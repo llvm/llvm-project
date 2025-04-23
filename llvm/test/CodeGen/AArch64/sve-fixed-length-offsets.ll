@@ -54,7 +54,7 @@ define void @nxv16i8(ptr %ldptr, ptr %stptr) {
 define void @nxv8i16(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, #128 // =0x80
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
@@ -99,7 +99,7 @@ define void @nxv8i16(ptr %ldptr, ptr %stptr) {
 define void @nxv4i32(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, #64 // =0x40
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
@@ -144,7 +144,7 @@ define void @nxv4i32(ptr %ldptr, ptr %stptr) {
 define void @nxv2i64(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, #32 // =0x20
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1, x8, lsl #3]
@@ -189,7 +189,7 @@ define void @nxv2i64(ptr %ldptr, ptr %stptr) {
 define void @nxv4i8(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x1, x8]
@@ -197,7 +197,7 @@ define void @nxv4i8(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-128-LABEL: nxv4i8:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ptrue p0.s
+; CHECK-128-NEXT:    ptrue p0.b
 ; CHECK-128-NEXT:    mov w8, #32 // =0x20
 ; CHECK-128-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
 ; CHECK-128-NEXT:    st1b { z0.s }, p0, [x1, x8]
@@ -205,28 +205,28 @@ define void @nxv4i8(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-256-LABEL: nxv4i8:
 ; CHECK-256:       // %bb.0:
-; CHECK-256-NEXT:    ptrue p0.s
+; CHECK-256-NEXT:    ptrue p0.b
 ; CHECK-256-NEXT:    ld1b { z0.s }, p0/z, [x0, #4, mul vl]
 ; CHECK-256-NEXT:    st1b { z0.s }, p0, [x1, #4, mul vl]
 ; CHECK-256-NEXT:    ret
 ;
 ; CHECK-512-LABEL: nxv4i8:
 ; CHECK-512:       // %bb.0:
-; CHECK-512-NEXT:    ptrue p0.s
+; CHECK-512-NEXT:    ptrue p0.b
 ; CHECK-512-NEXT:    ld1b { z0.s }, p0/z, [x0, #2, mul vl]
 ; CHECK-512-NEXT:    st1b { z0.s }, p0, [x1, #2, mul vl]
 ; CHECK-512-NEXT:    ret
 ;
 ; CHECK-1024-LABEL: nxv4i8:
 ; CHECK-1024:       // %bb.0:
-; CHECK-1024-NEXT:    ptrue p0.s
+; CHECK-1024-NEXT:    ptrue p0.b
 ; CHECK-1024-NEXT:    ld1b { z0.s }, p0/z, [x0, #1, mul vl]
 ; CHECK-1024-NEXT:    st1b { z0.s }, p0, [x1, #1, mul vl]
 ; CHECK-1024-NEXT:    ret
 ;
 ; CHECK-2048-LABEL: nxv4i8:
 ; CHECK-2048:       // %bb.0:
-; CHECK-2048-NEXT:    ptrue p0.s
+; CHECK-2048-NEXT:    ptrue p0.b
 ; CHECK-2048-NEXT:    mov w8, #32 // =0x20
 ; CHECK-2048-NEXT:    ld1b { z0.s }, p0/z, [x0, x8]
 ; CHECK-2048-NEXT:    st1b { z0.s }, p0, [x1, x8]
@@ -241,7 +241,7 @@ define void @nxv4i8(ptr %ldptr, ptr %stptr) {
 define void @nxv2f32(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, #16 // =0x10
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x1, x8, lsl #2]
@@ -249,7 +249,7 @@ define void @nxv2f32(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-128-LABEL: nxv2f32:
 ; CHECK-128:       // %bb.0:
-; CHECK-128-NEXT:    ptrue p0.d
+; CHECK-128-NEXT:    ptrue p0.b
 ; CHECK-128-NEXT:    mov x8, #16 // =0x10
 ; CHECK-128-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
 ; CHECK-128-NEXT:    st1w { z0.d }, p0, [x1, x8, lsl #2]
@@ -257,28 +257,28 @@ define void @nxv2f32(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-256-LABEL: nxv2f32:
 ; CHECK-256:       // %bb.0:
-; CHECK-256-NEXT:    ptrue p0.d
+; CHECK-256-NEXT:    ptrue p0.b
 ; CHECK-256-NEXT:    ld1w { z0.d }, p0/z, [x0, #4, mul vl]
 ; CHECK-256-NEXT:    st1w { z0.d }, p0, [x1, #4, mul vl]
 ; CHECK-256-NEXT:    ret
 ;
 ; CHECK-512-LABEL: nxv2f32:
 ; CHECK-512:       // %bb.0:
-; CHECK-512-NEXT:    ptrue p0.d
+; CHECK-512-NEXT:    ptrue p0.b
 ; CHECK-512-NEXT:    ld1w { z0.d }, p0/z, [x0, #2, mul vl]
 ; CHECK-512-NEXT:    st1w { z0.d }, p0, [x1, #2, mul vl]
 ; CHECK-512-NEXT:    ret
 ;
 ; CHECK-1024-LABEL: nxv2f32:
 ; CHECK-1024:       // %bb.0:
-; CHECK-1024-NEXT:    ptrue p0.d
+; CHECK-1024-NEXT:    ptrue p0.b
 ; CHECK-1024-NEXT:    ld1w { z0.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-1024-NEXT:    st1w { z0.d }, p0, [x1, #1, mul vl]
 ; CHECK-1024-NEXT:    ret
 ;
 ; CHECK-2048-LABEL: nxv2f32:
 ; CHECK-2048:       // %bb.0:
-; CHECK-2048-NEXT:    ptrue p0.d
+; CHECK-2048-NEXT:    ptrue p0.b
 ; CHECK-2048-NEXT:    mov x8, #16 // =0x10
 ; CHECK-2048-NEXT:    ld1w { z0.d }, p0/z, [x0, x8, lsl #2]
 ; CHECK-2048-NEXT:    st1w { z0.d }, p0, [x1, x8, lsl #2]
@@ -293,7 +293,7 @@ define void @nxv2f32(ptr %ldptr, ptr %stptr) {
 define void @nxv4f64(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, #16 // =0x10
 ; CHECK-NEXT:    add x9, x0, #128
 ; CHECK-NEXT:    ldr z1, [x9, #1, mul vl]
@@ -345,7 +345,7 @@ define void @nxv4f64(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-2048-LABEL: nxv4f64:
 ; CHECK-2048:       // %bb.0:
-; CHECK-2048-NEXT:    ptrue p0.d
+; CHECK-2048-NEXT:    ptrue p0.b
 ; CHECK-2048-NEXT:    mov x8, #16 // =0x10
 ; CHECK-2048-NEXT:    add x9, x0, #128
 ; CHECK-2048-NEXT:    ldr z1, [x9, #1, mul vl]

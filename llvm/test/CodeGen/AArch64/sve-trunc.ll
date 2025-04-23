@@ -207,7 +207,7 @@ define void @trunc_promoteIntRes(<vscale x 4 x i64> %0, ptr %ptr) {
 ; CHECK-LABEL: trunc_promoteIntRes:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:

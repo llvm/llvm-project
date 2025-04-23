@@ -1963,7 +1963,7 @@ exit:
 define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ; CHECK-LABEL: zext_v16i8_to_v16i32_in_loop_scalable_vectors:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  LBB19_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1989,7 +1989,7 @@ define void @zext_v16i8_to_v16i32_in_loop_scalable_vectors(ptr %src, ptr %dst) {
 ;
 ; CHECK-BE-LABEL: zext_v16i8_to_v16i32_in_loop_scalable_vectors:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    ptrue p0.s
+; CHECK-BE-NEXT:    ptrue p0.b
 ; CHECK-BE-NEXT:    mov x8, xzr
 ; CHECK-BE-NEXT:  .LBB19_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1

@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 2 x i64> @fold_loadext_and(ptr %ptr, i32 %needle, <vscale x 2 x i64> %b) #0 {
 ; CHECK-LABEL: fold_loadext_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i32>, ptr %ptr, align 4
@@ -23,9 +23,10 @@ define <vscale x 2 x i64> @fold_loadext_and(ptr %ptr, i32 %needle, <vscale x 2 x
 define <vscale x 2 x i1> @fold_loadext_and_legalize(ptr %ptr, <vscale x 2 x i32> %a) #0 {
 ; CHECK-LABEL: fold_loadext_and_legalize:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    and z0.d, z0.d, #0xffffffff
 ; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x i32>, ptr %ptr

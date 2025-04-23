@@ -923,7 +923,7 @@ define <vscale x 8 x i8> @loadnxv8i8(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    mov z0.h, p0/m, w8
 ; CHECK-NEXT:    ret
   %l = load i8, ptr %p
@@ -946,7 +946,7 @@ define <vscale x 4 x i16> @loadnxv4i16(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    mov z0.s, p0/m, w8
 ; CHECK-NEXT:    ret
   %l = load i16, ptr %p
@@ -969,7 +969,7 @@ define <vscale x 2 x i32> @loadnxv2i32(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
 ; CHECK-NEXT:    ret
   %l = load i32, ptr %p
@@ -1003,7 +1003,7 @@ define <vscale x 4 x half> @loadnxv4f16(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -1030,7 +1030,7 @@ define <vscale x 4 x bfloat> @loadnxv4bf16(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -1057,7 +1057,7 @@ define <vscale x 2 x float> @loadnxv2f32(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -1097,7 +1097,7 @@ define <vscale x 8 x i8> @loadnxv8i8_offset(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldrb w8, [x0, #1]
-; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    mov z0.h, p0/m, w8
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
@@ -1122,7 +1122,7 @@ define <vscale x 4 x i16> @loadnxv4i16_offset(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldurh w8, [x0, #1]
-; CHECK-NEXT:    ptrue p0.s, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    mov z0.s, p0/m, w8
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
@@ -1147,7 +1147,7 @@ define <vscale x 2 x i32> @loadnxv2i32_offset(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldur w8, [x0, #1]
-; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
 ; CHECK-NEXT:    ret
   %g = getelementptr inbounds i8, ptr %p, i64 1
@@ -1184,7 +1184,7 @@ define <vscale x 4 x half> @loadnxv4f16_offset(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -1213,7 +1213,7 @@ define <vscale x 4 x bfloat> @loadnxv4bf16_offset(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
@@ -1242,7 +1242,7 @@ define <vscale x 2 x float> @loadnxv2f32_offset(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000

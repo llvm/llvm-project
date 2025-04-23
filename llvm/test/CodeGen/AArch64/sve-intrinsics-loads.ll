@@ -57,7 +57,7 @@ define <vscale x 16 x i8> @ld1rqb_i8_imm_upper_bound(<vscale x 16 x i1> %pred, p
 define <vscale x 16 x i8> @ld1rqb_i8_imm_out_of_lower_bound(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm_out_of_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-129
+; CHECK-NEXT:    mov x8, #-129 // =0xffffffffffffff7f
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 -129
@@ -68,7 +68,7 @@ define <vscale x 16 x i8> @ld1rqb_i8_imm_out_of_lower_bound(<vscale x 16 x i1> %
 define <vscale x 16 x i8> @ld1rqb_i8_imm_out_of_upper_bound(<vscale x 16 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqb_i8_imm_out_of_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #113
+; CHECK-NEXT:    mov w8, #113 // =0x71
 ; CHECK-NEXT:    ld1rqb { z0.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 113
@@ -196,7 +196,7 @@ define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar(<vscale x 8 x i1> %pred, ptr %a
 define <vscale x 8 x i16> @ld1rqh_i16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_i16_imm_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <8 x i16>, ptr %addr, i16 -1
@@ -209,7 +209,7 @@ define <vscale x 8 x i16> @ld1rqh_i16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr 
 define <vscale x 8 x i16> @ld1rqh_i16_scalar_dupqlane(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_i16_scalar_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %idx
@@ -222,7 +222,7 @@ define <vscale x 8 x i16> @ld1rqh_i16_scalar_dupqlane(<vscale x 8 x i1> %pred, p
 define <vscale x 8 x half> @ld1rqh_f16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_f16_imm_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <8 x half>, ptr %addr, i16 -1
@@ -235,7 +235,7 @@ define <vscale x 8 x half> @ld1rqh_f16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr
 define <vscale x 8 x half> @ld1rqh_f16_scalar_dupqlane(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_f16_scalar_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %idx
@@ -248,7 +248,7 @@ define <vscale x 8 x half> @ld1rqh_f16_scalar_dupqlane(<vscale x 8 x i1> %pred, 
 define <vscale x 8 x bfloat> @ld1rqh_bf16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqh_bf16_imm_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, #-16]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <8 x bfloat>, ptr %addr, i16 -1
@@ -261,7 +261,7 @@ define <vscale x 8 x bfloat> @ld1rqh_bf16_imm_dupqlane(<vscale x 8 x i1> %pred, 
 define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar_dupqlane(<vscale x 8 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqh_bf16_scalar_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %idx
@@ -336,7 +336,7 @@ define <vscale x 4 x float> @ld1rqw_f32_scalar(<vscale x 4 x i1> %pred, ptr %bas
 define <vscale x 4 x i32> @ld1rqw_i32_imm_dupqlane(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_i32_imm_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <4 x i32>, ptr %addr, i32 1
@@ -349,7 +349,7 @@ define <vscale x 4 x i32> @ld1rqw_i32_imm_dupqlane(<vscale x 4 x i1> %pred, ptr 
 define <vscale x 4 x i32> @ld1rqw_i32_scalar_dupqlane(<vscale x 4 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqw_i32_scalar_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %idx
@@ -362,7 +362,7 @@ define <vscale x 4 x i32> @ld1rqw_i32_scalar_dupqlane(<vscale x 4 x i1> %pred, p
 define <vscale x 4 x float> @ld1rqw_f32_imm_dupqlane(<vscale x 4 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqw_f32_imm_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <4 x float>, ptr %addr, i32 1
@@ -375,7 +375,7 @@ define <vscale x 4 x float> @ld1rqw_f32_imm_dupqlane(<vscale x 4 x i1> %pred, pt
 define <vscale x 4 x float> @ld1rqw_f32_scalar_dupqlane(<vscale x 4 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqw_f32_scalar_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %idx
@@ -450,7 +450,7 @@ define <vscale x 2 x double> @ld1rqd_f64_scalar(<vscale x 2 x i1> %pred, ptr %ba
 define <vscale x 2 x i64> @ld1rqd_i64_imm_dupqlane(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_i64_imm_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <2 x i64>, ptr %addr, i64 1
@@ -463,7 +463,7 @@ define <vscale x 2 x i64> @ld1rqd_i64_imm_dupqlane(<vscale x 2 x i1> %pred, ptr 
 define <vscale x 2 x i64> @ld1rqd_i64_scalar_dupqlane(<vscale x 2 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqd_i64_scalar_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i64, ptr %addr, i64 %idx
@@ -476,7 +476,7 @@ define <vscale x 2 x i64> @ld1rqd_i64_scalar_dupqlane(<vscale x 2 x i1> %pred, p
 define <vscale x 2 x double> @ld1rqd_f64_imm_dupqlane(<vscale x 2 x i1> %pred, ptr %addr) {
 ; CHECK-LABEL: ld1rqd_f64_imm_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, #16]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <2 x double>, ptr %addr, i64 1
@@ -489,7 +489,7 @@ define <vscale x 2 x double> @ld1rqd_f64_imm_dupqlane(<vscale x 2 x i1> %pred, p
 define <vscale x 2 x double> @ld1rqd_f64_scalar_dupqlane(<vscale x 2 x i1> %pred, ptr %addr, i64 %idx) {
 ; CHECK-LABEL: ld1rqd_f64_scalar_dupqlane:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds double, ptr %addr, i64 %idx

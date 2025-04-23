@@ -14,8 +14,9 @@ define <vscale x 8 x i16> @sext_splat_v8i16_128() {
 define <vscale x 8 x i1> @sext_icmp_splat_v8i16_128(<vscale x 8 x i8> %d) {
 ; CHECK-LABEL: sext_icmp_splat_v8i16_128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z0.h, #-1
 ; CHECK-NEXT:    ret
   %c = icmp ugt <vscale x 8 x i8> splat(i8 128), %d
@@ -25,8 +26,9 @@ define <vscale x 8 x i1> @sext_icmp_splat_v8i16_128(<vscale x 8 x i8> %d) {
 define <vscale x 4 x i1> @sext_icmp_splat_v4i16_128(<vscale x 4 x i8> %d) {
 ; CHECK-LABEL: sext_icmp_splat_v4i16_128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z0.s, #-1
 ; CHECK-NEXT:    ret
   %c = icmp ugt <vscale x 4 x i8> splat(i8 128), %d

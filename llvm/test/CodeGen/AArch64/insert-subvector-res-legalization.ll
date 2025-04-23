@@ -8,9 +8,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_zero_i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_zero_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
 ; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
@@ -24,9 +23,8 @@ define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_zero_i8(ptr %a, ptr %
 define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_nonzero_i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_nonzero_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uzp1 z0.h, z0.h, z1.h
@@ -40,9 +38,8 @@ define <vscale x 8 x i8> @vec_scalable_subvec_scalable_idx_nonzero_i8(ptr %a, pt
 define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_zero_i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_zero_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    uunpkhi z0.d, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
@@ -56,9 +53,8 @@ define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_zero_i16(ptr %a, ptr
 define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_nonzero_i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_scalable_idx_nonzero_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1h { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z1.s
@@ -74,7 +70,7 @@ define <vscale x 4 x i16> @vec_scalable_subvec_scalable_idx_nonzero_i16(ptr %a, 
 define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_zero_i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_zero_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr d0, [x1]
 ; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
@@ -93,7 +89,7 @@ define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_nonzero_i8(ptr %a, ptr %
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cnth x8
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    sub x8, x8, #8
 ; CHECK-NEXT:    mov w9, #8 // =0x8
@@ -118,7 +114,7 @@ define <vscale x 8 x i8> @vec_scalable_subvec_fixed_idx_nonzero_i8(ptr %a, ptr %
 define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_zero_i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_zero_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr d0, [x1]
 ; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
@@ -137,7 +133,7 @@ define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_nonzero_i16(ptr %a, ptr
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cntw x8
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    sub x8, x8, #4
 ; CHECK-NEXT:    mov w9, #4 // =0x4
@@ -162,7 +158,7 @@ define <vscale x 4 x i16> @vec_scalable_subvec_fixed_idx_nonzero_i16(ptr %a, ptr
 define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_zero_i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: vec_scalable_subvec_fixed_idx_zero_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr d0, [x1]
 ; CHECK-NEXT:    ld1w { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
@@ -181,7 +177,7 @@ define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_i32(ptr %a, ptr
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    cntd x8
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ldr d1, [x1]
 ; CHECK-NEXT:    sub x8, x8, #2
 ; CHECK-NEXT:    mov w9, #2 // =0x2
@@ -208,11 +204,12 @@ define <vscale x 2 x i32> @vec_scalable_subvec_fixed_idx_nonzero_large_i32(ptr %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.d, vl8
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    ld1w { z0.d }, p1/z, [x1]
+; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    ldr z0, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #1

@@ -245,7 +245,7 @@ define void @nxv2f64_32b_aligned(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-BE-LABEL: nxv2f64_32b_aligned:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ptrue p0.d
+; CHECK-BE-NEXT:    ptrue p0.b
 ; CHECK-BE-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-BE-NEXT:    ld1d { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-BE-NEXT:    st1d { z0.d }, p0, [x1]

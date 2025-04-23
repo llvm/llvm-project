@@ -6,7 +6,7 @@
 define <vscale x 4 x i16> @load_promote_4i16(ptr %a) {
 ; CHECK-LABEL: load_promote_4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %load = load <vscale x 4 x i16>, ptr %a

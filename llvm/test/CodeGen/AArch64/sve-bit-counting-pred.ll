@@ -52,8 +52,9 @@ define <vscale x 16 x i1> @ctlz_nxv16i1(<vscale x 16 x i1> %a) {
 define <vscale x 8 x i1> @ctlz_nxv8i1(<vscale x 8 x i1> %a) {
 ; CHECK-LABEL: ctlz_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p2.h
+; CHECK-NEXT:    eor p0.b, p2/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i1> @llvm.ctlz.nxv8i1(<vscale x 8 x i1> %a)
   ret <vscale x 8 x i1> %res
@@ -62,8 +63,9 @@ define <vscale x 8 x i1> @ctlz_nxv8i1(<vscale x 8 x i1> %a) {
 define <vscale x 4 x i1> @ctlz_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ctlz_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p2.s
+; CHECK-NEXT:    eor p0.b, p2/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i1> @llvm.ctlz.nxv4i1(<vscale x 4 x i1> %a)
   ret <vscale x 4 x i1> %res
@@ -72,8 +74,9 @@ define <vscale x 4 x i1> @ctlz_nxv4i1(<vscale x 4 x i1> %a) {
 define <vscale x 2 x i1> @ctlz_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: ctlz_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p2.d
+; CHECK-NEXT:    eor p0.b, p2/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i1> @llvm.ctlz.nxv2i1(<vscale x 2 x i1> %a)
   ret <vscale x 2 x i1> %res
@@ -94,8 +97,9 @@ define <vscale x 16 x i1> @cttz_nxv16i1(<vscale x 16 x i1> %a) {
 define <vscale x 8 x i1> @cttz_nxv8i1(<vscale x 8 x i1> %a) {
 ; CHECK-LABEL: cttz_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p2.h
+; CHECK-NEXT:    eor p0.b, p2/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 8 x i1> @llvm.cttz.nxv8i1(<vscale x 8 x i1> %a)
   ret <vscale x 8 x i1> %res
@@ -104,8 +108,9 @@ define <vscale x 8 x i1> @cttz_nxv8i1(<vscale x 8 x i1> %a) {
 define <vscale x 4 x i1> @cttz_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: cttz_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p2.s
+; CHECK-NEXT:    eor p0.b, p2/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i1> @llvm.cttz.nxv4i1(<vscale x 4 x i1> %a)
   ret <vscale x 4 x i1> %res
@@ -114,8 +119,9 @@ define <vscale x 4 x i1> @cttz_nxv4i1(<vscale x 4 x i1> %a) {
 define <vscale x 2 x i1> @cttz_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: cttz_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p2.d
+; CHECK-NEXT:    eor p0.b, p2/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
   %res = call <vscale x 2 x i1> @llvm.cttz.nxv2i1(<vscale x 2 x i1> %a)
   ret <vscale x 2 x i1> %res

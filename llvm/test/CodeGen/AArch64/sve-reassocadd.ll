@@ -38,7 +38,7 @@ define <vscale x 8 x i16> @i16_1v_8s(ptr %b) {
 ; CHECK-LABEL: i16_1v_8s:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8, x9, lsl #1]
@@ -71,7 +71,7 @@ define <vscale x 8 x i16> @i16_2v_8s(ptr %b) {
 ; CHECK-LABEL: i16_2v_8s:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rdvl x8, #2
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8, x9, lsl #1]
@@ -104,7 +104,7 @@ define <vscale x 4 x i32> @i32_1v_16s(ptr %b) {
 ; CHECK-LABEL: i32_1v_16s:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
@@ -137,7 +137,7 @@ define <vscale x 2 x i64> @i64_1v_32s(ptr %b) {
 ; CHECK-LABEL: i64_1v_32s:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, x9, lsl #3]
@@ -204,7 +204,7 @@ define <vscale x 8 x i16> @i16_m2v_8s(ptr %b) {
 ; CHECK-LABEL: i16_m2v_8s:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cnth x8, all, mul #4
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    sub x8, x0, x8
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8, x9, lsl #1]
@@ -237,7 +237,7 @@ define <vscale x 4 x i32> @i32_m2v_16s(ptr %b) {
 ; CHECK-LABEL: i32_m2v_16s:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cnth x8, all, mul #4
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    sub x8, x0, x8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x8, x9, lsl #2]
@@ -270,7 +270,7 @@ define <vscale x 2 x i64> @i64_m2v_32s(ptr %b) {
 ; CHECK-LABEL: i64_m2v_32s:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cnth x8, all, mul #4
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov x9, #4 // =0x4
 ; CHECK-NEXT:    sub x8, x0, x8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8, x9, lsl #3]

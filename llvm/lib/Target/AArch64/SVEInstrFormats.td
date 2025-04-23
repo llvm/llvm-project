@@ -470,9 +470,9 @@ let Predicates = [HasSVE_or_SME] in {
   defm PTRUES : sve_int_ptrue<0b001, "ptrues", null_frag>;
 
   def : Pat<(nxv16i1 immAllOnesV), (PTRUE_B 31)>;
-  def : Pat<(nxv8i1 immAllOnesV), (PTRUE_H 31)>;
-  def : Pat<(nxv4i1 immAllOnesV), (PTRUE_S 31)>;
-  def : Pat<(nxv2i1 immAllOnesV), (PTRUE_D 31)>;
+  def : Pat<(nxv8i1 immAllOnesV), (PTRUE_B 31)>;
+  def : Pat<(nxv4i1 immAllOnesV), (PTRUE_B 31)>;
+  def : Pat<(nxv2i1 immAllOnesV), (PTRUE_B 31)>;
 }
 
 //===----------------------------------------------------------------------===//

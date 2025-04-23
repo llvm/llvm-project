@@ -5,8 +5,9 @@
 define <vscale x 2 x double> @ext2_f16_f64(ptr %ptr, i64 %index) {
 ; CHECK-LABEL: ext2_f16_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x half>, ptr %ptr, align 4
@@ -18,7 +19,7 @@ define <vscale x 2 x double> @ext2_f16_f64(ptr %ptr, i64 %index) {
 define <vscale x 4 x double> @ext4_f16_f64(ptr %ptr, i64 %index) {
 ; CHECK-LABEL: ext4_f16_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
@@ -62,8 +63,9 @@ define <vscale x 8 x double> @ext8_f16_f64(ptr %ptr, i64 %index) {
 define <vscale x 2 x double> @ext2_f32_f64(ptr %ptr, i64 %index) {
 ; CHECK-LABEL: ext2_f32_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %load = load <vscale x 2 x float>, ptr %ptr, align 4

@@ -10,7 +10,7 @@
 define void @consecutive_stores_pair(ptr %dest0, <vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1) {
 ; CHECK-LABEL: consecutive_stores_pair:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    faddv s0, p0, z0.s
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
@@ -27,7 +27,7 @@ define void @consecutive_stores_pair(ptr %dest0, <vscale x 4 x float> %vec0, <vs
 define void @consecutive_stores_quadruple(ptr %dest0, <vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1, <vscale x 4 x float> %vec2, <vscale x 4 x float> %vec3) {
 ; CHECK-LABEL: consecutive_stores_quadruple:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    faddv s0, p0, z0.s
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    faddv s2, p0, z2.s
@@ -53,7 +53,7 @@ define void @consecutive_stores_quadruple(ptr %dest0, <vscale x 4 x float> %vec0
 define void @consecutive_stores_pair_streaming_function(ptr %dest0, <vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1) "aarch64_pstate_sm_enabled"  {
 ; CHECK-LABEL: consecutive_stores_pair_streaming_function:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    faddv s0, p0, z0.s
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    stp s0, s1, [x0]
@@ -69,7 +69,7 @@ define void @consecutive_stores_pair_streaming_function(ptr %dest0, <vscale x 4 
 define void @consecutive_stores_quadruple_streaming_function(ptr %dest0, <vscale x 4 x float> %vec0, <vscale x 4 x float> %vec1, <vscale x 4 x float> %vec2, <vscale x 4 x float> %vec3) "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: consecutive_stores_quadruple_streaming_function:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    faddv s0, p0, z0.s
 ; CHECK-NEXT:    faddv s1, p0, z1.s
 ; CHECK-NEXT:    faddv s2, p0, z2.s

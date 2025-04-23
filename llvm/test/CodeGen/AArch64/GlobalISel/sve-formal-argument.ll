@@ -15,7 +15,7 @@ define void @formal_argument_nxv16i8(<vscale x 16 x i8> %0, ptr %p) {
 define void @formal_argument_nxv8i16(<vscale x 8 x i16> %0, ptr %p) {
 ; CHECK-LABEL: formal_argument_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <vscale x 8 x i16> %0, ptr %p, align 16
@@ -25,7 +25,7 @@ define void @formal_argument_nxv8i16(<vscale x 8 x i16> %0, ptr %p) {
 define void @formal_argument_nxv4i32(<vscale x 4 x i32> %0, ptr %p) {
 ; CHECK-LABEL: formal_argument_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <vscale x 4 x i32> %0, ptr %p, align 16
@@ -35,7 +35,7 @@ define void @formal_argument_nxv4i32(<vscale x 4 x i32> %0, ptr %p) {
 define void @formal_argument_nxv2i64(<vscale x 2 x i64> %0, ptr %p) {
 ; CHECK-LABEL: formal_argument_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <vscale x 2 x i64> %0, ptr %p, align 16

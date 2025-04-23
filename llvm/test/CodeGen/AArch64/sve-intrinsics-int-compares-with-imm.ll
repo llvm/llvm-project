@@ -895,7 +895,7 @@ define <vscale x 16 x i1> @wide_cmphs_b(<vscale x 16 x i1> %pg, <vscale x 16 x i
 define <vscale x 8 x i1> @ir_cmphs_h(<vscale x 8 x i16> %a) {
 ; CHECK-LABEL: ir_cmphs_h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %out = icmp uge <vscale x 8 x i16> %a, zeroinitializer
   ret <vscale x 8 x i1> %out

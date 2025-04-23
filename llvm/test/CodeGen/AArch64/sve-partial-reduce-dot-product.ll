@@ -1074,7 +1074,7 @@ entry:
 define <vscale x 2 x i64> @sdot_different_types(<vscale x 2 x i64> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i8> %b){
 ; CHECK-LABEL: sdot_different_types:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sunpklo z3.s, z1.h
 ; CHECK-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
@@ -1099,7 +1099,7 @@ define <vscale x 2 x i64> @sdot_different_types(<vscale x 2 x i64> %acc, <vscale
 ;
 ; CHECK-NEWLOWERING-LABEL: sdot_different_types:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.h
+; CHECK-NEWLOWERING-NEXT:    ptrue p0.b
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z3.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z1.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    sxtb z2.h, p0/m, z2.h
@@ -1132,7 +1132,7 @@ entry:
 define <vscale x 2 x i64> @usdot_different_types(<vscale x 2 x i64> %acc, <vscale x 8 x i16> %a, <vscale x 8 x i8> %b){
 ; CHECK-LABEL: usdot_different_types:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
@@ -1157,7 +1157,7 @@ define <vscale x 2 x i64> @usdot_different_types(<vscale x 2 x i64> %acc, <vscal
 ;
 ; CHECK-NEWLOWERING-LABEL: usdot_different_types:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.h
+; CHECK-NEWLOWERING-NEXT:    ptrue p0.b
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z3.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-NEWLOWERING-NEXT:    sxtb z2.h, p0/m, z2.h
@@ -1302,7 +1302,7 @@ entry:
 define <vscale x 2 x i16> @sdot_nxv8i8_promote (<vscale x 2 x i16> %acc, <vscale x 8 x i8> %a, <vscale x 8 x i8> %b){
 ; CHECK-LABEL: sdot_nxv8i8_promote:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
 ; CHECK-NEXT:    ptrue p0.d
@@ -1327,7 +1327,7 @@ define <vscale x 2 x i16> @sdot_nxv8i8_promote (<vscale x 2 x i16> %acc, <vscale
 ;
 ; CHECK-NEWLOWERING-LABEL: sdot_nxv8i8_promote:
 ; CHECK-NEWLOWERING:       // %bb.0: // %entry
-; CHECK-NEWLOWERING-NEXT:    ptrue p0.h
+; CHECK-NEWLOWERING-NEXT:    ptrue p0.b
 ; CHECK-NEWLOWERING-NEXT:    sxtb z1.h, p0/m, z1.h
 ; CHECK-NEWLOWERING-NEXT:    sxtb z2.h, p0/m, z2.h
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.d

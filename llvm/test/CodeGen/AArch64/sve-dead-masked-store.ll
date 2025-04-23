@@ -34,7 +34,7 @@ define void @dead_masked_store_alltrue_bigger(<vscale x 4 x i16> %val, <vscale x
 define void @dead_masked_store_alltrue_smaller(<vscale x 4 x i32> %val, <vscale x 4 x i16> %val1, ptr %a, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: dead_masked_store_alltrue_smaller:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    st1h { z1.s }, p1, [x0]
 ; CHECK-NEXT:    ret

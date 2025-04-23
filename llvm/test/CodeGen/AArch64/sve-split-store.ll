@@ -6,7 +6,7 @@
 define void @store_promote_4i8(<vscale x 4 x i8> %data, ptr %a) {
 ; CHECK-LABEL: store_promote_4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   store <vscale x 4 x i8> %data, ptr %a

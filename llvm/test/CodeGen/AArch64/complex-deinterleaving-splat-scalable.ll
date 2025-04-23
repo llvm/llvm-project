@@ -10,7 +10,7 @@ define <vscale x 4 x double> @complex_mul_const(<vscale x 4 x double> %a, <vscal
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fmov z6.d, #3.00000000
 ; CHECK-NEXT:    fmov z7.d, #11.00000000
 ; CHECK-NEXT:    fcmla z4.d, p0/m, z0.d, z2.d, #0
@@ -56,7 +56,7 @@ define <vscale x 4 x double> @complex_mul_non_const(<vscale x 4 x double> %a, <v
 ; CHECK-LABEL: complex_mul_non_const:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v7.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    // kill: def $d5 killed $d5 def $z5
 ; CHECK-NEXT:    // kill: def $d4 killed $d4 def $z4
 ; CHECK-NEXT:    movi v6.2d, #0000000000000000

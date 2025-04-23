@@ -35,7 +35,7 @@ define void @test_sincos_nxv4f32(<vscale x 4 x float> %x, ptr noalias %out_sin, 
 ; SLEEF:    bl _ZGVsNxvl4l4_sincosf
 ;
 ; ARMPL-LABEL: test_sincos_nxv4f32:
-; ARMPL:    ptrue p0.s
+; ARMPL:    ptrue p0.b
 ; ARMPL:    bl armpl_svsincos_f32_x
   %result = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> %x)
   %result.0 = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %result, 0
@@ -50,7 +50,7 @@ define void @test_sincos_nxv2f64(<vscale x 2 x double> %x, ptr noalias %out_sin,
 ; SLEEF:    bl _ZGVsNxvl8l8_sincos
 ;
 ; ARMPL-LABEL: test_sincos_nxv2f64:
-; ARMPL:    ptrue p0.d
+; ARMPL:    ptrue p0.b
 ; ARMPL:    bl armpl_svsincos_f64_x
   %result = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.sincos.nxv2f64(<vscale x 2 x double> %x)
   %result.0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %result, 0

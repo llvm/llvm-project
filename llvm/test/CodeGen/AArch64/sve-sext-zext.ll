@@ -76,7 +76,7 @@ define <vscale x 2 x i64> @zext_i1_i64(<vscale x 2 x i1> %a) {
 define <vscale x 8 x i16> @sext_i8_i16(<vscale x 8 x i8> %a) {
 ; CHECK-LABEL: sext_i8_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %r = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
@@ -86,7 +86,7 @@ define <vscale x 8 x i16> @sext_i8_i16(<vscale x 8 x i8> %a) {
 define <vscale x 4 x i32> @sext_i8_i32(<vscale x 4 x i8> %a) {
 ; CHECK-LABEL: sext_i8_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %r = sext <vscale x 4 x i8> %a to <vscale x 4 x i32>
@@ -96,7 +96,7 @@ define <vscale x 4 x i32> @sext_i8_i32(<vscale x 4 x i8> %a) {
 define <vscale x 2 x i64> @sext_i8_i64(<vscale x 2 x i8> %a) {
 ; CHECK-LABEL: sext_i8_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %r = sext <vscale x 2 x i8> %a to <vscale x 2 x i64>
@@ -133,7 +133,7 @@ define <vscale x 2 x i64> @zext_i8_i64(<vscale x 2 x i8> %a) {
 define <vscale x 4 x i32> @sext_i16_i32(<vscale x 4 x i16> %a) {
 ; CHECK-LABEL: sext_i16_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %r = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
@@ -143,7 +143,7 @@ define <vscale x 4 x i32> @sext_i16_i32(<vscale x 4 x i16> %a) {
 define <vscale x 2 x i64> @sext_i16_i64(<vscale x 2 x i16> %a) {
 ; CHECK-LABEL: sext_i16_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %r = sext <vscale x 2 x i16> %a to <vscale x 2 x i64>
@@ -171,7 +171,7 @@ define <vscale x 2 x i64> @zext_i16_i64(<vscale x 2 x i16> %a) {
 define <vscale x 2 x i64> @sext_i32_i64(<vscale x 2 x i32> %a) {
 ; CHECK-LABEL: sext_i32_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %r = sext <vscale x 2 x i32> %a to <vscale x 2 x i64>
@@ -383,7 +383,7 @@ define <vscale x 8 x i64> @zext_8i8_8i64(<vscale x 8 x i8> %aval) {
 define <vscale x 4 x i64> @sext_4i8_4i64(<vscale x 4 x i8> %aval) {
 ; CHECK-LABEL: sext_4i8_4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    sxtb z1.s, p0/m, z0.s
 ; CHECK-NEXT:    sunpklo z0.d, z1.s
@@ -396,7 +396,7 @@ define <vscale x 4 x i64> @sext_4i8_4i64(<vscale x 4 x i8> %aval) {
 define <vscale x 4 x i64> @sext_4i16_4i64(<vscale x 4 x i16> %aval) {
 ; CHECK-LABEL: sext_4i16_4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    sxth z1.s, p0/m, z0.s
 ; CHECK-NEXT:    sunpklo z0.d, z1.s
@@ -409,7 +409,7 @@ define <vscale x 4 x i64> @sext_4i16_4i64(<vscale x 4 x i16> %aval) {
 define <vscale x 8 x i32> @sext_8i8_8i32(<vscale x 8 x i8> %aval) {
 ; CHECK-LABEL: sext_8i8_8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z1.h
@@ -422,7 +422,7 @@ define <vscale x 8 x i32> @sext_8i8_8i32(<vscale x 8 x i8> %aval) {
 define <vscale x 8 x i64> @sext_8i8_8i64(<vscale x 8 x i8> %aval) {
 ; CHECK-LABEL: sext_8i8_8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    sunpklo z1.s, z0.h
 ; CHECK-NEXT:    sunpkhi z3.s, z0.h

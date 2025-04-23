@@ -580,7 +580,7 @@ define <vscale x 4 x float> @splat_nxv4f32_imm_out_of_range() {
 define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 ; CHECK-LABEL: splat_nxv2f64_imm_out_of_range:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    adrp x8, .LCPI60_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI60_0
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
@@ -594,7 +594,7 @@ define <vscale x 2 x double> @splat_nxv2f64_imm_out_of_range() {
 define <vscale x 2 x i1> @sve_splat_i1_allactive() {
 ; CHECK-LABEL: sve_splat_i1_allactive:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   ret <vscale x 2 x i1> splat(i1 true)
 }

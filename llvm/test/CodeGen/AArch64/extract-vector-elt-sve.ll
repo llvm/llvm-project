@@ -12,7 +12,7 @@
 define <vscale x 2 x i64> @insert_vscale_2_i64_zero(<vscale x 2 x i64> %vec, i64 %elt) {
 ; CHECK-SD-LABEL: insert_vscale_2_i64_zero:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ptrue p0.d, vl1
+; CHECK-SD-NEXT:    ptrue p0.b, vl1
 ; CHECK-SD-NEXT:    mov z0.d, p0/m, x0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -20,7 +20,7 @@ define <vscale x 2 x i64> @insert_vscale_2_i64_zero(<vscale x 2 x i64> %vec, i64
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov x8, xzr
 ; CHECK-GI-NEXT:    index z1.d, #0, #1
-; CHECK-GI-NEXT:    ptrue p0.d
+; CHECK-GI-NEXT:    ptrue p0.b
 ; CHECK-GI-NEXT:    mov z2.d, x8
 ; CHECK-GI-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
 ; CHECK-GI-NEXT:    mov z0.d, p0/m, x0
@@ -35,7 +35,7 @@ define <vscale x 2 x i64> @insert_vscale_2_i64(<vscale x 2 x i64> %vec, i64 %elt
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    mov z2.d, x1
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, z2.d
 ; CHECK-NEXT:    mov z0.d, p0/m, x0
 ; CHECK-NEXT:    ret
@@ -47,7 +47,7 @@ entry:
 define <vscale x 4 x i32> @insert_vscale_4_i32_zero(<vscale x 4 x i32> %vec, i32 %elt) {
 ; CHECK-SD-LABEL: insert_vscale_4_i32_zero:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ptrue p0.s, vl1
+; CHECK-SD-NEXT:    ptrue p0.b, vl1
 ; CHECK-SD-NEXT:    mov z0.s, p0/m, w0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -55,7 +55,7 @@ define <vscale x 4 x i32> @insert_vscale_4_i32_zero(<vscale x 4 x i32> %vec, i32
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, wzr
 ; CHECK-GI-NEXT:    index z1.s, #0, #1
-; CHECK-GI-NEXT:    ptrue p0.s
+; CHECK-GI-NEXT:    ptrue p0.b
 ; CHECK-GI-NEXT:    mov z2.s, w8
 ; CHECK-GI-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
 ; CHECK-GI-NEXT:    mov z0.s, p0/m, w0
@@ -70,7 +70,7 @@ define <vscale x 4 x i32> @insert_vscale_4_i32(<vscale x 4 x i32> %vec, i32 %elt
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    mov z2.s, w1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, w0
 ; CHECK-NEXT:    ret
@@ -82,7 +82,7 @@ entry:
 define <vscale x 8 x i16> @insert_vscale_8_i16_zero(<vscale x 8 x i16> %vec, i16 %elt) {
 ; CHECK-LABEL: insert_vscale_8_i16_zero:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    mov z0.h, p0/m, w0
 ; CHECK-NEXT:    ret
 entry:
@@ -95,7 +95,7 @@ define <vscale x 8 x i16> @insert_vscale_8_i16(<vscale x 8 x i16> %vec, i16 %elt
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    mov z2.h, w1
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, w0
 ; CHECK-NEXT:    ret

@@ -148,8 +148,9 @@ define i64 @umin_nxv4i64(<vscale x 4 x i64> %a) {
 define i8 @smin_nxv4i8(<vscale x 4 x i8> %a) {
 ; CHECK-LABEL: smin_nxv4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sminv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret

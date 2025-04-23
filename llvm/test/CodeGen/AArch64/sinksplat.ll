@@ -508,7 +508,7 @@ l2:
 define <vscale x 4 x float> @fmul_scalable(ptr %x, ptr %y) "target-features"="+sve" {
 ; CHECK-LABEL: fmul_scalable:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    sxtw x8, w8

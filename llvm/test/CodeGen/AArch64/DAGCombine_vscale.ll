@@ -7,7 +7,7 @@
 define <vscale x 4 x i32> @sext_inreg(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: sext_inreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %sext = shl <vscale x 4 x i32> %a, splat(i32 16)

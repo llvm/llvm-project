@@ -321,7 +321,7 @@ define <vscale x 8 x half> @insert_nxv8f16_nxv2f16(<vscale x 8 x half> %vec, <vs
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    st1h { z1.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    ldr z0, [sp]
@@ -499,7 +499,7 @@ define <vscale x 4 x bfloat> @insert_nxv4bf16_v4bf16(<vscale x 4 x bfloat> %sv0,
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    addpl x8, sp, #4
 ; CHECK-NEXT:    st1h { z0.s }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    str d1, [x8]
@@ -645,7 +645,7 @@ define <vscale x 16 x i1> @insert_nxv16i1_nxv4i1_into_poison(<vscale x 4 x i1> %
 define <vscale x 2 x i1> @insert_nxv2i1_v8i1_const_true_into_undef() vscale_range(4,8) {
 ; CHECK-LABEL: insert_nxv2i1_v8i1_const_true_into_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 2 x i1> @llvm.vector.insert.nxv2i1.v8i1 (<vscale x 2 x i1> poison, <8 x i1> splat (i1 true), i64 0)
   ret <vscale x 2 x i1> %v0
@@ -654,7 +654,7 @@ define <vscale x 2 x i1> @insert_nxv2i1_v8i1_const_true_into_undef() vscale_rang
 define <vscale x 4 x i1> @insert_nxv4i1_v16i1_const_true_into_undef() vscale_range(4,8) {
 ; CHECK-LABEL: insert_nxv4i1_v16i1_const_true_into_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 4 x i1> @llvm.vector.insert.nxv4i1.v16i1 (<vscale x 4 x i1> poison, <16 x i1> splat (i1 true), i64 0)
   ret <vscale x 4 x i1> %v0
@@ -663,7 +663,7 @@ define <vscale x 4 x i1> @insert_nxv4i1_v16i1_const_true_into_undef() vscale_ran
 define <vscale x 8 x i1> @insert_nxv8i1_v32i1_const_true_into_undef() vscale_range(4,8) {
 ; CHECK-LABEL: insert_nxv8i1_v32i1_const_true_into_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %v0 = call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.v32i1 (<vscale x 8 x i1> poison, <32 x i1> splat (i1 true), i64 0)
   ret <vscale x 8 x i1> %v0

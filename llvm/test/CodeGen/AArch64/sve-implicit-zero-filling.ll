@@ -179,7 +179,7 @@ define <vscale x 2 x i64> @zero_fill_non_zero_index(<vscale x 2 x i1> %pg, <vsca
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    uminv d3, p0, z0.d
 ; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    cmpeq p0.d, p1/z, z1.d, z2.d
 ; CHECK-NEXT:    fmov x8, d3
@@ -212,7 +212,7 @@ define <vscale x 2 x i64> @zero_fill_no_zero_upper_lanes(<vscale x 2 x i1> %pg, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z0.d
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    ptrue p0.b, vl1
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    mov z1.d, p0/m, x8
 ; CHECK-NEXT:    mov z0.d, z1.d

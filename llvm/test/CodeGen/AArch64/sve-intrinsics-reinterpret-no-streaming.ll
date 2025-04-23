@@ -7,7 +7,7 @@
 define <vscale x 16 x i1> @reinterpret_bool_from_splat() {
 ; CHECK-LABEL: reinterpret_bool_from_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %out = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat(i1 true))
   ret <vscale x 16 x i1> %out

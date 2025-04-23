@@ -36,13 +36,13 @@ define void @ld_st_nxv8i16(ptr %in, ptr %out) {
 ;
 ; ASM-LABEL: ld_st_nxv8i16:
 ; ASM:       // %bb.0: // %entry
-; ASM-NEXT:    ptrue p0.h
+; ASM-NEXT:    ptrue p0.b
 ; ASM-NEXT:    mov x8, xzr
 ; ASM-NEXT:    cnth x9
 ; ASM-NEXT:  .LBB0_1: // %loop
 ; ASM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; ASM-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; ASM-NEXT:    add z0.h, z0.h, #3
+; ASM-NEXT:    add z0.h, z0.h, #3 // =0x3
 ; ASM-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
 ; ASM-NEXT:    add x8, x8, x9
 ; ASM-NEXT:    cmp x8, #1024
@@ -102,13 +102,13 @@ define void @masked_ld_st_nxv8i16(ptr %in, ptr %out, i64 %n) {
 ;
 ; ASM-LABEL: masked_ld_st_nxv8i16:
 ; ASM:       // %bb.0: // %entry
-; ASM-NEXT:    ptrue p0.h
+; ASM-NEXT:    ptrue p0.b
 ; ASM-NEXT:    mov x8, xzr
 ; ASM-NEXT:    cnth x9
 ; ASM-NEXT:  .LBB1_1: // %loop
 ; ASM-NEXT:    // =>This Inner Loop Header: Depth=1
 ; ASM-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; ASM-NEXT:    add z0.h, z0.h, #3
+; ASM-NEXT:    add z0.h, z0.h, #3 // =0x3
 ; ASM-NEXT:    st1h { z0.h }, p0, [x1, x8, lsl #1]
 ; ASM-NEXT:    add x8, x8, x9
 ; ASM-NEXT:    cmp x2, x8

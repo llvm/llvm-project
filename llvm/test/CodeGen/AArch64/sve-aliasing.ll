@@ -122,13 +122,14 @@ define void @scalable_v2i64(ptr noalias nocapture noundef %l0) {
 define void @scalable_v8i8(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: scalable_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.h, p0/m, z2.h, z0.h
+; CHECK-NEXT:    mul z2.h, p1/m, z2.h, z0.h
 ; CHECK-NEXT:    movprfx z3, z1
-; CHECK-NEXT:    mul z3.h, p0/m, z3.h, z1.h
+; CHECK-NEXT:    mul z3.h, p1/m, z3.h, z1.h
 ; CHECK-NEXT:    eor z0.d, z2.d, z0.d
 ; CHECK-NEXT:    eor z1.d, z3.d, z1.d
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x0]
@@ -155,13 +156,14 @@ define void @scalable_v8i8(ptr noalias nocapture noundef %l0) {
 define void @scalable_v4i8(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: scalable_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.s, p0/m, z2.s, z0.s
+; CHECK-NEXT:    mul z2.s, p1/m, z2.s, z0.s
 ; CHECK-NEXT:    movprfx z3, z1
-; CHECK-NEXT:    mul z3.s, p0/m, z3.s, z1.s
+; CHECK-NEXT:    mul z3.s, p1/m, z3.s, z1.s
 ; CHECK-NEXT:    eor z0.d, z2.d, z0.d
 ; CHECK-NEXT:    eor z1.d, z3.d, z1.d
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
@@ -188,13 +190,14 @@ define void @scalable_v4i8(ptr noalias nocapture noundef %l0) {
 define void @scalable_v2i8(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: scalable_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sb { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z0.d
+; CHECK-NEXT:    mul z2.d, p1/m, z2.d, z0.d
 ; CHECK-NEXT:    movprfx z3, z1
-; CHECK-NEXT:    mul z3.d, p0/m, z3.d, z1.d
+; CHECK-NEXT:    mul z3.d, p1/m, z3.d, z1.d
 ; CHECK-NEXT:    eor z0.d, z2.d, z0.d
 ; CHECK-NEXT:    eor z1.d, z3.d, z1.d
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
@@ -221,13 +224,14 @@ define void @scalable_v2i8(ptr noalias nocapture noundef %l0) {
 define void @scalable_v4i16(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: scalable_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.s, p0/m, z2.s, z0.s
+; CHECK-NEXT:    mul z2.s, p1/m, z2.s, z0.s
 ; CHECK-NEXT:    movprfx z3, z1
-; CHECK-NEXT:    mul z3.s, p0/m, z3.s, z1.s
+; CHECK-NEXT:    mul z3.s, p1/m, z3.s, z1.s
 ; CHECK-NEXT:    eor z0.d, z2.d, z0.d
 ; CHECK-NEXT:    eor z1.d, z3.d, z1.d
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
@@ -254,13 +258,14 @@ define void @scalable_v4i16(ptr noalias nocapture noundef %l0) {
 define void @scalable_v2i16(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: scalable_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sh { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z0.d
+; CHECK-NEXT:    mul z2.d, p1/m, z2.d, z0.d
 ; CHECK-NEXT:    movprfx z3, z1
-; CHECK-NEXT:    mul z3.d, p0/m, z3.d, z1.d
+; CHECK-NEXT:    mul z3.d, p1/m, z3.d, z1.d
 ; CHECK-NEXT:    eor z0.d, z2.d, z0.d
 ; CHECK-NEXT:    eor z1.d, z3.d, z1.d
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
@@ -287,13 +292,14 @@ define void @scalable_v2i16(ptr noalias nocapture noundef %l0) {
 define void @scalable_v2i32(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: scalable_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1sw { z1.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    movprfx z2, z0
-; CHECK-NEXT:    mul z2.d, p0/m, z2.d, z0.d
+; CHECK-NEXT:    mul z2.d, p1/m, z2.d, z0.d
 ; CHECK-NEXT:    movprfx z3, z1
-; CHECK-NEXT:    mul z3.d, p0/m, z3.d, z1.d
+; CHECK-NEXT:    mul z3.d, p1/m, z3.d, z1.d
 ; CHECK-NEXT:    eor z0.d, z2.d, z0.d
 ; CHECK-NEXT:    eor z1.d, z3.d, z1.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
@@ -350,17 +356,18 @@ define void @negative_tooshort_v16i8(ptr noalias nocapture noundef %l0) {
 define void @negative_scalable_v2i8(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: negative_scalable_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    rdvl x8, #1
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z0.d
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, x8]
 ; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z0.d
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0, x8]
 ; CHECK-NEXT:    ret
@@ -385,17 +392,18 @@ define void @negative_scalable_v2i8(ptr noalias nocapture noundef %l0) {
 define void @negative_scalable_v2i16(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: negative_scalable_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z0.d
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z0.d
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x8]
 ; CHECK-NEXT:    ret
@@ -420,17 +428,18 @@ define void @negative_scalable_v2i16(ptr noalias nocapture noundef %l0) {
 define void @negative_scalable_v2i32(ptr noalias nocapture noundef %l0) {
 ; CHECK-LABEL: negative_scalable_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cntw x8
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z0.d
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    mul z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    mul z1.d, p1/m, z1.d, z0.d
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x8]
 ; CHECK-NEXT:    ret

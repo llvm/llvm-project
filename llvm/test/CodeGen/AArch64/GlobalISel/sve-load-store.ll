@@ -16,7 +16,7 @@ define void @scalable_v16i8(ptr %l0, ptr %l1) {
 define void @scalable_v8i16(ptr %l0, ptr %l1) {
 ; CHECK-LABEL: scalable_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -28,7 +28,7 @@ define void @scalable_v8i16(ptr %l0, ptr %l1) {
 define void @scalable_v4i32(ptr %l0, ptr %l1) {
 ; CHECK-LABEL: scalable_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
@@ -40,7 +40,7 @@ define void @scalable_v4i32(ptr %l0, ptr %l1) {
 define void @scalable_v2i64(ptr %l0, ptr %l1) {
 ; CHECK-LABEL: scalable_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
 ; CHECK-NEXT:    ret

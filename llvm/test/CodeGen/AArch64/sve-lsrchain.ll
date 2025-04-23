@@ -50,9 +50,9 @@ define void @test(ptr nocapture noundef readonly %kernel, i32 noundef %kw, float
 ; CHECK-NEXT:    fmad z4.h, p0/m, z0.h, z5.h
 ; CHECK-NEXT:    ld1b { z5.b }, p1/z, [x16, x15]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z1.h
-; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x12, lsl #1]
+; CHECK-NEXT:    ld1h { z5.h }, p1/z, [x17, x12, lsl #1]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z2.h
-; CHECK-NEXT:    ld1h { z5.h }, p0/z, [x17, x13, lsl #1]
+; CHECK-NEXT:    ld1h { z5.h }, p1/z, [x17, x13, lsl #1]
 ; CHECK-NEXT:    fmla z4.h, p0/m, z5.h, z3.h
 ; CHECK-NEXT:    ldr z5, [x16, #1, mul vl]
 ; CHECK-NEXT:    str z4, [x16]

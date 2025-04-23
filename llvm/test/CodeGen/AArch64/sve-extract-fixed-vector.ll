@@ -343,7 +343,7 @@ define void @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, ptr %p) nounwi
 define <4 x i32> @typesize_regression_test_v4i32(ptr %addr, i64 %idx) {
 ; CHECK-LABEL: typesize_regression_test_v4i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret

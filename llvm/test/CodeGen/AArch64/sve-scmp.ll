@@ -4,9 +4,10 @@
 define <vscale x 8 x i8> @s_nxv8i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: s_nxv8i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmpgt p1.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    cmpgt p0.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    mov z0.h, p1/z, #1 // =0x1
@@ -34,9 +35,10 @@ entry:
 define <vscale x 4 x i16> @s_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: s_nxv4i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    cmpgt p1.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    mov z0.s, p1/z, #1 // =0x1
@@ -82,9 +84,10 @@ entry:
 define <vscale x 2 x i32> @s_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: s_nxv2i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cmpgt p1.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z1.d, z0.d
 ; CHECK-NEXT:    mov z0.d, p1/z, #1 // =0x1

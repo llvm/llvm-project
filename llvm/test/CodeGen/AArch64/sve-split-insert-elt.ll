@@ -8,7 +8,7 @@ define <vscale x 8 x i8> @promote_insert_8i8(<vscale x 8 x i8> %a, i8 %elt, i64 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    mov z2.h, w1
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, z2.h
 ; CHECK-NEXT:    mov z0.h, p0/m, w0
 ; CHECK-NEXT:    ret
@@ -99,7 +99,7 @@ define <vscale x 4 x i16> @promote_insert_4i16(<vscale x 4 x i16> %a, i16 %elt) 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #5 // =0x5
 ; CHECK-NEXT:    index z1.s, #0, #1
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, z2.s
 ; CHECK-NEXT:    mov z0.s, p0/m, w0

@@ -511,7 +511,7 @@ define void @quux() #1 {
 ; CHECK-NEXT:    mov p8.b, p0.b
 ; CHECK-NEXT:    pext { p3.s, p4.s }, pn8[0]
 ; CHECK-NEXT:    mov p0.b, p3.b
-; CHECK-NEXT:    ptrue p2.s
+; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
 ; CHECK-NEXT:    mov p1.b, p4.b
 ; CHECK-NEXT:    and p1.b, p1/z, p1.b, p2.b

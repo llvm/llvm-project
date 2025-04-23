@@ -142,8 +142,9 @@ define <vscale x 2 x i64> @abs_nxv2i64(<vscale x 2 x i64> %a) {
 define <vscale x 4 x i16> @abs_nxv4i16(<vscale x 4 x i16> %a) {
 ; CHECK-LABEL: abs_nxv4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    abs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %res = call <vscale x 4 x i16> @llvm.abs.nxv4i16(<vscale x 4 x i16> %a, i1 false)

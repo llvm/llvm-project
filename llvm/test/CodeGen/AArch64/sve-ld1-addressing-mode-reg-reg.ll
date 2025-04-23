@@ -50,7 +50,7 @@ define <vscale x 2 x i64> @ld1_nxv16i8_bitcast_to_i64(ptr %addr, i64 %off) {
 define <vscale x 8 x i16> @ld1_nxv8i16_zext8(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv8i16_zext8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
@@ -62,7 +62,7 @@ define <vscale x 8 x i16> @ld1_nxv8i16_zext8(ptr %addr, i64 %off) {
 define <vscale x 4 x i32> @ld1_nxv4i32_zext8(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4i32_zext8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
@@ -74,7 +74,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_zext8(ptr %addr, i64 %off) {
 define <vscale x 2 x i64> @ld1_nxv2i64_zext8(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2i64_zext8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
@@ -86,7 +86,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_zext8(ptr %addr, i64 %off) {
 define <vscale x 8 x i16> @ld1_nxv8i16_sext8(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv8i16_sext8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1sb { z0.h }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
@@ -98,7 +98,7 @@ define <vscale x 8 x i16> @ld1_nxv8i16_sext8(ptr %addr, i64 %off) {
 define <vscale x 4 x i32> @ld1_nxv4i32_sext8(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4i32_sext8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
@@ -110,7 +110,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_sext8(ptr %addr, i64 %off) {
 define <vscale x 2 x i64> @ld1_nxv2i64_sext8(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2i64_sext8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %off
@@ -124,7 +124,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_sext8(ptr %addr, i64 %off) {
 define <vscale x 8 x i16> @ld1_nxv8i16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
@@ -135,7 +135,7 @@ define <vscale x 8 x i16> @ld1_nxv8i16(ptr %addr, i64 %off) {
 define <vscale x 4 x i32> @ld1_nxv4i32_zext16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4i32_zext16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
@@ -147,7 +147,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_zext16(ptr %addr, i64 %off) {
 define <vscale x 2 x i64> @ld1_nxv2i64_zext16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2i64_zext16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
@@ -159,7 +159,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_zext16(ptr %addr, i64 %off) {
 define <vscale x 4 x i32> @ld1_nxv4i32_sext16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4i32_sext16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
@@ -171,7 +171,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32_sext16(ptr %addr, i64 %off) {
 define <vscale x 2 x i64> @ld1_nxv2i64_sext16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2i64_sext16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %off
@@ -183,7 +183,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_sext16(ptr %addr, i64 %off) {
 define <vscale x 8 x half> @ld1_nxv8f16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
@@ -194,7 +194,7 @@ define <vscale x 8 x half> @ld1_nxv8f16(ptr %addr, i64 %off) {
 define <vscale x 8 x bfloat> @ld1_nxv8bf16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
@@ -205,7 +205,7 @@ define <vscale x 8 x bfloat> @ld1_nxv8bf16(ptr %addr, i64 %off) {
 define <vscale x 4 x half> @ld1_nxv4f16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
@@ -216,7 +216,7 @@ define <vscale x 4 x half> @ld1_nxv4f16(ptr %addr, i64 %off) {
 define <vscale x 4 x bfloat> @ld1_nxv4bf16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
@@ -227,7 +227,7 @@ define <vscale x 4 x bfloat> @ld1_nxv4bf16(ptr %addr, i64 %off) {
 define <vscale x 2 x half> @ld1_nxv2f16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %off
@@ -238,7 +238,7 @@ define <vscale x 2 x half> @ld1_nxv2f16(ptr %addr, i64 %off) {
 define <vscale x 2 x bfloat> @ld1_nxv2bf16(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %off
@@ -251,7 +251,7 @@ define <vscale x 2 x bfloat> @ld1_nxv2bf16(ptr %addr, i64 %off) {
 define <vscale x 4 x i32> @ld1_nxv4i32(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
@@ -262,7 +262,7 @@ define <vscale x 4 x i32> @ld1_nxv4i32(ptr %addr, i64 %off) {
 define <vscale x 2 x i64> @ld1_nxv2i64_zext32(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2i64_zext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
@@ -274,7 +274,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_zext32(ptr %addr, i64 %off) {
 define <vscale x 2 x i64> @ld1_nxv2i64_sext32(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2i64_sext32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %off
@@ -286,7 +286,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64_sext32(ptr %addr, i64 %off) {
 define <vscale x 4 x float> @ld1_nxv4f32(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %off
@@ -297,7 +297,7 @@ define <vscale x 4 x float> @ld1_nxv4f32(ptr %addr, i64 %off) {
 define <vscale x 2 x float> @ld1_nxv2f32(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %off
@@ -310,7 +310,7 @@ define <vscale x 2 x float> @ld1_nxv2f32(ptr %addr, i64 %off) {
 define <vscale x 2 x i64> @ld1_nxv2i64(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i64, ptr %addr, i64 %off
@@ -321,7 +321,7 @@ define <vscale x 2 x i64> @ld1_nxv2i64(ptr %addr, i64 %off) {
 define <vscale x 2 x double> @ld1_nxv2f64(ptr %addr, i64 %off) {
 ; CHECK-LABEL: ld1_nxv2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds double, ptr %addr, i64 %off

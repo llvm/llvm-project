@@ -142,7 +142,7 @@ define i64 @vscale_4096_poison(<vscale x 16 x i8> %a) #1 {
 define i32 @ctz_nxv2i1(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cntp x0, p0, p0.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -154,7 +154,7 @@ define i32 @ctz_nxv2i1(<vscale x 2 x i1> %a) {
 define i32 @ctz_nxv2i1_poison(<vscale x 2 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv2i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cntp x0, p0, p0.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -166,7 +166,7 @@ define i32 @ctz_nxv2i1_poison(<vscale x 2 x i1> %a) {
 define i64 @add_i64_ctz_nxv2i1_poison(<vscale x 2 x i1> %a, i64 %b) {
 ; CHECK-LABEL: add_i64_ctz_nxv2i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    incp x0, p0.d
 ; CHECK-NEXT:    ret
@@ -178,7 +178,7 @@ define i64 @add_i64_ctz_nxv2i1_poison(<vscale x 2 x i1> %a, i64 %b) {
 define i32 @add_i32_ctz_nxv2i1_poison(<vscale x 2 x i1> %a, i32 %b) {
 ; CHECK-LABEL: add_i32_ctz_nxv2i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    incp x0, p0.d
@@ -193,7 +193,7 @@ define i32 @add_i32_ctz_nxv2i1_poison(<vscale x 2 x i1> %a, i32 %b) {
 define i32 @ctz_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cntp x0, p0, p0.s
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -205,7 +205,7 @@ define i32 @ctz_nxv4i1(<vscale x 4 x i1> %a) {
 define i32 @ctz_nxv4i1_poison(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv4i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cntp x0, p0, p0.s
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -217,7 +217,7 @@ define i32 @ctz_nxv4i1_poison(<vscale x 4 x i1> %a) {
 define i64 @add_i64_ctz_nxv4i1_poison(<vscale x 4 x i1> %a, i64 %b) {
 ; CHECK-LABEL: add_i64_ctz_nxv4i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    incp x0, p0.s
 ; CHECK-NEXT:    ret
@@ -229,7 +229,7 @@ define i64 @add_i64_ctz_nxv4i1_poison(<vscale x 4 x i1> %a, i64 %b) {
 define i32 @add_i32_ctz_nxv4i1_poison(<vscale x 4 x i1> %a, i32 %b) {
 ; CHECK-LABEL: add_i32_ctz_nxv4i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    incp x0, p0.s
@@ -244,7 +244,7 @@ define i32 @add_i32_ctz_nxv4i1_poison(<vscale x 4 x i1> %a, i32 %b) {
 define i32 @ctz_nxv8i1(<vscale x 8 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cntp x0, p0, p0.h
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -256,7 +256,7 @@ define i32 @ctz_nxv8i1(<vscale x 8 x i1> %a) {
 define i32 @ctz_nxv8i1_poison(<vscale x 8 x i1> %a) {
 ; CHECK-LABEL: ctz_nxv8i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cntp x0, p0, p0.h
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
@@ -268,7 +268,7 @@ define i32 @ctz_nxv8i1_poison(<vscale x 8 x i1> %a) {
 define i64 @add_i64_ctz_nxv8i1_poison(<vscale x 8 x i1> %a, i64 %b) {
 ; CHECK-LABEL: add_i64_ctz_nxv8i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    incp x0, p0.h
 ; CHECK-NEXT:    ret
@@ -280,7 +280,7 @@ define i64 @add_i64_ctz_nxv8i1_poison(<vscale x 8 x i1> %a, i64 %b) {
 define i32 @add_i32_ctz_nxv8i1_poison(<vscale x 8 x i1> %a, i32 %b) {
 ; CHECK-LABEL: add_i32_ctz_nxv8i1_poison:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
 ; CHECK-NEXT:    incp x0, p0.h
@@ -510,7 +510,7 @@ define i32 @ctz_v4i1(<4 x i1> %a) {
 ; NONSTREAMING:       // %bb.0:
 ; NONSTREAMING-NEXT:    shl v0.4h, v0.4h, #15
 ; NONSTREAMING-NEXT:    ptrue p0.h, vl4
-; NONSTREAMING-NEXT:    ptrue p1.h
+; NONSTREAMING-NEXT:    ptrue p1.b
 ; NONSTREAMING-NEXT:    cmlt v0.4h, v0.4h, #0
 ; NONSTREAMING-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; NONSTREAMING-NEXT:    brkb p0.b, p1/z, p0.b
@@ -523,7 +523,7 @@ define i32 @ctz_v4i1(<4 x i1> %a) {
 ; STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; STREAMING-NEXT:    ptrue p0.h, vl4
 ; STREAMING-NEXT:    lsl z0.h, z0.h, #15
-; STREAMING-NEXT:    ptrue p1.h
+; STREAMING-NEXT:    ptrue p1.b
 ; STREAMING-NEXT:    asr z0.h, z0.h, #15
 ; STREAMING-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; STREAMING-NEXT:    brkb p0.b, p1/z, p0.b
@@ -539,7 +539,7 @@ define i32 @ctz_v4i1_poison(<4 x i1> %a) {
 ; NONSTREAMING:       // %bb.0:
 ; NONSTREAMING-NEXT:    shl v0.4h, v0.4h, #15
 ; NONSTREAMING-NEXT:    ptrue p0.h, vl4
-; NONSTREAMING-NEXT:    ptrue p1.h
+; NONSTREAMING-NEXT:    ptrue p1.b
 ; NONSTREAMING-NEXT:    cmlt v0.4h, v0.4h, #0
 ; NONSTREAMING-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; NONSTREAMING-NEXT:    brkb p0.b, p1/z, p0.b
@@ -552,7 +552,7 @@ define i32 @ctz_v4i1_poison(<4 x i1> %a) {
 ; STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; STREAMING-NEXT:    ptrue p0.h, vl4
 ; STREAMING-NEXT:    lsl z0.h, z0.h, #15
-; STREAMING-NEXT:    ptrue p1.h
+; STREAMING-NEXT:    ptrue p1.b
 ; STREAMING-NEXT:    asr z0.h, z0.h, #15
 ; STREAMING-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; STREAMING-NEXT:    brkb p0.b, p1/z, p0.b
@@ -568,7 +568,7 @@ define i32 @ctz_v2i1(<2 x i1> %a) {
 ; NONSTREAMING:       // %bb.0:
 ; NONSTREAMING-NEXT:    shl v0.2s, v0.2s, #31
 ; NONSTREAMING-NEXT:    ptrue p0.s, vl2
-; NONSTREAMING-NEXT:    ptrue p1.s
+; NONSTREAMING-NEXT:    ptrue p1.b
 ; NONSTREAMING-NEXT:    cmlt v0.2s, v0.2s, #0
 ; NONSTREAMING-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; NONSTREAMING-NEXT:    brkb p0.b, p1/z, p0.b
@@ -581,7 +581,7 @@ define i32 @ctz_v2i1(<2 x i1> %a) {
 ; STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; STREAMING-NEXT:    ptrue p0.s, vl2
 ; STREAMING-NEXT:    lsl z0.s, z0.s, #31
-; STREAMING-NEXT:    ptrue p1.s
+; STREAMING-NEXT:    ptrue p1.b
 ; STREAMING-NEXT:    asr z0.s, z0.s, #31
 ; STREAMING-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; STREAMING-NEXT:    brkb p0.b, p1/z, p0.b
@@ -597,7 +597,7 @@ define i32 @ctz_v2i1_poison(<2 x i1> %a) {
 ; NONSTREAMING:       // %bb.0:
 ; NONSTREAMING-NEXT:    shl v0.2s, v0.2s, #31
 ; NONSTREAMING-NEXT:    ptrue p0.s, vl2
-; NONSTREAMING-NEXT:    ptrue p1.s
+; NONSTREAMING-NEXT:    ptrue p1.b
 ; NONSTREAMING-NEXT:    cmlt v0.2s, v0.2s, #0
 ; NONSTREAMING-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; NONSTREAMING-NEXT:    brkb p0.b, p1/z, p0.b
@@ -610,7 +610,7 @@ define i32 @ctz_v2i1_poison(<2 x i1> %a) {
 ; STREAMING-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; STREAMING-NEXT:    ptrue p0.s, vl2
 ; STREAMING-NEXT:    lsl z0.s, z0.s, #31
-; STREAMING-NEXT:    ptrue p1.s
+; STREAMING-NEXT:    ptrue p1.b
 ; STREAMING-NEXT:    asr z0.s, z0.s, #31
 ; STREAMING-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; STREAMING-NEXT:    brkb p0.b, p1/z, p0.b

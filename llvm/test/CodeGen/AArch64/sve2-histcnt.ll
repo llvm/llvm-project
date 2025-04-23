@@ -368,9 +368,10 @@ define void @histogram_zext_from_i16_to_i64(ptr %base, <vscale x 4 x i16> %indic
 define void @histogram_sext_from_i16_to_i64(ptr %base, <vscale x 4 x i16> %indices, <vscale x 4 x i1> %mask) #0{
 ; CHECK-LABEL: histogram_sext_from_i16_to_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    mov z3.s, #1 // =0x1
 ; CHECK-NEXT:    sxth z0.s, p1/m, z0.s
+; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    histcnt z1.s, p0/z, z0.s, z0.s
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0, z0.s, sxtw #2]
 ; CHECK-NEXT:    mad z1.s, p1/m, z3.s, z2.s

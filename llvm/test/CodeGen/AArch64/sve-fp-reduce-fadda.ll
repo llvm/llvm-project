@@ -52,7 +52,7 @@ define half @fadda_nxv6f16(<vscale x 6 x half> %v, half %s) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    fmov s0, s1
@@ -79,7 +79,7 @@ define half @fadda_nxv10f16(<vscale x 10 x half> %v, half %s) {
 ; CHECK-NEXT:    // kill: def $h2 killed $h2 def $z2
 ; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    str z1, [sp]
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    fadda h2, p0, h2, z0.h
 ; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    addvl x8, sp, #1

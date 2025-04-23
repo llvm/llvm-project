@@ -7,7 +7,7 @@ target triple = "aarch64"
 define <vscale x 4 x double> @mull_add(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c) {
 ; CHECK-LABEL: mull_add:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcmla z4.d, p0/m, z0.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z5.d, p0/m, z1.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z4.d, p0/m, z0.d, z2.d, #90
@@ -43,7 +43,7 @@ define <vscale x 4 x double> @mul_add_mull(<vscale x 4 x double> %a, <vscale x 4
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v24.2d, #0000000000000000
 ; CHECK-NEXT:    movi v25.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
@@ -92,7 +92,7 @@ define <vscale x 4 x double> @mul_sub_mull(<vscale x 4 x double> %a, <vscale x 4
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v24.2d, #0000000000000000
 ; CHECK-NEXT:    movi v25.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #270
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #270
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
@@ -141,7 +141,7 @@ define <vscale x 4 x double> @mul_conj_mull(<vscale x 4 x double> %a, <vscale x 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v24.2d, #0000000000000000
 ; CHECK-NEXT:    movi v25.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90

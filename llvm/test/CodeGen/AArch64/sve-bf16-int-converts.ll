@@ -448,8 +448,9 @@ define <vscale x 2 x bfloat> @sitofp_nxv2i1_to_nxv2bf16(<vscale x 2 x i1> %a) {
 define <vscale x 2 x bfloat> @sitofp_nxv2i8_to_nxv2bf16(<vscale x 2 x i8> %a) {
 ; CHECK-LABEL: sitofp_nxv2i8_to_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ret
@@ -460,8 +461,9 @@ define <vscale x 2 x bfloat> @sitofp_nxv2i8_to_nxv2bf16(<vscale x 2 x i8> %a) {
 define <vscale x 2 x bfloat> @sitofp_nxv2i16_to_nxv2bf16(<vscale x 2 x i16> %a) {
 ; CHECK-LABEL: sitofp_nxv2i16_to_nxv2bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.d, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.d
 ; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ret
@@ -510,8 +512,9 @@ define <vscale x 4 x bfloat> @sitofp_nxv4i1_to_nxv4bf16(<vscale x 4 x i1> %a) {
 define <vscale x 4 x bfloat> @sitofp_nxv4i8_to_nxv4bf16(<vscale x 4 x i8> %a) {
 ; CHECK-LABEL: sitofp_nxv4i8_to_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ret
@@ -522,8 +525,9 @@ define <vscale x 4 x bfloat> @sitofp_nxv4i8_to_nxv4bf16(<vscale x 4 x i8> %a) {
 define <vscale x 4 x bfloat> @sitofp_nxv4i16_to_nxv4bf16(<vscale x 4 x i16> %a) {
 ; CHECK-LABEL: sitofp_nxv4i16_to_nxv4bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    scvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    bfcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    ret
@@ -575,7 +579,7 @@ define <vscale x 8 x bfloat> @sitofp_nxv8i1_to_nxv8bf16(<vscale x 8 x i1> %a) {
 define <vscale x 8 x bfloat> @sitofp_nxv8i8_to_nxv8bf16(<vscale x 8 x i8> %a) {
 ; CHECK-LABEL: sitofp_nxv8i8_to_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    sunpkhi z1.s, z0.h

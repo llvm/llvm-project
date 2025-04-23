@@ -83,9 +83,10 @@ define <vscale x 8 x i32> @sdiv_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i
 define <vscale x 2 x i32> @sdiv_widen_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: sdiv_widen_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    sdiv z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %div = sdiv <vscale x 2 x i32> %a, %b
@@ -459,9 +460,10 @@ define <vscale x 4 x i64> @smin_split_i64(<vscale x 4 x i64> %a, <vscale x 4 x i
 define <vscale x 8 x i8> @smin_promote_i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: smin_promote_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <vscale x 8 x i8> %a, %b
@@ -472,9 +474,10 @@ define <vscale x 8 x i8> @smin_promote_i8(<vscale x 8 x i8> %a, <vscale x 8 x i8
 define <vscale x 4 x i16> @smin_promote_i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: smin_promote_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <vscale x 4 x i16> %a, %b
@@ -485,9 +488,10 @@ define <vscale x 4 x i16> @smin_promote_i16(<vscale x 4 x i16> %a, <vscale x 4 x
 define <vscale x 2 x i32> @smin_promote_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: smin_promote_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %cmp = icmp slt <vscale x 2 x i32> %a, %b
@@ -631,9 +635,10 @@ define <vscale x 8 x i32> @smax_split_i32(<vscale x 8 x i32> %a, <vscale x 8 x i
 define <vscale x 4 x i16> @smax_promote_i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: smax_promote_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %cmp = icmp sgt <vscale x 4 x i16> %a, %b
@@ -772,9 +777,10 @@ define <vscale x 16 x i16> @asr_split_i16(<vscale x 16 x i16> %a, <vscale x 16 x
 define <vscale x 2 x i32> @asr_promote_i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b){
 ; CHECK-LABEL: asr_promote_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    asr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %shr = ashr <vscale x 2 x i32> %a, %b

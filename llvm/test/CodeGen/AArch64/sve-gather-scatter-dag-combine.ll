@@ -31,7 +31,7 @@ define <vscale x 2 x i64> @no_dag_combine_sext(<vscale x 2 x i1> %pg,
 ; CHECK-LABEL: no_dag_combine_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z1.d }, p0/z, [z0.d, #16]
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z1.d
 ; CHECK-NEXT:    st1b { z1.d }, p1, [x0]
@@ -76,7 +76,7 @@ define <vscale x 2 x i64> @no_dag_combine_zext(<vscale x 2 x i1> %pg,
 define <vscale x 16 x i8> @narrow_i64_gather_index_i8_zext(ptr %out, ptr %in, <vscale x 16 x i8> %d, i64 %ptr){
 ; CHECK-LABEL: narrow_i64_gather_index_i8_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x1, x2
 ; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x8, #3, mul vl]
 ; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x8, #2, mul vl]
@@ -102,7 +102,7 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_zext(ptr %out, ptr %in, <v
 define <vscale x 16 x i8> @narrow_i64_gather_index_i8_sext(ptr %out, ptr %in, <vscale x 16 x i8> %d, i64 %ptr){
 ; CHECK-LABEL: narrow_i64_gather_index_i8_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x1, x2
 ; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x8, #3, mul vl]
 ; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x8, #2, mul vl]
@@ -128,7 +128,7 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_sext(ptr %out, ptr %in, <v
 define <vscale x 8 x i16> @narrow_i64_gather_index_i16_zext(ptr %out, ptr %in, <vscale x 8 x i16> %d, i64 %ptr){
 ; CHECK-LABEL: narrow_i64_gather_index_i16_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x1, x2, lsl #1
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x8, #1, mul vl]
@@ -148,7 +148,7 @@ define <vscale x 8 x i16> @narrow_i64_gather_index_i16_zext(ptr %out, ptr %in, <
 define <vscale x 8 x i16> @narrow_i64_gather_index_i16_sext(ptr %out, ptr %in, <vscale x 8 x i16> %d, i64 %ptr){
 ; CHECK-LABEL: narrow_i64_gather_index_i16_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x1, x2, lsl #1
 ; CHECK-NEXT:    ld1sh { z0.s }, p0/z, [x1, x2, lsl #1]
 ; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x8, #1, mul vl]
@@ -168,7 +168,7 @@ define <vscale x 8 x i16> @narrow_i64_gather_index_i16_sext(ptr %out, ptr %in, <
 define <vscale x 4 x i32> @no_narrow_i64_gather_index_i32(ptr %out, ptr %in, <vscale x 4 x i32> %d, i64 %ptr){
 ; CHECK-LABEL: no_narrow_i64_gather_index_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1, x2, lsl #2]
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x1, z0.s, uxtw #2]
 ; CHECK-NEXT:    ret
@@ -184,7 +184,7 @@ define <vscale x 4 x i32> @no_narrow_i64_gather_index_i32(ptr %out, ptr %in, <vs
 define <vscale x 2 x i64> @no_narrow_i64_gather_index_i64(ptr %out, ptr %in, <vscale x 2 x i64> %d, i64 %ptr){
 ; CHECK-LABEL: no_narrow_i64_gather_index_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1, x2, lsl #3]
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1, z0.d, lsl #3]
 ; CHECK-NEXT:    ret

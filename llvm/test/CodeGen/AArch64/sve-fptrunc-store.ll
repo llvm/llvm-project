@@ -7,6 +7,7 @@ define void @fptrunc2_f64_f32(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -22,6 +23,7 @@ define void @fptrunc2_f64_f16(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -37,6 +39,7 @@ define void @fptrunc4_f32_f16(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    ldr z0, [x1]
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:
@@ -49,9 +52,10 @@ entry:
 define void @fptrunc2_f32_f16(ptr %dst, ptr %src) {
 ; CHECK-LABEL: fptrunc2_f32_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x1]
-; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
+; CHECK-NEXT:    fcvt z0.h, p1/m, z0.s
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
 entry:

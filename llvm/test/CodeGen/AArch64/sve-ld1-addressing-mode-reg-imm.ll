@@ -92,10 +92,9 @@ define <vscale x 2 x i64> @ld1d_inbound(ptr %a) {
 define void @load_nxv6f16(ptr %a) {
 ; CHECK-LABEL: load_nxv6f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1h { z0.s }, p1/z, [x0]
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load volatile <vscale x 6 x half>, ptr %a
   ret void
@@ -104,7 +103,7 @@ define void @load_nxv6f16(ptr %a) {
 define void @load_nxv6f32(ptr %a) {
 ; CHECK-LABEL: load_nxv6f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret
@@ -115,7 +114,7 @@ define void @load_nxv6f32(ptr %a) {
 define void @load_nxv12f16(ptr %a) {
 ; CHECK-LABEL: load_nxv12f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0, #2, mul vl]
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret

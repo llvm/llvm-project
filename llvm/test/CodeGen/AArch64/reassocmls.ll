@@ -268,13 +268,14 @@ define <8 x i16> @mla_v8i16_C(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c, <8 x i16
 define <vscale x 8 x i16> @smlsl_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c, <vscale x 8 x i8> %d, <vscale x 8 x i8> %e) {
 ; CHECK-LABEL: smlsl_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    sxtb z3.h, p0/m, z3.h
 ; CHECK-NEXT:    sxtb z4.h, p0/m, z4.h
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
-; CHECK-NEXT:    mls z0.h, p0/m, z4.h, z3.h
-; CHECK-NEXT:    mls z0.h, p0/m, z2.h, z1.h
+; CHECK-NEXT:    mls z0.h, p1/m, z4.h, z3.h
+; CHECK-NEXT:    mls z0.h, p1/m, z2.h, z1.h
 ; CHECK-NEXT:    ret
   %be = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
   %ce = sext <vscale x 8 x i8> %c to <vscale x 8 x i16>

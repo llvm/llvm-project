@@ -51,7 +51,7 @@ if.end:
 define void @sve_cmplt_setcc_hslo(ptr %out, <vscale x 8 x i16> %in, <vscale x 8 x i1> %pg) {
 ; CHECK-LABEL: sve_cmplt_setcc_hslo:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p1.h
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cmplt p2.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    and p1.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ptest p1, p2.b

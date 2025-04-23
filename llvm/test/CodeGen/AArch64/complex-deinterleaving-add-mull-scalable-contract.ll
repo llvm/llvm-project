@@ -54,7 +54,7 @@ define <vscale x 4 x double> @mul_add_mull(<vscale x 4 x double> %a, <vscale x 4
 ; CHECK-NEXT:    movi v25.2d, #0000000000000000
 ; CHECK-NEXT:    movi v26.2d, #0000000000000000
 ; CHECK-NEXT:    movi v27.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z2.d, z0.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z3.d, z1.d, #0
 ; CHECK-NEXT:    fcmla z27.d, p0/m, z6.d, z4.d, #0
@@ -105,7 +105,7 @@ define <vscale x 4 x double> @mul_sub_mull(<vscale x 4 x double> %a, <vscale x 4
 ; CHECK-NEXT:    movi v25.2d, #0000000000000000
 ; CHECK-NEXT:    movi v26.2d, #0000000000000000
 ; CHECK-NEXT:    movi v27.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z2.d, z0.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z3.d, z1.d, #0
 ; CHECK-NEXT:    fcmla z27.d, p0/m, z6.d, z4.d, #0
@@ -156,7 +156,7 @@ define <vscale x 4 x double> @mul_conj_mull(<vscale x 4 x double> %a, <vscale x 
 ; CHECK-NEXT:    movi v25.2d, #0000000000000000
 ; CHECK-NEXT:    movi v26.2d, #0000000000000000
 ; CHECK-NEXT:    movi v27.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z2.d, z0.d, #0
 ; CHECK-NEXT:    fcmla z25.d, p0/m, z3.d, z1.d, #0
 ; CHECK-NEXT:    fcmla z27.d, p0/m, z4.d, z6.d, #0

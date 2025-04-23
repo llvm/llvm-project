@@ -19,7 +19,7 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ldr q1, [x1]
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    strb w8, [sp, #12]
 ; CHECK-NEXT:    and w8, w8, #0xff

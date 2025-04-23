@@ -174,7 +174,7 @@ entry:
 define <vscale x 2 x i32> @signed_wide_add_nxv4i16(<vscale x 2 x i32> %acc, <vscale x 4 x i16> %input){
 ; CHECK-LABEL: signed_wide_add_nxv4i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
 ; CHECK-NEXT:    uunpklo z2.d, z1.s
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s

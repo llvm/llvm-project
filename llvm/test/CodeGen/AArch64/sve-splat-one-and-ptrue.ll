@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 16 x i1> @fold_away_ptrue_and_ptrue() #0 {
 ; CHECK-LABEL: fold_away_ptrue_and_ptrue:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %1)
@@ -20,7 +20,7 @@ define <vscale x 16 x i1> @fold_away_ptrue_and_ptrue() #0 {
 define <vscale x 16 x i1> @fold_away_ptrue_and_splat_predicate() #0 {
 ; CHECK-LABEL: fold_away_ptrue_and_splat_predicate:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> splat(i1 true))
   %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
@@ -32,8 +32,8 @@ define <vscale x 16 x i1> @fold_away_ptrue_and_splat_predicate() #0 {
 define <vscale x 16 x i1> @fold_away_ptrue_and_convert_to() #0 {
 ; CHECK-LABEL: fold_away_ptrue_and_convert_to:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)

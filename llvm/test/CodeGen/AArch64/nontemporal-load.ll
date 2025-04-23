@@ -621,7 +621,7 @@ define <vscale x 20 x float> @test_ldnp_v20f32_vscale(ptr %A) {
 ;
 ; CHECK-BE-LABEL: test_ldnp_v20f32_vscale:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ptrue p0.s
+; CHECK-BE-NEXT:    ptrue p0.b
 ; CHECK-BE-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-BE-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
 ; CHECK-BE-NEXT:    ld1w { z2.s }, p0/z, [x0, #2, mul vl]

@@ -94,7 +94,7 @@ define <vscale x 16 x i8> @ld1rb_gep_out_of_range_down(ptr %valp) {
 define <vscale x 8 x i16> @ld1rb_i8_i16_zext(ptr %valp) {
 ; CHECK-LABEL: ld1rb_i8_i16_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rb { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
@@ -107,7 +107,7 @@ define <vscale x 8 x i16> @ld1rb_i8_i16_zext(ptr %valp) {
 define <vscale x 8 x i16> @ld1rb_i8_i16_sext(ptr %valp) {
 ; CHECK-LABEL: ld1rb_i8_i16_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rsb { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
@@ -120,7 +120,7 @@ define <vscale x 8 x i16> @ld1rb_i8_i16_sext(ptr %valp) {
 define <vscale x 4 x i32> @ld1rb_i8_i32_zext(ptr %valp) {
 ; CHECK-LABEL: ld1rb_i8_i32_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rb { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
@@ -133,7 +133,7 @@ define <vscale x 4 x i32> @ld1rb_i8_i32_zext(ptr %valp) {
 define <vscale x 4 x i32> @ld1rb_i8_i32_sext(ptr %valp) {
 ; CHECK-LABEL: ld1rb_i8_i32_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rsb { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
@@ -146,7 +146,7 @@ define <vscale x 4 x i32> @ld1rb_i8_i32_sext(ptr %valp) {
 define <vscale x 2 x i64> @ld1rb_i8_i64_zext(ptr %valp) {
 ; CHECK-LABEL: ld1rb_i8_i64_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
@@ -159,7 +159,7 @@ define <vscale x 2 x i64> @ld1rb_i8_i64_zext(ptr %valp) {
 define <vscale x 2 x i64> @ld1rb_i8_i64_sext(ptr %valp) {
 ; CHECK-LABEL: ld1rb_i8_i64_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i8, ptr %valp
@@ -172,7 +172,7 @@ define <vscale x 2 x i64> @ld1rb_i8_i64_sext(ptr %valp) {
 define <vscale x 8 x i16> @ld1rh(ptr %valp) {
 ; CHECK-LABEL: ld1rh:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
@@ -184,7 +184,7 @@ define <vscale x 8 x i16> @ld1rh(ptr %valp) {
 define <vscale x 8 x i16> @ld1rh_gep(ptr %valp) {
 ; CHECK-LABEL: ld1rh_gep:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x0, #126]
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i16, ptr %valp, i32 63
@@ -197,7 +197,7 @@ define <vscale x 8 x i16> @ld1rh_gep(ptr %valp) {
 define <vscale x 8 x i16> @ld1rh_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LABEL: ld1rh_gep_out_of_range_up:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x0, #128
 ; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
@@ -211,7 +211,7 @@ define <vscale x 8 x i16> @ld1rh_gep_out_of_range_up(ptr %valp) {
 define <vscale x 8 x i16> @ld1rh_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LABEL: ld1rh_gep_out_of_range_down:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sub x8, x0, #2
 ; CHECK-NEXT:    ld1rh { z0.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
@@ -225,7 +225,7 @@ define <vscale x 8 x i16> @ld1rh_gep_out_of_range_down(ptr %valp) {
 define <vscale x 4 x i32> @ld1rh_i16_i32_zext(ptr %valp) {
 ; CHECK-LABEL: ld1rh_i16_i32_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rh { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
@@ -238,7 +238,7 @@ define <vscale x 4 x i32> @ld1rh_i16_i32_zext(ptr %valp) {
 define <vscale x 4 x i32> @ld1rh_i16_i32_sext(ptr %valp) {
 ; CHECK-LABEL: ld1rh_i16_i32_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rsh { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
@@ -251,7 +251,7 @@ define <vscale x 4 x i32> @ld1rh_i16_i32_sext(ptr %valp) {
 define <vscale x 2 x i64> @ld1rh_i16_i64_zext(ptr %valp) {
 ; CHECK-LABEL: ld1rh_i16_i64_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rh { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
@@ -264,7 +264,7 @@ define <vscale x 2 x i64> @ld1rh_i16_i64_zext(ptr %valp) {
 define <vscale x 2 x i64> @ld1rh_i16_i64_sext(ptr %valp) {
 ; CHECK-LABEL: ld1rh_i16_i64_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rsh { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i16, ptr %valp
@@ -277,7 +277,7 @@ define <vscale x 2 x i64> @ld1rh_i16_i64_sext(ptr %valp) {
 define <vscale x 4 x i32> @ld1rw(ptr %valp) {
 ; CHECK-LABEL: ld1rw:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %valp
@@ -289,7 +289,7 @@ define <vscale x 4 x i32> @ld1rw(ptr %valp) {
 define <vscale x 4 x i32> @ld1rw_gep(ptr %valp) {
 ; CHECK-LABEL: ld1rw_gep:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x0, #252]
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i32, ptr %valp, i32 63
@@ -302,7 +302,7 @@ define <vscale x 4 x i32> @ld1rw_gep(ptr %valp) {
 define <vscale x 4 x i32> @ld1rw_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LABEL: ld1rw_gep_out_of_range_up:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x0, #256
 ; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x8]
 ; CHECK-NEXT:    ret
@@ -316,7 +316,7 @@ define <vscale x 4 x i32> @ld1rw_gep_out_of_range_up(ptr %valp) {
 define <vscale x 4 x i32> @ld1rw_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LABEL: ld1rw_gep_out_of_range_down:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sub x8, x0, #4
 ; CHECK-NEXT:    ld1rw { z0.s }, p0/z, [x8]
 ; CHECK-NEXT:    ret
@@ -330,7 +330,7 @@ define <vscale x 4 x i32> @ld1rw_gep_out_of_range_down(ptr %valp) {
 define <vscale x 2 x i64> @ld1rw_i32_i64_zext(ptr %valp) {
 ; CHECK-LABEL: ld1rw_i32_i64_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rw { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %valp
@@ -343,7 +343,7 @@ define <vscale x 2 x i64> @ld1rw_i32_i64_zext(ptr %valp) {
 define <vscale x 2 x i64> @ld1rw_i32_i64_sext(ptr %valp) {
 ; CHECK-LABEL: ld1rw_i32_i64_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rsw { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i32, ptr %valp
@@ -356,7 +356,7 @@ define <vscale x 2 x i64> @ld1rw_i32_i64_sext(ptr %valp) {
 define <vscale x 2 x i64> @ld1rd(ptr %valp) {
 ; CHECK-LABEL: ld1rd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %val = load i64, ptr %valp
@@ -368,7 +368,7 @@ define <vscale x 2 x i64> @ld1rd(ptr %valp) {
 define <vscale x 2 x i64> @ld1rd_gep(ptr %valp) {
 ; CHECK-LABEL: ld1rd_gep:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x0, #504]
 ; CHECK-NEXT:    ret
   %valp2 = getelementptr i64, ptr %valp, i32 63
@@ -381,7 +381,7 @@ define <vscale x 2 x i64> @ld1rd_gep(ptr %valp) {
 define <vscale x 2 x i64> @ld1rd_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LABEL: ld1rd_gep_out_of_range_up:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x0, #512
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
@@ -395,7 +395,7 @@ define <vscale x 2 x i64> @ld1rd_gep_out_of_range_up(ptr %valp) {
 define <vscale x 2 x i64> @ld1rd_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LABEL: ld1rd_gep_out_of_range_down:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sub x8, x0, #8
 ; CHECK-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
@@ -409,7 +409,7 @@ define <vscale x 2 x i64> @ld1rd_gep_out_of_range_down(ptr %valp) {
 define <vscale x 8 x half> @ld1rh_half(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.h
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rh { z0.h }, p0/z, [x0]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -439,7 +439,7 @@ define <vscale x 8 x half> @ld1rh_half_neoverse(ptr %valp) #1 {
 define <vscale x 8 x half> @ld1rh_half_gep(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_gep:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.h
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rh { z0.h }, p0/z, [x0, #126]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -458,7 +458,7 @@ define <vscale x 8 x half> @ld1rh_half_gep(ptr %valp) {
 define <vscale x 8 x half> @ld1rh_half_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_gep_out_of_range_up:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.h
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    add x8, x0, #128
 ; CHECK-LD1R-NEXT:    ld1rh { z0.h }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -478,7 +478,7 @@ define <vscale x 8 x half> @ld1rh_half_gep_out_of_range_up(ptr %valp) {
 define <vscale x 8 x half> @ld1rh_half_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_gep_out_of_range_down:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.h
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    sub x8, x0, #2
 ; CHECK-LD1R-NEXT:    ld1rh { z0.h }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -498,7 +498,7 @@ define <vscale x 8 x half> @ld1rh_half_gep_out_of_range_down(ptr %valp) {
 define <vscale x 4 x half> @ld1rh_half_unpacked4(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked4:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rh { z0.s }, p0/z, [x0]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -516,7 +516,7 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4(ptr %valp) {
 define <vscale x 4 x half> @ld1rh_half_unpacked4_gep(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked4_gep:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rh { z0.s }, p0/z, [x0, #126]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -535,7 +535,7 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4_gep(ptr %valp) {
 define <vscale x 4 x half> @ld1rh_half_unpacked4_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked4_gep_out_of_range_up:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    add x8, x0, #128
 ; CHECK-LD1R-NEXT:    ld1rh { z0.s }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -555,7 +555,7 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4_gep_out_of_range_up(ptr %valp) 
 define <vscale x 4 x half> @ld1rh_half_unpacked4_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked4_gep_out_of_range_down:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    sub x8, x0, #2
 ; CHECK-LD1R-NEXT:    ld1rh { z0.s }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -575,7 +575,7 @@ define <vscale x 4 x half> @ld1rh_half_unpacked4_gep_out_of_range_down(ptr %valp
 define <vscale x 2 x half> @ld1rh_half_unpacked2(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked2:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rh { z0.d }, p0/z, [x0]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -593,7 +593,7 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2(ptr %valp) {
 define <vscale x 2 x half> @ld1rh_half_unpacked2_gep(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked2_gep:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rh { z0.d }, p0/z, [x0, #126]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -612,7 +612,7 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2_gep(ptr %valp) {
 define <vscale x 2 x half> @ld1rh_half_unpacked2_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked2_gep_out_of_range_up:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    add x8, x0, #128
 ; CHECK-LD1R-NEXT:    ld1rh { z0.d }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -632,7 +632,7 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2_gep_out_of_range_up(ptr %valp) 
 define <vscale x 2 x half> @ld1rh_half_unpacked2_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rh_half_unpacked2_gep_out_of_range_down:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    sub x8, x0, #2
 ; CHECK-LD1R-NEXT:    ld1rh { z0.d }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -652,7 +652,7 @@ define <vscale x 2 x half> @ld1rh_half_unpacked2_gep_out_of_range_down(ptr %valp
 define <vscale x 4 x float> @ld1rw_float(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rw { z0.s }, p0/z, [x0]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -670,7 +670,7 @@ define <vscale x 4 x float> @ld1rw_float(ptr %valp) {
 define <vscale x 4 x float> @ld1rw_float_gep(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float_gep:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rw { z0.s }, p0/z, [x0, #252]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -689,7 +689,7 @@ define <vscale x 4 x float> @ld1rw_float_gep(ptr %valp) {
 define <vscale x 4 x float> @ld1rw_float_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float_gep_out_of_range_up:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    add x8, x0, #256
 ; CHECK-LD1R-NEXT:    ld1rw { z0.s }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -709,7 +709,7 @@ define <vscale x 4 x float> @ld1rw_float_gep_out_of_range_up(ptr %valp) {
 define <vscale x 4 x float> @ld1rw_float_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float_gep_out_of_range_down:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.s
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    sub x8, x0, #4
 ; CHECK-LD1R-NEXT:    ld1rw { z0.s }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -729,7 +729,7 @@ define <vscale x 4 x float> @ld1rw_float_gep_out_of_range_down(ptr %valp) {
 define <vscale x 2 x float> @ld1rw_float_unpacked2(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float_unpacked2:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rw { z0.d }, p0/z, [x0]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -747,7 +747,7 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2(ptr %valp) {
 define <vscale x 2 x float> @ld1rw_float_unpacked2_gep(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float_unpacked2_gep:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rw { z0.d }, p0/z, [x0, #252]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -766,7 +766,7 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2_gep(ptr %valp) {
 define <vscale x 2 x float> @ld1rw_float_unpacked2_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float_unpacked2_gep_out_of_range_up:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    add x8, x0, #256
 ; CHECK-LD1R-NEXT:    ld1rw { z0.d }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -786,7 +786,7 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2_gep_out_of_range_up(ptr %valp
 define <vscale x 2 x float> @ld1rw_float_unpacked2_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rw_float_unpacked2_gep_out_of_range_down:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    sub x8, x0, #4
 ; CHECK-LD1R-NEXT:    ld1rw { z0.d }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -806,7 +806,7 @@ define <vscale x 2 x float> @ld1rw_float_unpacked2_gep_out_of_range_down(ptr %va
 define <vscale x 2 x double> @ld1rd_double(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rd_double:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rd { z0.d }, p0/z, [x0]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -824,7 +824,7 @@ define <vscale x 2 x double> @ld1rd_double(ptr %valp) {
 define <vscale x 2 x double> @ld1rd_double_gep(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rd_double_gep:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    ld1rd { z0.d }, p0/z, [x0, #504]
 ; CHECK-LD1R-NEXT:    ret
 ;
@@ -843,7 +843,7 @@ define <vscale x 2 x double> @ld1rd_double_gep(ptr %valp) {
 define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_up(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rd_double_gep_out_of_range_up:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    add x8, x0, #512
 ; CHECK-LD1R-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -863,7 +863,7 @@ define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_up(ptr %valp) {
 define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_down(ptr %valp) {
 ; CHECK-LD1R-LABEL: ld1rd_double_gep_out_of_range_down:
 ; CHECK-LD1R:       // %bb.0:
-; CHECK-LD1R-NEXT:    ptrue p0.d
+; CHECK-LD1R-NEXT:    ptrue p0.b
 ; CHECK-LD1R-NEXT:    sub x8, x0, #8
 ; CHECK-LD1R-NEXT:    ld1rd { z0.d }, p0/z, [x8]
 ; CHECK-LD1R-NEXT:    ret
@@ -883,7 +883,7 @@ define <vscale x 2 x double> @ld1rd_double_gep_out_of_range_down(ptr %valp) {
 define <vscale x 2 x double> @dupq_ld1rqd_f64(ptr %a) {
 ; CHECK-LABEL: dupq_ld1rqd_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <2 x double>, ptr %a
@@ -895,7 +895,7 @@ define <vscale x 2 x double> @dupq_ld1rqd_f64(ptr %a) {
 define <vscale x 4 x float> @dupq_ld1rqw_f32(ptr %a) {
 ; CHECK-LABEL: dupq_ld1rqw_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <4 x float>, ptr %a
@@ -907,7 +907,7 @@ define <vscale x 4 x float> @dupq_ld1rqw_f32(ptr %a) {
 define <vscale x 8 x half> @dupq_ld1rqh_f16(ptr %a) {
 ; CHECK-LABEL: dupq_ld1rqh_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x half>, ptr %a
@@ -919,7 +919,7 @@ define <vscale x 8 x half> @dupq_ld1rqh_f16(ptr %a) {
 define <vscale x 8 x bfloat> @dupq_ld1rqh_bf16(ptr %a) #0 {
 ; CHECK-LABEL: dupq_ld1rqh_bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x bfloat>, ptr %a
@@ -931,7 +931,7 @@ define <vscale x 8 x bfloat> @dupq_ld1rqh_bf16(ptr %a) #0 {
 define <vscale x 2 x i64> @dupq_ld1rqd_i64(ptr %a) #0 {
 ; CHECK-LABEL: dupq_ld1rqd_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqd { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <2 x i64>, ptr %a
@@ -943,7 +943,7 @@ define <vscale x 2 x i64> @dupq_ld1rqd_i64(ptr %a) #0 {
 define <vscale x 4 x i32> @dupq_ld1rqw_i32(ptr %a) #0 {
 ; CHECK-LABEL: dupq_ld1rqw_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqw { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <4 x i32>, ptr %a
@@ -955,7 +955,7 @@ define <vscale x 4 x i32> @dupq_ld1rqw_i32(ptr %a) #0 {
 define <vscale x 8 x i16> @dupq_ld1rqw_i16(ptr %a) #0 {
 ; CHECK-LABEL: dupq_ld1rqw_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rqh { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %1 = load <8 x i16>, ptr %a
@@ -1414,7 +1414,7 @@ define <vscale x 2 x double> @negtest_dup_ld1rd_double_passthru_nxv2f64(<vscale 
 define ptr @avoid_preindex_load(ptr %src, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
 ; CHECK-NEXT:    add x0, x0, #1
 ; CHECK-NEXT:    str z0, [x1]

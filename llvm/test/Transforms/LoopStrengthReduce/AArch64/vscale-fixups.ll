@@ -63,7 +63,6 @@ define void @many_mulvl1_addressing(ptr %src_rows, ptr %dst_rows, i64 %stride, i
 ; COMMON-LABEL: many_mulvl1_addressing:
 ; COMMON:       // %bb.0: // %entry
 ; COMMON-NEXT:    ptrue p0.b
-; COMMON-NEXT:    ptrue p1.h
 ; COMMON-NEXT:  .LBB1_1: // %for.body
 ; COMMON-NEXT:    // =>This Inner Loop Header: Depth=1
 ; COMMON-NEXT:    add x8, x0, x2
@@ -75,8 +74,8 @@ define void @many_mulvl1_addressing(ptr %src_rows, ptr %dst_rows, i64 %stride, i
 ; COMMON-NEXT:    addvl x0, x0, #2
 ; COMMON-NEXT:    add z0.b, z0.b, z1.b
 ; COMMON-NEXT:    add z1.b, z2.b, z3.b
-; COMMON-NEXT:    st1b { z0.h }, p1, [x1]
-; COMMON-NEXT:    st1b { z1.h }, p1, [x1, #1, mul vl]
+; COMMON-NEXT:    st1b { z0.h }, p0, [x1]
+; COMMON-NEXT:    st1b { z1.h }, p0, [x1, #1, mul vl]
 ; COMMON-NEXT:    addvl x1, x1, #2
 ; COMMON-NEXT:    b.ne .LBB1_1
 ; COMMON-NEXT:  // %bb.2: // %for.exit
@@ -156,7 +155,7 @@ for.exit:
 define void @mixed_offsets_scalable_then_fixed(ptr %src, ptr %dst, i64 %count) #0 {
 ; BASE-LABEL: mixed_offsets_scalable_then_fixed:
 ; BASE:       // %bb.0: // %entry
-; BASE-NEXT:    ptrue p0.s
+; BASE-NEXT:    ptrue p0.b
 ; BASE-NEXT:    addvl x8, x0, #4
 ; BASE-NEXT:    mov x9, #8 // =0x8
 ; BASE-NEXT:  .LBB3_1: // %for.body
@@ -176,7 +175,7 @@ define void @mixed_offsets_scalable_then_fixed(ptr %src, ptr %dst, i64 %count) #
 ;
 ; PREINDEX-LABEL: mixed_offsets_scalable_then_fixed:
 ; PREINDEX:       // %bb.0: // %entry
-; PREINDEX-NEXT:    ptrue p0.s
+; PREINDEX-NEXT:    ptrue p0.b
 ; PREINDEX-NEXT:    addvl x8, x0, #4
 ; PREINDEX-NEXT:    mov x9, #8 // =0x8
 ; PREINDEX-NEXT:  .LBB3_1: // %for.body
@@ -196,7 +195,7 @@ define void @mixed_offsets_scalable_then_fixed(ptr %src, ptr %dst, i64 %count) #
 ;
 ; POSTINDEX-LABEL: mixed_offsets_scalable_then_fixed:
 ; POSTINDEX:       // %bb.0: // %entry
-; POSTINDEX-NEXT:    ptrue p0.s
+; POSTINDEX-NEXT:    ptrue p0.b
 ; POSTINDEX-NEXT:    mov x8, xzr
 ; POSTINDEX-NEXT:    addvl x9, x0, #4
 ; POSTINDEX-NEXT:    mov x10, #8 // =0x8
@@ -244,7 +243,7 @@ define void @mixed_offsets_fixed_then_scalable(ptr %src, ptr %dst, i64 %count) #
 ; COMMON-LABEL: mixed_offsets_fixed_then_scalable:
 ; COMMON:       // %bb.0: // %entry
 ; COMMON-NEXT:    addvl x9, x0, #4
-; COMMON-NEXT:    ptrue p0.s
+; COMMON-NEXT:    ptrue p0.b
 ; COMMON-NEXT:    mov x8, xzr
 ; COMMON-NEXT:    add x9, x9, #32
 ; COMMON-NEXT:    mov x10, #8 // =0x8
@@ -332,7 +331,7 @@ define void @three_access_wide_gap(ptr %src, ptr %dst, i64 %count) #0 {
 ;
 ; POSTINDEX-LABEL: three_access_wide_gap:
 ; POSTINDEX:       // %bb.0: // %entry
-; POSTINDEX-NEXT:    ptrue p0.s
+; POSTINDEX-NEXT:    ptrue p0.b
 ; POSTINDEX-NEXT:    mov x8, xzr
 ; POSTINDEX-NEXT:  .LBB5_1: // %for.body
 ; POSTINDEX-NEXT:    // =>This Inner Loop Header: Depth=1

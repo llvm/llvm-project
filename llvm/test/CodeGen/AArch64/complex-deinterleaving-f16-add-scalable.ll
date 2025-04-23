@@ -40,7 +40,7 @@ entry:
 define <vscale x 8 x half> @complex_add_v8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: complex_add_v8f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcadd z1.h, p0/m, z1.h, z0.h, #90
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -61,7 +61,7 @@ entry:
 define <vscale x 16 x half> @complex_add_v16f16(<vscale x 16 x half> %a, <vscale x 16 x half> %b) {
 ; CHECK-LABEL: complex_add_v16f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcadd z2.h, p0/m, z2.h, z0.h, #90
 ; CHECK-NEXT:    fcadd z3.h, p0/m, z3.h, z1.h, #90
 ; CHECK-NEXT:    mov z0.d, z2.d
@@ -84,7 +84,7 @@ entry:
 define <vscale x 32 x half> @complex_add_v32f16(<vscale x 32 x half> %a, <vscale x 32 x half> %b) {
 ; CHECK-LABEL: complex_add_v32f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcadd z4.h, p0/m, z4.h, z0.h, #90
 ; CHECK-NEXT:    fcadd z5.h, p0/m, z5.h, z1.h, #90
 ; CHECK-NEXT:    fcadd z6.h, p0/m, z6.h, z2.h, #90

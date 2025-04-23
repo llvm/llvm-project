@@ -75,7 +75,7 @@ define <vscale x 8 x i16> @saba_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, 
 define <vscale x 8 x i16> @saba_h_promoted_ops(<vscale x 8 x i16> %a, <vscale x 8 x i8> %b, <vscale x 8 x i8> %c) #0 {
 ; CHECK-LABEL: saba_h_promoted_ops:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z2.h, p0/m, z2.h
 ; CHECK-NEXT:    sxtb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    saba z0.h, z1.h, z2.h
@@ -126,7 +126,7 @@ define <vscale x 4 x i32> @saba_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, 
 define <vscale x 4 x i32> @saba_s_promoted_ops(<vscale x 4 x i32> %a, <vscale x 4 x i16> %b, <vscale x 4 x i16> %c) #0 {
 ; CHECK-LABEL: saba_s_promoted_ops:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z2.s, p0/m, z2.s
 ; CHECK-NEXT:    sxth z1.s, p0/m, z1.s
 ; CHECK-NEXT:    saba z0.s, z1.s, z2.s
@@ -177,7 +177,7 @@ define <vscale x 2 x i64> @saba_d(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, 
 define <vscale x 2 x i64> @saba_d_promoted_ops(<vscale x 2 x i64> %a, <vscale x 2 x i32> %b, <vscale x 2 x i32> %c) #0 {
 ; CHECK-LABEL: saba_d_promoted_ops:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtw z2.d, p0/m, z2.d
 ; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    saba z0.d, z1.d, z2.d

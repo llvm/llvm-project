@@ -1055,7 +1055,7 @@ define <vscale x 4 x i32> @extract_nxv4i32_nxv8i32_splat_const() {
 define <vscale x 2 x i1> @extract_nxv2i1_nxv16i1_all_ones() {
 ; CHECK-LABEL: extract_nxv2i1_nxv16i1_all_ones:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ret
   %ext = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> splat(i1 true), i64 0)
   ret <vscale x 2 x i1> %ext

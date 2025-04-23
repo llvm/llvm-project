@@ -116,7 +116,7 @@ define i1 @cmp8_ptest_any_px(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vsc
 define i1 @cmp8_ptest_any_px_bad_ptrue(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: cmp8_ptest_any_px_bad_ptrue:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpge p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
@@ -372,7 +372,7 @@ define i1 @cmp32_ptest_first_ax(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <
 ; CHECK-LABEL: cmp32_ptest_first_ax:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
@@ -391,7 +391,7 @@ define i1 @cmp32_ptest_last_ax(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <v
 ; CHECK-LABEL: cmp32_ptest_last_ax:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -409,6 +409,8 @@ define i1 @cmp32_ptest_any_ax(<vscale x 16 x i1> %pg, <vscale x 4 x i32> %a, <vs
 ; CHECK-LABEL: cmp32_ptest_any_ax:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptest p1, p0.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> %pg)
@@ -476,8 +478,9 @@ define i1 @cmp8_ptest_any_aa(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 define i1 @cmp32_ptest_first_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: cmp32_ptest_first_aa:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
@@ -492,8 +495,9 @@ define i1 @cmp32_ptest_first_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 define i1 @cmp32_ptest_last_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: cmp32_ptest_last_aa:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    cmpge p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
@@ -508,7 +512,7 @@ define i1 @cmp32_ptest_last_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 define i1 @cmp32_ptest_any_aa(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: cmp32_ptest_any_aa:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret

@@ -351,7 +351,7 @@ define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vsca
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov w9, #16 // =0x10
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
 ; CHECK-NEXT:    cmp x8, #16
@@ -874,7 +874,7 @@ define <vscale x 8 x i32> @splice_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x8, x9, x8
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    mov x9, #-8 // =0xfffffffffffffff8

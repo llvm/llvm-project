@@ -7,7 +7,7 @@ target triple = "aarch64"
 define <vscale x 2 x double> @complex_add_v2f64(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: complex_add_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcadd z1.d, p0/m, z1.d, z0.d, #90
 ; CHECK-NEXT:    mov z0.d, z1.d
 ; CHECK-NEXT:    ret
@@ -28,7 +28,7 @@ entry:
 define <vscale x 4 x double> @complex_add_v4f64(<vscale x 4 x double> %a, <vscale x 4 x double> %b) {
 ; CHECK-LABEL: complex_add_v4f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcadd z2.d, p0/m, z2.d, z0.d, #90
 ; CHECK-NEXT:    fcadd z3.d, p0/m, z3.d, z1.d, #90
 ; CHECK-NEXT:    mov z0.d, z2.d
@@ -51,7 +51,7 @@ entry:
 define <vscale x 8 x double> @complex_add_v8f64(<vscale x 8 x double> %a, <vscale x 8 x double> %b) {
 ; CHECK-LABEL: complex_add_v8f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fcadd z4.d, p0/m, z4.d, z0.d, #90
 ; CHECK-NEXT:    fcadd z5.d, p0/m, z5.d, z1.d, #90
 ; CHECK-NEXT:    fcadd z6.d, p0/m, z6.d, z2.d, #90

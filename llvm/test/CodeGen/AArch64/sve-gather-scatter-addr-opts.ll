@@ -345,7 +345,7 @@ define <vscale x 2 x i64> @masked_gather_nxv2i64_null_with__vec_plus_imm_offsets
 define <vscale x 4 x i32> @masked_gather_nxv4i32_s8_offsets(ptr %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv4i32_s8_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, sxtw #2]
 ; CHECK-NEXT:    ret
@@ -370,7 +370,7 @@ define <vscale x 4 x i32> @masked_gather_nxv4i32_u8_offsets(ptr %base, <vscale x
 define <vscale x 4 x i32> @masked_gather_nxv4i32_u32s8_offsets(ptr %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask) #0 {
 ; CHECK-LABEL: masked_gather_nxv4i32_u32s8_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0, z0.s, uxtw #2]
 ; CHECK-NEXT:    ret
@@ -421,7 +421,7 @@ define void @masked_scatter_nxv2i64_null_with__vec_plus_imm_offsets(<vscale x 2 
 define void @masked_scatter_nxv4i32_s8_offsets(ptr %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv4i32_s8_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, sxtw #2]
 ; CHECK-NEXT:    ret
@@ -446,7 +446,7 @@ define void @masked_scatter_nxv4i32_u8_offsets(ptr %base, <vscale x 4 x i8> %off
 define void @masked_scatter_nxv4i32_u32s8_offsets(ptr %base, <vscale x 4 x i8> %offsets, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %data) #0 {
 ; CHECK-LABEL: masked_scatter_nxv4i32_u32s8_offsets:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    sxtb z0.s, p1/m, z0.s
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x0, z0.s, uxtw #2]
 ; CHECK-NEXT:    ret

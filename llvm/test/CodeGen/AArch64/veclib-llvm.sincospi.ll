@@ -69,7 +69,7 @@ define void @test_sincospi_nxv4f32(<vscale x 4 x float> %x, ptr noalias %out_sin
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; ARMPL-NEXT:    .cfi_offset w30, -16
-; ARMPL-NEXT:    ptrue p0.s
+; ARMPL-NEXT:    ptrue p0.b
 ; ARMPL-NEXT:    bl armpl_svsincospi_f32_x
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret
@@ -96,7 +96,7 @@ define void @test_sincospi_nxv2f64(<vscale x 2 x double> %x, ptr noalias %out_si
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; ARMPL-NEXT:    .cfi_def_cfa_offset 16
 ; ARMPL-NEXT:    .cfi_offset w30, -16
-; ARMPL-NEXT:    ptrue p0.d
+; ARMPL-NEXT:    ptrue p0.b
 ; ARMPL-NEXT:    bl armpl_svsincospi_f64_x
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret

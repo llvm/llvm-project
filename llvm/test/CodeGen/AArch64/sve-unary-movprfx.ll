@@ -785,7 +785,7 @@ define <vscale x 2 x double> @fsqrt_f64_not_active(<vscale x 2 x double> %a, <vs
 define <vscale x 8 x i16> @sxtb_i16(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) #0 {
 ; CHECK-LABEL: sxtb_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
@@ -796,7 +796,7 @@ define <vscale x 8 x i16> @sxtb_i16(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) 
 define <vscale x 8 x i16> @sxtb_i16_dupreg(<vscale x 8 x i8> %a) #0 {
 ; CHECK-LABEL: sxtb_i16_dupreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %ret = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
@@ -843,7 +843,7 @@ define <vscale x 8 x i16> @sxtb_i16_not_active(<vscale x 8 x i16> %a, <vscale x 
 define <vscale x 4 x i32> @sxtb_i32(<vscale x 4 x i8> %a, <vscale x 4 x i8> %b) #0 {
 ; CHECK-LABEL: sxtb_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
@@ -854,7 +854,7 @@ define <vscale x 4 x i32> @sxtb_i32(<vscale x 4 x i8> %a, <vscale x 4 x i8> %b) 
 define <vscale x 4 x i32> @sxtb_i32_dupreg(<vscale x 4 x i8> %a) #0 {
 ; CHECK-LABEL: sxtb_i32_dupreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %ret = sext <vscale x 4 x i8> %a to <vscale x 4 x i32>
@@ -901,7 +901,7 @@ define <vscale x 4 x i32> @sxtb_i32_not_active(<vscale x 4 x i32> %a, <vscale x 
 define <vscale x 2 x i64> @sxtb_i64(<vscale x 2 x i8> %a, <vscale x 2 x i8> %b) #0 {
 ; CHECK-LABEL: sxtb_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
@@ -912,7 +912,7 @@ define <vscale x 2 x i64> @sxtb_i64(<vscale x 2 x i8> %a, <vscale x 2 x i8> %b) 
 define <vscale x 2 x i64> @sxtb_i64_dupreg(<vscale x 2 x i8> %a) #0 {
 ; CHECK-LABEL: sxtb_i64_dupreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %ret = sext <vscale x 2 x i8> %a to <vscale x 2 x i64>
@@ -959,7 +959,7 @@ define <vscale x 2 x i64> @sxtb_i64_not_active(<vscale x 2 x i64> %a, <vscale x 
 define <vscale x 4 x i32> @sxth_i32(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b) #0 {
 ; CHECK-LABEL: sxth_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    sxth z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
@@ -970,7 +970,7 @@ define <vscale x 4 x i32> @sxth_i32(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b
 define <vscale x 4 x i32> @sxth_i32_dupreg(<vscale x 4 x i16> %a) #0 {
 ; CHECK-LABEL: sxth_i32_dupreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %ret = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
@@ -1017,7 +1017,7 @@ define <vscale x 4 x i32> @sxth_i32_not_active(<vscale x 4 x i32> %a, <vscale x 
 define <vscale x 2 x i64> @sxth_i64(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b) #0 {
 ; CHECK-LABEL: sxth_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    sxth z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
@@ -1028,7 +1028,7 @@ define <vscale x 2 x i64> @sxth_i64(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b
 define <vscale x 2 x i64> @sxth_i64_dupreg(<vscale x 2 x i16> %a) #0 {
 ; CHECK-LABEL: sxth_i64_dupreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxth z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %ret = sext <vscale x 2 x i16> %a to <vscale x 2 x i64>
@@ -1075,7 +1075,7 @@ define <vscale x 2 x i64> @sxth_i64_not_active(<vscale x 2 x i64> %a, <vscale x 
 define <vscale x 2 x i64> @sxtw_i64(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) #0 {
 ; CHECK-LABEL: sxtw_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
@@ -1086,7 +1086,7 @@ define <vscale x 2 x i64> @sxtw_i64(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b
 define <vscale x 2 x i64> @sxtw_i64_dupreg(<vscale x 2 x i32> %a) #0 {
 ; CHECK-LABEL: sxtw_i64_dupreg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sxtw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    ret
   %ret = sext <vscale x 2 x i32> %a to <vscale x 2 x i64>
