@@ -72,7 +72,7 @@ class TestSwiftProtocolTypes(TestBase):
         self.expect("expression --dynamic-type no-dynamic-values"
                     " --raw-output --show-types -- loc3dCB",
                     substrs=['PointUtils & Swift.AnyObject) $R',
-                             '(Builtin.RawPointer) object = 0x',
+                             '(Builtin.UnknownObject) object = 0x',
                              '(Builtin.RawPointer) wtable = 0x'])
  
         self.expect("expression -- loc3dCB",
