@@ -591,6 +591,7 @@ public:
   NODE(OmpFromClause, Modifier)
   NODE(parser, OmpExpectation)
   NODE_ENUM(OmpExpectation, Value)
+  NODE(parser, OmpHintClause)
   NODE(parser, OmpHoldsClause)
   NODE(parser, OmpIfClause)
   NODE(OmpIfClause, Modifier)

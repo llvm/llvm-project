@@ -1420,8 +1420,8 @@ public:
   /// \return The expected cost of a sign- or zero-extended vector extract. Use
   /// Index = -1 to indicate that there is no information about the index value.
   InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                           VectorType *VecTy,
-                                           unsigned Index) const;
+                                           VectorType *VecTy, unsigned Index,
+                                           TTI::TargetCostKind CostKind) const;
 
   /// \return The expected cost of control-flow related instructions such as
   /// Phi, Ret, Br, Switch.
@@ -2210,9 +2210,10 @@ public:
                                            Type *Src, CastContextHint CCH,
                                            TTI::TargetCostKind CostKind,
                                            const Instruction *I) const = 0;
-  virtual InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                                   VectorType *VecTy,
-                                                   unsigned Index) const = 0;
+  virtual InstructionCost
+  getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
+                           unsigned Index,
+                           TTI::TargetCostKind CostKind) const = 0;
   virtual InstructionCost
   getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                  const Instruction *I = nullptr) const = 0;
@@ -2947,10 +2948,11 @@ public:
                                    const Instruction *I) const override {
     return Impl.getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   }
-  InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                           VectorType *VecTy,
-                                           unsigned Index) const override {
-    return Impl.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+  InstructionCost
+  getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
+                           unsigned Index,
+                           TTI::TargetCostKind CostKind) const override {
+    return Impl.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
   }
   InstructionCost
   getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,

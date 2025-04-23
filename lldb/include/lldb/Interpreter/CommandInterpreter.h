@@ -476,6 +476,8 @@ public:
 
   void UpdatePrompt(llvm::StringRef prompt);
 
+  void UpdateUseColor(bool use_color);
+
   bool Confirm(llvm::StringRef message, bool default_answer);
 
   void LoadCommandDictionary();

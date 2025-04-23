@@ -114,7 +114,7 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
     value of the specified integer type.
   }];
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "llvm::APInt":$value);
+                        APIntParameter<"">:$value);
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "const llvm::APInt &":$value), [{
