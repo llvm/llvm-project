@@ -2793,8 +2793,9 @@ public:
   /// of some sort, e.g., it is a floating-point type or a vector thereof.
   bool hasFloatingRepresentation() const;
 
-  /// Determine whether this type has a boolean representation
-  /// of some sort.
+  /// Determine whether this type has a boolean representation -- i.e., it is a
+  /// boolean type, an enum type whose underlying type is a boolean type, or a
+  /// vector of booleans.
   bool hasBooleanRepresentation() const;
 
   // Type Checking Functions: Check to see if this type is structurally the
