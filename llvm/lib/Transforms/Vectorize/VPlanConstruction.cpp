@@ -354,8 +354,9 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
 
   // Fix VPlan loop-closed-ssa exit phi's by adding incoming operands to the
   // VPIRInstructions wrapping them.
-  // Note that the operand order may need adjusting when predecessors are added,
-  // if an exit block has multiple predecessor.
+  // // Note that the operand order corresponds to IR predecessor order, and may
+  // need adjusting when VPlan predecessors are added, if an exit block has
+  // multiple predecessor.
   for (auto *EB : Plan->getExitBlocks()) {
     for (VPRecipeBase &R : EB->phis()) {
       auto *PhiR = cast<VPIRPhi>(&R);
