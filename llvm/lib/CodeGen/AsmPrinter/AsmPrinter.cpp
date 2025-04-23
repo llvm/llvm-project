@@ -1666,7 +1666,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
   return ConstantInt::get(Int64Ty, TypeIdVal);
 }
 
-/// Emits call graph section.
+/// Emits .callgraph section.
 void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
                                       FunctionInfo &FuncInfo) {
   if (!MF.getTarget().Options.EmitCallGraphSection)
@@ -1675,7 +1675,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // Switch to the call graph section for the function
   MCSection *FuncCGSection =
       getObjFileLowering().getCallGraphSection(*getCurrentSection());
-  assert(FuncCGSection && "null call graph section");
+  assert(FuncCGSection && "null callgraph section");
   OutStreamer->pushSection();
   OutStreamer->switchSection(FuncCGSection);
 
@@ -1728,7 +1728,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   OutStreamer->emitInt64(CallSiteLabels.size());
 
   // Emit the type id and call site label pairs.
-  for (const auto& [TypeId, Label] : CallSiteLabels) {
+  for (const auto &[TypeId, Label] : CallSiteLabels) {
     OutStreamer->emitInt64(TypeId);
     OutStreamer->emitSymbolValue(Label, TM.getProgramPointerSize());
   }
@@ -1865,6 +1865,30 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
   StringRef Name = TII->getName(MI.getOpcode());
   assert(!Name.empty() && "Missing mnemonic and name for opcode");
   return Name;
+}
+
+void AsmPrinter::emitIndirectCalleeLabels(
+    FunctionInfo &FuncInfo,
+    const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+    MachineInstr &MI) {
+  // Only indirect calls have type identifiers set.
+  const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
+  if (CallSiteInfo == CallSitesInfoMap.end())
+    return;
+  if (CallSiteInfo->second.CalleeTypeIds.empty())
+    return;
+
+  for (auto *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
+    // Emit label.
+    MCSymbol *S = MF->getContext().createTempSymbol();
+    OutStreamer->emitLabel(S);
+
+    // Get numeric callee_type id value.
+    uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
+
+    // Add to function's callsite labels.
+    FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
+  }
 }
 
 /// EmitFunctionBody - This method emits the body and trailer for a
@@ -2045,28 +2069,9 @@ void AsmPrinter::emitFunctionBody() {
         break;
       }
 
-      // FIXME: Some indirect calls can get lowered to jump instructions,
-      // resulting in emitting labels for them. The extra information can
-      // be neglected while disassembling but still takes space in the binary.
-      if (TM.Options.EmitCallGraphSection && MI.isCall()) {
-        // Only indirect calls have type identifiers set.
-        const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
-        if (CallSiteInfo != CallSitesInfoMap.end()) {
-          if (!CallSiteInfo->second.CalleeTypeIds.empty()) {
-            for (auto *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
-              // Emit label.
-              MCSymbol *S = MF->getContext().createTempSymbol();
-              OutStreamer->emitLabel(S);
+      if (TM.Options.EmitCallGraphSection && MI.isCall())
+        emitIndirectCalleeLabels(FuncInfo, CallSitesInfoMap, MI);
 
-              // Get numeric callee_type id value.
-              uint64_t CalleeTypeIdVal = CalleeTypeId->getZExtValue();
-
-              // Add to function's callsite labels.
-              FuncInfo.CallSiteLabels.emplace_back(CalleeTypeIdVal, S);
-            }
-          }
-        }
-      }
       // If there is a post-instruction symbol, emit a label for it here.
       if (MCSymbol *S = MI.getPostInstrSymbol())
         OutStreamer->emitLabel(S);
