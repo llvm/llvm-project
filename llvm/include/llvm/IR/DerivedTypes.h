@@ -697,7 +697,10 @@ public:
   [[deprecated("PointerType::getUnqual with pointee type is pending removal. "
                "Use Context overload.")]]
   static PointerType *getUnqual(Type *ElementType) {
-    return PointerType::get(ElementType, 0);
+    assert(ElementType && "Can't get a pointer to <null> type!");
+    assert(isValidElementType(ElementType) &&
+           "Invalid type for pointer element!");
+    return PointerType::getUnqual(ElementType->getContext());
   }
 
   /// This constructs an opaque pointer to an object in the

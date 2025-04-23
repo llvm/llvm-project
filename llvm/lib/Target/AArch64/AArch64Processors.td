@@ -723,6 +723,7 @@ def ProcessorFeatures {
                                  FeatureSB, FeaturePAuth, FeatureSSBS, FeatureSVE, FeatureSVE2,
                                  FeatureComplxNum, FeatureCRC, FeatureDotProd,
                                  FeatureFPARMv8,FeatureFullFP16, FeatureJS, FeatureLSE,
+                                 FeatureUseFixedOverScalableIfEqualCost,
                                  FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A520 = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVEBitPerm,
@@ -732,6 +733,7 @@ def ProcessorFeatures {
                                  FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
                                  FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS,
                                  FeatureNEON, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                 FeatureUseFixedOverScalableIfEqualCost,
                                  FeatureDotProd];
   list<SubtargetFeature> A520AE = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVEBitPerm,

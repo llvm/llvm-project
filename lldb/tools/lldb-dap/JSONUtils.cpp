@@ -870,6 +870,19 @@ llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
   return llvm::json::Value(std::move(object));
 }
 
+llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format) {
+  lldb::SBMutex lock = process.GetTarget().GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  llvm::json::Array threads;
+  const uint32_t num_threads = process.GetNumThreads();
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
+    threads.emplace_back(CreateThread(thread, format));
+  }
+  return threads;
+}
+
 // "StoppedEvent": {
 //   "allOf": [ { "$ref": "#/definitions/Event" }, {
 //     "type": "object",

@@ -14,9 +14,10 @@ process launch
 
 thread backtrace
 # CHECK: frame #0: {{.*}}`bar
-# CHECK: frame #1: {{.*}}`foo + 6
+# CHECK: frame #1: {{.*}}`foo + 21
 # CHECK: frame #2: {{.*}}`main + 20
 
 target modules show-unwind -n foo
-# CHECK: eh_frame UnwindPlan:
-# CHECK: row[0]: 0: CFA=rsp +8 => rip=r13
+# CHECK:      eh_frame UnwindPlan:
+# CHECK:      row[0]:   16: CFA=rsp +8 => rip=r13
+# CHECK-NEXT: row[1]:   27: CFA=rsp +8 => rip=r14

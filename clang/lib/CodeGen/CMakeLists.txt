@@ -102,6 +102,7 @@ add_clang_library(clangCodeGen
   CodeGenFunction.cpp
   CodeGenModule.cpp
   CodeGenPGO.cpp
+  CodeGenSYCL.cpp
   CodeGenTBAA.cpp
   CodeGenTypes.cpp
   ConstantInitBuilder.cpp
@@ -118,6 +119,7 @@ add_clang_library(clangCodeGen
   SwiftCallingConv.cpp
   TargetBuiltins/ARM.cpp
   TargetBuiltins/AMDGPU.cpp
+  TargetBuiltins/DirectX.cpp
   TargetBuiltins/Hexagon.cpp
   TargetBuiltins/NVPTX.cpp
   TargetBuiltins/PPC.cpp

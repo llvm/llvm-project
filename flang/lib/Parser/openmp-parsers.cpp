@@ -804,6 +804,8 @@ TYPE_PARSER(
 // OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
 TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
+TYPE_PARSER(construct<OmpHintClause>(scalarIntConstantExpr))
+
 // init clause
 TYPE_PARSER(construct<OmpInitClause>(
     maybe(nonemptyList(Parser<OmpInitClause::Modifier>{}) / ":"),
@@ -941,8 +943,8 @@ TYPE_PARSER( //
     "HAS_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::HasDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
-    "HINT" >> construct<OmpClause>(
-                  construct<OmpClause::Hint>(parenthesized(constantExpr))) ||
+    "HINT" >> construct<OmpClause>(construct<OmpClause::Hint>(
+                  parenthesized(Parser<OmpHintClause>{}))) ||
     "HOLDS" >> construct<OmpClause>(construct<OmpClause::Holds>(
                    parenthesized(Parser<OmpHoldsClause>{}))) ||
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
@@ -1217,9 +1219,8 @@ TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
 TYPE_PARSER(sourced(construct<OmpAtomicClause>(
     construct<OmpAtomicClause>(Parser<OmpMemoryOrderClause>{}) ||
     construct<OmpAtomicClause>("FAIL" >> Parser<OmpFailClause>{}) ||
-    construct<OmpAtomicClause>("HINT" >>
-        sourced(construct<OmpClause>(
-            construct<OmpClause::Hint>(parenthesized(constantExpr))))))))
+    construct<OmpAtomicClause>(
+        "HINT" >> parenthesized(Parser<OmpHintClause>{})))))
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
 TYPE_PARSER(sourced(construct<OmpAtomicClauseList>(

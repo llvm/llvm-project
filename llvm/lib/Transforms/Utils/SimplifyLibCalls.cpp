@@ -1936,7 +1936,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   bool IsIntrinsic = CalleeFn->isIntrinsic();
   if (!IsIntrinsic) {
     StringRef CallerName = CI->getFunction()->getName();
-    if (!CallerName.empty() && CallerName.back() == 'f' &&
+    if (CallerName.ends_with('f') &&
         CallerName.size() == (CalleeName.size() + 1) &&
         CallerName.starts_with(CalleeName))
       return nullptr;
@@ -3002,6 +3002,9 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
     return nullptr;
 
   Value *Arg = CI->getArgOperand(0);
+  if (isa<ConstantData>(Arg))
+    return nullptr;
+
   SmallVector<CallInst *, 1> SinCalls;
   SmallVector<CallInst *, 1> CosCalls;
   SmallVector<CallInst *, 1> SinCosCalls;

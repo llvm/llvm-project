@@ -845,6 +845,13 @@ namespace {
       return TLI.isOperationLegalOrCustom(Opcode, VT, LegalOperations);
     }
 
+    bool hasUMin(EVT VT) const {
+      auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
+      return (LK.first == TargetLoweringBase::TypeLegal ||
+              LK.first == TargetLoweringBase::TypePromoteInteger) &&
+             TLI.isOperationLegal(ISD::UMIN, LK.second);
+    }
+
   public:
     /// Runs the dag combiner on all nodes in the work list
     void Run(CombineLevel AtLevel);
@@ -3860,6 +3867,58 @@ static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
   return Matcher.getNode(ISD::CTLZ_ZERO_UNDEF, DL, VT, Not);
 }
 
+// Fold sub(x, mul(divrem(x,y)[0], y)) to divrem(x, y)[1]
+static SDValue foldRemainderIdiom(SDNode *N, SelectionDAG &DAG,
+                                  const SDLoc &DL) {
+  assert(N->getOpcode() == ISD::SUB && "Node must be a SUB");
+  SDValue Sub0 = N->getOperand(0);
+  SDValue Sub1 = N->getOperand(1);
+
+  auto CheckAndFoldMulCase = [&](SDValue DivRem, SDValue MaybeY) -> SDValue {
+    if ((DivRem.getOpcode() == ISD::SDIVREM ||
+         DivRem.getOpcode() == ISD::UDIVREM) &&
+        DivRem.getResNo() == 0 && DivRem.getOperand(0) == Sub0 &&
+        DivRem.getOperand(1) == MaybeY) {
+      return SDValue(DivRem.getNode(), 1);
+    }
+    return SDValue();
+  };
+
+  if (Sub1.getOpcode() == ISD::MUL) {
+    // (sub x, (mul divrem(x,y)[0], y))
+    SDValue Mul0 = Sub1.getOperand(0);
+    SDValue Mul1 = Sub1.getOperand(1);
+
+    if (SDValue Res = CheckAndFoldMulCase(Mul0, Mul1))
+      return Res;
+
+    if (SDValue Res = CheckAndFoldMulCase(Mul1, Mul0))
+      return Res;
+
+  } else if (Sub1.getOpcode() == ISD::SHL) {
+    // Handle (sub x, (shl divrem(x,y)[0], C)) where y = 1 << C
+    SDValue Shl0 = Sub1.getOperand(0);
+    SDValue Shl1 = Sub1.getOperand(1);
+    // Check if Shl0 is divrem(x, Y)[0]
+    if ((Shl0.getOpcode() == ISD::SDIVREM ||
+         Shl0.getOpcode() == ISD::UDIVREM) &&
+        Shl0.getResNo() == 0 && Shl0.getOperand(0) == Sub0) {
+
+      SDValue Divisor = Shl0.getOperand(1);
+
+      ConstantSDNode *DivC = isConstOrConstSplat(Divisor);
+      ConstantSDNode *ShC = isConstOrConstSplat(Shl1);
+      if (!DivC || !ShC)
+        return SDValue();
+
+      if (DivC->getAPIntValue().isPowerOf2() &&
+          DivC->getAPIntValue().logBase2() == ShC->getAPIntValue())
+        return SDValue(Shl0.getNode(), 1);
+    }
+  }
+  return SDValue();
+}
+
 // Since it may not be valid to emit a fold to zero for vector initializers
 // check if we can before folding.
 static SDValue tryFoldToZero(const SDLoc &DL, const TargetLowering &TLI, EVT VT,
@@ -4087,6 +4146,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   if (SDValue V = foldSubToUSubSat(VT, N, DL))
     return V;
 
+  if (SDValue V = foldRemainderIdiom(N, DAG, DL))
+    return V;
+
   // (A - B) - 1  ->  add (xor B, -1), A
   if (sd_match(N, m_Sub(m_OneUse(m_Sub(m_Value(A), m_Value(B))), m_One())))
     return DAG.getNode(ISD::ADD, DL, VT, A, DAG.getNOT(DL, B, VT));
@@ -4250,6 +4312,20 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       sd_match(N0, m_UMinLike(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_UMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
+
+  // (sub x, (select (ult x, y), 0, y)) -> (umin x, (sub x, y))
+  // (sub x, (select (uge x, y), y, 0)) -> (umin x, (sub x, y))
+  if (hasUMin(VT)) {
+    SDValue Y;
+    if (sd_match(N1, m_OneUse(m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
+                                               m_SpecificCondCode(ISD::SETULT)),
+                                       m_Zero(), m_Deferred(Y)))) ||
+        sd_match(N1, m_OneUse(m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
+                                               m_SpecificCondCode(ISD::SETUGE)),
+                                       m_Deferred(Y), m_Zero()))))
+      return DAG.getNode(ISD::UMIN, DL, VT, N0,
+                         DAG.getNode(ISD::SUB, DL, VT, N0, Y));
+  }
 
   return SDValue();
 }
@@ -5961,7 +6037,10 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
         LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
-    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
+    SDNodeFlags LogicFlags;
+    LogicFlags.setDisjoint(N->getFlags().hasDisjoint() &&
+                           ISD::isExtOpcode(HandOpcode));
+    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y, LogicFlags);
     if (HandOpcode == ISD::SIGN_EXTEND_INREG)
       return DAG.getNode(HandOpcode, DL, VT, Logic, N0.getOperand(1));
     return DAG.getNode(HandOpcode, DL, VT, Logic);
@@ -6426,6 +6505,12 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
       }
     }
   }
+
+  if (LHS0 == LHS1 && RHS0 == RHS1 && CCL == CCR &&
+      LHS0.getValueType() == RHS0.getValueType() &&
+      ((LogicOp->getOpcode() == ISD::AND && CCL == ISD::SETO) ||
+       (LogicOp->getOpcode() == ISD::OR && CCL == ISD::SETUO)))
+    return DAG.getSetCC(DL, VT, LHS0, RHS0, CCL);
 
   if (TargetPreference == AndOrSETCCFoldKind::None)
     return SDValue();
@@ -12057,6 +12142,17 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
     if (SDValue NewSel = SimplifySelect(DL, N0, N1, N2))
       return NewSel;
+
+    // (select (ugt x, C), (add x, ~C), x) -> (umin (add x, ~C), x)
+    // (select (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
+    APInt C;
+    if (sd_match(Cond1, m_ConstInt(C)) && hasUMin(VT)) {
+      if ((CC == ISD::SETUGT && Cond0 == N2 &&
+           sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) ||
+          (CC == ISD::SETULT && Cond0 == N1 &&
+           sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))))
+        return DAG.getNode(ISD::UMIN, DL, VT, N1, N2);
+    }
   }
 
   if (!VT.isVector())
@@ -13740,10 +13836,9 @@ static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
 
   EVT OrigVT = ALoad->getValueType(0);
   assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
-  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomic(
-      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
+  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomicLoad(
+      ExtLoadType, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
       ALoad->getBasePtr(), ALoad->getMemOperand()));
-  NewALoad->setExtensionType(ExtLoadType);
   DAG.ReplaceAllUsesOfValueWith(
       SDValue(ALoad, 0),
       DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));
@@ -16287,7 +16382,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // Finally, recreate the node, it's operands were updated to use
   // frozen operands, so we just need to use it's "original" operands.
   SmallVector<SDValue> Ops(N0->ops());
-  // Special-handle ISD::UNDEF, each single one of them can be it's own thing.
+  // TODO: ISD::UNDEF and ISD::POISON should get separate handling, but best
+  // leave for a future patch.
   for (SDValue &Op : Ops) {
     if (Op.isUndef())
       Op = DAG.getFreeze(Op);
@@ -24708,10 +24804,8 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
 
   // We are going to pad the shuffle operands, so any indice, that was picking
   // from the second operand, must be adjusted.
-  SmallVector<int, 16> AdjustedMask;
-  AdjustedMask.reserve(SVN->getMask().size());
+  SmallVector<int, 16> AdjustedMask(SVN->getMask());
   assert(SVN->getOperand(1).isUndef() && "Expected unary shuffle!");
-  append_range(AdjustedMask, SVN->getMask());
 
   // Identity masks for the operands of the (padded) shuffle.
   SmallVector<int, 32> IdentityMask(2 * OpVT.getVectorNumElements());
@@ -25150,7 +25244,7 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   auto *Ld = dyn_cast<LoadSDNode>(Extract->getOperand(0));
-  if (!Ld || Ld->getExtensionType() || !Ld->isSimple())
+  if (!Ld || !ISD::isNormalLoad(Ld) || !Ld->isSimple())
     return SDValue();
 
   // Allow targets to opt-out.

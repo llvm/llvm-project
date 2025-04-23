@@ -1,5 +1,5 @@
 """
-Test lldb-dap setBreakpoints request
+Test lldb-dap attach request
 """
 
 

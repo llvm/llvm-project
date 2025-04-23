@@ -143,7 +143,7 @@ enum class LangAS : unsigned int;
 class LocalInstantiationScope;
 class LookupResult;
 class MangleNumberingContext;
-typedef ArrayRef<std::pair<IdentifierInfo *, SourceLocation>> ModuleIdPath;
+typedef ArrayRef<IdentifierLoc> ModuleIdPath;
 class ModuleLoader;
 class MultiLevelTemplateArgumentList;
 struct NormalizedConstraint;
@@ -160,6 +160,7 @@ class SemaAVR;
 class SemaBPF;
 class SemaCodeCompletion;
 class SemaCUDA;
+class SemaDirectX;
 class SemaHLSL;
 class SemaHexagon;
 class SemaLoongArch;
@@ -290,7 +291,8 @@ public:
 /// parameter. This avoids updating the type on hot paths in the parser.
 class PreferredTypeBuilder {
 public:
-  PreferredTypeBuilder(bool Enabled) : Enabled(Enabled) {}
+  PreferredTypeBuilder(ASTContext *Ctx, bool Enabled)
+      : Ctx(Ctx), Enabled(Enabled) {}
 
   void enterCondition(Sema &S, SourceLocation Tok);
   void enterReturn(Sema &S, SourceLocation Tok);
@@ -336,6 +338,7 @@ public:
   }
 
 private:
+  ASTContext *Ctx;
   bool Enabled;
   /// Start position of a token for which we store expected type.
   SourceLocation ExpectedLoc;
@@ -1074,6 +1077,11 @@ public:
     return *CUDAPtr;
   }
 
+  SemaDirectX &DirectX() {
+    assert(DirectXPtr);
+    return *DirectXPtr;
+  }
+
   SemaHLSL &HLSL() {
     assert(HLSLPtr);
     return *HLSLPtr;
@@ -1212,6 +1220,7 @@ private:
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
+  std::unique_ptr<SemaDirectX> DirectXPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaHexagon> HexagonPtr;
   std::unique_ptr<SemaLoongArch> LoongArchPtr;
@@ -2091,6 +2100,50 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
+  /// `__counted_by_or_null` pointer type \param LHSTy.
+  ///
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being assigned from.
+  /// \param Action The type assignment being performed
+  /// \param Loc The SourceLocation to use for error diagnostics
+  /// \param Assignee The ValueDecl being assigned. This is used to compute
+  ///        the name of the assignee. If the assignee isn't known this can
+  ///        be set to nullptr.
+  /// \param ShowFullyQualifiedAssigneeName If set to true when using \p
+  ///        Assignee to compute the name of the assignee use the fully
+  ///        qualified name, otherwise use the unqualified name.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckAssignmentToCountAttrPtr(
+      QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
+      SourceLocation Loc, const ValueDecl *Assignee,
+      bool ShowFullyQualifiedAssigneeName);
+
+  /// Perform Bounds Safety Semantic checks for initializing a Bounds Safety
+  /// pointer.
+  ///
+  /// \param Entity The entity being initialized
+  /// \param Kind The kind of initialization being performed
+  /// \param Action The type assignment being performed
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being used for initialization.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
+                                       const InitializationKind &Kind,
+                                       AssignmentAction Action,
+                                       QualType LHSType, Expr *RHSExpr);
+
+  /// Perform Bounds Safety semantic checks for uses of invalid uses counted_by
+  /// or counted_by_or_null pointers in \param E.
+  ///
+  /// \param E the expression to check
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E);
   ///@}
 
   //
@@ -3538,6 +3591,17 @@ public:
 
   bool checkConstantPointerAuthKey(Expr *keyExpr, unsigned &key);
 
+  enum PointerAuthDiscArgKind {
+    // Address discrimination argument of __ptrauth.
+    PADAK_AddrDiscPtrAuth,
+
+    // Extra discriminator argument of __ptrauth.
+    PADAK_ExtraDiscPtrAuth,
+  };
+
+  bool checkPointerAuthDiscriminatorArg(Expr *Arg, PointerAuthDiscArgKind Kind,
+                                        unsigned &IntVal);
+
   /// Diagnose function specifiers on a declaration of an identifier that
   /// does not identify a function.
   void DiagnoseFunctionSpecifiers(const DeclSpec &DS);
@@ -4321,6 +4385,7 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(ValueDecl *decl);
+  void deduceHLSLAddressSpace(VarDecl *decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.
@@ -4503,7 +4568,7 @@ public:
   getAttrLoc(const AttrInfo &AL) {
     return AL.getLocation();
   }
-  SourceLocation getAttrLoc(const ParsedAttr &AL);
+  SourceLocation getAttrLoc(const AttributeCommonInfo &CI);
 
   /// If Expr is a valid integer constant, get the value of the integer
   /// expression and return success or failure. May output an error.
@@ -4883,6 +4948,10 @@ public:
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
 
+  TypeAwareAllocationMode ShouldUseTypeAwareOperatorNewOrDelete() const;
+  FunctionDecl *BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnDecl,
+                                          QualType AllocType, SourceLocation);
+
   ValueDecl *tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,
                                            const IdentifierInfo *MemberOrBase);
 
@@ -4910,11 +4979,26 @@ public:
   /// it is and Element is not NULL, assigns the element type to Element.
   bool isStdInitializerList(QualType Ty, QualType *Element);
 
+  /// Tests whether Ty is an instance of std::type_identity and, if
+  /// it is and TypeArgument is not NULL, assigns the element type to Element.
+  /// If MalformedDecl is not null, and type_identity was ruled out due to being
+  /// incorrectly structured despite having the correct name, the faulty Decl
+  /// will be assigned to MalformedDecl.
+  bool isStdTypeIdentity(QualType Ty, QualType *TypeArgument,
+                         const Decl **MalformedDecl = nullptr);
+
   /// Looks for the std::initializer_list template and instantiates it
   /// with Element, or emits an error if it's not found.
   ///
   /// \returns The instantiated template, or null on error.
   QualType BuildStdInitializerList(QualType Element, SourceLocation Loc);
+
+  /// Looks for the std::type_identity template and instantiates it
+  /// with Type, or returns a null type if type_identity has not been declared
+  ///
+  /// \returns The instantiated template, or null if std::type_identity is not
+  /// declared
+  QualType tryBuildStdTypeIdentity(QualType Type, SourceLocation Loc);
 
   /// Determine whether Ctor is an initializer-list constructor, as
   /// defined in [dcl.init.list]p2.
@@ -6164,6 +6248,10 @@ public:
   /// \<initializer_list>.
   ClassTemplateDecl *StdInitializerList;
 
+  /// The C++ "std::type_identity" template, which is defined in
+  /// \<type_traits>.
+  ClassTemplateDecl *StdTypeIdentity;
+
   // Contains the locations of the beginning of unparsed default
   // argument locations.
   llvm::DenseMap<ParmVarDecl *, SourceLocation> UnparsedDefaultArgLocs;
@@ -7212,7 +7300,7 @@ public:
 
   // #embed
   ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
-                            StringLiteral *BinaryData);
+                            StringLiteral *BinaryData, StringRef FileName);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
@@ -8290,14 +8378,12 @@ public:
 
   /// Finds the overloads of operator new and delete that are appropriate
   /// for the allocation.
-  bool FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
-                               AllocationFunctionScope NewScope,
-                               AllocationFunctionScope DeleteScope,
-                               QualType AllocType, bool IsArray,
-                               bool &PassAlignment, MultiExprArg PlaceArgs,
-                               FunctionDecl *&OperatorNew,
-                               FunctionDecl *&OperatorDelete,
-                               bool Diagnose = true);
+  bool FindAllocationFunctions(
+      SourceLocation StartLoc, SourceRange Range,
+      AllocationFunctionScope NewScope, AllocationFunctionScope DeleteScope,
+      QualType AllocType, bool IsArray, ImplicitAllocationParameters &IAP,
+      MultiExprArg PlaceArgs, FunctionDecl *&OperatorNew,
+      FunctionDecl *&OperatorDelete, bool Diagnose = true);
 
   /// DeclareGlobalNewDelete - Declare the global forms of operator new and
   /// delete. These are:
@@ -8328,15 +8414,13 @@ public:
 
   bool FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
                                 DeclarationName Name, FunctionDecl *&Operator,
-                                bool Diagnose = true, bool WantSize = false,
-                                bool WantAligned = false);
+                                ImplicitDeallocationParameters,
+                                bool Diagnose = true);
   FunctionDecl *FindUsualDeallocationFunction(SourceLocation StartLoc,
-                                              bool CanProvideSize,
-                                              bool Overaligned,
+                                              ImplicitDeallocationParameters,
                                               DeclarationName Name);
   FunctionDecl *FindDeallocationFunctionForDestructor(SourceLocation StartLoc,
                                                       CXXRecordDecl *RD,
-                                                      DeclarationName Name,
                                                       bool Diagnose = true);
 
   /// ActOnCXXDelete - Parsed a C++ 'delete' expression (C++ 5.3.5), as in:
@@ -10127,13 +10211,14 @@ public:
 
   /// Contexts in which a converted constant expression is required.
   enum CCEKind {
-    CCEK_CaseValue,    ///< Expression in a case label.
-    CCEK_Enumerator,   ///< Enumerator value with fixed underlying type.
-    CCEK_TemplateArg,  ///< Value of a non-type template parameter.
-    CCEK_InjectedTTP,  ///< Injected parameter of a template template parameter.
-    CCEK_ArrayBound,   ///< Array bound in array declarator or new-expression.
-    CCEK_ExplicitBool, ///< Condition in an explicit(bool) specifier.
-    CCEK_Noexcept,     ///< Condition in a noexcept(bool) specifier.
+    CCEK_CaseValue,     ///< Expression in a case label.
+    CCEK_Enumerator,    ///< Enumerator value with fixed underlying type.
+    CCEK_TemplateArg,   ///< Value of a non-type template parameter.
+    CCEK_TempArgStrict, ///< As above, but applies strict template checking
+                        ///< rules.
+    CCEK_ArrayBound,    ///< Array bound in array declarator or new-expression.
+    CCEK_ExplicitBool,  ///< Condition in an explicit(bool) specifier.
+    CCEK_Noexcept,      ///< Condition in a noexcept(bool) specifier.
     CCEK_StaticAssertMessageSize, ///< Call to size() in a static assert
                                   ///< message.
     CCEK_StaticAssertMessageData, ///< Call to data() in a static assert
@@ -11895,7 +11980,7 @@ public:
                                    QualType InstantiatedParamType, Expr *Arg,
                                    TemplateArgument &SugaredConverted,
                                    TemplateArgument &CanonicalConverted,
-                                   bool MatchingTTP,
+                                   bool StrictCheck,
                                    CheckTemplateArgumentKind CTAK);
 
   /// Check a template argument against its corresponding

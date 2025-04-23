@@ -23,6 +23,8 @@
 
 #include "mlir/IR/Value.h"
 
+#include "clang/CIR/MissingFeatures.h"
+
 namespace clang::CIRGen {
 
 /// This trivial value class is used to represent the result of an
@@ -75,6 +77,28 @@ enum class AlignmentSource {
   Type
 };
 
+/// Given that the base address has the given alignment source, what's
+/// our confidence in the alignment of the field?
+static inline AlignmentSource getFieldAlignmentSource(AlignmentSource source) {
+  // For now, we don't distinguish fields of opaque pointers from
+  // top-level declarations, but maybe we should.
+  return AlignmentSource::Decl;
+}
+
+class LValueBaseInfo {
+  AlignmentSource alignSource;
+
+public:
+  explicit LValueBaseInfo(AlignmentSource source = AlignmentSource::Type)
+      : alignSource(source) {}
+  AlignmentSource getAlignmentSource() const { return alignSource; }
+  void setAlignmentSource(AlignmentSource source) { alignSource = source; }
+
+  void mergeForCast(const LValueBaseInfo &info) {
+    setAlignmentSource(info.getAlignmentSource());
+  }
+};
+
 class LValue {
   enum {
     Simple,       // This is a normal l-value, use getAddress().
@@ -87,12 +111,26 @@ class LValue {
   clang::QualType type;
   clang::Qualifiers quals;
 
+  // The alignment to use when accessing this lvalue. (For vector elements,
+  // this is the alignment of the whole vector)
+  unsigned alignment;
   mlir::Value v;
   mlir::Type elementType;
+  LValueBaseInfo baseInfo;
 
-  void initialize(clang::QualType type, clang::Qualifiers quals) {
+  void initialize(clang::QualType type, clang::Qualifiers quals,
+                  clang::CharUnits alignment, LValueBaseInfo baseInfo) {
+    assert((!alignment.isZero() || type->isIncompleteType()) &&
+           "initializing l-value with zero alignment!");
     this->type = type;
     this->quals = quals;
+    const unsigned maxAlign = 1U << 31;
+    this->alignment = alignment.getQuantity() <= maxAlign
+                          ? alignment.getQuantity()
+                          : maxAlign;
+    assert(this->alignment == alignment.getQuantity() &&
+           "Alignment exceeds allowed max!");
+    this->baseInfo = baseInfo;
   }
 
 public:
@@ -102,27 +140,39 @@ public:
   // TODO: Add support for volatile
   bool isVolatile() const { return false; }
 
+  unsigned getVRQualifiers() const {
+    return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
+  }
+
   clang::QualType getType() const { return type; }
 
   mlir::Value getPointer() const { return v; }
 
   clang::CharUnits getAlignment() const {
-    // TODO: Handle alignment
-    return clang::CharUnits::One();
+    return clang::CharUnits::fromQuantity(alignment);
   }
+  void setAlignment(clang::CharUnits a) { alignment = a.getQuantity(); }
 
   Address getAddress() const {
     return Address(getPointer(), elementType, getAlignment());
   }
 
   const clang::Qualifiers &getQuals() const { return quals; }
+  clang::Qualifiers &getQuals() { return quals; }
 
-  static LValue makeAddr(Address address, clang::QualType t) {
+  LValueBaseInfo getBaseInfo() const { return baseInfo; }
+
+  static LValue makeAddr(Address address, clang::QualType t,
+                         LValueBaseInfo baseInfo) {
+    // Classic codegen sets the objc gc qualifier here. That requires an
+    // ASTContext, which is passed in from CIRGenFunction::makeAddrLValue.
+    assert(!cir::MissingFeatures::objCGC());
+
     LValue r;
     r.lvType = Simple;
     r.v = address.getPointer();
     r.elementType = address.getElementType();
-    r.initialize(t, t.getQualifiers());
+    r.initialize(t, t.getQualifiers(), address.getAlignment(), baseInfo);
     return r;
   }
 };

@@ -208,10 +208,9 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    s_load_b96 s[8:10], s[4:5], 0x10
 ; GFX12-PACKED-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-PACKED-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-PACKED-GISEL-NEXT:    s_pack_lh_b32_b16 s8, s8, s8
-; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s9
+; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
 ; GFX12-PACKED-GISEL-NEXT:    s_endpgm
 main_body:

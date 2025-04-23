@@ -3002,8 +3002,13 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     APInt UndefLHS, UndefRHS;
     SDValue LHS = V.getOperand(0);
     SDValue RHS = V.getOperand(1);
+    // Only recognize splats with the same demanded undef elements for both
+    // operands, otherwise we might fail to handle binop-specific undef
+    // handling.
+    // e.g. (and undef, 0) -> 0 etc.
     if (isSplatValue(LHS, DemandedElts, UndefLHS, Depth + 1) &&
-        isSplatValue(RHS, DemandedElts, UndefRHS, Depth + 1)) {
+        isSplatValue(RHS, DemandedElts, UndefRHS, Depth + 1) &&
+        (DemandedElts & UndefLHS) == (DemandedElts & UndefRHS)) {
       UndefElts = UndefLHS | UndefRHS;
       return true;
     }
@@ -4401,14 +4406,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case ISD::ATOMIC_LOAD: {
-    unsigned MemBits =
-        cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
     // If we are looking at the loaded value.
     if (Op.getResNo() == 0) {
-      if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
-        Known.Zero.setBitsFrom(MemBits);
-      else if (Op->getOpcode() == ISD::ATOMIC_LOAD &&
-               cast<AtomicSDNode>(Op)->getExtensionType() == ISD::ZEXTLOAD)
+      auto *AT = cast<AtomicSDNode>(Op);
+      unsigned MemBits = AT->getMemoryVT().getScalarSizeInBits();
+
+      // For atomic_load, prefer to use the extension type.
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        if (AT->getExtensionType() == ISD::ZEXTLOAD)
+          Known.Zero.setBitsFrom(MemBits);
+        else if (AT->getExtensionType() != ISD::SEXTLOAD &&
+                 TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
+          Known.Zero.setBitsFrom(MemBits);
+      } else if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         Known.Zero.setBitsFrom(MemBits);
     }
     break;
@@ -5247,22 +5257,29 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case ISD::ATOMIC_LOAD: {
-    Tmp = cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
+    auto *AT = cast<AtomicSDNode>(Op);
     // If we are looking at the loaded value.
     if (Op.getResNo() == 0) {
+      Tmp = AT->getMemoryVT().getScalarSizeInBits();
       if (Tmp == VTBits)
         return 1; // early-out
+
+      // For atomic_load, prefer to use the extension type.
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        switch (AT->getExtensionType()) {
+        default:
+          break;
+        case ISD::SEXTLOAD:
+          return VTBits - Tmp + 1;
+        case ISD::ZEXTLOAD:
+          return VTBits - Tmp;
+        }
+      }
+
       if (TLI->getExtendForAtomicOps() == ISD::SIGN_EXTEND)
         return VTBits - Tmp + 1;
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         return VTBits - Tmp;
-      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
-        ISD::LoadExtType ETy = cast<AtomicSDNode>(Op)->getExtensionType();
-        if (ETy == ISD::SEXTLOAD)
-          return VTBits - Tmp + 1;
-        if (ETy == ISD::ZEXTLOAD)
-          return VTBits - Tmp;
-      }
     }
     break;
   }
@@ -5386,6 +5403,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::TargetFrameIndex:
   case ISD::CopyFromReg:
     return true;
+
+  case ISD::POISON:
+    return false;
 
   case ISD::UNDEF:
     return PoisonOnly;
@@ -5593,7 +5613,24 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
          (Op.getOpcode() == ISD::ADD || isADDLike(Op));
 }
 
-bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const {
+bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN,
+                                   unsigned Depth) const {
+  EVT VT = Op.getValueType();
+
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+
+  return isKnownNeverNaN(Op, DemandedElts, SNaN, Depth);
+}
+
+bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
+                                   bool SNaN, unsigned Depth) const {
+  assert(!DemandedElts.isZero() && "No demanded elements");
+
   // If we're told that NaNs won't happen, assume they won't.
   if (getTarget().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs())
     return true;
@@ -5649,21 +5686,21 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FLDEXP: {
     if (SNaN)
       return true;
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
   }
   case ISD::FABS:
   case ISD::FNEG:
   case ISD::FCOPYSIGN: {
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
   }
   case ISD::SELECT:
-    return isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1) &&
-           isKnownNeverNaN(Op.getOperand(2), SNaN, Depth + 1);
+    return isKnownNeverNaN(Op.getOperand(1), DemandedElts, SNaN, Depth + 1) &&
+           isKnownNeverNaN(Op.getOperand(2), DemandedElts, SNaN, Depth + 1);
   case ISD::FP_EXTEND:
   case ISD::FP_ROUND: {
     if (SNaN)
       return true;
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
   }
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
@@ -5685,8 +5722,8 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FMAXIMUMNUM: {
     // Only one needs to be known not-nan, since it will be returned if the
     // other ends up being one.
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) ||
-           isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
+    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1) ||
+           isKnownNeverNaN(Op.getOperand(1), DemandedElts, SNaN, Depth + 1);
   }
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE: {
@@ -5694,33 +5731,80 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
       return true;
     // This can return a NaN if either operand is an sNaN, or if both operands
     // are NaN.
-    return (isKnownNeverNaN(Op.getOperand(0), false, Depth + 1) &&
-            isKnownNeverSNaN(Op.getOperand(1), Depth + 1)) ||
-           (isKnownNeverNaN(Op.getOperand(1), false, Depth + 1) &&
-            isKnownNeverSNaN(Op.getOperand(0), Depth + 1));
+    return (isKnownNeverNaN(Op.getOperand(0), DemandedElts, false, Depth + 1) &&
+            isKnownNeverSNaN(Op.getOperand(1), DemandedElts, Depth + 1)) ||
+           (isKnownNeverNaN(Op.getOperand(1), DemandedElts, false, Depth + 1) &&
+            isKnownNeverSNaN(Op.getOperand(0), DemandedElts, Depth + 1));
   }
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM: {
     // TODO: Does this quiet or return the origina NaN as-is?
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
-           isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
+    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1) &&
+           isKnownNeverNaN(Op.getOperand(1), DemandedElts, SNaN, Depth + 1);
   }
-  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue Src = Op.getOperand(0);
+    auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isFixedLengthVector() && Idx &&
+        Idx->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
+      APInt DemandedSrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(),
+                                                  Idx->getZExtValue());
+      return isKnownNeverNaN(Src, DemandedSrcElts, SNaN, Depth + 1);
+    }
+    return isKnownNeverNaN(Src, SNaN, Depth + 1);
+  }
   case ISD::EXTRACT_SUBVECTOR: {
-    return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);
+    SDValue Src = Op.getOperand(0);
+    if (Src.getValueType().isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(1);
+      unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
+      APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+      return isKnownNeverNaN(Src, DemandedSrcElts, SNaN, Depth + 1);
+    }
+    return isKnownNeverNaN(Src, SNaN, Depth + 1);
+  }
+  case ISD::INSERT_SUBVECTOR: {
+    SDValue BaseVector = Op.getOperand(0);
+    SDValue SubVector = Op.getOperand(1);
+    EVT BaseVectorVT = BaseVector.getValueType();
+    if (BaseVectorVT.isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(2);
+      unsigned NumBaseElts = BaseVectorVT.getVectorNumElements();
+      unsigned NumSubElts = SubVector.getValueType().getVectorNumElements();
+
+      // Clear/Extract the bits at the position where the subvector will be
+      // inserted.
+      APInt DemandedMask =
+          APInt::getBitsSet(NumBaseElts, Idx, Idx + NumSubElts);
+      APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
+      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+
+      bool NeverNaN = true;
+      if (!DemandedSrcElts.isZero())
+        NeverNaN &=
+            isKnownNeverNaN(BaseVector, DemandedSrcElts, SNaN, Depth + 1);
+      if (NeverNaN && !DemandedSubElts.isZero())
+        NeverNaN &=
+            isKnownNeverNaN(SubVector, DemandedSubElts, SNaN, Depth + 1);
+      return NeverNaN;
+    }
+    return isKnownNeverNaN(BaseVector, SNaN, Depth + 1) &&
+           isKnownNeverNaN(SubVector, SNaN, Depth + 1);
   }
   case ISD::BUILD_VECTOR: {
-    for (const SDValue &Opnd : Op->ops())
-      if (!isKnownNeverNaN(Opnd, SNaN, Depth + 1))
+    unsigned NumElts = Op.getNumOperands();
+    for (unsigned I = 0; I != NumElts; ++I)
+      if (DemandedElts[I] &&
+          !isKnownNeverNaN(Op.getOperand(I), SNaN, Depth + 1))
         return false;
     return true;
   }
   default:
-    if (Opcode >= ISD::BUILTIN_OP_END ||
-        Opcode == ISD::INTRINSIC_WO_CHAIN ||
-        Opcode == ISD::INTRINSIC_W_CHAIN ||
-        Opcode == ISD::INTRINSIC_VOID) {
-      return TLI->isKnownNeverNaNForTargetNode(Op, *this, SNaN, Depth);
+    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID) {
+      return TLI->isKnownNeverNaNForTargetNode(Op, DemandedElts, *this, SNaN,
+                                               Depth);
     }
 
     return false;
@@ -6238,6 +6322,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
+
+    if (OpOpcode == ISD::POISON)
+      return getPOISON(VT);
+
     if (N1.isUndef())
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
@@ -6258,6 +6346,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
     }
+
+    if (OpOpcode == ISD::POISON)
+      return getPOISON(VT);
+
     if (N1.isUndef())
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
@@ -7570,7 +7662,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     } else {
       switch (Opcode) {
       case ISD::SUB:
-        return getUNDEF(VT);     // fold op(undef, arg2) -> undef
+        // fold op(undef, arg2) -> undef, fold op(poison, arg2) ->poison.
+        return N1.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
       case ISD::SIGN_EXTEND_INREG:
       case ISD::UDIV:
       case ISD::SDIV:
@@ -7578,7 +7671,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::SREM:
       case ISD::SSUBSAT:
       case ISD::USUBSAT:
-        return getConstant(0, DL, VT);    // fold op(undef, arg2) -> 0
+        // fold op(undef, arg2) -> 0, fold op(poison, arg2) -> poison.
+        return N1.getOpcode() == ISD::POISON ? getPOISON(VT)
+                                             : getConstant(0, DL, VT);
       }
     }
   }
@@ -7598,16 +7693,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SDIV:
     case ISD::UREM:
     case ISD::SREM:
-      return getUNDEF(VT);       // fold op(arg1, undef) -> undef
+      // fold op(arg1, undef) -> undef, fold op(arg1, poison) -> poison.
+      return N2.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
     case ISD::MUL:
     case ISD::AND:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
-      return getConstant(0, DL, VT);  // fold op(arg1, undef) -> 0
+      // fold op(arg1, undef) -> 0, fold op(arg1, poison) -> poison.
+      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
+                                           : getConstant(0, DL, VT);
     case ISD::OR:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
-      return getAllOnesConstant(DL, VT);
+      // fold op(arg1, undef) -> an all-ones constant, fold op(arg1, poison) ->
+      // poison.
+      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
+                                           : getAllOnesConstant(DL, VT);
     }
   }
 
@@ -8899,10 +9000,13 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDVTList VTList, ArrayRef<SDValue> Ops,
-                                MachineMemOperand *MMO) {
+                                MachineMemOperand *MMO,
+                                ISD::LoadExtType ExtType) {
   FoldingSetNodeID ID;
-  ID.AddInteger(MemVT.getRawBits());
   AddNodeIDNode(ID, Opcode, VTList, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<AtomicSDNode>(
+      dl.getIROrder(), Opcode, VTList, MemVT, MMO, ExtType));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void* IP = nullptr;
@@ -8911,8 +9015,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
     return SDValue(E, 0);
   }
 
-  auto *N = newSDNode<AtomicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
-                                    VTList, MemVT, MMO);
+  auto *N = newSDNode<AtomicSDNode>(dl.getIROrder(), dl.getDebugLoc(), Opcode,
+                                    VTList, MemVT, MMO, ExtType);
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
@@ -8958,14 +9062,12 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
 }
 
-SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
-                                EVT VT, SDValue Chain, SDValue Ptr,
-                                MachineMemOperand *MMO) {
-  assert(Opcode == ISD::ATOMIC_LOAD && "Invalid Atomic Op");
-
+SDValue SelectionDAG::getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl,
+                                    EVT MemVT, EVT VT, SDValue Chain,
+                                    SDValue Ptr, MachineMemOperand *MMO) {
   SDVTList VTs = getVTList(VT, MVT::Other);
   SDValue Ops[] = {Chain, Ptr};
-  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
+  return getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, VTs, Ops, MMO, ExtType);
 }
 
 /// getMergeValues - Create a MERGE_VALUES node from the given operands.

@@ -63,9 +63,7 @@ struct ThunkArgInfo {
 class AArch64Arm64ECCallLowering : public ModulePass {
 public:
   static char ID;
-  AArch64Arm64ECCallLowering() : ModulePass(ID) {
-    initializeAArch64Arm64ECCallLoweringPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64Arm64ECCallLowering() : ModulePass(ID) {}
 
   Function *buildExitThunk(FunctionType *FnTy, AttributeList Attrs);
   Function *buildEntryThunk(Function *F);
@@ -658,9 +656,7 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
   GuardCheck->setCallingConv(CallingConv::CFGuard_Check);
 
   Value *GuardRetVal = B.CreateBitCast(GuardCheck, PtrTy);
-  SmallVector<Value *> Args;
-  for (Argument &Arg : GuestExit->args())
-    Args.push_back(&Arg);
+  SmallVector<Value *> Args(llvm::make_pointer_range(GuestExit->args()));
   CallInst *Call = B.CreateCall(Arm64Ty, GuardRetVal, Args);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 
@@ -717,9 +713,7 @@ AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
   Dispatch->setCallingConv(CallingConv::CFGuard_Check);
 
   Value *DispatchRetVal = B.CreateBitCast(Dispatch, PtrTy);
-  SmallVector<Value *> Args;
-  for (Argument &Arg : GuestExit->args())
-    Args.push_back(&Arg);
+  SmallVector<Value *> Args(llvm::make_pointer_range(GuestExit->args()));
   CallInst *Call = B.CreateCall(Arm64Ty, DispatchRetVal, Args);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
 

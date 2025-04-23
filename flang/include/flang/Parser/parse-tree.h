@@ -4272,6 +4272,11 @@ struct OmpGrainsizeClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
+struct OmpHintClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpHintClause, ScalarIntConstantExpr);
+};
+
 // Ref: [5.2: 214]
 //
 // holds-clause ->
@@ -4832,7 +4837,7 @@ struct OmpMemoryOrderClause {
 struct OmpAtomicClause {
   UNION_CLASS_BOILERPLATE(OmpAtomicClause);
   CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpClause> u;
+  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpHintClause> u;
 };
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
@@ -5244,21 +5249,23 @@ EMPTY_CLASS(AccEndAtomic);
 // ACC ATOMIC READ
 struct AccAtomicRead {
   TUPLE_CLASS_BOILERPLATE(AccAtomicRead);
-  std::tuple<Verbatim, Statement<AssignmentStmt>, std::optional<AccEndAtomic>>
+  std::tuple<Verbatim, AccClauseList, Statement<AssignmentStmt>,
+      std::optional<AccEndAtomic>>
       t;
 };
 
 // ACC ATOMIC WRITE
 struct AccAtomicWrite {
   TUPLE_CLASS_BOILERPLATE(AccAtomicWrite);
-  std::tuple<Verbatim, Statement<AssignmentStmt>, std::optional<AccEndAtomic>>
+  std::tuple<Verbatim, AccClauseList, Statement<AssignmentStmt>,
+      std::optional<AccEndAtomic>>
       t;
 };
 
 // ACC ATOMIC UPDATE
 struct AccAtomicUpdate {
   TUPLE_CLASS_BOILERPLATE(AccAtomicUpdate);
-  std::tuple<std::optional<Verbatim>, Statement<AssignmentStmt>,
+  std::tuple<std::optional<Verbatim>, AccClauseList, Statement<AssignmentStmt>,
       std::optional<AccEndAtomic>>
       t;
 };
@@ -5268,7 +5275,7 @@ struct AccAtomicCapture {
   TUPLE_CLASS_BOILERPLATE(AccAtomicCapture);
   WRAPPER_CLASS(Stmt1, Statement<AssignmentStmt>);
   WRAPPER_CLASS(Stmt2, Statement<AssignmentStmt>);
-  std::tuple<Verbatim, Stmt1, Stmt2, AccEndAtomic> t;
+  std::tuple<Verbatim, AccClauseList, Stmt1, Stmt2, AccEndAtomic> t;
 };
 
 struct OpenACCAtomicConstruct {

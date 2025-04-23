@@ -28,6 +28,15 @@ using namespace mlir::dataflow;
 // AbstractDenseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
+void AbstractDenseForwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
+    Operation *top) {
+  top->walk([&](Operation *op) {
+    if (isa<RegionBranchOpInterface, CallOpInterface>(op))
+      return;
+    buildOperationEquivalentLatticeAnchor(op);
+  });
+}
+
 LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
   // Visit every operation and block.
   if (failed(processOperation(top)))
@@ -240,17 +249,18 @@ void AbstractDenseForwardDataFlowAnalysis::visitRegionBranchOperation(
   }
 }
 
-const AbstractDenseLattice *
-AbstractDenseForwardDataFlowAnalysis::getLatticeFor(ProgramPoint *dependent,
-                                                    LatticeAnchor anchor) {
-  AbstractDenseLattice *state = getLattice(anchor);
-  addDependency(state, dependent);
-  return state;
-}
-
 //===----------------------------------------------------------------------===//
 // AbstractDenseBackwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
+
+void AbstractDenseBackwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
+    Operation *top) {
+  top->walk([&](Operation *op) {
+    if (isa<RegionBranchOpInterface, CallOpInterface>(op))
+      return;
+    buildOperationEquivalentLatticeAnchor(op);
+  });
+}
 
 LogicalResult
 AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
@@ -454,12 +464,4 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
     visitRegionBranchControlFlowTransfer(branch, branchPoint, successor, *after,
                                          before);
   }
-}
-
-const AbstractDenseLattice *
-AbstractDenseBackwardDataFlowAnalysis::getLatticeFor(ProgramPoint *dependent,
-                                                     LatticeAnchor anchor) {
-  AbstractDenseLattice *state = getLattice(anchor);
-  addDependency(state, dependent);
-  return state;
 }

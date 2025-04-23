@@ -329,9 +329,6 @@ public:
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
-  virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
-                                     ArgListTy &Args) const {};
-
   static ISD::NodeType getExtendForContent(BooleanContent Content) {
     switch (Content) {
     case UndefinedBooleanContent:
@@ -350,7 +347,7 @@ public:
   explicit TargetLoweringBase(const TargetMachine &TM);
   TargetLoweringBase(const TargetLoweringBase &) = delete;
   TargetLoweringBase &operator=(const TargetLoweringBase &) = delete;
-  virtual ~TargetLoweringBase() = default;
+  virtual ~TargetLoweringBase();
 
   /// Return true if the target support strict float operation
   bool isStrictFPEnabled() const {
@@ -3464,6 +3461,34 @@ public:
     return false;
   }
 
+  // Get the preferred opcode for FP_TO_XINT nodes.
+  // By default, this checks if the provded operation is an illegal FP_TO_UINT
+  // and if so, checks if FP_TO_SINT is legal or custom for use as a
+  // replacement. If both UINT and SINT conversions are Custom, we choose SINT
+  // by default because that's the right thing on PPC.
+  virtual unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                             EVT ToVT) const {
+    if (isOperationLegal(Op, ToVT))
+      return Op;
+    switch (Op) {
+    case ISD::FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::FP_TO_SINT, ToVT))
+        return ISD::FP_TO_SINT;
+      break;
+    case ISD::STRICT_FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, ToVT))
+        return ISD::STRICT_FP_TO_SINT;
+      break;
+    case ISD::VP_FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, ToVT))
+        return ISD::VP_FP_TO_SINT;
+      break;
+    default:
+      break;
+    }
+    return Op;
+  }
+
   /// Create the IR node for the given complex deinterleaving operation.
   /// If one cannot be created using all the given inputs, nullptr should be
   /// returned.
@@ -3838,6 +3863,7 @@ public:
   TargetLowering &operator=(const TargetLowering &) = delete;
 
   explicit TargetLowering(const TargetMachine &TM);
+  ~TargetLowering() override;
 
   bool isPositionIndependent() const;
 
@@ -4257,6 +4283,7 @@ public:
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
   /// NaN.
   virtual bool isKnownNeverNaNForTargetNode(SDValue Op,
+                                            const APInt &DemandedElts,
                                             const SelectionDAG &DAG,
                                             bool SNaN = false,
                                             unsigned Depth = 0) const;
@@ -4563,6 +4590,9 @@ public:
       SelectionDAG & /*DAG*/, SmallVectorImpl<SDValue> & /*InVals*/) const {
     llvm_unreachable("Not Implemented");
   }
+
+  virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
+                                     ArgListTy &Args) const {}
 
   /// This structure contains the information necessary for lowering
   /// pointer-authenticating indirect calls.  It is equivalent to the "ptrauth"
