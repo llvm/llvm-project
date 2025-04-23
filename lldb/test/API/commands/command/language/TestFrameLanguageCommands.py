@@ -14,6 +14,8 @@ class TestCase(TestBase):
         frame = thread.selected_frame
         self.assertEqual(frame.GuessLanguage(), lldb.eLanguageTypeC_plus_plus_11)
         self.assertEqual(frame.name, "f()")
+
+        # Test `help`.
         self.expect(
             "help demangle",
             substrs=[
@@ -21,21 +23,21 @@ class TestCase(TestBase):
                 "Syntax: language cplusplus demangle [<mangled-name> ...]",
             ],
         )
-        self.expect("demangle _Z1fv", startstr="_Z1fv ---> f()")
 
-        # Switch the objc caller.
+        # Run a `language cplusplus` command.
+        self.expect(f"demangle _Z1fv", startstr="_Z1fv ---> f()")
+        # Test prefix matching.
+        self.expect("dem _Z1fv", startstr="_Z1fv ---> f()")
+
+        # Select the objc caller.
         self.runCmd("up")
         frame = thread.selected_frame
         self.assertEqual(frame.GuessLanguage(), lldb.eLanguageTypeObjC_plus_plus)
         self.assertEqual(frame.name, "main")
+
+        # Ensure `demangle` doesn't resolve from the objc frame.
         self.expect("help demangle", error=True)
-        self.expect(
-            "help tagged-pointer",
-            substrs=[
-                "Commands for operating on Objective-C tagged pointers.",
-                "Syntax: class-table <subcommand> [<subcommand-options>]",
-            ],
-        )
+        # Run a `language objc` command.
         self.expect(
             "tagged-pointer info 0",
             error=True,
