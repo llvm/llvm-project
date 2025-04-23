@@ -1569,7 +1569,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   }
 
   RegisterType RegType = RegisterType::SRV;
-  int SlotNum = -1;
+  std::optional<unsigned> SlotNum;
   unsigned SpaceNum = 0;
 
   // Validate slot
@@ -1583,10 +1583,12 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
       return;
     }
     StringRef SlotNumStr = Slot.substr(1);
-    if (SlotNumStr.getAsInteger(10, SlotNum)) {
+    unsigned N;
+    if (SlotNumStr.getAsInteger(10, N)) {
       Diag(SlotLoc, diag::err_hlsl_unsupported_register_number);
       return;
     }
+    SlotNum = N;
   }
 
   // Validate space
@@ -1601,7 +1603,7 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   }
 
   // If we have slot, diagnose it is the right register type for the decl
-  if (SlotNum >= 0)
+  if (SlotNum.has_value())
     if (!DiagnoseHLSLRegisterAttribute(SemaRef, SlotLoc, TheDecl, RegType,
                                        !SpaceLoc.isInvalid()))
       return;
