@@ -9786,6 +9786,13 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
   case MCK_SReg_256:
   case MCK_SReg_512:
     return Operand.isNull() ? Match_Success : Match_InvalidOperand;
+  case MCK_SReg_RSRC: {
+    if (Operand.isReg())
+      if (Operand.isRegClass(SReg_128_XNULLRegClassID) ||
+          Operand.isRegClass(SReg_256_XNULLRegClassID))
+        return Match_Success;
+    return Match_InvalidOperand;
+  }
   default:
     return Match_InvalidOperand;
   }
