@@ -364,6 +364,15 @@ public:
     return CompilerDecl();
   }
 
+  virtual llvm::Expected<CompilerType> GetDereferencedType(
+      lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+      bool transparent_pointers, bool omit_empty_base_classes,
+      bool ignore_array_bounds, std::string &child_name,
+      uint32_t &child_byte_size, int32_t &child_byte_offset,
+      uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
+      bool &child_is_base_class, bool &child_is_deref_of_parent,
+      ValueObject *valobj, uint64_t &language_flags, bool &type_valid) = 0;
+
   virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
@@ -488,8 +497,6 @@ public:
 
   virtual bool IsReferenceType(lldb::opaque_compiler_type_t type,
                                CompilerType *pointee_type, bool *is_rvalue) = 0;
-
-  virtual bool IsValidDereferenceType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool
   ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) {

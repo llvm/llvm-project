@@ -233,13 +233,6 @@ bool CompilerType::IsReferenceType(CompilerType *pointee_type,
   return false;
 }
 
-bool CompilerType::IsValidDereferenceType() const {
-  if (IsValid())
-    if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsValidDereferenceType(m_type);
-  return false;
-}
-
 bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -898,6 +891,25 @@ CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
   if (IsValid())
     return GetTypeSystem()->GetStaticFieldWithName(m_type, name);
   return CompilerDecl();
+}
+
+llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
+    ExecutionContext *exe_ctx, bool transparent_pointers,
+    bool omit_empty_base_classes, bool ignore_array_bounds,
+    std::string &child_name, uint32_t &child_byte_size,
+    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
+    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
+    bool &child_is_deref_of_parent, ValueObject *valobj,
+    uint64_t &language_flags, bool &type_valid) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDereferencedType(
+          m_type, exe_ctx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+          child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, child_is_deref_of_parent, valobj, language_flags,
+          type_valid);
+  return CompilerType();
 }
 
 llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
