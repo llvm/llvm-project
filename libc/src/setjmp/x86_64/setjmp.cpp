@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // We use naked functions to avoid compiler-generated prologue and epilogue.
-// Despite GCC documentation listing this as a supported case for extended asm, the 
-// generated code is not wrong as we only pass in constant operands to 
-// extended asm.
+// Despite GCC documentation listing this as a unsupported case for extended 
+// asm, the generated code is not wrong as we only pass in constant operands 
+// to extended asm.
 // See https://github.com/llvm/llvm-project/issues/137055 for related remarks.
 
 #include "hdr/offsetof_macros.h"
