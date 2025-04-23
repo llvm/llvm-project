@@ -12,10 +12,17 @@
 namespace mlir {
 class RewritePatternSet;
 
+namespace vector {
+  struct UnrollVectorOptions;
+} // namespace vector
+
 namespace xegpu {
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
+
+void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
+                                 const vector::UnrollVectorOptions &options);
 
 } // namespace xegpu
 } // namespace mlir

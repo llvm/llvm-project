@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
@@ -387,10 +388,6 @@ struct UnrollAtomicRMWOp : public UnrollPattern<xegpu::AtomicRMWOp> {
   }
 };
 
-} // namespace
-
-namespace {
-
 struct XeGPUUnrollPass final
     : public xegpu::impl::XeGPUUnrollBase<XeGPUUnrollPass> {
   XeGPUUnrollPass() = default;
@@ -432,5 +429,10 @@ struct XeGPUUnrollPass final
     return;
   }
 };
-
 } // namespace
+
+void mlir::xegpu::populateXeGPUUnrollPatterns(
+    RewritePatternSet &patterns, const mlir::vector::UnrollVectorOptions &options) {
+  patterns.add<UnrollCreateNdOp, UnrollLoadNdOp, UnrollStoreNdOp>(
+        patterns.getContext(), options);
+}
