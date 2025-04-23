@@ -44,6 +44,7 @@ static const unsigned ZOSAddressMap[] = {
     0, // hlsl_groupshared
     0, // hlsl_constant
     0, // hlsl_private
+    0, // hlsl_device
 #if LLPC_BUILD_NPI
     0, // wasm_funcref
     0  // hip_lane_shared

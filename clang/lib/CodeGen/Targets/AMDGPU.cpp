@@ -346,6 +346,11 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
 
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     const FunctionDecl *FD, llvm::Function *F, CodeGenModule &M) const {
+#if LLPC_BUILD_NPI
+  llvm::StringMap<bool> TargetFetureMap;
+  M.getContext().getFunctionFeatureMap(TargetFetureMap, FD);
+
+#endif /* LLPC_BUILD_NPI */
   const auto *ReqdWGS =
       M.getLangOpts().OpenCL ? FD->getAttr<ReqdWorkGroupSizeAttr>() : nullptr;
   const bool IsOpenCLKernel =
@@ -446,7 +451,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   }
 
   // OpenCL doesn't support cluster feature.
-  if (IsOpenCLKernel || FD->getAttr<CUDANoClusterAttr>())
+  if ((IsOpenCLKernel && TargetFetureMap.lookup("gfx1250-insts")) ||
+      FD->getAttr<CUDANoClusterAttr>())
     F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 #endif /* LLPC_BUILD_NPI */
 }

@@ -266,6 +266,7 @@ constexpr Definition g_top_level_entries[] = {
                                   g_var_child_entries, true),
     Entry::DefinitionWithChildren("progress", EntryType::Invalid,
                                   g_progress_child_entries),
+    Definition("separator", EntryType::Separator),
 };
 
 constexpr Definition g_root = Entry::DefinitionWithChildren(
@@ -367,6 +368,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(CurrentPCArrow);
     ENUM_TO_CSTR(ProgressCount);
     ENUM_TO_CSTR(ProgressMessage);
+    ENUM_TO_CSTR(Separator);
   }
   return "???";
 }
@@ -1899,6 +1901,13 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
         s.PutCString(progress->message);
         return true;
       }
+    }
+    return false;
+
+  case Entry::Type::Separator:
+    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+      s << target->GetDebugger().GetSeparator();
+      return true;
     }
     return false;
   }
