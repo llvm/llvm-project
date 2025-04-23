@@ -52,7 +52,7 @@ template<typename ...T> void as_operand_of_cast(int a, T ...t) {
 
 // fold-operator can be '>' or '>>'.
 template <int... N> constexpr bool greaterThan() { return (N > ...); }
-// expected-error@-1 {{comparison in a fold expression}}
+// expected-error@-1 {{comparison in fold expression}}
 
 template <int... N> constexpr int rightShift() { return (N >> ...); }
 
