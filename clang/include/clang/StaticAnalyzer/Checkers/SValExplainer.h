@@ -122,7 +122,7 @@ public:
 
   std::string VisitSymbolConjured(const SymbolConjured *S) {
     return "symbol of type '" + S->getType().getAsString() +
-           "' conjured at statement '" +
+           "' conjured at CFG element '" +
            printCFGElementRef(S->getCFGElementRef()) + "'";
   }
 
