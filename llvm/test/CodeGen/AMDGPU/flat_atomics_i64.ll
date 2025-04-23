@@ -11810,7 +11810,7 @@ define amdgpu_kernel void @atomic_load_i64_offset(ptr %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %in, i64 4
+  %gep = getelementptr inbounds i64, ptr %in, i64 4
   %val = load atomic i64, ptr %gep  seq_cst, align 8
   store i64 %val, ptr %out
   ret void
@@ -11920,8 +11920,8 @@ define amdgpu_kernel void @atomic_load_i64_addr64_offset(ptr %in, ptr %out, i64 
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %in, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %in, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   %val = load atomic i64, ptr %gep seq_cst, align 8
   store i64 %val, ptr %out
   ret void
@@ -11981,7 +11981,7 @@ define amdgpu_kernel void @atomic_load_i64_addr64(ptr %in, ptr %out, i64 %index)
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %in, i64 %index
+  %ptr = getelementptr inbounds i64, ptr %in, i64 %index
   %val = load atomic i64, ptr %ptr seq_cst, align 8
   store i64 %val, ptr %out
   ret void
@@ -12025,7 +12025,7 @@ define amdgpu_kernel void @atomic_store_i64_offset(i64 %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr i64, ptr %out, i64 4
+  %gep = getelementptr inbounds i64, ptr %out, i64 4
   store atomic i64 %in, ptr %gep  seq_cst, align 8
   ret void
 }
@@ -12119,8 +12119,8 @@ define amdgpu_kernel void @atomic_store_i64_addr64_offset(i64 %in, ptr %out, i64
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr i64, ptr %out, i64 %index
-  %gep = getelementptr i64, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds i64, ptr %out, i64 %index
+  %gep = getelementptr inbounds i64, ptr %ptr, i64 4
   store atomic i64 %in, ptr %gep seq_cst, align 8
   ret void
 }
@@ -13597,7 +13597,7 @@ define amdgpu_kernel void @atomic_load_f64_offset(ptr %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr double, ptr %in, i64 4
+  %gep = getelementptr inbounds double, ptr %in, i64 4
   %val = load atomic double, ptr %gep  seq_cst, align 8
   store double %val, ptr %out
   ret void
@@ -13707,8 +13707,8 @@ define amdgpu_kernel void @atomic_load_f64_addr64_offset(ptr %in, ptr %out, i64 
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1]
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr double, ptr %in, i64 %index
-  %gep = getelementptr double, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds double, ptr %in, i64 %index
+  %gep = getelementptr inbounds double, ptr %ptr, i64 4
   %val = load atomic double, ptr %gep seq_cst, align 8
   store double %val, ptr %out
   ret void
@@ -13812,7 +13812,7 @@ define amdgpu_kernel void @atomic_store_f64_offset(double %in, ptr %out) {
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %gep = getelementptr double, ptr %out, i64 4
+  %gep = getelementptr inbounds double, ptr %out, i64 4
   store atomic double %in, ptr %gep  seq_cst, align 8
   ret void
 }
@@ -13906,8 +13906,8 @@ define amdgpu_kernel void @atomic_store_f64_addr64_offset(double %in, ptr %out, 
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %ptr = getelementptr double, ptr %out, i64 %index
-  %gep = getelementptr double, ptr %ptr, i64 4
+  %ptr = getelementptr inbounds double, ptr %out, i64 %index
+  %gep = getelementptr inbounds double, ptr %ptr, i64 4
   store atomic double %in, ptr %gep seq_cst, align 8
   ret void
 }
