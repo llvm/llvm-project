@@ -133,8 +133,9 @@ static InstructionCost getIntImmCostImpl(const DataLayout &DL,
                                     /*CompressionCost=*/false, FreeZeroes);
 }
 
-InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                            TTI::TargetCostKind CostKind) {
+InstructionCost
+RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                            TTI::TargetCostKind CostKind) const {
   return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind, false);
 }
 
@@ -168,7 +169,7 @@ static bool canUseShiftPair(Instruction *Inst, const APInt &Imm) {
 InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                                 const APInt &Imm, Type *Ty,
                                                 TTI::TargetCostKind CostKind,
-                                                Instruction *Inst) {
+                                                Instruction *Inst) const {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
 
@@ -276,7 +277,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
 InstructionCost
 RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                   const APInt &Imm, Type *Ty,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   // Prevent hoisting in unknown cases.
   return TTI::TCC_Free;
 }
@@ -286,7 +287,7 @@ bool RISCVTTIImpl::hasActiveVectorLength(unsigned, Type *DataTy, Align) const {
 }
 
 TargetTransformInfo::PopcntSupportKind
-RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
+RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) const {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
   return ST->hasStdExtZbb() || (ST->hasVendorXCVbitmanip() && !ST->is64Bit())
              ? TTI::PSK_FastHardware
@@ -382,6 +383,62 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
   if (IndexVT.getScalarType().bitsGT(ST.getXLenVT()))
     IndexVT = IndexVT.changeVectorElementType(MVT::i16);
   return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
+}
+
+/// Attempt to approximate the cost of a shuffle which will require splitting
+/// during legalization.  Note that processShuffleMasks is not an exact proxy
+/// for the algorithm used in LegalizeVectorTypes, but hopefully it's a
+/// reasonably close upperbound.
+static InstructionCost costShuffleViaSplitting(const RISCVTTIImpl &TTI,
+                                               MVT LegalVT, VectorType *Tp,
+                                               ArrayRef<int> Mask,
+                                               TTI::TargetCostKind CostKind) {
+  assert(LegalVT.isFixedLengthVector() && !Mask.empty() &&
+         "Expected fixed vector type and non-empty mask");
+  unsigned LegalNumElts = LegalVT.getVectorNumElements();
+  // Number of destination vectors after legalization:
+  unsigned NumOfDests = divideCeil(Mask.size(), LegalNumElts);
+  // We are going to permute multiple sources and the result will be in
+  // multiple destinations. Providing an accurate cost only for splits where
+  // the element type remains the same.
+  if (NumOfDests <= 1 ||
+      LegalVT.getVectorElementType().getSizeInBits() !=
+          Tp->getElementType()->getPrimitiveSizeInBits() ||
+      LegalNumElts >= Tp->getElementCount().getFixedValue())
+    return InstructionCost::getInvalid();
+
+  unsigned VecTySize = TTI.getDataLayout().getTypeStoreSize(Tp);
+  unsigned LegalVTSize = LegalVT.getStoreSize();
+  // Number of source vectors after legalization:
+  unsigned NumOfSrcs = divideCeil(VecTySize, LegalVTSize);
+
+  auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(), LegalNumElts);
+
+  unsigned NormalizedVF = LegalNumElts * std::max(NumOfSrcs, NumOfDests);
+  unsigned NumOfSrcRegs = NormalizedVF / LegalNumElts;
+  unsigned NumOfDestRegs = NormalizedVF / LegalNumElts;
+  SmallVector<int> NormalizedMask(NormalizedVF, PoisonMaskElem);
+  assert(NormalizedVF >= Mask.size() &&
+         "Normalized mask expected to be not shorter than original mask.");
+  copy(Mask, NormalizedMask.begin());
+  InstructionCost Cost = 0;
+  SmallDenseSet<std::pair<ArrayRef<int>, unsigned>> ReusedSingleSrcShuffles;
+  processShuffleMasks(
+      NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
+      [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
+        if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
+          return;
+        if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
+                 .second)
+          return;
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
+                                   RegMask, CostKind, 0, nullptr);
+      },
+      [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
+                                   CostKind, 0, nullptr);
+      });
+  return Cost;
 }
 
 /// Try to perform better estimation of the permutation.
@@ -646,48 +703,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return true;
       }
     };
-    // We are going to permute multiple sources and the result will be in
-    // multiple destinations. Providing an accurate cost only for splits where
-    // the element type remains the same.
-    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
-        shouldSplit(Kind) &&
-        LT.second.getVectorElementType().getSizeInBits() ==
-        Tp->getElementType()->getPrimitiveSizeInBits() &&
-        LT.second.getVectorNumElements() <
-        cast<FixedVectorType>(Tp)->getNumElements() &&
-        divideCeil(Mask.size(),
-                   cast<FixedVectorType>(Tp)->getNumElements()) ==
-        static_cast<unsigned>(*LT.first.getValue())) {
-      unsigned NumRegs = *LT.first.getValue();
-      unsigned VF = cast<FixedVectorType>(Tp)->getNumElements();
-      unsigned SubVF = PowerOf2Ceil(VF / NumRegs);
-      auto *SubVecTy = FixedVectorType::get(Tp->getElementType(), SubVF);
 
-      InstructionCost Cost = 0;
-      for (unsigned I = 0, NumSrcRegs = divideCeil(Mask.size(), SubVF);
-           I < NumSrcRegs; ++I) {
-        bool IsSingleVector = true;
-        SmallVector<int> SubMask(SubVF, PoisonMaskElem);
-        transform(
-                  Mask.slice(I * SubVF,
-                             I == NumSrcRegs - 1 ? Mask.size() % SubVF : SubVF),
-                  SubMask.begin(), [&](int I) -> int {
-                    if (I == PoisonMaskElem)
-                      return PoisonMaskElem;
-                    bool SingleSubVector = I / VF == 0;
-                    IsSingleVector &= SingleSubVector;
-                    return (SingleSubVector ? 0 : 1) * SubVF + (I % VF) % SubVF;
-                  });
-        if (all_of(enumerate(SubMask), [](auto &&P) {
-          return P.value() == PoisonMaskElem ||
-            static_cast<unsigned>(P.value()) == P.index();
-        }))
-          continue;
-        Cost += getShuffleCost(IsSingleVector ? TTI::SK_PermuteSingleSrc
-                               : TTI::SK_PermuteTwoSrc,
-                               SubVecTy, SubMask, CostKind, 0, nullptr);
-      }
-      return Cost;
+    if (!Mask.empty() && LT.first.isValid() && LT.first != 1 &&
+        shouldSplit(Kind)) {
+      InstructionCost SplitCost =
+          costShuffleViaSplitting(*this, LT.second, FVTp, Mask, CostKind);
+      if (SplitCost.isValid())
+        return SplitCost;
     }
   }
 
@@ -888,7 +910,7 @@ RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
 InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-    bool UseMaskForCond, bool UseMaskForGaps) {
+    bool UseMaskForCond, bool UseMaskForGaps) const {
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
@@ -1069,7 +1091,7 @@ InstructionCost RISCVTTIImpl::getStridedMemoryOpCost(
 }
 
 InstructionCost
-RISCVTTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) {
+RISCVTTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   // FIXME: This is a property of the default vector convention, not
   // all possible calling conventions.  Fixing that will require
   // some TTI API and SLP rework.
@@ -1899,7 +1921,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
 InstructionCost RISCVTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);
@@ -1951,7 +1973,7 @@ RISCVTTIImpl::getStoreImmCost(Type *Ty, TTI::OperandValueInfo OpInfo,
 }
 
 InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                              MaybeAlign Alignment,
+                                              Align Alignment,
                                               unsigned AddressSpace,
                                               TTI::TargetCostKind CostKind,
                                               TTI::OperandValueInfo OpInfo,
@@ -2444,7 +2466,7 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 InstructionCost RISCVTTIImpl::getPointersChainCost(
     ArrayRef<const Value *> Ptrs, const Value *Base,
     const TTI::PointersChainInfo &Info, Type *AccessTy,
-    TTI::TargetCostKind CostKind) {
+    TTI::TargetCostKind CostKind) const {
   InstructionCost Cost = TTI::TCC_Free;
   // In the basic model we take into account GEP instructions only
   // (although here can come alloca instruction, a value, constants and/or
@@ -2488,9 +2510,9 @@ InstructionCost RISCVTTIImpl::getPointersChainCost(
   return Cost;
 }
 
-void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                           TTI::UnrollingPreferences &UP,
-                                           OptimizationRemarkEmitter *ORE) {
+void RISCVTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   // TODO: More tuning on benchmarks and metrics with changes as needed
   //       would apply to all settings below to enable performance.
 
@@ -2566,7 +2588,7 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::PeelingPreferences &PP) {
+                                         TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
@@ -2620,7 +2642,7 @@ RISCVTTIImpl::getPreferredAddressingMode(const Loop *L,
 }
 
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                                 const TargetTransformInfo::LSRCost &C2) {
+                                 const TargetTransformInfo::LSRCost &C2) const {
   // RISC-V specific here are "instruction number 1st priority".
   // If we need to emit adds inside the loop to add up base registers, then
   // we need at least one extra temporary register.
@@ -2669,7 +2691,7 @@ bool RISCVTTIImpl::isLegalMaskedCompressStore(Type *DataTy,
 /// sext instructions that sign extended the same initial value. A getelementptr
 /// is considered as "complex" if it has more than 2 operands.
 bool RISCVTTIImpl::shouldConsiderAddressTypePromotion(
-    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) {
+    const Instruction &I, bool &AllowPromotionWithoutCommonHeader) const {
   bool Considerable = false;
   AllowPromotionWithoutCommonHeader = false;
   if (!isa<SExtInst>(&I))
