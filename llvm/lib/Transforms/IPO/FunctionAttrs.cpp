@@ -661,8 +661,12 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
     auto TypeSize = DL.getTypeStoreSize(Ty);
     if (!TypeSize.isScalable() && Offset) {
       int64_t Size = TypeSize.getFixedValue();
-      return ConstantRange(APInt(64, *Offset, true),
-                           APInt(64, *Offset + Size, true));
+      APInt Low(64, *Offset, true);
+      APInt High(64, *Offset + Size, true);
+      // Bail if the range overflows signed 64-bit int.
+      if (Low.sge(High))
+        return std::nullopt;
+      return ConstantRange(Low, High);
     }
     return std::nullopt;
   };
