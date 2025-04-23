@@ -1,6 +1,0 @@
-DIAG_ENUM(ConstexprInvalidCastKind)
-DIAG_ENUM_ITEM(0, Reinterpret)
-DIAG_ENUM_ITEM(1, Dynamic)
-DIAG_ENUM_ITEM(2, ThisConversionOrReinterpret)
-DIAG_ENUM_ITEM(3, CastFrom)
-DIAG_ENUM_END()

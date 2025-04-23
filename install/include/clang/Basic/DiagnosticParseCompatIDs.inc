@@ -1,3 +1,0 @@
-DIAG_COMPAT_IDS_BEGIN()
-DIAG_COMPAT_ID(0,enum_fixed_underlying_type,11,compat_cxx11_enum_fixed_underlying_type,compat_pre_cxx11_enum_fixed_underlying_type)
-DIAG_COMPAT_IDS_END()
