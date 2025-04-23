@@ -348,6 +348,7 @@ def AllocaOp : CIR_Op<"alloca", [
   }];
 
   let arguments = (ins
+    Optional<PrimitiveInt>:$dynAllocSize,
     TypeAttr:$allocaType,
     StrAttr:$name,
     UnitAttr:$init,
@@ -364,16 +365,30 @@ def AllocaOp : CIR_Op<"alloca", [
     OpBuilder<(ins "mlir::Type":$addr,
                    "mlir::Type":$allocaType,
                    "llvm::StringRef":$name,
-                   "mlir::IntegerAttr":$alignment)>
+                   "mlir::IntegerAttr":$alignment)>,
+
+    OpBuilder<(ins "mlir::Type":$addr,
+                   "mlir::Type":$allocaType,
+                   "llvm::StringRef":$name,
+                   "mlir::IntegerAttr":$alignment,
+                   "mlir::Value":$dynAllocSize),
+    [{
+      if (dynAllocSize)
+        $_state.addOperands(dynAllocSize);
+      build($_builder, $_state, addr, allocaType, name, alignment);
+    }]>
   ];
 
   let extraClassDeclaration = [{
     // Whether the alloca input type is a pointer.
     bool isPointerType() { return ::mlir::isa<::cir::PointerType>(getAllocaType()); }
+
+    bool isDynamic() { return (bool)getDynAllocSize(); }
   }];
 
   let assemblyFormat = [{
     $allocaType `,` qualified(type($addr)) `,`
+    ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
     `[` $name
        (`,` `init` $init^)?
        (`,` `const` $constant^)?

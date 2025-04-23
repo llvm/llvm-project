@@ -392,6 +392,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::VariableArray: {
+    const VariableArrayType *vla = cast<VariableArrayType>(ty);
+    assert(vla->getIndexTypeCVRQualifiers() == 0 &&
+           "FIXME: We only handle trivial array types so far!");
+    // VLAs resolve to the innermost element type; this matches
+    // the return of alloca, and there isn't any obviously better choice.
+    resultType = convertTypeForMem(vla->getElementType());
+    break;
+  }
+
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());

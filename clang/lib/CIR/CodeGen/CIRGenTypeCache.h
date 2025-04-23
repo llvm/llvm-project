@@ -49,7 +49,12 @@ struct CIRGenTypeCache {
   cir::FP80Type FP80Ty;
   cir::FP128Type FP128Ty;
 
+  /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
+  mlir::Type SizeTy;
+
   mlir::Type PtrDiffTy;
+
+  cir::PointerType UInt8PtrTy;
 
   /// The size and alignment of a pointer into the generic address space.
   union {

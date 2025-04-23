@@ -13,11 +13,16 @@ void test() {
   const double cd = 4.0;
   const bool cb1 = true;
   const bool cb2 = false;
+
+
+  // TODO: The following variables need to be used for example as function return value
+  /*
   int uii;
   long uil;
   float uif;
   double uid;
   bool uib;
+  */
 }
 
 // Note: The alignment of i64 stores below is wrong. That should be fixed
@@ -36,11 +41,14 @@ void test() {
 // CHECK:    %[[CD_PTR:.*]] = alloca double, i64 1, align 8
 // CHECK:    %[[CB1_PTR:.*]] = alloca i8, i64 1, align 1
 // CHECK:    %[[CB2_PTR:.*]] = alloca i8, i64 1, align 1
-// CHECK:    %[[UII_PTR:.*]] = alloca i32, i64 1, align 4
-// CHECK:    %[[UIL_PTR:.*]] = alloca i64, i64 1, align 8
-// CHECK:    %[[UIF_PTR:.*]] = alloca float, i64 1, align 4
-// CHECK:    %[[UID_PTR:.*]] = alloca double, i64 1, align 8
-// CHECK:    %[[UIB_PTR:.*]] = alloca i8, i64 1, align 1
+
+// TODO: those alloca are removed in DCE
+// CHECK    %[[UII_PTR:.*]] = alloca i32, i64 1, align 4
+// CHECK    %[[UIL_PTR:.*]] = alloca i64, i64 1, align 8
+// CHECK    %[[UIF_PTR:.*]] = alloca float, i64 1, align 4
+// CHECK    %[[UID_PTR:.*]] = alloca double, i64 1, align 8
+// CHECK    %[[UIB_PTR:.*]] = alloca i8, i64 1, align 1
+
 // CHECK:    store i32 1, ptr %[[I_PTR]], align 4
 // CHECK:    store i64 2, ptr %[[L_PTR]], align 4
 // CHECK:    store float 3.000000e+00, ptr %[[F_PTR]], align 4

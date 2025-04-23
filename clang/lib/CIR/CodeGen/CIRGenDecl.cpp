@@ -25,11 +25,11 @@ using namespace clang::CIRGen;
 
 CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
-  QualType ty = d.getType();
+  const QualType ty = d.getType();
   if (ty.getAddressSpace() != LangAS::Default)
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
 
-  mlir::Location loc = getLoc(d.getSourceRange());
+  const mlir::Location loc = getLoc(d.getSourceRange());
 
   CIRGenFunction::AutoVarEmission emission(d);
   emission.IsEscapingByRef = d.isEscapingByref();
@@ -37,22 +37,28 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
     cgm.errorNYI(d.getSourceRange(),
                  "emitAutoVarDecl: decl escaping by reference");
 
-  CharUnits alignment = getContext().getDeclAlign(&d);
+  const CharUnits alignment = getContext().getDeclAlign(&d);
 
   // If the type is variably-modified, emit all the VLA sizes for it.
   if (ty->isVariablyModifiedType())
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: variably modified type");
+    emitVariablyModifiedType(ty);
 
   Address address = Address::invalid();
-  if (!ty->isConstantSizeType())
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarDecl: non-constant size type");
-
-  // A normal fixed sized variable becomes an alloca in the entry block,
-  mlir::Type allocaTy = convertTypeForMem(ty);
-  // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
-                             /*insertIntoFnEntryBlock=*/false);
-  declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
+  if (ty->isConstantSizeType()) {
+    // A normal fixed sized variable becomes an alloca in the entry block,
+    const mlir::Type allocaTy = convertTypeForMem(ty);
+    // Create the temp alloca and declare variable using it.
+    address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
+                               /*insertIntoFnEntryBlock=*/false);
+    declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()),
+            alignment);
+  } else { // not openmp nor constant sized type
+    const VlaSizePair vlaSize = getVLASize(ty);
+    const mlir::Type mlirType = convertTypeForMem(vlaSize.type);
+    Address allocaAddr = Address::invalid();
+    address = createTempAlloca(mlirType, alignment, loc, "vla", vlaSize.numElts,
+                               &allocaAddr, builder.saveInsertionPoint());
+  }
 
   emission.Addr = address;
   setAddrOfLocalVar(&d, address);

@@ -67,8 +67,14 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
+
+  SizeTy =
+      cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
+
   PtrDiffTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
+
+  UInt8PtrTy = builder.getPointerTo(UInt8Ty);
 
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));

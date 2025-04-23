@@ -77,43 +77,36 @@ struct PackedAndPaddedS {
 
 #pragma pack(pop)
 
-void f(void) {
+struct IncompleteS* f(void) {
   struct IncompleteS *p;
+  return p;
 }
 
-// CIR:      cir.func @f()
-// CIR-NEXT:   cir.alloca !cir.ptr<!cir.record<struct "IncompleteS" incomplete>>,
-// CIR-SAME:       !cir.ptr<!cir.ptr<!cir.record<struct
-// CIR-SAME:       "IncompleteS" incomplete>>>, ["p"]
-// CIR-NEXT:   cir.return
+// CIR: cir.func @f()
+// CIR:  cir.alloca !cir.ptr<!cir.record<struct "IncompleteS" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<struct "IncompleteS" incomplete>>>, ["p"]
 
-// LLVM:      define void @f()
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
-// LLVM-NEXT:   ret void
+// LLVM: define ptr @f()
+// LLVM:   %[[P:.*]] = alloca ptr, i64 1, align 8
 
-// OGCG:      define{{.*}} void @f()
+// OGCG: define{{.*}} ptr @f()
 // OGCG-NEXT: entry:
-// OGCG-NEXT:   %[[P:.*]] = alloca ptr, align 8
-// OGCG-NEXT:   ret void
+// OGCG:   %[[P:.*]] = alloca ptr, align 8
 
-void f2(void) {
+int f2(void) {
   struct CompleteS s;
+  return s.a;
 }
 
 // CIR:      cir.func @f2()
-// CIR-NEXT:   cir.alloca !cir.record<struct "CompleteS" {!s32i, !s8i}>,
+// CIR:   cir.alloca !cir.record<struct "CompleteS" {!s32i, !s8i}>,
 // CIR-SAME:       !cir.ptr<!cir.record<struct "CompleteS" {!s32i, !s8i}>>,
-// CIR-SAME:       ["s"] {alignment = 4 : i64}
-// CIR-NEXT:   cir.return
+// CIR:       ["s"] {alignment = 4 : i64}
 
-// LLVM:      define void @f2()
-// LLVM-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM-NEXT:   ret void
+// LLVM:  define {{.*}} @f2()
+// LLVM:   %[[S:.*]] = alloca %struct.CompleteS, i64 1, align 4
 
-// OGCG:      define{{.*}} void @f2()
-// OGCG-NEXT: entry:
-// OGCG-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, align 4
-// OGCG-NEXT:   ret void
+// OGCG:      define{{.*}} {{.*}} @f2()
+// OGCG:   %[[S:.*]] = alloca %struct.CompleteS, align 4
 
 char f3(int a) {
   cs.a = a;

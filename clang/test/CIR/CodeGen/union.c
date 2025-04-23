@@ -11,20 +11,16 @@ union IncompleteU *p;
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
 
-void f(void) {
+union IncompleteU* f(void) {
   union IncompleteU *p;
+  return p;
 }
 
-// CIR: cir.func @f()
-// CIR-NEXT: cir.alloca !cir.ptr<!cir.record<union "IncompleteU" incomplete>>,
-// CIR-SAME:     !cir.ptr<!cir.ptr<!cir.record<union "IncompleteU" incomplete>>>, ["p"]
-// CIR-NEXT: cir.return
+// CIR: cir.func @f() -> !cir.ptr<!cir.record<union "IncompleteU" incomplete>>
+// CIR:   cir.alloca !cir.ptr<!cir.record<union "IncompleteU" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "IncompleteU" incomplete>>>, ["p"]
 
-// LLVM:      define void @f()
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
-// LLVM-NEXT:   ret void
+// LLVM: define ptr @f()
+// LLVM:   %[[P:.*]] = alloca ptr, i64 1, align 8
 
-// OGCG:      define{{.*}} void @f()
-// OGCG-NEXT: entry:
-// OGCG-NEXT:   %[[P:.*]] = alloca ptr, align 8
-// OGCG-NEXT:   ret void
+// OGCG: define{{.*}} ptr @f()
+// OGCG:   %[[P:.*]] = alloca ptr, align 8

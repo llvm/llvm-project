@@ -175,6 +175,23 @@ public:
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           mlir::IntegerAttr alignment,
+                           mlir::Value dynAllocSize) {
+    return create<cir::AllocaOp>(loc, addrType, type, name, alignment,
+                                 dynAllocSize);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment,
+                           mlir::Value dynAllocSize) {
+    auto alignmentIntAttr = getSizeFromCharUnits(getContext(), alignment);
+    return createAlloca(loc, addrType, type, name, alignmentIntAttr,
+                        dynAllocSize);
+  }
+
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
                          bool isVolatile = false, uint64_t alignment = 0) {
     mlir::IntegerAttr intAttr;

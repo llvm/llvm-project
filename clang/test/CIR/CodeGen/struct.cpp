@@ -12,20 +12,17 @@ IncompleteS *p;
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
 
-void f(void) {
+struct IncompleteS* f(void) {
   IncompleteS *p;
+  return p;
 }
 
-// CIR:      cir.func @f()
-// CIR-NEXT:   cir.alloca !cir.ptr<!cir.record<struct "IncompleteS" incomplete>>,
-// CIR-SAME:       !cir.ptr<!cir.ptr<!cir.record<struct "IncompleteS" incomplete>>>, ["p"]
-// CIR-NEXT:   cir.return
+// CIR: cir.func @f()
+// CIR:  cir.alloca !cir.ptr<!cir.record<struct "IncompleteS" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<struct "IncompleteS" incomplete>>>, ["p"]
 
-// LLVM:      define void @f()
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
-// LLVM-NEXT:   ret void
+// LLVM: define ptr @f()
+// LLVM:   %[[P:.*]] = alloca ptr, i64 1, align 8
 
-// OGCG:      define{{.*}} void @_Z1fv()
+// OGCG: define{{.*}} ptr @_Z1fv()
 // OGCG-NEXT: entry:
-// OGCG-NEXT:   %[[P:.*]] = alloca ptr, align 8
-// OGCG-NEXT:   ret void
+// OGCG:   %[[P:.*]] = alloca ptr, align 8

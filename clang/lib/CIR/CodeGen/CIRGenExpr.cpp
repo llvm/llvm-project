@@ -88,9 +88,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
 
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
     case CK_ArrayToPointerDecay: {
-      cgm.errorNYI(expr->getSourceRange(),
-                   "emitPointerWithAlignment: array-to-pointer decay");
-      return Address::invalid();
+      return emitArrayToPointerDecay(ce->getSubExpr());
     }
 
     case CK_UncheckedDerivedToBase:
@@ -742,6 +740,41 @@ LValue CIRGenFunction::emitMemberExpr(const MemberExpr *e) {
   llvm_unreachable("Unhandled member declaration!");
 }
 
+Address CIRGenFunction::emitArrayToPointerDecay(const Expr *e) {
+  assert(e->getType()->isArrayType() &&
+         "Array to pointer decay must have array source type!");
+
+  // Expressions of array type can't be bitfields or vector elements.
+  const LValue lv = emitLValue(e);
+  const Address addr = lv.getAddress();
+
+  // If the array type was an incomplete type, we need to make sure
+  // the decay ends up being the right type.
+  const cir::PointerType lvalueAddrTy =
+      mlir::dyn_cast<cir::PointerType>(addr.getPointer().getType());
+  assert(lvalueAddrTy && "expected pointer");
+
+  if (e->getType()->isVariableArrayType())
+    return addr;
+
+  const cir::ArrayType pointeeTy =
+      mlir::dyn_cast<cir::ArrayType>(lvalueAddrTy.getPointee());
+  assert(pointeeTy && "expected array");
+
+  const mlir::Type arrayTy = convertType(e->getType());
+  assert(mlir::isa<cir::ArrayType>(arrayTy) && "expected array");
+  assert(pointeeTy == arrayTy);
+
+  const QualType elementType =
+      e->getType()->castAsArrayTypeUnsafe()->getElementType();
+
+  const mlir::Value ptr = cgm.getBuilder().maybeBuildArrayDecay(
+      cgm.getLoc(e->getSourceRange()), addr.getPointer(),
+      convertTypeForMem(elementType));
+
+  return Address(ptr, addr.getAlignment());
+}
+
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (e->getOpcode() == BO_Comma) {
@@ -1059,7 +1092,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(ip);
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
-                                /*var type*/ ty, name, alignIntAttr);
+                                /*var type*/ ty, name, alignIntAttr, arraySize);
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
@@ -1080,5 +1113,62 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
                                          bool insertIntoFnEntryBlock) {
   mlir::Value alloca =
       emitAlloca(name.str(), ty, loc, align, insertIntoFnEntryBlock);
+  return Address(alloca, ty, align);
+}
+
+Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
+                                         mlir::Location loc, const Twine &name,
+                                         mlir::Value arraySize,
+                                         Address *allocaAddr,
+                                         mlir::OpBuilder::InsertPoint ip) {
+  const Address alloca =
+      createTempAllocaWithoutCast(ty, align, loc, name, arraySize, ip);
+
+  if (allocaAddr)
+    *allocaAddr = alloca;
+
+  const mlir::Value v = alloca.getPointer();
+  // Alloca always returns a pointer in alloca address space, which may
+  // be different from the type defined by the language. For example,
+  // in C++ the auto variables are in the default address space. Therefore
+  // cast alloca to the default address space when necessary.
+  // FIXME: Missing features addrspace
+  return Address(v, ty, align);
+}
+
+/// This creates an alloca and inserts it into the entry block if \p ArraySize
+/// is nullptr, otherwise inserts it at the current insertion point of the
+/// builder.
+cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
+                                               mlir::Location loc,
+                                               const Twine &name,
+                                               mlir::Value arraySize,
+                                               bool insertIntoFnEntryBlock) {
+  return cast<cir::AllocaOp>(emitAlloca(name.str(), ty, loc, CharUnits(),
+                                        insertIntoFnEntryBlock, arraySize)
+                                 .getDefiningOp());
+}
+
+/// This creates an alloca and inserts it into the provided insertion point
+cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
+                                               mlir::Location loc,
+                                               const Twine &name,
+                                               mlir::OpBuilder::InsertPoint ip,
+                                               mlir::Value arraySize) {
+  assert(ip.isSet() && "Insertion point is not set");
+  return cast<cir::AllocaOp>(
+      emitAlloca(name.str(), ty, loc, CharUnits(), ip, arraySize)
+          .getDefiningOp());
+}
+
+/// This creates a alloca and inserts it into the entry block of the
+/// current region.
+Address CIRGenFunction::createTempAllocaWithoutCast(
+    mlir::Type ty, CharUnits align, mlir::Location loc, const Twine &name,
+    mlir::Value arraySize, mlir::OpBuilder::InsertPoint ip) {
+  cir::AllocaOp alloca = ip.isSet()
+                             ? createTempAlloca(ty, loc, name, ip, arraySize)
+                             : createTempAlloca(ty, loc, name, arraySize);
+  alloca.setAlignmentAttr(cgm.getSize(align));
   return Address(alloca, ty, align);
 }

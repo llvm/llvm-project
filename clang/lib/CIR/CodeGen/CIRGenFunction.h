@@ -101,6 +101,20 @@ public:
 
   mlir::MLIRContext &getMLIRContext() { return cgm.getMLIRContext(); }
 
+public:
+  struct VlaSizePair {
+    mlir::Value numElts;
+    QualType type;
+
+    VlaSizePair(mlir::Value numElts, QualType type)
+        : numElts(numElts), type(type) {}
+  };
+
+  llvm::DenseMap<const Expr *, mlir::Value> vlaSizeMap;
+
+  VlaSizePair getVLASize(const VariableArrayType *type);
+  VlaSizePair getVLASize(QualType type);
+
 private:
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
@@ -446,6 +460,8 @@ public:
 
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
+  Address emitArrayToPointerDecay(const Expr *e);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -607,6 +623,8 @@ public:
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
 
+  void emitVariablyModifiedType(QualType ty);
+
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
@@ -620,6 +638,26 @@ public:
 public:
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name, bool insertIntoFnEntryBlock);
+
+  Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
+                           const Twine &name, mlir::Value arraySize = nullptr,
+                           Address *alloca = nullptr,
+                           mlir::OpBuilder::InsertPoint ip = {});
+
+  cir::AllocaOp createTempAlloca(mlir::Type ty, mlir::Location loc,
+                                 const Twine &name,
+                                 mlir::OpBuilder::InsertPoint ip,
+                                 mlir::Value arraySize);
+
+  cir::AllocaOp createTempAlloca(mlir::Type ty, mlir::Location loc,
+                                 const Twine &name, mlir::Value arraySize,
+                                 bool insertIntoFnEntryBlock = false);
+
+  Address createTempAllocaWithoutCast(mlir::Type ty, CharUnits align,
+                                      mlir::Location loc,
+                                      const Twine &name = "tmp",
+                                      mlir::Value arraySize = nullptr,
+                                      mlir::OpBuilder::InsertPoint ip = {});
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission

@@ -254,10 +254,55 @@ public:
   }
 };
 
+class CIRVLAAllocaOpFlattening : public mlir::OpRewritePattern<cir::AllocaOp> {
+public:
+  using OpRewritePattern<cir::AllocaOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AllocaOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (!op.isDynamic()) {
+      return mlir::failure();
+    }
+
+    const mlir::Location loc = op->getLoc();
+
+    const Type u8Type = IntegerType::get(
+        getContext(), 8, IntegerType::SignednessSemantics::Unsigned);
+
+    const PointerType allocaInt8PtrTy =
+        cir::PointerType::get(getContext(), u8Type);
+
+    const PointerType allocaInt8PtrPtrTy =
+        cir::PointerType::get(getContext(), allocaInt8PtrTy);
+
+    rewriter.setInsertionPointAfter(op);
+
+    const IntegerAttr alignment = rewriter.getI64IntegerAttr(8);
+    const Value stackSavedAlloca = rewriter.create<cir::AllocaOp>(
+        loc, allocaInt8PtrPtrTy, allocaInt8PtrTy, "saved_stack", alignment);
+
+    const Value stackSaveValue =
+        rewriter.create<cir::StackSaveOp>(loc, allocaInt8PtrTy);
+
+    rewriter.create<cir::StoreOp>(loc, stackSaveValue, stackSavedAlloca);
+
+    const Block::iterator blockEndIt = rewriter.getBlock()->end();
+    const Block::iterator it = std::prev(std::prev(blockEndIt));
+    rewriter.setInsertionPointAfter(&*it);
+
+    const Value loadStackSaved =
+        rewriter.create<cir::LoadOp>(loc, allocaInt8PtrTy, stackSavedAlloca);
+    rewriter.create<cir::StackRestoreOp>(loc, loadStackSaved);
+
+    return mlir::success();
+  }
+};
+
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
-  patterns
-      .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening>(
-          patterns.getContext());
+  patterns.add<CIRIfFlattening, CIRLoopOpInterfaceFlattening,
+               CIRScopeOpFlattening, CIRVLAAllocaOpFlattening>(
+      patterns.getContext());
 }
 
 void CIRFlattenCFGPass::runOnOperation() {
@@ -271,7 +316,7 @@ void CIRFlattenCFGPass::runOnOperation() {
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::ternaryOp());
     assert(!cir::MissingFeatures::tryOp());
-    if (isa<IfOp, ScopeOp, LoopOpInterface>(op))
+    if (isa<IfOp, ScopeOp, LoopOpInterface, AllocaOp>(op))
       ops.push_back(op);
   });
 
