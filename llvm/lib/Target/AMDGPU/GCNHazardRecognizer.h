@@ -41,7 +41,7 @@ private:
   // will be added to EmittedInstrs, when AdvanceCycle() or RecedeCycle() is
   // called.
   MachineInstr *CurrCycleInstr;
-  std::list<MachineInstr*> EmittedInstrs;
+  std::list<MachineInstr *> EmittedInstrs;
   const MachineFunction &MF;
   const GCNSubtarget &ST;
   const SIInstrInfo &TII;
@@ -80,14 +80,15 @@ private:
 
   int checkSoftClauseHazards(MachineInstr *SMEM);
   int checkSMRDHazards(MachineInstr *SMRD);
-  int checkVMEMHazards(MachineInstr* VMEM);
+  int checkVMEMHazards(MachineInstr *VMEM);
   int checkDPPHazards(MachineInstr *DPP);
   int checkDivFMasHazards(MachineInstr *DivFMas);
   int checkGetRegHazards(MachineInstr *GetRegInstr);
   int checkSetRegHazards(MachineInstr *SetRegInstr);
   int createsVALUHazard(const MachineInstr &MI);
   int checkVALUHazards(MachineInstr *VALU);
-  int checkVALUHazardsHelper(const MachineOperand &Def, const MachineRegisterInfo &MRI);
+  int checkVALUHazardsHelper(const MachineOperand &Def,
+                             const MachineRegisterInfo &MRI);
   int checkRWLaneHazards(MachineInstr *RWLane);
   int checkRFEHazards(MachineInstr *RFE);
   int checkInlineAsmHazards(MachineInstr *IA);
@@ -150,4 +151,4 @@ public:
 
 } // end namespace llvm
 
-#endif //LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
+#endif // LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H

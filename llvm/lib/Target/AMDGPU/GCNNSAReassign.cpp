@@ -31,8 +31,7 @@ using namespace llvm;
 
 STATISTIC(NumNSAInstructions,
           "Number of NSA instructions with non-sequential address found");
-STATISTIC(NumNSAConverted,
-          "Number of NSA instructions changed to sequential");
+STATISTIC(NumNSAConverted, "Number of NSA instructions changed to sequential");
 
 namespace {
 class GCNNSAReassignImpl {
@@ -139,7 +138,7 @@ bool GCNNSAReassignImpl::canAssign(unsigned StartReg, unsigned NumRegs) const {
     for (unsigned I = 0; CSRegs[I]; ++I)
       if (TRI->isSubRegisterEq(Reg, CSRegs[I]) &&
           !LRM->isPhysRegUsed(CSRegs[I]))
-      return false;
+        return false;
   }
 
   return true;
@@ -179,7 +178,7 @@ GCNNSAReassignImpl::CheckNSA(const MachineInstr &MI, bool Fast) const {
   }
 
   int VAddr0Idx =
-    AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vaddr0);
 
   unsigned VgprBase = 0;
   bool NSA = false;
@@ -254,7 +253,7 @@ bool GCNNSAReassignImpl::run(MachineFunction &MF) {
   MaxNumVGPRs = std::min(ST->getMaxNumVGPRs(MFI->getOccupancy()), MaxNumVGPRs);
   CSRegs = MRI->getCalleeSavedRegs();
 
-  using Candidate = std::pair<const MachineInstr*, bool>;
+  using Candidate = std::pair<const MachineInstr *, bool>;
   SmallVector<Candidate, 32> Candidates;
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -287,7 +286,7 @@ bool GCNNSAReassignImpl::run(MachineFunction &MF) {
 
     const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI->getOpcode());
     int VAddr0Idx =
-      AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::vaddr0);
+        AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::vaddr0);
 
     SmallVector<LiveInterval *, 16> Intervals;
     SmallVector<MCRegister, 16> OrigRegs;
@@ -319,8 +318,7 @@ bool GCNNSAReassignImpl::run(MachineFunction &MF) {
 
     LLVM_DEBUG(dbgs() << "Attempting to reassign NSA: " << *MI
                       << "\tOriginal allocation:\t";
-               for (auto *LI
-                    : Intervals) dbgs()
+               for (auto *LI : Intervals) dbgs()
                << " " << llvm::printReg((VRM->getPhys(LI->reg())), TRI);
                dbgs() << '\n');
 

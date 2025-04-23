@@ -11,7 +11,8 @@
 //
 // $old = ...
 // $dpp_value = V_MOV_B32_dpp $old, $vgpr_to_be_read_from_other_lane,
-//                            dpp_controls..., $row_mask, $bank_mask, $bound_ctrl
+//                            dpp_controls..., $row_mask, $bank_mask,
+//                            $bound_ctrl
 // $res = VALU $dpp_value [, src1]
 //
 // to
@@ -98,8 +99,8 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties()
-      .set(MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::IsSSA);
   }
 };
 
@@ -176,8 +177,9 @@ MachineOperand *GCNDPPCombine::getOldOpndValue(MachineOperand &OldOpnd) const {
   if (!Def)
     return nullptr;
 
-  switch(Def->getOpcode()) {
-  default: break;
+  switch (Def->getOpcode()) {
+  default:
+    break;
   case AMDGPU::IMPLICIT_DEF:
     return nullptr;
   case AMDGPU::COPY:
@@ -195,7 +197,7 @@ MachineOperand *GCNDPPCombine::getOldOpndValue(MachineOperand &OldOpnd) const {
 }
 
 [[maybe_unused]] static unsigned getOperandSize(MachineInstr &MI, unsigned Idx,
-                               MachineRegisterInfo &MRI) {
+                                                MachineRegisterInfo &MRI) {
   int16_t RegClass = MI.getDesc().operands()[Idx].RegClass;
   if (RegClass == -1)
     return 0;
@@ -239,9 +241,9 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
                                    TII->isVOPC(OrigOpE32)))) &&
          "VOPC cannot form DPP unless mask is full");
 
-  auto DPPInst = BuildMI(*OrigMI.getParent(), OrigMI,
-                         OrigMI.getDebugLoc(), TII->get(DPPOp))
-    .setMIFlags(OrigMI.getFlags());
+  auto DPPInst = BuildMI(*OrigMI.getParent(), OrigMI, OrigMI.getDebugLoc(),
+                         TII->get(DPPOp))
+                     .setMIFlags(OrigMI.getFlags());
 
   bool Fail = false;
   do {
@@ -284,8 +286,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 
     auto *Mod0 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src0_modifiers);
     if (Mod0) {
-      assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
-                                          AMDGPU::OpName::src0_modifiers));
+      assert(NumOperands ==
+             AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::src0_modifiers));
       assert(HasVOP3DPP ||
              (0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod0->getImm());
@@ -308,8 +310,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 
     auto *Mod1 = TII->getNamedOperand(OrigMI, AMDGPU::OpName::src1_modifiers);
     if (Mod1) {
-      assert(NumOperands == AMDGPU::getNamedOperandIdx(DPPOp,
-                                          AMDGPU::OpName::src1_modifiers));
+      assert(NumOperands ==
+             AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::src1_modifiers));
       assert(HasVOP3DPP ||
              (0LL == (Mod1->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod1->getImm());
@@ -440,7 +442,8 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   assert(OldOpnd->isImm());
   switch (OrigMIOp) {
-  default: break;
+  default:
+    break;
   case AMDGPU::V_ADD_U32_e32:
   case AMDGPU::V_ADD_U32_e64:
   case AMDGPU::V_ADD_CO_U32_e32:
@@ -561,8 +564,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
   assert(RowMaskOpnd && RowMaskOpnd->isImm());
   auto *BankMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::bank_mask);
   assert(BankMaskOpnd && BankMaskOpnd->isImm());
-  const bool MaskAllLanes = RowMaskOpnd->getImm() == 0xF &&
-                            BankMaskOpnd->getImm() == 0xF;
+  const bool MaskAllLanes =
+      RowMaskOpnd->getImm() == 0xF && BankMaskOpnd->getImm() == 0xF;
 
   auto *BCZOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::bound_ctrl);
   assert(BCZOpnd && BCZOpnd->isImm());
@@ -577,7 +580,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     return false;
   }
 
-  auto * const OldOpndValue = getOldOpndValue(*OldOpnd);
+  auto *const OldOpndValue = getOldOpndValue(*OldOpnd);
   // OldOpndValue is either undef (IMPLICIT_DEF) or immediate or something else
   // We could use: assert(!OldOpndValue || OldOpndValue->isImm())
   // but the third option is used to distinguish undef from non-immediate
@@ -601,27 +604,23 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       }
     } else if (BoundCtrlZero) {
       assert(!MaskAllLanes); // by check [1]
-      LLVM_DEBUG(dbgs() <<
-        "  failed: old!=0 and bctrl:0 and not all lanes isn't combinable\n");
+      LLVM_DEBUG(dbgs() << "  failed: old!=0 and bctrl:0 and not all lanes "
+                           "isn't combinable\n");
       return false;
     }
   }
 
-  LLVM_DEBUG(dbgs() << "  old=";
-    if (!OldOpndValue)
-      dbgs() << "undef";
-    else
-      dbgs() << *OldOpndValue;
-    dbgs() << ", bound_ctrl=" << CombBCZ << '\n');
+  LLVM_DEBUG(dbgs() << "  old="; if (!OldOpndValue) dbgs() << "undef";
+             else dbgs() << *OldOpndValue;
+             dbgs() << ", bound_ctrl=" << CombBCZ << '\n');
 
-  SmallVector<MachineInstr*, 4> OrigMIs, DPPMIs;
-  DenseMap<MachineInstr*, SmallVector<unsigned, 4>> RegSeqWithOpNos;
+  SmallVector<MachineInstr *, 4> OrigMIs, DPPMIs;
+  DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RegSeqWithOpNos;
   auto CombOldVGPR = getRegSubRegPair(*OldOpnd);
   // try to reuse previous old reg if its undefined (IMPLICIT_DEF)
   if (CombBCZ && OldOpndValue) { // CombOldVGPR should be undef
     const TargetRegisterClass *RC = MRI->getRegClass(DPPMovReg);
-    CombOldVGPR = RegSubRegPair(
-      MRI->createVirtualRegister(RC));
+    CombOldVGPR = RegSubRegPair(MRI->createVirtualRegister(RC));
     auto UndefInst = BuildMI(*MovMI.getParent(), MovMI, MovMI.getDebugLoc(),
                              TII->get(AMDGPU::IMPLICIT_DEF), CombOldVGPR.Reg);
     DPPMIs.push_back(UndefInst.getInstr());
@@ -736,7 +735,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   Rollback |= !Uses.empty();
 
-  for (auto *MI : *(Rollback? &DPPMIs : &OrigMIs))
+  for (auto *MI : *(Rollback ? &DPPMIs : &OrigMIs))
     MI->eraseFromParent();
 
   if (!Rollback) {

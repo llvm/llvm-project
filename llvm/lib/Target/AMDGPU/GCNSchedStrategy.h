@@ -181,8 +181,7 @@ public:
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const ScheduleMetrics &Sm) {
-  dbgs() << "\n Schedule Metric (scaled by "
-         << ScheduleMetrics::ScaleFactor
+  dbgs() << "\n Schedule Metric (scaled by " << ScheduleMetrics::ScaleFactor
          << " ) is: " << Sm.getMetric() << " [ " << Sm.getBubbles() << "/"
          << Sm.getLength() << " ]\n";
   return OS;
@@ -234,8 +233,9 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   unsigned MinOccupancy;
 
   // Vector of regions recorder for later rescheduling
-  SmallVector<std::pair<MachineBasicBlock::iterator,
-                        MachineBasicBlock::iterator>, 32> Regions;
+  SmallVector<
+      std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>, 32>
+      Regions;
 
   // Records if a region is not yet scheduled, or schedule has been reverted,
   // or we generally desire to reschedule it.

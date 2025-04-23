@@ -301,11 +301,11 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
     HasHighPressure = true;
     if (SGPRDelta > VGPRDelta) {
       Cand.RPDelta.CriticalMax =
-        PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
+          PressureChange(AMDGPU::RegisterPressureSets::SReg_32);
       Cand.RPDelta.CriticalMax.setUnitInc(SGPRDelta);
     } else {
       Cand.RPDelta.CriticalMax =
-        PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
+          PressureChange(AMDGPU::RegisterPressureSets::VGPR_32);
       Cand.RPDelta.CriticalMax.setUnitInc(VGPRDelta);
     }
   }
@@ -318,7 +318,7 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
                                          const RegPressureTracker &RPTracker,
                                          SchedCandidate &Cand,
                                          bool IsBottomUp) {
-  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo*>(TRI);
+  const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
   unsigned SGPRPressure = 0;
   unsigned VGPRPressure = 0;
@@ -414,7 +414,7 @@ SUnit *GCNSchedStrategy::pickNodeBidirectional(bool &IsTopNode) {
       pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand,
                         /*IsBottomUp=*/false);
       assert(TCand.SU == TopCand.SU &&
-           "Last pick result should correspond to re-picking right now");
+             "Last pick result should correspond to re-picking right now");
     }
 #endif
   }
@@ -1493,8 +1493,7 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
       dbgs()
       << "\n\t      *** In shouldRevertScheduling ***\n"
       << "      *********** BEFORE UnclusteredHighRPStage ***********\n");
-  ScheduleMetrics MBefore =
-      getScheduleMetrics(DAG.SUnits);
+  ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
   LLVM_DEBUG(
       dbgs()
       << "\n      *********** AFTER UnclusteredHighRPStage ***********\n");

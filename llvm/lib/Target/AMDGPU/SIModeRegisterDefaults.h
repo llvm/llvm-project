@@ -36,11 +36,9 @@ struct SIModeRegisterDefaults {
   /// and f16/v2f16 instructions.
   DenormalMode FP64FP16Denormals;
 
-  SIModeRegisterDefaults() :
-    IEEE(true),
-    DX10Clamp(true),
-    FP32Denormals(DenormalMode::getIEEE()),
-    FP64FP16Denormals(DenormalMode::getIEEE()) {}
+  SIModeRegisterDefaults()
+      : IEEE(true), DX10Clamp(true), FP32Denormals(DenormalMode::getIEEE()),
+        FP64FP16Denormals(DenormalMode::getIEEE()) {}
 
   SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
 

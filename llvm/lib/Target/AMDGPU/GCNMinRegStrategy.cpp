@@ -26,7 +26,7 @@ class GCNMinRegScheduler {
     int Priority;
 
     Candidate(const SUnit *SU_, int Priority_ = 0)
-      : SU(SU_), Priority(Priority_) {}
+        : SU(SU_), Priority(Priority_) {}
   };
 
   SpecificBumpPtrAllocator<Candidate> Alloc;
@@ -40,7 +40,7 @@ class GCNMinRegScheduler {
     return NumPreds[SU->NodeNum] == std::numeric_limits<unsigned>::max();
   }
 
-  void setIsScheduled(const SUnit *SU)  {
+  void setIsScheduled(const SUnit *SU) {
     assert(!SU->isBoundaryNode());
     NumPreds[SU->NodeNum] = std::numeric_limits<unsigned>::max();
   }
@@ -62,22 +62,22 @@ class GCNMinRegScheduler {
   int getReadySuccessors(const SUnit *SU) const;
   int getNotReadySuccessors(const SUnit *SU) const;
 
-  template <typename Calc>
-  unsigned findMax(unsigned Num, Calc C);
+  template <typename Calc> unsigned findMax(unsigned Num, Calc C);
 
-  Candidate* pickCandidate();
+  Candidate *pickCandidate();
 
   void bumpPredsPriority(const SUnit *SchedSU, int Priority);
-  void releaseSuccessors(const SUnit* SU, int Priority);
+  void releaseSuccessors(const SUnit *SU, int Priority);
 
 public:
-  std::vector<const SUnit*> schedule(ArrayRef<const SUnit*> TopRoots,
-                                     const ScheduleDAG &DAG);
+  std::vector<const SUnit *> schedule(ArrayRef<const SUnit *> TopRoots,
+                                      const ScheduleDAG &DAG);
 };
 
 } // end anonymous namespace
 
-void GCNMinRegScheduler::initNumPreds(const decltype(ScheduleDAG::SUnits) &SUnits) {
+void GCNMinRegScheduler::initNumPreds(
+    const decltype(ScheduleDAG::SUnits) &SUnits) {
   NumPreds.resize(SUnits.size());
   for (unsigned I = 0; I < SUnits.size(); ++I)
     NumPreds[I] = SUnits[I].NumPredsLeft;
@@ -108,7 +108,7 @@ template <typename Calc>
 unsigned GCNMinRegScheduler::findMax(unsigned Num, Calc C) {
   assert(!RQ.empty() && Num <= RQ.size());
 
-  using T = decltype(C(*RQ.begin())) ;
+  using T = decltype(C(*RQ.begin()));
 
   T Max = std::numeric_limits<T>::min();
   unsigned NumMax = 0;
@@ -130,15 +130,17 @@ unsigned GCNMinRegScheduler::findMax(unsigned Num, Calc C) {
   return NumMax;
 }
 
-GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
+GCNMinRegScheduler::Candidate *GCNMinRegScheduler::pickCandidate() {
   do {
     unsigned Num = RQ.size();
-    if (Num == 1) break;
+    if (Num == 1)
+      break;
 
     LLVM_DEBUG(dbgs() << "\nSelecting max priority candidates among " << Num
                       << '\n');
     Num = findMax(Num, [=](const Candidate &C) { return C.Priority; });
-    if (Num == 1) break;
+    if (Num == 1)
+      break;
 
     LLVM_DEBUG(dbgs() << "\nSelecting min non-ready producing candidate among "
                       << Num << '\n');
@@ -149,7 +151,8 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
                         << Res << " successors, metric = " << -Res << '\n');
       return -Res;
     });
-    if (Num == 1) break;
+    if (Num == 1)
+      break;
 
     LLVM_DEBUG(dbgs() << "\nSelecting most producing candidate among " << Num
                       << '\n');
@@ -160,14 +163,16 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
                         << " successors, metric = " << Res << '\n');
       return Res;
     });
-    if (Num == 1) break;
+    if (Num == 1)
+      break;
 
     Num = Num ? Num : RQ.size();
     LLVM_DEBUG(
         dbgs()
         << "\nCan't find best candidate, selecting in program order among "
         << Num << '\n');
-    Num = findMax(Num, [=](const Candidate &C) { return -(int64_t)C.SU->NodeNum; });
+    Num = findMax(Num,
+                  [=](const Candidate &C) { return -(int64_t)C.SU->NodeNum; });
     assert(Num == 1);
   } while (false);
 
@@ -175,7 +180,7 @@ GCNMinRegScheduler::Candidate* GCNMinRegScheduler::pickCandidate() {
 }
 
 void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
-  SmallPtrSet<const SUnit*, 32> Set;
+  SmallPtrSet<const SUnit *, 32> Set;
   for (const auto &S : SchedSU->Succs) {
     if (S.getSUnit()->isBoundaryNode() || isScheduled(S.getSUnit()) ||
         S.getKind() != SDep::Data)
@@ -188,7 +193,7 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
       }
     }
   }
-  SmallVector<const SUnit*, 32> Worklist(Set.begin(), Set.end());
+  SmallVector<const SUnit *, 32> Worklist(Set.begin(), Set.end());
   while (!Worklist.empty()) {
     const auto *SU = Worklist.pop_back_val();
     assert(!SU->isBoundaryNode());
@@ -210,7 +215,7 @@ void GCNMinRegScheduler::bumpPredsPriority(const SUnit *SchedSU, int Priority) {
   LLVM_DEBUG(dbgs() << '\n');
 }
 
-void GCNMinRegScheduler::releaseSuccessors(const SUnit* SU, int Priority) {
+void GCNMinRegScheduler::releaseSuccessors(const SUnit *SU, int Priority) {
   for (const auto &S : SU->Succs) {
     auto *SuccSU = S.getSUnit();
     if (S.isWeak())
@@ -221,11 +226,11 @@ void GCNMinRegScheduler::releaseSuccessors(const SUnit* SU, int Priority) {
   }
 }
 
-std::vector<const SUnit*>
-GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
+std::vector<const SUnit *>
+GCNMinRegScheduler::schedule(ArrayRef<const SUnit *> TopRoots,
                              const ScheduleDAG &DAG) {
   const auto &SUnits = DAG.SUnits;
-  std::vector<const SUnit*> Schedule;
+  std::vector<const SUnit *> Schedule;
   Schedule.reserve(SUnits.size());
 
   initNumPreds(SUnits);
@@ -241,8 +246,7 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
     LLVM_DEBUG(dbgs() << "\n=== Picking candidate, Step = " << StepNo
                       << "\n"
                          "Ready queue:";
-               for (auto &C
-                    : RQ) dbgs()
+               for (auto &C : RQ) dbgs()
                << ' ' << C.SU->NodeNum << "(P" << C.Priority << ')';
                dbgs() << '\n';);
 
@@ -268,8 +272,8 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
 
 namespace llvm {
 
-std::vector<const SUnit*> makeMinRegSchedule(ArrayRef<const SUnit*> TopRoots,
-                                             const ScheduleDAG &DAG) {
+std::vector<const SUnit *> makeMinRegSchedule(ArrayRef<const SUnit *> TopRoots,
+                                              const ScheduleDAG &DAG) {
   GCNMinRegScheduler S;
   return S.schedule(TopRoots, DAG);
 }
