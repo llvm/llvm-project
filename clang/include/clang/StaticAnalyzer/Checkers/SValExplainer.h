@@ -19,9 +19,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValVisitor.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cctype>
 
 namespace clang {
 
@@ -32,15 +30,11 @@ private:
   ASTContext &ACtx;
   ProgramStateRef State;
 
-  std::string printCFGElementRef(CFGBlock::ConstCFGElementRef ElemRef) {
+  std::string printCFGElementRef(ConstCFGElementRef Elem) {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
-    ElemRef->dumpToStream(OS);
-    // HACK: `CFGBlock::ConstCFGElementRef::dumpToStream` contains a new line
-    // character in the end of the string, we don't want it so we remove it
-    // here.
-    llvm::StringRef StrRef(Str);
-    return StrRef.rtrim().str();
+    Elem->dumpToStream(OS, /*TerminateWithNewLine=*/false);
+    return Str;
   }
 
   std::string printStmt(const Stmt *S) {

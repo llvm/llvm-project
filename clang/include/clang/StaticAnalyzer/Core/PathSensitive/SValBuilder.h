@@ -172,11 +172,11 @@ public:
 
   // Forwarding methods to SymbolManager.
 
-  const SymbolConjured *conjureSymbol(CFGBlock::ConstCFGElementRef ElemRef,
+  const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const LocationContext *LCtx,
                                       QualType type, unsigned visitCount,
                                       const void *symbolTag = nullptr) {
-    return SymMgr.conjureSymbol(ElemRef, LCtx, type, visitCount, symbolTag);
+    return SymMgr.conjureSymbol(Elem, LCtx, type, visitCount, symbolTag);
   }
 
   /// Construct an SVal representing '0' for the specified type.
@@ -192,19 +192,19 @@ public:
   /// preserve the relation between related(or even equivalent) expressions, so
   /// conjured symbols should be used sparingly.
   DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        CFGBlock::ConstCFGElementRef elemRef,
+                                        ConstCFGElementRef elem,
                                         const LocationContext *LCtx,
                                         unsigned count);
   DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        CFGBlock::ConstCFGElementRef elemRef,
+                                        ConstCFGElementRef elem,
                                         const LocationContext *LCtx,
                                         QualType type, unsigned count);
-  DefinedOrUnknownSVal conjureSymbolVal(CFGBlock::ConstCFGElementRef elemRef,
+  DefinedOrUnknownSVal conjureSymbolVal(ConstCFGElementRef elem,
                                         const LocationContext *LCtx,
                                         QualType type, unsigned visitCount);
 
   /// Conjure a symbol representing heap allocated memory region.
-  DefinedSVal getConjuredHeapSymbolVal(CFGBlock::ConstCFGElementRef elemRef,
+  DefinedSVal getConjuredHeapSymbolVal(ConstCFGElementRef elem,
                                        const LocationContext *LCtx,
                                        QualType type, unsigned Count);
 

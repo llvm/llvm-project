@@ -151,9 +151,7 @@ public:
     return Pred->getSVal(S);
   }
 
-  CFGBlock::ConstCFGElementRef getCFGElementRef() const {
-    return Eng.getCFGElementRef();
-  }
+  ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 
   /// Returns true if the value of \p E is greater than or equal to \p
   /// Val under unsigned comparison.

@@ -45,8 +45,8 @@ void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
 /// for-loop iterator.
 static void populateObjCForDestinationSet(
     ExplodedNodeSet &dstLocation, SValBuilder &svalBuilder,
-    const ObjCForCollectionStmt *S, CFGBlock::ConstCFGElementRef elemRef,
-    SVal elementV, SymbolManager &SymMgr, const NodeBuilderContext *currBldrCtx,
+    const ObjCForCollectionStmt *S, ConstCFGElementRef elem, SVal elementV,
+    SymbolManager &SymMgr, const NodeBuilderContext *currBldrCtx,
     StmtNodeBuilder &Bldr, bool hasElements) {
 
   for (ExplodedNode *Pred : dstLocation) {
@@ -67,7 +67,7 @@ static void populateObjCForDestinationSet(
         SVal V;
         if (hasElements) {
           SymbolRef Sym =
-              SymMgr.conjureSymbol(elemRef, LCtx, T, currBldrCtx->blockCount());
+              SymMgr.conjureSymbol(elem, LCtx, T, currBldrCtx->blockCount());
           V = svalBuilder.makeLoc(Sym);
         } else {
           V = svalBuilder.makeIntVal(0, T);
@@ -110,7 +110,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
   const Stmt *elem = S->getElement();
   const Stmt *collection = S->getCollection();
-  CFGBlock::ConstCFGElementRef elemRef = getCFGElementRef();
+  const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
   SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
 

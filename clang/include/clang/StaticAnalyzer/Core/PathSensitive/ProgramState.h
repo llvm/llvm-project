@@ -313,8 +313,7 @@ public:
   /// be triggered by this event.
   ///
   /// \param Regions the set of regions to be invalidated.
-  /// \param ElemRef \p CFGBlock::ConstCFGElementRef that caused the
-  /// invalidation.
+  /// \param Elem The CFG Element that caused the invalidation.
   /// \param BlockCount The number of times the current basic block has been
   ///        visited.
   /// \param CausesPointerEscape the flag is set to true when the invalidation
@@ -327,14 +326,14 @@ public:
   ///        or symbols.
   [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<const MemRegion *> Regions,
-                    CFGBlock::ConstCFGElementRef ElemRef, unsigned BlockCount,
+                    ConstCFGElementRef Elem, unsigned BlockCount,
                     const LocationContext *LCtx, bool CausesPointerEscape,
                     InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<SVal> Values, CFGBlock::ConstCFGElementRef ElemRef,
+  invalidateRegions(ArrayRef<SVal> Values, ConstCFGElementRef Elem,
                     unsigned BlockCount, const LocationContext *LCtx,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,

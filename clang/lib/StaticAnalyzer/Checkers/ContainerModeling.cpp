@@ -33,12 +33,11 @@ namespace {
 class ContainerModeling
   : public Checker<check::PostCall, check::LiveSymbols, check::DeadSymbols> {
 
-  void handleBegin(CheckerContext &C, CFGBlock::ConstCFGElementRef ElemRef,
-                   SVal RetVal, SVal Cont) const;
-  void handleEnd(CheckerContext &C, CFGBlock::ConstCFGElementRef ElemRef,
-                 SVal RetVal, SVal Cont) const;
-  void handleAssignment(CheckerContext &C, SVal Cont,
-                        CFGBlock::ConstCFGElementRef ElemRef,
+  void handleBegin(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
+                   SVal Cont) const;
+  void handleEnd(CheckerContext &C, ConstCFGElementRef Elem, SVal RetVal,
+                 SVal Cont) const;
+  void handleAssignment(CheckerContext &C, SVal Cont, ConstCFGElementRef Elem,
                         SVal OldCont = UndefinedVal()) const;
   void handleAssign(CheckerContext &C, SVal Cont, const Expr *ContE) const;
   void handleClear(CheckerContext &C, SVal Cont, const Expr *ContE) const;
@@ -110,12 +109,12 @@ SymbolRef getContainerBegin(ProgramStateRef State, const MemRegion *Cont);
 SymbolRef getContainerEnd(ProgramStateRef State, const MemRegion *Cont);
 ProgramStateRef createContainerBegin(ProgramStateRef State,
                                      const MemRegion *Cont,
-                                     CFGBlock::ConstCFGElementRef ElemRef,
-                                     QualType T, const LocationContext *LCtx,
+                                     ConstCFGElementRef Elem, QualType T,
+                                     const LocationContext *LCtx,
                                      unsigned BlockCount);
 ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
-                                   CFGBlock::ConstCFGElementRef ElemRef,
-                                   QualType T, const LocationContext *LCtx,
+                                   ConstCFGElementRef Elem, QualType T,
+                                   const LocationContext *LCtx,
                                    unsigned BlockCount);
 ProgramStateRef setContainerData(ProgramStateRef State, const MemRegion *Cont,
                                  const ContainerData &CData);
@@ -252,8 +251,7 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleBegin(CheckerContext &C,
-                                    CFGBlock::ConstCFGElementRef ElemRef,
+void ContainerModeling::handleBegin(CheckerContext &C, ConstCFGElementRef Elem,
                                     SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
@@ -266,9 +264,8 @@ void ContainerModeling::handleBegin(CheckerContext &C,
   auto State = C.getState();
   auto BeginSym = getContainerBegin(State, ContReg);
   if (!BeginSym) {
-    State =
-        createContainerBegin(State, ContReg, ElemRef, C.getASTContext().LongTy,
-                             C.getLocationContext(), C.blockCount());
+    State = createContainerBegin(State, ContReg, Elem, C.getASTContext().LongTy,
+                                 C.getLocationContext(), C.blockCount());
     BeginSym = getContainerBegin(State, ContReg);
   }
   State = setIteratorPosition(State, RetVal,
@@ -276,8 +273,7 @@ void ContainerModeling::handleBegin(CheckerContext &C,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleEnd(CheckerContext &C,
-                                  CFGBlock::ConstCFGElementRef ElemRef,
+void ContainerModeling::handleEnd(CheckerContext &C, ConstCFGElementRef Elem,
                                   SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
@@ -290,9 +286,8 @@ void ContainerModeling::handleEnd(CheckerContext &C,
   auto State = C.getState();
   auto EndSym = getContainerEnd(State, ContReg);
   if (!EndSym) {
-    State =
-        createContainerEnd(State, ContReg, ElemRef, C.getASTContext().LongTy,
-                           C.getLocationContext(), C.blockCount());
+    State = createContainerEnd(State, ContReg, Elem, C.getASTContext().LongTy,
+                               C.getLocationContext(), C.blockCount());
     EndSym = getContainerEnd(State, ContReg);
   }
   State = setIteratorPosition(State, RetVal,
@@ -301,7 +296,7 @@ void ContainerModeling::handleEnd(CheckerContext &C,
 }
 
 void ContainerModeling::handleAssignment(CheckerContext &C, SVal Cont,
-                                         CFGBlock::ConstCFGElementRef ElemRef,
+                                         ConstCFGElementRef Elem,
                                          SVal OldCont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
@@ -336,7 +331,7 @@ void ContainerModeling::handleAssignment(CheckerContext &C, SVal Cont,
           auto &SVB = C.getSValBuilder();
           // Then generate and assign a new "end" symbol for the new container.
           auto NewEndSym =
-              SymMgr.conjureSymbol(ElemRef, C.getLocationContext(),
+              SymMgr.conjureSymbol(Elem, C.getLocationContext(),
                                    C.getASTContext().LongTy, C.blockCount());
           State = assumeNoOverflow(State, NewEndSym, 4);
           if (CData) {
@@ -856,8 +851,8 @@ SymbolRef getContainerEnd(ProgramStateRef State, const MemRegion *Cont) {
 
 ProgramStateRef createContainerBegin(ProgramStateRef State,
                                      const MemRegion *Cont,
-                                     CFGBlock::ConstCFGElementRef ElemRef,
-                                     QualType T, const LocationContext *LCtx,
+                                     ConstCFGElementRef Elem, QualType T,
+                                     const LocationContext *LCtx,
                                      unsigned BlockCount) {
   // Only create if it does not exist
   const auto *CDataPtr = getContainerData(State, Cont);
@@ -866,7 +861,7 @@ ProgramStateRef createContainerBegin(ProgramStateRef State,
 
   auto &SymMgr = State->getSymbolManager();
   const SymbolConjured *Sym =
-      SymMgr.conjureSymbol(ElemRef, LCtx, T, BlockCount, "begin");
+      SymMgr.conjureSymbol(Elem, LCtx, T, BlockCount, "begin");
   State = assumeNoOverflow(State, Sym, 4);
 
   if (CDataPtr) {
@@ -879,8 +874,8 @@ ProgramStateRef createContainerBegin(ProgramStateRef State,
 }
 
 ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
-                                   CFGBlock::ConstCFGElementRef ElemRef,
-                                   QualType T, const LocationContext *LCtx,
+                                   ConstCFGElementRef Elem, QualType T,
+                                   const LocationContext *LCtx,
                                    unsigned BlockCount) {
   // Only create if it does not exist
   const auto *CDataPtr = getContainerData(State, Cont);
@@ -889,7 +884,7 @@ ProgramStateRef createContainerEnd(ProgramStateRef State, const MemRegion *Cont,
 
   auto &SymMgr = State->getSymbolManager();
   const SymbolConjured *Sym =
-      SymMgr.conjureSymbol(ElemRef, LCtx, T, BlockCount, "end");
+      SymMgr.conjureSymbol(Elem, LCtx, T, BlockCount, "end");
   State = assumeNoOverflow(State, Sym, 4);
 
   if (CDataPtr) {

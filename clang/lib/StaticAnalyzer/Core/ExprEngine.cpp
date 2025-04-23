@@ -2051,9 +2051,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
       for (const auto N : preVisit) {
         const LocationContext *LCtx = N->getLocationContext();
-        SVal result =
-            svalBuilder.conjureSymbolVal(nullptr, getCFGElementRef(), LCtx,
-                                         resultType, currBldrCtx->blockCount());
+        SVal result = svalBuilder.conjureSymbolVal(
+            /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
+            currBldrCtx->blockCount());
         ProgramStateRef State = N->getState()->BindExpr(Ex, LCtx, result);
 
         // Escape pointers passed into the list, unless it's an ObjC boxed

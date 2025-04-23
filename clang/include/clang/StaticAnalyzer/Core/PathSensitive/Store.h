@@ -223,9 +223,8 @@ public:
   ///
   /// \param[in] store The initial store.
   /// \param[in] Values The values to invalidate.
-  /// \param[in] ElemRef The current \p CFGBlock::ConstCFGElementRef being
-  ///   evaluated. Used to conjure symbols to mark the values of invalidated
-  ///   regions.
+  /// \param[in] Elem The current CFG Element being evaluated. Used to conjure
+  ///   symbols to mark the values of invalidated regions.
   /// \param[in] Count The current block count. Used to conjure
   ///   symbols to mark the values of invalidated regions.
   /// \param[in] Call The call expression which will be used to determine which
@@ -242,7 +241,7 @@ public:
   ///   even if they do not currently have bindings. Pass \c NULL if this
   ///   information will not be used.
   virtual StoreRef invalidateRegions(
-      Store store, ArrayRef<SVal> Values, CFGBlock::ConstCFGElementRef ElemRef,
+      Store store, ArrayRef<SVal> Values, ConstCFGElementRef Elem,
       unsigned Count, const LocationContext *LCtx, const CallEvent *Call,
       InvalidatedSymbols &IS, RegionAndSymbolInvalidationTraits &ITraits,
       InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) = 0;

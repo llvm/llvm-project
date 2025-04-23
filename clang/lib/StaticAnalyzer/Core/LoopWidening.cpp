@@ -30,7 +30,7 @@ namespace ento {
 ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
                                     unsigned BlockCount,
-                                    CFGBlock::ConstCFGElementRef ElemRef) {
+                                    ConstCFGElementRef Elem) {
   // Invalidate values in the current state.
   // TODO Make this more conservative by only invalidating values that might
   //      be modified by the body of the loop.
@@ -75,7 +75,7 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                      RegionAndSymbolInvalidationTraits::TK_PreserveContents);
   }
 
-  return PrevState->invalidateRegions(Regions, ElemRef, BlockCount, LCtx, true,
+  return PrevState->invalidateRegions(Regions, Elem, BlockCount, LCtx, true,
                                       nullptr, nullptr, &ITraits);
 }
 

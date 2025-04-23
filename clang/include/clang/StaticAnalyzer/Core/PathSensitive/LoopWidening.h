@@ -28,7 +28,7 @@ namespace ento {
 ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
                                     unsigned BlockCount,
-                                    CFGBlock::ConstCFGElementRef ElemRef);
+                                    ConstCFGElementRef Elem);
 
 } // end namespace ento
 } // end namespace clang

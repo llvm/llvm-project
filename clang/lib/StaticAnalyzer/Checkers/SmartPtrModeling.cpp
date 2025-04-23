@@ -78,11 +78,9 @@ private:
   bool handleOstreamOperator(const CallEvent &Call, CheckerContext &C) const;
   bool handleSwap(ProgramStateRef State, SVal First, SVal Second,
                   CheckerContext &C) const;
-  std::pair<SVal, ProgramStateRef>
-  retrieveOrConjureInnerPtrVal(ProgramStateRef State,
-                               const MemRegion *ThisRegion,
-                               CFGBlock::ConstCFGElementRef ElemRef,
-                               QualType Type, CheckerContext &C) const;
+  std::pair<SVal, ProgramStateRef> retrieveOrConjureInnerPtrVal(
+      ProgramStateRef State, const MemRegion *ThisRegion,
+      ConstCFGElementRef Elem, QualType Type, CheckerContext &C) const;
 
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
@@ -438,14 +436,13 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
 }
 
 std::pair<SVal, ProgramStateRef> SmartPtrModeling::retrieveOrConjureInnerPtrVal(
-    ProgramStateRef State, const MemRegion *ThisRegion,
-    CFGBlock::ConstCFGElementRef ElemRef, QualType Type,
-    CheckerContext &C) const {
+    ProgramStateRef State, const MemRegion *ThisRegion, ConstCFGElementRef Elem,
+    QualType Type, CheckerContext &C) const {
   const auto *Ptr = State->get<TrackedRegionMap>(ThisRegion);
   if (Ptr)
     return {*Ptr, State};
-  auto Val = C.getSValBuilder().conjureSymbolVal(
-      ElemRef, C.getLocationContext(), Type, C.blockCount());
+  auto Val = C.getSValBuilder().conjureSymbolVal(Elem, C.getLocationContext(),
+                                                 Type, C.blockCount());
   State = State->set<TrackedRegionMap>(ThisRegion, Val);
   return {Val, State};
 }
@@ -471,7 +468,7 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
   // https://en.cppreference.com/w/cpp/memory/unique_ptr/operator_cmp.
 
   auto makeSValFor = [&C, this](ProgramStateRef State, const Expr *E,
-                                CFGBlock::ConstCFGElementRef ElemRef,
+                                ConstCFGElementRef Elem,
                                 SVal S) -> std::pair<SVal, ProgramStateRef> {
     if (S.isZeroConstant()) {
       return {S, State};
@@ -480,7 +477,7 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
     assert(Reg &&
            "this pointer of std::unique_ptr should be obtainable as MemRegion");
     QualType Type = getInnerPointerType(C, E->getType()->getAsCXXRecordDecl());
-    return retrieveOrConjureInnerPtrVal(State, Reg, ElemRef, Type, C);
+    return retrieveOrConjureInnerPtrVal(State, Reg, Elem, Type, C);
   };
 
   SVal First = Call.getArgSVal(0);

@@ -80,58 +80,56 @@ public:
 /// A symbol representing the result of an expression in the case when we do
 /// not know anything about what the expression is.
 class SymbolConjured : public SymbolData {
-  CFGBlock::ConstCFGElementRef ElemRef;
+  ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
   const LocationContext *LCtx;
   const void *SymbolTag;
 
   friend class SymExprAllocator;
-  SymbolConjured(SymbolID sym, CFGBlock::ConstCFGElementRef elemRef,
+  SymbolConjured(SymbolID sym, ConstCFGElementRef elem,
                  const LocationContext *lctx, QualType t, unsigned count,
                  const void *symbolTag)
-      : SymbolData(SymbolConjuredKind, sym), ElemRef(elemRef), T(t),
-        Count(count), LCtx(lctx), SymbolTag(symbolTag) {
+      : SymbolData(SymbolConjuredKind, sym), Elem(elem), T(t), Count(count),
+        LCtx(lctx), SymbolTag(symbolTag) {
     assert(lctx);
     assert(isValidTypeForSymbol(t));
   }
 
 public:
-  const CFGBlock::ConstCFGElementRef getCFGElementRef() const {
-    return ElemRef;
-  }
+  ConstCFGElementRef getCFGElementRef() const { return Elem; }
 
   // It might return null.
   const Stmt *getStmt() const {
-    switch (ElemRef->getKind()) {
+    switch (Elem->getKind()) {
     case CFGElement::Initializer:
-      return ElemRef->castAs<CFGInitializer>().getInitializer()->getInit();
+      return Elem->castAs<CFGInitializer>().getInitializer()->getInit();
     case CFGElement::ScopeBegin:
-      return ElemRef->castAs<CFGScopeBegin>().getTriggerStmt();
+      return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
     case CFGElement::ScopeEnd:
-      return ElemRef->castAs<CFGScopeEnd>().getTriggerStmt();
+      return Elem->castAs<CFGScopeEnd>().getTriggerStmt();
     case CFGElement::NewAllocator:
-      return ElemRef->castAs<CFGNewAllocator>().getAllocatorExpr();
+      return Elem->castAs<CFGNewAllocator>().getAllocatorExpr();
     case CFGElement::LifetimeEnds:
-      return ElemRef->castAs<CFGLifetimeEnds>().getTriggerStmt();
+      return Elem->castAs<CFGLifetimeEnds>().getTriggerStmt();
     case CFGElement::LoopExit:
-      return ElemRef->castAs<CFGLoopExit>().getLoopStmt();
+      return Elem->castAs<CFGLoopExit>().getLoopStmt();
     case CFGElement::Statement:
-      return ElemRef->castAs<CFGStmt>().getStmt();
+      return Elem->castAs<CFGStmt>().getStmt();
     case CFGElement::Constructor:
-      return ElemRef->castAs<CFGConstructor>().getStmt();
+      return Elem->castAs<CFGConstructor>().getStmt();
     case CFGElement::CXXRecordTypedCall:
-      return ElemRef->castAs<CFGCXXRecordTypedCall>().getStmt();
+      return Elem->castAs<CFGCXXRecordTypedCall>().getStmt();
     case CFGElement::AutomaticObjectDtor:
-      return ElemRef->castAs<CFGAutomaticObjDtor>().getTriggerStmt();
+      return Elem->castAs<CFGAutomaticObjDtor>().getTriggerStmt();
     case CFGElement::DeleteDtor:
-      return ElemRef->castAs<CFGDeleteDtor>().getDeleteExpr();
+      return Elem->castAs<CFGDeleteDtor>().getDeleteExpr();
     case CFGElement::BaseDtor:
       return nullptr;
     case CFGElement::MemberDtor:
       return nullptr;
     case CFGElement::TemporaryDtor:
-      return ElemRef->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
+      return Elem->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
     case CFGElement::CleanupFunction:
       return nullptr;
     }
@@ -148,12 +146,11 @@ public:
 
   void dumpToStream(raw_ostream &os) const override;
 
-  static void Profile(llvm::FoldingSetNodeID &profile,
-                      CFGBlock::ConstCFGElementRef ElemRef,
+  static void Profile(llvm::FoldingSetNodeID &profile, ConstCFGElementRef Elem,
                       const LocationContext *LCtx, QualType T, unsigned Count,
                       const void *SymbolTag) {
     profile.AddInteger((unsigned)SymbolConjuredKind);
-    profile.Add(ElemRef);
+    profile.Add(Elem);
     profile.AddPointer(LCtx);
     profile.Add(T);
     profile.AddInteger(Count);
@@ -161,7 +158,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, ElemRef, LCtx, T, Count, SymbolTag);
+    Profile(profile, Elem, LCtx, T, Count, SymbolTag);
   }
 
   // Implement isa<T> support.
@@ -569,12 +566,12 @@ public:
   template <typename SymExprT, typename... Args>
   const SymExprT *acquire(Args &&...args);
 
-  const SymbolConjured *conjureSymbol(CFGBlock::ConstCFGElementRef ElemRef,
+  const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const LocationContext *LCtx, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
 
-    return acquire<SymbolConjured>(ElemRef, LCtx, T, VisitCount, SymbolTag);
+    return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
   }
 
   QualType getType(const SymExpr *SE) const {

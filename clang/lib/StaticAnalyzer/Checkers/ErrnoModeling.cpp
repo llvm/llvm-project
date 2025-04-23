@@ -256,11 +256,11 @@ ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
 
 ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
                                          CheckerContext &C,
-                                         CFGBlock::ConstCFGElementRef ElemRef) {
+                                         ConstCFGElementRef Elem) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return State;
-  State = State->invalidateRegions(ErrnoR, ElemRef, C.blockCount(),
+  State = State->invalidateRegions(ErrnoR, Elem, C.blockCount(),
                                    C.getLocationContext(), false);
   if (!State)
     return nullptr;

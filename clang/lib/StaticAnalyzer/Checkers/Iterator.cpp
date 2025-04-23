@@ -208,14 +208,14 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State, SVal Val,
 
 ProgramStateRef createIteratorPosition(ProgramStateRef State, SVal Val,
                                        const MemRegion *Cont,
-                                       CFGBlock::ConstCFGElementRef ElemRef,
+                                       ConstCFGElementRef Elem,
                                        const LocationContext *LCtx,
                                        unsigned blockCount) {
   auto &StateMgr = State->getStateManager();
   auto &SymMgr = StateMgr.getSymbolManager();
   auto &ACtx = StateMgr.getContext();
 
-  auto Sym = SymMgr.conjureSymbol(ElemRef, LCtx, ACtx.LongTy, blockCount);
+  auto *Sym = SymMgr.conjureSymbol(Elem, LCtx, ACtx.LongTy, blockCount);
   State = assumeNoOverflow(State, Sym, 4);
   return setIteratorPosition(State, Val,
                              IteratorPosition::getPosition(Cont, Sym));
