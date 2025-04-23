@@ -1766,7 +1766,5 @@ Error IRMover::move(std::unique_ptr<Module> Src,
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);
-  Error E = TheIRLinker.run();
-  Composite.dropTriviallyDeadConstantArrays();
-  return E;
+  return TheIRLinker.run();
 }
