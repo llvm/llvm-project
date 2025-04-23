@@ -44,7 +44,7 @@ OptionValueEnumeration::ToJSON(const ExecutionContext *exe_ctx) {
       return enums.cstring.GetStringRef();
   }
 
-  return llvm::formatv("%", PRIu64, static_cast<uint64_t>(m_current_value));
+  return std::to_string(static_cast<uint64_t>(m_current_value));
 }
 
 Status OptionValueEnumeration::SetValueFromString(llvm::StringRef value,
