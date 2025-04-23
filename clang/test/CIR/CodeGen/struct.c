@@ -7,6 +7,12 @@
 
 // For LLVM IR checks, the structs are defined before the variables, so these
 // checks are at the top.
+// CIR-DAG: !rec_IncompleteS = !cir.record<struct "IncompleteS" incomplete>
+// CIR-DAG: !rec_CompleteS = !cir.record<struct "CompleteS" {!s32i, !s8i}>
+// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!rec_InnerS, !s32i}>  
+// CIR-DAG: !rec_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
 // LLVM-DAG: %struct.CompleteS = type { i32, i8 }
 // LLVM-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // LLVM-DAG: %struct.InnerS = type { i32, i8 }
@@ -20,8 +26,7 @@
 
 struct IncompleteS *p;
 
-// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.record<struct
-// CIR-SAME:     "IncompleteS" incomplete>>
+// CIR:      cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
 // LLVM-DAG: @p = dso_local global ptr null
 // OGCG-DAG: @p = global ptr null, align 8
 
@@ -30,10 +35,9 @@ struct CompleteS {
   char b;
 } cs;
 
-// CIR:       cir.global external @cs = #cir.zero : !cir.record<struct
-// CIR-SAME:      "CompleteS" {!s32i, !s8i}>
-// LLVM-DAG:      @cs = dso_local global %struct.CompleteS zeroinitializer
-// OGCG-DAG:      @cs = global %struct.CompleteS zeroinitializer, align 4
+// CIR:       cir.global external @cs = #cir.zero : !rec_CompleteS
+// LLVM-DAG:  @cs = dso_local global %struct.CompleteS zeroinitializer
+// OGCG-DAG:  @cs = global %struct.CompleteS zeroinitializer, align 4
 
 struct InnerS {
   int a;
@@ -47,10 +51,9 @@ struct OuterS {
 
 struct OuterS os;
 
-// CIR:       cir.global external @os = #cir.zero : !cir.record<struct
-// CIR-SAME:      "OuterS" {!cir.record<struct "InnerS" {!s32i, !s8i}>, !s32i}>
-// LLVM-DAG:      @os = dso_local global %struct.OuterS zeroinitializer
-// OGCG-DAG:      @os = global %struct.OuterS zeroinitializer, align 4
+// CIR:       cir.global external @os = #cir.zero : !rec_OuterS
+// LLVM-DAG:  @os = dso_local global %struct.OuterS zeroinitializer
+// OGCG-DAG:  @os = global %struct.OuterS zeroinitializer, align 4
 
 #pragma pack(push)
 #pragma pack(1)
@@ -60,20 +63,18 @@ struct PackedS {
   char a1;
 } ps;
 
-// CIR:       cir.global external @ps = #cir.zero : !cir.record<struct "PackedS"
-// CIR-SAME:      packed {!s32i, !s8i}>
-// LLVM-DAG:      @ps = dso_local global %struct.PackedS zeroinitializer
-// OGCG-DAG:      @ps = global %struct.PackedS zeroinitializer, align 1
+// CIR:       cir.global external @ps = #cir.zero : !rec_PackedS
+// LLVM-DAG:  @ps = dso_local global %struct.PackedS zeroinitializer
+// OGCG-DAG:  @ps = global %struct.PackedS zeroinitializer, align 1
 
 struct PackedAndPaddedS {
   int  b0;
   char b1;
 } __attribute__((aligned(2))) pps;
 
-// CIR:       cir.global external @pps = #cir.zero : !cir.record<struct
-// CIR-SAME:      "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
-// LLVM-DAG:      @pps = dso_local global %struct.PackedAndPaddedS zeroinitializer
-// OGCG-DAG:      @pps = global %struct.PackedAndPaddedS zeroinitializer, align 2
+// CIR:       cir.global external @pps = #cir.zero : !rec_PackedAndPaddedS
+// LLVM-DAG:  @pps = dso_local global %struct.PackedAndPaddedS zeroinitializer
+// OGCG-DAG:  @pps = global %struct.PackedAndPaddedS zeroinitializer, align 2
 
 #pragma pack(pop)
 
@@ -82,9 +83,7 @@ void f(void) {
 }
 
 // CIR:      cir.func @f()
-// CIR-NEXT:   cir.alloca !cir.ptr<!cir.record<struct "IncompleteS" incomplete>>,
-// CIR-SAME:       !cir.ptr<!cir.ptr<!cir.record<struct
-// CIR-SAME:       "IncompleteS" incomplete>>>, ["p"]
+// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"] {alignment = 8 : i64}
 // CIR-NEXT:   cir.return
 
 // LLVM:      define void @f()
@@ -101,9 +100,7 @@ void f2(void) {
 }
 
 // CIR:      cir.func @f2()
-// CIR-NEXT:   cir.alloca !cir.record<struct "CompleteS" {!s32i, !s8i}>,
-// CIR-SAME:       !cir.ptr<!cir.record<struct "CompleteS" {!s32i, !s8i}>>,
-// CIR-SAME:       ["s"] {alignment = 4 : i64}
+// CIR-NEXT:   cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["s"] {alignment = 4 : i64}
 // CIR-NEXT:   cir.return
 
 // LLVM:      define void @f2()
@@ -160,7 +157,7 @@ char f4(int a, struct CompleteS *p) {
   return p->b;
 }
 
-// CIR:      cir.func @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!cir.record<struct "CompleteS" {!s32i, !s8i}>>
+// CIR:      cir.func @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!rec_CompleteS>
 // CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[P_ADDR:.*]] = cir.alloca {{.*}} ["p", init] {alignment = 8 : i64}
 // CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"] {alignment = 1 : i64}
