@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // We use naked functions to avoid compiler-generated prologue and epilogue.
-// Despite GCC document list this as an supported case for extended asm, the 
+// Despite GCC documentation listing this as a supported case for extended asm, the 
 // generated code is not wrong as we only pass in constant operands to 
 // extended asm.
 // See https://github.com/llvm/llvm-project/issues/137055 for related remarks.
