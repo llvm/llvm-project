@@ -132,7 +132,7 @@ private:
                                       {}, "q");
     Value *AxUpdate = B.CreateFMA(B.CreateFNeg(Q), Ay, Ax, {}, "ax");
     Value *Clt = B.CreateFCmp(CmpInst::FCMP_OLT, AxUpdate,
-                              ConstantFP::get(ComputeFpTy, 0.0), "clt");
+                              ConstantFP::getZero(ComputeFpTy), "clt");
     Value *Axp = B.CreateFAdd(AxUpdate, Ay, "axp");
     return B.CreateSelect(Clt, Axp, AxUpdate, "ax");
   }
