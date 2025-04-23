@@ -352,6 +352,23 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG(
   Plan->getEntry()->setOneSuccessor(getOrCreateVPBB(TheLoop->getHeader()));
   Plan->getEntry()->setPlan(&*Plan);
 
+  // Fix VPlan loop-closed-ssa exit phi's by adding incoming operands to the
+  // VPIRInstructions wrapping them.
+  // // Note that the operand order corresponds to IR predecessor order, and may
+  // need adjusting when VPlan predecessors are added, if an exit block has
+  // multiple predecessor.
+  for (auto *EB : Plan->getExitBlocks()) {
+    for (VPRecipeBase &R : EB->phis()) {
+      auto *PhiR = cast<VPIRPhi>(&R);
+      PHINode &Phi = PhiR->getIRPhi();
+      assert(PhiR->getNumOperands() == 0 &&
+             "no phi operands should be added yet");
+      for (BasicBlock *Pred : predecessors(EB->getIRBasicBlock()))
+        PhiR->addOperand(
+            getOrCreateVPOperand(Phi.getIncomingValueForBlock(Pred)));
+    }
+  }
+
   for (const auto &[IRBB, VPB] : BB2VPBB)
     VPB2IRBB[VPB] = IRBB;
 
@@ -462,19 +479,28 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
 
   VPBasicBlock *ScalarPH = Plan.createVPBasicBlock("scalar.ph");
   VPBlockUtils::connectBlocks(ScalarPH, Plan.getScalarHeader());
-  if (!RequiresScalarEpilogueCheck) {
-    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
-    return;
-  }
 
   // If needed, add a check in the middle block to see if we have completed
   // all of the iterations in the first vector loop.  Three cases:
-  // 1) If (N - N%VF) == N, then we *don't* need to run the remainder.
+  // 1) If we require a scalar epilogue, there is no conditional branch as
+  //    we unconditionally branch to the scalar preheader.  Remove the recipes
+  //    from the exit blocks.
+  // 2) If (N - N%VF) == N, then we *don't* need to run the remainder.
   //    Thus if tail is to be folded, we know we don't need to run the
   //    remainder and we can set the condition to true.
-  // 2) If we require a scalar epilogue, there is no conditional branch as
-  //    we unconditionally branch to the scalar preheader.  Do nothing.
   // 3) Otherwise, construct a runtime check.
+
+  if (!RequiresScalarEpilogueCheck) {
+    VPBlockUtils::connectBlocks(MiddleVPBB, ScalarPH);
+    // The exit blocks are unreachable, remove their recipes to make sure no
+    // users remain that may pessimize transforms.
+    for (auto *EB : Plan.getExitBlocks()) {
+      for (VPRecipeBase &R : make_early_inc_range(*EB))
+        R.eraseFromParent();
+    }
+    return;
+  }
+
   BasicBlock *IRExitBlock = TheLoop->getUniqueLatchExitBlock();
   auto *VPExitBlock = Plan.getExitBlock(IRExitBlock);
   // The connection order corresponds to the operands of the conditional branch.

@@ -9373,11 +9373,8 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
   }
 }
 
-// Collect VPIRInstructions for phis in the exit blocks that are modeled
-// in VPlan and add the exiting VPValue as operand.
-static SetVector<VPIRInstruction *>
-collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
-                         VPlan &Plan) {
+// Collect VPIRInstructions for phis in the exit block from the latch only.
+static SetVector<VPIRInstruction *> collectUsersInLatchExitBlock(VPlan &Plan) {
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
     // Nothing to do for unreachable exit blocks.
@@ -9393,11 +9390,8 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
         continue;
       }
 
-      PHINode &ExitPhi = ExitIRI->getIRPhi();
-      BasicBlock *ExitingBB = OrigLoop->getLoopLatch();
-      Value *IncomingValue = ExitPhi.getIncomingValueForBlock(ExitingBB);
-      VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue);
-      ExitIRI->addOperand(V);
+      assert(ExitIRI->getNumOperands() == 1 && "must have a single operand");
+      VPValue *V = ExitIRI->getOperand(0);
       if (V->isLiveIn())
         continue;
       assert(V->getDefiningRecipe()->getParent()->getEnclosingLoopRegion() &&
@@ -9426,7 +9420,7 @@ addUsersInExitBlocks(VPlan &Plan,
            ExitIRI->getParent()->getSinglePredecessor() == MiddleVPBB &&
            "exit values from early exits must be fixed when branch to "
            "early-exit is added");
-    ExitIRI->extractLastLaneOfOperand(B);
+    ExitIRI->extractLastLaneOfFirstOperand(B);
   }
 }
 
@@ -9767,7 +9761,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
   SetVector<VPIRInstruction *> ExitUsersToFix =
-      collectUsersInExitBlocks(OrigLoop, RecipeBuilder, *Plan);
+      collectUsersInLatchExitBlock(*Plan);
   addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
   addUsersInExitBlocks(*Plan, ExitUsersToFix);
 
