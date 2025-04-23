@@ -5089,6 +5089,31 @@ SmallVector<OpFoldResult> AffineLinearizeIndexOp::getPaddedBasis() {
   return ret;
 }
 
+namespace mlir {
+namespace affine {
+OpFoldResult computeProduct(Location loc, OpBuilder &builder,
+                            ArrayRef<OpFoldResult> terms) {
+  int64_t nDynamic = 0;
+  SmallVector<Value> dynamicPart;
+  AffineExpr result = builder.getAffineConstantExpr(1);
+  for (OpFoldResult term : terms) {
+    if (!term)
+      return term;
+    std::optional<int64_t> maybeConst = getConstantIntValue(term);
+    if (maybeConst) {
+      result = result * builder.getAffineConstantExpr(*maybeConst);
+    } else {
+      dynamicPart.push_back(cast<Value>(term));
+      result = result * builder.getAffineSymbolExpr(nDynamic++);
+    }
+  }
+  if (auto constant = dyn_cast<AffineConstantExpr>(result))
+    return getAsIndexOpFoldResult(builder.getContext(), constant.getValue());
+  return builder.create<AffineApplyOp>(loc, result, dynamicPart).getResult();
+}
+} // namespace affine
+} // namespace mlir
+
 namespace {
 /// Rewrite `affine.linearize_index disjoint [%...a, %x, %...b] by (%...c, 1,
 /// %...d)` to `affine.linearize_index disjoint [%...a, %...b] by (%...c,
@@ -5147,27 +5172,6 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
     return success();
   }
 };
-
-OpFoldResult computeProduct(Location loc, OpBuilder &builder,
-                            ArrayRef<OpFoldResult> terms) {
-  int64_t nDynamic = 0;
-  SmallVector<Value> dynamicPart;
-  AffineExpr result = builder.getAffineConstantExpr(1);
-  for (OpFoldResult term : terms) {
-    if (!term)
-      return term;
-    std::optional<int64_t> maybeConst = getConstantIntValue(term);
-    if (maybeConst) {
-      result = result * builder.getAffineConstantExpr(*maybeConst);
-    } else {
-      dynamicPart.push_back(cast<Value>(term));
-      result = result * builder.getAffineSymbolExpr(nDynamic++);
-    }
-  }
-  if (auto constant = dyn_cast<AffineConstantExpr>(result))
-    return getAsIndexOpFoldResult(builder.getContext(), constant.getValue());
-  return builder.create<AffineApplyOp>(loc, result, dynamicPart).getResult();
-}
 
 /// If conseceutive outputs of a delinearize_index are linearized with the same
 /// bounds, canonicalize away the redundant arithmetic.
@@ -5315,7 +5319,7 @@ public:
       // We use the slice from the linearize's basis above because of the
       // "bounds inferred from `disjoint`" case above.
       OpFoldResult newSize =
-          computeProduct(linearizeOp.getLoc(), rewriter, basisToMerge);
+          affine::computeProduct(linearizeOp.getLoc(), rewriter, basisToMerge);
 
       // Trivial case where we can just skip past the delinearize all together
       if (m.length == m.delinearize.getNumResults()) {
