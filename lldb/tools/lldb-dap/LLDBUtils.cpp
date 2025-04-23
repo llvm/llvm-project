@@ -111,15 +111,6 @@ std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
   return s;
 }
 
-std::string RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger,
-                                    llvm::StringRef prefix,
-                                    const llvm::ArrayRef<std::string> &commands,
-                                    bool echo_commands) {
-  bool required_command_failed = false;
-  return RunLLDBCommands(debugger, prefix, commands, required_command_failed,
-                         /*parse_command_directives=*/false, echo_commands);
-}
-
 bool ThreadHasStopReason(lldb::SBThread &thread) {
   switch (thread.GetStopReason()) {
   case lldb::eStopReasonTrace:

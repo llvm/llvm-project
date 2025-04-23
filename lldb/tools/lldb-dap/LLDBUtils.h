@@ -97,12 +97,6 @@ std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             bool parse_command_directives = true,
                             bool echo_commands = false);
 
-/// Similar to the method above, but without parsing command directives.
-std::string RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger,
-                                    llvm::StringRef prefix,
-                                    const llvm::ArrayRef<std::string> &commands,
-                                    bool echo_commands);
-
 /// Check if a thread has a stop reason.
 ///
 /// \param[in] thread
