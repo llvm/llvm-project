@@ -280,7 +280,6 @@ protected:
   bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
-  bool UseBlockVGPROpsForCSR = false;
   bool HasGloballyAddressableScratch = false;
 
   // Dummy feature to use for assembler in tablegen.
@@ -1334,8 +1333,6 @@ public:
   bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
 
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
-
-  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
   bool hasGloballyAddressableScratch() const {
     return HasGloballyAddressableScratch;
