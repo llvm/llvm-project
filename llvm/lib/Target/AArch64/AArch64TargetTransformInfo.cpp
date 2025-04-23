@@ -4618,7 +4618,7 @@ static bool isLoopSizeWithinBudget(Loop *L, const AArch64TTIImpl &TTI,
   }
 
   if (FinalSize)
-    *FinalSize = *LoopCost.getValue();
+    *FinalSize = LoopCost.getValue();
   return true;
 }
 
