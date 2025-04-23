@@ -17,6 +17,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "VPlanVerifier.h"
@@ -163,8 +164,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
       if (UI->getParent() == SinkTo)
         return true;
       NeedsDuplicating = UI->onlyFirstLaneUsed(SinkCandidate);
-      // We only know how to duplicate VPRecipeRecipes for now.
-      return NeedsDuplicating && isa<VPReplicateRecipe>(SinkCandidate);
+      // We only know how to duplicate VPReplicateRecipes and
+      // VPScalarIVStepsRecipes for now.
+      return NeedsDuplicating &&
+             isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(SinkCandidate);
     };
     if (!all_of(SinkCandidate->users(), CanSinkWithUser))
       continue;
@@ -172,9 +175,16 @@ static bool sinkScalarOperands(VPlan &Plan) {
     if (NeedsDuplicating) {
       if (ScalarVFOnly)
         continue;
-      Instruction *I = SinkCandidate->getUnderlyingInstr();
-      auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
-      // TODO: add ".cloned" suffix to name of Clone's VPValue.
+      VPSingleDefRecipe *Clone;
+      if (isa<VPReplicateRecipe>(SinkCandidate)) {
+        // TODO: Handle converting to uniform recipes as separate transform,
+        // then cloning should be sufficient here.
+        Instruction *I = SinkCandidate->getUnderlyingInstr();
+        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
+        // TODO: add ".cloned" suffix to name of Clone's VPValue.
+      } else {
+        Clone = SinkCandidate->clone();
+      }
 
       Clone->insertBefore(SinkCandidate);
       SinkCandidate->replaceUsesWithIf(Clone, [SinkTo](VPUser &U, unsigned) {
@@ -864,10 +874,8 @@ void VPlanTransforms::optimizeInductionExitUsers(
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-    for (VPRecipeBase &R : *ExitVPBB) {
-      auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
-      if (!ExitIRI)
-        break;
+    for (VPRecipeBase &R : ExitVPBB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
@@ -1026,6 +1034,18 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     if (TypeInfo.inferScalarType(X) != WideStepTy)
       X = VPBuilder(&R).createWidenCast(Instruction::Trunc, X, WideStepTy);
     R.getVPSingleValue()->replaceAllUsesWith(X);
+    return;
+  }
+
+  // For i1 vp.merges produced by AnyOf reductions:
+  // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
+  if (match(&R, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
+                                                 m_VPValue(X), m_VPValue())) &&
+      match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
+      TypeInfo.inferScalarType(R.getVPSingleValue())->isIntegerTy(1)) {
+    R.setOperand(1, R.getOperand(0));
+    R.setOperand(0, Y);
+    return;
   }
 }
 
@@ -2445,7 +2465,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
+    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder,
+    VFRange &Range) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
@@ -2482,34 +2503,47 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : *VPEarlyExitBlock) {
-    auto *ExitIRI = dyn_cast<VPIRPhi>(&R);
-    if (!ExitIRI)
-      break;
-
-    PHINode &ExitPhi = ExitIRI->getIRPhi();
-    VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
-
+  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
+    auto *ExitIRI = cast<VPIRPhi>(&R);
+    // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
+    // a single predecessor and 1 if it has two.
+    unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (OrigLoop->getUniqueExitBlock()) {
-      // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
-      // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
-      // which is coming from the original latch.
-      VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-      ExitIRI->addOperand(IncomingFromLatch);
-      ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
+      // If VPEarlyExitBlock has two predecessors, they are already ordered such
+      // that early exit is second (and latch exit is first), by construction.
+      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
+      // ordered the other way around, and it is the order of the latter which
+      // corresponds to the order of operands of VPEarlyExitBlock's phi recipes.
+      // Therefore, if early exit (UncountableExitingBlock) is the first
+      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
+      // thereby bringing them to match VPEarlyExitBlock's predecessor order,
+      // with early exit being last (second). Otherwise they already match.
+      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) ==
+          UncountableExitingBlock)
+        ExitIRI->swapOperands();
+
+      // The first of two operands corresponds to the latch exit, via MiddleVPBB
+      // predecessor. Extract its last lane.
+      ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
     }
-    // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
+
+    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
+    auto IsVector = [](ElementCount VF) { return VF.isVector(); };
+    // When the VFs are vectors, need to add `extract` to get the incoming value
+    // from early exit. When the range contains scalar VF, limit the range to
+    // scalar VF to prevent mis-compilation for the range containing both scalar
+    // and vector VFs.
+    if (!IncomingFromEarlyExit->isLiveIn() &&
+        LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
+      // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
           nullptr, "early.exit.value");
+      ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
-    ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 

@@ -67,8 +67,12 @@ public:
         nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
   }
 
-  void buildDefCFAOffset(int64_t Offset) const {
-    insertCFIInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
+  void buildDefCFAOffset(int64_t Offset, MCSymbol *Label = nullptr) const {
+    insertCFIInst(MCCFIInstruction::cfiDefCfaOffset(Label, Offset));
+  }
+
+  void buildAdjustCFAOffset(int64_t Adjustment) const {
+    insertCFIInst(MCCFIInstruction::createAdjustCfaOffset(nullptr, Adjustment));
   }
 
   void buildOffset(MCRegister Reg, int64_t Offset) const {
@@ -76,10 +80,22 @@ public:
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
   }
 
+  void buildNegateRAState() const {
+    insertCFIInst(MCCFIInstruction::createNegateRAState(nullptr));
+  }
+
+  void buildNegateRAStateWithPC() const {
+    insertCFIInst(MCCFIInstruction::createNegateRAStateWithPC(nullptr));
+  }
+
   void buildRegister(MCRegister Reg1, MCRegister Reg2) const {
     insertCFIInst(MCCFIInstruction::createRegister(
         nullptr, TRI.getDwarfRegNum(Reg1, IsEH),
         TRI.getDwarfRegNum(Reg2, IsEH)));
+  }
+
+  void buildWindowSave() const {
+    insertCFIInst(MCCFIInstruction::createWindowSave(nullptr));
   }
 
   void buildRestore(MCRegister Reg) const {

@@ -1680,10 +1680,6 @@ translated into the LLVM ``convergent`` attribute, which indicates that the call
 instructions of a function with this attribute cannot be made control-dependent
 on any additional values.
 
-In languages designed for SPMD/SIMT programming model, e.g. OpenCL or CUDA,
-the call instructions of a function with this attribute must be executed by
-all work items or threads in a work group or sub group.
-
 This attribute is different from ``noduplicate`` because it allows duplicating
 function calls if it can be proved that the duplicated function calls are
 not made control-dependent on any additional values, e.g., unrolling a loop
@@ -2687,6 +2683,19 @@ The semantics are as follows:
   handler, where the offset from "lr" to the preferred return address depends on
   the execution state of the code which generated the exception. In this case
   a sequence equivalent to "movs pc, lr" will be used.
+  }];
+}
+
+def ARMInterruptSaveFPDocs : Documentation {
+    let Category = DocCatFunction;
+  let Heading = "interrupt_save_fp (ARM)";
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt_save_fp("TYPE")))``
+on ARM targets. This attribute behaves the same way as the ARM interrupt
+attribute, except the general purpose floating point registers are also saved,
+along with FPEXC and FPSCR. Note, even on M-class CPUs, where the floating
+point context can be automatically saved depending on the FPCCR, the general
+purpose floating point registers will be saved.
   }];
 }
 

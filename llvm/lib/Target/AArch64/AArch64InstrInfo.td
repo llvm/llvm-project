@@ -389,6 +389,8 @@ def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 
 def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
+def HasFastIncVL : Predicate<"!Subtarget->hasDisableFastIncVL()">;
+
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
 def UseLDAPUR : Predicate<"!Subtarget->avoidLDAPUR()">;
@@ -880,11 +882,20 @@ def AArch64cmltz : PatFrag<(ops node:$lhs),
 def AArch64cmtst : PatFrag<(ops node:$LHS, node:$RHS),
                            (vnot (AArch64cmeqz (and node:$LHS, node:$RHS)))>;
 
-def AArch64fcmeqz: SDNode<"AArch64ISD::FCMEQz", SDT_AArch64fcmpz>;
-def AArch64fcmgez: SDNode<"AArch64ISD::FCMGEz", SDT_AArch64fcmpz>;
-def AArch64fcmgtz: SDNode<"AArch64ISD::FCMGTz", SDT_AArch64fcmpz>;
-def AArch64fcmlez: SDNode<"AArch64ISD::FCMLEz", SDT_AArch64fcmpz>;
-def AArch64fcmltz: SDNode<"AArch64ISD::FCMLTz", SDT_AArch64fcmpz>;
+def AArch64fcmeqz : PatFrag<(ops node:$lhs),
+                            (AArch64fcmeq node:$lhs, immAllZerosV)>;
+
+def AArch64fcmgez : PatFrag<(ops node:$lhs),
+                            (AArch64fcmge node:$lhs, immAllZerosV)>;
+
+def AArch64fcmgtz : PatFrag<(ops node:$lhs),
+                            (AArch64fcmgt node:$lhs, immAllZerosV)>;
+
+def AArch64fcmlez : PatFrag<(ops node:$lhs),
+                            (AArch64fcmge immAllZerosV, node:$lhs)>;
+
+def AArch64fcmltz : PatFrag<(ops node:$lhs),
+                            (AArch64fcmgt immAllZerosV, node:$lhs)>;
 
 def AArch64fcvtxn_n: SDNode<"AArch64ISD::FCVTXN", SDTFPRoundOp>;
 def AArch64fcvtxnsdr: PatFrags<(ops node:$Rn),
@@ -3588,7 +3599,7 @@ defm LDRW : LoadUI<0b10, 0, 0b01, GPR32z, uimm12s4, "ldr",
                          (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)))]>;
 let Predicates = [HasFPARMv8] in {
 defm LDRB : LoadUI<0b00, 1, 0b01, FPR8Op, uimm12s1, "ldr",
-                   [(set FPR8Op:$Rt,
+                   [(set (i8 FPR8Op:$Rt),
                          (load (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)))]>;
 defm LDRH : LoadUI<0b01, 1, 0b01, FPR16Op, uimm12s2, "ldr",
                    [(set (f16 FPR16Op:$Rt),
@@ -3776,7 +3787,7 @@ defm LDURW : LoadUnscaled<0b10, 0, 0b01, GPR32z, "ldur",
                           (load (am_unscaled32 GPR64sp:$Rn, simm9:$offset)))]>;
 let Predicates = [HasFPARMv8] in {
 defm LDURB : LoadUnscaled<0b00, 1, 0b01, FPR8Op, "ldur",
-                    [(set FPR8Op:$Rt,
+                    [(set (i8 FPR8Op:$Rt),
                           (load (am_unscaled8 GPR64sp:$Rn, simm9:$offset)))]>;
 defm LDURH : LoadUnscaled<0b01, 1, 0b01, FPR16Op, "ldur",
                     [(set (f16 FPR16Op:$Rt),
@@ -4346,7 +4357,7 @@ defm STRW : StoreUIz<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
                             (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))]>;
 let Predicates = [HasFPARMv8] in {
 defm STRB : StoreUI<0b00, 1, 0b00, FPR8Op, uimm12s1, "str",
-                    [(store FPR8Op:$Rt,
+                    [(store (i8 FPR8Op:$Rt),
                             (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))]>;
 defm STRH : StoreUI<0b01, 1, 0b00, FPR16Op, uimm12s2, "str",
                     [(store (f16 FPR16Op:$Rt),
@@ -4482,7 +4493,7 @@ defm STURW : StoreUnscaled<0b10, 0, 0b00, GPR32z, "stur",
                                  (am_unscaled32 GPR64sp:$Rn, simm9:$offset))]>;
 let Predicates = [HasFPARMv8] in {
 defm STURB : StoreUnscaled<0b00, 1, 0b00, FPR8Op, "stur",
-                         [(store FPR8Op:$Rt,
+                         [(store (i8 FPR8Op:$Rt),
                                  (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 defm STURH : StoreUnscaled<0b01, 1, 0b00, FPR16Op, "stur",
                          [(store (f16 FPR16Op:$Rt),
@@ -4601,6 +4612,12 @@ def : Pat<(truncstorei16 GPR64:$Rt, (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
   (STURHHi (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$Rn, simm9:$offset)>;
 def : Pat<(truncstorei8 GPR64:$Rt, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
   (STURBBi (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$Rn, simm9:$offset)>;
+
+// aarch64mfp8 (bsub) stores
+def : Pat<(store aarch64mfp8:$Rt, (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
+          (STURBi FPR8:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+def : Pat<(store aarch64mfp8:$Rt, (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)),
+          (STRBui FPR8:$Rt, GPR64sp:$Rn, uimm12s1:$offset)>;
 
 // Match stores from lane 0 to the appropriate subreg's store.
 multiclass VecStoreULane0Pat<SDPatternOperator StoreOp,
@@ -5670,6 +5687,17 @@ def : Pat<(v4i32 (bswap (v4i32 V128:$Rn))),
           (v4i32 (REV32v16i8 (v4i32 V128:$Rn)))>;
 def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))),
           (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
+
+// Patterns for funnel shifts to be matched to equivalent REV instructions
+def : Pat<(v2i64 (or (v2i64 (AArch64vshl (v2i64 V128:$Rn), (i32 32))), 
+                     (v2i64 (AArch64vlshr (v2i64 V128:$Rn), (i32 32))))), 
+          (v2i64 (REV64v4i32 (v2i64 V128:$Rn)))>;
+def : Pat<(v4i32 (or (v4i32 (AArch64vshl (v4i32 V128:$Rn), (i32 16))), 
+                     (v4i32 (AArch64vlshr (v4i32 V128:$Rn), (i32 16))))), 
+          (v4i32 (REV32v8i16 (v4i32 V128:$Rn)))>;
+def : Pat<(v2i32 (or (v2i32 (AArch64vshl (v2i32 V64:$Rn), (i32 16))), 
+                     (v2i32 (AArch64vlshr (v2i32 V64:$Rn), (i32 16))))), 
+          (v2i32 (REV32v4i16 (v2i32 V64:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three vector instructions.
@@ -7243,8 +7271,15 @@ def : Pat<(v2i64 (int_aarch64_neon_vcopy_lane
 
 // Move elements between vectors
 multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE,
-                                ValueType VTScal, Operand SVEIdxTy, Instruction INS> {
+                                ValueType VTScal, Operand SVEIdxTy, Instruction INS, Instruction DUP, SubRegIndex DUPSub> {
   // Extracting from the lowest 128-bits of an SVE vector
+  def : Pat<(VT128 (vector_insert undef,
+                      (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
+                      (i64 0))),
+            (INSERT_SUBREG (VT128 (IMPLICIT_DEF)),
+                (DUP (VT128 (EXTRACT_SUBREG VTSVE:$Rm, zsub)), SVEIdxTy:$Immn),
+                 DUPSub)>;
+
   def : Pat<(VT128 (vector_insert VT128:$Rn,
                       (VTScal (vector_extract VTSVE:$Rm, (i64 SVEIdxTy:$Immn))),
                       (i64 imm:$Immd))),
@@ -7262,6 +7297,11 @@ multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE
                         (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
                         (i64 imm:$Immd))),
             (INS V128:$src, imm:$Immd, V128:$Rn, imm:$Immn)>;
+
+  def : Pat<(VT128 (vector_insert undef,
+                        (VTScal (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))),
+                        (i64 0))),
+            (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), (DUP V128:$Rn, imm:$Immn), DUPSub)>;
 
   def : Pat<(VT128 (vector_insert V128:$src,
                         (VTScal (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))),
@@ -7285,15 +7325,15 @@ multiclass Neon_INS_elt_pattern<ValueType VT128, ValueType VT64, ValueType VTSVE
                 dsub)>;
 }
 
-defm : Neon_INS_elt_pattern<v8f16,  v4f16,  nxv8f16,  f16,  VectorIndexH, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane>;
-defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane>;
+defm : Neon_INS_elt_pattern<v8f16,  v4f16,  nxv8f16,  f16,  VectorIndexH, INSvi16lane, DUPi16, hsub>;
+defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi16lane, DUPi16, hsub>;
+defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane, DUPi32, ssub>;
+defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane, DUPi64, dsub>;
 
-defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane>;
-defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane>;
-defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane>;
-defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane>;
+defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane,  DUPi8,  bsub>;
+defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane, DUPi16, hsub>;
+defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane, DUPi32, ssub>;
+defm : Neon_INS_elt_pattern<v2i64,  v1i64,  nxv2i64,  i64,  VectorIndexD, INSvi64lane, DUPi64, dsub>;
 
 // Insert from bitcast
 // vector_insert(bitcast(f32 src), n, lane) -> INSvi32lane(src, lane, INSERT_SUBREG(-, n), 0)

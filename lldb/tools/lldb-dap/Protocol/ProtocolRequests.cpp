@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolRequests.h"
-#include "DAP.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
@@ -112,6 +111,14 @@ json::Value toJSON(const SourceResponseBody &SA) {
     Result.insert({"mimeType", SA.mimeType});
 
   return std::move(Result);
+}
+
+bool fromJSON(const llvm::json::Value &Params, NextArguments &NA,
+              llvm::json::Path P) {
+  json::ObjectMapper OM(Params, P);
+  return OM && OM.map("threadId", NA.threadId) &&
+         OM.mapOptional("singleThread", NA.singleThread) &&
+         OM.mapOptional("granularity", NA.granularity);
 }
 
 } // namespace lldb_dap::protocol
