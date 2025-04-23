@@ -161,6 +161,7 @@ struct MissingFeatures {
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
   static bool setDSOLocal() { return false; }
+  static bool foldCaseStmt() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

@@ -777,14 +777,16 @@ def CaseOp : CIR_Op<"case", [
   let summary = "Case operation";
   let description = [{
     The `cir.case` operation represents a case within a C/C++ switch.
-    The `cir.case` operation must be in a `cir.switch` operation directly or indirectly.
+    The `cir.case` operation must be in a `cir.switch` operation directly
+    or indirectly.
 
     The `cir.case` have 4 kinds:
     - `equal, <constant>`: equality of the second case operand against the
     condition.
     - `anyof, [constant-list]`: equals to any of the values in a subsequent
     following list.
-    - `range, [lower-bound, upper-bound]`: the condition is within the closed interval.
+    - `range, [lower-bound, upper-bound]`: the condition is within the closed
+                                           interval.
     - `default`: any other value.
 
     Each case region must be explicitly terminated.
@@ -965,7 +967,8 @@ def SwitchOp : CIR_Op<"switch",
     // Collect cases in the switch.
     void collectCases(llvm::SmallVector<CaseOp> &cases);
 
-    // Check if the switch is in a simple form. If yes, collect the cases to \param cases.
+    // Check if the switch is in a simple form.
+    // If yes, collect the cases to \param cases.
     // This is an expensive and need to be used with caution.
     bool isSimpleForm(llvm::SmallVector<CaseOp> &cases);
   }];
