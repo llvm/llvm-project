@@ -2537,18 +2537,18 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto genRegionEntryCB = [&](mlir::Operation *op) {
     genEntryBlock(converter.getFirOpBuilder(), taskgroupArgs, op->getRegion(0));
+    bindEntryBlockArgs(converter,
+                       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op),
+                       taskgroupArgs);
     return llvm::to_vector(taskgroupArgs.getSyms());
   };
 
-  OpWithBodyGenInfo genInfo =
+  return genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
           .setClauses(&item->clauses)
-          .setGenRegionEntryCb(genRegionEntryCB);
-
-  auto taskgroupOp =
-      genOpWithBody<mlir::omp::TaskgroupOp>(genInfo, queue, item, clauseOps);
-  return taskgroupOp;
+          .setGenRegionEntryCb(genRegionEntryCB),
+      queue, item, clauseOps);
 }
 
 static mlir::omp::TaskwaitOp

@@ -112,12 +112,12 @@ public:
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
-  bool processIsDevicePtr(
-      mlir::omp::IsDevicePtrClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processInReduction(
       mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
+  bool processIsDevicePtr(
+      mlir::omp::IsDevicePtrClauseOps &result,
+      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 

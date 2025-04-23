@@ -416,8 +416,7 @@ void DataSharingProcessor::collectSymbols(
 
   bool collectSymbols = (itr == clauses.end());
 
-  converter.collectSymbolSet(eval, allSymbols, flag,
-                             /*collectSymbols=*/collectSymbols,
+  converter.collectSymbolSet(eval, allSymbols, flag, collectSymbols,
                              /*collectHostAssociatedSymbols=*/true);
 
   llvm::SetVector<const semantics::Symbol *> symbolsInNestedRegions;

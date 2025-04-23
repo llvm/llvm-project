@@ -16,10 +16,12 @@
 !CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {bindc_name = "res", uniq_name = "_QFomp_taskgroup_task_reductionEres"}
 !CHECK:         %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFomp_taskgroup_task_reductionEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:         omp.taskgroup task_reduction(@[[RED_I32_NAME]]  %[[VAL_1]]#0 -> %[[VAL_2:.*]] : !fir.ref<i32>) {
-!CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i32>
-!CHECK:           %[[VAL_4:.*]] = arith.constant 1 : i32
-!CHECK:           %[[VAL_5:.*]] = arith.addi %[[VAL_3]], %[[VAL_4]] : i32
-!CHECK:           hlfir.assign %[[VAL_5]] to %[[VAL_1]]#0 : i32, !fir.ref<i32>
+!CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2]] 
+!CHECK-SAME:      {uniq_name = "_QFomp_taskgroup_task_reductionEres"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i32>
+!CHECK:           %[[VAL_5:.*]] = arith.constant 1 : i32
+!CHECK:           %[[VAL_6:.*]] = arith.addi %[[VAL_4]], %[[VAL_5]] : i32
+!CHECK:           hlfir.assign %[[VAL_6]] to %[[VAL_3]]#0 : i32, !fir.ref<i32>
 !CHECK:           omp.terminator
 !CHECK:          }
 !CHECK:        return
