@@ -1084,6 +1084,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
+
+  Tokens = annotate("using std::operator==;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
