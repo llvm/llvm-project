@@ -21,32 +21,32 @@ struct Baz {
 // ok
 int g_a[__null_terminated 8];
 
-// expected-error@+1{{array 'g_b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+// expected-error@+1{{array 'g_b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
 int g_b[__terminated_by(42) 8];
 
-// expected-error@+1{{array 'g_foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+// expected-error@+1{{array 'g_foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
 struct Foo g_foo;
 
 // ok
 struct Bar g_bar;
 
-// expected-error@+1{{array 'g_baz.f.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+// expected-error@+1{{array 'g_baz.f.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
 struct Baz g_baz;
 
 void no_init_static_local(void) {
   // ok
   static int a[__null_terminated 8];
 
-  // expected-error@+1{{array 'b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   static int b[__terminated_by(42) 8];
 
-  // expected-error@+1{{array 'foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'foo.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   static struct Foo foo;
 
   // ok
   static struct Bar bar;
 
-  // expected-error@+1{{array 'baz.f.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: 42; got 0)}}
+  // expected-error@+1{{array 'baz.f.b' with '__terminated_by' attribute is initialized with an incorrect terminator (expected: '42'; got '0')}}
   static struct Baz baz;
 }
 

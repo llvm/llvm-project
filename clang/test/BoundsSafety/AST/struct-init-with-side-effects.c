@@ -98,7 +98,7 @@ void test_count_annot() {
   struct s_count_annot s1 = {
     .len = 10,
     .ptr = arr,
-    // expected-warning@+1{{initializer getlen() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'getlen()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .dummy = getlen()
   };
   struct s_count_annot s2;
@@ -157,7 +157,7 @@ void test_range_annot() {
   struct s_range_annot s1 = {
     .end = arr + 10,
     .start = arr,
-    // expected-warning@+1{{initializer getlen() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'getlen()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .dummy = getlen()
   };
   struct s_count_annot s2;

@@ -43,20 +43,20 @@ void unsafe_term_ice(int *__null_terminated p, int val) {
 
 void null(int *__null_terminated p, int *__terminated_by(42) q) {
   __null_terminated_to_indexable(p); // ok
-  __null_terminated_to_indexable(q); // expected-error{{pointer argument must be terminated by 0 (got 42)}}
+  __null_terminated_to_indexable(q); // expected-error{{pointer argument must be terminated by '0' (got '42')}}
 }
 
 void unsafe_null(int *__null_terminated p, int *__terminated_by(42) q) {
   __unsafe_null_terminated_to_indexable(p); // ok
-  __unsafe_null_terminated_to_indexable(q); // expected-error{{pointer argument must be terminated by 0 (got 42)}}
+  __unsafe_null_terminated_to_indexable(q); // expected-error{{pointer argument must be terminated by '0' (got '42')}}
 }
 
 void _42(int *__null_terminated p, int *__terminated_by(42) q) {
-  (void)__builtin_terminated_by_to_indexable(p, 42); // expected-error{{pointer argument must be terminated by 42 (got 0)}}
+  (void)__builtin_terminated_by_to_indexable(p, 42); // expected-error{{pointer argument must be terminated by '42' (got '0')}}
   (void)__builtin_terminated_by_to_indexable(q, 42); // ok
 }
 
 void unsafe_42(int *__null_terminated p, int *__terminated_by(42) q) {
-  (void)__builtin_unsafe_terminated_by_to_indexable(p, 42); // expected-error{{pointer argument must be terminated by 42 (got 0)}}
+  (void)__builtin_unsafe_terminated_by_to_indexable(p, 42); // expected-error{{pointer argument must be terminated by '42' (got '0')}}
   (void)__builtin_unsafe_terminated_by_to_indexable(q, 42); // ok
 }

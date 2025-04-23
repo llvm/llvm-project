@@ -12587,7 +12587,7 @@ let CategoryName = "BoundsSafety Pointer Attributes Issue" in {
 def err_bounds_safety_conflicting_pointer_attributes : Error<
   "%select{array|pointer}0 cannot have more than one %select{bound|type|count|end|terminator}1 attribute">;
 def note_bounds_safety_conflicting_pointer_attribute_args : Note<
-  "conflicting arguments for %select{count|end|terminator}0 were '%1' and '%2'">;
+  "conflicting arguments for %select{count|end|terminator}0 were %1 and %2">;
 def warn_bounds_safety_duplicate_pointer_attributes : Warning<
   "%select{array|pointer}0 annotated with %select{__unsafe_indexable|__bidi_indexable|__indexable|__single|__terminated_by}1 "
   "multiple times. Annotate only once to remove this warning">, InGroup<BoundsSafetyRedundantAttribute>;
@@ -12609,7 +12609,7 @@ def err_bounds_safety_dynamic_count_function_call : Error<
   "argument of '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null}0' attribute can only reference "
 	"function with 'const' attribute">;
 def err_bounds_safety_dynamic_count_function_call_argument : Error<
-  "argument of function call '%0' in '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null}1' attribute is not a constant expression">;
+  "argument of function call %0 in '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null}1' attribute is not a constant expression">;
 def err_attribute_invalid_argument_expression_for_pointer_bounds_attribute : Error<
   "invalid argument expression to bounds attribute">;
 def err_invalid_decl_kind_bounds_safety_dynamic_count : Error<
@@ -12767,7 +12767,7 @@ def warn_bounds_safety_conv_single_to_implicit_indexable_unsafe_zeroth_element :
       "returning|" // UnsafeOpKind::Return
       "passing|" // UnsafeOpKind::CallArg
       "UNUSED" // UnsafeOpKind::Cast
-    "}0 __bidi_indexable '%1'"
+    "}0 __bidi_indexable %1"
   "%select{"
     " at any index|||||||}0 "
   "will %select{"
@@ -12780,7 +12780,7 @@ def warn_bounds_safety_conv_single_to_implicit_indexable_unsafe_zeroth_element :
       "pass an out-of-bounds pointer|" // UnsafeOpKind::CallArg
       "UNUSED" // UnsafeOpKind::Cast
   "}0. At runtime %4 is assigned a __single pointer that"
-  " results in '%1' having bounds smaller than a single %2 (%3 byte%s3)">,
+  " results in %1 having bounds smaller than a single %2 (%3 byte%s3)">,
   InGroup<BoundsSafetyConvSingleToImplicitIndexableThenConvertToLargerType>;
 
 def warn_bounds_safety_conv_single_to_implicit_indexable_unsafely_cast :
@@ -12806,7 +12806,7 @@ def note_single_entity_assigned_here_with_pointee_sizes : Note<
   "struct member|" // AssignmentSourceKind::StructMember
   "union member" // AssignmentSourceKind::UnionMember
   "}0 %1 %select{assigned to|used to initialize}9 %2 here results in %2 having the bounds of a single %3 "
-  "(%4 bytes) but %select{'%8'|cast of %2 to %8}7 has pointee type %5 (%6 bytes)">;
+  "(%4 bytes) but %select{%8|cast of %2 to %8}7 has pointee type %5 (%6 bytes)">;
 
 def warn_bounds_safety_conv_single_to_implicit_indexable_dynamic_count_conversion :
   Warning<
@@ -12905,7 +12905,7 @@ def err_bounds_safety_typeof_dbpt : Error<
   "__typeof__ on an expression of type %0 is not yet supported">;
 
 def err_bounds_safety_single_pointer_arithmetic : Error<
-  "pointer arithmetic on single pointer '%0' is out of bounds%select{|; consider adding '__counted_by' to '%2'}1">;
+  "pointer arithmetic on single pointer %0 is out of bounds%select{|; consider adding '__counted_by' to '%2'}1">;
 def err_bounds_safety_flexible_array_member_record_pointer_arithmetic : Error<
   "-fbounds-safety forbids arithmetic on pointers to types with a flexible array "
   "member">;
@@ -12971,16 +12971,16 @@ def err_bounds_safety_counted_by_on_incomplete_type_on_var_decl : Error<
 >;
 
 def err_bounds_safety_pointer_subscript : Error<
-  "array subscript on %select{single|'__terminated_by'}0 pointer '%1' "
+  "array subscript on %select{single|'__terminated_by'}0 pointer %1 "
   "%select{must use a constant index of 0 to be in bounds|is not allowed}0">;
 def err_bounds_safety_indexable_pointer_arithmetic : Error<
-  "decremented indexable pointer '%0' is out of bounds">;
+  "decremented indexable pointer %0 is out of bounds">;
 def err_bounds_safety_indexable_pointer_subscript : Error<
-  "array subscript with a negative index on indexable pointer '%0' is out of bounds">;
+  "array subscript with a negative index on indexable pointer %0 is out of bounds">;
 def err_bounds_safety_terminated_by_pointer_arithmetic_dec : Error<
-  "cannot decrement '__terminated_by' pointer '%0'">;
+  "cannot decrement '__terminated_by' pointer %0">;
 def err_bounds_safety_terminated_by_pointer_arithmetic : Error<
-  "pointer arithmetic on '__terminated_by' pointer '%0' can only increase the "
+  "pointer arithmetic on '__terminated_by' pointer %0 can only increase the "
   "value by one">;
 
 def err_bounds_safety_dynamic_bound_pointer_unary_arithmetic : Error<
@@ -13079,7 +13079,7 @@ def err_bounds_safety_dependent_assignments_order : Error<
 def note_bounds_safety_decl_assignment : Note<
   "'%0' has been assigned here">;
 def err_bounds_safety_dependent_struct_assignment : Error<
-  "cannot assign '%0' because it contains field %1 referred to by flexible array member %2">;
+  "cannot assign %0 because it contains field %1 referred to by flexible array member %2">;
 def note_bounds_safety_count_param_loc : Note<
   "referred to by count parameter here">;
 def err_bounds_safety_dependent_field_duplicates : Error<
@@ -13089,7 +13089,7 @@ def note_bounds_safety_struct_fields_only_in_fam : Note<
 def error_bounds_safety_no_arrow_members : Error<
   "arrow notation not allowed for struct member in count parameter">;
 def error_bounds_safety_no_count_in_unions : Error<
-  "count parameter refers to union '%0' of type %1">;
+  "count parameter refers to union %0 of type %1">;
 
 def err_bounds_safety_taking_address_dynamic_bound_dependent : Error<
   "%select{variable|field}1 referred to by '%select{__counted_by|__sized_by|__counted_by_or_null|__sized_by_or_null|__ended_by}0' "
@@ -13111,7 +13111,7 @@ def err_bounds_safety_incompatible_dynamic_bound_argument: Error<
 def err_bounds_safety_mismatching_count_type_argument: Error<
   "incompatible pointer types assigning %0 with an expression with mismatching size attributes %1">;
 def err_bounds_safety_incompatible_count_expression: Error<
-  "incompatible count expression (%0) vs. (%1) in argument to function">;
+  "incompatible count expression %0 vs. %1 in argument to function">;
 def err_bounds_safety_unsynchronized_indirect_param: Error<
   "passing%select{| address of}1 %0 as an indirect parameter; "
   "must also pass %2 %select{|or its address }3because the type of %select{%0|%2}4, "
@@ -13196,7 +13196,7 @@ def note_bounds_safety_consider_adding_to_return : Note<
 
 def warn_bounds_safety_initlist_range_partial_null : Warning<
   "%select{|implicitly }0initializing field %1 of type %2 to NULL while "
-  "'%3' is initialized with a value rarely succeeds">, InGroup<BoundsSafetyInitListPartialNull>;
+  "%3 is initialized with a value rarely succeeds">, InGroup<BoundsSafetyInitListPartialNull>;
 
 def err_bounds_safety_dynamic_bound_init_side_effect : Error<
   "initalizer for %select{count|size|'__counted_by' pointer|'__sized_by' pointer|'__counted_by_or_null' pointer|'__sized_by_or_null' pointer|'__ended_by' pointer|end pointer}0 with side effects is not yet supported">;
@@ -13212,7 +13212,7 @@ def err_bounds_safety_flexible_global_wrong_count : Error<
 def err_bounds_safety_flexible_global_not_counted : Error<
   "flexible array member is initialized without a count">;
 def err_bounds_safety_flexible_global_non_int_count_init : Error<
-  "count '%0' has non-integer value '%1' of type %2">;
+  "count %0 has non-integer value %1 of type %2">;
 
 def err_bounds_safety_local_external_dynamic_count : Error<
   "attribute %0 is not allowed for local variables with external storage">;
@@ -13405,7 +13405,7 @@ def err_bounds_safety_terminated_by_wrong_initializer_kind : Error<
   "string literal or an initializer list">;
 def err_bounds_safety_terminated_by_terminator_mismatch : Error<
   "array '%0' with '__terminated_by' attribute is initialized with an "
-  "incorrect terminator (expected: %1; got %2)">;
+  "incorrect terminator (expected: %quoted1; got %quoted2)">;
 
 def err_bounds_safety_irrecoverable_attr : Error<
   "bounds attribute '%select{__bidi_indexable|__indexable|__single|__unsafe_indexable}0' cannot be applied to attributed type %1 in this context%select{| due to the surrounding 'typeof' specifier}2">;

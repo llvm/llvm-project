@@ -87,13 +87,13 @@ void TestCountedBy(void) {
 
   int* ptr;
   struct CountedByDataWithSubStruct c9 = {ptr, 4, {0}}; // OK
-  // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+  // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
   struct CountedByDataWithSubStruct c10 = {ptr, 4, {side_effect()}};
   struct CountedByDataWithSubStructAtStart c11 = {{0}, ptr, 4}; // OK
-  // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+  // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
   struct CountedByDataWithSubStructAtStart c12 = {{side_effect()}, ptr, 4};
   struct CountedByDataWithOtherField c13 = {ptr, 4, 0}; // OK
-  // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+  // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
   struct CountedByDataWithOtherField c14 = {ptr, 4, side_effect()};
 }
 

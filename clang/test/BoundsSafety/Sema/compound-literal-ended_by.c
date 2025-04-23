@@ -58,32 +58,32 @@ struct eb_with_other_data field_initializers_with_side_effects(struct eb_with_ot
    *s = (struct eb_with_other_data){
     0x0,
     0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     side_effect()
   };
 
   struct eb_with_other_data s2 = (struct eb_with_other_data){
     0,
     0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     side_effect()
   };
 
   consume_eb_with_other_data((struct eb_with_other_data){
     0x0,
     0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     side_effect()}
   );
   consume_eb_with_other_data((struct eb_with_other_data){
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .other = side_effect(),
     .start = 0x0,
     .end = 0x0}
   );
 
   (void) (struct eb_with_other_data){
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .other = side_effect(),
     .start = 0x0,
     .end = 0x0};
@@ -103,7 +103,7 @@ struct eb_with_other_data field_initializers_with_side_effects(struct eb_with_ot
   };
   (void)(struct Contains_eb_with_other_data) {
     .s = {
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
       .other = side_effect(),
       .start = 0x0,
       .end = 0x0
@@ -113,22 +113,22 @@ struct eb_with_other_data field_initializers_with_side_effects(struct eb_with_ot
 
   // Nested CompoundLiteralExpr
   (void)(struct NestedEB) {
-    // expected-warning@+1{{initializer (struct eb_with_other_data){.start = 0, .end = 0, .other = side_effect()} has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer '(struct eb_with_other_data){.start = 0, .end = 0, .other = side_effect()}' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .inner = (struct eb_with_other_data) {
       .start = 0x0,
       .end = 0x0,
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminat}}
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminat}}
       .other = side_effect()
     },
     .start = 0x0,
     .end = 0x0,
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     .other = side_effect()
   };
 
   // Test array initializer list that initializes structs
   (void)(struct eb_with_other_data[]){
-    // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}} 
+    // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     {0x0, 0x0, side_effect()},
     {0x0, 0x0, 0x0}
   };
@@ -140,7 +140,7 @@ struct eb_with_other_data field_initializers_with_side_effects(struct eb_with_ot
 
   (void)(union UnionWith_eb_with_other_data) {
     {
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
       .other = side_effect(),
       .start = 0x0,
       .end = 0x0
@@ -152,7 +152,7 @@ struct eb_with_other_data field_initializers_with_side_effects(struct eb_with_ot
     // Test very "untransparent"
     (union TransparentUnion) {.cb = 
       {
-        // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+        // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
         .other = side_effect(),
         .start = 0x0,
         .end = 0x0
@@ -163,14 +163,14 @@ struct eb_with_other_data field_initializers_with_side_effects(struct eb_with_ot
   receive_transparent_union(
     // Transparent
     (struct eb_with_other_data){
-      // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+      // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
       .other = side_effect(),
       .start = 0x0,
       .end = 0x0
     }
   );
 
-  // expected-warning@+1{{initializer side_effect() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+  // expected-warning@+1{{initializer 'side_effect()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
   return (struct eb_with_other_data) { 0x0, 0x0, side_effect()};
 };
 
@@ -318,7 +318,7 @@ void var_init_from_compound_literal_with_side_effect(char*__bidi_indexable ptr) 
   // both-error@+1{{cannot initialize array of type 'struct eb_with_other_data[]' with non-constant array of type 'struct eb_with_other_data[2]'}}
   struct eb_with_other_data arr[] = (struct eb_with_other_data[]){
     {.start = ptr, .end = ptr + 1, .other = 0x0},
-    // expected-warning@+1{{initializer get_count() has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
+    // expected-warning@+1{{initializer 'get_count()' has a side effect; this may lead to an unexpected result because the evaluation order of initialization list expressions is indeterminate}}
     {.start = ptr, .end = ptr + 1, .other = get_count()},
   };
 }
