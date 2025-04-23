@@ -40,7 +40,7 @@ template <typename T> struct IndexSet {
 
   friend bool operator==(const IndexSet &lhs, const IndexSet &rhs) {
     return llvm::all_of(Indices(), [&lhs, &rhs](T(IndexSet::*index)) {
-      return lhs.*index == lhs.*index;
+      return lhs.*index == rhs.*index;
     });
   }
 };
