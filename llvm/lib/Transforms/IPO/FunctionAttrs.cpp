@@ -662,9 +662,10 @@ ArgumentAccessInfo getArgumentAccessInfo(const Instruction *I,
     if (!TypeSize.isScalable() && Offset) {
       int64_t Size = TypeSize.getFixedValue();
       APInt Low(64, *Offset, true);
-      APInt High(64, *Offset + Size, true);
+      bool Overflow;
+      APInt High = Low.sadd_ov(APInt(64, Size, true), Overflow);
       // Bail if the range overflows signed 64-bit int.
-      if (Low.sge(High))
+      if (Overflow)
         return std::nullopt;
       return ConstantRange(Low, High);
     }
