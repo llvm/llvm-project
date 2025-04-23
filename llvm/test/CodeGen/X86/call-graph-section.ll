@@ -1,6 +1,6 @@
 ;; Tests that we store the type identifiers in .callgraph section of the object file.
 
-; RUN: llc --call-graph-section -filetype=obj -o - < %s | \
+; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .callgraph - | FileCheck %s
 
 declare !type !0 void @foo()
