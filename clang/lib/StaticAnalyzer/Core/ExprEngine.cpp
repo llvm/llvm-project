@@ -2556,10 +2556,19 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
+
+    // FIXME:
+    // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
+    // since we are currently at the block entrance and the current reference
+    // would be stale.  Ideally, we should pass on the terminator of the CFG
+    // block, but the terminator cannot be referred as a CFG element.
+    // As a workaround, we pass on the first element of the block that we are
+    // processing.
+    ConstCFGElementRef Elem = *nodeBuilder.getContext().getBlock()->ref_begin();
     // Widen.
     const LocationContext *LCtx = Pred->getLocationContext();
-    ProgramStateRef WidenedState = getWidenedLoopState(
-        Pred->getState(), LCtx, BlockCount, getCFGElementRef());
+    ProgramStateRef WidenedState =
+        getWidenedLoopState(Pred->getState(), LCtx, BlockCount, Elem);
     nodeBuilder.generateNode(WidenedState, Pred);
     return;
   }
