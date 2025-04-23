@@ -5780,19 +5780,19 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (callOrInvoke) {
     *callOrInvoke = CI;
     if (CGM.getCodeGenOpts().CallGraphSection) {
-      assert((TargetDecl && TargetDecl->getFunctionType() ||
-              Callee.getAbstractInfo().getCalleeFunctionProtoType()) &&
-             "cannot find callsite type");
       QualType CST;
       if (TargetDecl && TargetDecl->getFunctionType())
         CST = QualType(TargetDecl->getFunctionType(), 0);
       else if (const auto *FPT =
                    Callee.getAbstractInfo().getCalleeFunctionProtoType())
         CST = QualType(FPT, 0);
+      else
+        llvm_unreachable(
+            "Cannot find the callee type to generate callee_type metadata.");
 
       // Set type identifier metadata of indirect calls for call graph section.
       if (!CST.isNull())
-        CGM.CreateCalleeTypeMetadataForIcall(CST, *callOrInvoke);
+        CGM.createCalleeTypeMetadataForIcall(CST, *callOrInvoke);
     }
   }
 

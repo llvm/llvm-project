@@ -2654,7 +2654,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       // Skip available_externally functions. They won't be codegen'ed in the
       // current module anyway.
       if (getContext().GetGVALinkageForFunction(FD) != GVA_AvailableExternally)
-        CreateFunctionTypeMetadataForIcall(FD, F);
+        createFunctionTypeMetadataForIcall(FD, F);
     }
   }
 
@@ -2868,7 +2868,7 @@ static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
   return MD->hasGeneralizedMDString();
 }
 
-void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                                        llvm::Function *F) {
   if (CodeGenOpts.CallGraphSection && !hasExistingGeneralizedTypeMD(F) &&
       (!F->hasLocalLinkage() ||
@@ -2898,7 +2898,7 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
       F->addTypeMetadata(0, llvm::ConstantAsMetadata::get(CrossDsoTypeId));
 }
 
-void CodeGenModule::CreateCalleeTypeMetadataForIcall(const QualType &QT,
+void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
                                                      llvm::CallBase *CB) {
   // Only if needed for call graph section and only for indirect calls.
   if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
@@ -2909,7 +2909,7 @@ void CodeGenModule::CreateCalleeTypeMetadataForIcall(const QualType &QT,
       getLLVMContext(), {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
                              llvm::Type::getInt64Ty(getLLVMContext()), 0)),
                          TypeIdMD});
-  llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), { TypeTuple });
+  llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), {TypeTuple});
   CB->setMetadata(llvm::LLVMContext::MD_callee_type, MDN);
 }
 
@@ -3041,7 +3041,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   // jump table.
   if (!CodeGenOpts.SanitizeCfiCrossDso ||
       !CodeGenOpts.SanitizeCfiCanonicalJumpTables)
-    CreateFunctionTypeMetadataForIcall(FD, F);
+    createFunctionTypeMetadataForIcall(FD, F);
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
     setKCFIType(FD, F);
