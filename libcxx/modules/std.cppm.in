@@ -124,6 +124,7 @@ module;
 #  include <sstream>
 #endif
 #include <stack>
+#include <stacktrace>
 #include <stdexcept>
 #include <stop_token>
 #if _LIBCPP_HAS_LOCALIZATION

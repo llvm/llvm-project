@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../common/config.h"
+#include "stacktrace/config.h"
 
 #if defined(_LIBCPP_STACKTRACE_COLLECT_UNWIND)
 
-#  include "./unwind.h"
-
-#  include <__stacktrace/context.h>
-#  include <__stacktrace/entry.h>
 #  include <unwind.h>
+
+#  include "stacktrace/unwind.h"
+#  include <__stacktrace/basic_stacktrace.h>
+#  include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {

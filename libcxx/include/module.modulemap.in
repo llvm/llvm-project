@@ -1986,12 +1986,14 @@ module std [system] {
   }
 
   module stacktrace {
-    module basic_stacktrace { header "__stacktrace/basic_stacktrace.h" }
-    module alloc { header "__stacktrace/alloc.h" }
-    module context { header "__stacktrace/context.h" }
-    module entry { header "__stacktrace/entry.h" }
-    module to_string { header "__stacktrace/to_string.h" }
-    module stacktrace_entry { header "__stacktrace/stacktrace_entry.h" }
+    module fwd {
+      header "__stacktrace/basic_stacktrace.h"
+      header "__stacktrace/stacktrace_entry.h"
+    }
+    module impl {
+      header "__stacktrace/impl.h"
+    }
+
     header "stacktrace"
     export *
   }
