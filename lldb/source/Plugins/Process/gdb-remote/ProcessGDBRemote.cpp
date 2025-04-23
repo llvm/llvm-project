@@ -853,13 +853,14 @@ bool ProcessGDBRemote::GPUBreakpointHit(void *baton,
                                                     sc_list);
       SymbolContext sc;
       args.symbol_values[i].name = symbol_name;
-      args.symbol_values[i].value = LLDB_INVALID_ADDRESS;
       size_t num_symbols = sc_list.GetSize();
       for (size_t sc_idx=0; sc_idx<num_symbols; ++sc_idx) {
         if (sc_list.GetContextAtIndex(sc_idx, sc)) {
-          args.symbol_values[i].value = sc.symbol->GetAddress().GetLoadAddress(&target);
-          if (args.symbol_values[i].value != LLDB_INVALID_ADDRESS)
+          auto load_addr = sc.symbol->GetAddress().GetLoadAddress(&target);
+          if (load_addr != LLDB_INVALID_ADDRESS) {
+            args.symbol_values[i].value = load_addr;
             break;
+          }
         }
       }
     }
@@ -874,13 +875,18 @@ bool ProcessGDBRemote::GPUBreakpointHit(void *baton,
       if (bp_sp) 
         bp_sp->SetEnabled(false);
     }
-    //  Set any new breakpoints if requested.
-    if (response->breakpoints)
-      HandleGPUBreakpoints(args.plugin_name, response->breakpoints.value());
-    if (response->connect_info)
-      HandleConnectionRequest(*response->connect_info);
+    HandleGPUActions(response->actions);
   }
   return false; // Don't stop, auto continue.
+}
+
+Status ProcessGDBRemote::HandleGPUActions(const GPUActions &gpu_action) {
+  Status error;
+  if (gpu_action.breakpoints)
+    HandleGPUBreakpoints(gpu_action.plugin_name, *gpu_action.breakpoints);
+  if (gpu_action.connect_info)
+    error = HandleConnectionRequest(*gpu_action.connect_info);
+  return error;
 }
 
 Status ProcessGDBRemote::HandleConnectionRequest(
@@ -1014,9 +1020,9 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetVContSupported('c');
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
-  if (auto plugin_infos = m_gdb_comm.GetGPUPluginInfos()) {
-    for (const auto &plugin_info: *plugin_infos)
-      HandleGPUBreakpoints(plugin_info.name, plugin_info.breakpoints);
+  if (auto init_actions = m_gdb_comm.GetGPUInitializeActions()) {
+    for (const auto &init_action: *init_actions)
+      HandleGPUActions(init_action);
   }
   // First dispatch any commands from the platform:
   auto handle_cmds = [&] (const Args &args) ->  void {
@@ -2547,12 +2553,12 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(0, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
-      } else if (key.compare("gpu-connection") == 0) {
+      } else if (key.compare("gpu-actions") == 0) {
         StringExtractorGDBRemote extractor(value);
-        std::optional<GPUPluginConnectionInfo> connect_info = 
-            extractor.GetFromJSONHexASCII<GPUPluginConnectionInfo>();
-        if (connect_info)
-          HandleConnectionRequest(*connect_info);
+        if (std::optional<GPUActions> gpu_actions = 
+            extractor.GetFromJSONHexASCII<GPUActions>()) {
+          HandleGPUActions(*gpu_actions);
+        }
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))

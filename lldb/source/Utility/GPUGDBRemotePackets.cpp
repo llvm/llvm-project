@@ -49,27 +49,6 @@ llvm::json::Value toJSON(const GPUBreakpointInfo &data) {
 }
 
 //------------------------------------------------------------------------------
-// GPUPluginInfo
-//------------------------------------------------------------------------------
-
-bool fromJSON(const llvm::json::Value &value, GPUPluginInfo &data,
-              llvm::json::Path path) {
-  ObjectMapper o(value, path);
-  return o && 
-         o.map("name", data.name) &&
-         o.map("description", data.description) &&
-         o.map("breakpoints", data.breakpoints);      
-}
-
-llvm::json::Value toJSON(const GPUPluginInfo &data) {
-  return json::Value(
-    Object{{"name", data.name}, 
-           {"description", data.description},
-           {"breakpoints", data.breakpoints},
-          });
-}
-
-//------------------------------------------------------------------------------
 // GPUPluginConnectionInfo
 //------------------------------------------------------------------------------
 bool fromJSON(const llvm::json::Value &value, GPUPluginConnectionInfo &data,
@@ -112,6 +91,25 @@ json::Value toJSON(const GPUPluginBreakpointHitArgs &data) {
             });
 }
 
+//------------------------------------------------------------------------------
+// GPUActions
+//------------------------------------------------------------------------------
+bool fromJSON(const llvm::json::Value &value, GPUActions &data,
+              llvm::json::Path path) {
+  ObjectMapper o(value, path);
+  return o && 
+         o.map("plugin_name", data.plugin_name) &&
+         o.mapOptional("breakpoints", data.breakpoints) &&
+         o.mapOptional("connect_info", data.connect_info);
+}
+
+llvm::json::Value toJSON(const GPUActions &data) {
+  return json::Value(
+    Object{{"plugin_name", data.plugin_name},
+           {"breakpoints", data.breakpoints},
+           {"connect_info", data.connect_info},
+          });
+}
 
 //------------------------------------------------------------------------------
 // GPUPluginBreakpointHitResponse
@@ -124,15 +122,13 @@ bool fromJSON(const llvm::json::Value &value,
   ObjectMapper o(value, path);
   return o && 
          o.map("disable_bp", data.disable_bp) &&
-         o.mapOptional("breakpoints", data.breakpoints) &&
-         o.mapOptional("connect_info", data.connect_info);
+         o.map("actions", data.actions);
 }
 
 llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data) {
   return json::Value(
     Object{{"disable_bp", data.disable_bp}, 
-           {"breakpoints", data.breakpoints},
-           {"connect_info", data.connect_info},
+           {"actions", data.actions},
           });
 }
 

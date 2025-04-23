@@ -1101,9 +1101,9 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
   // Check if any plug-ins have new connections
   StreamGDBRemote extra_stop_reply_args;
   for (auto &plugin_up : m_plugins) {
-    if (std::optional<GPUPluginConnectionInfo> connection_info = 
+    if (std::optional<GPUActions> connection_info = 
           plugin_up->NativeProcessIsStopping()) {
-      extra_stop_reply_args.PutCString("gpu-connection:");
+      extra_stop_reply_args.PutCString("gpu-actions:");
       extra_stop_reply_args.PutAsJSON(*connection_info, /*hex_ascii=*/true);
       extra_stop_reply_args.PutChar(';');
     } 
@@ -3692,11 +3692,11 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize(
     StringExtractorGDBRemote &) {
-  std::vector<GPUPluginInfo> infos;
+  std::vector<GPUActions> gpu_actions;
   for (auto &plugin_up: m_plugins)
-      infos.push_back(plugin_up->GetPluginInfo());
+    gpu_actions.push_back(plugin_up->GetInitializeActions());
   StreamGDBRemote response;
-  response.PutAsJSONArray(infos);
+  response.PutAsJSONArray(gpu_actions);
   return SendPacketNoLock(response.GetString());
 }
 
