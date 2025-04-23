@@ -9076,9 +9076,13 @@ bool VPRecipeBuilder::getScaledReductions(
 
   PartialReductionChain Chain(RdxExitInstr, ExtA, ExtB, BinOp);
 
-  unsigned TargetScaleFactor =
-      PHI->getType()->getPrimitiveSizeInBits().getKnownScalarFactor(
-          A->getType()->getPrimitiveSizeInBits());
+  TypeSize PHISize = PHI->getType()->getPrimitiveSizeInBits();
+  TypeSize ASize = A->getType()->getPrimitiveSizeInBits();
+
+  if (!PHISize.hasKnownScalarFactor(ASize))
+    return false;
+
+  unsigned TargetScaleFactor = PHISize.getKnownScalarFactor(ASize);
 
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
