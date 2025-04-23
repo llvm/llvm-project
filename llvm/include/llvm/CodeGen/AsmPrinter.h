@@ -356,6 +356,13 @@ public:
     DwarfUsesRelocationsAcrossSections = Enable;
   }
 
+  /// Generate and emit labels for callees of the indirect callsites which will
+  /// be used to populate the .callgraph section.
+  void emitIndirectCalleeLabels(
+      FunctionInfo &FuncInfo,
+      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+      MachineInstr &MI);
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
