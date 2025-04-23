@@ -1458,7 +1458,6 @@ define <vscale x 2 x i32> @vwaddu_vx_disjoint_or(<vscale x 2 x i16> %x.i16, i16 
   ret <vscale x 2 x i32> %or
 }
 
-
 define <vscale x 2 x i32> @vwadd_vx_disjoint_or(<vscale x 2 x i16> %x.i16, i16 %y.i16) {
 ; CHECK-LABEL: vwadd_vx_disjoint_or:
 ; CHECK:       # %bb.0:
