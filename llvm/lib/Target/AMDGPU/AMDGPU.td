@@ -1263,14 +1263,6 @@ def FeatureXF32Insts : SubtargetFeature<"xf32-insts",
    "v_mfma_f32_16x16x8_xf32 and v_mfma_f32_32x32x4_xf32"
  >;
 
-// Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
-// restoring the callee-saved registers.
-def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
-  "UseBlockVGPROpsForCSR",
-  "true",
-  "Use block load/store for VGPR callee saved registers"
->;
-
 def FeatureDynamicVGPR : SubtargetFeature <"dynamic-vgpr",
   "DynamicVGPR",
   "true",
@@ -1281,6 +1273,14 @@ def FeatureDynamicVGPRBlockSize32 : SubtargetFeature<"dynamic-vgpr-block-size-32
   "DynamicVGPRBlockSize32",
   "true",
   "Use a block size of 32 for dynamic VGPR allocation (default is 16)"
+>;
+
+// Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
+// restoring the callee-saved registers.
+def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
+  "UseBlockVGPROpsForCSR",
+  "true",
+  "Use block load/store for VGPR callee saved registers"
 >;
 
 def FeatureLshlAddU64Inst
