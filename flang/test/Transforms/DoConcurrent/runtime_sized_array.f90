@@ -25,9 +25,13 @@ end subroutine
 ! CHECK-DAG: %[[N_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}) {{.*}} {name = "_QFfooEa.extent.dim0"}
 
 ! CHECK: omp.target
-! CHECK-SAME: map_entries(%[[I_MAP]] -> %[[I_ARG:arg[0-9]*]],
-! CHECK-SAME:             %[[A_MAP]] -> %[[A_ARG:arg[0-9]*]],
-! CHECK-SAME:             %[[N_MAP]] -> %[[N_ARG:arg[0-9]*]] : {{.*}})
+! CHECK-SAME: map_entries(
+! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:     %[[I_MAP]] -> %[[I_ARG:arg[0-9]*]],
+! CHECK-SAME:     %[[A_MAP]] -> %[[A_ARG:arg[0-9]*]],
+! CHECK-SAME:     %[[N_MAP]] -> %[[N_ARG:arg[0-9]*]] : {{.*}})
 ! CHECK-SAME: {{.*}} {
 
 ! CHECK-DAG:  %{{.*}} = hlfir.declare %[[I_ARG]]

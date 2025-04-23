@@ -23,6 +23,14 @@ end program do_concurrent_shape
 ! CHECK: omp.map.info
 ! CHECK: omp.map.info
 
+! CHECK: omp.map.info
+! CHECK: omp.map.info
+! CHECK: omp.map.info
+
+! CHECK: omp.map.info
+! CHECK: omp.map.info
+! CHECK: omp.map.info
+
 ! CHECK: %[[DIM0_EXT_MAP:.*]] = omp.map.info 
 ! CHECK-SAME:   var_ptr(%[[DIM0_EXT]] : !fir.ref<index>, index)
 ! CHECK-SAME:   map_clauses(implicit, exit_release_or_enter_alloc) 
@@ -34,6 +42,12 @@ end program do_concurrent_shape
 ! CHECK-SAME:   capture(ByCopy) -> !fir.ref<index> {name = "_QFEa.extent.dim1"}
 
 ! CHECK: omp.target host_eval({{.*}}) map_entries(
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
@@ -61,6 +75,10 @@ end subroutine do_concurrent_shape_shift
 
 ! CHECK: omp.map.info
 ! CHECK: omp.map.info
+! CHECK: omp.map.info
+
+! CHECK: omp.map.info
+! CHECK: omp.map.info
 
 ! CHECK: %[[DIM0_STRT_MAP:.*]] = omp.map.info 
 ! CHECK-SAME:   var_ptr(%[[DIM0_STRT]] : !fir.ref<index>, index)
@@ -73,6 +91,9 @@ end subroutine do_concurrent_shape_shift
 ! CHECK-SAME:   capture(ByCopy) -> !fir.ref<index> {name = "_QF{{.*}}Ea.extent.dim0"}
 
 ! CHECK: omp.target host_eval({{.*}}) map_entries(
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
+! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %{{[^[:space:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:   %[[DIM0_STRT_MAP]] -> %[[DIM0_STRT_ARG:[^,]+]],

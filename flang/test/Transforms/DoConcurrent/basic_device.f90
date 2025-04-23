@@ -40,7 +40,11 @@ program do_concurrent_basic
 
     ! CHECK: omp.target
     ! CHECK-SAME: host_eval(%[[HOST_LB]] -> %[[LB:[[:alnum:]]+]], %[[HOST_UB]] -> %[[UB:[[:alnum:]]+]], %[[HOST_STEP]] -> %[[STEP:[[:alnum:]]+]] : index, index, index)
-    ! CHECK-SAME: map_entries(%[[I_MAP_INFO]] -> %[[I_ARG:[[:alnum:]]+]],
+    ! CHECK-SAME: map_entries(
+    ! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
+    ! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
+    ! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
+    ! CHECK-SAME:     %[[I_MAP_INFO]] -> %[[I_ARG:[[:alnum:]]+]],
     ! CHECK-SAME:             %[[A_MAP_INFO]] -> %[[A_ARG:.[[:alnum:]]+]]
 
     ! CHECK: %[[A_DEV_DECL:.*]]:2 = hlfir.declare %[[A_ARG]]

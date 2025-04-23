@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/IRMapping.h"
@@ -242,6 +242,10 @@ void collectLoopLiveIns(fir::DoLoopOp doLoop,
                         llvm::SmallVectorImpl<mlir::Value> &liveIns) {
   llvm::SmallDenseSet<mlir::Value> seenValues;
   llvm::SmallDenseSet<mlir::Operation *> seenOps;
+
+  liveIns.push_back(doLoop.getLowerBound());
+  liveIns.push_back(doLoop.getUpperBound());
+  liveIns.push_back(doLoop.getStep());
 
   mlir::visitUsedValuesDefinedAbove(
       doLoop.getRegion(), [&](mlir::OpOperand *operand) {
@@ -548,7 +552,7 @@ public:
                         "These will be serialzied.");
 
     llvm::SmallVector<mlir::Value> loopNestLiveIns;
-    looputils::collectLoopLiveIns(loopNest.back().first, loopNestLiveIns);
+    looputils::collectLoopLiveIns(loopNest.front().first, loopNestLiveIns);
     assert(!loopNestLiveIns.empty());
 
     llvm::SetVector<mlir::Value> locals;
@@ -569,19 +573,15 @@ public:
     mlir::IRMapping mapper;
 
     if (mapToDevice) {
-      // TODO: Currently the loop bounds for the outer loop are duplicated.
+      mlir::ModuleOp module = doLoop->getParentOfType<mlir::ModuleOp>();
+      bool isTargetDevice =
+          llvm::cast<mlir::omp::OffloadModuleInterface>(*module)
+              .getIsTargetDevice();
+
       mlir::omp::TargetOperands targetClauseOps;
       genLoopNestClauseOps(doLoop.getLoc(), rewriter, loopNest, mapper,
-                           loopNestClauseOps, &targetClauseOps);
-
-      // Prevent mapping host-evaluated variables.
-      loopNestLiveIns.erase(llvm::remove_if(loopNestLiveIns,
-                                            [&](mlir::Value liveIn) {
-                                              return llvm::is_contained(
-                                                  targetClauseOps.hostEvalVars,
-                                                  liveIn);
-                                            }),
-                            loopNestLiveIns.end());
+                           loopNestClauseOps,
+                           isTargetDevice ? nullptr : &targetClauseOps);
 
       LiveInShapeInfoMap liveInShapeInfoMap;
       // The outermost loop will contain all the live-in values in all nested
