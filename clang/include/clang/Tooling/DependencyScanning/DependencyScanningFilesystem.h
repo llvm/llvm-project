@@ -379,6 +379,16 @@ public:
   /// false if not (i.e. this entry is not a file or its scan fails).
   bool ensureDirectiveTokensArePopulated(EntryRef Entry);
 
+  /// \returns The scanned preprocessor directive tokens of the file that are
+  /// used to speed up preprocessing, if available.
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  getDirectiveTokens(const Twine &Path) {
+    if (llvm::ErrorOr<EntryRef> Entry = getOrCreateFileSystemEntry(Path.str()))
+      if (ensureDirectiveTokensArePopulated(*Entry))
+        return Entry->getDirectiveTokens();
+    return std::nullopt;
+  }
+
   /// Check whether \p Path exists. By default checks cached result of \c
   /// status(), and falls back on FS if unable to do so.
   bool exists(const Twine &Path) override;
