@@ -16,7 +16,6 @@
 #include <sys/proc.h>
 #include <sys/procfs.h>
 
-using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 
@@ -35,7 +34,7 @@ enum class ProcessState {
 };
 }
 
-ProcessInstanceInfo::timespec convert(pr_timestruc64_t t) {
+static ProcessInstanceInfo::timespec convert(pr_timestruc64_t t) {
   ProcessInstanceInfo::timespec ts;
   ts.tv_sec = t.tv_sec;
   ts.tv_usec = t.tv_nsec / 1000; // nanos to micros
@@ -101,7 +100,7 @@ static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
 
   process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
   ArchSpec arch_spec = ArchSpec();
-  arch_spec.SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64,
+  arch_spec.SetArchitecture(eArchTypeXCOFF, llvm::XCOFF::TCPU_PPC64,
                             LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
   process_info.SetArchitecture(arch_spec);
   process_info.SetParentProcessID(psinfoData.pr_ppid);

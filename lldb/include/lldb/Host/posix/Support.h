@@ -9,6 +9,7 @@
 #ifndef LLDB_HOST_POSIX_SUPPORT_H
 #define LLDB_HOST_POSIX_SUPPORT_H
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
