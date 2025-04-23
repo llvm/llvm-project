@@ -4242,9 +4242,8 @@ struct OmpDeviceTypeClause {
 // OMP 5.2 15.8.3 extended-atomic, fail-clause ->
 //    FAIL(memory-order)
 struct OmpFailClause {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpFailClause, common::Indirection<OmpMemoryOrderClause>);
-  CharBlock source;
+  using MemoryOrder = common::OmpMemoryOrderType;
+  WRAPPER_CLASS_BOILERPLATE(OmpFailClause, MemoryOrder);
 };
 
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
