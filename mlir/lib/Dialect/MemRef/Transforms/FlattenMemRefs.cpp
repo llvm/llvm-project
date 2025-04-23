@@ -14,8 +14,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -27,7 +27,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
 
 namespace mlir {
 namespace memref {
@@ -323,7 +322,8 @@ struct FlattenSubview : public OpRewritePattern<memref::SubViewOp> {
   }
 };
 
-struct FlattenMemrefsPass : public mlir::memref::impl::FlattenMemrefsPassBase<FlattenMemrefsPass> {
+struct FlattenMemrefsPass
+    : public mlir::memref::impl::FlattenMemrefsPassBase<FlattenMemrefsPass> {
   using Base::Base;
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -354,4 +354,3 @@ void memref::populateFlattenMemrefsPatterns(RewritePatternSet &patterns) {
 std::unique_ptr<Pass> mlir::memref::createFlattenMemrefsPass() {
   return std::make_unique<FlattenMemrefsPass>();
 }
-
