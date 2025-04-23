@@ -12603,6 +12603,18 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
     auto CheckAddressSpace = [&](Value &Obj) {
       if (isa<UndefValue>(&Obj))
         return true;
+      // Some targets relax the requirement for alloca to be in an exact address
+      // space, allowing it in certain other address spaces instead. These
+      // targets later lower alloca to the correct address space in the
+      // pipeline. Therefore, we need to query TTI to determine the appropriate
+      // address space.
+      if (auto *AI = dyn_cast<AllocaInst>(&Obj)) {
+        Function *Fn = AI->getFunction();
+        auto *TTI =
+            A.getInfoCache().getAnalysisResultForFunction<TargetIRAnalysis>(
+                *Fn);
+        return takeAddressSpace(TTI->getAssumedAddrSpace(AI));
+      }
       // If an argument in flat address space only has addrspace cast uses, and
       // those casts are same, then we take the dst addrspace.
       if (auto *Arg = dyn_cast<Argument>(&Obj)) {

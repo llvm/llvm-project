@@ -72,17 +72,18 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[N]], 42
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[C]], ptr [[AL32]], ptr addrspacecast (ptr addrspace(5) @LocGlob to ptr)
-; CHECK-NEXT:    store ptr [[SELECT]], ptr [[LOC]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[LOC]] to ptr addrspace(5)
+; CHECK-NEXT:    store ptr [[SELECT]], ptr addrspace(5) [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR6]]
 ; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
 ; CHECK-NEXT:    [[SEXT:%.*]] = shl i64 [[N]], 32
 ; CHECK-NEXT:    [[IDXPROM_I:%.*]] = ashr exact i64 [[SEXT]], 32
 ; CHECK-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID:%.*]]
 ; CHECK:       region.check.tid:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[TMP3]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
 ; CHECK:       region.guarded:
 ; CHECK-NEXT:    store i32 0, ptr [[X]], align 4, !noalias [[META7:![0-9]+]]
 ; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1_I]], align 4, !noalias [[META7]]
@@ -91,7 +92,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK:       region.guarded.end:
 ; CHECK-NEXT:    br label [[REGION_BARRIER]]
 ; CHECK:       region.barrier:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP2]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP3]])
 ; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
 ; CHECK:       region.exit:
 ; CHECK-NEXT:    call void @usei8ptr(ptr captures(none) [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
@@ -107,18 +108,19 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM4_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID5:%.*]]
 ; CHECK:       region.check.tid5:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[REGION_GUARDED4:%.*]], label [[REGION_BARRIER2:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[REGION_GUARDED4:%.*]], label [[REGION_BARRIER2:%.*]]
 ; CHECK:       region.guarded4:
 ; CHECK-NEXT:    store i32 [[SUB3_I]], ptr [[ARRAYIDX5_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END1:%.*]]
 ; CHECK:       region.guarded.end1:
 ; CHECK-NEXT:    br label [[REGION_BARRIER2]]
 ; CHECK:       region.barrier2:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP4]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP5]])
 ; CHECK-NEXT:    br label [[REGION_EXIT3]]
 ; CHECK:       region.exit3:
+; CHECK-NEXT:    [[TMP7:%.*]] = addrspacecast ptr [[SELECT]] to ptr addrspace(5)
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
 ; CHECK-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       __omp_outlined__.exit:
@@ -128,16 +130,16 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM6_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID10:%.*]]
 ; CHECK:       region.check.tid10:
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[TMP7]], label [[REGION_GUARDED9:%.*]], label [[REGION_BARRIER7:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[REGION_GUARDED9:%.*]], label [[REGION_BARRIER7:%.*]]
 ; CHECK:       region.guarded9:
 ; CHECK-NEXT:    store i32 [[CALL_I]], ptr [[ARRAYIDX7_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END6:%.*]]
 ; CHECK:       region.guarded.end6:
 ; CHECK-NEXT:    br label [[REGION_BARRIER7]]
 ; CHECK:       region.barrier7:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP6]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP8]])
 ; CHECK-NEXT:    br label [[REGION_EXIT8:%.*]]
 ; CHECK:       region.exit8:
 ; CHECK-NEXT:    [[CALL8_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
@@ -145,16 +147,16 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    [[ARRAYIDX10_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM9_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID15:%.*]]
 ; CHECK:       region.check.tid15:
-; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
-; CHECK-NEXT:    br i1 [[TMP9]], label [[REGION_GUARDED14:%.*]], label [[REGION_BARRIER12:%.*]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 0
+; CHECK-NEXT:    br i1 [[TMP11]], label [[REGION_GUARDED14:%.*]], label [[REGION_BARRIER12:%.*]]
 ; CHECK:       region.guarded14:
 ; CHECK-NEXT:    store i32 [[CALL8_I]], ptr [[ARRAYIDX10_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END11:%.*]]
 ; CHECK:       region.guarded.end11:
 ; CHECK-NEXT:    br label [[REGION_BARRIER12]]
 ; CHECK:       region.barrier12:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP8]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP10]])
 ; CHECK-NEXT:    br label [[REGION_EXIT13:%.*]]
 ; CHECK:       region.exit13:
 ; CHECK-NEXT:    [[CALL11_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
@@ -162,16 +164,16 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-NEXT:    [[ARRAYIDX13_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM12_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID20:%.*]]
 ; CHECK:       region.check.tid20:
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[TMP11]], label [[REGION_GUARDED19:%.*]], label [[REGION_BARRIER17:%.*]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], 0
+; CHECK-NEXT:    br i1 [[TMP13]], label [[REGION_GUARDED19:%.*]], label [[REGION_BARRIER17:%.*]]
 ; CHECK:       region.guarded19:
 ; CHECK-NEXT:    store i32 [[CALL11_I]], ptr [[ARRAYIDX13_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END16:%.*]]
 ; CHECK:       region.guarded.end16:
 ; CHECK-NEXT:    br label [[REGION_BARRIER17]]
 ; CHECK:       region.barrier17:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP10]])
+; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP12]])
 ; CHECK-NEXT:    br label [[REGION_EXIT18:%.*]]
 ; CHECK:       region.exit18:
 ; CHECK-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
@@ -228,8 +230,9 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED:       user_code.entry:
 ; CHECK-DISABLED-NEXT:    [[C:%.*]] = icmp eq i64 [[N]], 42
 ; CHECK-DISABLED-NEXT:    [[SELECT:%.*]] = select i1 [[C]], ptr [[AL32]], ptr addrspacecast (ptr addrspace(5) @LocGlob to ptr)
-; CHECK-DISABLED-NEXT:    store ptr [[SELECT]], ptr [[LOC]], align 8
-; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR6]]
+; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[LOC]] to ptr addrspace(5)
+; CHECK-DISABLED-NEXT:    store ptr [[SELECT]], ptr addrspace(5) [[TMP1]], align 8
+; CHECK-DISABLED-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR6]]
 ; CHECK-DISABLED-NEXT:    store i32 0, ptr [[X]], align 4, !noalias [[META7:![0-9]+]]
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
 ; CHECK-DISABLED-NEXT:    store i32 1, ptr [[ARRAYIDX1_I]], align 4, !noalias [[META7]]
@@ -249,6 +252,7 @@ define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %
 ; CHECK-DISABLED-NEXT:    [[IDXPROM4_I:%.*]] = zext i32 [[I_0_I]] to i64
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM4_I]]
 ; CHECK-DISABLED-NEXT:    store i32 [[SUB3_I]], ptr [[ARRAYIDX5_I]], align 4, !noalias [[META7]]
+; CHECK-DISABLED-NEXT:    [[TMP3:%.*]] = addrspacecast ptr [[SELECT]] to ptr addrspace(5)
 ; CHECK-DISABLED-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
 ; CHECK-DISABLED-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-DISABLED:       __omp_outlined__.exit:
