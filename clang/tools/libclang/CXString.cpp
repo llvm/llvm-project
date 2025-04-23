@@ -123,7 +123,7 @@ static CXStringSet *createSetImpl(ArrayRef<StringTy> Strings) {
 }
 
 CXStringSet *createSet(const std::vector<std::string> &Strings) {
-  return createSetImpl<std::string, true>(ArrayRef<std::string>(Strings));
+  return createSetImpl<std::string, true>(Strings);
 }
 
 CXStringSet *createRefSet(ArrayRef<StringRef> Strings) {
