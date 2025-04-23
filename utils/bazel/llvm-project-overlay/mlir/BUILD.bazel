@@ -2316,6 +2316,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":IR",
         ":InferTypeOpInterface",
+        ":LLVMCommonConversion",
         ":LLVMDialect",
         ":SideEffectInterfaces",
         ":X86VectorIncGen",
