@@ -1242,10 +1242,10 @@ static void eraseDebugIntrinsicsWithNonLocalRefs(Function &F) {
 /// Fix up the debug info in the old and new functions. Following changes are
 /// done.
 /// 1. If a debug record points to a value that has been replaced, update the
-/// record to use the new value.
+///    record to use the new value.
 /// 2. If an Input value that has been replaced was used as a location of a
-/// debug record in the Parent function, then materealize a similar record in
-/// the new function.
+///    debug record in the Parent function, then materealize a similar record in
+///    the new function.
 /// 3. Point line locations and debug intrinsics to the new subprogram scope
 /// 4. Remove intrinsics which point to values outside of the new function.
 static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
@@ -1280,17 +1280,18 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
   auto UpdateOrInsertDebugRecord = [&](auto *DR, Value *OldLoc, Value *NewLoc,
                                        DIExpression *Expr, bool Declare) {
-    if (DR->getParent()->getParent() == &NewFunc)
+    if (DR->getParent()->getParent() == &NewFunc) {
       DR->replaceVariableLocationOp(OldLoc, NewLoc);
-    else {
-      if (Declare)
-        DIB.insertDeclare(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-                          &NewFunc.getEntryBlock());
-      else
-        DIB.insertDbgValueIntrinsic(
-            NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-            NewFunc.getEntryBlock().getTerminator()->getIterator());
+      return;
     }
+    if (Declare) {
+      DIB.insertDeclare(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+                        &NewFunc.getEntryBlock());
+      return;
+    }
+    DIB.insertDbgValueIntrinsic(
+        NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+        NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
     SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
@@ -1317,7 +1318,7 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
 
     if (Argument *Arg = dyn_cast<Argument>(Location))
       return Arg->getParent() != &NewFunc;
-    else if (Instruction *LocationInst = dyn_cast<Instruction>(Location))
+    if (Instruction *LocationInst = dyn_cast<Instruction>(Location))
       return LocationInst->getFunction() != &NewFunc;
     return false;
   };
