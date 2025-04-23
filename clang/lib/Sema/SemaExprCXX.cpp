@@ -6147,9 +6147,8 @@ static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
       S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
       return APValue();
     }
-    llvm::APSInt V =
-        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
-    return APValue{V};
+    return APValue(
+        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType()));
     break;
   }
   default:
