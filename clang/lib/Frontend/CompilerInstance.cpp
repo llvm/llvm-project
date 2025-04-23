@@ -536,6 +536,9 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                            /*ShowAllHeaders=*/true, /*OutputPath=*/"",
                            /*ShowDepth=*/true, /*MSStyle=*/true);
   }
+
+  if (GetDependencyDirectives)
+    PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 }
 
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
@@ -1245,6 +1248,10 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
 
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
+
+  if (GetDependencyDirectives)
+    Instance.GetDependencyDirectives =
+        GetDependencyDirectives->cloneFor(Instance.getFileManager());
 
   // If we're collecting module dependencies, we need to share a collector
   // between all of the module CompilerInstances. Other than that, we don't
