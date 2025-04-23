@@ -905,6 +905,15 @@ defm "" : SRegClass<16, [v16i32, v16f32, v8i64, v8f64, v32i16, v32f16, v32bf16],
 defm "" : SRegClass<32, [v32i32, v32f32, v16i64, v16f64], SGPR_1024Regs>;
 }
 
+def SReg_RSRC : SIRegisterClass<"AMDGPU", [v8i32], 32,
+  (add SReg_256_XNULL, SReg_128_XNULL)> {
+  let Size = 8;
+  let CopyCost = -1;
+  let isAllocatable = 0;
+  let HasSGPR = 1;
+  let BaseClassOrder = 10000;
+}
+
 def VRegOrLds_32 : SIRegisterClass<"AMDGPU", [i32, f32, i16, f16, bf16, v2i16, v2f16, v2bf16], 32,
                                  (add VGPR_32, LDS_DIRECT_CLASS)> {
   let isAllocatable = 0;

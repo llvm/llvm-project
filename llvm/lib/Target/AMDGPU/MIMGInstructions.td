@@ -877,7 +877,7 @@ class MIMG_Atomic_gfx6789_base <bits<8> op, string asm, RegisterClass data_rc,
   : MIMG_gfx6789 <op, (outs data_rc:$vdst), dns> {
   let Constraints = "$vdst = $vdata";
 
-  let InOperandList = (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256_XNULL:$srsrc,
+  let InOperandList = (ins data_rc:$vdata, addr_rc:$vaddr, SReg_RSRC:$srsrc,
                            DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                            R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da);
   let AsmString = asm#" $vdst, $vaddr, $srsrc$dmask$unorm$cpol$r128$tfe$lwe$da";
@@ -923,7 +923,7 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
                !if(enableDisasm, "GFX10", "")> {
   let Constraints = "$vdst = $vdata";
 
-  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256_XNULL:$srsrc,
+  let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_RSRC:$srsrc,
                            DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol:$cpol,
                            R128A16:$r128, A16:$a16, TFE:$tfe, LWE:$lwe);
   let AsmString = opcode#" $vdst, $vaddr0, $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
