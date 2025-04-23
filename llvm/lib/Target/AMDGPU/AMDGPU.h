@@ -51,6 +51,7 @@ FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
+FunctionPass *createSIConvertWaveSizeLegacyPass(const TargetMachine *);
 
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
@@ -173,6 +174,9 @@ extern char &SIShrinkInstructionsLegacyID;
 
 void initializeSIFixSGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixSGPRCopiesLegacyID;
+
+void initializeSIConvertWaveSizeLegacyPass(PassRegistry &);
+extern char &SIConvertWaveSizeLegacyID;
 
 void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
