@@ -168,6 +168,7 @@ Changes to the RISC-V Backend
   and branch and linker relaxation. This can be disabled with ``.option noexact``,
   which is also the default.
 * `-mcpu=xiangshan-kunminghu` was added.
+* `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
