@@ -942,7 +942,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   std::optional<llvm::PGOOptions> pgoOpt;
  
   if (opts.hasProfileIRInstr()){
-    // // -fprofile-generate.
+    // -fprofile-generate.
     pgoOpt = llvm::PGOOptions(
       opts.InstrProfileOutput.empty() ? llvm::getDefaultProfileGenName()
                                              : opts.InstrProfileOutput,
