@@ -1002,7 +1002,8 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @fmin_intrinsic_nofast(
-; CHECK-NOT: <2 x float> @llvm.minnum.v2f32
+; CHECK: call <2 x float> @llvm.minnum.v2f32
+; CHECK: call float @llvm.vector.reduce.fmin.v2f32
 define float @fmin_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
@@ -1022,7 +1023,8 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @fmax_intrinsic_nofast(
-; CHECK-NOT: <2 x float> @llvm.maxnum.v2f32
+; CHECK: call <2 x float> @llvm.maxnum.v2f32
+; CHECK: call float @llvm.vector.reduce.fmax.v2f32
 define float @fmax_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body

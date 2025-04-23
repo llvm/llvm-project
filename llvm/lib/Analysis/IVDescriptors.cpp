@@ -892,10 +892,13 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
        return true;
      if (isa<FPMathOperator>(I) && I->hasNoNaNs() && I->hasNoSignedZeros())
        return true;
-     // minimum and maximum intrinsics do not require nsz and nnan flags since
-     // NaN and signed zeroes are propagated in the intrinsic implementation.
+     // minimum/minnum and maximum/maxnum intrinsics do not require nsz and nnan
+     // flags since NaN and signed zeroes are propagated in the intrinsic
+     // implementation.
      return match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())) ||
-            match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value()));
+            match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())) ||
+            match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())) ||
+            match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value()));
     };
     if (isIntMinMaxRecurrenceKind(Kind) ||
         (HasRequiredFMF() && isFPMinMaxRecurrenceKind(Kind)))
