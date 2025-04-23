@@ -1023,7 +1023,7 @@ public:
 
     /// Check if any of the tracked live intervals exceeds the number of
     /// available registers for the target.
-    bool exceedsMaxNumRegs(const TargetTransformInfo &TTI) {
+    bool exceedsMaxNumRegs(const TargetTransformInfo &TTI) const {
       return any_of(MaxLocalUsers, [&TTI](auto &LU) {
         return LU.second > TTI.getNumberOfRegisters(LU.first);
       });
@@ -7602,8 +7602,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
 
       if (RU.exceedsMaxNumRegs(TTI)) {
-        LLVM_DEBUG(dbgs() << "LV(REG): Ignoring VF " << VF
-                          << " as it uses too many registers\n");
+        LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
+                          << VF << " because it uses too many registers\n");
         continue;
       }
 
