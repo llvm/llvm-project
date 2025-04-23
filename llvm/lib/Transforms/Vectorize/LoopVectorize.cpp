@@ -4460,6 +4460,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenSelectSC:
       case VPDef::VPBlendSC:
       case VPDef::VPFirstOrderRecurrencePHISC:
+      case VPDef::VPHistogramSC:
       case VPDef::VPWidenPHISC:
       case VPDef::VPWidenIntOrFpInductionSC:
       case VPDef::VPWidenPointerInductionSC:
