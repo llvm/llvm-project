@@ -4,9 +4,6 @@
 ; number of UAVs for setting the shader flag '64 UAV slots' when the validator
 ; version is < 1.6
 
-; Note: there is no feature flag here (only a module flag), so we don't have an
-; object test.
-
 target triple = "dxil-pc-shadermodel6.7-library"
 
 ; CHECK:      Combined Shader Flags for Module
