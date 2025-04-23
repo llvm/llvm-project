@@ -153,6 +153,7 @@
 #include <clc/integer/abs_diff.h>
 #include <clc/integer/add_sat.h>
 #include <clc/integer/clz.h>
+#include <clc/integer/ctz.h>
 #include <clc/integer/hadd.h>
 #include <clc/integer/mad24.h>
 #include <clc/integer/mad_hi.h>

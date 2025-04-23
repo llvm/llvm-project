@@ -155,10 +155,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   if (isFunctionPointer()) {
     const FunctionPointer &FP = asFunctionPointer();
     if (const FunctionDecl *FD = FP.getFunction()->getDecl())
-      return APValue(FD, CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+      return APValue(FD, CharUnits::fromQuantity(Offset), {},
                      /*OnePastTheEnd=*/false, /*IsNull=*/false);
-    return APValue(FP.getFunction()->getExpr(),
-                   CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+    return APValue(FP.getFunction()->getExpr(), CharUnits::fromQuantity(Offset),
+                   {},
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
@@ -167,7 +167,8 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     return APValue(
         APValue::LValueBase::getTypeInfo(
             TypeInfo, QualType(PointeeStorage.Typeid.TypeInfoType, 0)),
-        CharUnits::Zero(), APValue::NoLValuePath{});
+        CharUnits::Zero(), {},
+        /*OnePastTheEnd=*/false, /*IsNull=*/false);
   }
 
   // Build the lvalue base from the block.
@@ -222,6 +223,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     UsePath = false;
 
   // Build the path into the object.
+  bool OnePastEnd = isOnePastEnd();
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -250,9 +252,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Ptr = Ptr.expand();
       const Descriptor *Desc = Ptr.getFieldDesc();
       unsigned Index;
-      if (Ptr.isOnePastEnd())
+      if (Ptr.isOnePastEnd()) {
         Index = Ptr.getArray().getNumElems();
-      else
+        OnePastEnd = false;
+      } else
         Index = Ptr.getIndex();
 
       QualType ElemType = Desc->getElemQualType();
@@ -303,8 +306,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   std::reverse(Path.begin(), Path.end());
 
   if (UsePath)
-    return APValue(Base, Offset, Path,
-                   /*IsOnePastEnd=*/!isElementPastEnd() && isOnePastEnd());
+    return APValue(Base, Offset, Path, OnePastEnd);
 
   return APValue(Base, Offset, APValue::NoLValuePath());
 }

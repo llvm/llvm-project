@@ -68,12 +68,14 @@ def ACCC_Copy : Clause<"copy"> {
 // 2.7.7
 def ACCC_Copyin : Clause<"copyin"> {
   let flangClass = "AccObjectListWithModifier";
+  let clangAccSpelling = "CopyIn";
   let aliases = ["present_or_copyin", "pcopyin"];
 }
 
 // 2.7.8
 def ACCC_Copyout : Clause<"copyout"> {
   let flangClass = "AccObjectListWithModifier";
+  let clangAccSpelling = "CopyOut";
   let aliases = ["present_or_copyout", "pcopyout"];
 }
 
@@ -124,6 +126,7 @@ def ACCC_DeviceNum : Clause<"device_num">  {
 // 2.7.4
 def ACCC_DevicePtr : Clause<"deviceptr"> {
   let flangClass = "AccObjectList";
+  let clangAccSpelling = "DevicePtr";
 }
 
 // 2.13.1
@@ -144,6 +147,7 @@ def ACCC_Finalize : Clause<"finalize"> {}
 // 2.5.14
 def ACCC_FirstPrivate : Clause<"firstprivate"> {
   let flangClass = "AccObjectList";
+  let clangAccSpelling = "FirstPrivate";
 }
 
 // 2.9.2
@@ -179,7 +183,9 @@ def ACCC_NoCreate : Clause<"no_create"> {
 }
 
 // 2.15.1
-def ACCC_NoHost : Clause<"nohost"> {}
+def ACCC_NoHost : Clause<"nohost"> { 
+  let clangAccSpelling = "NoHost"; 
+}
 
 // 2.5.10
 def ACCC_NumGangs : Clause<"num_gangs"> {
@@ -270,6 +276,7 @@ def ACCC_Unknown : Clause<"unknown"> {
 
 // 2.12
 def ACC_Atomic : Directive<"atomic"> {
+  let allowedOnceClauses = [VersionedClause<ACCC_If, 34>];
   let association = AS_Block;
   let category = CA_Executable;
 }
@@ -277,11 +284,11 @@ def ACC_Atomic : Directive<"atomic"> {
 // 2.6.5
 def ACC_Data : Directive<"data"> {
   let allowedOnceClauses = [
-    VersionedClause<ACCC_Async, 32>,
     VersionedClause<ACCC_If>,
     VersionedClause<ACCC_Default>
   ];
   let allowedClauses = [
+    VersionedClause<ACCC_Async, 32>,
     VersionedClause<ACCC_DeviceType, 32>,
     VersionedClause<ACCC_Wait, 32>
   ];
@@ -318,27 +325,23 @@ def ACC_Declare : Directive<"declare"> {
 
 // 2.5.3
 def ACC_Kernels : Directive<"kernels"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_Attach>,
-    VersionedClause<ACCC_Copy>,
-    VersionedClause<ACCC_Copyin>,
-    VersionedClause<ACCC_Copyout>,
-    VersionedClause<ACCC_Create>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_NoCreate>,
-    VersionedClause<ACCC_Present>,
-    VersionedClause<ACCC_DevicePtr>,
-    VersionedClause<ACCC_Wait>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_Default>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_NumGangs>,
-    VersionedClause<ACCC_NumWorkers>,
-    VersionedClause<ACCC_Self>,
-    VersionedClause<ACCC_VectorLength>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_Async>,
+                        VersionedClause<ACCC_Attach>,
+                        VersionedClause<ACCC_Copy>,
+                        VersionedClause<ACCC_Copyin>,
+                        VersionedClause<ACCC_Copyout>,
+                        VersionedClause<ACCC_Create>,
+                        VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_NoCreate>,
+                        VersionedClause<ACCC_NumGangs>,
+                        VersionedClause<ACCC_NumWorkers>,
+                        VersionedClause<ACCC_Present>,
+                        VersionedClause<ACCC_DevicePtr>,
+                        VersionedClause<ACCC_VectorLength>,
+                        VersionedClause<ACCC_Wait>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Default>,
+                            VersionedClause<ACCC_If>,
+                            VersionedClause<ACCC_Self>];
   let association = AS_Block;
   let category = CA_Executable;
 }
@@ -377,27 +380,23 @@ def ACC_Parallel : Directive<"parallel"> {
 def ACC_Serial : Directive<"serial"> {
   // Spec line 950-951: clause is as for the parallel construct except that the
   // num_gangs, num_workers, and vector_length clauses are not permitted.
-  let allowedClauses = [
-    VersionedClause<ACCC_Attach>,
-    VersionedClause<ACCC_Copy>,
-    VersionedClause<ACCC_Copyin>,
-    VersionedClause<ACCC_Copyout>,
-    VersionedClause<ACCC_Create>,
-    VersionedClause<ACCC_DevicePtr>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_NoCreate>,
-    VersionedClause<ACCC_Present>,
-    VersionedClause<ACCC_Private>,
-    VersionedClause<ACCC_FirstPrivate>,
-    VersionedClause<ACCC_Reduction>,
-    VersionedClause<ACCC_Wait>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_Default>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Self>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_Async>,
+                        VersionedClause<ACCC_Attach>,
+                        VersionedClause<ACCC_Copy>,
+                        VersionedClause<ACCC_Copyin>,
+                        VersionedClause<ACCC_Copyout>,
+                        VersionedClause<ACCC_Create>,
+                        VersionedClause<ACCC_DevicePtr>,
+                        VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_NoCreate>,
+                        VersionedClause<ACCC_Present>,
+                        VersionedClause<ACCC_Private>,
+                        VersionedClause<ACCC_FirstPrivate>,
+                        VersionedClause<ACCC_Reduction>,
+                        VersionedClause<ACCC_Wait>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Default>,
+                            VersionedClause<ACCC_If>,
+                            VersionedClause<ACCC_Self>];
   let association = AS_Block;
   let category = CA_Executable;
 }

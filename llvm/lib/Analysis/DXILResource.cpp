@@ -901,9 +901,8 @@ PreservedAnalyses DXILResourcePrinterPass::run(Module &M,
 
 void DXILResourceTypeWrapperPass::anchor() {}
 
-DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass() : ImmutablePass(ID) {
-  initializeDXILResourceTypeWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass()
+    : ImmutablePass(ID) {}
 
 INITIALIZE_PASS(DXILResourceTypeWrapperPass, "dxil-resource-type",
                 "DXIL Resource Type Analysis", false, true)
@@ -913,9 +912,7 @@ ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
   return new DXILResourceTypeWrapperPass();
 }
 
-DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {
-  initializeDXILResourceWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+DXILResourceWrapperPass::DXILResourceWrapperPass() : ModulePass(ID) {}
 
 DXILResourceWrapperPass::~DXILResourceWrapperPass() = default;
 

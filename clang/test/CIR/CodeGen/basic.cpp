@@ -87,3 +87,18 @@ int *f5() {
 // CHECK-NEXT:   cir.store %[[P]], %[[RET_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT:   %[[RET_VAL:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK-NEXT:   cir.return %[[RET_VAL]] : !cir.ptr<!s32i>
+
+using size_type = unsigned long;
+using _Tp = unsigned long;
+
+size_type max_size() {
+  return size_type(~0) / sizeof(_Tp);
+}
+
+// CHECK: cir.func @max_size()
+// CHECK:   %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
+// CHECK:   %1 = cir.const #cir.int<0> : !s32i
+// CHECK:   %2 = cir.unary(not, %1) : !s32i, !s32i
+// CHECK:   %3 = cir.cast(integral, %2 : !s32i), !u64i
+// CHECK:   %4 = cir.const #cir.int<8> : !u64i
+// CHECK:   %5 = cir.binop(div, %3, %4) : !u64i
