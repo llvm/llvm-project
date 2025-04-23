@@ -103,7 +103,7 @@ def FeatureStdExtZiccamoa
     : RISCVExtension<1, 0, "Main Memory Supports All Atomics in A">;
 
 def FeatureStdExtZiccamoc
-    : RISCVExtension<1, 0, "Main memory supports atomics in Zacas">;
+    : RISCVExtension<1, 0, "Main Memory Supports Atomics in Zacas">;
 
 def FeatureStdExtZiccif
     : RISCVExtension<1, 0,

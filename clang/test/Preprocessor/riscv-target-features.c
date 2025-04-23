@@ -1051,7 +1051,6 @@
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iziccamoc -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCAMOC-EXT %s
-// CHECK-ZICCAMOC-EXT: __riscv_ziccamoc 1000000{{$}}
 // RUN: %clang --target=riscv64-unknown-linux-gnu \
 // RUN:   -march=rv64iziccamoc -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCAMOC-EXT %s
