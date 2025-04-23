@@ -493,9 +493,10 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   // simple form later since the conversion itself should be harmless.
   if (subStmtKind == SubStmtKind::Case)
     result = emitCaseStmt(*cast<CaseStmt>(sub), condType, buildingTopLevelCase);
-  else if (subStmtKind == SubStmtKind::Default)
+  else if (subStmtKind == SubStmtKind::Default) {
     getCIRGenModule().errorNYI(sub->getSourceRange(), "Default case");
-  else if (buildingTopLevelCase)
+    return mlir::failure();
+  } else if (buildingTopLevelCase)
     // If we're building a top level case, try to restore the insert point to
     // the case we're building, then we can attach more random stmts to the
     // case to make generating `cir.switch` operation to be a simple form.
@@ -513,6 +514,7 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
   mlir::ArrayAttr value = builder.getArrayAttr(caseEltValueListAttr);
   if (s.getRHS()) {
     getCIRGenModule().errorNYI(s.getSourceRange(), "SwitchOp range kind");
+    return mlir::failure();
   }
   assert(!cir::MissingFeatures::foldCaseStmt());
   return emitCaseDefaultCascade(&s, condType, value, cir::CaseOpKind::Equal,
@@ -528,8 +530,10 @@ mlir::LogicalResult CIRGenFunction::emitSwitchCase(const SwitchCase &s,
     return emitCaseStmt(cast<CaseStmt>(s), condTypeStack.back(),
                         buildingTopLevelCase);
 
-  if (s.getStmtClass() == Stmt::DefaultStmtClass)
+  if (s.getStmtClass() == Stmt::DefaultStmtClass) {
     getCIRGenModule().errorNYI(s.getSourceRange(), "Default case");
+    return mlir::failure();
+  }
 
   llvm_unreachable("expect case or default stmt");
 }
@@ -724,7 +728,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
   //      ...
   //    }
   if (!isa<CompoundStmt>(s))
-    return emitStmt(s, /*useCurrentScope=*/!false);
+    return emitStmt(s, /*useCurrentScope=*/true);
 
   auto *compoundStmt = cast<CompoundStmt>(s);
 
