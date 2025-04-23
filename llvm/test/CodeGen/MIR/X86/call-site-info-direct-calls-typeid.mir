@@ -13,11 +13,11 @@
 # CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: []
 
 --- |  
-  declare noundef i32 @_Z4fizzii(i32 noundef %x, i32 noundef %y)
-  
-  declare noundef i32 @_Z4buzzii(i32 noundef %x, i32 noundef %y)
-  
-  define dso_local noundef i32 @_Z3barii(i32 noundef %x, i32 noundef %y) {
+  declare !type !0 noundef i32 @_Z4fizzii(i32 noundef %x, i32 noundef %y)
+
+  declare !type !0 noundef i32 @_Z4buzzii(i32 noundef %x, i32 noundef %y)
+
+  define dso_local noundef i32 @_Z3barii(i32 noundef %x, i32 noundef %y) !type !0 {
   entry:
     %x.addr = alloca i32, align 4
     %y.addr = alloca i32, align 4
@@ -33,7 +33,7 @@
     ret i32 %sub
   }
   
-  define dso_local noundef i32 @_Z3fooii(i32 noundef %x, i32 noundef %y) {
+  define dso_local noundef i32 @_Z3fooii(i32 noundef %x, i32 noundef %y) !type !0 {
   entry:
     %x.addr = alloca i32, align 4
     %y.addr = alloca i32, align 4
