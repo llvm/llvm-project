@@ -313,7 +313,7 @@ private:
   FileSizeTy getFileSize(size_t I) const;
 
   llvm::Error
-  forEachFileImpl(llvm::DenseSet<ObjectRef> &Seen,
+  forEachFileImpl(llvm::DenseMap<ObjectRef, ObjectRef> &Seen,
                   llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback);
 
   static bool isValid(const ObjectProxy &Node);
@@ -864,16 +864,16 @@ private:
 
 /// An implementation of a \p vfs::FileSystem that supports the simple queries
 /// of the preprocessor, for creating \p FileEntries using a file path, while
-/// "replaying" an \p IncludeTreeRoot. It is not intended to be a complete
+/// "replaying" an \p IncludeTree::FileList. It is not intended to be a complete
 /// implementation of a file system.
 Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
-createIncludeTreeFileSystem(IncludeTreeRoot &Root);
+createIncludeTreeFileSystem(IncludeTree::FileList &List);
 
 /// Create the same IncludeTreeFileSystem but from
 /// ArrayRef<IncludeTree::FileEntry>.
 Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>> createIncludeTreeFileSystem(
     llvm::cas::ObjectStore &CAS,
-    llvm::ArrayRef<IncludeTree::FileList::FileEntry> List);
+    llvm::ArrayRef<IncludeTree::FileList::FileEntry> Files);
 
 } // namespace cas
 } // namespace clang

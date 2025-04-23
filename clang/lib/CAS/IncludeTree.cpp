@@ -246,24 +246,49 @@ IncludeTree::FileList::getFileSize(size_t I) const {
       Data.data() + I * sizeof(FileSizeTy));
 }
 
+static llvm::Error diagnoseFileChange(IncludeTree::File F, ObjectRef Content) {
+  auto FilenameBlob = F.getFilename();
+  if (!FilenameBlob)
+    return FilenameBlob.takeError();
+  cas::ObjectStore &DB = F.getCAS();
+  std::string Filename(FilenameBlob->getData());
+  std::string OldID = DB.getID(Content).toString();
+  std::string NewID = DB.getID(F.getContentsRef()).toString();
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "file '%s' changed during build; include-tree "
+                                 "contents changed from %s to %s",
+                                 Filename.c_str(), OldID.c_str(),
+                                 NewID.c_str());
+}
+
 llvm::Error IncludeTree::FileList::forEachFileImpl(
-    llvm::DenseSet<ObjectRef> &Seen,
+    llvm::DenseMap<ObjectRef, ObjectRef> &Seen,
     llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback) {
   size_t Next = 0;
   size_t FileCount = getNumFilesCurrentList();
+
   return forEachReference([&](ObjectRef Ref) -> llvm::Error {
     size_t Index = Next++;
-    if (!Seen.insert(Ref).second)
-      return llvm::Error::success();
-
     if (Index < FileCount) {
       auto Include = File::get(getCAS(), Ref);
       if (!Include)
         return Include.takeError();
+      auto Inserted = Seen.try_emplace(Ref, Include->getContentsRef());
+      if (!Inserted.second) {
+        if (Inserted.first->second != Include->getContentsRef())
+          return diagnoseFileChange(*Include, Inserted.first->second);
+        return llvm::Error::success();
+      }
       return Callback(std::move(*Include), getFileSize(Index));
     }
 
     // Otherwise, it's a chained FileList.
+    // Use a value to itself to indicate if the filelist node has been
+    // visited or not.
+    auto Inserted = Seen.try_emplace(Ref, Ref);
+    if (!Inserted.second)
+      return llvm::Error::success();
+
     auto Proxy = getCAS().getProxy(Ref);
     if (!Proxy)
       return Proxy.takeError();
@@ -274,7 +299,7 @@ llvm::Error IncludeTree::FileList::forEachFileImpl(
 
 llvm::Error IncludeTree::FileList::forEachFile(
     llvm::function_ref<llvm::Error(File, FileSizeTy)> Callback) {
-  llvm::DenseSet<ObjectRef> Seen;
+  llvm::DenseMap<ObjectRef, ObjectRef> Seen;
   return forEachFileImpl(Seen, Callback);
 }
 
@@ -321,7 +346,7 @@ bool IncludeTree::FileList::isValid(const ObjectProxy &Node) {
     return false;
   unsigned NumFiles =
       llvm::support::endian::read<uint32_t, llvm::endianness::little>(Data.data());
-  return NumFiles != 0 && NumFiles <= Base.getNumReferences() &&
+  return NumFiles <= Base.getNumReferences() &&
          Data.size() == sizeof(uint32_t) + NumFiles * sizeof(FileSizeTy);
 }
 
@@ -1015,38 +1040,19 @@ public:
 };
 } // namespace
 
-static llvm::Error diagnoseFileChange(IncludeTree::File F, ObjectRef Content) {
-  auto FilenameBlob = F.getFilename();
-  if (!FilenameBlob)
-    return FilenameBlob.takeError();
-  cas::ObjectStore &DB = F.getCAS();
-  std::string Filename(FilenameBlob->getData());
-  std::string OldID = DB.getID(Content).toString();
-  std::string NewID = DB.getID(F.getContentsRef()).toString();
-  return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                 "file '%s' changed during build; include-tree "
-                                 "contents changed from %s to %s",
-                                 Filename.c_str(), OldID.c_str(),
-                                 NewID.c_str());
-}
+static std::string computeFilename(StringRef Name, IncludeTreeFileSystem &FS) {
+  SmallString<128> Filename(Name);
+  assert(Filename != ".");
+  llvm::sys::path::remove_dots(Filename);
 
-Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
-cas::createIncludeTreeFileSystem(IncludeTreeRoot &Root) {
-  auto FileList = Root.getFileList();
-  if (!FileList)
-    return FileList.takeError();
-
-  std::vector<IncludeTree::FileList::FileEntry> Files;
-  Files.reserve(FileList->getNumReferences());
-
-  if (auto Err = FileList->forEachFile(
-          [&](IncludeTree::File File, IncludeTree::FileList::FileSizeTy Size) {
-            Files.push_back({File.getRef(), Size});
-            return llvm::Error::success();
-          }))
-    return std::move(Err);
-
-  return createIncludeTreeFileSystem(Root.getCAS(), Files);
+  StringRef DirName = llvm::sys::path::parent_path(Filename);
+  if (DirName.empty())
+    DirName = ".";
+  auto &DirEntry = FS.Directories[DirName];
+  if (DirEntry == llvm::sys::fs::UniqueID()) {
+    DirEntry = llvm::vfs::getNextVirtualUniqueID();
+  }
+  return Filename.str().str();
 }
 
 Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
@@ -1077,25 +1083,39 @@ cas::createIncludeTreeFileSystem(
     if (!FilenameBlob)
       return FilenameBlob.takeError();
 
-    SmallString<128> Filename(FilenameBlob->getData());
-    // Strip './' in the filename to match the behaviour of ASTWriter; we
-    // also strip './' in IncludeTreeFileSystem::getPath.
-    assert(Filename != ".");
-    llvm::sys::path::remove_dots(Filename);
-
-    StringRef DirName = llvm::sys::path::parent_path(Filename);
-    if (DirName.empty())
-      DirName = ".";
-    auto &DirEntry = IncludeTreeFS->Directories[DirName];
-    if (DirEntry == llvm::sys::fs::UniqueID()) {
-      DirEntry = llvm::vfs::getNextVirtualUniqueID();
-    }
-
+    auto Filename = computeFilename(FilenameBlob->getData(), *IncludeTreeFS);
     IncludeTreeFS->Files.insert(std::make_pair(
         Filename,
         IncludeTreeFileSystem::FileEntry{File->getContentsRef(), Entry.Size,
                                          llvm::vfs::getNextVirtualUniqueID()}));
   }
+
+  return IncludeTreeFS;
+}
+
+Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
+cas::createIncludeTreeFileSystem(IncludeTree::FileList &List) {
+  auto &CAS = List.getCAS();
+  IntrusiveRefCntPtr<IncludeTreeFileSystem> IncludeTreeFS =
+      new IncludeTreeFileSystem(CAS);
+
+  auto E = List.forEachFile(
+      [&](IncludeTree::File File,
+          IncludeTree::FileList::FileSizeTy Size) -> llvm::Error {
+        auto FilenameBlob = File.getFilename();
+        if (!FilenameBlob)
+          return FilenameBlob.takeError();
+        auto Filename =
+            computeFilename(FilenameBlob->getData(), *IncludeTreeFS);
+        IncludeTreeFS->Files.insert(
+            std::make_pair(Filename, IncludeTreeFileSystem::FileEntry{
+                                         File.getContentsRef(), Size,
+                                         llvm::vfs::getNextVirtualUniqueID()}));
+        return llvm::Error::success();
+      });
+
+  if (E)
+    return std::move(E);
 
   return IncludeTreeFS;
 }

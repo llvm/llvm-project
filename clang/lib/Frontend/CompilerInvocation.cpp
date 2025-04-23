@@ -1611,7 +1611,11 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
     auto Root = cas::IncludeTreeRoot::get(*CAS, *Ref);
     if (!Root)
       return Root.takeError();
-    return cas::createIncludeTreeFileSystem(*Root);
+    auto FileList = Root->getFileList();
+    if (!FileList)
+      return FileList.takeError();
+
+    return cas::createIncludeTreeFileSystem(*FileList);
   };
   auto makeCASFS = [&](std::shared_ptr<llvm::cas::ObjectStore> CAS,
                        llvm::cas::CASID &ID)
