@@ -350,13 +350,18 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
     std::lock_guard<std::mutex> guard(m_child_mutex);
     m_name_toindex[name.GetCString()] = *index_or_err;
     return *index_or_err;
-  } else if (!found_index && m_synth_filter_up == nullptr)
+  } else if (!found_index && m_synth_filter_up == nullptr) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::ValueObjectSynthetic' cannot find index "
+        "of child '%s'. m_synth_filter_up is null.",
+        name.AsCString());
+  } else if (found_index) {
+    return *found_index;
+  } else /*if (iter != m_name_toindex.end())*/
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::ValueObjectSynthetic' cannot find index "
         "of child '%s'",
         name.AsCString());
-  else /*if (iter != m_name_toindex.end())*/
-    return *found_index;
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }

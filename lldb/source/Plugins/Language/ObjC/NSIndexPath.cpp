@@ -133,8 +133,8 @@ public:
         (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
       return llvm::createStringError(
           "'SyntheticChildrenFrontEnd::NSIndexPathSyntheticFrontEnd' cannot "
-          "find index of child '%s'",
-          name.AsCString());
+          "find index of child '%s'. (idx='%d')",
+          name.AsCString(), idx);
     return idx;
   }
 

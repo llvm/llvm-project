@@ -395,8 +395,8 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetIndexOfChildWithName(
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSSetISyntheticFrontEnd' cannot find "
-        "index of child '%s'",
-        name.AsCString());
+        "index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 
@@ -532,8 +532,8 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetIndexOfChildWithName(
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSCFSetSyntheticFrontEnd' cannot find "
-        "index of child '%s'",
-        name.AsCString());
+        "index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 
@@ -670,8 +670,8 @@ llvm::Expected<size_t> lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::GenericNSSetMSyntheticFrontEnd' cannot "
-        "find index of child '%s'",
-        name.AsCString());
+        "find index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 

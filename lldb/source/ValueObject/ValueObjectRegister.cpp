@@ -147,8 +147,7 @@ ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
       return reg_info->kinds[eRegisterKindLLDB];
   }
   return llvm::createStringError(
-      "'SyntheticChildrenFrontEnd::ValueObjectRegisterSet' cannot find index "
-      "of child '%s'",
+      "'ValueObjectRegisterSet' cannot find index of child '%s'",
       name.str().c_str());
 }
 

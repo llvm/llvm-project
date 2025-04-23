@@ -132,7 +132,7 @@ llvm::Expected<size_t> lldb_private::formatters::
   if (!m_start)
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxStdSpanSyntheticFrontEnd' cannot "
-        "find index of child '%s'",
+        "find index of child '%s': Invalid start pointer.",
         name.AsCString());
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {

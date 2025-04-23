@@ -501,9 +501,8 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
   if (!m_pair_sp)
     return llvm::createStringError(
         "'SyntheticChildrenFrontend::LibCxxMapIteratorSyntheticFrontEnd' "
-        "cannot find index of child '%s'. Underlying pair is invalid: "
-        "m_pair_sp=%p",
-        name.AsCString(), static_cast<void *>(m_pair_sp.get()));
+        "cannot find index of child '%s': Invalid underlying pair.",
+        name.AsCString());
 
   return m_pair_sp->GetIndexOfChildWithName(name);
 }

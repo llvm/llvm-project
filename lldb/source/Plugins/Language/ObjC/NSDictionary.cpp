@@ -593,8 +593,8 @@ llvm::Expected<size_t> lldb_private::formatters::
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSDictionaryISyntheticFrontEnd' cannot "
-        "find index of child '%s'",
-        name.AsCString());
+        "find index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 
@@ -730,8 +730,8 @@ llvm::Expected<size_t> lldb_private::formatters::
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSCFDictionarySyntheticFrontEnd' cannot "
-        "find index of child '%s'",
-        name.AsCString());
+        "find index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 
@@ -866,8 +866,8 @@ lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSConstantDictionarySyntheticFrontEnd' "
-        "cannot find index of child '%s'",
-        name.AsCString());
+        "cannot find index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 
@@ -1072,8 +1072,8 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::GenericNSDictionaryMSyntheticFrontEnd' "
-        "cannot find index of child '%s'",
-        name.AsCString());
+        "cannot find index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 
@@ -1233,8 +1233,8 @@ llvm::Expected<size_t> lldb_private::formatters::Foundation1100::
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSDictionaryMSyntheticFrontEnd' cannot "
-        "find index of child '%s'",
-        name.AsCString());
+        "find index of child '%s'. (idx='%d')",
+        name.AsCString(), idx);
   return idx;
 }
 

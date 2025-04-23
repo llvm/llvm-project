@@ -207,8 +207,7 @@ StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
         "'SyntheticChildrenFrontend::StdlibCoroutineHandleSyntheticFrontEnd' "
         "cannot find index of child '%s'. (m_resume_ptr_sp='%p', "
         "m_destroy_ptr_sp='%p')",
-        name.AsCString(), static_cast<void *>(m_resume_ptr_sp.get()),
-        static_cast<void *>(m_destroy_ptr_sp.get()));
+        name.AsCString(), m_resume_ptr_sp.get(), m_destroy_ptr_sp.get());
 
   if (name == ConstString("resume"))
     return 0;

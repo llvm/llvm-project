@@ -106,7 +106,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
   if (!m_start) {
     return llvm::createStringError(
         "'SyntheticChildrenFrontend::LibcxxInitializerListSyntheticFrontEnd' "
-        "cannot find index of child '%s'",
+        "cannot find index of child '%s': Invalid start pointer.",
         name.AsCString());
   }
   size_t idx = ExtractIndexFromString(name.GetCString());
