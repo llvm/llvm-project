@@ -3,11 +3,11 @@
 ; RUN: llc --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .callgraph - | FileCheck %s
 
-declare void @foo()
+declare !type !0 void @foo()
 
-declare noundef i32 @bar(i8 signext)
+declare !type !1 noundef i32 @bar(i8 signext)
 
-declare noundef ptr @baz(ptr)
+declare !type !2 noundef ptr @baz(ptr)
 
 define dso_local void @main() {
 entry:
