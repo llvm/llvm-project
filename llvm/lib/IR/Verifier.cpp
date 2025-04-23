@@ -530,6 +530,7 @@ private:
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
   void visitCallsiteMetadata(Instruction &I, MDNode *MD);
+  void visitCalleeTypeMetadata(Instruction &I, MDNode *MD);
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
   void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
@@ -5050,6 +5051,20 @@ void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
   visitCallStackMetadata(MD);
 }
 
+void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
+  Check(isa<CallBase>(I), "!callee_type metadata should only exist on calls",
+        &I);
+  CallBase *CB = cast<CallBase>(&I);
+  Check(CB->isIndirectCall(),
+        "!callee_type metadata should only exist on indirect function calls",
+        &I);
+  for (const auto &Op : MD->operands()) {
+    auto *TypeMD = cast<MDNode>(Op.get());
+    Check(TypeMD->hasGeneralizedMDString(),
+          "Invalid \"callee_type\" type identifier", &I);
+  }
+}
+
 void Verifier::visitAnnotationMetadata(MDNode *Annotation) {
   Check(isa<MDTuple>(Annotation), "annotation must be a tuple");
   Check(Annotation->getNumOperands() >= 1,
@@ -5324,6 +5339,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_callsite))
     visitCallsiteMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_callee_type))
+    visitCalleeTypeMetadata(I, MD);
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
     visitDIAssignIDMetadata(I, MD);
