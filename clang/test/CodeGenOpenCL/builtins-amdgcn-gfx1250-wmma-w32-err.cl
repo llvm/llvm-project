@@ -168,6 +168,34 @@ void test_amdgcn_wmma_f16_16x16x32_f16(global v8h* out, v16h a, v16h b, v8h c, i
   *out = __builtin_amdgcn_wmma_f16_16x16x32_f16(0, a, 0, b, 0, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x32_f16' must be a constant integer}}
 }
 
+void test_amdgcn_wmma_f16_16x16x128_fp8_fp8(global v8h* out, v16i a, v16i b, v8h c, int mod)
+{
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8(a, b, mod, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8(a, b, 0, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8(a, b, 0, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_fp8_fp8' must be a constant integer}}
+}
+
+void test_amdgcn_wmma_f16_16x16x128_fp8_bf8(global v8h* out, v16i a, v16i b, v8h c, int mod)
+{
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8(a, b, mod, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8(a, b, 0, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8(a, b, 0, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_fp8_bf8' must be a constant integer}}
+}
+
+void test_amdgcn_wmma_f16_16x16x128_bf8_fp8(global v8h* out, v16i a, v16i b, v8h c, int mod)
+{
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8(a, b, mod, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8(a, b, 0, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8(a, b, 0, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_bf8_fp8' must be a constant integer}}
+}
+
+void test_amdgcn_wmma_f16_16x16x128_bf8_bf8(global v8h* out, v16i a, v16i b, v8h c, int mod)
+{
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8(a, b, mod, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8(a, b, 0, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8' must be a constant integer}}
+  *out = __builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8(a, b, 0, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_f16_16x16x128_bf8_bf8' must be a constant integer}}
+}
+
 void test_amdgcn_swmmac_f32_16x16x64_bf16(global v8f* out, v16bf16 a, v32bf16 b, v8f c, int index, int mod)
 {
   *out = __builtin_amdgcn_swmmac_f32_16x16x64_bf16(mod, a, 0, b, c, index, false, false); // expected-error {{'__builtin_amdgcn_swmmac_f32_16x16x64_bf16' must be a constant integer}}
