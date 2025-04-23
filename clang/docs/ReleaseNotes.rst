@@ -632,8 +632,6 @@ RISC-V Support
   Qualcomm's `Xqciint` extension to save and restore some GPRs in interrupt
   service routines.
 
-- `Zicsr` / `Zifencei` are allowed to be duplicated in the presence of `g` in `-march`.
-
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
