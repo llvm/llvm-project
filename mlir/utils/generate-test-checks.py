@@ -295,6 +295,13 @@ def main():
         help="Names to be used in FileCheck regular expression to represent "
         "attributes in the order they are defined. Separate names with commas,"
         "commas, and leave empty entries for default names (e.g.: 'MAP0,,,MAP1')")
+    parser.add_argument(
+        "--strict_name_re",
+        type=bool,
+        default=False,
+        help="Set to true to use stricter regex for CHECK-SAME directives. "
+        "Use when Greedy matching causes issues with the generic '.*'",
+    )
 
     args = parser.parse_args()
 
@@ -406,7 +413,7 @@ def main():
 
                 # Process the rest of the line.
                 output_line += process_line(
-                    [argument], variable_namer, strict_name_re=True
+                    [argument], variable_namer, args.strict_name_re
                 )
 
         # Append the output line.

@@ -1282,8 +1282,8 @@ bool SemaHLSL::handleResourceTypeAttr(QualType T, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(0);
-    StringRef Identifier = Loc->Ident->getName();
-    SourceLocation ArgLoc = Loc->Loc;
+    StringRef Identifier = Loc->getIdentifierInfo()->getName();
+    SourceLocation ArgLoc = Loc->getLoc();
 
     // Validate resource class value
     ResourceClass RC;
@@ -1542,8 +1542,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   }
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
-  StringRef Str = Loc->Ident->getName();
-  SourceLocation ArgLoc = Loc->Loc;
+  StringRef Str = Loc->getIdentifierInfo()->getName();
+  SourceLocation ArgLoc = Loc->getLoc();
 
   SourceLocation SpaceArgLoc;
   bool SpecifiedSpace = false;
@@ -1557,8 +1557,8 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
     }
 
     IdentifierLoc *Loc = AL.getArgAsIdent(1);
-    Space = Loc->Ident->getName();
-    SpaceArgLoc = Loc->Loc;
+    Space = Loc->getIdentifierInfo()->getName();
+    SpaceArgLoc = Loc->getLoc();
   } else {
     Slot = Str;
   }
@@ -2387,8 +2387,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ContainedTy = ResourceTy->getContainedType();
-    // TODO: Map to an hlsl_device address space.
-    TheCall->setType(getASTContext().getPointerType(ContainedTy));
+    auto ReturnType =
+        SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
     TheCall->setValueKind(VK_LValue);
 
     break;
@@ -2749,7 +2751,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
       BuildFlattenedTypeList(AT->getElementType(), ElementFields);
       // Repeat the element's field list n times.
       for (uint64_t Ct = 0; Ct < AT->getZExtSize(); ++Ct)
-        List.insert(List.end(), ElementFields.begin(), ElementFields.end());
+        llvm::append_range(List, ElementFields);
       continue;
     }
     // Vectors can only have element types that are builtin types, so this can
@@ -2777,7 +2779,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         FieldTypes.push_back(FD->getType());
       // Reverse the newly added sub-range.
       std::reverse(FieldTypes.begin(), FieldTypes.end());
-      WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+      llvm::append_range(WorkList, FieldTypes);
 
       // If this wasn't a standard layout type we may also have some base
       // classes to deal with.
@@ -2786,7 +2788,7 @@ static void BuildFlattenedTypeList(QualType BaseTy,
         for (const auto &Base : RD->bases())
           FieldTypes.push_back(Base.getType());
         std::reverse(FieldTypes.begin(), FieldTypes.end());
-        WorkList.insert(WorkList.end(), FieldTypes.begin(), FieldTypes.end());
+        llvm::append_range(WorkList, FieldTypes);
       }
       continue;
     }
@@ -3375,8 +3377,7 @@ static bool BuildInitializerList(Sema &S, ASTContext &Ctx, Expr *E,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         DeclAccessPair Found = DeclAccessPair::make(FD, FD->getAccess());
         DeclarationNameInfo NameInfo(FD->getDeclName(), E->getBeginLoc());
@@ -3424,8 +3425,7 @@ static Expr *GenerateInitLists(ASTContext &Ctx, QualType Ty,
       RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
     }
     while (!RecordTypes.empty()) {
-      const RecordType *RT = RecordTypes.back();
-      RecordTypes.pop_back();
+      const RecordType *RT = RecordTypes.pop_back_val();
       for (auto *FD : RT->getDecl()->fields()) {
         Inits.push_back(GenerateInitLists(Ctx, FD->getType(), It));
       }

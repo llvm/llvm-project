@@ -3026,7 +3026,7 @@ private:
 
     if (!NextToken ||
         NextToken->isOneOf(tok::arrow, tok::equal, tok::comma, tok::r_paren,
-                           TT_RequiresClause) ||
+                           TT_RequiresClause, TT_FunctionDeclarationLParen) ||
         (NextToken->is(tok::kw_noexcept) && !IsExpression) ||
         NextToken->canBePointerOrReferenceQualifier() ||
         (NextToken->is(tok::l_brace) && !NextToken->getNextNonComment())) {
@@ -3977,8 +3977,10 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   FormatToken *AfterLastAttribute = nullptr;
   FormatToken *ClosingParen = nullptr;
 
-  for (auto *Tok = FirstNonComment ? FirstNonComment->Next : nullptr; Tok;
-       Tok = Tok->Next) {
+  for (auto *Tok = FirstNonComment && FirstNonComment->isNot(tok::kw_using)
+                       ? FirstNonComment->Next
+                       : nullptr;
+       Tok; Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
     if (Tok->Previous->EndsCppAttributeGroup)
@@ -4153,8 +4155,18 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
                              ChildSize + Current->SpacesRequiredBefore;
     }
 
-    if (Current->is(TT_CtorInitializerColon))
+    if (Current->is(TT_ControlStatementLBrace)) {
+      if (Style.ColumnLimit > 0 &&
+          Style.BraceWrapping.AfterControlStatement ==
+              FormatStyle::BWACS_MultiLine &&
+          Line.Level * Style.IndentWidth + Line.Last->TotalLength >
+              Style.ColumnLimit) {
+        Current->CanBreakBefore = true;
+        Current->MustBreakBefore = true;
+      }
+    } else if (Current->is(TT_CtorInitializerColon)) {
       InFunctionDecl = false;
+    }
 
     // FIXME: Only calculate this if CanBreakBefore is true once static
     // initializers etc. are sorted out.
@@ -5586,11 +5598,12 @@ static bool isAllmanLambdaBrace(const FormatToken &Tok) {
 
 bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
                                      const FormatToken &Right) const {
-  const FormatToken &Left = *Right.Previous;
   if (Right.NewlinesBefore > 1 && Style.MaxEmptyLinesToKeep > 0 &&
       (!Style.RemoveEmptyLinesInUnwrappedLines || &Right == Line.First)) {
     return true;
   }
+
+  const FormatToken &Left = *Right.Previous;
 
   if (Style.BreakFunctionDefinitionParameters && Line.MightBeFunctionDecl &&
       Line.mightBeFunctionDefinition() && Left.MightBeFunctionDeclParen &&

@@ -5231,7 +5231,7 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
   // Add the final conversion sequence, if necessary.
   if (NewRefRelationship == Sema::Ref_Incompatible) {
-    assert(!isa<CXXConstructorDecl>(Function) &&
+    assert(Best->HasFinalConversion && !isa<CXXConstructorDecl>(Function) &&
            "should not have conversion after constructor");
 
     ImplicitConversionSequence ICS;
@@ -6200,6 +6200,7 @@ static void TryUserDefinedConversion(Sema &S,
 
   // If the conversion following the call to the conversion function
   // is interesting, add it as a separate step.
+  assert(Best->HasFinalConversion);
   if (Best->FinalConversion.First || Best->FinalConversion.Second ||
       Best->FinalConversion.Third) {
     ImplicitConversionSequence ICS;
@@ -8301,6 +8302,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
             Kind.getRange().getEnd());
       } else {
         CurInit = new (S.Context) ImplicitValueInitExpr(Step->Type);
+        // Note the return value isn't used to return a ExprError() when
+        // initialization fails . For struct initialization allows all field
+        // assignments to be checked rather than bailing on the first error.
+        S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                          AssignmentAction::Initializing,
+                                          Step->Type, CurInit.get());
       }
       break;
     }
@@ -8346,6 +8353,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
         }
       }
+
+      // Note the return value isn't used to return a ExprError() when
+      // initialization fails. For struct initialization this allows all field
+      // assignments to be checked rather than bailing on the first error.
+      S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                        getAssignmentAction(Entity, true),
+                                        Step->Type, InitialCurInit.get());
 
       bool Complained;
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),
@@ -10029,12 +10043,19 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     //   When [...] the constructor [...] is a candidate by
     //    - [over.match.copy] (in all cases)
     if (TD) {
-      SmallVector<Expr *, 8> TmpInits;
-      for (Expr *E : Inits)
+
+      // As template candidates are not deduced immediately,
+      // persist the array in the overload set.
+      MutableArrayRef<Expr *> TmpInits =
+          Candidates.getPersistentArgsArray(Inits.size());
+
+      for (auto [I, E] : llvm::enumerate(Inits)) {
         if (auto *DI = dyn_cast<DesignatedInitExpr>(E))
-          TmpInits.push_back(DI->getInit());
+          TmpInits[I] = DI->getInit();
         else
-          TmpInits.push_back(E);
+          TmpInits[I] = E;
+      }
+
       AddTemplateOverloadCandidate(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
           /*SuppressUserConversions=*/false,

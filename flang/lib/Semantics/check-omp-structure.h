@@ -318,10 +318,12 @@ private:
 
   void CheckAlignValue(const parser::OmpClause &);
 
+  void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
-  template <typename D> void CheckHintClause(D *, D *);
+  template <typename D> void CheckHintClause(D *, D *, std::string_view);
   inline void ErrIfAllocatableVariable(const parser::Variable &);
   inline void ErrIfLHSAndRHSSymbolsMatch(
       const parser::Variable &, const parser::Expr &);
