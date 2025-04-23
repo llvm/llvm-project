@@ -3799,6 +3799,7 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                               const SDLoc &DL, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
 
   if (AMDGPU::isKernel(CallConv)) {
     return AMDGPUTargetLowering::LowerReturn(Chain, CallConv, isVarArg, Outs,
@@ -3825,6 +3826,8 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<SDValue, 48> RetOps;
   RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
 
+  SDValue ReadFirstLane =
+      DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
   // Copy the result values into the output registers.
   for (unsigned I = 0, RealRVLocIdx = 0, E = RVLocs.size(); I != E;
        ++I, ++RealRVLocIdx) {
@@ -3852,7 +3855,9 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     default:
       llvm_unreachable("Unknown loc info!");
     }
-
+    if (TRI->isSGPRPhysReg(VA.getLocReg()))
+      Arg = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Arg.getValueType(),
+                        ReadFirstLane, Arg);
     Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Arg, Glue);
     Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
@@ -10269,14 +10274,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                             SIInstrInfo::MO_ABS32_LO);
     return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};
   }
-  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
-  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
-  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8:
   case Intrinsic::amdgcn_swmmac_f16_16x16x32_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x32_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf16:
@@ -10295,6 +10292,24 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                        Op.getOperand(3), IndexKeyi32);
   }
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f32_16x16x128_bf8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_fp8_bf8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_fp8:
+  case Intrinsic::amdgcn_swmmac_f16_16x16x128_bf8_bf8: {
+    if (Op.getOperand(4).getValueType() == MVT::i32)
+      return SDValue();
+
+    SDLoc SL(Op);
+    auto IndexKeyi32 = DAG.getAnyExtOrTrunc(Op.getOperand(4), SL, MVT::i32);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
+                       {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
+                        Op.getOperand(3), IndexKeyi32, Op.getOperand(5),
+                        Op.getOperand(6)});
+  }
   case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
   case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
   case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:
@@ -10309,7 +10324,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, Op.getValueType(),
                        {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                         Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
-                        IndexKeyi32}); // No clamp operand
+                        IndexKeyi32, Op.getOperand(7),
+                        Op.getOperand(8)}); // No clamp operand
   }
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu4:
   case Intrinsic::amdgcn_swmmac_i32_16x16x32_iu8:
