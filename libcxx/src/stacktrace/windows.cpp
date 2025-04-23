@@ -6,22 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "win_impl.h"
+#include "stacktrace/config.h"
 
 #if defined(_LIBCPP_STACKTRACE_WINDOWS)
 
-// windows.h must be first
-#  include <windows.h>
-// other windows-specific headers
-#  include <dbghelp.h>
-#  define PSAPI_VERSION 1
-#  include <psapi.h>
-// standard headers
-#  include <cstdlib>
-#  include <mutex>
-
-#  include "dll.h"
-#  include <__stacktrace/entry.h>
+#  include "stacktrace/alloc.h"
+#  include "stacktrace/config.h"
+#  include "stacktrace/context.h"
+#  include "stacktrace/utils.h"
+#  include "stacktrace/windows.h"
+#  include <__stacktrace/basic_stacktrace.h>
+#  include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
@@ -196,6 +191,54 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void win_impl::collect(size_t skip, size_
     // differentiate between a signal, SEH exception handler, or a normal function call.
     entry.__addr_ = frame.AddrPC.Offset - 1; // Back up 1 byte to get into prev insn range
   }
+}
+
+dll::~dll() { FreeLibrary(module_); }
+
+dll::dll(char const* name) : name_(name), module_(LoadLibrary(name)) {
+  if (!module_) {
+    debug() << "LoadLibrary failed: " << name_ << ": " << GetLastError() << '\n';
+  }
+}
+
+dbghelp_dll::~dbghelp_dll() = default;
+
+dbghelp_dll& dbghelp_dll::get() {
+  dbghelp_dll ret;
+  return ret;
+}
+
+dbghelp_dll::dbghelp_dll() : dll("dbghelp.dll") {
+  // clang-format off
+if (!get_func(&ImageNtHeader, "ImageNtHeader")) { return; }
+  if (!get_func(&StackWalk64, "StackWalk64")) { return; }
+  if (!get_func(&SymCleanup, "SymCleanup")) { return; }
+  if (!get_func(&SymFunctionTableAccess64, "SymFunctionTableAccess64")) { return; }
+  if (!get_func(&SymGetLineFromAddr64, "SymGetLineFromAddr64")) { return; }
+  if (!get_func(&SymGetModuleBase64, "SymGetModuleBase64")) { return; }
+  if (!get_func(&SymGetOptions, "SymGetOptions")) { return; }
+  if (!get_func(&SymGetSymFromAddr64, "SymGetSymFromAddr64")) { return; }
+  if (!get_func(&SymInitialize, "SymInitialize")) { return; }
+  if (!get_func(&SymLoadModule64, "SymLoadModule64")) { return; }
+  if (!get_func(&SymSetOptions, "SymSetOptions")) { return; }
+  valid_ = true;
+  // clang-format on
+}
+
+psapi_dll::~psapi_dll() = default;
+
+psapi_dll& psapi_dll::get() {
+  psapi_dll ret;
+  return ret;
+}
+
+psapi_dll() : dll("psapi.dll") {
+  // clang-format off
+if (!getFunc(&EnumProcessModules, "EnumProcessModules")) { return; }
+  if (!getFunc(&GetModuleInformation, "GetModuleInformation")) { return; }
+  if (!getFunc(&GetModuleBaseName, "GetModuleBaseNameA")) { return; }
+  valid_ = true;
+  // clang-format on
 }
 
 } // namespace __stacktrace

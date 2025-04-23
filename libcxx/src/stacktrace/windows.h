@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_WINDOWS_DBGHELP_DLL_H
-#define _LIBCPP_STACKTRACE_WINDOWS_DBGHELP_DLL_H
-
-#include "../common/config.h"
+#ifndef _LIBCPP_STACKTRACE_WIN_IMPL_H
+#define _LIBCPP_STACKTRACE_WIN_IMPL_H
 
 #if defined(_LIBCPP_STACKTRACE_WINDOWS)
 // windows.h must be first
@@ -18,19 +16,64 @@
 #  include <dbghelp.h>
 #  define PSAPI_VERSION 1
 #  include <psapi.h>
-// standard headers
-#  include <cstdlib>
-#  include <mutex>
+#endif
 
-#  include <__stacktrace/entry.h>
-
-#  include "../common/debug.h"
-#  include "dll.h"
+#include <__config>
+#include <__config_site>
+#include <cstddef>
+#include <cstdlib>
+#include <mutex>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
+struct context;
+
+struct win_impl {
+  context& cx_;
+  std::lock_guard<std::mutex> guard_;
+  win_impl(context& trace);
+  ~win_impl();
+
+  void collect(size_t skip, size_t max_depth);
+  void ident_modules();
+  void symbolize();
+  void resolve_lines();
+};
+
+#if defined(_LIBCPP_STACKTRACE_WINDOWS)
+
 // clang-format off
+
+struct dll {
+  char const* name_;
+  HMODULE module_;
+  /** Set to true in subclass's ctor if initialized successfully. */
+  bool valid_{false};
+
+  operator bool() const { return valid_; }
+
+  explicit dll(char const* name)
+      : name_(name), module_(LoadLibrary(name)) {
+    if (!module_) {
+      debug() << "LoadLibrary failed: "
+              << name_ << ": " << GetLastError() << '\n';
+    }
+  }
+
+  virtual ~dll() { FreeLibrary(module_); }
+
+  template <typename F>
+  bool get_func(F* func, char const* name) {
+    if (!(*func = (F)GetProcAddress(module_, name))) {
+      debug() << "GetProcAddress failed: "
+              << name << "' (" << name_ << "): "
+              << GetLastError() << "\n";
+      return false;
+    }
+    return true;
+  }
+};
 
 struct dbghelp_dll final : dll {
   virtual ~dbghelp_dll() = default;
@@ -64,8 +107,25 @@ struct dbghelp_dll final : dll {
   }
 };
 
+struct psapi_dll final : dll {
+  virtual ~psapi_dll() = default;
+  static psapi_dll& get() { static psapi_dll ret; return ret; }
+
+  bool  (*EnumProcessModules)   (HANDLE, HMODULE*, DWORD, DWORD*);
+  bool  (*GetModuleInformation) (HANDLE, HMODULE, MODULEINFO*, DWORD);
+  DWORD (*GetModuleBaseName)    (HANDLE, HMODULE, char**, DWORD);
+
+  psapi_dll() : dll("psapi.dll") {
+    if (!get_func(&EnumProcessModules, "EnumProcessModules")) { return; }
+    if (!get_func(&GetModuleInformation, "GetModuleInformation")) { return; }
+    if (!get_func(&GetModuleBaseName, "GetModuleBaseNameA")) { return; }
+    valid_ = true;
+  }
+};
+
+#endif
+
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_WINDOWS
-#endif // _LIBCPP_STACKTRACE_WINDOWS_DBGHELP_DLL_H
+#endif // _LIBCPP_STACKTRACE_WIN_IMPL_H

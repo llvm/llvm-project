@@ -40,24 +40,12 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
-  stacktrace/alloc.cpp
-  stacktrace/common/debug.cpp
-  stacktrace/common/fd.cpp
-  stacktrace/context.cpp
-  stacktrace/linux/linux-dl.cpp
-  stacktrace/linux/linux-elf.cpp
-  stacktrace/linux/linux-sym.cpp
-  stacktrace/osx/osx.cpp
+  stacktrace/linux.cpp
+  stacktrace/osx.cpp
   stacktrace/stacktrace.cpp
-  stacktrace/tools/addr2line.cpp
-  stacktrace/tools/atos.cpp
-  stacktrace/tools/llvm_symbolizer.cpp
-  stacktrace/tools/toolspawner.cpp
-  stacktrace/unwind/unwind.cpp
-  stacktrace/windows/dbghelp_dll.cpp
-  stacktrace/windows/dll.cpp
-  stacktrace/windows/psapi_dll.cpp
-  stacktrace/windows/win_impl.cpp
+  stacktrace/tools.cpp
+  stacktrace/unwind.cpp
+  stacktrace/windows.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp

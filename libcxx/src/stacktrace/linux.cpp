@@ -6,21 +6,73 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../common/config.h"
+#include "stacktrace/config.h"
 
 #if defined(_LIBCPP_STACKTRACE_LINUX)
 
-#  include "linux.h"
-
 #  include <cassert>
 #  include <dlfcn.h>
+#  include <link.h>
+#  include <stacktrace>
 #  include <unistd.h>
 
-#  include <__stacktrace/context.h>
-#  include <__stacktrace/entry.h>
+#  include "stacktrace/config.h"
+#  include "stacktrace/context.h"
+#  include "stacktrace/linux.h"
+#  include "stacktrace/utils.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
+
+void linux::ident_modules() {
+  auto& images = images::get();
+
+  // Aside from the left/right sentinels in the array (hence the 2),
+  // are there any other real images?
+  if (images.count_ <= 2) {
+    return;
+  }
+
+  auto mainProg = images.mainProg();
+  if (mainProg) {
+    cx_.__main_prog_path_ = mainProg->name_;
+  }
+
+  unsigned index = 1; // Starts at one, and is moved around in this loop
+  for (auto& entry : cx_.__entries_) {
+    while (images[index].loaded_at_ > entry.__addr_) {
+      --index;
+    }
+    while (images[index + 1].loaded_at_ <= entry.__addr_) {
+      ++index;
+    }
+    entry.__addr_unslid_ = entry.__addr_ - images[index].slide_;
+    entry.__file_        = images[index].name_;
+  }
+}
+
+/**
+When trying to collect a stacktrace under Linux, there are narrow (but still quite common) cases where we will fail
+to resolve symbols.  Linux's `dl` doesn't want to read symbols from the non-exported symbol table at runtime,
+and older versions of `addr2line` or `llvm-symbolizer` will also not resolve these.
+
+This implementation the minimum necessary to resolve symbols.  It can identify this as an ELF (32 or 64 bits), locate
+the symbol and symbol-string table, and fill in any remaining missing symbols.
+*/
+void linux::resolve_main_elf_syms(std::string_view main_elf_name) {
+  // We can statically initialize these, because main_elf_name should be the same every time.
+  static fd_mmap _mm(main_elf_name);
+  if (_mm) {
+    static elf::ELF _this_elf(_mm.addr_);
+    if (_this_elf) {
+      for (auto& entry : cx_.__entries_) {
+        if (entry.__desc_.empty() && entry.__file_ == main_elf_name) {
+          entry.__desc_ = _this_elf.getSym(entry.__addr_unslid_).name();
+        }
+      }
+    }
+  }
+}
 
 bool symbolize_entry(entry& entry) {
   bool ret = false;

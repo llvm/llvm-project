@@ -16,14 +16,15 @@
 #include <__vector/pmr.h>
 #include <__vector/vector.h>
 #include <cstddef>
+#include <list>
 #include <string>
 
-#include <__stacktrace/alloc.h>
-#include <__stacktrace/entry.h>
+#include <__stacktrace/basic_stacktrace.h>
+#include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_HIDDEN alloc;
+struct alloc;
 struct _LIBCPP_HIDDEN entry;
 
 namespace __stacktrace {

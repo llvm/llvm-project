@@ -33,9 +33,11 @@
 #include <cstdint>
 #include <string>
 
-#include <__stacktrace/entry.h>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+namespace __stacktrace {
+struct entry;
+} // namespace __stacktrace
 
 class _LIBCPP_EXPORTED_FROM_ABI stacktrace_entry {
 public:
@@ -72,10 +74,9 @@ public:
     return __x.native_handle() <=> __y.native_handle();
   }
 
-  _LIBCPP_HIDE_FROM_ABI explicit stacktrace_entry(__stacktrace::entry&& __e)
-      : __addr_(__e.__addr_), __desc_(std::move(__e.__desc_)), __file_(std::move(__e.__file_)), __line_(__e.__line_) {}
-
 private:
+  friend struct __stacktrace::entry;
+
   uintptr_t __addr_{};
   std::string __desc_{};
   std::string __file_{};

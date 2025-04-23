@@ -10,7 +10,7 @@
 #ifndef _LIBCPP_BASIC_STACKTRACE
 #define _LIBCPP_BASIC_STACKTRACE
 
-#include <__stacktrace/entry.h>
+#include <__stacktrace/impl.h>
 #include <__stacktrace/stacktrace_entry.h>
 
 #include <__config>
@@ -33,13 +33,7 @@
 #include <__vector/swap.h>
 #include <__vector/vector.h>
 #include <cstddef>
-#include <list>
 #include <memory>
-#include <string>
-
-#include <__stacktrace/alloc.h>
-#include <__stacktrace/context.h>
-#include <__stacktrace/to_string.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -67,13 +61,7 @@ class _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace {
   [[no_unique_address]] _Allocator __alloc_;
   __entry_vec __entries_;
 
-  _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const _Allocator& __alloc, std::pmr::list<__stacktrace::entry>&& __vec)
-      : __alloc_(__alloc), __entries_(__alloc) {
-    __entries_.reserve(__vec.size());
-    for (auto& __entry : __vec) {
-      __entries_.emplace_back(std::move(__entry));
-    }
-  }
+  // _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const _Allocator& __alloc, std::pmr::list<stacktrace_entry>&& __vec);
 
 public:
   // (19.6.4.1)
@@ -96,28 +84,26 @@ public:
 
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI static basic_stacktrace
   current(const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    __stacktrace::alloc __alloc(__caller_alloc);
-    __stacktrace::context __tr{__alloc};
-    __tr.do_stacktrace(1, /* infinite max_depth */ ~0);
-    return {__caller_alloc, std::move(__tr.__entries_)};
+    return current(1, /* no __max_depth */ ~0, __caller_alloc);
   }
 
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI static basic_stacktrace
   current(size_type __skip, const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
-    __stacktrace::alloc __alloc(__caller_alloc);
-    __stacktrace::context __tr{__alloc};
-    __tr.do_stacktrace(__skip + 1, /* infinite max_depth */ ~0);
-    return {__caller_alloc, std::move(__tr.__entries_)};
+    return current(__skip + 1, /* no __max_depth */ ~0, __caller_alloc);
   }
 
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI static basic_stacktrace
   current(size_type __skip,
           size_type __max_depth,
           const allocator_type& __caller_alloc = allocator_type()) noexcept(__kNoThrowAlloc) {
+    basic_stacktrace<_Allocator> __ret{__caller_alloc};
     __stacktrace::alloc __alloc(__caller_alloc);
-    __stacktrace::context __tr{__alloc};
-    __tr.do_stacktrace(__skip + 1, __max_depth);
-    return {__caller_alloc, std::move(__tr.__entries_)};
+    auto __resize = [&__ret](size_t __sz) { __ret.__entries_.resize(__sz); };
+    auto __assign = [&__ret](size_t __index, stacktrace_entry&& __entry) {
+      __ret.__entries_.at(__index) = std::move(__entry);
+    };
+    __stacktrace::__impl(__skip + 1, __max_depth, __alloc, __resize, __assign);
+    return __ret;
   }
 
   _LIBCPP_EXPORTED_FROM_ABI constexpr ~basic_stacktrace() = default;
