@@ -107,9 +107,9 @@ AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
-void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                            TTI::UnrollingPreferences &UP,
-                                            OptimizationRemarkEmitter *ORE) {
+void AMDGPUTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   const Function &F = *L->getHeader()->getParent();
   UP.Threshold =
       F.getFnAttributeAsParsedInteger("amdgpu-unroll-threshold", 300);
@@ -270,11 +270,11 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                          TTI::PeelingPreferences &PP) {
+                                          TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-int64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
+uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
@@ -417,7 +417,7 @@ bool GCNTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
-int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
+uint64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
@@ -490,7 +490,7 @@ void GCNTTIImpl::getMemcpyLoopResidualLoweringType(
   }
 }
 
-unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
+unsigned GCNTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   // Disable unrolling if the loop is not vectorized.
   // TODO: Enable this again.
   if (VF.isScalar())
@@ -528,8 +528,7 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -707,7 +706,7 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
 
 InstructionCost
 GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                  TTI::TargetCostKind CostKind) {
+                                  TTI::TargetCostKind CostKind) const {
   if (ICA.getID() == Intrinsic::fabs)
     return 0;
 
@@ -777,7 +776,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
 InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
                                            TTI::TargetCostKind CostKind,
-                                           const Instruction *I) {
+                                           const Instruction *I) const {
   assert((I == nullptr || I->getOpcode() == Opcode) &&
          "Opcode should reflect passed instruction.");
   const bool SCost =
@@ -808,7 +807,7 @@ InstructionCost GCNTTIImpl::getCFInstrCost(unsigned Opcode,
 InstructionCost
 GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                        std::optional<FastMathFlags> FMF,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
@@ -826,7 +825,7 @@ GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 InstructionCost
 GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
                                    FastMathFlags FMF,
-                                   TTI::TargetCostKind CostKind) {
+                                   TTI::TargetCostKind CostKind) const {
   EVT OrigTy = TLI->getValueType(DL, Ty);
 
   // Computes cost on targets that have packed math instructions(which support
@@ -841,7 +840,7 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
 InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                                TTI::TargetCostKind CostKind,
                                                unsigned Index, Value *Op0,
-                                               Value *Op1) {
+                                               Value *Op1) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -1141,7 +1140,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
-                                           const Instruction *CxtI) {
+                                           const Instruction *CxtI) const {
   if (!isa<FixedVectorType>(VT))
     return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
 
@@ -1386,12 +1385,12 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
 
 void GCNTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP,
-                                         OptimizationRemarkEmitter *ORE) {
+                                         OptimizationRemarkEmitter *ORE) const {
   CommonTTI.getUnrollingPreferences(L, SE, UP, ORE);
 }
 
 void GCNTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                       TTI::PeelingPreferences &PP) {
+                                       TTI::PeelingPreferences &PP) const {
   CommonTTI.getPeelingPreferences(L, SE, PP);
 }
 

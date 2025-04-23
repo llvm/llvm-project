@@ -907,7 +907,8 @@ private:
         // { <-- current Line
         //   baz();
         // }
-        if (Line.First == Line.Last && Line.First->isNot(TT_FunctionLBrace) &&
+        if (Line.First == Line.Last &&
+            Line.First->is(TT_ControlStatementLBrace) &&
             Style.BraceWrapping.AfterControlStatement ==
                 FormatStyle::BWACS_MultiLine) {
           return 0;

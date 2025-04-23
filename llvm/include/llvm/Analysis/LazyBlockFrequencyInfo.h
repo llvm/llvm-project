@@ -122,7 +122,5 @@ public:
   void print(raw_ostream &OS, const Module *M) const override;
 };
 
-/// Helper for client passes to initialize dependent passes for LBFI.
-void initializeLazyBFIPassPass(PassRegistry &Registry);
 } // namespace llvm
 #endif
