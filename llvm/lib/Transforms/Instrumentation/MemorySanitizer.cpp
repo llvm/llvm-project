@@ -286,7 +286,7 @@ static cl::opt<MSanEmbedFaultingInstructionMode> ClEmbedFaultingInst(
         clEnumValN(
             MSanEmbedFaultingInstructionMode::Full, "full",
             "Embed the complete LLVM IR instruction (including operands).")),
-    cl::Hidden, cl::init(MSanEmbedFaultingInstructionMode::Name));
+    cl::Hidden, cl::init(MSanEmbedFaultingInstructionMode::None));
 
 static cl::opt<bool>
     ClHandleICmpExact("msan-handle-icmp-exact",
@@ -929,7 +929,7 @@ void MemorySanitizer::createUserspaceApi(Module &M,
   StringRef WarningFnName = getWarningFnName(
       TrackOrigins, Recover,
       ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None);
-  SmallVector<Type *, 4> ArgsTy = {};
+  SmallVector<Type *, 2> ArgsTy = {};
   if (TrackOrigins) {
     ArgsTy.push_back(IRB.getInt32Ty());
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
@@ -974,7 +974,7 @@ void MemorySanitizer::createUserspaceApi(Module &M,
        AccessSizeIndex++) {
     unsigned AccessSize = 1 << AccessSizeIndex;
     std::string FunctionName = "__msan_maybe_warning_" + itostr(AccessSize);
-    SmallVector<Type *, 4> ArgsTy = {IRB.getIntNTy(AccessSize * 8),
+    SmallVector<Type *, 3> ArgsTy = {IRB.getIntNTy(AccessSize * 8),
                                      IRB.getInt32Ty()};
     if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None) {
       FunctionName = "__msan_maybe_warning_instname_" + itostr(AccessSize);
@@ -1500,7 +1500,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
 
-      SmallVector<Value *, 4> Args = {
+      SmallVector<Value *, 3> Args = {
           ConvertedShadow2,
           MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)};
       if (ClEmbedFaultingInst != MSanEmbedFaultingInstructionMode::None)
