@@ -14,12 +14,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 
-using namespace clang;
+using namespace clang; // clang-tidy: avoid-namespace-std or modernize-deprecated-headers
 
 
 
 bool ASTConsumer::HandleTopLevelDecl(DeclGroupRef D)
-{ return true; } // clang-format: bad brace placement, clang-tidy: function complexity
+{ return true; } // clang-format: bad brace style, clang-tidy: no comment explaining behavior
 
 void ASTConsumer::HandleInterestingDecl(DeclGroupRef D)
 {
@@ -37,6 +37,38 @@ void ASTConsumer::HandleImplicitImportDecl(ImportDecl* D) {
 
 
 
-int unusedFunction() { int a = 42; return 0; } // clang-tidy: unused function
+// clang-tidy: unused function, magic number, dead code
+int unusedFunction() { int a = 42; return 0; } 
 
-// trailing whitespace       
+// clang-tidy: use auto instead of explicit type where obvious
+void checkVectorUsage() {
+    std::vector<int> v = {1,2,3}; // clang-format: no space after comma
+    for(std::vector<int>::iterator it=v.begin();it!=v.end();++it){ // clang-format: no spacing, clang-tidy: modernize-loop-convert
+        *it += 1;
+    }
+}
+
+
+// clang-tidy: use nullptr instead of NULL
+void *getNull() {
+    return NULL;
+}
+
+// Misleading indentation
+int confusingIndentation(int x){
+  if (x > 0)
+    if (x < 10)
+      return 1;
+    else
+      return 2; // clang-tidy: misleading indentation
+  return 0;
+}
+
+
+// Variable shadowing & unused parameter
+int shadowingIssue(int val) {
+    int val = 5; // clang-tidy: variable shadowing
+    return val;
+}
+
+// trailing whitespace on next line     
