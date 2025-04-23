@@ -8,6 +8,7 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_unsigned_v4f16_v4i50
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_unsigned_v8f16_v8i19
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_unsigned_v8f16_v8i50
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_unsigned_v8f16_v8i100
 
 ;
 ; Float to unsigned 32-bit -- Vector size variation
