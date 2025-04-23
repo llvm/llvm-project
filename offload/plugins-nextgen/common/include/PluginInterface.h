@@ -301,6 +301,7 @@ struct GenericKernelTy {
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
+    case OMP_TGT_EXEC_MODE_BARE:
     case OMP_TGT_EXEC_MODE_SPMD:
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
@@ -373,7 +374,9 @@ struct GenericKernelTy {
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
-    switch (ExecutionMode) {
+    switch (KernelEnvironment.Configuration.ExecMode) {
+    case OMP_TGT_EXEC_MODE_BARE:
+      return "BARE";
     case OMP_TGT_EXEC_MODE_SPMD:
       return "SPMD";
     case OMP_TGT_EXEC_MODE_GENERIC:
@@ -437,6 +440,10 @@ private:
                                 uint32_t BlockLimitClause[3],
                                 uint64_t LoopTripCount, uint32_t &NumThreads,
                                 bool IsNumThreadsFromUser) const;
+  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  bool isBareMode() const {
+    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
+  }
 
   /// The kernel name.
   const char *Name;
