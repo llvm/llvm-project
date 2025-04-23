@@ -3389,9 +3389,9 @@ const typename AbstractManglingParser<
     {"de", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator*"},
     {"dl", OperatorInfo::Del, /*Ary*/ false, Node::Prec::Unary,
      "operator delete"},
-    {"ds", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
+    {"ds", OperatorInfo::Member, false, Node::Prec::PtrMem,
      "operator.*"},
-    {"dt", OperatorInfo::Member, /*Named*/ false, Node::Prec::Postfix,
+    {"dt", OperatorInfo::Member, false, Node::Prec::Postfix,
      "operator."},
     {"dv", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/"},
     {"eO", OperatorInfo::Binary, false, Node::Prec::Assign, "operator^="},
@@ -3421,11 +3421,11 @@ const typename AbstractManglingParser<
     {"or", OperatorInfo::Binary, false, Node::Prec::Ior, "operator|"},
     {"pL", OperatorInfo::Binary, false, Node::Prec::Assign, "operator+="},
     {"pl", OperatorInfo::Binary, false, Node::Prec::Additive, "operator+"},
-    {"pm", OperatorInfo::Member, /*Named*/ false, Node::Prec::PtrMem,
+    {"pm", OperatorInfo::Member, false, Node::Prec::PtrMem,
      "operator->*"},
     {"pp", OperatorInfo::Postfix, false, Node::Prec::Postfix, "operator++"},
     {"ps", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator+"},
-    {"pt", OperatorInfo::Member, /*Named*/ true, Node::Prec::Postfix,
+    {"pt", OperatorInfo::Member, false, Node::Prec::Postfix,
      "operator->"},
     {"qu", OperatorInfo::Conditional, false, Node::Prec::Conditional,
      "operator?"},
@@ -3498,9 +3498,6 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
 
     if (Op->getKind() >= OperatorInfo::Unnameable)
       /* Not a nameable operator.  */
-      return nullptr;
-    if (Op->getKind() == OperatorInfo::Member && !Op->getFlag())
-      /* Not a nameable MemberExpr */
       return nullptr;
 
     return make<NameType>(Op->getName());
