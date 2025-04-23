@@ -805,8 +805,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
 bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {
   const BasicBlock *BB = FuncInfo->MBB->getBasicBlock();
   const Instruction *Term = BB->getTerminator();
-  return Term->getMetadata("amdgpu.uniform") ||
-         Term->getMetadata("structurizecfg.uniform");
+  return !CurDAG->getUniformityInfo()->isDivergent(Term);
 }
 
 bool AMDGPUDAGToDAGISel::isUnneededShiftMask(const SDNode *N,
