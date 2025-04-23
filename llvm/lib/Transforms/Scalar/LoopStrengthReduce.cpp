@@ -1535,7 +1535,7 @@ void Cost::RateFormula(const Formula &F,
   C.NumBaseAdds += (F.UnfoldedOffset.isNonZero());
 
   // Accumulate non-free scaling amounts.
-  C.ScaleCost += *getScalingFactorCost(*TTI, LU, F, *L).getValue();
+  C.ScaleCost += getScalingFactorCost(*TTI, LU, F, *L).getValue();
 
   // Tally up the non-zero immediates.
   for (const LSRFixup &Fixup : LU.Fixups) {
