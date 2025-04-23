@@ -6001,8 +6001,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     for (auto it = EHStack.find(CurrentCleanupScopeDepth); it != EHStack.end();
          ++it) {
       EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
-      if (!(Cleanup && Cleanup->getCleanup()->isRedundantBeforeReturn()))
+      // Fake uses can be safely emitted immediately prior to the tail call; we
+      // choose to emit the fake use before the call rather than after, to avoid
+      // forcing variable values from every call on the "stack" to be preserved
+      // simultaneously.
+      if (Cleanup && Cleanup->isFakeUse()) {
+        CGBuilderTy::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(CI);
+        Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
+      } else if (!(Cleanup &&
+                   Cleanup->getCleanup()->isRedundantBeforeReturn())) {
         CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
+      }
     }
     if (CI->getType()->isVoidTy())
       Builder.CreateRetVoid();
