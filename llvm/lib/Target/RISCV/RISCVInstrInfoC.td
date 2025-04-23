@@ -1012,11 +1012,15 @@ let Predicates = [HasStdExtCOrZca] in {
 def : CompressPat<(JALR X0, GPRNoX0:$rs1, 0),
                   (C_JR GPRNoX0:$rs1)>;
 let isCompressOnly = true in {
-def : CompressPat<(ADD GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
-                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
-def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
-                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+foreach Inst=[ADD, OR, XOR] in {
+  def : CompressPat<(Inst GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                    (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+  def : CompressPat<(Inst GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
+                    (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 }
+def : CompressPat<(SUB GPRNoX0:$rs1, GPRNoX0:$rs2, X0),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+} // isCompressOnly = true
 def : CompressPat<(ADDI GPRNoX0:$rs1, GPRNoX0:$rs2, 0),
                   (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 def : CompressPat<(EBREAK), (C_EBREAK)>;
@@ -1053,3 +1057,21 @@ let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : CompressPat<(SD GPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
                   (C_SDSP GPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm)>;
 } // Predicates = [HasStdExtCOrZca, IsRV64]
+
+let isCompressOnly = true, Predicates = [HasStdExtCOrZca, HasStdExtZba] in {
+def : CompressPat<(SH1ADD GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(SH2ADD GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(SH3ADD GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+} // isCompressOnly = true, Predicates = [HasStdExtCOrZca, HasStdExtZba]
+
+let isCompressOnly = true, Predicates = [HasStdExtCOrZca, HasStdExtZba, IsRV64] in {
+def : CompressPat<(SH1ADD_UW GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(SH2ADD_UW GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+def : CompressPat<(SH3ADD_UW GPRNoX0:$rs1, X0, GPRNoX0:$rs2),
+                  (C_MV GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+} // isCompressOnly = true, Predicates = [HasStdExtCOrZca, HasStdExtZba, IsRV64]
