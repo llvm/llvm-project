@@ -2599,6 +2599,8 @@ static bool isWorthFoldingAdd(SDValue Add) {
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
       return false;
+    if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
+      return false;
   }
 
   return true;
