@@ -3468,7 +3468,6 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_fpmath:
     case LLVMContext::MD_tbaa_struct:
     case LLVMContext::MD_invariant_load:
-    case LLVMContext::MD_invariant_group:
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:

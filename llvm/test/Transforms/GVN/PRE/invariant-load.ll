@@ -162,7 +162,7 @@ define i32 @test8(i1 %cnd, ptr %p) {
 ; CHECK-NEXT:    br i1 [[CND]], label [[TAKEN:%.*]], label [[MERGE:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    [[P2:%.*]] = call ptr (...) @bar(ptr [[P]])
-; CHECK-NEXT:    [[V2_PRE:%.*]] = load i32, ptr [[P2]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[V2_PRE:%.*]] = load i32, ptr [[P2]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[V2:%.*]] = phi i32 [ [[V1]], [[ENTRY:%.*]] ], [ [[V2_PRE]], [[TAKEN]] ]

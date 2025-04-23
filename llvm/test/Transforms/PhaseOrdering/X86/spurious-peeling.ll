@@ -60,12 +60,12 @@ define dso_local void @_Z13vecIncFromPtrP12FloatVecPair(ptr %FVP) {
 ; O23-NEXT:    [[ARRAYIDX_I4_I:%.*]] = getelementptr inbounds [[CLASS_HOMEMADEVECTOR_0]], ptr [[TMP3]], i64 undef
 ; O23-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[ARRAYIDX_I4_I]], align 8, !tbaa [[TBAA8]]
 ; O23-NEXT:    [[ARRAYIDX_I5_I:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 undef
-; O23-NEXT:    [[DOTPRE_I:%.*]] = load float, ptr [[ARRAYIDX_I5_I]], align 4, !tbaa [[TBAA9:![0-9]+]]
+; O23-NEXT:    [[DOTPRE_I:%.*]] = load float, ptr [[ARRAYIDX_I5_I]], align 4
 ; O23-NEXT:    br label [[FOR_BODY7_I:%.*]]
 ; O23:       for.body7.i:
 ; O23-NEXT:    [[TMP5:%.*]] = phi float [ [[DOTPRE_I]], [[FOR_BODY7_LR_PH_I]] ], [ [[ADD_I:%.*]], [[FOR_BODY7_I]] ]
 ; O23-NEXT:    [[J_07_I:%.*]] = phi i32 [ 0, [[FOR_BODY7_LR_PH_I]] ], [ [[INC_I:%.*]], [[FOR_BODY7_I]] ]
-; O23-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX_I3_I]], align 4, !tbaa [[TBAA9]]
+; O23-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX_I3_I]], align 4, !tbaa [[TBAA9:![0-9]+]]
 ; O23-NEXT:    [[ADD_I]] = fadd float [[TMP5]], [[TMP6]]
 ; O23-NEXT:    store float [[ADD_I]], ptr [[ARRAYIDX_I5_I]], align 4, !tbaa [[TBAA9]]
 ; O23-NEXT:    [[INC_I]] = add nuw i32 [[J_07_I]], 1

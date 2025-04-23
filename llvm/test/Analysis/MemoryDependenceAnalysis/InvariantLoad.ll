@@ -10,8 +10,8 @@ declare void @foo(ptr)
 define i8 @test(i1 %cmp) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[P:%.*]] = alloca i8
-; CHECK-NEXT:    store i8 5, ptr [[P]]
+; CHECK-NEXT:    [[P:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 5, ptr [[P]], align 1
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
 ; CHECK-NEXT:    [[V:%.*]] = phi i8 [ 5, [[ENTRY:%.*]] ], [ -5, [[ALIVE:%.*]] ]
@@ -23,7 +23,7 @@ define i8 @test(i1 %cmp) {
 ; CHECK-NEXT:    br label [[ALIVE]]
 ; CHECK:       alive:
 ; CHECK-NEXT:    [[I_2:%.*]] = phi i8 [ [[I]], [[HEADER]] ], [ [[I_1]], [[DEAD]] ]
-; CHECK-NEXT:    store i8 -5, ptr [[P]]
+; CHECK-NEXT:    store i8 -5, ptr [[P]], align 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[P]], i8 0, i32 1, i1 false)
 ; CHECK-NEXT:    [[I_INC]] = add i8 [[I_2]], 1
 ; CHECK-NEXT:    [[CMP_LOOP:%.*]] = icmp ugt i8 [[I_INC]], 100
@@ -67,7 +67,7 @@ define i8 @test2(i1 %cmp, ptr %p) {
 ; CHECK-NEXT:    call void @foo(ptr [[P]])
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[B2:%.*]], label [[B1:%.*]]
 ; CHECK:       b1:
-; CHECK-NEXT:    [[RES2:%.*]] = load i8, ptr [[P]]
+; CHECK-NEXT:    [[RES2:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    [[RES3:%.*]] = add i8 [[RES1]], [[RES2]]
 ; CHECK-NEXT:    br label [[ALIVE:%.*]]
 ; CHECK:       b2:
@@ -105,7 +105,7 @@ define i8 @test3(i1 %cmp, ptr %p) {
 ; CHECK-NEXT:    call void @foo(ptr [[P]])
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[B1:%.*]], label [[B2:%.*]]
 ; CHECK:       b1:
-; CHECK-NEXT:    [[RES2:%.*]] = load i8, ptr [[P]]
+; CHECK-NEXT:    [[RES2:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    [[RES3:%.*]] = add i8 [[RES1]], [[RES2]]
 ; CHECK-NEXT:    br label [[ALIVE:%.*]]
 ; CHECK:       b2:
@@ -148,7 +148,7 @@ define void @test4() null_pointer_is_valid {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul float [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    [[INVAR_INC3]] = add nuw nsw i64 [[FUSION_INVAR_ADDRESS_DIM_0_03]], 1
 ; CHECK-NEXT:    [[DOTPHI_TRANS_INSERT:%.*]] = getelementptr inbounds [2 x [1 x [4 x float]]], ptr null, i64 0, i64 [[INVAR_INC3]], i64 0, i64 2
-; CHECK-NEXT:    [[DOTPRE]] = load float, ptr [[DOTPHI_TRANS_INSERT]], align 4, !invariant.load !0
+; CHECK-NEXT:    [[DOTPRE]] = load float, ptr [[DOTPHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    br label [[FUSION_LOOP_HEADER_DIM_1_PREHEADER]]
 ;
 entry:

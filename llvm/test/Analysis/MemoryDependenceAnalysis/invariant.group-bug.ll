@@ -29,7 +29,7 @@ define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3, i1
 ; CHECK-NEXT:    br i1 [[ARG4:%.*]], label [[BB10:%.*]], label [[BB29:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[I14_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 22
-; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load [[META6]]
+; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8
 ; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0) #[[ATTR1]]

@@ -6,23 +6,20 @@ define i32 @main(i64 %x, ptr %d, ptr noalias %p) {
 ; CHECK-SAME: (i64 [[X:%.*]], ptr [[D:%.*]], ptr noalias [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T1_PRE_PRE_PRE:%.*]] = load ptr, ptr [[P]], align 8
-; CHECK-NEXT:    [[T2_PRE_PRE_PRE:%.*]] = load ptr, ptr [[T1_PRE_PRE_PRE]], align 8, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[T2_PRE_PRE_PRE:%.*]] = load ptr, ptr [[T1_PRE_PRE_PRE]], align 8
 ; CHECK-NEXT:    [[T3_PRE_PRE_PRE:%.*]] = load ptr, ptr [[T2_PRE_PRE_PRE]], align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[T2_PRE_PRE:%.*]] = phi ptr [ [[T2_PRE_PRE23:%.*]], [[LOOP_LATCH:%.*]] ], [ [[T2_PRE_PRE_PRE]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[T1_PRE_PRE:%.*]] = phi ptr [ [[T1_PRE_PRE19:%.*]], [[LOOP_LATCH]] ], [ [[T1_PRE_PRE_PRE]], [[ENTRY]] ]
+; CHECK-NEXT:    [[T1_PRE_PRE:%.*]] = phi ptr [ [[T1_PRE_PRE19:%.*]], [[LOOP_LATCH:%.*]] ], [ [[T1_PRE_PRE_PRE]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[T2_PRE_PRE25:%.*]] = phi ptr [ [[T2_PRE_PRE23]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE:%.*]] ], [ [[T2_PRE_PRE]], [[LOOP]] ]
-; CHECK-NEXT:    [[T1_PRE_PRE21:%.*]] = phi ptr [ [[T1_PRE_PRE19]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T1_PRE_PRE]], [[LOOP]] ]
+; CHECK-NEXT:    [[T1_PRE_PRE21:%.*]] = phi ptr [ [[T1_PRE_PRE19]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE:%.*]] ], [ [[T1_PRE_PRE]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T3_PRE:%.*]] = phi ptr [ [[T3_PRE16:%.*]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T3_PRE_PRE_PRE]], [[LOOP]] ]
-; CHECK-NEXT:    [[T2_PRE:%.*]] = phi ptr [ [[T2_PRE13:%.*]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T2_PRE_PRE]], [[LOOP]] ]
+; CHECK-NEXT:    [[T2_PRE:%.*]] = phi ptr [ [[T2_PRE13:%.*]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T2_PRE_PRE_PRE]], [[LOOP]] ]
 ; CHECK-NEXT:    [[T1_PRE:%.*]] = phi ptr [ [[T1_PRE10:%.*]], [[LOOP2_LATCH_LOOP2_CRIT_EDGE]] ], [ [[T1_PRE_PRE]], [[LOOP]] ]
 ; CHECK-NEXT:    br label [[LOOP3:%.*]]
 ; CHECK:       loop3:
-; CHECK-NEXT:    [[T2_PRE_PRE24:%.*]] = phi ptr [ [[T2_PRE_PRE23]], [[LOOP3_LATCH:%.*]] ], [ [[T2_PRE_PRE25]], [[LOOP2]] ]
-; CHECK-NEXT:    [[T1_PRE_PRE20:%.*]] = phi ptr [ [[T1_PRE_PRE19]], [[LOOP3_LATCH]] ], [ [[T1_PRE_PRE21]], [[LOOP2]] ]
+; CHECK-NEXT:    [[T1_PRE_PRE20:%.*]] = phi ptr [ [[T1_PRE_PRE19]], [[LOOP3_LATCH:%.*]] ], [ [[T1_PRE_PRE21]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[T3_PRE17:%.*]] = phi ptr [ [[T3_PRE16]], [[LOOP3_LATCH]] ], [ [[T3_PRE]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[T2_PRE14:%.*]] = phi ptr [ [[T2_PRE13]], [[LOOP3_LATCH]] ], [ [[T2_PRE]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[T1_PRE11:%.*]] = phi ptr [ [[T1_PRE10]], [[LOOP3_LATCH]] ], [ [[T1_PRE]], [[LOOP2]] ]
@@ -36,11 +33,10 @@ define i32 @main(i64 %x, ptr %d, ptr noalias %p) {
 ; CHECK:       for.body.lr.ph.i:
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    [[T5_PRE:%.*]] = load ptr, ptr [[P]], align 8
-; CHECK-NEXT:    [[T6_PRE:%.*]] = load ptr, ptr [[T5_PRE]], align 8, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[T6_PRE:%.*]] = load ptr, ptr [[T5_PRE]], align 8
 ; CHECK-NEXT:    [[T7_PRE:%.*]] = load ptr, ptr [[T6_PRE]], align 8
 ; CHECK-NEXT:    br label [[LOOP3_LATCH]]
 ; CHECK:       loop3.latch:
-; CHECK-NEXT:    [[T2_PRE_PRE23]] = phi ptr [ [[T2_PRE_PRE24]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T6_PRE]], [[FOR_BODY_LR_PH_I]] ]
 ; CHECK-NEXT:    [[T1_PRE_PRE19]] = phi ptr [ [[T1_PRE_PRE20]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T5_PRE]], [[FOR_BODY_LR_PH_I]] ]
 ; CHECK-NEXT:    [[T3_PRE16]] = phi ptr [ [[T3_PRE17]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T7_PRE]], [[FOR_BODY_LR_PH_I]] ]
 ; CHECK-NEXT:    [[T2_PRE13]] = phi ptr [ [[T2_PRE14]], [[LOOP3_LOOP3_LATCH_CRIT_EDGE]] ], [ [[T6_PRE]], [[FOR_BODY_LR_PH_I]] ]
@@ -54,7 +50,7 @@ define i32 @main(i64 %x, ptr %d, ptr noalias %p) {
 ; CHECK:       loop2.latch.loop2_crit_edge:
 ; CHECK-NEXT:    br label [[LOOP2]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    store i32 0, ptr [[D]], align 4, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    store i32 0, ptr [[D]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:

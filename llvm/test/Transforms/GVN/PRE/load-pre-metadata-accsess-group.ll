@@ -13,14 +13,14 @@ define dso_local void @test1(ptr nocapture readonly %aa, ptr nocapture %bb) loca
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], [[ENTRY:%.*]] ], [ [[DOTPRE:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[IDX4:%.*]] = getelementptr inbounds i32, ptr [[AA]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[IDX4]], align 4, !llvm.access.group !0
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[IDX4]], align 4, !llvm.access.group [[ACC_GRP0:![0-9]+]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    store i32 [[MUL]], ptr [[IDX4]], align 4, !llvm.access.group !0
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[IDX4]], align 4, !llvm.access.group [[ACC_GRP0]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.for.body_crit_edge:
-; CHECK-NEXT:    [[DOTPRE]] = load i32, ptr [[IDX]], align 4, !llvm.access.group !0
+; CHECK-NEXT:    [[DOTPRE]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -65,10 +65,10 @@ define dso_local void @test2(ptr nocapture readonly %aa, ptr nocapture %bb) loca
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[DOTPRE]], [[FOR_BODY]] ], [ [[MUL:%.*]], [[FOR_BODY2_FOR_BODY2_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[INDVARS2_IV:%.*]] = phi i64 [ 0, [[FOR_BODY]] ], [ 1, [[FOR_BODY2_FOR_BODY2_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[MUL]] = mul nsw i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    store i32 [[MUL]], ptr [[AA]], align 4, !llvm.access.group !1
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[AA]], align 4, !llvm.access.group [[ACC_GRP1:![0-9]+]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY2_FOR_BODY2_CRIT_EDGE]], label [[FOR_END:%.*]]
 ; CHECK:       for.body2.for.body2_crit_edge:
-; CHECK-NEXT:    [[DOTPRE1]] = load i32, ptr [[IDX]], align 4, !llvm.access.group !1
+; CHECK-NEXT:    [[DOTPRE1]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY2]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br i1 false, label [[FOR_END_FOR_BODY_CRIT_EDGE:%.*]], label [[END:%.*]]

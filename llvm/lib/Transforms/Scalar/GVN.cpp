@@ -1516,7 +1516,10 @@ void GVNPass::eliminatePartiallyRedundantLoad(
         MSSAU->insertUse(cast<MemoryUse>(NewAccess), /*RenameUses=*/true);
     }
 
-    copyMetadataForLoad(*NewLoad, *Load);
+    NewLoad->copyMetadata(*Load);
+    // Drop UB-implying metadata as we do not know if it is guaranteed to
+    // transfer the execution to the original load.
+    NewLoad->dropUBImplyingAttrsAndMetadata();
 
     // Add the newly created load.
     ValuesPerBlock.push_back(

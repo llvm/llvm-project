@@ -128,6 +128,54 @@ NO:
   call void @g()
   ret i32 1
 }
+
+declare void @callee() memory(none)
+
+define i32 @pre_metadata_may_throw_speculative(i1 %cond) {
+; CHECK-LABEL: @pre_metadata_may_throw_speculative(
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[C:%.*]]
+; CHECK:       C.thread:
+; CHECK-NEXT:    store i32 0, ptr @x, align 4
+; CHECK-NEXT:    call void @callee()
+; CHECK-NEXT:    br label [[YES:%.*]]
+; CHECK:       C:
+; CHECK-NEXT:    [[A_PR:%.*]] = load i32, ptr @x, align 4, !range [[RNG0]]
+; CHECK-NEXT:    call void @callee()
+; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[A_PR]], 0
+; CHECK-NEXT:    br i1 [[COND2]], label [[YES]], label [[NO:%.*]]
+; CHECK:       YES:
+; CHECK-NEXT:    [[A3:%.*]] = phi i32 [ 0, [[A]] ], [ [[A_PR]], [[C]] ]
+; CHECK-NEXT:    call void @f()
+; CHECK-NEXT:    ret i32 [[A3]]
+; CHECK:       NO:
+; CHECK-NEXT:    call void @g()
+; CHECK-NEXT:    ret i32 1
+;
+  br i1 %cond, label %A, label %B
+
+A:
+  store i32 0, ptr @x, align 4
+  br label %C
+
+B:
+  br label %C
+
+C:
+  call void @callee()
+  %a = load i32, ptr @x, align 4, !range !{i32 0, i32 2}, !noundef !{}
+  %cond2 = icmp eq i32 %a, 0
+  br i1 %cond2, label %YES, label %NO
+
+YES:
+  call void @f()
+  ret i32 %a
+
+NO:
+  call void @g()
+  ret i32 1
+}
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { memory(none) }
 ;.
 ; CHECK: [[RNG0]] = !{i32 0, i32 2}
 ; CHECK: [[META1]] = !{}

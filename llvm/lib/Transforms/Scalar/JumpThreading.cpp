@@ -1362,11 +1362,14 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // farther than to a predecessor, we need to reuse the code from GVN's PRE.
   // It requires domination tree analysis, so for this simple case it is an
   // overkill.
+  bool TransfersExecution = false;
   if (PredsScanned.size() != AvailablePreds.size() &&
-      !isSafeToSpeculativelyExecute(LoadI))
+      !isSafeToSpeculativelyExecute(LoadI)) {
     for (auto I = LoadBB->begin(); &*I != LoadI; ++I)
       if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
         return false;
+    TransfersExecution = true;
+  }
 
   // If there is exactly one predecessor where the value is unavailable, the
   // already computed 'OneUnavailablePred' block is it.  If it ends in an
@@ -1407,7 +1410,11 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
         LoadI->getOrdering(), LoadI->getSyncScopeID(),
         UnavailablePred->getTerminator()->getIterator());
     NewVal->setDebugLoc(LoadI->getDebugLoc());
-    copyMetadataForLoad(*NewVal, *LoadI);
+    NewVal->copyMetadata(*LoadI);
+    // Drop UB-implying metadata if we do not know it is guaranteed to transfer
+    // the execution to the original load.
+    if (!TransfersExecution)
+      NewVal->dropUBImplyingAttrsAndMetadata();
 
     AvailablePreds.emplace_back(UnavailablePred, NewVal);
   }
