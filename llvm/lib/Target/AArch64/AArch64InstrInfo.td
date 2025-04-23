@@ -779,6 +779,8 @@ def AArch64csneg         : SDNode<"AArch64ISD::CSNEG", SDT_AArch64CSel>;
 def AArch64csinc         : SDNode<"AArch64ISD::CSINC", SDT_AArch64CSel>;
 def AArch64retglue       : SDNode<"AArch64ISD::RET_GLUE", SDTNone,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def AArch64ret_popless   : SDNode<"AArch64ISD::RET_POPLESS", SDTNone,
+                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def AArch64adc       : SDNode<"AArch64ISD::ADC",  SDTBinaryArithWithFlagsIn >;
 def AArch64sbc       : SDNode<"AArch64ISD::SBC",  SDTBinaryArithWithFlagsIn>;
 def AArch64add_flag  : SDNode<"AArch64ISD::ADDS",  SDTBinaryArithWithFlagsOut,
@@ -3315,6 +3317,13 @@ def BR  : BranchReg<0b0000, "br", [(brind GPR64:$Rn)]>;
 // flag lr as used in every function. It'll be restored before the RET by the
 // epilogue if it's legitimately used.
 def RET_ReallyLR : Pseudo<(outs), (ins), [(AArch64retglue)]>,
+                   Sched<[WriteBrReg]> {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+}
+
+def RET_POPLESS : Pseudo<(outs), (ins), [(AArch64ret_popless)]>,
                    Sched<[WriteBrReg]> {
   let isTerminator = 1;
   let isBarrier = 1;

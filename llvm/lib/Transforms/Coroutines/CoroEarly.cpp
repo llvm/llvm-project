@@ -209,6 +209,7 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
         break;
       case Intrinsic::coro_id_retcon:
       case Intrinsic::coro_id_retcon_once:
+      case Intrinsic::coro_id_retcon_once_dynamic:
       case Intrinsic::coro_id_async:
         F.setPresplitCoroutine();
         break;

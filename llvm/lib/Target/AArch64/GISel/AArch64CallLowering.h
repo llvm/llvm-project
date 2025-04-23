@@ -39,6 +39,8 @@ public:
                       SmallVectorImpl<BaseArgInfo> &Outs,
                       bool IsVarArg) const override;
 
+  bool adjustReturnToPopless(MachineIRBuilder &MIRBuilder) const override;
+
   bool fallBackToDAGISel(const MachineFunction &MF) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,

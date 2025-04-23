@@ -135,6 +135,7 @@ public:
     auto ID = I->getIntrinsicID();
     return ID == Intrinsic::coro_id || ID == Intrinsic::coro_id_retcon ||
            ID == Intrinsic::coro_id_retcon_once ||
+           ID == Intrinsic::coro_id_retcon_once_dynamic ||
            ID == Intrinsic::coro_id_async;
   }
 
@@ -308,6 +309,72 @@ public:
   // Methods to support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::coro_id_retcon_once;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
+/// This represents the llvm.coro.id.retcon.once.dynamic instruction.
+class LLVM_LIBRARY_VISIBILITY CoroIdRetconOnceDynamicInst
+    : public AnyCoroIdInst {
+  enum {
+    SizeArg,
+    AlignArg,
+    CoroFuncPtrArg,
+    AllocatorArg,
+    StorageArg,
+    PrototypeArg,
+    AllocArg,
+    DeallocArg
+  };
+
+public:
+  void checkWellFormed() const;
+
+  uint64_t getStorageSize() const {
+    return cast<ConstantInt>(getArgOperand(SizeArg))->getZExtValue();
+  }
+
+  Align getStorageAlignment() const {
+    return cast<ConstantInt>(getArgOperand(AlignArg))->getAlignValue();
+  }
+
+  Value *getStorage() const { return getArgOperand(StorageArg); }
+
+  /// Return the coro function pointer address. This should be the address of
+  /// a coro function pointer struct for the current coro function.
+  /// struct coro_function_pointer {
+  ///   uint32_t frame size;
+  ///   uint32_t relative_pointer(coro_function);
+  ///  };
+  GlobalVariable *getCoroFunctionPointer() const {
+    return cast<GlobalVariable>(
+        getArgOperand(CoroFuncPtrArg)->stripPointerCasts());
+  }
+
+  /// Return the prototype for the continuation function.  The type,
+  /// attributes, and calling convention of the continuation function(s)
+  /// are taken from this declaration.
+  Function *getPrototype() const {
+    return cast<Function>(getArgOperand(PrototypeArg)->stripPointerCasts());
+  }
+
+  /// Return the function to use for allocating memory.
+  Function *getAllocFunction() const {
+    return cast<Function>(getArgOperand(AllocArg)->stripPointerCasts());
+  }
+
+  /// Return the function to use for deallocating memory.
+  Function *getDeallocFunction() const {
+    return cast<Function>(getArgOperand(DeallocArg)->stripPointerCasts());
+  }
+
+  Value *getAllocator() const { return getArgOperand(AllocatorArg); }
+
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_id_retcon_once_dynamic;
   }
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));

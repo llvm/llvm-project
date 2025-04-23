@@ -41,6 +41,7 @@ namespace ISD {
     unsigned IsSplitEnd : 1;   ///< Last part of a split
     unsigned IsSwiftSelf : 1;  ///< Swift self parameter
     unsigned IsSwiftAsync : 1;  ///< Swift async context parameter
+    unsigned IsSwiftCoro : 1;  ///< Swift coro parameter
     unsigned IsSwiftError : 1; ///< Swift error parameter
     unsigned IsCFGuardTarget : 1; ///< Control Flow Guard target
     unsigned IsHva : 1;        ///< HVA field for
@@ -64,6 +65,7 @@ namespace ISD {
         : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsSRet(0), IsByVal(0),
           IsByRef(0), IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
           IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
+          IsSwiftCoro(0),
           IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
@@ -103,6 +105,9 @@ namespace ISD {
 
     bool isSwiftAsync() const { return IsSwiftAsync; }
     void setSwiftAsync() { IsSwiftAsync = 1; }
+
+    bool isSwiftCoro() const { return IsSwiftCoro; }
+    void setSwiftCoro() { IsSwiftCoro = 1; }
 
     bool isSwiftError() const { return IsSwiftError; }
     void setSwiftError() { IsSwiftError = 1; }

@@ -690,7 +690,9 @@ public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
                 const PreprocessorOptions &ppopts,
-                const CodeGenOptions &CodeGenOpts, llvm::Module &M,
+                const CodeGenOptions &CodeGenOpts,
+                const TargetInfo &CodeGenTargetInfo,
+                llvm::Module &M,
                 DiagnosticsEngine &Diags,
                 CoverageSourceInfo *CoverageInfo = nullptr);
 

@@ -2239,6 +2239,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
   bool SawSwiftSelf = false;
   bool SawSwiftAsync = false;
   bool SawSwiftError = false;
+  bool SawSwiftCoro = false;
 
   // Verify return value attributes.
   AttributeSet RetAttrs = Attrs.getRetAttrs();
@@ -2313,6 +2314,11 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (ArgAttrs.hasAttribute(Attribute::SwiftError)) {
       Check(!SawSwiftError, "Cannot have multiple 'swifterror' parameters!", V);
       SawSwiftError = true;
+    }
+
+    if (ArgAttrs.hasAttribute(Attribute::SwiftCoro)) {
+      Check(!SawSwiftCoro, "Cannot have multiple 'swiftcoro' parameters!", V);
+      SawSwiftCoro = true;
     }
 
     if (ArgAttrs.hasAttribute(Attribute::InAlloca)) {
@@ -3955,6 +3961,7 @@ static AttrBuilder getParameterABIAttributes(LLVMContext& C, unsigned I, Attribu
   static const Attribute::AttrKind ABIAttrs[] = {
       Attribute::StructRet,  Attribute::ByVal,          Attribute::InAlloca,
       Attribute::InReg,      Attribute::StackAlignment, Attribute::SwiftSelf,
+      Attribute::SwiftCoro,
       Attribute::SwiftAsync, Attribute::SwiftError,     Attribute::Preallocated,
       Attribute::ByRef};
   AttrBuilder Copy(C);
@@ -3989,6 +3996,15 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
             &CI);
     }
 #endif
+    Check(CI.getIntrinsicID() != Intrinsic::ret_popless,
+          "llvm.ret.popless call must be musttail", &CI);
+    return;
+  }
+
+  // Some musttail intrinsic calls are special, and don't have all the rules.
+  if (CI.getIntrinsicID() == Intrinsic::ret_popless) {
+    ReturnInst *Ret = dyn_cast_or_null<ReturnInst>(CI.getNextNode());
+    Check(Ret, "musttail intrinsic call must precede a ret", &CI);
     return;
   }
 

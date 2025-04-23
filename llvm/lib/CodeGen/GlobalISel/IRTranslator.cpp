@@ -391,7 +391,14 @@ bool IRTranslator::translateRet(const User &U, MachineIRBuilder &MIRBuilder) {
   // The target may mess up with the insertion point, but
   // this is not important as a return is the last instruction
   // of the block anyway.
-  return CLI->lowerReturn(MIRBuilder, Ret, VRegs, FuncInfo, SwiftErrorVReg);
+  bool Success =
+      CLI->lowerReturn(MIRBuilder, Ret, VRegs, FuncInfo, SwiftErrorVReg);
+
+  if (auto *MustTailCI = RI.getParent()->getTerminatingMustTailCall())
+    if (MustTailCI->getIntrinsicID() == Intrinsic::ret_popless)
+      Success &= CLI->adjustReturnToPopless(MIRBuilder);
+
+  return Success;
 }
 
 void IRTranslator::emitBranchForMergedCondition(
@@ -2422,6 +2429,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::stackrestore: {
     MIRBuilder.buildInstr(TargetOpcode::G_STACKRESTORE, {},
                           {getOrCreateVReg(*CI.getArgOperand(0))});
+    return true;
+  }
+  case Intrinsic::ret_popless: {
+    // The ret.popless intrin call itself is only annotating the following ret.
+    // To achieve that, it does need to be musttail and reachable from the ret.
+    assert(CI.getParent()->getTerminatingMustTailCall() == &CI &&
+           "llvm.ret.popless not in musttail position");
     return true;
   }
   case Intrinsic::cttz:

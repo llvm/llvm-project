@@ -284,6 +284,10 @@ namespace CallingConv {
     RISCV_VLSCall_32768 = 122,
     RISCV_VLSCall_65536 = 123,
 
+    /// This follows the Swift calling convention in how arguments are passed
+    /// but doesn't clean up the stack on a return.
+    SwiftCoro = 124,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

@@ -27,6 +27,7 @@ namespace clang {
   class VarDecl;
   class FunctionDecl;
   class ImportDecl;
+  class TargetInfo;
 
 /// ASTConsumer - This is an abstract interface that should be implemented by
 /// clients that read ASTs.  This abstraction layer allows the client to be
@@ -46,6 +47,14 @@ public:
   /// Initialize - This is called to initialize the consumer, providing the
   /// ASTContext.
   virtual void Initialize(ASTContext &Context) {}
+
+  /// Initialize - This is called to initialize the consumer, providing the
+  /// ASTContext. 'CodeGenTargetInfo' specifies the code-generation configuration
+  /// for this compilation instance, which may differ from the one carried
+  /// by the Context itself only in the OS Version number -
+  /// for example when type-checking must be performed against an epoch OS version
+  /// while code-generation must run according to the user-specified OS version.
+  virtual void Initialize(ASTContext &Context, const TargetInfo &CodeGenTargetInfo) {}
 
   /// HandleTopLevelDecl - Handle the specified top-level declaration.  This is
   /// called by the parser to process every top-level Decl*.

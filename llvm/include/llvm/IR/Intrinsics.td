@@ -865,6 +865,20 @@ def int_localrecover : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
+// Marks the following ret instruction as a "popless" return, one that does not
+// not restore SP to its function-entry value (i.e., does not deallocate the
+// stack frame), allowing allocations made in the function to be accessible
+// by the caller.
+//
+// The function must be annotated with an appropriate target-specific calling
+// convention, so the caller can generate stack accesses accordingly, generally
+// by treating the call as a variably-sized alloca, so using FP-based addressing
+// for its own frame rather than relying on statically known SP offsets.
+//
+// Calls to this intrinsic need to be musttail, but don't follow the other ABI
+// requirements for musttail calls, since this is really annotating the ret.
+def int_ret_popless : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
+
 // Given the frame pointer passed into an SEH filter function, returns a
 // pointer to the local variable area suitable for use with llvm.localrecover.
 def int_eh_recoverfp : DefaultAttrsIntrinsic<[llvm_ptr_ty],
@@ -1741,6 +1755,10 @@ def int_coro_id_retcon : Intrinsic<[llvm_token_ty],
 def int_coro_id_retcon_once : Intrinsic<[llvm_token_ty],
     [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
      llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_vararg_ty],
+    []>;
+def int_coro_id_retcon_once_dynamic : Intrinsic<[llvm_token_ty],
+    [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty,
+     llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
     []>;
 def int_coro_alloc : Intrinsic<[llvm_i1_ty], [llvm_token_ty], []>;
 def int_coro_id_async : Intrinsic<[llvm_token_ty],

@@ -791,6 +791,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
   ATTR_KIND_SANITIZE_TYPE = 101,
   ATTR_KIND_CAPTURES = 102,
+  ATTR_KIND_SWIFT_CORO = 103,
 };
 
 enum ComdatSelectionKindCodes {

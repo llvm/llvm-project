@@ -2709,6 +2709,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::AUTH_CALL_RVMARKER)
     MAKE_CASE(AArch64ISD::LOADgot)
     MAKE_CASE(AArch64ISD::RET_GLUE)
+    MAKE_CASE(AArch64ISD::RET_POPLESS)
     MAKE_CASE(AArch64ISD::BRCOND)
     MAKE_CASE(AArch64ISD::CSEL)
     MAKE_CASE(AArch64ISD::CSINV)
@@ -7859,6 +7860,7 @@ CCAssignFn *AArch64TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::CXX_FAST_TLS:
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
+  case CallingConv::SwiftCoro:
   case CallingConv::Tail:
   case CallingConv::GRAAL:
     if (Subtarget->isTargetWindows()) {
@@ -8381,7 +8383,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (CallConv == CallingConv::PreserveNone) {
     for (const ISD::InputArg &I : Ins) {
       if (I.Flags.isSwiftSelf() || I.Flags.isSwiftError() ||
-          I.Flags.isSwiftAsync()) {
+          I.Flags.isSwiftAsync() || I.Flags.isSwiftCoro()) {
         MachineFunction &MF = DAG.getMachineFunction();
         DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
             MF.getFunction(),
@@ -8845,6 +8847,18 @@ bool AArch64TargetLowering::DoesCalleeRestoreStack(CallingConv::ID CallCC,
          CallCC == CallingConv::Tail || CallCC == CallingConv::SwiftTail;
 }
 
+SDValue AArch64TargetLowering::adjustReturnPopless(SDValue RetChain,
+                                                   SelectionDAG &DAG) const {
+  if (RetChain.getOpcode() != AArch64ISD::RET_GLUE)
+    report_fatal_error("Unsupported aarch64 return for popless ret lowering");
+
+  auto *AFI = DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  AFI->setHasPoplessEpilogue();
+
+  return DAG.getNode(AArch64ISD::RET_POPLESS, SDLoc(RetChain),
+                     MVT::Other, RetChain->ops());
+}
+
 // Check if the value is zero-extended from i1 to i8
 static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   unsigned SizeInBits = Arg.getValueType().getSizeInBits();
@@ -9036,6 +9050,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (any_of(RVLocs, HasSVERegLoc) || any_of(ArgLocs, HasSVERegLoc))
       CallConv = CallingConv::AArch64_SVE_VectorCall;
   }
+
+  if (CallConv == CallingConv::SwiftCoro)
+    MF.getFrameInfo().setHasPoplessCall();
 
   if (IsTailCall) {
     // Check if it's really possible to do a tail call.
@@ -9733,7 +9750,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CallConv == CallingConv::PreserveNone) {
     for (const ISD::OutputArg &O : Outs) {
       if (O.Flags.isSwiftSelf() || O.Flags.isSwiftError() ||
-          O.Flags.isSwiftAsync()) {
+          O.Flags.isSwiftAsync() || O.Flags.isSwiftCoro()) {
         MachineFunction &MF = DAG.getMachineFunction();
         DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
             MF.getFunction(),
