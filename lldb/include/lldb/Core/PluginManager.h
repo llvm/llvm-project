@@ -12,6 +12,7 @@
 #include "lldb/Core/Architecture.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterfaceUsages.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -377,11 +378,13 @@ public:
   static SymbolLocatorCreateInstance
   GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
 
-  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec);
+  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec,
+                                               StatisticsMap &map);
 
   static FileSpec
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
-                             const FileSpecList &default_search_paths);
+                             const FileSpecList &default_search_paths,
+                             StatisticsMap &map);
 
   static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error,

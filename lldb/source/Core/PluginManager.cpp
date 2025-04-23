@@ -1217,12 +1217,18 @@ PluginManager::GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx) {
 }
 
 ModuleSpec
-PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
+PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec,
+                                          StatisticsMap &map) {
   auto instances = GetSymbolLocatorInstances().GetSnapshot();
   for (auto &instance : instances) {
     if (instance.locate_executable_object_file) {
-      std::optional<ModuleSpec> result =
-          instance.locate_executable_object_file(module_spec);
+      StatsDuration time;
+      std::optional<ModuleSpec> result;
+      {
+        ElapsedTime elapsed(time);
+        result = instance.locate_executable_object_file(module_spec);
+      }
+      map.add(instance.name, time.get().count());
       if (result)
         return *result;
     }
@@ -1231,12 +1237,19 @@ PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
 }
 
 FileSpec PluginManager::LocateExecutableSymbolFile(
-    const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
+    const ModuleSpec &module_spec, const FileSpecList &default_search_paths,
+    StatisticsMap &map) {
   auto instances = GetSymbolLocatorInstances().GetSnapshot();
   for (auto &instance : instances) {
     if (instance.locate_executable_symbol_file) {
-      std::optional<FileSpec> result = instance.locate_executable_symbol_file(
-          module_spec, default_search_paths);
+      StatsDuration time;
+      std::optional<FileSpec> result;
+      {
+        ElapsedTime elapsed(time);
+        result = instance.locate_executable_symbol_file(module_spec,
+                                                        default_search_paths);
+      }
+      map.add(instance.name, time.get().count());
       if (result)
         return *result;
     }

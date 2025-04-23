@@ -72,6 +72,14 @@ json::Value ModuleStats::ToJSON() const {
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   module.try_emplace("symbolsLoaded", num_symbols_loaded);
+
+  if (!symbol_locator_time.map.empty()) {
+    json::Object obj;
+    for (const auto &entry : symbol_locator_time.map)
+      obj.try_emplace(entry.first().str(), entry.second);
+    module.try_emplace("symbolLocatorTime", std::move(obj));
+  }
+
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
 
@@ -289,6 +297,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
 
   json::Array json_targets;
   json::Array json_modules;
+  StatisticsMap symbol_locator_total_time;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
   double debug_parse_time = 0.0;
@@ -319,6 +328,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     ModuleStats module_stat;
     module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
+    module_stat.symbol_locator_time = module->GetSymbolLocatorStatistics();
+    symbol_locator_total_time.merge(module_stat.symbol_locator_time);
     Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
       module_stat.num_symbols_loaded = symtab->GetNumSymbols();
@@ -425,6 +436,13 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         json_targets.emplace_back(target->ReportStatistics(options));
     }
     global_stats.try_emplace("targets", std::move(json_targets));
+  }
+
+  if (!symbol_locator_total_time.map.empty()) {
+    json::Object obj;
+    for (const auto &entry : symbol_locator_total_time.map)
+      obj.try_emplace(entry.first().str(), entry.second);
+    global_stats.try_emplace("totalSymbolLocatorTime", std::move(obj));
   }
 
   ConstStringStats const_string_stats;
