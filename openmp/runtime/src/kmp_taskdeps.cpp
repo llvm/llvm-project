@@ -243,10 +243,12 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
     }
     if (!exists) {
       if (source_info->nsuccessors >= source_info->successors_size) {
+        kmp_uint old_size = source_info->successors_size;
         source_info->successors_size = 2 * source_info->successors_size;
         kmp_int32 *old_succ_ids = source_info->successors;
         kmp_int32 *new_succ_ids = (kmp_int32 *)__kmp_allocate(
             source_info->successors_size * sizeof(kmp_int32));
+        KMP_MEMCPY(new_succ_ids, old_succ_ids, old_size * sizeof(kmp_int32));
         source_info->successors = new_succ_ids;
         __kmp_free(old_succ_ids);
       }
