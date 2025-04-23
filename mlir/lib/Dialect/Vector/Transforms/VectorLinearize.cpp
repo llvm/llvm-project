@@ -908,7 +908,6 @@ void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
       [=](vector::InsertStridedSliceOp op) -> bool {
         if (isLessThanTargetBitWidth(op, targetBitWidth)) {
           auto srcTy = op.getSourceVectorType();
-          auto dstTy = op.getDestVectorType();
           if (!op.hasNonUnitStrides() && srcTy.getRank() == 2)
             return false;
         }
