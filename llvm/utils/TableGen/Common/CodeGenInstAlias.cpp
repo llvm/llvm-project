@@ -73,7 +73,7 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
         if (!ArgName)
           return createStringError("register class argument must have a name");
         return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
-                                           cast<DefInit>(Arg)->getDef());
+                                           ArgRec);
       }
 
       // Match 'Reg'.
