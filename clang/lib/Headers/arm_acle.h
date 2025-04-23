@@ -841,8 +841,9 @@ __gcspopm() {
   return __builtin_arm_gcspopm(0);
 }
 
-static __inline__ const void * __attribute__((__always_inline__, __nodebug__, target("gcs")))
-__gcsss(const void *__stack) {
+static __inline__ void *__attribute__((__always_inline__, __nodebug__,
+                                       target("gcs")))
+__gcsss(void *__stack) {
   return __builtin_arm_gcsss(__stack);
 }
 #endif
