@@ -278,10 +278,6 @@ std::optional<StringRef> AttrOrTypeParameter::getAllocator() const {
   return getDefValue<StringInit>("allocator");
 }
 
-bool AttrOrTypeParameter::hasCustomComparator() const {
-  return getDefValue<StringInit>("comparator").has_value();
-}
-
 StringRef AttrOrTypeParameter::getComparator() const {
   return getDefValue<StringInit>("comparator").value_or("$_lhs == $_rhs");
 }
