@@ -398,7 +398,7 @@ TEST(CallHierarchy, MultiFileCpp) {
         OutgoingLevel1,
         // fromRanges are interpreted in the context of Items[0]'s file.
         // If that's the header, we can't get ranges from the implementation
-        // file!      
+        // file!
         ElementsAre(
             AllOf(to(AllOf(withName("caller1"), withDetail("nsa::caller1"))),
                   IsDeclaration ? oFromRanges()

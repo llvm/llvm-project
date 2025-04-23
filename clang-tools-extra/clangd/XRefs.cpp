@@ -2426,7 +2426,7 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       }
       Results.push_back(
           CallHierarchyOutgoingCall{std::move(*CHI), std::move(FromRanges)});
-  }
+    }
   });
   // Sort results by name of the callee.
   llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,
