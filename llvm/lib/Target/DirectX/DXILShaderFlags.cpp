@@ -265,6 +265,26 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       NumUAVs += UAV.getBinding().Size;
   if (NumUAVs > 8)
     CombinedSFMask.Max64UAVs = true;
+
+  // Set UAVsAtEveryStage flag based on the presence of UAVs, the shader
+  // model version, and the shader environment
+  if (!DRM.uavs().empty()) {
+    if (MMDI.ValidatorVersion < VersionTuple(1, 8))
+      CombinedSFMask.UAVsAtEveryStage =
+          MMDI.ShaderProfile != Triple::EnvironmentType::Compute &&
+          MMDI.ShaderProfile != Triple::EnvironmentType::Pixel;
+    else // MMDI.ValidatorVersion >= VersionTuple(1, 8)
+      switch (MMDI.ShaderProfile) {
+      default:
+        break;
+      case Triple::EnvironmentType::Vertex:
+      case Triple::EnvironmentType::Hull:
+      case Triple::EnvironmentType::Domain:
+      case Triple::EnvironmentType::Geometry:
+        CombinedSFMask.UAVsAtEveryStage = true;
+        break;
+      }
+  }
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {

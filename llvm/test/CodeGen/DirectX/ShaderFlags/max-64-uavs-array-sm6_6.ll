@@ -29,5 +29,10 @@ define void @test() "hlsl.export" {
   ret void
 }
 
+; Set dx.valver and dx.resmayalias to prevent flags ResMayNotAlias and
+; UAVsAtEveryStage from being set, as to not distract from the flag that is
+; actually being tested
 !llvm.module.flags = !{!0}
+!dx.valver = !{!1}
 !0 = !{i32 1, !"dx.resmayalias", i32 1}
+!1 = !{i32 1, i32 8}
