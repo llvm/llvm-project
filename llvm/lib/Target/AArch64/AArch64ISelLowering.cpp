@@ -2595,11 +2595,6 @@ unsigned AArch64TargetLowering::ComputeNumSignBitsForTargetNode(
   case AArch64ISD::FCMEQ:
   case AArch64ISD::FCMGE:
   case AArch64ISD::FCMGT:
-  case AArch64ISD::FCMEQz:
-  case AArch64ISD::FCMGEz:
-  case AArch64ISD::FCMGTz:
-  case AArch64ISD::FCMLEz:
-  case AArch64ISD::FCMLTz:
     // Compares return either 0 or all-ones
     return VTBits;
   case AArch64ISD::VASHR: {
@@ -2816,11 +2811,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FCMEQ)
     MAKE_CASE(AArch64ISD::FCMGE)
     MAKE_CASE(AArch64ISD::FCMGT)
-    MAKE_CASE(AArch64ISD::FCMEQz)
-    MAKE_CASE(AArch64ISD::FCMGEz)
-    MAKE_CASE(AArch64ISD::FCMGTz)
-    MAKE_CASE(AArch64ISD::FCMLEz)
-    MAKE_CASE(AArch64ISD::FCMLTz)
     MAKE_CASE(AArch64ISD::SADDV)
     MAKE_CASE(AArch64ISD::UADDV)
     MAKE_CASE(AArch64ISD::UADDLV)
@@ -15829,40 +15819,19 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
   assert(VT.getSizeInBits() == SrcVT.getSizeInBits() &&
          "function only supposed to emit natural comparisons");
 
-  APInt SplatValue;
-  APInt SplatUndef;
-  unsigned SplatBitSize = 0;
-  bool HasAnyUndefs;
-
-  BuildVectorSDNode *BVN = dyn_cast<BuildVectorSDNode>(RHS.getNode());
-  bool IsCnst = BVN && BVN->isConstantSplat(SplatValue, SplatUndef,
-                                            SplatBitSize, HasAnyUndefs);
-
-  bool IsZero = IsCnst && SplatValue == 0;
-
   if (SrcVT.getVectorElementType().isFloatingPoint()) {
     switch (CC) {
     default:
       return SDValue();
     case AArch64CC::NE: {
-      SDValue Fcmeq;
-      if (IsZero)
-        Fcmeq = DAG.getNode(AArch64ISD::FCMEQz, dl, VT, LHS);
-      else
-        Fcmeq = DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
+      SDValue Fcmeq = DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
       return DAG.getNOT(dl, Fcmeq, VT);
     }
     case AArch64CC::EQ:
-      if (IsZero)
-        return DAG.getNode(AArch64ISD::FCMEQz, dl, VT, LHS);
       return DAG.getNode(AArch64ISD::FCMEQ, dl, VT, LHS, RHS);
     case AArch64CC::GE:
-      if (IsZero)
-        return DAG.getNode(AArch64ISD::FCMGEz, dl, VT, LHS);
       return DAG.getNode(AArch64ISD::FCMGE, dl, VT, LHS, RHS);
     case AArch64CC::GT:
-      if (IsZero)
-        return DAG.getNode(AArch64ISD::FCMGTz, dl, VT, LHS);
       return DAG.getNode(AArch64ISD::FCMGT, dl, VT, LHS, RHS);
     case AArch64CC::LE:
       if (!NoNans)
@@ -15870,8 +15839,6 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
       // If we ignore NaNs then we can use to the LS implementation.
       [[fallthrough]];
     case AArch64CC::LS:
-      if (IsZero)
-        return DAG.getNode(AArch64ISD::FCMLEz, dl, VT, LHS);
       return DAG.getNode(AArch64ISD::FCMGE, dl, VT, RHS, LHS);
     case AArch64CC::LT:
       if (!NoNans)
@@ -15879,8 +15846,6 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
       // If we ignore NaNs then we can use to the MI implementation.
       [[fallthrough]];
     case AArch64CC::MI:
-      if (IsZero)
-        return DAG.getNode(AArch64ISD::FCMLTz, dl, VT, LHS);
       return DAG.getNode(AArch64ISD::FCMGT, dl, VT, RHS, LHS);
     }
   }
