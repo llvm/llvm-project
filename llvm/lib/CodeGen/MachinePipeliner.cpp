@@ -239,7 +239,7 @@ INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
 
 namespace {
 
-/// This class holds an SUnit corresponing to a memory operation and other
+/// This class holds an SUnit corresponding to a memory operation and other
 /// information related to the instruction.
 struct SUnitWithMemInfo {
   SUnit *SU;
