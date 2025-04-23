@@ -240,6 +240,7 @@ public:
   RT_API_ATTRS bool noFinalizationNeeded() const {
     return noFinalizationNeeded_;
   }
+  RT_API_ATTRS bool noDefinedAssignment() const { return noDefinedAssignment_; }
 
   RT_API_ATTRS std::size_t LenParameters() const {
     return lenParameterKind().Elements();
@@ -322,6 +323,7 @@ private:
   bool noInitializationNeeded_{false};
   bool noDestructionNeeded_{false};
   bool noFinalizationNeeded_{false};
+  bool noDefinedAssignment_{false};
 };
 
 } // namespace Fortran::runtime::typeInfo
