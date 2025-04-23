@@ -142,7 +142,11 @@ public:
   const std::string *bindName() const {
     return bindName_ ? &*bindName_ : nullptr;
   }
-  void set_bindName(std::string &&name) { bindName_ = std::move(name); }
+  bool bindNameIsInternal() const {return bindNameIsInternal_;}
+  void set_bindName(std::string &&name, bool isInternal=false) { 
+    bindName_ = std::move(name); 
+    bindNameIsInternal_ = isInternal;
+  }
 
   Fortran::common::OpenACCDeviceType dType() const { return deviceType_; }
 
@@ -153,6 +157,7 @@ private:
   bool isGang_{false};
   unsigned gangDim_{0};
   std::optional<std::string> bindName_;
+  bool bindNameIsInternal_{false};
   Fortran::common::OpenACCDeviceType deviceType_{
       Fortran::common::OpenACCDeviceType::None};
 };

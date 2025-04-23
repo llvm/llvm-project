@@ -1077,10 +1077,12 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
       } else if (const auto *bindClause =
                      std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
         std::string bindName = "";
+        bool isInternal = false;
         if (const auto *name =
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
           if (Symbol *sym = ResolveFctName(*name)) {
             bindName = sym->name().ToString();
+            isInternal = true;
           } else {
             context_.Say((*name).source,
                 "No function or subroutine declared for '%s'"_err_en_US,
@@ -1100,12 +1102,14 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
         if (!bindName.empty()) {
           // Fixme: do we need to ensure there there is only one device?
           for (auto &device : currentDevices) {
-            device->set_bindName(std::string(bindName));
+            device->set_bindName(std::string(bindName), isInternal);
           }
         }
       }
     }
     symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
+  } else {
+    llvm::errs() << "Couldnot add routine info to symbol: " << symbol.name() << "\n";
   }
 }
 
