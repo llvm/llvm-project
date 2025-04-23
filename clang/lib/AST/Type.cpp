@@ -2346,16 +2346,15 @@ bool Type::isArithmeticType() const {
 }
 
 bool Type::hasBooleanRepresentation() const {
-  if (isBooleanType())
-    return true;
-
-  if (const EnumType *ET = getAs<EnumType>())
-    return ET->getDecl()->getIntegerType()->isBooleanType();
-
-  if (const AtomicType *AT = getAs<AtomicType>())
-    return AT->getValueType()->hasBooleanRepresentation();
-
-  return false;
+  if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
+    return VT->getElementType()->isBooleanType();
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
+    return ET->getDecl()->isComplete() &&
+           ET->getDecl()->getIntegerType()->isBooleanType();
+  }
+  if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
+    return IT->getNumBits() == 1;
+  return isBooleanType();
 }
 
 Type::ScalarTypeKind Type::getScalarTypeKind() const {
