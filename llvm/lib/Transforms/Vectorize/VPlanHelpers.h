@@ -78,11 +78,6 @@ struct VFRange {
     return End.getKnownMinValue() <= Start.getKnownMinValue();
   }
 
-  bool contains(const ElementCount &VF) const {
-    return VF.getKnownMinValue() >= Start.getKnownMinValue() &&
-           VF.getKnownMinValue() < End.getKnownMinValue();
-  }
-
   VFRange(const ElementCount &Start, const ElementCount &End)
       : Start(Start), End(End) {
     assert(Start.isScalable() == End.isScalable() &&

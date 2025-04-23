@@ -155,6 +155,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:

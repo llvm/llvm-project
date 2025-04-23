@@ -823,7 +823,14 @@ public:
 
   FastMathFlags getFastMathFlags() const;
 
-  bool isNonNeg() const { return NonNegFlags.NonNeg; }
+  /// Returns true if the recipe has non-negative flag.
+  bool hasNonNegFlag() const { return OpType == OperationType::NonNegOp; }
+
+  bool isNonNeg() const {
+    assert(OpType == OperationType::NonNegOp &&
+           "recipe doesn't have a NNEG flag");
+    return NonNegFlags.NonNeg;
+  }
 
   bool hasNoUnsignedWrap() const {
     assert(OpType == OperationType::OverflowingBinOp &&
@@ -2374,18 +2381,18 @@ protected:
   }
 
   /// For VPExtendedReductionRecipe.
-  /// Note that IsNonNeg flag and the debug location are from the extend.
+  /// Note that the debug location is from the extend.
   VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    bool IsOrdered, NonNegFlagsTy NonNeg, DebugLoc DL)
-      : VPRecipeWithIRFlags(SC, Operands, NonNeg, DL), RdxKind(RdxKind),
+                    bool IsOrdered, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, DL), RdxKind(RdxKind),
         IsOrdered(IsOrdered), IsConditional(CondOp) {
     if (CondOp)
       addOperand(CondOp);
   }
 
   /// For VPMulAccumulateReductionRecipe.
-  /// Note that the NUW/NSW and DL are from the Mul.
+  /// Note that the NUW/NSW flags and the debug location are from the Mul.
   VPReductionRecipe(const unsigned char SC, const RecurKind RdxKind,
                     ArrayRef<VPValue *> Operands, VPValue *CondOp,
                     bool IsOrdered, WrapFlagsTy WrapFlags, DebugLoc DL)
@@ -2462,7 +2469,7 @@ public:
 /// A recipe to represent inloop reduction operations with vector-predication
 /// intrinsics, performing a reduction on a vector operand with the explicit
 /// vector length (EVL) into a scalar value, and adding the result to a chain.
-/// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
+/// The operands are {ChainOp, VecOp, EVL, [Condition]}.
 class VPReductionEVLRecipe : public VPReductionRecipe {
 public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
@@ -2518,17 +2525,21 @@ class VPExtendedReductionRecipe : public VPReductionRecipe {
       : VPReductionRecipe(
             VPDef::VPExtendedReductionSC, ExtRed->getRecurrenceKind(),
             {ExtRed->getChainOp(), ExtRed->getVecOp()}, ExtRed->getCondOp(),
-            ExtRed->isOrdered(), NonNegFlagsTy(ExtRed->isNonNeg()),
-            ExtRed->getDebugLoc()),
-        ExtOp(ExtRed->getExtOpcode()), ResultTy(ExtRed->getResultType()) {}
+            ExtRed->isOrdered(), ExtRed->getDebugLoc()),
+        ExtOp(ExtRed->getExtOpcode()), ResultTy(ExtRed->getResultType()) {
+    transferFlags(*ExtRed);
+  }
 
 public:
   VPExtendedReductionRecipe(VPReductionRecipe *R, VPWidenCastRecipe *Ext)
       : VPReductionRecipe(VPDef::VPExtendedReductionSC, R->getRecurrenceKind(),
                           {R->getChainOp(), Ext->getOperand(0)}, R->getCondOp(),
-                          R->isOrdered(), NonNegFlagsTy(Ext->isNonNeg()),
-                          Ext->getDebugLoc()),
-        ExtOp(Ext->getOpcode()), ResultTy(Ext->getResultType()) {}
+                          R->isOrdered(), Ext->getDebugLoc()),
+        ExtOp(Ext->getOpcode()), ResultTy(Ext->getResultType()) {
+    // Not all WidenCastRecipes contain nneg flag. Need to transfer flags from
+    // the original recipe to prevent setting wrong flags.
+    transferFlags(*Ext);
+  }
 
   ~VPExtendedReductionRecipe() override = default;
 
@@ -2555,13 +2566,13 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// The scalar type after extended.
+  /// The scalar type after extending.
   Type *getResultType() const { return ResultTy; }
 
   /// Is the extend ZExt?
   bool isZExt() const { return getExtOpcode() == Instruction::ZExt; }
 
-  /// The Opcode of extend recipe.
+  /// The opcode of extend recipe.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 };
 
@@ -2569,7 +2580,7 @@ public:
 /// reduction.add on the result of vector operands (might be extended)
 /// multiplication into a scalar value, and adding the result to a chain. This
 /// recipe is abstract and needs to be lowered to concrete recipes before
-/// codegen. The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
+/// codegen. The operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
   /// Opcode of the extend recipe.
   Instruction::CastOps ExtOp;
@@ -2600,12 +2611,14 @@ public:
             R->getCondOp(), R->isOrdered(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
-        ExtOp(Ext0->getOpcode()), IsNonNeg(Ext0->isNonNeg()),
-        ResultTy(ResultTy) {
+        ExtOp(Ext0->getOpcode()), ResultTy(ResultTy) {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
+    // Only set the non-negative flag if the original recipe contains.
+    if (Ext0->hasNonNegFlag())
+      IsNonNeg = Ext0->isNonNeg();
   }
 
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul)
@@ -2658,13 +2671,13 @@ public:
   VPValue *getVecOp0() const { return getOperand(1); }
   VPValue *getVecOp1() const { return getOperand(2); }
 
-  /// Return if this MulAcc recipe contains extend instructions.
+  /// Return if this MulAcc recipe contains extended operands.
   bool isExtended() const { return ExtOp != Instruction::CastOps::CastOpsEnd; }
 
-  /// Return the opcode of the underlying extend.
+  /// Return the opcode of the extends for the operands.
   Instruction::CastOps getExtOpcode() const { return ExtOp; }
 
-  /// Return if the extend opcode is ZExt.
+  /// Return if the operands are zero extended.
   bool isZExt() const { return ExtOp == Instruction::CastOps::ZExt; }
 
   /// Return the non negative flag of the ext recipe.

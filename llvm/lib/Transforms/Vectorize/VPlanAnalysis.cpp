@@ -272,14 +272,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExtendedReductionRecipe>(
-              [](const VPExtendedReductionRecipe *R) {
-                return R->getResultType();
-              })
-          .Case<VPMulAccumulateReductionRecipe>(
-              [](const VPMulAccumulateReductionRecipe *R) {
-                return R->getResultType();
-              })
+          .Case<VPExtendedReductionRecipe, VPMulAccumulateReductionRecipe>(
+              [](const auto *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
