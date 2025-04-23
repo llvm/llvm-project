@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/Overload.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -1099,4 +1100,50 @@ std::string SemaCUDA::getConfigureFuncName() const {
 
   // Legacy CUDA kernel configuration call
   return "cudaConfigureCall";
+}
+
+// Record any local constexpr variables that are passed one way on the host
+// and another on the device.
+void SemaCUDA::recordPotentialODRUsedVariable(
+    MultiExprArg Arguments, OverloadCandidateSet &Candidates) {
+  sema::LambdaScopeInfo *LambdaInfo = SemaRef.getCurLambda();
+  if (!LambdaInfo)
+    return;
+
+  for (unsigned I = 0; I < Arguments.size(); ++I) {
+    auto *DeclRef = dyn_cast<DeclRefExpr>(Arguments[I]);
+    if (!DeclRef)
+      continue;
+    auto *Variable = dyn_cast<VarDecl>(DeclRef->getDecl());
+    if (!Variable || !Variable->isLocalVarDecl() || !Variable->isConstexpr())
+      continue;
+
+    bool HostByValue = false, HostByRef = false;
+    bool DeviceByValue = false, DeviceByRef = false;
+
+    for (OverloadCandidate &Candidate : Candidates) {
+      FunctionDecl *Callee = Candidate.Function;
+      if (!Callee || I >= Callee->getNumParams())
+        continue;
+
+      CUDAFunctionTarget Target = IdentifyTarget(Callee);
+      if (Target == CUDAFunctionTarget::InvalidTarget ||
+          Target == CUDAFunctionTarget::Global)
+        continue;
+
+      bool CoversHost = (Target == CUDAFunctionTarget::Host ||
+                         Target == CUDAFunctionTarget::HostDevice);
+      bool CoversDevice = (Target == CUDAFunctionTarget::Device ||
+                           Target == CUDAFunctionTarget::HostDevice);
+
+      bool IsRef = Callee->getParamDecl(I)->getType()->isReferenceType();
+      HostByValue |= CoversHost && !IsRef;
+      HostByRef |= CoversHost && IsRef;
+      DeviceByValue |= CoversDevice && !IsRef;
+      DeviceByRef |= CoversDevice && IsRef;
+    }
+
+    if ((HostByValue && DeviceByRef) || (HostByRef && DeviceByValue))
+      LambdaInfo->CUDAPotentialODRUsedVars.insert(Variable);
+  }
 }
