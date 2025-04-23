@@ -466,7 +466,7 @@ AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointer;
   case Triple::x86:
-    return i386::createAnonymousPointer;
+    return i386_::createAnonymousPointer;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointer;
@@ -482,7 +482,7 @@ PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT) {
   case Triple::x86_64:
     return x86_64::createAnonymousPointerJumpStub;
   case Triple::x86:
-    return i386::createAnonymousPointerJumpStub;
+    return i386_::createAnonymousPointerJumpStub;
   case Triple::loongarch32:
   case Triple::loongarch64:
     return loongarch::createAnonymousPointerJumpStub;

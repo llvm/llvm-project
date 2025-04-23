@@ -102,13 +102,13 @@ TEST(StubsTest, StubsGeneration_i386) {
   LinkGraph G("foo", std::make_shared<orc::SymbolStringPool>(),
               Triple("i386-unknown-linux-gnu"), SubtargetFeatures(),
               getGenericEdgeKindName);
-  auto [PointerSym, StubSym] = GenerateStub(G, 4U, i386::Pointer32);
+  auto [PointerSym, StubSym] = GenerateStub(G, 4U, i386_::Pointer32);
 
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
                           StubSym.getBlock().edges().end()),
             1U);
   auto &JumpEdge = *StubSym.getBlock().edges().begin();
-  EXPECT_EQ(JumpEdge.getKind(), i386::Pointer32);
+  EXPECT_EQ(JumpEdge.getKind(), i386_::Pointer32);
   EXPECT_EQ(&JumpEdge.getTarget(), &PointerSym);
   EXPECT_EQ(StubSym.getBlock().getContent(),
             ArrayRef<char>(PointerJumpStubContent));

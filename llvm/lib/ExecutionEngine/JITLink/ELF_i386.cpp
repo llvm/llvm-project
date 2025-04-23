@@ -29,8 +29,8 @@ constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
 Error buildTables_ELF_i386(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  i386::GOTTableManager GOT;
-  i386::PLTTableManager PLT(GOT);
+  i386_::GOTTableManager GOT;
+  i386_::PLTTableManager PLT(GOT);
   visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }
@@ -59,7 +59,7 @@ private:
               if (Sym.getName() != nullptr &&
                   *Sym.getName() == ELFGOTSymbolName)
                 if (auto *GOTSection = G.findSectionByName(
-                        i386::GOTTableManager::getSectionName())) {
+                        i386_::GOTTableManager::getSectionName())) {
                   GOTSymbol = &Sym;
                   return {*GOTSection, true};
                 }
@@ -79,7 +79,7 @@ private:
     // record it, otherwise we'll create our own.
     // If there's a GOT section but we didn't find an external GOT symbol...
     if (auto *GOTSection =
-            G.findSectionByName(i386::GOTTableManager::getSectionName())) {
+            G.findSectionByName(i386_::GOTTableManager::getSectionName())) {
 
       // Check for an existing defined symbol.
       for (auto *Sym : GOTSection->symbols())
@@ -106,15 +106,15 @@ private:
   }
 
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    return i386::applyFixup(G, B, E, GOTSymbol);
+    return i386_::applyFixup(G, B, E, GOTSymbol);
   }
 };
 
 template <typename ELFT>
 class ELFLinkGraphBuilder_i386 : public ELFLinkGraphBuilder<ELFT> {
 private:
-  static Expected<i386::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
-    using namespace i386;
+  static Expected<i386_::EdgeKind_i386> getRelocationKind(const uint32_t Type) {
+    using namespace i386_;
     switch (Type) {
     case ELF::R_386_NONE:
       return EdgeKind_i386::None;
@@ -179,7 +179,7 @@ private:
                   Base::GraphSymbols.size()),
           inconvertibleErrorCode());
 
-    Expected<i386::EdgeKind_i386> Kind = getRelocationKind(Rel.getType(false));
+    Expected<i386_::EdgeKind_i386> Kind = getRelocationKind(Rel.getType(false));
     if (!Kind)
       return Kind.takeError();
 
@@ -187,23 +187,23 @@ private:
     int64_t Addend = 0;
 
     switch (*Kind) {
-    case i386::EdgeKind_i386::None:
+    case i386_::EdgeKind_i386::None:
       break;
-    case i386::EdgeKind_i386::Pointer32:
-    case i386::EdgeKind_i386::PCRel32:
-    case i386::EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT:
-    case i386::EdgeKind_i386::Delta32:
-    case i386::EdgeKind_i386::Delta32FromGOT:
-    case i386::EdgeKind_i386::BranchPCRel32:
-    case i386::EdgeKind_i386::BranchPCRel32ToPtrJumpStub:
-    case i386::EdgeKind_i386::BranchPCRel32ToPtrJumpStubBypassable: {
+    case i386_::EdgeKind_i386::Pointer32:
+    case i386_::EdgeKind_i386::PCRel32:
+    case i386_::EdgeKind_i386::RequestGOTAndTransformToDelta32FromGOT:
+    case i386_::EdgeKind_i386::Delta32:
+    case i386_::EdgeKind_i386::Delta32FromGOT:
+    case i386_::EdgeKind_i386::BranchPCRel32:
+    case i386_::EdgeKind_i386::BranchPCRel32ToPtrJumpStub:
+    case i386_::EdgeKind_i386::BranchPCRel32ToPtrJumpStubBypassable: {
       const char *FixupContent = BlockToFix.getContent().data() +
                                  (FixupAddress - BlockToFix.getAddress());
       Addend = *(const support::little32_t *)FixupContent;
       break;
     }
-    case i386::EdgeKind_i386::Pointer16:
-    case i386::EdgeKind_i386::PCRel16: {
+    case i386_::EdgeKind_i386::Pointer16:
+    case i386_::EdgeKind_i386::PCRel16: {
       const char *FixupContent = BlockToFix.getContent().data() +
                                  (FixupAddress - BlockToFix.getAddress());
       Addend = *(const support::little16_t *)FixupContent;
@@ -215,7 +215,7 @@ private:
     Edge GE(*Kind, Offset, *GraphSymbol, Addend);
     LLVM_DEBUG({
       dbgs() << "    ";
-      printEdge(dbgs(), BlockToFix, GE, i386::getEdgeKindName(*Kind));
+      printEdge(dbgs(), BlockToFix, GE, i386_::getEdgeKindName(*Kind));
       dbgs() << "\n";
     });
 
@@ -229,7 +229,7 @@ public:
                            Triple TT, SubtargetFeatures Features)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(SSP), std::move(TT),
                                   std::move(Features), FileName,
-                                  i386::getEdgeKindName) {}
+                                  i386_::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>
@@ -273,7 +273,7 @@ void link_ELF_i386(std::unique_ptr<LinkGraph> G,
     Config.PostPrunePasses.push_back(buildTables_ELF_i386);
 
     // Add GOT/Stubs optimizer pass.
-    Config.PreFixupPasses.push_back(i386::optimizeGOTAndStubAccesses);
+    Config.PreFixupPasses.push_back(i386_::optimizeGOTAndStubAccesses);
   }
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));

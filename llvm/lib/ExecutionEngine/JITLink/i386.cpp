@@ -14,7 +14,7 @@
 
 #define DEBUG_TYPE "jitlink"
 
-namespace llvm::jitlink::i386 {
+namespace llvm::jitlink::i386_ {
 
 const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
@@ -55,7 +55,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
 
   for (auto *B : G.blocks())
     for (auto &E : B->edges()) {
-      if (E.getKind() == i386::BranchPCRel32ToPtrJumpStubBypassable) {
+      if (E.getKind() == i386_::BranchPCRel32ToPtrJumpStubBypassable) {
         auto &StubBlock = E.getTarget().getBlock();
         assert(StubBlock.getSize() == sizeof(PointerJumpStubContent) &&
                "Stub block should be stub sized");
@@ -74,7 +74,7 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
 
         int64_t Displacement = TargetAddr - EdgeAddr + 4;
         if (isInt<32>(Displacement)) {
-          E.setKind(i386::BranchPCRel32);
+          E.setKind(i386_::BranchPCRel32);
           E.setTarget(GOTTarget);
           LLVM_DEBUG({
             dbgs() << "  Replaced stub branch with direct branch:\n    ";
@@ -88,4 +88,4 @@ Error optimizeGOTAndStubAccesses(LinkGraph &G) {
   return Error::success();
 }
 
-} // namespace llvm::jitlink::i386
+} // namespace llvm::jitlink::i386_
