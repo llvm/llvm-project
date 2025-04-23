@@ -35,6 +35,13 @@
 #include <cstddef>
 #include <memory>
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // (19.6.4)
@@ -288,5 +295,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI hash<basic_stacktrace<_Allocator>> {
 };
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_BASIC_STACKTRACE

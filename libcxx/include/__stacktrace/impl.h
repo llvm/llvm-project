@@ -32,8 +32,16 @@
 #include <__vector/pmr.h>
 #include <__vector/swap.h>
 #include <__vector/vector.h>
+#include <cstdint>
 #include <list>
 #include <string>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -153,5 +161,7 @@ __impl(size_t __skip,
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STACKTRACE_IMPL
