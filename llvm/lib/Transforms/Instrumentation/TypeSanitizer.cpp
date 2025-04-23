@@ -64,6 +64,13 @@ static cl::opt<bool> ClOutlineInstrumentation(
              "ELF size"),
     cl::Hidden, cl::init(false));
 
+
+static cl::opt<bool> ClVerifyOutlinedInstrumentation(
+  "tysan-verify-outlined-instrumentation",
+  cl::desc("Check types twice with both inlined instrumentation and "
+            "function calls. This verifies that they behave the same."),
+  cl::Hidden, cl::init(false));
+
 STATISTIC(NumInstrumentedAccesses, "Number of instrumented accesses");
 
 namespace {
@@ -958,6 +965,11 @@ PreservedAnalyses TypeSanitizerPass::run(Module &M,
   for (Function &F : M) {
     const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
     TySan.sanitizeFunction(F, TLI);
+    if (ClVerifyOutlinedInstrumentation && ClOutlineInstrumentation) {
+      ClOutlineInstrumentation = false;
+      TySan.sanitizeFunction(F, TLI);
+      ClOutlineInstrumentation = true;
+    }
   }
 
   return PreservedAnalyses::none();
