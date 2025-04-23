@@ -31,7 +31,8 @@ public:
 
   std::vector<std::string> GetListeningConnectionURI() const override;
 
-  static Socket *Create(NativeSocket sockfd, bool should_close, Status &error);
+  static llvm::Expected<std::unique_ptr<DomainSocket>>
+  FromBoundNativeSocket(NativeSocket sockfd, bool should_close);
 
 protected:
   DomainSocket(SocketProtocol protocol);

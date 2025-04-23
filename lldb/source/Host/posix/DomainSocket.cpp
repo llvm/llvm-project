@@ -192,21 +192,19 @@ std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
   return {llvm::formatv("unix-connect://{0}", addr.sun_path)};
 }
 
-Socket *DomainSocket::Create(NativeSocket sockfd, bool should_close,
-                             Status &error) {
+llvm::Expected<std::unique_ptr<DomainSocket>>
+DomainSocket::FromBoundNativeSocket(NativeSocket sockfd, bool should_close) {
 #ifdef __linux__
   // Check if fd represents domain socket or abstract socket.
   struct sockaddr_un addr;
   socklen_t addr_len = sizeof(addr);
-  if (getsockname(sockfd, (struct sockaddr *)&addr, &addr_len) == -1) {
-    error = Status::FromErrorString(
-        "lldb-platform child: not a socket or error occurred");
-    return nullptr;
-  }
-
-  if (addr.sun_family == AF_UNIX && addr.sun_path[0] == '\0') {
-    return new AbstractSocket(sockfd, should_close);
-  }
+  if (getsockname(sockfd, (struct sockaddr *)&addr, &addr_len) == -1)
+    return llvm::createStringError("not a socket or error occurred");
+  if (addr.sun_family != AF_UNIX)
+    return llvm::createStringError("Bad socket type");
+  if (addr_len > offsetof(struct sockaddr_un, sun_path) &&
+      addr.sun_path[0] == '\0')
+    return std::make_unique<AbstractSocket>(sockfd, should_close);
 #endif
-  return new DomainSocket(sockfd, should_close);
+  return std::make_unique<DomainSocket>(sockfd, should_close);
 }

@@ -465,21 +465,23 @@ int main_platform(int argc, char *argv[]) {
       return socket_error;
     }
 
-    Socket *socket;
+    std::unique_ptr<Socket> socket;
     if (gdbserver_port) {
-      socket = new TCPSocket(sockfd, /*should_close=*/true);
+      socket = std::make_unique<TCPSocket>(sockfd, /*should_close=*/true);
     } else {
-      socket = DomainSocket::Create(sockfd, /*should_close=*/true, error);
-      if (error.Fail()) {
+      llvm::Expected<std::unique_ptr<DomainSocket>> domain_socket =
+          DomainSocket::FromBoundNativeSocket(sockfd, /*should_close=*/true);
+      if (!domain_socket) {
         LLDB_LOGF(log, "Failed to create socket: %s\n", error.AsCString());
         return socket_error;
       }
+      socket = std::move(domain_socket.get());
     }
 
-    Socket::SocketProtocol protocol = socket->GetSocketProtocol();
-    GDBRemoteCommunicationServerPlatform platform(protocol, gdbserver_port);
-    platform.SetConnection(
-        std::unique_ptr<Connection>(new ConnectionFileDescriptor(socket)));
+    GDBRemoteCommunicationServerPlatform platform(socket->GetSocketProtocol(),
+                                                  gdbserver_port);
+    platform.SetConnection(std::unique_ptr<Connection>(
+        new ConnectionFileDescriptor(socket.release())));
     client_handle(platform, inferior_arguments);
     return 0;
   }
@@ -492,7 +494,7 @@ int main_platform(int argc, char *argv[]) {
     return 1;
   }
 
-  Socket::SocketProtocol protocol;
+  Socket::SocketProtocol protocol = Socket::ProtocolUnixDomain;
   std::string address;
   std::string gdb_address;
   uint16_t platform_port = 0;
