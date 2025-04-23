@@ -31,12 +31,6 @@ namespace lldb_dap {
 // possible targets for a given source line can be retrieved via the
 // `stepInTargets` request.
 Error StepInRequestHandler::Run(const StepInArguments &args) const {
-  std::string step_in_target;
-  auto it = dap.step_in_targets.find(args.targetId.value_or(0));
-  if (it != dap.step_in_targets.end())
-    step_in_target = it->second;
-
-  RunMode run_mode = args.singleThread ? eOnlyThisThread : eOnlyDuringStepping;
   SBThread thread = dap.GetLLDBThread(args.threadId);
   if (!thread.IsValid())
     return make_error<DAPError>("invalid thread");
@@ -44,11 +38,19 @@ Error StepInRequestHandler::Run(const StepInArguments &args) const {
   // Remember the thread ID that caused the resume so we can set the
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();
+
   if (args.granularity == eSteppingGranularityInstruction) {
     thread.StepInstruction(/*step_over=*/false);
-  } else {
-    thread.StepInto(step_in_target.c_str(), run_mode);
+    return Error::success();
   }
+
+  std::string step_in_target;
+  auto it = dap.step_in_targets.find(args.targetId.value_or(0));
+  if (it != dap.step_in_targets.end())
+    step_in_target = it->second;
+
+  RunMode run_mode = args.singleThread ? eOnlyThisThread : eOnlyDuringStepping;
+  thread.StepInto(step_in_target.c_str(), run_mode);
   return Error::success();
 }
 
