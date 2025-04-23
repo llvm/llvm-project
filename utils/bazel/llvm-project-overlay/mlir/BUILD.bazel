@@ -2316,6 +2316,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":IR",
         ":InferTypeOpInterface",
+        ":LLVMCommonConversion",
         ":LLVMDialect",
         ":SideEffectInterfaces",
         ":X86VectorIncGen",
@@ -6271,6 +6272,7 @@ td_library(
         ":BuiltinDialectTdFiles",
         ":DataLayoutInterfacesTdFiles",
         ":OpBaseTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -6364,6 +6366,8 @@ cc_library(
         ":PtrMemorySpaceInterfacesIncGen",
         ":PtrOpsEnumsGen",
         ":PtrOpsIncGen",
+        ":SideEffectInterfaces",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -8419,6 +8423,7 @@ cc_library(
         ":ToLLVMIRTranslation",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TransformUtils",
     ],
 )
 

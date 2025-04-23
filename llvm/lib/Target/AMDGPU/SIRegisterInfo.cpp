@@ -2510,7 +2510,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
       if (IsWWMRegSpill) {
         TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
-                                  RS->isRegUsed(AMDGPU::SCC));
+                                   RS->isRegUsed(AMDGPU::SCC));
       }
 
       buildSpillLoadStore(

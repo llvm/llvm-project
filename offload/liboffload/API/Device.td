@@ -12,7 +12,7 @@
 
 def : Enum {
   let name = "ol_device_type_t";
-  let desc = "Supported device types";
+  let desc = "Supported device types.";
   let etors =[
     Etor<"DEFAULT", "The default device type as preferred by the runtime">,
     Etor<"ALL", "Devices of all types">,
@@ -23,7 +23,7 @@ def : Enum {
 
 def : Enum {
   let name = "ol_device_info_t";
-  let desc = "Supported device info";
+  let desc = "Supported device info.";
   let is_typed = 1;
   let etors =[
     TaggedEtor<"TYPE", "ol_device_type_t", "type of the device">,
@@ -34,39 +34,34 @@ def : Enum {
   ];
 }
 
-def : Function {
-  let name = "olGetDeviceCount";
-  let desc = "Retrieves the number of available devices within a platform";
+def : FptrTypedef {
+  let name = "ol_device_iterate_cb_t";
+  let desc = "User-provided function to be used with `olIterateDevices`";
   let params = [
-    Param<"ol_platform_handle_t", "Platform", "handle of the platform instance", PARAM_IN>,
-    Param<"uint32_t*", "NumDevices", "pointer to the number of devices.", PARAM_OUT>
+    Param<"ol_device_handle_t", "Device", "the device handle of the current iteration", PARAM_IN>,
+    Param<"void*", "UserData", "optional user data", PARAM_IN_OPTIONAL>
   ];
-  let returns = [];
+  let return = "bool";
 }
 
 def : Function {
-  let name = "olGetDevice";
-  let desc = "Retrieves devices within a platform";
+  let name = "olIterateDevices";
+  let desc = "Iterates over all available devices, calling the callback for each device.";
   let details = [
-    "Multiple calls to this function will return identical device handles, in the same order.",
+    "If the user-provided callback returns `false`, the iteration is stopped."
   ];
   let params = [
-    Param<"ol_platform_handle_t", "Platform", "handle of the platform instance", PARAM_IN>,
-    Param<"uint32_t", "NumEntries", "the number of devices to be added to phDevices, which must be greater than zero", PARAM_IN>,
-    RangedParam<"ol_device_handle_t*", "Devices", "Array of device handles. "
-        "If NumEntries is less than the number of devices available, then this function shall only retrieve that number of devices.", PARAM_OUT,
-        Range<"0", "NumEntries">>
+    Param<"ol_device_iterate_cb_t", "Callback", "User-provided function called for each available device", PARAM_IN>,
+    Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
   ];
   let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`NumEntries == 0`"
-    ]>
+    Return<"OL_ERRC_INVALID_DEVICE">
   ];
 }
 
 def : Function {
   let name = "olGetDeviceInfo";
-  let desc = "Queries the given property of the device";
+  let desc = "Queries the given property of the device.";
   let details = [];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
@@ -90,7 +85,7 @@ def : Function {
 
 def : Function {
   let name = "olGetDeviceInfoSize";
-  let desc = "Returns the storage size of the given device query";
+  let desc = "Returns the storage size of the given device query.";
   let details = [];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,

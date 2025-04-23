@@ -130,7 +130,7 @@ expand_template(
         "${LLDB_BUG_REPORT_URL}": "",
     } | select({
         "@platforms//os:macos": {
-            "#cmakedefine HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION",
+            "#cmakedefine01 HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION 1",
             "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 0",
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
@@ -139,7 +139,7 @@ expand_template(
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
         "@platforms//os:linux": {
-            "#cmakedefine HAVE_LIBCOMPRESSION": "/* #undef HAVE_LIBCOMPRESSION */",
+            "#cmakedefine01 HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION 0",
             "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 1",
             "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 1",
             "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 1",
@@ -484,10 +484,8 @@ cc_library(
 
 objc_library(
     name = "HostMacOSXObjCXX",
-    srcs = glob([
-        "source/Host/macosx/objcxx/*.mm",
-    ]),
     copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["source/Host/macosx/objcxx/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],
@@ -832,9 +830,9 @@ cc_binary(
     deps = [
         ":APIHeaders",
         ":Host",
+        ":UtilityHeaders",
         ":liblldb.wrapper",
         ":lldb_options_inc_gen",
-        ":UtilityHeaders",
         "//llvm:Option",
         "//llvm:Support",
     ],
@@ -855,8 +853,8 @@ cc_library(
 
 objc_library(
     name = "DebugServerMacOSX",
-    srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
     copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["tools/debugserver/source/MacOSX/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],

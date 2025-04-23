@@ -5022,6 +5022,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     // Packed
+    case Intrinsic::x86_avx512fp16_add_ph_512:
+    case Intrinsic::x86_avx512fp16_sub_ph_512:
+    case Intrinsic::x86_avx512fp16_mul_ph_512:
+    case Intrinsic::x86_avx512fp16_div_ph_512:
+    case Intrinsic::x86_avx512fp16_max_ph_512:
+    case Intrinsic::x86_avx512fp16_min_ph_512:
     case Intrinsic::x86_avx512_min_ps_512:
     case Intrinsic::x86_avx512_min_pd_512:
     case Intrinsic::x86_avx512_max_ps_512:

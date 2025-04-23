@@ -2275,17 +2275,16 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // handling here.
     if (ToType->isArrayParameterType()) {
       FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
     } else if (FromType->isArrayParameterType()) {
       const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
       FromType = APT->getConstantArrayType(S.Context);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
     }
 
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
+    SCS.First = ICK_HLSL_Array_RValue;
+
+    // Don't consider qualifiers, which include things like address spaces
+    if (FromType.getCanonicalType().getUnqualifiedType() !=
+        ToType.getCanonicalType().getUnqualifiedType())
       return false;
 
     SCS.setAllToTypes(ToType);
@@ -14707,6 +14706,8 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   // the UnresolvedLookupExpr was type-dependent.
   if (OverloadResult == OR_Success) {
     const FunctionDecl *FDecl = Best->Function;
+    if (LangOpts.CUDA)
+      CUDA().recordPotentialODRUsedVariable(Args, CandidateSet);
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
 
