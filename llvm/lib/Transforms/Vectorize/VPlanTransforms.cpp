@@ -1598,11 +1598,6 @@ static void licm(VPlan &Plan) {
 
 void VPlanTransforms::truncateToMinimalBitwidths(
     VPlan &Plan, const MapVector<Instruction *, uint64_t> &MinBWs) {
-#ifndef NDEBUG
-  // Count the processed recipes and cross check the count later with MinBWs
-  // size, to make sure all entries in MinBWs have been handled.
-  unsigned NumProcessedRecipes = 0;
-#endif
   // Keep track of created truncates, so they can be re-used. Note that we
   // cannot use RAUW after creating a new truncate, as this would could make
   // other uses have different types for their operands, making them invalidly
@@ -1624,9 +1619,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (!NewResSizeInBits)
         continue;
 
-#ifndef NDEBUG
-      NumProcessedRecipes++;
-#endif
       // If the value wasn't vectorized, we must maintain the original scalar
       // type. Skip those here, after incrementing NumProcessedRecipes. Also
       // skip casts which do not need to be handled explicitly here, as
@@ -1650,7 +1642,6 @@ void VPlanTransforms::truncateToMinimalBitwidths(
             // Add an entry to ProcessedTruncs to avoid counting the same
             // operand multiple times.
             ProcessedTruncs[Op] = nullptr;
-            NumProcessedRecipes += 1;
           }
         }
 #endif
@@ -1714,19 +1705,11 @@ void VPlanTransforms::truncateToMinimalBitwidths(
           NewOp->insertBefore(&R);
         } else {
           PH->appendRecipe(NewOp);
-#ifndef NDEBUG
-          auto *OpInst = dyn_cast<Instruction>(Op->getLiveInIRValue());
-          bool IsContained = MinBWs.contains(OpInst);
-          NumProcessedRecipes += IsContained;
-#endif
         }
       }
 
     }
   }
-
-  assert(MinBWs.size() == NumProcessedRecipes &&
-         "some entries in MinBWs haven't been processed");
 }
 
 /// Remove BranchOnCond recipes with true conditions together with removing
