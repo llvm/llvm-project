@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -1454,8 +1455,20 @@ static bool checkAndReplaceCondition(
       return ShouldReplace;
     });
     NumCondsRemoved++;
-    if (Cmp->use_empty())
+    if (Cmp->use_empty()) {
+      SmallVector<DbgVariableIntrinsic *> DbgUsers;
+      SmallVector<DbgVariableRecord *> DVRUsers;
+      findDbgUsers(DbgUsers, Cmp, &DVRUsers);
+      
+      for (auto *DVR: DVRUsers) {
+        auto *DTN = DT.getNode(DVR->getParent());
+        if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+          continue;
+        DVR->replaceVariableLocationOp(Cmp, ConstantC);
+      }
+
       ToRemove.push_back(Cmp);
+    }
     return Changed;
   };
 
