@@ -32,6 +32,12 @@ class InterpStack;
 class InterpFrame;
 class SourceMapper;
 
+struct StdAllocatorCaller {
+  const Expr *Call = nullptr;
+  QualType AllocType;
+  explicit operator bool() { return Call; }
+};
+
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
@@ -115,6 +121,8 @@ public:
   /// Will return \c false if there were any allocations to diagnose,
   /// \c true otherwise.
   bool maybeDiagnoseDanglingAllocations();
+
+  StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
 
 private:
   friend class EvaluationResult;

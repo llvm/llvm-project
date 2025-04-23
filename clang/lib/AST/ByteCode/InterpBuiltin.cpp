@@ -1526,34 +1526,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // A call to __operator_new is only valid within std::allocate<>::allocate.
   // Walk up the call stack to find the appropriate caller and get the
   // element type from it.
-  QualType ElemType;
-  const CallExpr *NewCall = nullptr;
-
-  for (const InterpFrame *F = Frame; F; F = F->Caller) {
-    const Function *Func = F->getFunction();
-    if (!Func)
-      continue;
-    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
-    if (!MD)
-      continue;
-    const IdentifierInfo *FnII = MD->getIdentifier();
-    if (!FnII || !FnII->isStr("allocate"))
-      continue;
-
-    const auto *CTSD =
-        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
-    if (!CTSD)
-      continue;
-
-    const IdentifierInfo *ClassII = CTSD->getIdentifier();
-    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
-    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
-        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
-      ElemType = TAL[0].getAsType();
-      NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
-      break;
-    }
-  }
+  auto [NewCall, ElemType] = S.getStdAllocatorCaller("allocate");
 
   if (ElemType.isNull()) {
     S.FFDiag(Call, S.getLangOpts().CPlusPlus20
@@ -1655,33 +1628,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
     return false;
 
   // This is permitted only within a call to std::allocator<T>::deallocate.
-  bool DeallocateFrameFound = false;
-  for (const InterpFrame *F = Frame; F; F = F->Caller) {
-    const Function *Func = F->getFunction();
-    if (!Func)
-      continue;
-    const auto *MD = dyn_cast_if_present<CXXMethodDecl>(Func->getDecl());
-    if (!MD)
-      continue;
-    const IdentifierInfo *FnII = MD->getIdentifier();
-    if (!FnII || !FnII->isStr("deallocate"))
-      continue;
-
-    const auto *CTSD =
-        dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent());
-    if (!CTSD)
-      continue;
-
-    const IdentifierInfo *ClassII = CTSD->getIdentifier();
-    const TemplateArgumentList &TAL = CTSD->getTemplateArgs();
-    if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
-        TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
-      DeallocateFrameFound = true;
-      break;
-    }
-  }
-
-  if (!DeallocateFrameFound) {
+  if (!S.getStdAllocatorCaller("deallocate")) {
     S.FFDiag(Call);
     return true;
   }
