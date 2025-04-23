@@ -14,12 +14,12 @@ struct V { int i; const struct A a; }; // c-note {{member 'a' declared 'const' h
                                           cxx-note {{default constructor of 'V' is implicitly deleted because field 'a' of const-qualified type 'const struct A' would not be initialized}}
 
 void f() {
-  struct S s1; // c-warning {{default initialization of an object of type 'struct S' with const member leaves the object unitialized and is incompatible with C++}} \
+  struct S s1; // c-warning {{default initialization of an object of type 'struct S' with const member leaves the object uninitialized and is incompatible with C++}} \
                   cxx-error {{call to implicitly-deleted default constructor of 'struct S'}}
   struct S s2 = { 0 };
 }
 void g() {
-  struct T t1; // c-warning {{default initialization of an object of type 'struct T' with const member leaves the object unitialized and is incompatible with C++}} \
+  struct T t1; // c-warning {{default initialization of an object of type 'struct T' with const member leaves the object uninitialized and is incompatible with C++}} \
                   cxx-error {{call to implicitly-deleted default constructor of 'struct T'}}
   struct T t2 = { { 0 } };
 }
@@ -28,7 +28,7 @@ void h() {
   struct U u2 = { { 0 }, 0 };
 }
 void x() {
-  struct V v1; // c-warning {{default initialization of an object of type 'struct V' with const member leaves the object unitialized and is incompatible with C++}} \
+  struct V v1; // c-warning {{default initialization of an object of type 'struct V' with const member leaves the object uninitialized and is incompatible with C++}} \
                   cxx-error {{call to implicitly-deleted default constructor of 'struct V'}}
   struct V v2 = { 0 };
   struct V v3 = { 0, { 0 } };
@@ -46,7 +46,7 @@ const struct S s;   // c-warning {{default initialization of an object of type '
                        cxx-error {{call to implicitly-deleted default constructor of 'const struct S'}}
 
 void func() {
-  const int a;        // c-warning {{default initialization of an object of type 'const int' leaves the object unitialized and is incompatible with C++}} \
+  const int a;        // c-warning {{default initialization of an object of type 'const int' leaves the object uninitialized and is incompatible with C++}} \
                          cxx-error {{default initialization of an object of const type 'const int'}}
   static const int b; // c-warning {{default initialization of an object of type 'const int' is incompatible with C++}} \
                          cxx-error {{default initialization of an object of const type 'const int'}}

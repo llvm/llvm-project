@@ -8201,7 +8201,7 @@ def note_default_init_const_member : Note<
   "member %0 declared 'const' here">;
 def warn_default_init_const : Warning<
   "default initialization of an object of type %0%select{| with const member}1"
-  "%select{| leaves the object unitialized and}2 is incompatible with C++">,
+  "%select{| leaves the object uninitialized and}2 is incompatible with C++">,
   InGroup<DefaultConstInit>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"

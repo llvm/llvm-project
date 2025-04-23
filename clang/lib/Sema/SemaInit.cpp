@@ -6584,7 +6584,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
         }
       }
       // If the record has any members which are const (recursively checked),
-      // then we want to diagnose those as being unitialized if there is no
+      // then we want to diagnose those as being uninitialized if there is no
       // initializer present.
       if (!Initializer) {
         if (const FieldDecl *FD = GetConstField(Rec)) {
