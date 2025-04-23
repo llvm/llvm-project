@@ -4963,7 +4963,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
   %res1 = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs1, i32 4, <16 x i1> %mask, <16 x float> %src0)
   %ptrs = getelementptr inbounds %struct.pt, ptr %x, <16 x i64> %zext, i32 1
   %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x float> %src0)
-  %pair1 = insertvalue {<16 x float>, <16 x float>} undef, <16 x float> %res1, 0
+  %pair1 = insertvalue {<16 x float>, <16 x float>} poison, <16 x float> %res1, 0
   %pair2 = insertvalue {<16 x float>, <16 x float>} %pair1, <16 x float> %res, 1
   ret {<16 x float>, <16 x float>} %pair2
 }
@@ -5188,7 +5188,7 @@ define {<8 x float>, <8 x float>} @test_gather_8f32_mask_index_pair(ptr %x, ptr 
   %res1 = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> %ptrs1, i32 4, <8 x i1> %mask, <8 x float> %src0)
   %ptrs = getelementptr inbounds %struct.pt2, ptr %x, <8 x i64> %zext, i32 1
   %res = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> %ptrs, i32 4, <8 x i1> %mask, <8 x float> %src0)
-  %pair1 = insertvalue {<8 x float>, <8 x float>} undef, <8 x float> %res1, 0
+  %pair1 = insertvalue {<8 x float>, <8 x float>} poison, <8 x float> %res1, 0
   %pair2 = insertvalue {<8 x float>, <8 x float>} %pair1, <8 x float> %res, 1
   ret {<8 x float>, <8 x float>} %pair2
 }
@@ -5400,7 +5400,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair2(ptr %x, 
   %res1 = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs1, i32 4, <16 x i1> %mask, <16 x float> %src0)
   %ptrs = getelementptr inbounds %struct.pt2, ptr %x, <16 x i64> %zext, i32 1
   %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x float> %src0)
-  %pair1 = insertvalue {<16 x float>, <16 x float>} undef, <16 x float> %res1, 0
+  %pair1 = insertvalue {<16 x float>, <16 x float>} poison, <16 x float> %res1, 0
   %pair2 = insertvalue {<16 x float>, <16 x float>} %pair1, <16 x float> %res, 1
   ret {<16 x float>, <16 x float>} %pair2
 }
