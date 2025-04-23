@@ -6,9 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../common/config.h"
+#include "stacktrace/config.h"
 
 #if defined(_LIBCPP_STACKTRACE_APPLE)
+
+#  include "stacktrace/osx.h"
 
 #  include <algorithm>
 #  include <array>
@@ -16,10 +18,11 @@
 #  include <mach-o/dyld.h>
 #  include <mach-o/loader.h>
 
-#  include <__stacktrace/context.h>
-#  include <__stacktrace/entry.h>
-
-#  include "osx.h"
+#  include "stacktrace/config.h"
+#  include "stacktrace/context.h"
+#  include "stacktrace/utils.h"
+#  include <__stacktrace/basic_stacktrace.h>
+#  include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
