@@ -25,16 +25,10 @@ void consume(int* __bidi_indexable);
 // LEGACY-SAME: i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
-// LEGACY-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[COUNT]] to i64
-// LEGACY-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[IDX_EXT]]
-// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3:[0-9]+]]
-// LEGACY-NEXT:    store ptr null, ptr [[BYVAL_TEMP]], align 8
-// LEGACY-NEXT:    [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 8
-// LEGACY-NEXT:    store ptr [[ADD_PTR]], ptr [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 8
-// LEGACY-NEXT:    [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
-// LEGACY-NEXT:    store ptr null, ptr [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 8, !tbaa [[TBAA2:![0-9]+]]
-// LEGACY-NEXT:    call void @consume(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
-// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
+// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR4:[0-9]+]]
+// LEGACY-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[BYVAL_TEMP]], i8 0, i64 24, i1 false)
+// LEGACY-NEXT:    call void @consume(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR4]]
+// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR4]]
 // LEGACY-NEXT:    ret void
 //
 void use_inline_header_func_unspecified_ptr(int count) {
@@ -62,16 +56,10 @@ void use_inline_header_func_unspecified_ptr(int count) {
 // LEGACY-SAME: i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // LEGACY-NEXT:  [[ENTRY:.*:]]
 // LEGACY-NEXT:    [[BYVAL_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
-// LEGACY-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[COUNT]] to i64
-// LEGACY-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[IDX_EXT]]
-// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
-// LEGACY-NEXT:    store ptr null, ptr [[BYVAL_TEMP]], align 8
-// LEGACY-NEXT:    [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 8
-// LEGACY-NEXT:    store ptr [[ADD_PTR]], ptr [[PTR_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 8
-// LEGACY-NEXT:    [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
-// LEGACY-NEXT:    store ptr null, ptr [[PTR_SROA_5_0_BYVAL_TEMP_SROA_IDX]], align 8, !tbaa [[TBAA2]]
-// LEGACY-NEXT:    call void @consume(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
-// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR3]]
+// LEGACY-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR4]]
+// LEGACY-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(24) [[BYVAL_TEMP]], i8 0, i64 24, i1 false)
+// LEGACY-NEXT:    call void @consume(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR4]]
+// LEGACY-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR4]]
 // LEGACY-NEXT:    ret void
 //
 void use_inline_header_func_unsafe_indexable_ptr(int count) {
@@ -81,10 +69,4 @@ void use_inline_header_func_unsafe_indexable_ptr(int count) {
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
 // CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
-//.
-// LEGACY: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// LEGACY: [[META3]] = !{!"p1 int", [[META4:![0-9]+]], i64 0}
-// LEGACY: [[META4]] = !{!"any pointer", [[META5:![0-9]+]], i64 0}
-// LEGACY: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
-// LEGACY: [[META6]] = !{!"Simple C/C++ TBAA"}
 //.
