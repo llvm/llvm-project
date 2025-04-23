@@ -4990,6 +4990,34 @@ define i1 @clang_builtin_isnormal_inf_check_copysign(half %x, half %y) {
   ret i1 %and
 }
 
+define i1 @clang_builtin_isnormal_inf_check_copysign_logical_select(half %x, half %y) {
+; CHECK-LABEL: @clang_builtin_isnormal_inf_check_copysign_logical_select(
+; CHECK-NEXT:    [[COPYSIGN_X:%.*]] = call half @llvm.copysign.f16(half [[X:%.*]], half [[Y:%.*]])
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq half [[COPYSIGN_X]], 0xH7C00
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[ORD]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %copysign.x = call half @llvm.copysign.f16(half %x, half %y)
+  %ord = fcmp ord half %x, 0.0
+  %cmp = fcmp uge half %copysign.x, 0xH7C00
+  %and = select i1 %ord, i1 %cmp, i1 false
+  ret i1 %and
+}
+
+define i1 @clang_builtin_isnormal_inf_check_fabs_nnan_logical_select(half %x) {
+; CHECK-LABEL: @clang_builtin_isnormal_inf_check_fabs_nnan_logical_select(
+; CHECK-NEXT:    [[COPYSIGN_X:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oeq half [[COPYSIGN_X]], 0xH7C00
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %copysign.x = call nnan half @llvm.fabs.f16(half %x)
+  %ord = fcmp ord half %x, 0.0
+  %cmp = fcmp uge half %copysign.x, 0xH7C00
+  %and = select i1 %ord, i1 %cmp, i1 false
+  ret i1 %and
+}
+
 define i1 @isnormal_logical_select_0(half %x) {
 ; CHECK-LABEL: @isnormal_logical_select_0(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
