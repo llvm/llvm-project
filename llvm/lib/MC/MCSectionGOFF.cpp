@@ -111,7 +111,7 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     getParent()->printSwitchToSection(MAI, T, OS, Subsection);
     if (!Emitted) {
       emitCATTR(OS, Name, EDAttributes.Rmode, EDAttributes.Alignment,
-                EDAttributes.LoadBehavior, EDAttributes.Executable,
+                EDAttributes.LoadBehavior, GOFF::ESD_EXE_Unspecified,
                 EDAttributes.IsReadOnly, 0, StringRef());
       Emitted = true;
     } else

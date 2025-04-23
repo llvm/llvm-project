@@ -238,7 +238,6 @@ public:
     SymbolFlags.setReservedQwords(Attr.ReservedQwords);
     // TODO Do we need/should set the "mangled" flag?
     BehavAttrs.setReadOnly(Attr.IsReadOnly);
-    BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setRmode(Attr.Rmode);
     BehavAttrs.setTextStyle(Attr.TextStyle);
     BehavAttrs.setBindingAlgorithm(Attr.BindAlgorithm);

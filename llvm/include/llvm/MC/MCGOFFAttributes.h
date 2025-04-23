@@ -51,7 +51,6 @@ struct SDAttr {
 // Attributes for ED symbols.
 struct EDAttr {
   bool IsReadOnly = false;
-  GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
   GOFF::ESDRmode Rmode;
   GOFF::ESDNameSpaceId NameSpace = GOFF::ESD_NS_NormalName;
   GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented;
