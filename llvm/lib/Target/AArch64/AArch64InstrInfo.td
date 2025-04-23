@@ -3161,8 +3161,8 @@ def : InstAlias<"mov $dst, $src",
                 (ORRWrs GPR32:$dst, WZR,
                         (logical_shifted_reg32 GPR32:$src, 0)), 2>;
 def : InstAlias<"mov $dst, $src", 
-               (ORRXrs GPR64:$dst, XZR,
-                       (logical_shifted_reg64 GPR64:$src, 0)), 2>;
+                (ORRXrs GPR64:$dst, XZR,
+                        (logical_shifted_reg64 GPR64:$src, 0)), 2>;
 
 def : InstAlias<"mvn $Wd, $Wm",
                 (ORNWrs GPR32:$Wd, WZR,
@@ -3191,11 +3191,11 @@ def : InstAlias<"tst $src1, $src2",
                          (logical_shifted_reg64 GPR64:$src2, 0)), 3>;
 
 def : InstAlias<"tst $src1, $src2$sh",
-               (ANDSWrs WZR, GPR32:$src1,
-                        (logical_shifted_reg32 GPR32:$src2, logical_shift32:$sh)), 2>;
+                (ANDSWrs WZR, GPR32:$src1,
+                         (logical_shifted_reg32 GPR32:$src2, logical_shift32:$sh)), 2>;
 def : InstAlias<"tst $src1, $src2$sh",
-               (ANDSXrs XZR, GPR64:$src1,
-                        (logical_shifted_reg64 GPR64:$src2, logical_shift64:$sh)), 2>;
+                (ANDSXrs XZR, GPR64:$src1,
+                         (logical_shifted_reg64 GPR64:$src2, logical_shift64:$sh)), 2>;
 
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;

@@ -39,7 +39,7 @@ unsigned CodeGenInstAlias::ResultOperand::getMINumOperands() const {
 }
 
 static const Record *getInitValueAsRegClass(const Init *V) {
-  if (const DefInit *VDefInit = dyn_cast<DefInit>(V)) {
+  if (const auto *VDefInit = dyn_cast<DefInit>(V)) {
     const Record *R = VDefInit->getDef();
     if (R->isSubClassOf("RegisterClass"))
       return R;
@@ -73,7 +73,7 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
         if (!ArgName)
           return createStringError("register class argument must have a name");
         return ResultOperand::createRecord(ArgName->getAsUnquotedString(),
-                                           cast<DefInit>(Arg)->getDef());
+                                           ArgRec);
       }
 
       // Match 'Reg'.
@@ -101,7 +101,7 @@ static Expected<ResultOperand> matchSimpleOperand(const Init *Arg,
 
   if (Op->isSubClassOf("Operand")) {
     // Match integer or bits.
-    if (const IntInit *ArgInt = dyn_cast_or_null<IntInit>(
+    if (const auto *ArgInt = dyn_cast_or_null<IntInit>(
             Arg->convertInitializerTo(IntRecTy::get(Arg->getRecordKeeper())))) {
       if (ArgName)
         return createStringError("integer argument must not have a name");
