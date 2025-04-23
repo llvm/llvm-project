@@ -2408,7 +2408,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
     for (Function &F : M.functions())
       for (Instruction &I : instructions(F))
         for (Value *Op : I.operands())
-          if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+          if (isa<ConstantExpr, ConstantAggregate>(Op))
             Worklist.push_back(cast<Constant>(Op));
 
     // Recursively look for any referenced buffer pointer constants.
@@ -2421,7 +2421,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
       if (isBufferFatPtrOrVector(C->getType()))
         BufferFatPtrConsts.insert(C);
       for (Value *Op : C->operands())
-        if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+        if (isa<ConstantExpr, ConstantAggregate>(Op))
           Worklist.push_back(cast<Constant>(Op));
     }
 
