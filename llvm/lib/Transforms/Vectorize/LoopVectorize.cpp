@@ -8909,6 +8909,8 @@ VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   HGramOps.push_back(Operands[1]);
   // Increment value.
   HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1)));
+  // Store Instruction.
+  HGramOps.push_back(getVPValueOrAddLiveIn(HI->Store));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.

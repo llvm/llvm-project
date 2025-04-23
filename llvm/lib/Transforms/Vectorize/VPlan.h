@@ -1460,7 +1460,7 @@ public:
   /// Return the mask operand if one was provided, or a null pointer if all
   /// lanes should be executed unconditionally.
   VPValue *getMask() const {
-    return getNumOperands() == 3 ? getOperand(2) : nullptr;
+    return getNumOperands() == 4 ? getOperand(3) : nullptr;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
