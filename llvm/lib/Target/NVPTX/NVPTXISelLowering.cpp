@@ -2172,19 +2172,25 @@ NVPTXTargetLowering::LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const {
 }
 
 /// A generic routine for constructing a tree reduction on a vector operand.
-/// This method differs from iterative splitting in DAGTypeLegalizer by
-/// progressively grouping elements bottom-up.
+/// This method groups elements bottom-up, progressively building each level.
+/// This approach differs from top-down iterative splitting used in
+/// DAGTypeLegalizer and ExpandReductions.
+///
+/// Also, the flags on the original reduction operation will be propagated to
+/// each scalar operation.
 static SDValue BuildTreeReduction(
     const SmallVector<SDValue> &Elements, EVT EltTy,
     ArrayRef<std::pair<unsigned /*NodeType*/, unsigned /*NumInputs*/>> Ops,
     const SDLoc &DL, const SDNodeFlags Flags, SelectionDAG &DAG) {
-  // now build the computation graph in place at each level
+  // Build the reduction tree at each level, starting with all the elements.
   SmallVector<SDValue> Level = Elements;
+
   unsigned OpIdx = 0;
   while (Level.size() > 1) {
+    // Try to reduce this level using the current operator.
     const auto [DefaultScalarOp, DefaultGroupSize] = Ops[OpIdx];
 
-    // partially reduce all elements in level
+    // Build the next level by partially reducing all elements.
     SmallVector<SDValue> ReducedLevel;
     unsigned I = 0, E = Level.size();
     for (; I + DefaultGroupSize <= E; I += DefaultGroupSize) {
@@ -2195,18 +2201,23 @@ static SDValue BuildTreeReduction(
     }
 
     if (I < E) {
+      // We have leftover elements. Why?
+
       if (ReducedLevel.empty()) {
-        // The current operator requires more inputs than there are operands at
-        // this level. Pick a smaller operator and retry.
+        // ...because this level is now so small that the current operator is
+        // too big for it. Pick a smaller operator and retry.
         ++OpIdx;
         assert(OpIdx < Ops.size() && "no smaller operators for reduction");
         continue;
       }
 
-      // Otherwise, we just have a remainder, which we push to the next level.
+      // ...because the operator's required number of inputs doesn't divide
+      // evenly this level. We push this remainder to the next level.
       for (; I < E; ++I)
         ReducedLevel.push_back(Level[I]);
     }
+
+    // Process the next level.
     Level = ReducedLevel;
   }
 
@@ -2222,6 +2233,7 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
   const SDNodeFlags Flags = Op->getFlags();
   SDValue Vector;
   SDValue Accumulator;
+
   if (Op->getOpcode() == ISD::VECREDUCE_SEQ_FADD ||
       Op->getOpcode() == ISD::VECREDUCE_SEQ_FMUL) {
     // special case with accumulator as first arg
@@ -2231,6 +2243,7 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
     // default case
     Vector = Op.getOperand(0);
   }
+
   EVT EltTy = Vector.getValueType().getVectorElementType();
   const bool CanUseMinMax3 = EltTy == MVT::f32 && STI.getSmVersion() >= 100 &&
                              STI.getPTXVersion() >= 88;
@@ -2238,78 +2251,86 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
   // A list of SDNode opcodes with equivalent semantics, sorted descending by
   // number of inputs they take.
   SmallVector<std::pair<unsigned /*Op*/, unsigned /*NumIn*/>, 2> ScalarOps;
-  bool IsReassociatable;
+
+  // Whether we can lower to scalar operations in an arbitrary order.
+  bool IsAssociative;
 
   switch (Op->getOpcode()) {
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_SEQ_FADD:
     ScalarOps = {{ISD::FADD, 2}};
-    IsReassociatable = false;
+    IsAssociative = Op->getOpcode() == ISD::VECREDUCE_FADD;
     break;
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_SEQ_FMUL:
     ScalarOps = {{ISD::FMUL, 2}};
-    IsReassociatable = false;
+    IsAssociative = Op->getOpcode() == ISD::VECREDUCE_FMUL;
     break;
   case ISD::VECREDUCE_FMAX:
     if (CanUseMinMax3)
       ScalarOps.push_back({NVPTXISD::FMAXNUM3, 3});
     ScalarOps.push_back({ISD::FMAXNUM, 2});
-    IsReassociatable = false;
+    // Definition of maxNum in IEEE 754 2008 is non-associative, but only
+    // because of how sNaNs are treated. However, NVIDIA GPUs don't support
+    // sNaNs.
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_FMIN:
     if (CanUseMinMax3)
       ScalarOps.push_back({NVPTXISD::FMINNUM3, 3});
     ScalarOps.push_back({ISD::FMINNUM, 2});
-    IsReassociatable = false;
+    // Definition of minNum in IEEE 754 2008 is non-associative, but only
+    // because of how sNaNs are treated. However, NVIDIA GPUs don't support
+    // sNaNs.
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_FMAXIMUM:
     if (CanUseMinMax3)
       ScalarOps.push_back({NVPTXISD::FMAXIMUM3, 3});
     ScalarOps.push_back({ISD::FMAXIMUM, 2});
-    IsReassociatable = false;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_FMINIMUM:
     if (CanUseMinMax3)
       ScalarOps.push_back({NVPTXISD::FMINIMUM3, 3});
     ScalarOps.push_back({ISD::FMINIMUM, 2});
-    IsReassociatable = false;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_ADD:
     ScalarOps = {{ISD::ADD, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_MUL:
     ScalarOps = {{ISD::MUL, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_UMAX:
     ScalarOps = {{ISD::UMAX, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_UMIN:
     ScalarOps = {{ISD::UMIN, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_SMAX:
     ScalarOps = {{ISD::SMAX, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_SMIN:
     ScalarOps = {{ISD::SMIN, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_AND:
     ScalarOps = {{ISD::AND, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_OR:
     ScalarOps = {{ISD::OR, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   case ISD::VECREDUCE_XOR:
     ScalarOps = {{ISD::XOR, 2}};
-    IsReassociatable = true;
+    IsAssociative = true;
     break;
   default:
     llvm_unreachable("unhandled vecreduce operation");
@@ -2326,18 +2347,21 @@ SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
   }
 
   // Lower to tree reduction.
-  if (IsReassociatable || Flags.hasAllowReassociation()) {
-    // we don't expect an accumulator for reassociatable vector reduction ops
+  if (IsAssociative || allowUnsafeFPMath(DAG.getMachineFunction())) {
+    // we don't expect an accumulator for reassociative vector reduction ops
     assert(!Accumulator && "unexpected accumulator");
     return BuildTreeReduction(Elements, EltTy, ScalarOps, DL, Flags, DAG);
   }
 
   // Lower to sequential reduction.
   for (unsigned OpIdx = 0, I = 0; I < NumElts; ++OpIdx) {
+    // Try to reduce the remaining sequence as much as possible using the
+    // current operator.
     assert(OpIdx < ScalarOps.size() && "no smaller operators for reduction");
     const auto [DefaultScalarOp, DefaultGroupSize] = ScalarOps[OpIdx];
 
     if (!Accumulator) {
+      // Try to initialize the accumulator using the current operator.
       if (I + DefaultGroupSize <= NumElts) {
         Accumulator = DAG.getNode(
             DefaultScalarOp, DL, EltTy,
