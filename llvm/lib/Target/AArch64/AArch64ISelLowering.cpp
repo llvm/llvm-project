@@ -1831,13 +1831,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   }
 
   // Handle partial reduction operations
-  if (EnablePartialReduceNodes) {
-    if (Subtarget->isSVEorStreamingSVEAvailable()) {
-      // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
-      // Other pairs will default to 'Expand'.
-      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
-      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
-    }
+  if (EnablePartialReduceNodes && Subtarget->isSVEorStreamingSVEAvailable()) {
+    // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
+    // Other pairs will default to 'Expand'.
+    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
+    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
