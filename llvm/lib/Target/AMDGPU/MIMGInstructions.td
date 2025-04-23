@@ -873,7 +873,7 @@ multiclass MIMG_Store <mimgopc op, string asm, bit has_d16, bit mip = 0> {
 }
 
 class MIMG_Atomic_gfx6789_base <bits<8> op, string asm, RegisterClass data_rc,
-                                RegisterClass addr_rc, string dns="", bits<1> hasR128=false>
+                                RegisterClass addr_rc, bit hasR128, string dns="">
   : MIMG_gfx6789 <op, (outs data_rc:$vdst), dns> {
   let Constraints = "$vdst = $vdata";
 
@@ -897,17 +897,17 @@ class MIMG_Atomic_gfx90a_base <bits<8> op, string asm, RegisterClass data_rc,
 
 multiclass MIMG_Atomic_si<mimgopc op, string asm, RegisterClass data_rc, RegisterClass addr_rc, bit enableDasm = 0> {
   let AssemblerPredicate = isGFX6GFX7 in {
-    def _r1_si : MIMG_Atomic_gfx6789_base<op.SI, asm, data_rc, addr_rc, !if(enableDasm, "GFX6GFX7", "")>;
-    def _r2_si : MIMG_Atomic_gfx6789_base<op.SI, asm, data_rc, addr_rc, "", /*hasR128*/ true>;
+    def _R1_si : MIMG_Atomic_gfx6789_base<op.SI, asm, data_rc, addr_rc, false, !if(enableDasm, "GFX6GFX7", "")>;
+    def _R2_si : MIMG_Atomic_gfx6789_base<op.SI, asm, data_rc, addr_rc, true, "">;
   }
 }
 
 multiclass MIMG_Atomic_vi<mimgopc op, string asm, RegisterClass data_rc, RegisterClass addr_rc, bit enableDasm = 0> {
   let AssemblerPredicate = isGFX8GFX9NotGFX90A, MIMGEncoding = MIMGEncGfx8 in {
-    def _r1_vi : MIMG_Atomic_gfx6789_base<op.VI, asm, data_rc, addr_rc, !if(enableDasm, "GFX8", "")>;
+    def _R1_vi : MIMG_Atomic_gfx6789_base<op.VI, asm, data_rc, addr_rc, false, !if(enableDasm, "GFX8", "")>;
   }
   let AssemblerPredicate = isGFX8Only, MIMGEncoding = MIMGEncGfx8 in {
-    def _r2_vi : MIMG_Atomic_gfx6789_base<op.VI, asm, data_rc, addr_rc, "", /*hasR128*/ true>;
+    def _R2_vi : MIMG_Atomic_gfx6789_base<op.VI, asm, data_rc, addr_rc, true, "">;
   }
 }
 
@@ -1130,7 +1130,7 @@ multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
   : MIMG_Atomic <op, asm, isCmpSwap, isFP, renamed>;
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
-                           RegisterClass src_rc, string dns="", bits<1> hasR128=false>
+                           RegisterClass src_rc, bit hasR128, string dns="">
   : MIMG_gfx6789 <op.VI, (outs dst_rc:$vdata), dns> {
   let InOperandList = !con((ins src_rc:$vaddr, !if(hasR128, SReg_128_XNULL, SReg_256_XNULL):$srsrc, SReg_128_XNULL:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
@@ -1353,11 +1353,11 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
   foreach addr = MIMG_Sampler_AddrSizes<sample, isG16>.MachineInstrs in {
     let VAddrDwords = addr.NumWords in {
       if op.HAS_GFX10M then {
-        def _V # addr.NumWords # _r1
-          : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass,
+        def _V # addr.NumWords # _R1
+          : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass, false,
                                  !if(!and(enableDisasm, addr.Disassemble), "GFX8", "")>;
-        def _V # addr.NumWords # _r2
-          : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass, "", /*hasR128*/ true>;
+        def _V # addr.NumWords # _R2
+          : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass, true, "">;
         if !not(ExtendedImageInst) then
         def _V # addr.NumWords # _gfx90a
           : MIMG_Sampler_gfx90a <op, asm, dst_rc, addr.RegClass,

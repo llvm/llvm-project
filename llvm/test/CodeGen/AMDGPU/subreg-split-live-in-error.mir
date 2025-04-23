@@ -97,7 +97,7 @@ body: |
     %11.sub5:sgpr_256 = COPY %11.sub0
     %11.sub6:sgpr_256 = COPY %11.sub0
     %11.sub7:sgpr_256 = COPY %11.sub0
-    %12:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_r1 %9, %11, undef %13:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, addrspace 4)
+    %12:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_R1 %9, %11, undef %13:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, addrspace 4)
     %14:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
     %15:vreg_128 = IMPLICIT_DEF
     S_CBRANCH_SCC1 %bb.8, implicit undef $scc
