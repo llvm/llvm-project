@@ -125,6 +125,7 @@ int main(int argc, char **argv) {
   C *c2 = new C();
   C *c3 = new C[3];
 
+  // clang-format off
   //% self.expect("expr c->dummy", endstr=" 2324\n")
   //% self.expect("expr c->*2", endstr=" 2\n")
   //% self.expect("expr c + 44", endstr=" 44\n")
@@ -174,6 +175,9 @@ int main(int argc, char **argv) {
   //% self.expect("expr (new struct C[1]); side_effect", endstr=" = 4\n")
   //% self.expect("expr delete c2; side_effect", endstr=" = 1\n")
   //% self.expect("expr delete[] c3; side_effect", endstr=" = 2\n")
+  //% self.expect("image lookup -n operator()", substrs=["C::operator()(int)"])
+  //% self.expect("image lookup -n C::operator()", substrs=["C::operator()(int)"])
+  // clang-format on
   delete c2;
   delete[] c3;
   return 0;
