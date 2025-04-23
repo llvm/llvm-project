@@ -2414,6 +2414,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atan2f128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atan2f128_test.cpp
+  DEPENDS
+    libc.src.math.atan2f128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   f16add_test
   NEED_MPFR
   SUITE

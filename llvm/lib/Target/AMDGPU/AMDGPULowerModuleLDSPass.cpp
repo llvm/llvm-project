@@ -1502,10 +1502,8 @@ public:
   const AMDGPUTargetMachine *TM;
   static char ID;
 
-  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM_ = nullptr)
-      : ModulePass(ID), TM(TM_) {
-    initializeAMDGPULowerModuleLDSLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM = nullptr)
+      : ModulePass(ID), TM(TM) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     if (!TM)

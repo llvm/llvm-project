@@ -32,13 +32,10 @@
 
 using namespace llvm;
 
-namespace {
-
-bool allowEmitFakeUse(const Value *Arg) {
+static bool allowEmitFakeUse(const Value *Arg) {
   if (isSpvIntrinsic(Arg))
     return false;
-  if (dyn_cast<AtomicCmpXchgInst>(Arg) || dyn_cast<InsertValueInst>(Arg) ||
-      dyn_cast<UndefValue>(Arg))
+  if (isa<AtomicCmpXchgInst, InsertValueInst, UndefValue>(Arg))
     return false;
   if (const auto *LI = dyn_cast<LoadInst>(Arg))
     if (LI->getType()->isAggregateType())
@@ -46,7 +43,7 @@ bool allowEmitFakeUse(const Value *Arg) {
   return true;
 }
 
-inline unsigned typeToAddressSpace(const Type *Ty) {
+static unsigned typeToAddressSpace(const Type *Ty) {
   if (auto PType = dyn_cast<TypedPointerType>(Ty))
     return PType->getAddressSpace();
   if (auto PType = dyn_cast<PointerType>(Ty))
@@ -57,7 +54,39 @@ inline unsigned typeToAddressSpace(const Type *Ty) {
   report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 }
 
-} // anonymous namespace
+#ifndef NDEBUG
+static bool
+storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
+  switch (SC) {
+  case SPIRV::StorageClass::Uniform:
+  case SPIRV::StorageClass::PushConstant:
+  case SPIRV::StorageClass::StorageBuffer:
+  case SPIRV::StorageClass::PhysicalStorageBufferEXT:
+    return true;
+  case SPIRV::StorageClass::UniformConstant:
+  case SPIRV::StorageClass::Input:
+  case SPIRV::StorageClass::Output:
+  case SPIRV::StorageClass::Workgroup:
+  case SPIRV::StorageClass::CrossWorkgroup:
+  case SPIRV::StorageClass::Private:
+  case SPIRV::StorageClass::Function:
+  case SPIRV::StorageClass::Generic:
+  case SPIRV::StorageClass::AtomicCounter:
+  case SPIRV::StorageClass::Image:
+  case SPIRV::StorageClass::CallableDataNV:
+  case SPIRV::StorageClass::IncomingCallableDataNV:
+  case SPIRV::StorageClass::RayPayloadNV:
+  case SPIRV::StorageClass::HitAttributeNV:
+  case SPIRV::StorageClass::IncomingRayPayloadNV:
+  case SPIRV::StorageClass::ShaderRecordBufferNV:
+  case SPIRV::StorageClass::CodeSectionINTEL:
+  case SPIRV::StorageClass::DeviceOnlyINTEL:
+  case SPIRV::StorageClass::HostOnlyINTEL:
+    return false;
+  }
+  llvm_unreachable("Unknown SPIRV::StorageClass enum");
+}
+#endif
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
@@ -767,23 +796,25 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
 static std::string GetSpirvImageTypeName(const SPIRVType *Type,
                                          MachineIRBuilder &MIRBuilder,
-                                         const std::string &Prefix);
+                                         const std::string &Prefix,
+                                         SPIRVGlobalRegistry &GR);
 
 static std::string buildSpirvTypeName(const SPIRVType *Type,
-                                      MachineIRBuilder &MIRBuilder) {
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry &GR) {
   switch (Type->getOpcode()) {
   case SPIRV::OpTypeSampledImage: {
-    return GetSpirvImageTypeName(Type, MIRBuilder, "sampled_image_");
+    return GetSpirvImageTypeName(Type, MIRBuilder, "sampled_image_", GR);
   }
   case SPIRV::OpTypeImage: {
-    return GetSpirvImageTypeName(Type, MIRBuilder, "image_");
+    return GetSpirvImageTypeName(Type, MIRBuilder, "image_", GR);
   }
   case SPIRV::OpTypeArray: {
     MachineRegisterInfo *MRI = MIRBuilder.getMRI();
     Register ElementTypeReg = Type->getOperand(1).getReg();
     auto *ElementType = MRI->getUniqueVRegDef(ElementTypeReg);
     uint32_t ArraySize = getArrayComponentCount(MRI, Type);
-    return (buildSpirvTypeName(ElementType, MIRBuilder) + Twine("[") +
+    return (buildSpirvTypeName(ElementType, MIRBuilder, GR) + Twine("[") +
             Twine(ArraySize) + Twine("]"))
         .str();
   }
@@ -795,6 +826,22 @@ static std::string buildSpirvTypeName(const SPIRVType *Type,
     if (Type->getOperand(2).getImm())
       return ("i" + Twine(Type->getOperand(1).getImm())).str();
     return ("u" + Twine(Type->getOperand(1).getImm())).str();
+  case SPIRV::OpTypePointer: {
+    uint32_t StorageClass = GR.getPointerStorageClass(Type);
+    SPIRVType *PointeeType = GR.getPointeeType(Type);
+    return ("p_" + Twine(StorageClass) + Twine("_") +
+            buildSpirvTypeName(PointeeType, MIRBuilder, GR))
+        .str();
+  }
+  case SPIRV::OpTypeStruct: {
+    std::string TypeName = "{";
+    for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
+      SPIRVType *MemberType =
+          GR.getSPIRVTypeForVReg(Type->getOperand(I).getReg());
+      TypeName = '_' + buildSpirvTypeName(MemberType, MIRBuilder, GR);
+    }
+    return TypeName + "}";
+  }
   default:
     llvm_unreachable("Trying to the the name of an unknown type.");
   }
@@ -802,10 +849,12 @@ static std::string buildSpirvTypeName(const SPIRVType *Type,
 
 static std::string GetSpirvImageTypeName(const SPIRVType *Type,
                                          MachineIRBuilder &MIRBuilder,
-                                         const std::string &Prefix) {
+                                         const std::string &Prefix,
+                                         SPIRVGlobalRegistry &GR) {
   Register SampledTypeReg = Type->getOperand(1).getReg();
   auto *SampledType = MIRBuilder.getMRI()->getUniqueVRegDef(SampledTypeReg);
-  std::string TypeName = Prefix + buildSpirvTypeName(SampledType, MIRBuilder);
+  std::string TypeName =
+      Prefix + buildSpirvTypeName(SampledType, MIRBuilder, GR);
   for (uint32_t I = 2; I < Type->getNumOperands(); ++I) {
     TypeName = (TypeName + '_' + Twine(Type->getOperand(I).getImm())).str();
   }
@@ -815,20 +864,19 @@ static std::string GetSpirvImageTypeName(const SPIRVType *Type,
 Register SPIRVGlobalRegistry::getOrCreateGlobalVariableWithBinding(
     const SPIRVType *VarType, uint32_t Set, uint32_t Binding,
     MachineIRBuilder &MIRBuilder) {
-  SPIRVType *VarPointerTypeReg = getOrCreateSPIRVPointerType(
-      VarType, MIRBuilder, SPIRV::StorageClass::UniformConstant);
   Register VarReg =
       MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
 
   // TODO: The name should come from the llvm-ir, but how that name will be
   // passed from the HLSL to the backend has not been decided. Using this place
   // holder for now.
-  std::string Name = ("__resource_" + buildSpirvTypeName(VarType, MIRBuilder) +
-                      "_" + Twine(Set) + "_" + Twine(Binding))
-                         .str();
-  buildGlobalVariable(VarReg, VarPointerTypeReg, Name, nullptr,
-                      SPIRV::StorageClass::UniformConstant, nullptr, false,
-                      false, SPIRV::LinkageType::Import, MIRBuilder, false);
+  std::string Name =
+      ("__resource_" + buildSpirvTypeName(VarType, MIRBuilder, *this) + "_" +
+       Twine(Set) + "_" + Twine(Binding))
+          .str();
+  buildGlobalVariable(VarReg, VarType, Name, nullptr,
+                      getPointerStorageClass(VarType), nullptr, false, false,
+                      SPIRV::LinkageType::Import, MIRBuilder, false);
 
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::DescriptorSet, {Set});
   buildOpDecorate(VarReg, MIRBuilder, SPIRV::Decoration::Binding, {Binding});
@@ -842,13 +890,22 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
   assert((ElemType->getOpcode() != SPIRV::OpTypeVoid) &&
          "Invalid array element type");
   SPIRVType *SpvTypeInt32 = getOrCreateSPIRVIntegerType(32, MIRBuilder);
-  Register NumElementsVReg =
-      buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
+
+  if (NumElems != 0) {
+    Register NumElementsVReg =
+        buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
+    return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+      return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
+          .addDef(createTypeVReg(MIRBuilder))
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(NumElementsVReg);
+    });
+  }
+
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
+    return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
         .addDef(createTypeVReg(MIRBuilder))
-        .addUse(getSPIRVTypeID(ElemType))
-        .addUse(NumElementsVReg);
+        .addUse(getSPIRVTypeID(ElemType));
   });
 }
 
@@ -1296,6 +1353,34 @@ SPIRVGlobalRegistry::getPointerStorageClass(const SPIRVType *Type) const {
       Type->getOperand(1).getImm());
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
+    MachineIRBuilder &MIRBuilder, Type *ElemType,
+    SPIRV::StorageClass::StorageClass SC, bool IsWritable, bool EmitIr) {
+  auto Key = SPIRV::irhandle_vkbuffer(ElemType, SC, IsWritable);
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  // TODO(134119): The SPIRVType for `ElemType` will not have an explicit
+  // layout. This generates invalid SPIR-V.
+  auto *T = StructType::create(ElemType);
+  auto *BlockType =
+      getOrCreateSPIRVType(T, MIRBuilder, SPIRV::AccessQualifier::None, EmitIr);
+
+  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                  SPIRV::Decoration::Block, {});
+  buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                        SPIRV::Decoration::Offset, 0, {0});
+
+  if (!IsWritable) {
+    buildOpMemberDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                          SPIRV::Decoration::NonWritable, 0, {});
+  }
+
+  SPIRVType *R = getOrCreateSPIRVPointerTypeInternal(BlockType, MIRBuilder, SC);
+  add(Key, R);
+  return R;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(
     MachineIRBuilder &MIRBuilder, SPIRVType *SampledType, SPIRV::Dim::Dim Dim,
     uint32_t Depth, uint32_t Arrayed, uint32_t Multisampled, uint32_t Sampled,
@@ -1473,7 +1558,7 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVTypeByName(
 
   // Handle "type*" or  "type* vector[N]".
   if (TypeStr.starts_with("*")) {
-    SpirvTy = getOrCreateSPIRVPointerType(SpirvTy, MIRBuilder, SC);
+    SpirvTy = getOrCreateSPIRVPointerType(Ty, MIRBuilder, SC);
     TypeStr = TypeStr.substr(strlen("*"));
   }
 
@@ -1642,6 +1727,45 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVArrayType(
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
+    const Type *BaseType, MachineInstr &I,
+    SPIRV::StorageClass::StorageClass SC) {
+  MachineIRBuilder MIRBuilder(I);
+  return getOrCreateSPIRVPointerType(BaseType, MIRBuilder, SC);
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
+    const Type *BaseType, MachineIRBuilder &MIRBuilder,
+    SPIRV::StorageClass::StorageClass SC) {
+  SPIRVType *SpirvBaseType = getOrCreateSPIRVType(
+      BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
+  return getOrCreateSPIRVPointerTypeInternal(SpirvBaseType, MIRBuilder, SC);
+}
+
+SPIRVType *SPIRVGlobalRegistry::changePointerStorageClass(
+    SPIRVType *PtrType, SPIRV::StorageClass::StorageClass SC, MachineInstr &I) {
+  [[maybe_unused]] SPIRV::StorageClass::StorageClass OldSC =
+      getPointerStorageClass(PtrType);
+  assert(storageClassRequiresExplictLayout(OldSC) ==
+         storageClassRequiresExplictLayout(SC));
+
+  SPIRVType *PointeeType = getPointeeType(PtrType);
+  MachineIRBuilder MIRBuilder(I);
+  return getOrCreateSPIRVPointerTypeInternal(PointeeType, MIRBuilder, SC);
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
+    SPIRVType *BaseType, MachineIRBuilder &MIRBuilder,
+    SPIRV::StorageClass::StorageClass SC) {
+  const Type *LLVMType = getTypeForSPIRVType(BaseType);
+  assert(!storageClassRequiresExplictLayout(SC));
+  SPIRVType *R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC);
+  assert(
+      getPointeeType(R) == BaseType &&
+      "The base type was not correctly laid out for the given storage class.");
+  return R;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerTypeInternal(
     SPIRVType *BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC) {
   const Type *PointerElementType = getTypeForSPIRVType(BaseType);
@@ -1661,14 +1785,6 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
       });
   add(PointerElementType, AddressSpace, NewMI);
   return finishCreatingSPIRVType(Ty, NewMI);
-}
-
-SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
-    SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &,
-    SPIRV::StorageClass::StorageClass SC) {
-  MachineInstr *DepMI = const_cast<MachineInstr *>(BaseType);
-  MachineIRBuilder MIRBuilder(*DepMI->getParent(), DepMI->getIterator());
-  return getOrCreateSPIRVPointerType(BaseType, MIRBuilder, SC);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateUndef(MachineInstr &I,

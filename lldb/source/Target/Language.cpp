@@ -510,7 +510,7 @@ bool Language::IsNilReference(ValueObject &valobj) { return false; }
 
 bool Language::IsUninitializedReference(ValueObject &valobj) { return false; }
 
-bool Language::GetFunctionDisplayName(const SymbolContext *sc,
+bool Language::GetFunctionDisplayName(const SymbolContext &sc,
                                       const ExecutionContext *exe_ctx,
                                       FunctionNameRepresentation representation,
                                       Stream &s) {

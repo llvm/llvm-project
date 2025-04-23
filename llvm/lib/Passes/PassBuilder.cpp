@@ -82,6 +82,7 @@
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
+#include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
@@ -137,6 +138,7 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
@@ -147,21 +149,25 @@
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/CodeGen/StackColoring.h"
+#include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/TypePromotion.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
@@ -791,6 +797,31 @@ Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
 Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "minimal",
                                             "LowerMatrixIntrinsics");
+}
+
+Expected<IRNormalizerOptions> parseIRNormalizerPassOptions(StringRef Params) {
+  IRNormalizerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "preserve-order")
+      Result.PreserveOrder = Enable;
+    else if (ParamName == "rename-all")
+      Result.RenameAll = Enable;
+    else if (ParamName == "fold-all") // FIXME: Name mismatch
+      Result.FoldPreOutputs = Enable;
+    else if (ParamName == "reorder-operands")
+      Result.ReorderOperands = Enable;
+    else {
+      return make_error<StringError>(
+          formatv("invalid normalize pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Result;
 }
 
 Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {

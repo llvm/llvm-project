@@ -26,7 +26,6 @@
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
-#include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__utility/move.h>
@@ -201,7 +200,7 @@ struct __stable_sort_switch {
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
-  static_assert(is_integral<_Tp>::value);
+  static_assert(__is_ordered_integer_representable_v<_Tp>);
   if constexpr (sizeof(_Tp) == 1) {
     return 1 << 8;
   }
@@ -211,7 +210,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_min_bound() {
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr unsigned __radix_sort_max_bound() {
-  static_assert(is_integral<_Tp>::value);
+  static_assert(__is_ordered_integer_representable_v<_Tp>);
   if constexpr (sizeof(_Tp) >= 8) {
     return 1 << 15;
   }
@@ -245,11 +244,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __stable_sort(
   }
 
 #if _LIBCPP_STD_VER >= 17
-  constexpr auto __default_comp = __desugars_to_v<__totally_ordered_less_tag, _Compare, value_type, value_type >;
-  constexpr auto __integral_value =
-      is_integral_v<value_type > && is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
-  constexpr auto __allowed_radix_sort = __default_comp && __integral_value;
-  if constexpr (__allowed_radix_sort) {
+  constexpr auto __default_comp = __desugars_to_v<__less_tag, _Compare, value_type, value_type >;
+  constexpr auto __radix_sortable =
+      __is_ordered_integer_representable_v<value_type> &&
+      is_same_v< value_type&, __iter_reference<_RandomAccessIterator>>;
+  if constexpr (__default_comp && __radix_sortable) {
     if (__len <= __buff_size && __len >= static_cast<difference_type>(std::__radix_sort_min_bound<value_type>()) &&
         __len <= static_cast<difference_type>(std::__radix_sort_max_bound<value_type>())) {
       if (__libcpp_is_constant_evaluated()) {

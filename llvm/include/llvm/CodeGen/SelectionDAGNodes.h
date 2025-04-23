@@ -692,8 +692,10 @@ public:
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
 
-  /// Return true if the type of the node type undefined.
-  bool isUndef() const { return NodeType == ISD::UNDEF; }
+  /// Returns true if the node type is UNDEF or POISON.
+  bool isUndef() const {
+    return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
+  }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
@@ -1544,15 +1546,13 @@ public:
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
 public:
-  AtomicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTL,
-               EVT MemVT, MachineMemOperand *MMO)
-    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+  AtomicSDNode(unsigned Order, const DebugLoc &dl, unsigned Opc, SDVTList VTL,
+               EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy)
+      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
-  }
-
-  void setExtensionType(ISD::LoadExtType ETy) {
-    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
+    assert((Opc == ISD::ATOMIC_LOAD || ETy == ISD::NON_EXTLOAD) &&
+           "Only atomic load uses ExtTy");
     LoadSDNodeBits.ExtTy = ETy;
   }
 

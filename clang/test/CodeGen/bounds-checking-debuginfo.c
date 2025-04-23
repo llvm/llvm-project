@@ -23,7 +23,7 @@ void d(double*);
 // CHECK-TRAP-NEXT:    [[CALL:%.*]] = call i32 (...) @f(), !dbg [[DBG22:![0-9]+]]
 // CHECK-TRAP-NEXT:    [[TMP0:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG23:![0-9]+]], !nosanitize [[META10:![0-9]+]]
 // CHECK-TRAP-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 10, !dbg [[DBG23]], !nosanitize [[META10]]
-// CHECK-TRAP-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG23]], !nosanitize [[META10]]
+// CHECK-TRAP-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !dbg [[DBG23]], !prof [[PROF27:![0-9]+]], !nosanitize [[META10]]
 // CHECK-TRAP:       [[TRAP]]:
 // CHECK-TRAP-NEXT:    call void @llvm.ubsantrap(i8 18) #[[ATTR3:[0-9]+]], !dbg [[DBG23]], !nosanitize [[META10]]
 // CHECK-TRAP-NEXT:    unreachable, !dbg [[DBG23]], !nosanitize [[META10]]
@@ -31,7 +31,7 @@ void d(double*);
 // CHECK-TRAP-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64, !dbg [[DBG26:![0-9]+]]
 // CHECK-TRAP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x double], ptr [[A]], i64 0, i64 [[IDXPROM]], !dbg [[DBG26]]
 // CHECK-TRAP-NEXT:    [[TMP2:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !dbg [[DBG26]]
-// CHECK-TRAP-NEXT:    ret double [[TMP2]], !dbg [[DBG27:![0-9]+]]
+// CHECK-TRAP-NEXT:    ret double [[TMP2]], !dbg [[DBG28:![0-9]+]]
 //
 // CHECK-NOTRAP-LABEL: define dso_local double @f1(
 // CHECK-NOTRAP-SAME: i32 noundef [[B:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] !dbg [[DBG4:![0-9]+]] {
@@ -92,7 +92,8 @@ double f1(int b, int i) {
 // CHECK-TRAP: [[META24]] = distinct !DISubprogram(name: "__ubsan_check_array_bounds", scope: [[META5]], file: [[META5]], type: [[META25:![0-9]+]], flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: [[META0]])
 // CHECK-TRAP: [[META25]] = !DISubroutineType(types: null)
 // CHECK-TRAP: [[DBG26]] = !DILocation(line: 66, column: 10, scope: [[DBG4]])
-// CHECK-TRAP: [[DBG27]] = !DILocation(line: 66, column: 3, scope: [[DBG4]])
+// CHECK-TRAP: [[PROF27]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK-TRAP: [[DBG28]] = !DILocation(line: 66, column: 3, scope: [[DBG4]])
 //.
 // CHECK-NOTRAP: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 // CHECK-NOTRAP: [[META1]] = !DIFile(filename: "<stdin>", directory: {{.*}})

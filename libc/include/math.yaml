@@ -93,6 +93,14 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: atan2f128
+    standards:
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: atanf
     standards:
       - stdc

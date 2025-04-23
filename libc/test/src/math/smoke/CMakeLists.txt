@@ -4085,6 +4085,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atan2f128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2f128_test.cpp
+  DEPENDS
+    libc.src.math.atan2f128
+)
+
+add_fp_unittest(
   scalbln_test
   SUITE
     libc-math-smoke-tests
@@ -4252,6 +4262,7 @@ add_fp_unittest(
   SRCS
     pow_test.cpp
   DEPENDS
+    libc.src.errno.errno
     libc.hdr.fenv_macros
     libc.src.math.pow
 )

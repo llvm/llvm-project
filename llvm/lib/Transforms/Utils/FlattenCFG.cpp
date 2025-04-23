@@ -356,8 +356,8 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
     if (iter1->mayWriteToMemory()) {
       for (BasicBlock::iterator BI(PBI2), BE(PTI2); BI != BE; ++BI) {
         if (BI->mayReadFromMemory() || BI->mayWriteToMemory()) {
-          // Check alias with Head2.
-          if (!AA || !AA->isNoAlias(&*iter1, &*BI))
+          // Check whether iter1 and BI may access the same memory location.
+          if (!AA || AA->getModRefInfo(&*iter1, &*BI) != ModRefInfo::NoModRef)
             return false;
         }
       }

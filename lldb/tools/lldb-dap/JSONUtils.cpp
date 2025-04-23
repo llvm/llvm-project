@@ -870,6 +870,19 @@ llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
   return llvm::json::Value(std::move(object));
 }
 
+llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format) {
+  lldb::SBMutex lock = process.GetTarget().GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  llvm::json::Array threads;
+  const uint32_t num_threads = process.GetNumThreads();
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
+    threads.emplace_back(CreateThread(thread, format));
+  }
+  return threads;
+}
+
 // "StoppedEvent": {
 //   "allOf": [ { "$ref": "#/definitions/Event" }, {
 //     "type": "object",
@@ -1400,7 +1413,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adapter_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
@@ -1410,7 +1422,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
 
   const auto *launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {debug_adapter_path.str(), "--comm-file",
+  std::vector<std::string> args = {DAP::debug_adapter_path.str(), "--comm-file",
                                    comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     args.push_back("--debugger-pid");

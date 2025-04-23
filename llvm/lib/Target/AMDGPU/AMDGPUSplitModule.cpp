@@ -205,8 +205,9 @@ static CostType calculateFunctionCosts(GetTTIFn GetTTI, Module &M,
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
         assert(Cost != InstructionCost::getMax());
         // Assume expensive if we can't tell the cost of an instruction.
-        CostType CostVal =
-            Cost.getValue().value_or(TargetTransformInfo::TCC_Expensive);
+        CostType CostVal = Cost.isValid()
+                               ? Cost.getValue()
+                               : (CostType)TargetTransformInfo::TCC_Expensive;
         assert((FnCost + CostVal) >= FnCost && "Overflow!");
         FnCost += CostVal;
       }
@@ -1017,12 +1018,12 @@ void RecursiveSearchSplitting::setupWorkList() {
   }
 
   for (const auto &Node : NodeEC) {
-    if (!Node.isLeader())
+    if (!Node->isLeader())
       continue;
 
     BitVector Cluster = SG.createNodesBitVector();
-    for (auto MI = NodeEC.member_begin(Node); MI != NodeEC.member_end(); ++MI) {
-      const SplitGraph::Node &N = SG.getNode(*MI);
+    for (unsigned M : NodeEC.members(*Node)) {
+      const SplitGraph::Node &N = SG.getNode(M);
       if (N.isGraphEntryPoint())
         N.getDependencies(Cluster);
     }

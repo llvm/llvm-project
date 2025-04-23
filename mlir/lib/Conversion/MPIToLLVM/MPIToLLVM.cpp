@@ -15,8 +15,10 @@
 #include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <memory>
@@ -57,9 +59,14 @@ std::pair<Value, Value> getRawPtrAndSize(const Location loc,
       loc, rewriter.getI64Type(), memRef, 2);
   Value resPtr =
       rewriter.create<LLVM::GEPOp>(loc, ptrType, elType, dataPtr, offset);
-  Value size = rewriter.create<LLVM::ExtractValueOp>(loc, memRef,
-                                                     ArrayRef<int64_t>{3, 0});
-  size = rewriter.create<LLVM::TruncOp>(loc, rewriter.getI32Type(), size);
+  Value size;
+  if (cast<LLVM::LLVMStructType>(memRef.getType()).getBody().size() > 3) {
+    size = rewriter.create<LLVM::ExtractValueOp>(loc, memRef,
+                                                 ArrayRef<int64_t>{3, 0});
+    size = rewriter.create<LLVM::TruncOp>(loc, rewriter.getI32Type(), size);
+  } else {
+    size = rewriter.create<arith::ConstantIntOp>(loc, 1, 32);
+  }
   return {resPtr, size};
 }
 
@@ -96,6 +103,9 @@ public:
 
   /// Get the MPI_STATUS_IGNORE value (typically a pointer type).
   virtual intptr_t getStatusIgnore() = 0;
+
+  /// Get the MPI_IN_PLACE value (void *).
+  virtual void *getInPlace() = 0;
 
   /// Gets or creates an MPI datatype as a value which corresponds to the given
   /// type.
@@ -157,6 +167,8 @@ public:
   }
 
   intptr_t getStatusIgnore() override { return 1; }
+
+  void *getInPlace() override { return reinterpret_cast<void *>(-1); }
 
   Value getDataType(const Location loc, ConversionPatternRewriter &rewriter,
                     Type type) override {
@@ -282,6 +294,8 @@ public:
   }
 
   intptr_t getStatusIgnore() override { return 0; }
+
+  void *getInPlace() override { return reinterpret_cast<void *>(1); }
 
   Value getDataType(const Location loc, ConversionPatternRewriter &rewriter,
                     Type type) override {
@@ -516,7 +530,8 @@ struct CommSplitOpLowering : public ConvertOpToLLVMPattern<mpi::CommSplitOp> {
                    outPtr.getRes()});
 
     // load the communicator into a register
-    auto res = rewriter.create<LLVM::LoadOp>(loc, i32, outPtr.getResult());
+    Value res = rewriter.create<LLVM::LoadOp>(loc, i32, outPtr.getResult());
+    res = rewriter.create<LLVM::SExtOp>(loc, rewriter.getI64Type(), res);
 
     // if retval is checked, replace uses of retval with the results from the
     // call op
@@ -525,7 +540,7 @@ struct CommSplitOpLowering : public ConvertOpToLLVMPattern<mpi::CommSplitOp> {
       replacements.push_back(callOp.getResult());
 
     // replace op
-    replacements.push_back(res.getRes());
+    replacements.push_back(res);
     rewriter.replaceOp(op, replacements);
 
     return success();
@@ -709,6 +724,7 @@ struct AllReduceOpLowering : public ConvertOpToLLVMPattern<mpi::AllReduceOp> {
     Location loc = op.getLoc();
     MLIRContext *context = rewriter.getContext();
     Type i32 = rewriter.getI32Type();
+    Type i64 = rewriter.getI64Type();
     Type elemType = op.getSendbuf().getType().getElementType();
 
     // ptrType `!llvm.ptr`
@@ -719,6 +735,14 @@ struct AllReduceOpLowering : public ConvertOpToLLVMPattern<mpi::AllReduceOp> {
         getRawPtrAndSize(loc, rewriter, adaptor.getSendbuf(), elemType);
     auto [recvPtr, recvSize] =
         getRawPtrAndSize(loc, rewriter, adaptor.getRecvbuf(), elemType);
+
+    // If input and output are the same, request in-place operation.
+    if (adaptor.getSendbuf() == adaptor.getRecvbuf()) {
+      sendPtr = rewriter.create<LLVM::ConstantOp>(
+          loc, i64, reinterpret_cast<int64_t>(mpiTraits->getInPlace()));
+      sendPtr = rewriter.create<LLVM::IntToPtrOp>(loc, ptrType, sendPtr);
+    }
+
     Value dataType = mpiTraits->getDataType(loc, rewriter, elemType);
     Value mpiOp = mpiTraits->getMPIOp(loc, rewriter, op.getOp());
     Value commWorld = mpiTraits->castComm(loc, rewriter, adaptor.getComm());

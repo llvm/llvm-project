@@ -215,6 +215,11 @@ public:
                                            const char *session_dictionary_name,
                                            lldb::DebuggerSP debugger);
 
+  static bool
+  LLDBSwigPythonCallModuleNewTarget(const char *python_module_name,
+                                    const char *session_dictionary_name,
+                                    lldb::TargetSP target);
+
   static python::PythonObject
   LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
                                const char *session_dictionary_name,
