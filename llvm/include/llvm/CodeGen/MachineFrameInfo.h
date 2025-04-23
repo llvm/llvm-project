@@ -90,13 +90,15 @@ public:
     return Map.lookup(MBB);
   }
 
-  void set(PointsMap CSI) { Map = std::move(CSI); }
+  void set(PointsMap &&CSI) { Map = std::move(CSI); }
 
   MachineBasicBlock *findAny(const CalleeSavedInfo &Match) const {
-    for (auto [BB, CSIV] : Map)
-      for (auto &CSI : CSIV)
+    for (auto [BB, CSIV] : Map) {
+      for (auto &CSI : CSIV) {
         if (CSI.getReg() == Match.getReg())
           return BB;
+      }
+    }
     return nullptr;
   }
 
@@ -891,11 +893,11 @@ public:
   }
 
   void setSavePoints(SaveRestorePoints::PointsMap NewSavePoints) {
-    SavePoints.set(NewSavePoints);
+    SavePoints.set(std::move(NewSavePoints));
   }
 
   void setRestorePoints(SaveRestorePoints::PointsMap NewRestorePoints) {
-    RestorePoints.set(NewRestorePoints);
+    RestorePoints.set(std::move(NewRestorePoints));
   }
 
   static const SaveRestorePoints::PointsMap constructSaveRestorePoints(

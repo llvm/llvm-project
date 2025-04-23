@@ -122,8 +122,16 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   # CHECK:      savePoint:
   # CHECK-NEXT:   - point:           '%bb.1'
+  # CHECK-NEXT:     registers:
+  # CHECK-NEXT:       - '$ebx'
+  # CHECK-NEXT:       - '$edi'
+  # CHECK-NEXT:       - '$esi'
   # CHECK:      restorePoint:
   # CHECK-NEXT:   - point:           '%bb.3'
+  # CHECK-NEXT:     registers:
+  # CHECK-NEXT:       - '$ebx'
+  # CHECK-NEXT:       - '$edi'
+  # CHECK-NEXT:       - '$esi'
   savePoint:       ''
   restorePoint:    ''
 fixedStack:      

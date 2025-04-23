@@ -872,10 +872,10 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
   if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints,
-                                  true /*IsSavePoints*/))
+                                  /*IsSavePoints=*/true))
     return true;
   if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints,
-                                  false /*IsSavePoints*/))
+                                  /*IsSavePoints=*/false))
     return true;
 
   std::vector<CalleeSavedInfo> CSIInfo;

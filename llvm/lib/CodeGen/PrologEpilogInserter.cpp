@@ -682,8 +682,10 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 static void fillCSInfoPerBB(MachineFrameInfo &MFI,
                             DenseMap<MCRegister, CalleeSavedInfo *> &RegToInfo,
                             MBBVector &PrologEpilogBlocks, bool isSave) {
-  std::vector<CalleeSavedInfo> CSIV = {};
-  std::vector<CalleeSavedInfo> GCSIV = {};
+  // CaleeSavedInfo list for each point
+  std::vector<CalleeSavedInfo> CSIV;
+  // Global CalleeSavedInfo list aggregating CSIVs for all points
+  std::vector<CalleeSavedInfo> GCSIV;
   const SaveRestorePoints::PointsMap &SRPoints =
       isSave ? MFI.getSavePoints() : MFI.getRestorePoints();
   SaveRestorePoints::PointsMap Inner;
@@ -696,6 +698,8 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
       CSIV.push_back(*RegToInfo.at(Reg.getReg()));
       GCSIV.push_back(*RegToInfo.at(Reg.getReg()));
     }
+    // We need to sort CSIV, because Aarch64 expect CSI list to come sorted by
+    // frame index
     std::sort(CSIV.begin(), CSIV.end(),
               [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
                 return Lhs.getFrameIdx() < Rhs.getFrameIdx();
@@ -703,6 +707,10 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
     Inner.insert({BB, CSIV});
   }
 
+  // If in any case not all CSRs listed in MFI.getCalleeSavedInfo are in the
+  // list of spilled/restored registers (for example AArch64 backend add VG
+  // registers in the list of CalleeSavedRegs during spill slot assignment), we
+  // should add them to this list and spill/restore them in Prolog/Epilog.
   if (GCSIV.size() < RegToInfo.size()) {
     for (auto &RTI : RegToInfo) {
       if (find_if(GCSIV, [&RTI](const CalleeSavedInfo &CSI) {
@@ -710,12 +718,14 @@ static void fillCSInfoPerBB(MachineFrameInfo &MFI,
           }) != std::end(GCSIV))
         continue;
       for (auto BB : PrologEpilogBlocks) {
-        if (Inner.contains(BB)) {
-          Inner[BB].push_back(*RTI.second);
-          std::sort(Inner[BB].begin(), Inner[BB].end(),
+        if (auto Entry = Inner.find(BB); Entry != Inner.end()) {
+          auto &CSI = Entry->second;
+          CSI.push_back(*RTI.second);
+          std::sort(CSI.begin(), CSI.end(),
                     [](const CalleeSavedInfo &Lhs, const CalleeSavedInfo &Rhs) {
                       return Lhs.getFrameIdx() < Rhs.getFrameIdx();
                     });
+          continue;
         }
         CSIV.clear();
         CSIV.push_back(*RTI.second);
@@ -761,13 +771,13 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
       RegToInfo.insert({CS.getReg(), &CS});
 
     if (!MFI.getSavePoints().empty()) {
-      fillCSInfoPerBB(MFI, RegToInfo, PrologBlocks, true /* isSave */);
-      fillCSInfoPerBB(MFI, RegToInfo, EpilogBlocks, false /* isSave */);
+      fillCSInfoPerBB(MFI, RegToInfo, PrologBlocks, /*isSave=*/true);
+      fillCSInfoPerBB(MFI, RegToInfo, EpilogBlocks, /*isSave=*/false);
     } else {
       SaveRestorePoints::PointsMap SavePts;
       for (MachineBasicBlock *PrologBlock : PrologBlocks)
         SavePts.insert({PrologBlock, MFI.getCalleeSavedInfo()});
-      MFI.setSavePoints(SavePts);
+      MFI.setSavePoints(std::move(SavePts));
     }
 
     if (!CSI.empty()) {
@@ -798,7 +808,7 @@ void PEIImpl::spillCalleeSavedRegs(MachineFunction &MF) {
         SaveRestorePoints::PointsMap RestorePts;
         for (MachineBasicBlock *EpilogBlock : EpilogBlocks)
           RestorePts.insert({EpilogBlock, MFI.getCalleeSavedInfo()});
-        MFI.setRestorePoints(RestorePts);
+        MFI.setRestorePoints(std::move(RestorePts));
       }
 
       for (MachineBasicBlock *RestoreBlock : RestoreBlocks) {

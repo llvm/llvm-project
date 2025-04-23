@@ -636,10 +636,28 @@ namespace yaml {
 
 // Struct representing one save/restore point in the
 // 'savePoint' / 'restorePoint' list. One point consist of machine basic block
-// name and list of saved/restored in this basic block registers. Generally
-// 'registers' is not obligatory field, if this field is not specified, it is
-// assumed to be equal to the list of all CalleeSavedRegisters, calculated
-// during PEI
+// name and list of saved/restored in this basic block registers. There are
+// two forms of Save/Restore point representation:
+// 1. Without explicit register enumeration:
+//      savePoint:       '%bb.n'
+//      restorePoint:    '%bb.n'
+// supported for backward compatibility (in this case we assume that all
+// CalleeSavedRegisters are splilled/restored in these points)
+// 2. With explicit register:
+//  savePoint:
+//    - point:           '%bb.1'
+//      registers:
+//        - '$rbx'
+//        - '$r12'
+//        ...
+//  restorePoint:
+//    - point:           '%bb.1'
+//      registers:
+//        - '$rbx'
+//        - '$r12'
+// If this representation form is used and no register is saved/restored in the
+// selected BB, the empty list of register should be specified ( i.e. registers:
+// [])
 struct SaveRestorePointEntry {
   StringValue Point;
   std::vector<StringValue> Registers;
@@ -685,7 +703,7 @@ template <> struct PolymorphicTraits<SaveRestorePoints> {
 template <> struct MappingTraits<SaveRestorePointEntry> {
   static void mapping(IO &YamlIO, SaveRestorePointEntry &Entry) {
     YamlIO.mapRequired("point", Entry.Point);
-    YamlIO.mapOptional("registers", Entry.Registers);
+    YamlIO.mapRequired("registers", Entry.Registers);
   }
 };
 

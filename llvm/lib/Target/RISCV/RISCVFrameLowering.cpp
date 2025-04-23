@@ -943,7 +943,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // callee-saved register.
   CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
-  // For scalar spills we skip 2 instrs at once, because right after
+  // For scalar register spills we skip 2 instrs at once, because right after
   // spills there are cfi instructions. At the moment of prolog emission they
   // are already inserted for scalar instructions, but not for vector
   // instructions.
@@ -1068,11 +1068,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // to the stack, not before.
   // FIXME: assumes exactly one instruction is used to save each callee-saved
   // register.
-  int Distance = getUnmanagedCSI(MF, CSI).size();
-  // Skip scalar CSR spills and corresponding cfi instrs
-  if (!RVFI->isPushable(MF) && !RVFI->useSaveRestoreLibCalls(MF) && NeedsDwarfCFI)
-    Distance *= 2;
-  std::advance(MBBI, Distance);
+  std::advance(MBBI, ScalarDistance);
 
   // Generate new FP.
   if (hasFP(MF)) {
@@ -1307,7 +1303,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   // Skip to after the restores of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
   // callee-saved register.
-  // Skip CSR restore + corresponding cfi restore instruction
+  // Skip CSR restore instructions + corresponding cfi restore instructions
   int ScalarDistance = getUnmanagedCSI(MF, CSI).size();
   if (NeedsDwarfCFI)
     ScalarDistance *= 2;
@@ -2197,6 +2193,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
                               MachineInstr::FrameSetup);
     }
   };
+
   storeRegsToStackSlots(UnmanagedCSI);
 
   bool NeedsDwarfCFI = needsDwarfCFI(*MF);
@@ -2320,6 +2317,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     }
   };
   loadRegFromStackSlot(RVVCSI);
+
   loadRegFromStackSlot(UnmanagedCSI);
 
   bool NeedsDwarfCFI = needsDwarfCFI(*MF);

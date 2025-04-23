@@ -634,8 +634,19 @@ static void convertSRPoints(ModuleSlotTracker &MST,
         Str.clear();
       }
     }
+    // Sort here needed for stable output for lit tests
+    std::sort(Entry.Registers.begin(), Entry.Registers.end(),
+              [](const yaml::StringValue &Lhs, const yaml::StringValue &Rhs) {
+                return Lhs.Value < Rhs.Value;
+              });
     Points.push_back(Entry);
   }
+  // Sort here needed for stable output for lit tests
+  std::sort(Points.begin(), Points.end(),
+            [](const yaml::SaveRestorePointEntry &Lhs,
+               const yaml::SaveRestorePointEntry &Rhs) {
+              return Lhs.Point.Value < Rhs.Point.Value;
+            });
 }
 
 static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
