@@ -545,6 +545,8 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
         for (MCRegUnitIterator RUI(Reg, TRI); RUI.isValid(); ++RUI) {
           // If it's using a non-loop-invariant register, then it's obviously
           // not safe to hoist.
+          // Note this isn't a final check, as we haven't gathered all the loop
+          // register definitions yet.
           if (RUDefs.test(*RUI) || RUClobbers.test(*RUI)) {
             HasNonInvariantUse = true;
             break;
@@ -621,14 +623,6 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     const MachineLoop *ML = MLI->getLoopFor(BB);
     if (ML && ML->getHeader()->isEHPad()) continue;
 
-    // Conservatively treat live-in's as an external def.
-    // FIXME: That means a reload that're reused in successor block(s) will not
-    // be LICM'ed.
-    for (const auto &LI : BB->liveins()) {
-      for (MCRegUnitIterator RUI(LI.PhysReg, TRI); RUI.isValid(); ++RUI)
-        RUDefs.set(*RUI);
-    }
-
     // Funclet entry blocks will clobber all registers
     if (const uint32_t *Mask = BB->getBeginClobberMask(TRI))
       applyBitsNotInRegMaskToRegUnitsMask(*TRI, RUClobbers, Mask);
@@ -636,6 +630,16 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : *BB)
       ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates, CurLoop);
+  }
+
+  // Mark registers as clobbered if they are livein and also defined in the loop
+  for (const auto &LoopLI : CurLoop->getHeader()->liveins()) {
+    MCPhysReg LoopLiveInReg = LoopLI.PhysReg;
+    for (MCRegUnitIterator RUI(LoopLiveInReg, TRI); RUI.isValid(); ++RUI) {
+      if (RUDefs.test(*RUI)) {
+        RUClobbers.set(*RUI);
+      }
+    }
   }
 
   // Gather the registers read / clobbered by the terminator.

@@ -46,6 +46,7 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    andi t3, a4, 1
 ; CHECK-NEXT:    li t2, 4
+; CHECK-NEXT:    andi s10, a0, 1
 ; CHECK-NEXT:  .LBB0_1: # %for.cond1.preheader.i
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_2 Depth 2
@@ -105,7 +106,6 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    addi s8, s8, 4
 ; CHECK-NEXT:    addi ra, ra, 4
 ; CHECK-NEXT:    addi a3, a3, 4
-; CHECK-NEXT:    andi s10, a0, 1
 ; CHECK-NEXT:    addi s11, s11, 4
 ; CHECK-NEXT:    beqz s10, .LBB0_4
 ; CHECK-NEXT:  # %bb.7: # %for.cond.cleanup11.i

@@ -128,9 +128,10 @@ define protected amdgpu_kernel void @InferPHI(i32 %a, ptr addrspace(1) %b, doubl
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; CHECK-NEXT:  .LBB3_1: ; %bb0
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; CHECK-NEXT:    s_mov_b64 vcc, vcc
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb1
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec

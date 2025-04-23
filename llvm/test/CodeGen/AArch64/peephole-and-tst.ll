@@ -9,6 +9,7 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-LABEL: test_func_i32_two_uses:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:ptr_wrapper
+; CHECK-NEXT:    and w11, w2, w0
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:ptr_wrapper]
 ; CHECK-NEXT:    ldr x9, [x8]
 ; CHECK-NEXT:    mov w8, wzr
@@ -21,7 +22,6 @@ define i32 @test_func_i32_two_uses(i32 %in, i32 %bit, i32 %mask) {
 ; CHECK-NEXT:  .LBB0_3: // %do.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ands w10, w1, w0
-; CHECK-NEXT:    and w11, w2, w0
 ; CHECK-NEXT:    cinc w8, w8, ne
 ; CHECK-NEXT:    cmp w10, w11
 ; CHECK-NEXT:    b.eq .LBB0_1
