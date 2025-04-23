@@ -15,6 +15,7 @@
 #define LLVM_MC_MCSCHEDULE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -123,7 +124,7 @@ struct MCSchedClassDesc {
   static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const char* Name;
+  unsigned NameOffset;
 #endif
   uint16_t NumMicroOps : 13;
   uint16_t BeginGroup : 1;
@@ -321,6 +322,9 @@ struct MCSchedModel {
   unsigned ProcID;
   const MCProcResourceDesc *ProcResourceTable;
   const MCSchedClassDesc *SchedClassTable;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  StringTable SchedClassNameTable = "";
+#endif
   unsigned NumProcResourceKinds;
   unsigned NumSchedClasses;
   // Instruction itinerary tables used by InstrItineraryData.
@@ -408,6 +412,12 @@ struct MCSchedModel {
 
   /// Returns the default initialized model.
   static const MCSchedModel Default;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  StringRef getSchedClassName(const MCSchedClassDesc *SCDesc) const {
+    return SchedClassNameTable[SCDesc->NameOffset];
+  }
+#endif
 };
 
 // The first three are only template'd arguments so we can get away with leaving

@@ -20,24 +20,25 @@
 
 using namespace llvm;
 
-static_assert(std::is_trivial_v<MCSchedModel>,
-              "MCSchedModel is required to be a trivial type");
-const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
-                                            DefaultMicroOpBufferSize,
-                                            DefaultLoopMicroOpBufferSize,
-                                            DefaultLoadLatency,
-                                            DefaultHighLatency,
-                                            DefaultMispredictPenalty,
-                                            false,
-                                            true,
-                                            /*EnableIntervals=*/false,
-                                            0,
-                                            nullptr,
-                                            nullptr,
-                                            0,
-                                            0,
-                                            nullptr,
-                                            nullptr};
+constexpr MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
+                                                DefaultMicroOpBufferSize,
+                                                DefaultLoopMicroOpBufferSize,
+                                                DefaultLoadLatency,
+                                                DefaultHighLatency,
+                                                DefaultMispredictPenalty,
+                                                false,
+                                                true,
+                                                /*EnableIntervals=*/false,
+                                                0,
+                                                nullptr,
+                                                nullptr,
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+                                                "",
+#endif
+                                                0,
+                                                0,
+                                                nullptr,
+                                                nullptr};
 
 int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {

@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
@@ -1430,6 +1431,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
   OS << "}; // " << Target << "ReadAdvanceTable\n";
 
   // Emit a SchedClass table for each processor.
+  StringToOffsetTable NameTable;
   for (const auto &[Idx, Proc] : enumerate(SchedModels.procModels())) {
     if (!Proc.hasInstrSchedModel())
       continue;
@@ -1446,14 +1448,17 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
     // name and position.
     assert(SchedModels.getSchedClass(0).Name == "NoInstrModel" &&
            "invalid class not first");
-    OS << "  {DBGFIELD(\"InvalidSchedClass\")  "
+    unsigned NameOffset = NameTable.GetOrAddStringOffset("InvalidSchedClass");
+    OS << "  {DBGFIELD(" << NameOffset << " /* InvalidSchedClass */)  "
        << MCSchedClassDesc::InvalidNumMicroOps
        << ", false, false, false, 0, 0,  0, 0,  0, 0},\n";
 
     for (unsigned SCIdx = 1, SCEnd = SCTab.size(); SCIdx != SCEnd; ++SCIdx) {
       MCSchedClassDesc &MCDesc = SCTab[SCIdx];
       const CodeGenSchedClass &SchedClass = SchedModels.getSchedClass(SCIdx);
-      OS << "  {DBGFIELD(\"" << SchedClass.Name << "\") ";
+      NameOffset = NameTable.GetOrAddStringOffset(SchedClass.Name);
+      OS << "  {DBGFIELD(" << NameOffset << " /* " << SchedClass.Name
+         << " */) ";
       if (SchedClass.Name.size() < 18)
         OS.indent(18 - SchedClass.Name.size());
       OS << MCDesc.NumMicroOps << ", " << (MCDesc.BeginGroup ? "true" : "false")
@@ -1467,6 +1472,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
          << MCDesc.NumReadAdvanceEntries << "}, // #" << SCIdx << '\n';
     }
     OS << "}; // " << Proc.ModelName << "SchedClasses\n";
+    NameTable.EmitStringTableDef(OS, Proc.ModelName + "SchedClassNames");
   }
 }
 
@@ -1516,10 +1522,11 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
     if (PM.hasInstrSchedModel())
       OS << "  " << PM.ModelName << "ProcResources" << ",\n"
          << "  " << PM.ModelName << "SchedClasses" << ",\n"
+         << "  DBGFIELD(" << PM.ModelName << "SchedClassNames" << ")\n"
          << "  " << PM.ProcResourceDefs.size() + 1 << ",\n"
          << "  " << SchedModels.schedClasses().size() << ",\n";
     else
-      OS << "  nullptr, nullptr, 0, 0,"
+      OS << "  nullptr, nullptr, DBGFIELD(\"\") 0, 0,"
          << " // No instruction-level machine model.\n";
     if (PM.hasItineraries())
       OS << "  " << PM.ItinsDef->getName() << ",\n";
@@ -1561,10 +1568,10 @@ void SubtargetEmitter::emitSchedModel(raw_ostream &OS) {
   }
   emitSchedClassTables(SchedTables, OS);
 
-  OS << "\n#undef DBGFIELD\n";
-
   // Emit the processor machine model
   emitProcessorModels(OS);
+
+  OS << "\n#undef DBGFIELD\n";
 }
 
 static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
