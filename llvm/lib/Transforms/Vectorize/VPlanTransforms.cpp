@@ -2546,12 +2546,12 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   VPValue *Op0, *Op1;
   if (MulAcc->isExtended()) {
     Type *RedTy = MulAcc->getResultType();
-    if (MulAcc->isZExt())
-      Op0 = new VPWidenCastRecipe(
-          MulAcc->getExtOpcode(), MulAcc->getVecOp0(), RedTy,
-          VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()), MulAcc->getDebugLoc());
+    if (MulAcc->isZExt0())
+      Op0 = new VPWidenCastRecipe(MulAcc->getExt0Opcode(), MulAcc->getVecOp0(),
+                                  RedTy, VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg0()),
+                                  MulAcc->getDebugLoc());
     else
-      Op0 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp0(),
+      Op0 = new VPWidenCastRecipe(MulAcc->getExt0Opcode(), MulAcc->getVecOp0(),
                                   RedTy, {}, MulAcc->getDebugLoc());
     Op0->getDefiningRecipe()->insertBefore(MulAcc);
     // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
@@ -2559,14 +2559,15 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
     if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
       Op1 = Op0;
     } else {
-      if (MulAcc->isZExt())
-        Op1 = new VPWidenCastRecipe(
-            MulAcc->getExtOpcode(), MulAcc->getVecOp1(), RedTy,
-            VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg()),
-            MulAcc->getDebugLoc());
+      if (MulAcc->isZExt1())
+        Op1 = new VPWidenCastRecipe(MulAcc->getExt1Opcode(),
+                                    MulAcc->getVecOp1(), RedTy,
+            VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg1()),
+                                    MulAcc->getDebugLoc());
       else
-        Op1 = new VPWidenCastRecipe(MulAcc->getExtOpcode(), MulAcc->getVecOp1(),
-                                    RedTy, {}, MulAcc->getDebugLoc());
+        Op1 =
+            new VPWidenCastRecipe(MulAcc->getExt1Opcode(), MulAcc->getVecOp1(),
+                                  RedTy, {}, MulAcc->getDebugLoc());
       Op1->getDefiningRecipe()->insertBefore(MulAcc);
     }
   } else {
@@ -2933,10 +2934,8 @@ tryToCreateAbstractPartialReductionRecipe(VPPartialReductionRecipe *PRed) {
   auto *BinOpR = cast<VPWidenRecipe>(BinOp->getDefiningRecipe());
   VPWidenCastRecipe *Ext0R = dyn_cast<VPWidenCastRecipe>(BinOpR->getOperand(0));
   VPWidenCastRecipe *Ext1R = dyn_cast<VPWidenCastRecipe>(BinOpR->getOperand(1));
-
-  // TODO: Make work with extends of different signedness
-  if (Ext0R->hasMoreThanOneUniqueUser() || Ext1R->hasMoreThanOneUniqueUser() ||
-      Ext0R->getOpcode() != Ext1R->getOpcode())
+  if (!Ext0R || Ext0R->hasMoreThanOneUniqueUser() || !Ext1R ||
+      Ext1R->hasMoreThanOneUniqueUser())
     return;
 
   auto *AbstractR = new VPMulAccumulateReductionRecipe(

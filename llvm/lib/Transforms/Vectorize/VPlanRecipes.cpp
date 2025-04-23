@@ -2576,14 +2576,14 @@ VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
     return Ctx.TTI.getPartialReductionCost(
         Instruction::Add, Ctx.Types.inferScalarType(getVecOp0()),
         Ctx.Types.inferScalarType(getVecOp1()), getResultType(), VF,
-        TTI::getPartialReductionExtendKind(getExtOpcode()),
-        TTI::getPartialReductionExtendKind(getExtOpcode()), Instruction::Mul);
+        TTI::getPartialReductionExtendKind(getExt0Opcode()),
+        TTI::getPartialReductionExtendKind(getExt1Opcode()), Instruction::Mul);
   }
 
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy,
+  return Ctx.TTI.getMulAccReductionCost(isZExt0(), RedTy, SrcVecTy,
                                         Ctx.CostKind);
 }
 
@@ -2669,15 +2669,16 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   if (isExtended())
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
+  if (isExtended()) {
+    O << " " << Instruction::getOpcodeName(ExtOp0) << " to " << *getResultType()
       << "), (";
-  else
+  } else
     O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
+  if (isExtended()) {
+    O << " " << Instruction::getOpcodeName(ExtOp1) << " to " << *getResultType()
       << ")";
+  }
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
