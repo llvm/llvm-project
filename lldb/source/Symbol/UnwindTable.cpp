@@ -150,7 +150,8 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
   if (ranges.empty())
     return nullptr;
 
-  auto func_unwinder_sp = std::make_shared<FuncUnwinders>(*this, start_addr, ranges);
+  auto func_unwinder_sp =
+      std::make_shared<FuncUnwinders>(*this, start_addr, ranges);
   for (const AddressRange &range : ranges)
     m_unwinds.emplace_hint(insert_pos, range.GetBaseAddress().GetFileAddress(),
                            func_unwinder_sp);
