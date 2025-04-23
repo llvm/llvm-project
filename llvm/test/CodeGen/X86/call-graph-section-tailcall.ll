@@ -1,9 +1,9 @@
 ;; Tests that we store the type identifiers in .callgraph section of the object file for tailcalls.
 
-; RUN: llc --call-graph-section -filetype=obj -o - < %s | \
+; RUN: llc -mtriple=x86_64-unknown-linux --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .callgraph - | FileCheck %s
 
-define dso_local noundef i32 @_Z13call_indirectPFicEc(ptr noundef readonly captures(none) %func, i8 noundef signext %x) local_unnamed_addr !type !0 {
+define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) local_unnamed_addr !type !0 {
 entry:
   %call = tail call noundef i32 %func(i8 noundef signext %x), !callee_type !1
   ret i32 %call

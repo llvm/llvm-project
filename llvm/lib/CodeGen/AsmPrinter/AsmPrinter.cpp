@@ -1863,12 +1863,10 @@ static StringRef getMIMnemonic(const MachineInstr &MI, MCStreamer &Streamer) {
 void AsmPrinter::emitIndirectCalleeLabels(
     FunctionInfo &FuncInfo,
     const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
-    MachineInstr &MI) {
+    const MachineInstr &MI) {
   // Only indirect calls have type identifiers set.
   const auto &CallSiteInfo = CallSitesInfoMap.find(&MI);
   if (CallSiteInfo == CallSitesInfoMap.end())
-    return;
-  if (CallSiteInfo->second.CalleeTypeIds.empty())
     return;
 
   for (auto *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {

@@ -361,7 +361,7 @@ public:
   void emitIndirectCalleeLabels(
       FunctionInfo &FuncInfo,
       const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
-      MachineInstr &MI);
+      const MachineInstr &MI);
 
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
