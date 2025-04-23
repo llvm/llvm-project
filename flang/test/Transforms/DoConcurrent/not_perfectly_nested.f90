@@ -29,7 +29,11 @@ end
 ! HOST: %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 {bindc_name = "j"}
 ! HOST: %[[ORIG_J_DECL:.*]]:2 = hlfir.declare %[[ORIG_J_ALLOC]]
 
-! DEVICE: omp.target {{.*}}map_entries(%{{[^[:space:]]+}} -> %[[I_ARG:[^,]+]],
+! DEVICE: omp.target {{.*}}map_entries(
+! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
+! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
+! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
+! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[I_ARG:[^,]+]],
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[X_ARG:[^,]+]],
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[J_ARG:[^,]+]],
 ! DEVICE-SAME:   %{{[^[:space:]]+}} -> %[[K_ARG:[^,]+]],
