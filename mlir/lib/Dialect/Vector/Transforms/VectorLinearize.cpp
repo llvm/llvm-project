@@ -280,6 +280,7 @@ private:
   unsigned targetVectorBitWidth;
 };
 
+// clang-format off
 /// This pattern linearizes the InsertStridedSliceOp by extracting rows from the
 /// source vector using ExtractStridedSliceOp and inserting them into the
 /// destination vector using InsertStridedSliceOp.
@@ -288,11 +289,14 @@ private:
 ///   vector<4x4xf32>
 /// is converted to :
 ///   %0 = vector.extract_strided_slice %s {offsets=[0], sizes=[4], strides=[1]}
-///   : vector<4xf32> from vector<8xf32> %1 = vector.insert_strided_slice %0, %d
-///   {offsets=[0], strides=[1]} : vector<4xf32> into vector<16xf32> %2 =
-///   vector.extract_strided_slice %s {offsets=[4], sizes=[4], strides=[1]} :
-///   vector<4xf32> from vector<8xf32> %3 = vector.insert_strided_slice %2, %1
-///   {offsets=[4], strides=[1]} : vector<4xf32> into vector<16xf32>
+///   : vector<4xf32> from vector<8xf32>
+///   %1 = vector.insert_strided_slice %0, %d {offsets=[0], strides=[1]}
+///   : vector<4xf32> into vector<16xf32>
+///   %2 = vector.extract_strided_slice %s {offsets=[4], sizes=[4], strides=[1]}
+///   : vector<4xf32> from vector<8xf32>
+///   %3 = vector.insert_strided_slice %2, %1 {offsets=[4], strides=[1]}
+///   : vector<4xf32> into vector<16xf32>
+// clang-format on
 struct LinearizeVectorInsertStridedSlice final
     : public OpConversionPattern<vector::InsertStridedSliceOp> {
   using OpConversionPattern<vector::InsertStridedSliceOp>::OpConversionPattern;
