@@ -1084,6 +1084,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
+
+  Tokens = annotate("using std::operator==;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  // Not TT_FunctionDeclarationName.
+  EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {
@@ -2165,6 +2170,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   // FIXME:
   // EXPECT_TOKEN(Tokens[13], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("auto foo{(std::function<int()>)[] { return 0; }};");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("auto foo{(int (*)())[] { return 0; }};");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
@@ -3973,6 +3988,12 @@ TEST_F(TokenAnnotatorTest, IdentifierPackage) {
   auto Tokens = annotate("auto package;");
   ASSERT_EQ(Tokens.size(), 4u) << Tokens;
   EXPECT_FALSE(Tokens[0]->isObjCAccessSpecifier());
+}
+
+TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
+  auto Tokens = annotate("auto dollars = 2_$;");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_EQ(Tokens[3]->TokenText, "2_$");
 }
 
 } // namespace
