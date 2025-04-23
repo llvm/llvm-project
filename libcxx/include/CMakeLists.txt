@@ -729,10 +729,7 @@ set(files
   __ranges/zip_view.h
   __split_buffer
   __stacktrace/basic_stacktrace.h
-  __stacktrace/alloc.h
-  __stacktrace/context.h
-  __stacktrace/entry.h
-  __stacktrace/to_string.h
+  __stacktrace/impl.h
   __stacktrace/stacktrace_entry.h
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
