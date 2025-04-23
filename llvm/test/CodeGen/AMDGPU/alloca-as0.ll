@@ -14,7 +14,7 @@ define i32 @static_alloca() {
 ; ISEL-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; ISEL-NEXT:    s_mov_b64 exec, s[18:19]
 ; ISEL-NEXT:    s_addk_i32 s32, 0x400
-; ISEL-NEXT:    v_writelane_b32 v40, s16, 4
+; ISEL-NEXT:    v_writelane_b32 v40, s16, 3
 ; ISEL-NEXT:    s_getpc_b64 s[16:17]
 ; ISEL-NEXT:    s_add_u32 s16, s16, bar@rel32@lo+4
 ; ISEL-NEXT:    s_addc_u32 s17, s17, bar@rel32@hi+12
@@ -27,25 +27,22 @@ define i32 @static_alloca() {
 ; ISEL-NEXT:    v_writelane_b32 v40, s34, 2
 ; ISEL-NEXT:    s_cselect_b32 s34, s18, 0
 ; ISEL-NEXT:    s_mov_b64 s[18:19], src_private_base
-; ISEL-NEXT:    v_writelane_b32 v40, s35, 3
-; ISEL-NEXT:    s_cselect_b32 s35, s19, 0
+; ISEL-NEXT:    s_cselect_b32 s18, s19, 0
 ; ISEL-NEXT:    v_mov_b32_e32 v0, s34
-; ISEL-NEXT:    v_mov_b32_e32 v1, s35
+; ISEL-NEXT:    v_mov_b32_e32 v1, s18
 ; ISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; ISEL-NEXT:    v_mov_b32_e32 v0, s34
-; ISEL-NEXT:    v_mov_b32_e32 v1, s35
-; ISEL-NEXT:    flat_load_dword v0, v[0:1]
-; ISEL-NEXT:    v_readlane_b32 s35, v40, 3
+; ISEL-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; ISEL-NEXT:    v_readlane_b32 s34, v40, 2
 ; ISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; ISEL-NEXT:    v_readlane_b32 s30, v40, 0
 ; ISEL-NEXT:    s_mov_b32 s32, s33
-; ISEL-NEXT:    v_readlane_b32 s4, v40, 4
+; ISEL-NEXT:    v_readlane_b32 s4, v40, 3
 ; ISEL-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; ISEL-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; ISEL-NEXT:    s_mov_b64 exec, s[6:7]
 ; ISEL-NEXT:    s_mov_b32 s33, s4
-; ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; ISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GI-LABEL: static_alloca:
@@ -56,35 +53,27 @@ define i32 @static_alloca() {
 ; GI-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GI-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GI-NEXT:    s_mov_b64 exec, s[18:19]
-; GI-NEXT:    v_writelane_b32 v40, s16, 4
-; GI-NEXT:    v_writelane_b32 v40, s30, 0
-; GI-NEXT:    v_writelane_b32 v40, s31, 1
+; GI-NEXT:    v_writelane_b32 v40, s16, 2
 ; GI-NEXT:    s_addk_i32 s32, 0x400
-; GI-NEXT:    v_writelane_b32 v40, s34, 2
-; GI-NEXT:    s_lshr_b32 s34, s33, 6
 ; GI-NEXT:    s_mov_b64 s[16:17], src_private_base
+; GI-NEXT:    v_writelane_b32 v40, s30, 0
 ; GI-NEXT:    s_getpc_b64 s[18:19]
 ; GI-NEXT:    s_add_u32 s18, s18, bar@rel32@lo+4
 ; GI-NEXT:    s_addc_u32 s19, s19, bar@rel32@hi+12
 ; GI-NEXT:    v_lshrrev_b32_e64 v0, 6, s33
 ; GI-NEXT:    v_mov_b32_e32 v1, s17
-; GI-NEXT:    v_writelane_b32 v40, s35, 3
-; GI-NEXT:    s_mov_b32 s35, s17
+; GI-NEXT:    v_writelane_b32 v40, s31, 1
 ; GI-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; GI-NEXT:    v_mov_b32_e32 v0, s34
-; GI-NEXT:    v_mov_b32_e32 v1, s35
-; GI-NEXT:    flat_load_dword v0, v[0:1]
-; GI-NEXT:    v_readlane_b32 s35, v40, 3
-; GI-NEXT:    v_readlane_b32 s34, v40, 2
+; GI-NEXT:    buffer_load_dword v0, off, s[0:3], s33
 ; GI-NEXT:    v_readlane_b32 s31, v40, 1
 ; GI-NEXT:    v_readlane_b32 s30, v40, 0
 ; GI-NEXT:    s_mov_b32 s32, s33
-; GI-NEXT:    v_readlane_b32 s4, v40, 4
+; GI-NEXT:    v_readlane_b32 s4, v40, 2
 ; GI-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GI-NEXT:    s_mov_b64 exec, s[6:7]
 ; GI-NEXT:    s_mov_b32 s33, s4
-; GI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GI-NEXT:    s_waitcnt vmcnt(0)
 ; GI-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4
   call void @bar(ptr %alloca)
@@ -112,19 +101,18 @@ define amdgpu_kernel void @static_alloca_kernel(ptr %p) {
 ; ISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
 ; ISEL-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; ISEL-NEXT:    s_cselect_b32 s33, 0, 0
-; ISEL-NEXT:    s_cselect_b32 s36, s15, 0
+; ISEL-NEXT:    s_cselect_b32 s15, s15, 0
 ; ISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; ISEL-NEXT:    s_mov_b32 s14, s16
 ; ISEL-NEXT:    v_mov_b32_e32 v0, s33
-; ISEL-NEXT:    v_mov_b32_e32 v1, s36
+; ISEL-NEXT:    v_mov_b32_e32 v1, s15
 ; ISEL-NEXT:    s_movk_i32 s32, 0x400
 ; ISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; ISEL-NEXT:    v_mov_b32_e32 v0, s33
-; ISEL-NEXT:    v_mov_b32_e32 v1, s36
-; ISEL-NEXT:    flat_load_dword v2, v[0:1]
+; ISEL-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
 ; ISEL-NEXT:    v_mov_b32_e32 v0, s34
 ; ISEL-NEXT:    v_mov_b32_e32 v1, s35
-; ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; ISEL-NEXT:    flat_store_dword v[0:1], v2
 ; ISEL-NEXT:    s_endpgm
 ;
@@ -138,10 +126,10 @@ define amdgpu_kernel void @static_alloca_kernel(ptr %p) {
 ; GI-NEXT:    s_add_u32 s8, s8, 8
 ; GI-NEXT:    s_mov_b32 s13, s15
 ; GI-NEXT:    s_mov_b32 s12, s14
+; GI-NEXT:    s_mov_b64 s[14:15], src_private_base
 ; GI-NEXT:    s_addc_u32 s9, s9, 0
 ; GI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GI-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GI-NEXT:    s_mov_b64 s[14:15], src_private_base
 ; GI-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GI-NEXT:    s_getpc_b64 s[18:19]
 ; GI-NEXT:    s_add_u32 s18, s18, bar@rel32@lo+4
@@ -150,15 +138,11 @@ define amdgpu_kernel void @static_alloca_kernel(ptr %p) {
 ; GI-NEXT:    v_mov_b32_e32 v1, s15
 ; GI-NEXT:    s_mov_b32 s14, s16
 ; GI-NEXT:    s_movk_i32 s32, 0x400
-; GI-NEXT:    s_mov_b32 s36, 0
-; GI-NEXT:    s_mov_b32 s37, s15
 ; GI-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; GI-NEXT:    v_mov_b32_e32 v0, s36
-; GI-NEXT:    v_mov_b32_e32 v1, s37
-; GI-NEXT:    flat_load_dword v2, v[0:1]
+; GI-NEXT:    buffer_load_dword v2, off, s[0:3], 0
 ; GI-NEXT:    v_mov_b32_e32 v0, s34
 ; GI-NEXT:    v_mov_b32_e32 v1, s35
-; GI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GI-NEXT:    s_waitcnt vmcnt(0)
 ; GI-NEXT:    flat_store_dword v[0:1], v2
 ; GI-NEXT:    s_endpgm
   %alloca = alloca i32, align 4
@@ -279,24 +263,24 @@ define amdgpu_kernel void @dynamic_alloca_i32_kernel(i32 %n, ptr %p) {
 ; ISEL-LABEL: dynamic_alloca_i32_kernel:
 ; ISEL:       ; %bb.0:
 ; ISEL-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
+; ISEL-NEXT:    s_mov_b32 s12, s14
+; ISEL-NEXT:    s_load_dword s14, s[8:9], 0x0
+; ISEL-NEXT:    s_load_dwordx2 s[34:35], s[8:9], 0x8
 ; ISEL-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; ISEL-NEXT:    s_add_u32 s0, s0, s17
-; ISEL-NEXT:    s_load_dword s17, s[8:9], 0x0
-; ISEL-NEXT:    s_load_dwordx2 s[34:35], s[8:9], 0x8
-; ISEL-NEXT:    s_movk_i32 s32, 0x400
 ; ISEL-NEXT:    s_addc_u32 s1, s1, 0
-; ISEL-NEXT:    s_mov_b32 s13, s15
-; ISEL-NEXT:    s_mov_b32 s12, s14
-; ISEL-NEXT:    s_mov_b64 s[14:15], src_private_base
-; ISEL-NEXT:    s_cmp_lg_u32 s32, -1
-; ISEL-NEXT:    s_cselect_b32 s15, s15, 0
-; ISEL-NEXT:    s_cselect_b32 s20, s32, 0
 ; ISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; ISEL-NEXT:    s_lshl_b32 s14, s17, 2
+; ISEL-NEXT:    s_lshl_b32 s14, s14, 2
 ; ISEL-NEXT:    s_add_i32 s14, s14, 15
 ; ISEL-NEXT:    s_and_b32 s14, s14, -16
+; ISEL-NEXT:    s_movk_i32 s32, 0x400
 ; ISEL-NEXT:    s_lshl_b32 s14, s14, 6
-; ISEL-NEXT:    s_add_i32 s32, s32, s14
+; ISEL-NEXT:    s_add_i32 s17, s32, s14
+; ISEL-NEXT:    s_mov_b32 s13, s15
+; ISEL-NEXT:    s_cmp_lg_u32 s32, -1
+; ISEL-NEXT:    s_mov_b64 s[14:15], src_private_base
+; ISEL-NEXT:    s_cselect_b32 s36, s32, 0
+; ISEL-NEXT:    s_cselect_b32 s15, s15, 0
 ; ISEL-NEXT:    s_add_u32 s8, s8, 16
 ; ISEL-NEXT:    s_addc_u32 s9, s9, 0
 ; ISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
@@ -306,16 +290,16 @@ define amdgpu_kernel void @dynamic_alloca_i32_kernel(i32 %n, ptr %p) {
 ; ISEL-NEXT:    s_addc_u32 s19, s19, bar@rel32@hi+12
 ; ISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; ISEL-NEXT:    s_mov_b32 s14, s16
-; ISEL-NEXT:    v_mov_b32_e32 v0, s20
+; ISEL-NEXT:    v_mov_b32_e32 v0, s36
 ; ISEL-NEXT:    v_mov_b32_e32 v1, s15
 ; ISEL-NEXT:    s_mov_b32 s33, 0
-; ISEL-NEXT:    v_mov_b32_e32 v40, s20
-; ISEL-NEXT:    v_mov_b32_e32 v41, s15
+; ISEL-NEXT:    s_mov_b32 s32, s17
 ; ISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; ISEL-NEXT:    flat_load_dword v2, v[40:41]
+; ISEL-NEXT:    v_mov_b32_e32 v0, s36
+; ISEL-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
 ; ISEL-NEXT:    v_mov_b32_e32 v0, s34
 ; ISEL-NEXT:    v_mov_b32_e32 v1, s35
-; ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; ISEL-NEXT:    flat_store_dword v[0:1], v2
 ; ISEL-NEXT:    s_endpgm
 ;
@@ -356,11 +340,10 @@ define amdgpu_kernel void @dynamic_alloca_i32_kernel(i32 %n, ptr %p) {
 ; GI-NEXT:    s_mov_b32 s33, 0
 ; GI-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GI-NEXT:    v_mov_b32_e32 v0, s36
-; GI-NEXT:    v_mov_b32_e32 v1, s37
-; GI-NEXT:    flat_load_dword v2, v[0:1]
+; GI-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
 ; GI-NEXT:    v_mov_b32_e32 v0, s34
 ; GI-NEXT:    v_mov_b32_e32 v1, s35
-; GI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GI-NEXT:    s_waitcnt vmcnt(0)
 ; GI-NEXT:    flat_store_dword v[0:1], v2
 ; GI-NEXT:    s_endpgm
   %alloca = alloca i32, i32 %n, align 4
@@ -478,24 +461,24 @@ define i32 @dynamic_alloca_i64(i64 %n) {
 define amdgpu_kernel void @dynamic_alloca_i64_kernel(i64 %n, ptr %p) {
 ; ISEL-LABEL: dynamic_alloca_i64_kernel:
 ; ISEL:       ; %bb.0:
-; ISEL-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; ISEL-NEXT:    s_load_dwordx4 s[20:23], s[8:9], 0x0
+; ISEL-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; ISEL-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
 ; ISEL-NEXT:    s_add_u32 s0, s0, s17
-; ISEL-NEXT:    s_movk_i32 s32, 0x400
 ; ISEL-NEXT:    s_addc_u32 s1, s1, 0
-; ISEL-NEXT:    s_mov_b32 s13, s15
 ; ISEL-NEXT:    s_mov_b32 s12, s14
-; ISEL-NEXT:    s_mov_b64 s[14:15], src_private_base
-; ISEL-NEXT:    s_cmp_lg_u32 s32, -1
-; ISEL-NEXT:    s_cselect_b32 s15, s15, 0
-; ISEL-NEXT:    s_cselect_b32 s17, s32, 0
 ; ISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; ISEL-NEXT:    s_lshl_b32 s14, s20, 2
 ; ISEL-NEXT:    s_add_i32 s14, s14, 15
 ; ISEL-NEXT:    s_and_b32 s14, s14, -16
+; ISEL-NEXT:    s_movk_i32 s32, 0x400
 ; ISEL-NEXT:    s_lshl_b32 s14, s14, 6
-; ISEL-NEXT:    s_add_i32 s32, s32, s14
+; ISEL-NEXT:    s_add_i32 s17, s32, s14
+; ISEL-NEXT:    s_mov_b32 s13, s15
+; ISEL-NEXT:    s_cmp_lg_u32 s32, -1
+; ISEL-NEXT:    s_mov_b64 s[14:15], src_private_base
+; ISEL-NEXT:    s_cselect_b32 s34, s32, 0
+; ISEL-NEXT:    s_cselect_b32 s15, s15, 0
 ; ISEL-NEXT:    s_add_u32 s8, s8, 16
 ; ISEL-NEXT:    s_addc_u32 s9, s9, 0
 ; ISEL-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
@@ -505,16 +488,16 @@ define amdgpu_kernel void @dynamic_alloca_i64_kernel(i64 %n, ptr %p) {
 ; ISEL-NEXT:    s_addc_u32 s19, s19, bar@rel32@hi+12
 ; ISEL-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; ISEL-NEXT:    s_mov_b32 s14, s16
-; ISEL-NEXT:    v_mov_b32_e32 v0, s17
+; ISEL-NEXT:    v_mov_b32_e32 v0, s34
 ; ISEL-NEXT:    v_mov_b32_e32 v1, s15
 ; ISEL-NEXT:    s_mov_b32 s33, 0
 ; ISEL-NEXT:    v_mov_b32_e32 v40, s22
 ; ISEL-NEXT:    v_mov_b32_e32 v41, s23
-; ISEL-NEXT:    v_mov_b32_e32 v42, s17
-; ISEL-NEXT:    v_mov_b32_e32 v43, s15
+; ISEL-NEXT:    s_mov_b32 s32, s17
 ; ISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; ISEL-NEXT:    flat_load_dword v0, v[42:43]
-; ISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; ISEL-NEXT:    v_mov_b32_e32 v0, s34
+; ISEL-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; ISEL-NEXT:    s_waitcnt vmcnt(0)
 ; ISEL-NEXT:    flat_store_dword v[40:41], v0
 ; ISEL-NEXT:    s_endpgm
 ;
@@ -553,11 +536,10 @@ define amdgpu_kernel void @dynamic_alloca_i64_kernel(i64 %n, ptr %p) {
 ; GI-NEXT:    s_mov_b32 s33, 0
 ; GI-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GI-NEXT:    v_mov_b32_e32 v0, s34
-; GI-NEXT:    v_mov_b32_e32 v1, s35
-; GI-NEXT:    flat_load_dword v2, v[0:1]
+; GI-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
 ; GI-NEXT:    v_mov_b32_e32 v0, s38
 ; GI-NEXT:    v_mov_b32_e32 v1, s39
-; GI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GI-NEXT:    s_waitcnt vmcnt(0)
 ; GI-NEXT:    flat_store_dword v[0:1], v2
 ; GI-NEXT:    s_endpgm
   %alloca = alloca i32, i64 %n, align 4
