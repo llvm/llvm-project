@@ -408,8 +408,12 @@ def main():
             for argument in ssa_split[1:]:
                 output_line += "// " + args.check_prefix + "-SAME:  "
 
-                # Pad to align with the original position in the line.
-                output_line += " " * len(ssa_split[0])
+                # Pad to align with the original position in the line (i.e. where the label ends),
+                # unless the label is more than 20 chars long, in which case pad with 4 spaces
+                # (this is to avoid deep indentation).
+                label_length = len(ssa_split[0])
+                pad_depth = label_length if label_length < 21 else 4
+                output_line += " " * pad_depth
 
                 # Process the rest of the line.
                 output_line += process_line(
