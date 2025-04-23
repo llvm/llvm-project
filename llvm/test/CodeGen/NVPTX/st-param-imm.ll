@@ -2023,4 +2023,28 @@ define void @st_param_bfloat() {
   ret void
 }
 
+define void @st_param_v2bfloat(<2 x bfloat> %val) {
+; CHECK-LABEL: st_param_v2bfloat(
+; CHECK:	.param .align 4 .b8 st_param_v2bfloat_param_0[4]
+; CHECK-NEXT: )
+; CHECK-NEXT: {
+; CHECK-NEXT:		.reg .b32 	%r<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:	// %bb.0:
+; CHECK-NEXT:	ld.param.b32 	%r1, [st_param_v2bfloat_param_0];
+; CHECK-NEXT:	{ // callseq 84, 0
+; CHECK-NEXT:	.param .align 4 .b8 param0[4];
+; CHECK-NEXT:	st.param.b32 	[param0], %r1;
+; CHECK-NEXT:	call.uni
+; CHECK-NEXT:	call_v2bfloat,
+; CHECK-NEXT:	(
+; CHECK-NEXT:	param0
+; CHECK-NEXT:	);
+; CHECK-NEXT:	} // callseq 84
+; CHECK-NEXT:	ret;
+  call void @call_v2bfloat(<2 x bfloat> %val)
+  ret void
+}
+
 declare void @call_bfloat(bfloat)
+declare void @call_v2bfloat(<2 x bfloat>)
