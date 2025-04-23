@@ -103,7 +103,7 @@ class MapsForPrivatizedSymbolsPass
         /*varPtrPtr=*/Value{},
         /*members=*/SmallVector<Value>{},
         /*member_index=*/mlir::ArrayAttr{},
-        /*bounds=*/boundsOps.empty() ? SmallVector<Value>{} : boundsOps,
+        /*bounds=*/boundsOps,
         /*mapperId=*/mlir::FlatSymbolRefAttr(), /*name=*/StringAttr(),
         builder.getBoolAttr(false));
   }
@@ -183,6 +183,7 @@ class MapsForPrivatizedSymbolsPass
       return fir::hasDynamicSize(innerType);
     return fir::hasDynamicSize(t);
   }
+
   void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
                     llvm::SmallVector<mlir::Value> &boundsOps) {
     if (!fir::isBoxAddress(var.getType()))
@@ -193,21 +194,20 @@ class MapsForPrivatizedSymbolsPass
     mlir::Location loc = var.getLoc();
     mlir::Type idxTy = builder.getIndexType();
     mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Type boundTy = builder.getType<omp::MapBoundsType>();
     mlir::Value box = builder.create<fir::LoadOp>(loc, var);
     for (unsigned int i = 0; i < rank; ++i) {
       mlir::Value dimNo = builder.createIntegerConstant(loc, idxTy, i);
       auto dimInfo =
           builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dimNo);
-      auto normalizedLB = builder.create<mlir::arith::ConstantOp>(
-          loc, idxTy, builder.getIntegerAttr(idxTy, 0));
       mlir::Value lb = dimInfo.getLowerBound();
       mlir::Value extent = dimInfo.getExtent();
       mlir::Value byteStride = dimInfo.getByteStride();
       mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
 
       mlir::Value boundsOp = builder.create<omp::MapBoundsOp>(
-          loc, boundTy, /*lower_bound=*/normalizedLB,
+          loc, boundTy, /*lower_bound=*/zero,
           /*upper_bound=*/ub, /*extent=*/extent, /*stride=*/byteStride,
           /*stride_in_bytes = */ true, /*start_idx=*/lb);
       LLVM_DEBUG(PDBGS() << "Created BoundsOp " << boundsOp << "\n");
