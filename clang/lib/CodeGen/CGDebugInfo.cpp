@@ -287,7 +287,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
 
   PP.SuppressInlineNamespace =
       PrintingPolicy::SuppressInlineNamespaceMode::None;
-  PP.PrintCanonicalTypes = true;
+  PP.PrintAsCanonical = true;
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
@@ -1059,8 +1059,23 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
   // additional ones.
   llvm::dwarf::Tag Tag = getNextQualifier(Qc);
   if (!Tag) {
-    assert(Qc.empty() && "Unknown type qualifier for debug info");
-    return getOrCreateType(QualType(T, 0), Unit);
+    if (Qc.getPointerAuth()) {
+      unsigned Key = Qc.getPointerAuth().getKey();
+      bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
+      unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
+      bool IsaPointer = Qc.getPointerAuth().isIsaPointer();
+      bool AuthenticatesNullValues =
+          Qc.getPointerAuth().authenticatesNullValues();
+      Qc.removePointerAuth();
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      llvm::DIType *FromTy = getOrCreateType(QualType(T, 0), Unit);
+      return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
+                                                 ExtraDiscr, IsaPointer,
+                                                 AuthenticatesNullValues);
+    } else {
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      return getOrCreateType(QualType(T, 0), Unit);
+    }
   }
 
   auto *FromTy = getOrCreateType(Qc.apply(CGM.getContext(), T), Unit);
@@ -1786,12 +1801,12 @@ llvm::DIType *CGDebugInfo::createFieldType(
 }
 
 llvm::DISubprogram *
-CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
-                                         llvm::DIFile *FileScope) {
+CGDebugInfo::createInlinedSubprogram(StringRef FuncName,
+                                     llvm::DIFile *FileScope) {
   // We are caching the subprogram because we don't want to duplicate
   // subprograms with the same message. Note that `SPFlagDefinition` prevents
   // subprograms from being uniqued.
-  llvm::DISubprogram *&SP = InlinedTrapFuncMap[FuncName];
+  llvm::DISubprogram *&SP = InlinedSubprogramMap[FuncName];
 
   if (!SP) {
     llvm::DISubroutineType *DIFnTy = DBuilder.createSubroutineType(nullptr);
@@ -2003,8 +2018,17 @@ CGDebugInfo::getOrCreateMethodType(const CXXMethodDecl *Method,
   return getOrCreateInstanceMethodType(ThisType, Func, Unit);
 }
 
-llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
-    QualType ThisPtr, const FunctionProtoType *Func, llvm::DIFile *Unit) {
+llvm::DISubroutineType *CGDebugInfo::getOrCreateMethodTypeForDestructor(
+    const CXXMethodDecl *Method, llvm::DIFile *Unit, QualType FNType) {
+  const FunctionProtoType *Func = FNType->getAs<FunctionProtoType>();
+  // skip the first param since it is also this
+  return getOrCreateInstanceMethodType(Method->getThisType(), Func, Unit, true);
+}
+
+llvm::DISubroutineType *
+CGDebugInfo::getOrCreateInstanceMethodType(QualType ThisPtr,
+                                           const FunctionProtoType *Func,
+                                           llvm::DIFile *Unit, bool SkipFirst) {
   FunctionProtoType::ExtProtoInfo EPI = Func->getExtProtoInfo();
   Qualifiers &Qc = EPI.TypeQuals;
   Qc.removeConst();
@@ -2044,7 +2068,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
   }
 
   // Copy rest of the arguments.
-  for (unsigned i = 1, e = Args.size(); i != e; ++i)
+  for (unsigned i = (SkipFirst ? 2 : 1), e = Args.size(); i != e; ++i)
     Elts.push_back(Args[i]);
 
   // Attach FlagObjectPointer to the explicit "this" parameter.
@@ -3490,7 +3514,8 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
     }
   }
 
-  llvm::DIType *ClassType = getOrCreateType(QualType(Ty->getClass(), 0), U);
+  llvm::DIType *ClassType = getOrCreateType(
+      QualType(Ty->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0), U);
   if (Ty->isMemberDataPointerType())
     return DBuilder.createMemberPointerType(
         getOrCreateType(Ty->getPointeeType(), U), ClassType, Size, /*Align=*/0,
@@ -3613,6 +3638,14 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
+llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                                       StringRef FuncName) {
+  llvm::DISubprogram *SP =
+      createInlinedSubprogram(FuncName, Location->getFile());
+  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
+                               /*Scope=*/SP, /*InlinedAt=*/Location);
+}
+
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
     llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
   // Create a debug location from `TrapLocation` that adds an artificial inline
@@ -3624,10 +3657,7 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  llvm::DISubprogram *TrapSP =
-      createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
-  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName);
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -4350,6 +4380,12 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     // Create fake but valid subroutine type. Otherwise -verify would fail, and
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
     return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray({}));
+
+  if (const auto *Method = dyn_cast<CXXDestructorDecl>(D)) {
+    // Read method type from 'FnType' because 'D.getType()' does not cover
+    // implicit arguments for destructors.
+    return getOrCreateMethodTypeForDestructor(Method, F, FnType);
+  }
 
   if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);
@@ -6215,4 +6251,24 @@ CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
     return DBuilder.createConstantValueExpression(ValIntOpt.value());
 
   return nullptr;
+}
+
+CodeGenFunction::LexicalScope::LexicalScope(CodeGenFunction &CGF,
+                                            SourceRange Range)
+    : RunCleanupsScope(CGF), Range(Range), ParentScope(CGF.CurLexicalScope) {
+  CGF.CurLexicalScope = this;
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockStart(CGF.Builder, Range.getBegin());
+}
+
+CodeGenFunction::LexicalScope::~LexicalScope() {
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockEnd(CGF.Builder, Range.getEnd());
+
+  // If we should perform a cleanup, force them now.  Note that
+  // this ends the cleanup scope before rescoping any labels.
+  if (PerformCleanup) {
+    ApplyDebugLocation DL(CGF, Range.getEnd());
+    ForceCleanup();
+  }
 }

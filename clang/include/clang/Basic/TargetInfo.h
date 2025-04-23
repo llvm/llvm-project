@@ -235,7 +235,7 @@ protected:
   bool NoAsmVariants;  // True if {|} are normal characters.
   bool HasLegalHalfType; // True if the backend supports operations on the half
                          // LLVM IR type.
-  bool HalfArgsAndReturns;
+  bool HalfArgsAndReturns; // OpenCL 6.1.1.1, NEON (IEEE 754-2008 half) type.
   bool HasFloat128;
   bool HasFloat16;
   bool HasBFloat16;
@@ -1175,8 +1175,7 @@ public:
     }
     void setRequiresImmediate(llvm::ArrayRef<int> Exacts) {
       Flags |= CI_ImmediateConstant;
-      for (int Exact : Exacts)
-        ImmSet.insert(Exact);
+      ImmSet.insert_range(Exacts);
     }
     void setRequiresImmediate(int Exact) {
       Flags |= CI_ImmediateConstant;
@@ -1675,7 +1674,7 @@ public:
   // access target-specific GPU grid values that must be consistent between
   // host RTL (plugin), deviceRTL and clang.
   virtual const llvm::omp::GV &getGridValue() const {
-    return llvm::omp::SPIRVGridValues;
+    llvm_unreachable("getGridValue not implemented on this target");
   }
 
   /// Retrieve the name of the platform as it is used in the

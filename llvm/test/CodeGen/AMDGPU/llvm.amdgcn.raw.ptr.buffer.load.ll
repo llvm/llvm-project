@@ -476,7 +476,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %a5, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %a6, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -530,7 +530,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %a5, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %a6, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -583,7 +583,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %a5, i32 0, i32 3)
   %r6 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %a6, i32 0, i32 3)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -699,7 +699,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 28, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -1116,7 +1116,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 28, i32 0, i32 0)
   %r6 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 0)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 
@@ -1172,7 +1172,7 @@ main_body:
   %r5 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 28, i32 0, i32 8)
   %r6 = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 32, i32 0, i32 8)
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r1, float %r2, float %r3, float %r4, i1 true, i1 true)
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %r5, float %r6, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

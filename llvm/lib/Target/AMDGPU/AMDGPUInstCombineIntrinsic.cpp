@@ -719,11 +719,38 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
 
+    // TODO: Replace call with scalar operation if only one element is poison.
+    if (isa<PoisonValue>(Src0) && isa<PoisonValue>(Src1))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+
     if (isa<UndefValue>(Src0) && isa<UndefValue>(Src1)) {
       return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
     }
 
     break;
+  }
+  case Intrinsic::amdgcn_cvt_off_f32_i4: {
+    Value* Arg = II.getArgOperand(0);
+    Type *Ty = II.getType();
+
+    if (isa<PoisonValue>(Arg))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(Ty));
+
+    if(IC.getSimplifyQuery().isUndefValue(Arg))
+      return IC.replaceInstUsesWith(II, Constant::getNullValue(Ty));
+
+    ConstantInt *CArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
+    if (!CArg)
+      break;
+
+    // Tabulated 0.0625 * (sext (CArg & 0xf)).
+    constexpr size_t ResValsSize = 16;
+    static constexpr float ResVals[ResValsSize] = {
+        0.0,  0.0625,  0.125,  0.1875,  0.25,  0.3125,  0.375,  0.4375,
+        -0.5, -0.4375, -0.375, -0.3125, -0.25, -0.1875, -0.125, -0.0625};
+    Constant *Res =
+        ConstantFP::get(Ty, ResVals[CArg->getZExtValue() & (ResValsSize - 1)]);
+    return IC.replaceInstUsesWith(II, Res);
   }
   case Intrinsic::amdgcn_ubfe:
   case Intrinsic::amdgcn_sbfe: {
@@ -802,8 +829,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if ((!IsCompr && (EnBits & (1 << I)) == 0) ||
           (IsCompr && ((EnBits & (0x3 << (2 * I))) == 0))) {
         Value *Src = II.getArgOperand(I + 2);
-        if (!isa<UndefValue>(Src)) {
-          IC.replaceOperand(II, I + 2, UndefValue::get(Src->getType()));
+        if (!isa<PoisonValue>(Src)) {
+          IC.replaceOperand(II, I + 2, PoisonValue::get(Src->getType()));
           Changed = true;
         }
       }
@@ -822,6 +849,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
     Value *Src2 = II.getArgOperand(2);
+
+    for (Value *Src : {Src0, Src1, Src2}) {
+      if (isa<PoisonValue>(Src))
+        return IC.replaceInstUsesWith(II, Src);
+    }
 
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
@@ -1041,7 +1073,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_ballot: {
-    if (auto *Src = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+    Value *Arg = II.getArgOperand(0);
+    if (isa<PoisonValue>(Arg))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+
+    if (auto *Src = dyn_cast<ConstantInt>(Arg)) {
       if (Src->isZero()) {
         // amdgcn.ballot(i1 0) is zero.
         return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
@@ -1090,11 +1126,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
     if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
-        BM->getZExtValue() != 0xF || isa<UndefValue>(Old))
+        BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 
     // If bound_ctrl = 1, row mask = bank mask = 0xf we can omit old value.
-    return IC.replaceOperand(II, 0, UndefValue::get(Old->getType()));
+    return IC.replaceOperand(II, 0, PoisonValue::get(Old->getType()));
   }
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlane16_var:
@@ -1102,7 +1138,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_permlanex16_var: {
     // Discard vdst_in if it's not going to be read.
     Value *VDstIn = II.getArgOperand(0);
-    if (isa<UndefValue>(VDstIn))
+    if (isa<PoisonValue>(VDstIn))
       break;
 
     // FetchInvalid operand idx.
@@ -1121,13 +1157,15 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!FetchInvalid->getZExtValue() && !BoundCtrl->getZExtValue())
       break;
 
-    return IC.replaceOperand(II, 0, UndefValue::get(VDstIn->getType()));
+    return IC.replaceOperand(II, 0, PoisonValue::get(VDstIn->getType()));
   }
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
-  case Intrinsic::amdgcn_readlane: {
-    // If the first argument is uniform these intrinsics return it unchanged.
-    const Use &Src = II.getArgOperandUse(0);
+  case Intrinsic::amdgcn_readlane:
+  case Intrinsic::amdgcn_ds_bpermute: {
+    // If the data argument is uniform these intrinsics return it unchanged.
+    unsigned SrcIdx = IID == Intrinsic::amdgcn_ds_bpermute ? 1 : 0;
+    const Use &Src = II.getArgOperandUse(SrcIdx);
     if (isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
 
@@ -1136,7 +1174,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return &II;
 
     // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
-    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse()) {
+    if (auto *BC = dyn_cast<BitCastInst>(Src);
+        BC && BC->hasOneUse() && IID != Intrinsic::amdgcn_ds_bpermute) {
       Value *BCSrc = BC->getOperand(0);
 
       // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
@@ -1156,6 +1195,22 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
         NewCall->takeName(&II);
         return new BitCastInst(NewCall, II.getType());
+      }
+    }
+
+    // If the lane argument of bpermute is uniform, change it to readlane. This
+    // generates better code and can enable further optimizations because
+    // readlane is AlwaysUniform.
+    if (IID == Intrinsic::amdgcn_ds_bpermute) {
+      const Use &Lane = II.getArgOperandUse(0);
+      if (isTriviallyUniform(Lane)) {
+        Value *NewLane = IC.Builder.CreateLShr(Lane, 2);
+        Function *NewDecl = Intrinsic::getOrInsertDeclaration(
+            II.getModule(), Intrinsic::amdgcn_readlane, II.getType());
+        II.setCalledFunction(NewDecl);
+        II.setOperand(0, Src);
+        II.setOperand(1, NewLane);
+        return &II;
       }
     }
 
@@ -1243,6 +1298,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
 
+    for (Value *Src : {Op0, Op1}) {
+      if (isa<PoisonValue>(Src))
+        return IC.replaceInstUsesWith(II, Src);
+    }
+
     // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
     // infinity, gives +0.0.
     // TODO: Move to InstSimplify?
@@ -1263,6 +1323,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
     Value *Op2 = II.getArgOperand(2);
+
+    for (Value *Src : {Op0, Op1, Op2}) {
+      if (isa<PoisonValue>(Src))
+        return IC.replaceInstUsesWith(II, Src);
+    }
 
     // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
     // infinity, gives +0.0.

@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_JSONUTILS_H
 
 #include "DAPForward.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
@@ -62,17 +63,14 @@ llvm::StringRef GetAsString(const llvm::json::Value &value);
 /// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// \param[in] defaultValue
-///     The default value to return if the key is not present
-///
 /// \return
 ///     A llvm::StringRef that contains the string value for the
-///     specified \a key, or the default value if there is no key that
+///     specified \a key, or \a std::nullopt if there is no key that
 ///     matches or if the value is not a string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue = {});
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue = {});
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key);
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key);
 
 /// Extract the integer value for the specified key from the specified object
 /// and return it as the specified integer type T.
@@ -292,7 +290,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 /// \return
 ///     A "ExceptionBreakpointsFilter" JSON object with that follows
 ///     the formal JSON definition outlined by Microsoft.
-llvm::json::Value
+protocol::ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 
 /// Create a "Scope" JSON object as described in the debug adapter definition.
@@ -415,6 +413,8 @@ llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
 ///     A "Thread" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
+
+llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format);
 
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
@@ -567,10 +567,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     The original launch_request object whose fields are used to construct
 ///     the reverse request object.
 ///
-/// \param[in] debug_adapter_path
-///     Path to the current debug adapter. It will be used to delegate the
-///     launch of the target.
-///
 /// \param[in] comm_file
 ///     The fifo file used to communicate the with the target launcher.
 ///
@@ -584,7 +580,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     Microsoft.
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adapter_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid);
 

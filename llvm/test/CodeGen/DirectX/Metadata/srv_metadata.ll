@@ -25,14 +25,14 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; PRINT-NEXT:;
 ; PRINT-NEXT:; Name                                 Type  Format         Dim      ID      HLSL Bind  Count
 ; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ------
-; PRINT-NEXT:;                                       SRV     f16         buf      T0             t0     1
-; PRINT-NEXT:;                                       SRV     f32         buf      T1             t1     1
-; PRINT-NEXT:;                                       SRV     f64         buf      T2             t2     1
-; PRINT-NEXT:;                                       SRV     i32         buf      T3             t3     1
-; PRINT-NEXT:;                                       SRV    byte         r/o      T4             t5     1
-; PRINT-NEXT:;                                       SRV  struct         r/o      T5             t6     1
-; PRINT-NEXT:;                                       SRV     u64         buf      T6     t10,space2     1
-; PRINT-NEXT:;                                       SRV     f32         buf      T7      t4,space3   100
+; PRINT-NEXT:;                                   texture     f16         buf      T0             t0     1
+; PRINT-NEXT:;                                   texture     f32         buf      T1             t1     1
+; PRINT-NEXT:;                                   texture     f64         buf      T2             t2     1
+; PRINT-NEXT:;                                   texture     i32         buf      T3             t3     1
+; PRINT-NEXT:;                                   texture    byte         r/o      T4             t5     1
+; PRINT-NEXT:;                                   texture  struct         r/o      T5             t6     1
+; PRINT-NEXT:;                                   texture     u64         buf      T6     t10,space2     1
+; PRINT-NEXT:;                                   texture     f32         buf      T7      t4,space3   100
 
 define void @test() #0 {
   ; Buffer<half4> Buf : register(t0)

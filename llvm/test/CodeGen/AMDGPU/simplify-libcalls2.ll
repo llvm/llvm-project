@@ -9,7 +9,7 @@
 define void @foo(i32 %i) {
   call void @llvm.lifetime.start.p0(i64 1, ptr poison)
   call void @llvm.lifetime.end.p0(i64 1, ptr poison)
-  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(name: "1", scope: !2), metadata !DIExpression()), !dbg !3
+  call void @llvm.dbg.value(metadata i32 poison, metadata !DILocalVariable(name: "1", scope: !2), metadata !DIExpression()), !dbg !3
   ret void
 }
 

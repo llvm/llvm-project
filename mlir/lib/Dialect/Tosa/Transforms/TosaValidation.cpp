@@ -41,17 +41,91 @@ using namespace mlir::tosa;
 
 namespace {
 
-static LogicalResult checkConstantOperandPad(Operation *op) {
-  if (auto padOp = dyn_cast<tosa::PadOp>(op)) {
-    DenseElementsAttr paddings;
-    if (!matchPattern(padOp.getPadding(), m_Constant(&paddings)))
-      return op->emitOpError("padding of pad is not constant");
+static LogicalResult
+checkConstantOperands(Operation *op, ArrayRef<unsigned int> operandIndices) {
+  for (const auto index : operandIndices) {
+    Attribute attr;
+    if (!matchPattern(op->getOperand(index), m_Constant(&attr))) {
+      return op->emitOpError("expected compile time resolvable constant, but "
+                             "got variable value for operand #")
+             << index;
+    }
+  }
+  return success();
+}
 
-    DenseElementsAttr padConst;
-    // Assume this op is zero-padding if padConst is not presented.
-    if (padOp.getPadConst() &&
-        !matchPattern(padOp.getPadConst(), m_Constant(&padConst)))
-      return op->emitOpError("pad_const of pad is not constant");
+static LogicalResult checkConstantOperandMul(Operation *op,
+                                             const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::MulOp>(op)) {
+    // Check 'shift'
+    return checkConstantOperands(op, {2});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandTable(Operation *op,
+                                               const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::TableOp>(op)) {
+    // Check 'table'
+    return checkConstantOperands(op, {1});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandPad(Operation *op,
+                                             const TargetEnv &env) {
+  if (auto padOp = dyn_cast<tosa::PadOp>(op)) {
+    // Assume this op is zero-padding if padConst is not presented
+    if (!env.allows(Extension::dynamic) && padOp.getPadConst())
+      // Check 'pad_const'
+      // Note: 'padding' (operand 1) is not checked as it is a tosa.shape type
+      return checkConstantOperands(op, {2});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandRescale(Operation *op,
+                                                 const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::RescaleOp>(op)) {
+    // Check 'multiplier', 'shift', 'input_zp' and 'output_zp'
+    return checkConstantOperands(op, {1, 2, 3, 4});
+  }
+  return success();
+}
+
+template <typename T>
+static LogicalResult checkConstantOperandConvOps(Operation *op,
+                                                 const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<T>(op)) {
+    // Check 'input_zp' and 'weight_zp'
+    return checkConstantOperands(op, {3, 4});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandMatMul(Operation *op,
+                                                const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::MatMulOp>(op)) {
+    // Check 'A_zp' and 'B_zp'
+    return checkConstantOperands(op, {2, 3});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandAvgPool2d(Operation *op,
+                                                   const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::AvgPool2dOp>(op)) {
+    // Check 'input_zp' and 'output_zp'
+    return checkConstantOperands(op, {1, 2});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandNegate(Operation *op,
+                                                const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::NegateOp>(op)) {
+    // Check 'input1_zp' and 'output_zp'
+    return checkConstantOperands(op, {1, 2});
   }
   return success();
 }
@@ -91,13 +165,15 @@ public:
     this->profile = options.profile;
     this->extension = options.extension;
     this->strictOpSpecAlignment = options.strictOpSpecAlignment;
+    this->allowInvalidOpDatatypeCombinations =
+        options.allowInvalidOpDatatypeCombinations;
     this->level = options.level;
   }
   void runOnOperation() final;
 
   LogicalResult applyConstantOperandCheck(Operation *op) {
     for (auto &checker : constCheckers) {
-      if (failed(checker(op)))
+      if (failed(checker(op, targetEnv)))
         return failure();
     }
     return success();
@@ -114,7 +190,19 @@ public:
 
 private:
   void populateConstantOperandChecks() {
+    constCheckers.emplace_back(checkConstantOperandMul);
+    constCheckers.emplace_back(checkConstantOperandTable);
     constCheckers.emplace_back(checkConstantOperandPad);
+    constCheckers.emplace_back(checkConstantOperandRescale);
+    constCheckers.emplace_back(checkConstantOperandConvOps<tosa::Conv2DOp>);
+    constCheckers.emplace_back(checkConstantOperandConvOps<tosa::Conv3DOp>);
+    constCheckers.emplace_back(
+        checkConstantOperandConvOps<tosa::DepthwiseConv2DOp>);
+    constCheckers.emplace_back(
+        checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
+    constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandAvgPool2d);
+    constCheckers.emplace_back(checkConstantOperandNegate);
   }
 
   bool levelCheckKernel(Operation *op, int32_t v, const StringRef checkDesc) {
@@ -436,7 +524,7 @@ private:
           llvm::errs() << "unknown TOSA extension name passed in: " << ext
                        << ", supported extension are int16, int4, bf16, "
                        << "fp8e4m3, fp8e5m2, fft, variable, controlflow, "
-                       << "doubleround and inexactround\n";
+                       << "doubleround, inexactround and dynamic\n";
           return signalPassFailure();
         }
       }
@@ -447,7 +535,9 @@ private:
   bool CheckVariableReadOrWrite(Operation *op);
   bool isValidElementType(Type type);
 
-  SmallVector<std::function<LogicalResult(Operation *)>> constCheckers;
+  SmallVector<
+      std::function<LogicalResult(Operation *, const tosa::TargetEnv &)>>
+      constCheckers;
   TosaLevel tosaLevel;
   DenseMap<StringAttr, mlir::Type> variablesMap;
   TosaProfileCompliance profileComp;
@@ -677,7 +767,7 @@ inline bool CompatibleTypes(const mlir::Type &type,
 
 bool TosaValidation::CheckVariable(Operation *op) {
   if (isa<mlir::tosa::VariableOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
 
     if (variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has already been declared";
@@ -696,8 +786,7 @@ bool TosaValidation::CheckVariable(Operation *op) {
 bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
-
+    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
     if (!variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has not been declared";
       return false;
@@ -889,8 +978,63 @@ bool checkErrorIfResize(Operation *op) {
   return true;
 }
 
+bool checkErrorIfMul(Operation *op) {
+  auto mul = dyn_cast<tosa::MulOp>(op);
+  if (!mul)
+    return true;
+
+  // REQUIRE(0 <= shift && shift <= 63);
+  // REQUIRE(is_same<in_t,int32_t>() || shift == 0);
+  ElementsAttr shift_elem;
+  if (!matchPattern(mul.getShift(), m_Constant(&shift_elem))) {
+    return true;
+  }
+  int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+  auto inputElemType = getElementTypeOrSelf(mul.getInput1());
+  if (inputElemType.isInteger(32)) {
+    // 0 <= shift <= 63 for int32_t type
+    if (shift < 0 || shift > 63) {
+      op->emitOpError() << "requires 0 <= shift && shift <= 63, but got: "
+                        << shift;
+      return false;
+    }
+  } else {
+    // shift must be 0 for all other types
+    if (shift != 0) {
+      op->emitOpError() << "requires shift = 0 for all input data types that "
+                           "are not int32_t, but got: "
+                        << shift;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool checkErrorIfTable(Operation *op) {
+  auto table = dyn_cast<tosa::TableOp>(op);
+  if (!table)
+    return true;
+
+  // REQUIRE(length(table) == TABLE_SIZE) where TABLE_SIZE is 256 or 513
+  const auto inputElemType = getElementTypeOrSelf(table.getInput1().getType());
+  const int tableSize = inputElemType.isInteger(8) ? 256 : 513;
+
+  const ShapeAdaptor tableShape(table.getTable().getType());
+  if (tableShape.hasStaticShape()) {
+    const auto numElements = tableShape.getNumElements();
+    if (numElements != tableSize) {
+      op->emitOpError() << "requires table size of " << tableSize << ", got "
+                        << numElements;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
-  if (!checkErrorIfResize(op))
+  if (!checkErrorIfResize(op) || !checkErrorIfMul(op) || !checkErrorIfTable(op))
     return failure();
   return success();
 }
@@ -928,15 +1072,8 @@ void TosaValidation::runOnOperation() {
     if (op->getDialect() != tosaDialect)
       return;
 
-    // Profile-Extension based validation should be performed at the beginning.
-    if (strictOpSpecAlignment &&
-        failed(profileComp.checkProfile(op, targetEnv)))
-      return signalPassFailure();
-
-    if (strictOpSpecAlignment &&
-        failed(profileComp.checkExtension(op, targetEnv)))
-      return signalPassFailure();
-
+    // perform valid element type check at the beginning to
+    // protect rest of code against quantized element types
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {
@@ -952,6 +1089,20 @@ void TosaValidation::runOnOperation() {
                           << elementTy << " is not legal";
         return signalPassFailure();
       }
+    }
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkProfile(op, targetEnv)))
+      return signalPassFailure();
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkExtension(op, targetEnv)))
+      return signalPassFailure();
+
+    if (!allowInvalidOpDatatypeCombinations &&
+        failed(profileComp.checkInvalid(op))) {
+      op->emitOpError("illegal: operand/result data types not supported");
+      return signalPassFailure();
     }
 
     // Some uses of TOSA rely on the constant operands of particular

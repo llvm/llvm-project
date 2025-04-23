@@ -325,3 +325,18 @@ template <class> void f() {
 template void f<int>();
 
 }
+
+namespace GH133719 {
+
+template <class T>
+constexpr auto f{[] (auto arg) {
+  return [a{arg}] {
+      [] () requires true {}();
+  };
+}};
+
+void foo() {
+  f<int>(0);
+}
+
+}

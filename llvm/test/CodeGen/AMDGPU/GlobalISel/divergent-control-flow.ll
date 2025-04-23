@@ -183,7 +183,7 @@ bb8:
   br i1 %tmp10, label %bb11, label %bb12
 
 bb11:
-  store float 4.0, ptr addrspace(5) undef, align 4
+  store float 4.0, ptr addrspace(5) poison, align 4
   br label %bb12
 
 bb12:
@@ -231,7 +231,7 @@ bb:
   br label %bb1
 
 bb1:
-  %lsr.iv = phi i32 [ undef, %bb ], [ %lsr.iv.next, %bb4 ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %lsr.iv.next, %bb4 ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
   br i1 %cmp0, label %bb4, label %bb9

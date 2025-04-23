@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #ifdef __EMSCRIPTEN__
 #include "Wasm.h"
+#include <dlfcn.h>
 #endif // __EMSCRIPTEN__
 
 #include "clang/AST/ASTConsumer.h"
@@ -202,7 +203,7 @@ IncrementalCompilerBuilder::CreateCpp() {
   Argv.push_back("wasm32-unknown-emscripten");
   Argv.push_back("-fvisibility=default");
 #endif
-  Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
+  llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
@@ -231,7 +232,7 @@ IncrementalCompilerBuilder::createCuda(bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
-  Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
+  llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
@@ -711,6 +712,14 @@ llvm::Error Interpreter::Undo(unsigned N) {
 }
 
 llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
+#ifdef __EMSCRIPTEN__
+  void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+  if (!handle) {
+    llvm::errs() << dlerror() << '\n';
+    return llvm::make_error<llvm::StringError>("Failed to load dynamic library",
+                                               llvm::inconvertibleErrorCode());
+  }
+#else
   auto EE = getExecutionEngine();
   if (!EE)
     return EE.takeError();
@@ -722,6 +731,7 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
     EE->getMainJITDylib().addGenerator(std::move(*DLSG));
   else
     return DLSG.takeError();
+#endif
 
   return llvm::Error::success();
 }

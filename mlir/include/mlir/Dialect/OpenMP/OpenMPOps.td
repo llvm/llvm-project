@@ -236,7 +236,7 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 // 2.7 teams Construct
 //===----------------------------------------------------------------------===//
 def TeamsOp : OpenMP_Op<"teams", traits = [
-    AttrSizedOperandSegments, RecursiveMemoryEffects
+    AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
     OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
@@ -396,6 +396,7 @@ def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
   ];
   let assemblyFormat = "$region attr-dict";
   let hasVerifier = 1;
+  let hasRegionVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -751,11 +752,9 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
-    OpenMP_IfClause, OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,
-    OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
-    OpenMP_PriorityClause, OpenMP_PrivateClause,
-    OpenMP_ReductionClauseSkip<extraClassDeclaration = true>,
-    OpenMP_UntiedClause
+    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
+    OpenMP_NogroupClause, OpenMP_NumTasksClause, OpenMP_PriorityClause,
+    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "taskloop construct";
   let description = [{
@@ -821,9 +820,6 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }];
 
   let extraClassDeclaration = [{
-    /// Returns the reduction variables
-    SmallVector<Value> getAllReductionVars();
-
     void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
   }] # clausesExtraClassDeclaration;
 
@@ -896,17 +892,6 @@ def FlushOp : OpenMP_Op<"flush", clauses = [
 
   // Override inherited assembly format to include `varList`.
   let assemblyFormat = "( `(` $varList^ `:` type($varList) `)` )? attr-dict";
-
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      return getOperation()->getNumOperands();
-    }
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      return getOperand(i);
-    }
-  }] # clausesExtraClassDeclaration;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1006,31 +991,19 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
     ) attr-dict
   }];
 
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      return getNumOperands();
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      return getOperands()[i];
-    }
-  }];
-
   let hasVerifier = 1;
 }
 
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
+                       UI64Attr:$map_type,
+                       VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
                        OptionalAttr<IndexListArrayAttr>:$members_index,
                        Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
-                       OptionalAttr<UI64Attr>:$map_type,
                        OptionalAttr<FlatSymbolRefAttr>:$mapper_id,
-                       OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name,
                        DefaultValuedAttr<BoolAttr, "false">:$partial_map);
   let results = (outs OpenMP_PointerLikeType:$omp_ptr);
@@ -1066,6 +1039,11 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     Description of arguments:
     - `var_ptr`: The address of variable to copy.
     - `var_type`: The type of the variable to copy.
+    - 'map_type': OpenMP map type for this map capture, for example: from, to and
+       always. It's a bitfield composed of the OpenMP runtime flags stored in
+       OpenMPOffloadMappingFlags.
+    - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
+       this can affect how the variable is lowered.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
     - `members`: Used to indicate mapped child members for the current MapInfoOp,
@@ -1080,13 +1058,8 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
        is the inner-most dimension.
-    - 'map_type': OpenMP map type for this map capture, for example: from, to and
-       always. It's a bitfield composed of the OpenMP runtime flags stored in
-       OpenMPOffloadMappingFlags.
     - 'mapper_id': OpenMP mapper map type modifier for this map capture. It's used to
        specify a user defined mapper to be used for mapping.
-    - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
-       this can affect how the variable is lowered.
     - `name`: Holds the name of variable as specified in user clause (including bounds).
     - `partial_map`: The record type being mapped will not be mapped in its entirety,
        it may be used however, in a mapping to bind it's mapped components together.
@@ -1094,27 +1067,17 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
+    `map_clauses` `(` custom<MapClause>($map_type) `)`
+    `capture` `(` custom<CaptureType>($map_capture_type) `)`
     oilist(
         `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
       | `mapper` `(` $mapper_id `)`
-      | `map_clauses` `(` custom<MapClause>($map_type) `)`
-      | `capture` `(` custom<CaptureType>($map_capture_type) `)`
       | `members` `(` $members `:` custom<MembersIndex>($members_index) `:` type($members) `)`
       | `bounds` `(` $bounds `)`
     ) `->` type($omp_ptr) attr-dict
   }];
 
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      return getNumOperands();
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      return getOperands()[i];
-    }
-  }];
+  let hasVerifier = 1;
 }
 
 //===---------------------------------------------------------------------===//
@@ -1347,7 +1310,11 @@ def TargetOp : OpenMP_Op<"target", traits = [
 
     /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
     /// contents of the target region.
-    llvm::omp::OMPTgtExecModeFlags getKernelExecFlags();
+    ///
+    /// \param capturedOp result of a still valid (no modifications made to any
+    /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
+    static ::mlir::omp::TargetRegionFlags
+    getKernelExecFlags(Operation *capturedOp);
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
@@ -1516,21 +1483,6 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", traits = [
     clausesOptAssemblyFormat #
     ") `:` type($v) `,` type($x) `,` $element_type attr-dict";
 
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getX() && "expected 'x' operand");
-      assert(getV() && "expected 'v' operand");
-      return 2;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? getX() : getV();
-    }
-  }] # clausesExtraClassDeclaration;
-
   let hasVerifier = 1;
 }
 
@@ -1555,21 +1507,6 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write", traits = [
   // Override clause-based assemblyFormat.
   let assemblyFormat = "$x `=` $expr" # clausesReqAssemblyFormat # " oilist(" #
     clausesOptAssemblyFormat # ") `:` type($x) `,` type($expr) attr-dict";
-
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getX() && "expected address operand");
-      assert(getExpr() && "expected value operand");
-      return 2;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i < 2 && "invalid index position for an operand");
-      return i == 0 ? getX() : getExpr();
-    }
-  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1614,20 +1551,6 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update", traits = [
   // Override clause-based assemblyFormat.
   let assemblyFormat = clausesAssemblyFormat #
     "$x `:` type($x) $region attr-dict";
-
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getX() && "expected 'x' operand");
-      return 1;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i == 0 && "invalid index position for an operand");
-      return getX();
-    }
-  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -1715,19 +1638,6 @@ def ThreadprivateOp : OpenMP_Op<"threadprivate",
   let results = (outs OpenMP_PointerLikeType:$tls_addr);
   let assemblyFormat = [{
     $sym_addr `:` type($sym_addr) `->` type($tls_addr) attr-dict
-  }];
-  let extraClassDeclaration = [{
-    /// The number of variable operands.
-    unsigned getNumVariableOperands() {
-      assert(getSymAddr() && "expected one variable operand");
-      return 1;
-    }
-
-    /// The i-th variable operand passed.
-    Value getVariableOperand(unsigned i) {
-      assert(i == 0 && "invalid index position for an operand");
-      return getSymAddr();
-    }
   }];
 }
 

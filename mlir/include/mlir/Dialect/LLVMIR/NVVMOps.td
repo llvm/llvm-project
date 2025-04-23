@@ -19,11 +19,13 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
+include "mlir/Dialect/LLVMIR/LLVMTypes.td"
 
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
+def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -807,15 +809,49 @@ def NVVM_ShflOp :
    let hasVerifier = 1;
 }
 
-def NVVM_VoteBallotOp :
-  NVVM_Op<"vote.ballot.sync">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$mask, LLVM_Type:$pred)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder,
-            llvm::Intrinsic::nvvm_vote_ballot_sync, {$mask, $pred});
+def VoteSyncKindAny : I32EnumAttrCase<"any", 0>;
+def VoteSyncKindAll : I32EnumAttrCase<"all", 1>;
+def VoteSyncKindBallot : I32EnumAttrCase<"ballot", 2>;
+def VoteSyncKindUni : I32EnumAttrCase<"uni", 3>;
+
+def VoteSyncKind : I32EnumAttr<"VoteSyncKind", "NVVM vote sync kind",
+                               [VoteSyncKindAny, VoteSyncKindAll,
+                                VoteSyncKindBallot, VoteSyncKindUni]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def VoteSyncKindAttr : EnumAttr<NVVM_Dialect, VoteSyncKind, "vote_sync_kind">;
+
+def NVVM_VoteSyncOp
+    : NVVM_Op<"vote.sync">,
+      Results<(outs AnyTypeOf<[I32, I1]>:$res)>,
+      Arguments<(ins I32:$mask, I1:$pred, VoteSyncKindAttr:$kind)> {
+  let summary = "Vote across thread group";
+  let description = [{
+    The `vote.sync` op will cause executing thread to wait until all non-exited
+    threads corresponding to membermask have executed `vote.sync` with the same
+    qualifiers and same membermask value before resuming execution.
+
+    The vote operation kinds are:
+    - `any`: True if source predicate is True for some thread in membermask.
+    - `all`: True if source predicate is True for all non-exited threads in
+      membermask. 
+    - `uni`: True if source predicate has the same value in all non-exited
+      threads in membermask.
+    - `ballot`: In the ballot form, the destination result is a 32 bit integer.
+      In this form, the predicate from each thread in membermask are copied into
+      the corresponding bit position of the result, where the bit position
+      corresponds to the thread’s lane id.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-vote-sync)
   }];
-  let hasCustomAssemblyFormat = 1;
+  string llvmBuilder = [{
+    auto intId = getVoteSyncIntrinsicId($kind);
+    $res = createIntrinsicCall(builder, intId, {$mask, $pred});
+  }];
+  let assemblyFormat = "$kind $mask `,` $pred attr-dict `->` type($res)";
+  let hasVerifier = 1;
 }
 
 def NVVM_SyncWarpOp :
@@ -2217,7 +2253,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   }];
 
   let arguments = (ins
-    LLVM_PointerShared:$dstMem,
+    LLVM_PointerSharedCluster:$dstMem,
     LLVM_PointerGlobal:$srcMem,
     LLVM_PointerShared:$mbar,
     I32:$size,
@@ -2274,7 +2310,7 @@ def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
   }];
 
   let arguments = (ins
-    LLVM_PointerShared:$dstMem,
+    LLVM_PointerSharedCluster:$dstMem,
     LLVM_PointerShared:$srcMem,
     LLVM_PointerShared:$mbar,
     I32:$size);
@@ -2581,6 +2617,82 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
   }];
   
   let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM match.sync Op
+//===----------------------------------------------------------------------===//
+
+def MatchSyncKindAny : I32EnumAttrCase<"any", 0>;
+def MatchSyncKindAll : I32EnumAttrCase<"all", 1>;
+
+def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
+  [MatchSyncKindAny, MatchSyncKindAll]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
+
+def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
+  Results<(outs AnyTypeOf<[I32, LLVMStructType]>:$res)>,
+  Arguments<(ins I32:$thread_mask,
+                 AnyTypeOf<[I32, I64]>:$val,
+                 MatchSyncKindAttr:$kind)> {
+  let summary = "Broadcast and compare a value across threads in warp";
+  let description = [{
+    The `match.sync` op performs broadcast and compare of operand `val` across 
+    all non-exited threads in `thread_mask` and returns a mask depending on the 
+    kind and an optional predicate.
+
+    The matching operation kinds are:
+    - `any`: Returns a mask corresponding to the non-exited threads in the 
+    `thread_mask` that have the same value of operand `val`.
+    - `all`: Returns a mask and a predicate. If all non-exited threads in the 
+    `thread_mask` have the same value of operand `val`, the predicate is set to 
+    true and the mask corresponds to the non-exited threads in the 
+    `thread_mask`. Otherwise, the predicate is set to false and the mask is 0.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-match-sync)
+  }];
+  string llvmBuilder = [{
+    auto intId = getMatchSyncIntrinsicId(
+        op.getVal().getType(), $kind);
+    $res = createIntrinsicCall(builder,
+        intId, {$thread_mask, $val});
+  }];
+  let assemblyFormat = "$kind $thread_mask `,` $val attr-dict `:` type($val) `->` type($res)";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Bulk Store Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, I64:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
+
+  let summary = "Bulk Store Op";
+  let description = [{
+    Initializes a region of shared memory at the address given by `addr`.
+    The `size` operand specifies the number of bytes to initialize and must be 
+    a multiple of 8.
+    The `initVal` operand specifies the value to initialize the memory to. The 
+    only supported value is 0.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk)
+  }];
+
+  string llvmBuilder = [{
+    auto intId = getStBulkIntrinsicId(
+          llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType()));
+    createIntrinsicCall(builder, intId,
+                      {$addr, $size, builder.getInt64($initVal)});
+  }];
+  
+  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr)";
+  
+  let hasVerifier = 1;
 }
 
 def NVVM_Exit : NVVM_Op<"exit"> {

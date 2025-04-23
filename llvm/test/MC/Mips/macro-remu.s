@@ -5,7 +5,7 @@
 
   remu $4,$5
 # CHECK-NOTRAP: bnez $5, $tmp0            # encoding: [A,A,0xa0,0x14]
-# CHECK-NOTRAP:                           # fixup A - offset: 0, value: ($tmp0)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                           # fixup A - offset: 0, value: $tmp0-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: divu $zero, $4, $5        # encoding: [0x1b,0x00,0x85,0x00]
 # CHECK-NOTRAP: break 7                   # encoding: [0x0d,0x00,0x07,0x00]
 # CHECK-NOTRAP: mfhi $4                   # encoding: [0x10,0x20,0x00,0x00]
@@ -82,7 +82,7 @@
 
   remu $4,$5,$6
 # CHECK-NOTRAP: bnez $6, $tmp1            # encoding: [A,A,0xc0,0x14]
-# CHECK-NOTRAP:                           # fixup A - offset: 0, value: ($tmp1)-4, kind: fixup_Mips_PC16
+# CHECK-NOTRAP:                           # fixup A - offset: 0, value: $tmp1-4, kind: fixup_Mips_PC16
 # CHECK-NOTRAP: divu $zero, $5, $6        # encoding: [0x1b,0x00,0xa6,0x00]
 # CHECK-NOTRAP: break 7                   # encoding: [0x0d,0x00,0x07,0x00]
 # CHECK-NOTRAP: $tmp1

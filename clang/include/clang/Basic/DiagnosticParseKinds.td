@@ -11,6 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 let Component = "Parse" in {
+let CategoryName = "Parse Issue" in {
+// C++11 compatibility with C++98.
+defm enum_fixed_underlying_type : CXX11Compat<
+  "enumeration types with a fixed underlying type are",
+  /*ext_warn=*/false>;
+}
 
 def err_asm_qualifier_ignored : Error<
   "expected 'volatile', 'inline', 'goto', or '('">, CatInlineAsm;
@@ -107,9 +113,6 @@ def err_enumerator_list_missing_comma : Error<
   "missing ',' between enumerators">;
 def err_enumerator_unnamed_no_def : Error<
   "unnamed enumeration must be a definition">;
-def ext_cxx11_enum_fixed_underlying_type : Extension<
-  "enumeration types with a fixed underlying type are a C++11 extension">,
-  InGroup<CXX11>;
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
@@ -119,9 +122,6 @@ def ext_c23_enum_fixed_underlying_type : Extension<
 def warn_c17_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C standards before C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
-def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
-  "enumeration types with a fixed underlying type are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def ext_enum_base_in_type_specifier : ExtWarn<
   "non-defining declaration of enumeration with a fixed underlying type is "
   "only permitted as a standalone declaration"
@@ -171,12 +171,17 @@ def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
 def ext_c11_feature : Extension<
   "'%0' is a C11 extension">, InGroup<C11>;
+def ext_c2y_feature : Extension<
+  "'%0' is a C2y extension">, InGroup<C2y>;
 def warn_c11_compat_keyword : Warning<
   "'%0' is incompatible with C standards before C11">,
   InGroup<CPre11Compat>, DefaultIgnore;
 def warn_c23_compat_keyword : Warning<
  "'%0' is incompatible with C standards before C23">,
  InGroup<CPre23Compat>, DefaultIgnore;
+def warn_c2y_compat_keyword : Warning<
+  "'%0' is incompatible with C standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 
 def err_c11_noreturn_misplaced : Error<
   "'_Noreturn' keyword must precede function declarator">;
@@ -336,7 +341,10 @@ def warn_cxx20_compat_label_end_of_compound_statement : Warning<
 def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
-  "cannot use %select{unicode|wide|an empty}0 string literal in 'asm'">;
+  "cannot use %select{unicode|wide}0 string literal in 'asm'">;
+
+def err_asm_expected_string : Error<
+  "expected string literal %select{or parenthesized constant expression |}0in 'asm'">;
 def err_expected_selector_for_method : Error<
   "expected selector for Objective-C method">;
 def err_expected_property_name : Error<"expected property name">;
@@ -1450,6 +1458,9 @@ def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
 def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+def err_acc_modifier
+    : Error<"%enum_select<ACCModifier>{%Unknown{unknown}|%Duplicate{duplicate}}"
+            "0 modifier %1 in OpenACC modifier-list on '%2' clause">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
@@ -1628,7 +1639,7 @@ def note_omp_ctx_compatible_set_and_selector_for_property
            "'match(%2={%1(%0)})'">;
 def warn_omp_ctx_incompatible_score_for_property
     : Warning<"the context selector '%0' in the context set '%1' cannot have a "
-              "score ('%2'); score ignored">,
+              "score (%quoted2); score ignored">,
       InGroup<OpenMPClauses>;
 def warn_omp_more_one_device_type_clause
     : Warning<"more than one 'device_type' clause is specified">,
@@ -1709,6 +1720,9 @@ def err_type_unparsed : Error<"unparsed tokens following type">;
 def warn_pragma_unroll_cuda_value_in_parens : Warning<
   "argument to '#pragma unroll' should not be in parentheses in CUDA C/C++">,
   InGroup<CudaCompat>;
+
+def err_ptrauth_qualifier_bad_arg_count : Error<
+  "'__ptrauth' qualifier must take between 1 and 3 arguments">;
 
 def warn_cuda_attr_lambda_position : Warning<
   "nvcc does not allow '__%0__' to appear after the parameter list in lambdas">,
@@ -1821,5 +1835,9 @@ def err_hlsl_virtual_function
     : Error<"virtual functions are unsupported in HLSL">;
 def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
+
+// HLSL Root Siganture diagnostic messages
+def err_hlsl_unexpected_end_of_params
+    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
 
 } // end of Parser diagnostics

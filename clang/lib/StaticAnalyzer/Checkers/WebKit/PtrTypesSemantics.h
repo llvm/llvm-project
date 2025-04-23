@@ -70,6 +70,7 @@ std::optional<bool> isUnchecked(const clang::QualType T);
 /// underlying pointer type.
 class RetainTypeChecker {
   llvm::DenseSet<const RecordType *> CFPointees;
+  llvm::DenseSet<const Type *> RecordlessTypes;
   bool IsARCEnabled{false};
 
 public:
@@ -135,12 +136,18 @@ bool isCheckedPtr(const std::string &Name);
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
 bool isRetainPtr(const std::string &Name);
 
+/// \returns true if \p Name is a smart pointer type name, false if not.
+bool isSmartPtrClass(const std::string &Name);
+
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);
+
+/// \returns true if \p F is a builtin function which is considered trivial.
+bool isTrivialBuiltinFunction(const FunctionDecl *F);
 
 /// \returns true if \p F is a static singleton function.
 bool isSingleton(const FunctionDecl *F);

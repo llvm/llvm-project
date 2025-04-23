@@ -3533,6 +3533,11 @@ void EmitClangAttrPCHRead(const RecordKeeper &Records, raw_ostream &OS) {
       DelayedArgs->writePCHReadArgs(OS);
       OS << ");\n";
     }
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    read" << R.getName() << "Attr(cast<" << R.getName()
+         << "Attr>(New));\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -3563,6 +3568,10 @@ void EmitClangAttrPCHWrite(const RecordKeeper &Records, raw_ostream &OS) {
 
     for (const auto *Arg : Args)
       createArgument(*Arg, R.getName())->writePCHWrite(OS);
+
+    if (Attr->getValueAsBit("HasCustomSerialization"))
+      OS << "    Record.Add" << R.getName() << "Attr(SA);\n";
+
     OS << "    break;\n";
     OS << "  }\n";
   }
@@ -4551,7 +4560,7 @@ static void GenerateTargetRequirements(const Record &Attr,
         std::vector<StringRef> DA =
             I.second->getValueAsDef("Target")->getValueAsListOfStrings(
                 "Arches");
-        Arches.insert(Arches.end(), DA.begin(), DA.end());
+        llvm::append_range(Arches, DA);
       }
     }
   }
@@ -5135,6 +5144,14 @@ public:
 
     Spellings[(size_t)Kind].push_back(Name);
   }
+
+  void merge(const SpellingList &Other) {
+    for (size_t Kind = 0; Kind < NumSpellingKinds; ++Kind) {
+      Spellings[Kind].insert(Spellings[Kind].end(),
+                             Other.Spellings[Kind].begin(),
+                             Other.Spellings[Kind].end());
+    }
+  }
 };
 
 class DocumentationData {
@@ -5292,29 +5309,87 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       return L->getValueAsString("Name") < R->getValueAsString("Name");
     }
   };
-  std::map<const Record *, std::vector<DocumentationData>, CategoryLess>
-      SplitDocs;
+
+  std::map<const Record *, std::map<uint32_t, DocumentationData>, CategoryLess>
+      MergedDocs;
+
+  std::vector<DocumentationData> UndocumentedDocs;
+  const Record *UndocumentedCategory = nullptr;
+
+  // Collect documentation data, grouping by category and heading.
   for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
     const Record &Attr = *A;
     std::vector<const Record *> Docs =
         Attr.getValueAsListOfDefs("Documentation");
+
     for (const auto *D : Docs) {
       const Record &Doc = *D;
       const Record *Category = Doc.getValueAsDef("Category");
       // If the category is "InternalOnly", then there cannot be any other
       // documentation categories (otherwise, the attribute would be
       // emitted into the docs).
-      const StringRef Cat = Category->getValueAsString("Name");
-      bool InternalOnly = Cat == "InternalOnly";
-      if (InternalOnly && Docs.size() > 1)
+      StringRef Cat = Category->getValueAsString("Name");
+      if (Cat == "InternalOnly" && Docs.size() > 1)
         PrintFatalError(Doc.getLoc(),
                         "Attribute is \"InternalOnly\", but has multiple "
                         "documentation categories");
 
-      if (!InternalOnly)
-        SplitDocs[Category].push_back(DocumentationData(
-            Doc, Attr, GetAttributeHeadingAndSpellings(Doc, Attr, Cat)));
+      if (Cat == "InternalOnly")
+        continue;
+
+      // Track the Undocumented category Record for later grouping
+      if (Cat == "Undocumented" && !UndocumentedCategory)
+        UndocumentedCategory = Category;
+
+      // Generate Heading and Spellings.
+      auto HeadingAndSpellings =
+          GetAttributeHeadingAndSpellings(Doc, Attr, Cat);
+
+      // Handle Undocumented category separately - no content merging
+      if (Cat == "Undocumented" && UndocumentedCategory) {
+        UndocumentedDocs.push_back(
+            DocumentationData(Doc, Attr, HeadingAndSpellings));
+        continue;
+      }
+
+      auto &CategoryDocs = MergedDocs[Category];
+
+      std::string key = Doc.getValueAsString("Content").str();
+      uint32_t keyHash = llvm::hash_value(key);
+
+      // If the content already exists, merge the documentation.
+      auto It = CategoryDocs.find(keyHash);
+      if (It != CategoryDocs.end()) {
+        // Merge heading
+        if (It->second.Heading != HeadingAndSpellings.first)
+          It->second.Heading += ", " + HeadingAndSpellings.first;
+        // Merge spellings
+        It->second.SupportedSpellings.merge(HeadingAndSpellings.second);
+        // Merge content
+        It->second.Documentation = &Doc; // Update reference
+      } else {
+        // Create new entry for unique content
+        CategoryDocs.emplace(keyHash,
+                             DocumentationData(Doc, Attr, HeadingAndSpellings));
+      }
     }
+  }
+
+  std::map<const Record *, std::vector<DocumentationData>, CategoryLess>
+      SplitDocs;
+
+  for (auto &CategoryPair : MergedDocs) {
+
+    std::vector<DocumentationData> MD;
+    for (auto &DocPair : CategoryPair.second)
+      MD.push_back(std::move(DocPair.second));
+
+    SplitDocs.emplace(CategoryPair.first, MD);
+  }
+
+  // Append Undocumented category entries
+  if (!UndocumentedDocs.empty() && UndocumentedCategory) {
+    SplitDocs.emplace(UndocumentedCategory, UndocumentedDocs);
   }
 
   // Having split the attributes out based on what documentation goes where,

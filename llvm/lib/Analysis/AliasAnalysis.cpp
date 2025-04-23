@@ -220,38 +220,6 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
       return ModRefInfo::NoModRef;
   }
 
-  // Try to refine the mod-ref info further using other API entry points to the
-  // aggregate set of AA results.
-
-  // We can completely ignore inaccessible memory here, because MemoryLocations
-  // can only reference accessible memory.
-  auto ME = getMemoryEffects(Call, AAQI)
-                .getWithoutLoc(IRMemLocation::InaccessibleMem);
-  if (ME.doesNotAccessMemory())
-    return ModRefInfo::NoModRef;
-
-  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
-  if ((ArgMR | OtherMR) != OtherMR) {
-    // Refine the modref info for argument memory. We only bother to do this
-    // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
-    // on the final result.
-    ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
-    for (const auto &I : llvm::enumerate(Call->args())) {
-      const Value *Arg = I.value();
-      if (!Arg->getType()->isPointerTy())
-        continue;
-      unsigned ArgIdx = I.index();
-      MemoryLocation ArgLoc = MemoryLocation::getForArgument(Call, ArgIdx, TLI);
-      AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI, Call);
-      if (ArgAlias != AliasResult::NoAlias)
-        AllArgsMask |= getArgModRefInfo(Call, ArgIdx);
-    }
-    ArgMR &= AllArgsMask;
-  }
-
-  Result &= ArgMR | OtherMR;
-
   // Apply the ModRef mask. This ensures that if Loc is a constant memory
   // location, we take into account the fact that the call definitely could not
   // modify the memory location.
@@ -366,6 +334,26 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   }
 
   return Result;
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2) {
+  SimpleAAQueryInfo AAQIP(*this);
+  return getModRefInfo(I1, I2, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2, AAQueryInfo &AAQI) {
+  // Early-exit if either instruction does not read or write memory.
+  if (!I1->mayReadOrWriteMemory() || !I2->mayReadOrWriteMemory())
+    return ModRefInfo::NoModRef;
+
+  if (const auto *Call2 = dyn_cast<CallBase>(I2))
+    return getModRefInfo(I1, Call2, AAQI);
+
+  // FIXME: We can have a more precise result.
+  ModRefInfo MR = getModRefInfo(I1, MemoryLocation::getOrNone(I2), AAQI);
+  return isModOrRefSet(MR) ? ModRefInfo::ModRef : ModRefInfo::NoModRef;
 }
 
 MemoryEffects AAResults::getMemoryEffects(const CallBase *Call,
@@ -700,14 +688,10 @@ AAResults::Concept::~Concept() = default;
 // Provide a definition for the static object used to identify passes.
 AnalysisKey AAManager::Key;
 
-ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {}
 
 ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB)
-    : ImmutablePass(ID), CB(std::move(CB)) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : ImmutablePass(ID), CB(std::move(CB)) {}
 
 char ExternalAAWrapperPass::ID = 0;
 
@@ -719,9 +703,7 @@ llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback) {
   return new ExternalAAWrapperPass(std::move(Callback));
 }
 
-AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {
-  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {}
 
 char AAResultsWrapperPass::ID = 0;
 

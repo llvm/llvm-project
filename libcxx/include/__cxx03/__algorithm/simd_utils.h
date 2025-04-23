@@ -10,7 +10,6 @@
 #define _LIBCPP___CXX03___ALGORITHM_SIMD_UTILS_H
 
 #include <__cxx03/__algorithm/min.h>
-#include <__cxx03/__bit/bit_cast.h>
 #include <__cxx03/__bit/countl.h>
 #include <__cxx03/__bit/countr.h>
 #include <__cxx03/__config>

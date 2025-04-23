@@ -49,6 +49,12 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
                         "", "cir::BoolType">:$type,
                     "bool":$value);
 
+  let builders = [
+    AttrBuilder<(ins "bool":$value), [{
+      return $_get($_ctxt, cir::BoolType::get($_ctxt), value);
+    }]>,
+  ];
+
   let assemblyFormat = [{
     `<` $value `>`
   }];
@@ -65,6 +71,13 @@ def ZeroAttr : CIR_Attr<"Zero", "zero", [TypedAttrInterface]> {
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+
   let assemblyFormat = [{}];
 }
 
@@ -80,6 +93,13 @@ def UndefAttr : CIR_Attr<"Undef", "undef", [TypedAttrInterface]> {
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+
   let assemblyFormat = [{}];
 }
 
@@ -94,7 +114,7 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
     value of the specified integer type.
   }];
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "llvm::APInt":$value);
+                        APIntParameter<"">:$value);
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "const llvm::APInt &":$value), [{
@@ -154,6 +174,53 @@ def FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
   }];
 }
 
+
+//===----------------------------------------------------------------------===//
+// ConstArrayAttr
+//===----------------------------------------------------------------------===//
+
+def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]> {
+  let summary = "A constant array from ArrayAttr or StringRefAttr";
+  let description = [{
+    An CIR array attribute is an array of literals of the specified attr types.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::Attribute":$elts,
+                        "int":$trailingZerosNum);
+
+  // Define a custom builder for the type; that removes the need to pass
+  // in an MLIRContext instance, as it can be infered from the `type`.
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::ArrayType":$type,
+                                        "mlir::Attribute":$elts), [{
+      int zeros = 0;
+      auto typeSize = mlir::cast<cir::ArrayType>(type).getSize();
+      if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
+        zeros = typeSize - str.size();
+      else
+        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
+
+      return $_get(type.getContext(), type, elts, zeros);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::ArrayType":$type,
+                                        "mlir::Attribute":$elts,
+                                        "int":$trailingZerosNum), [{
+      return $_get(type.getContext(), type, elts, trailingZerosNum);
+    }]>
+  ];
+
+  // Printing and parsing available in CIRDialect.cpp
+  let hasCustomAssemblyFormat = 1;
+
+  // Enable verifier.
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    bool hasTrailingZeros() const { return getTrailingZerosNum() != 0; };
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ConstPtrAttr
 //===----------------------------------------------------------------------===//
@@ -172,11 +239,7 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
                                         "mlir::IntegerAttr":$value), [{
       return $_get(type.getContext(), mlir::cast<cir::PointerType>(type),
                    value);
-    }]>,
-    AttrBuilder<(ins "mlir::Type":$type,
-                     "mlir::IntegerAttr":$value), [{
-      return $_get($_ctxt, mlir::cast<cir::PointerType>(type), value);
-    }]>,
+    }]>
   ];
   let extraClassDeclaration = [{
     bool isNullValue() const { return getValue().getInt() == 0; }

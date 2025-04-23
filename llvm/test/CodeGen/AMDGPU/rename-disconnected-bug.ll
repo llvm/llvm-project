@@ -11,7 +11,7 @@ B1:
   br label %B2
 
 B2:
-  %v0 = phi <4 x float> [ zeroinitializer, %B1 ], [ <float 0.0, float 0.0, float 0.0, float undef>, %B0 ]
+  %v0 = phi <4 x float> [ zeroinitializer, %B1 ], [ <float 0.0, float 0.0, float 0.0, float poison>, %B0 ]
   br i1 %c1, label %B20.1, label %B20.2
 
 B20.1:

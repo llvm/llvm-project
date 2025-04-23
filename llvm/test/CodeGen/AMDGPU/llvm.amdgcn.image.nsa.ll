@@ -116,7 +116,7 @@ main_body:
 ; GCN-LABEL: {{^}}sample_undef_undef_undef_undef:
 ; GCN: image_sample_c_b v0, v[0:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 define amdgpu_ps float @sample_undef_undef_undef_undef(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp) {
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float undef, float undef, float undef, float undef, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float poison, float poison, float poison, float poison, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 
@@ -125,7 +125,7 @@ define amdgpu_ps float @sample_undef_undef_undef_undef(<8 x i32> inreg %rsrc, <4
 ; NONSA: image_sample_c_b v0, v[0:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 ; NSA: image_sample_c_b v0, [v0, v0, v0, v0], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 define amdgpu_ps float @sample_undef_undef_undef_def(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %layer) {
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float undef, float undef, float undef, float %layer, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float poison, float poison, float poison, float %layer, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 
@@ -134,7 +134,7 @@ define amdgpu_ps float @sample_undef_undef_undef_def(<8 x i32> inreg %rsrc, <4 x
 ; GCN: image_sample_c_b v0, v[0:3], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D_ARRAY
 define amdgpu_ps float @sample_undef_undef_undef_def_rnd(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %layer) {
   %layer_rnd = call float @llvm.rint.f32(float %layer)
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float undef, float undef, float undef, float %layer_rnd, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float poison, float poison, float poison, float %layer_rnd, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 
@@ -147,7 +147,7 @@ define amdgpu_ps float @sample_def_undef_undef_undef(<8 x i32> inreg %rsrc, <4 x
   ; eliminated in the presence of undef, just add an arbitrary intermediate
   ; computation.
   %c0 = fadd float %z0, 1.0
-  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float %c0, float undef, float undef, float undef, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
+  %r = call float @llvm.amdgcn.image.sample.c.b.1darray.f32.f32.f32(i32 1, float %c0, float poison, float poison, float poison, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   ret float %r
 }
 

@@ -168,9 +168,7 @@ void PseudoProbeVerifier::verifyProbeFactors(
   }
 }
 
-SampleProfileProber::SampleProfileProber(Function &Func,
-                                         const std::string &CurModuleUniqueId)
-    : F(&Func), CurModuleUniqueId(CurModuleUniqueId) {
+SampleProfileProber::SampleProfileProber(Function &Func) : F(&Func) {
   BlockProbeIds.clear();
   CallProbeIds.clear();
   LastProbeId = (uint32_t)PseudoProbeReservedId::Last;
@@ -199,8 +197,7 @@ void SampleProfileProber::computeBlocksToIgnore(
   computeEHOnlyBlocks(*F, BlocksAndCallsToIgnore);
   findUnreachableBlocks(BlocksAndCallsToIgnore);
 
-  BlocksToIgnore.insert(BlocksAndCallsToIgnore.begin(),
-                        BlocksAndCallsToIgnore.end());
+  BlocksToIgnore.insert_range(BlocksAndCallsToIgnore);
 
   // Handle the call-to-invoke conversion case: make sure that the probe id and
   // callsite id are consistent before and after the block split. For block
@@ -453,7 +450,6 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
 
 PreservedAnalyses SampleProfileProbePass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
-  auto ModuleId = getUniqueModuleId(&M);
   // Create the pseudo probe desc metadata beforehand.
   // Note that modules with only data but no functions will require this to
   // be set up so that they will be known as probed later.
@@ -462,7 +458,7 @@ PreservedAnalyses SampleProfileProbePass::run(Module &M,
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
-    SampleProfileProber ProbeManager(F, ModuleId);
+    SampleProfileProber ProbeManager(F);
     ProbeManager.instrumentOneFunc(F, TM);
   }
 

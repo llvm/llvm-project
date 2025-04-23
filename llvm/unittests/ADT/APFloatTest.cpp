@@ -8347,4 +8347,13 @@ TEST(APFloatTest, AddOrSubtractSignificand) {
   Helper::runTest(true, false, 3, 0x10001, false, 7, 0x100, false, 6, 0x1e00,
                   lfLessThanHalf);
 }
+
+TEST(APFloatTest, hasSignBitInMSB) {
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEsingle()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::x87DoubleExtended()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
+  EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+}
+
 } // namespace

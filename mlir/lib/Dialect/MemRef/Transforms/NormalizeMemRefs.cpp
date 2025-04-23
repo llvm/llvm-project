@@ -21,7 +21,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_NORMALIZEMEMREFS
+#define GEN_PASS_DEF_NORMALIZEMEMREFSPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -40,7 +40,7 @@ namespace {
 /// to call a non-normalizable function, we treat that function as
 /// non-normalizable as well. We assume external functions to be normalizable.
 struct NormalizeMemRefs
-    : public memref::impl::NormalizeMemRefsBase<NormalizeMemRefs> {
+    : public memref::impl::NormalizeMemRefsPassBase<NormalizeMemRefs> {
   void runOnOperation() override;
   void normalizeFuncOpMemRefs(func::FuncOp funcOp, ModuleOp moduleOp);
   bool areMemRefsNormalizable(func::FuncOp funcOp);
@@ -52,11 +52,6 @@ struct NormalizeMemRefs
 };
 
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::memref::createNormalizeMemRefsPass() {
-  return std::make_unique<NormalizeMemRefs>();
-}
 
 void NormalizeMemRefs::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Normalizing Memrefs...\n");
@@ -356,12 +351,12 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
   SmallVector<memref::AllocOp, 4> allocOps;
   funcOp.walk([&](memref::AllocOp op) { allocOps.push_back(op); });
   for (memref::AllocOp allocOp : allocOps)
-    (void)normalizeMemRef(&allocOp);
+    (void)normalizeMemRef(allocOp);
 
   SmallVector<memref::AllocaOp> allocaOps;
   funcOp.walk([&](memref::AllocaOp op) { allocaOps.push_back(op); });
   for (memref::AllocaOp allocaOp : allocaOps)
-    (void)normalizeMemRef(&allocaOp);
+    (void)normalizeMemRef(allocaOp);
 
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);

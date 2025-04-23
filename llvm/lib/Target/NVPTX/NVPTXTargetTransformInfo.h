@@ -16,8 +16,9 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXTARGETTRANSFORMINFO_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETTRANSFORMINFO_H
 
-#include "NVPTXTargetMachine.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "NVPTXTargetMachine.h"
+#include "NVPTXUtilities.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -41,9 +42,9 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
-  bool hasBranchDivergence(const Function *F = nullptr) { return true; }
+  bool hasBranchDivergence(const Function *F = nullptr) const { return true; }
 
-  bool isSourceOfDivergence(const Value *V);
+  bool isSourceOfDivergence(const Value *V) const;
 
   unsigned getFlatAddressSpace() const {
     return AddressSpace::ADDRESS_SPACE_GENERIC;
@@ -73,7 +74,7 @@ public:
   // vectorizers but disables heuristics based on the number of registers.
   // FIXME: Return a more reasonable number, while keeping an eye on
   // LoopVectorizer's unrolling heuristics.
-  unsigned getNumberOfRegisters(bool Vector) const { return 1; }
+  unsigned getNumberOfRegisters(unsigned ClassID) const { return 1; }
 
   // Only <2 x half> should be vectorized, so always return 32 for the vector
   // register size.
@@ -94,20 +95,61 @@ public:
   // calls are particularly expensive in NVPTX.
   unsigned getInliningThresholdMultiplier() const { return 11; }
 
+  InstructionCost getInstructionCost(const User *U,
+                                     ArrayRef<const Value *> Operands,
+                                     TTI::TargetCostKind CostKind) const;
+
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
+
+  InstructionCost getScalarizationOverhead(VectorType *InTy,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) const {
+    if (!InTy->getElementCount().isFixed())
+      return InstructionCost::getInvalid();
+
+    auto VT = getTLI()->getValueType(DL, InTy);
+    auto NumElements = InTy->getElementCount().getFixedValue();
+    InstructionCost Cost = 0;
+    if (Insert && !VL.empty()) {
+      bool AllConstant = all_of(seq(NumElements), [&](int Idx) {
+        return !DemandedElts[Idx] || isa<Constant>(VL[Idx]);
+      });
+      if (AllConstant) {
+        Cost += TTI::TCC_Free;
+        Insert = false;
+      }
+    }
+    if (Insert && Isv2x16VT(VT)) {
+      // Can be built in a single mov
+      Cost += 1;
+      Insert = false;
+    }
+    if (Insert && VT == MVT::v4i8) {
+      InstructionCost Cost = 3; // 3 x PRMT
+      for (auto Idx : seq(NumElements))
+        if (DemandedElts[Idx])
+          Cost += 1; // zext operand to i32
+      Insert = false;
+    }
+    return Cost + BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert,
+                                                  Extract, CostKind, VL);
+  }
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
-  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) {
+  bool hasVolatileVariant(Instruction *I, unsigned AddrSpace) const {
     // Volatile loads/stores are only supported for shared and global address
     // spaces, or for generic AS that maps to them.
     if (!(AddrSpace == llvm::ADDRESS_SPACE_GENERIC ||

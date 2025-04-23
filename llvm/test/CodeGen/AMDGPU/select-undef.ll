@@ -6,7 +6,7 @@
 ; GCN-NOT: v_cndmask
 ; GCN-NEXT: s_setpc_b64
 define float @select_undef_lhs(float %val, i1 %cond) {
-  %sel = select i1 %cond, float undef, float %val
+  %sel = select i1 %cond, float poison, float %val
   ret float %sel
 }
 
@@ -16,7 +16,7 @@ define float @select_undef_lhs(float %val, i1 %cond) {
 ; GCN-NOT: v_cndmask
 ; GCN-NEXT: s_setpc_b64
 define float @select_undef_rhs(float %val, i1 %cond) {
-  %sel = select i1 %cond, float %val, float undef
+  %sel = select i1 %cond, float %val, float poison
   ret float %sel
 }
 
@@ -25,7 +25,7 @@ define float @select_undef_rhs(float %val, i1 %cond) {
 ; GCN: store_dword {{[^,]+}}, [[RES]]
 define void @select_undef_n1(ptr addrspace(1) %a, i32 %c) {
   %cc = icmp eq i32 %c, 0
-  %sel = select i1 %cc, float 1.000000e+00, float undef
+  %sel = select i1 %cc, float 1.000000e+00, float poison
   store float %sel, ptr addrspace(1) %a
   ret void
 }
@@ -35,7 +35,7 @@ define void @select_undef_n1(ptr addrspace(1) %a, i32 %c) {
 ; GCN: store_dword {{[^,]+}}, [[RES]]
 define void @select_undef_n2(ptr addrspace(1) %a, i32 %c) {
   %cc = icmp eq i32 %c, 0
-  %sel = select i1 %cc, float undef, float 1.000000e+00
+  %sel = select i1 %cc, float poison, float 1.000000e+00
   store float %sel, ptr addrspace(1) %a
   ret void
 }
