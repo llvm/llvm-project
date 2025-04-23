@@ -20,7 +20,6 @@
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
-#include "FunctionPointer.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -985,26 +984,6 @@ bool CmpHelperEQ(InterpState &S, CodePtr OpPC, CompareFn Fn) {
 }
 
 template <>
-inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
-                                         CompareFn Fn) {
-  const auto &RHS = S.Stk.pop<FunctionPointer>();
-  const auto &LHS = S.Stk.pop<FunctionPointer>();
-
-  // We cannot compare against weak declarations at compile time.
-  for (const auto &FP : {LHS, RHS}) {
-    if (FP.isWeak()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_pointer_weak_comparison)
-          << FP.toDiagnosticString(S.getASTContext());
-      return false;
-    }
-  }
-
-  S.Stk.push<Boolean>(Boolean::from(Fn(LHS.compare(RHS))));
-  return true;
-}
-
-template <>
 inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
   const Pointer &RHS = S.Stk.pop<Pointer>();
@@ -1134,6 +1113,12 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
             << P.toDiagnosticString(S.getASTContext());
         return false;
       }
+    } else if (BothNonNull && P.isIntegralPointer()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_constant_comparison)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
+      return false;
     }
   }
 
@@ -1953,7 +1938,7 @@ inline bool CastMemberPtrPtr(InterpState &S, CodePtr OpPC) {
     S.Stk.push<Pointer>(*Ptr);
     return true;
   }
-  return false;
+  return Invalid(S, OpPC);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2141,11 +2126,24 @@ static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
 
 /// 1) Pops a Pointer from the stack.
 /// 2) Pops another Pointer from the stack.
-/// 3) Pushes the different of the indices of the two pointers on the stack.
+/// 3) Pushes the difference of the indices of the two pointers on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
+
+  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_pointer_arith_unspecified)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
+  if (LHS == RHS) {
+    S.Stk.push<T>();
+    return true;
+  }
 
   for (const Pointer &P : {LHS, RHS}) {
     if (P.isZeroSizeArray()) {
@@ -2161,21 +2159,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
 
       return false;
     }
-  }
-
-  if (RHS.isZero()) {
-    S.Stk.push<T>(T::from(LHS.getIndex()));
-    return true;
-  }
-
-  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
-    // TODO: Diagnose.
-    return false;
-  }
-
-  if (LHS.isZero() && RHS.isZero()) {
-    S.Stk.push<T>();
-    return true;
   }
 
   T A = LHS.isBlockPointer()
@@ -2412,7 +2395,18 @@ static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
     bool HasValidResult = !Ptr.isZero();
 
     if (HasValidResult) {
-      // FIXME: note_constexpr_invalid_void_star_cast
+      if (S.getStdAllocatorCaller("allocate"))
+        return true;
+
+      const auto &E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      if (S.getLangOpts().CPlusPlus26 &&
+          S.getASTContext().hasSimilarType(Ptr.getType(),
+                                           E->getType()->getPointeeType()))
+        return true;
+
+      S.CCEDiag(E, diag::note_constexpr_invalid_void_star_cast)
+          << E->getSubExpr()->getType() << S.getLangOpts().CPlusPlus26
+          << Ptr.getType().getCanonicalType() << E->getType()->getPointeeType();
     } else if (!S.getLangOpts().CPlusPlus26) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.CCEDiag(E, diag::note_constexpr_invalid_cast)
@@ -2804,10 +2798,9 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   const T &IntVal = S.Stk.pop<T>();
 
-  if (Desc)
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-        << S.getLangOpts().CPlusPlus;
+  S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus;
 
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
   return true;
@@ -2871,6 +2864,15 @@ inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool PushCC(InterpState &S, CodePtr OpPC, bool Value) {
+  S.ConstantContextOverride = Value;
+  return true;
+}
+inline bool PopCC(InterpState &S, CodePtr OpPC) {
+  S.ConstantContextOverride = std::nullopt;
+  return true;
+}
+
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
 
@@ -2883,12 +2885,22 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
                         bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
-  // FIXME: Support diagnosing other invalid cast kinds.
   if (Kind == CastKind::Reinterpret) {
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
     return !Fatal;
+  } else if (Kind == CastKind::Volatile) {
+    // FIXME: Technically not a cast.
+    const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+    if (S.getLangOpts().CPlusPlus)
+      S.FFDiag(E, diag::note_constexpr_access_volatile_type)
+          << AK_Read << E->getSubExpr()->getType();
+    else
+      S.FFDiag(E);
+
+    return false;
   }
+
   return false;
 }
 

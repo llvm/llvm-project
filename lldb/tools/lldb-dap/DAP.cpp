@@ -28,6 +28,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -499,6 +500,10 @@ ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
   return exc_bp;
 }
 
+lldb::SBThread DAP::GetLLDBThread(lldb::tid_t tid) {
+  return target.GetProcess().GetThreadByID(tid);
+}
+
 lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
   auto tid = GetInteger<int64_t>(arguments, "threadId")
                  .value_or(LLDB_INVALID_THREAD_ID);
@@ -915,7 +920,7 @@ llvm::Error DAP::Loop() {
     StopEventHandlers();
   });
 
-  while (!disconnecting) {
+  while (!disconnecting || !m_queue.empty()) {
     std::unique_lock<std::mutex> lock(m_queue_mutex);
     m_queue_cv.wait(lock, [&] { return disconnecting || !m_queue.empty(); });
 

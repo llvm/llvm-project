@@ -8503,10 +8503,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     }
 
     auto LoopUsersItr = LoopUsers.find(CurrL);
-    if (LoopUsersItr != LoopUsers.end()) {
-      ToForget.insert(ToForget.end(), LoopUsersItr->second.begin(),
-                LoopUsersItr->second.end());
-    }
+    if (LoopUsersItr != LoopUsers.end())
+      llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
     PushLoopPHIs(CurrL, Worklist, Visited);
@@ -14687,9 +14685,7 @@ INITIALIZE_PASS_END(ScalarEvolutionWrapperPass, "scalar-evolution",
 
 char ScalarEvolutionWrapperPass::ID = 0;
 
-ScalarEvolutionWrapperPass::ScalarEvolutionWrapperPass() : FunctionPass(ID) {
-  initializeScalarEvolutionWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ScalarEvolutionWrapperPass::ScalarEvolutionWrapperPass() : FunctionPass(ID) {}
 
 bool ScalarEvolutionWrapperPass::runOnFunction(Function &F) {
   SE.reset(new ScalarEvolution(

@@ -77,7 +77,7 @@ body:             |
     %lhs:fpr(<2 x s64>) = COPY $q0
     %zero:gpr(s64) = G_CONSTANT i64 0
     %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMEQZ %lhs
+    %fcmp:fpr(<2 x s64>) = G_FCMEQ %lhs, %zero_vec(<2 x s64>)
     $q0 = COPY %fcmp(<2 x s64>)
     RET_ReallyLR implicit $q0
 
@@ -97,7 +97,7 @@ body:             |
     %lhs:fpr(<2 x s64>) = COPY $q0
     %zero:gpr(s64) = G_CONSTANT i64 0
     %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMGEZ %lhs
+    %fcmp:fpr(<2 x s64>) = G_FCMGE %lhs, %zero_vec(<2 x s64>)
     $q0 = COPY %fcmp(<2 x s64>)
     RET_ReallyLR implicit $q0
 
@@ -117,7 +117,7 @@ body:             |
     %lhs:fpr(<2 x s64>) = COPY $q0
     %zero:gpr(s64) = G_CONSTANT i64 0
     %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMGTZ %lhs
+    %fcmp:fpr(<2 x s64>) = G_FCMGT %lhs, %zero_vec(<2 x s64>)
     $q0 = COPY %fcmp(<2 x s64>)
     RET_ReallyLR implicit $q0
 
@@ -137,7 +137,7 @@ body:             |
     %lhs:fpr(<2 x s64>) = COPY $q0
     %zero:gpr(s64) = G_CONSTANT i64 0
     %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMLEZ %lhs
+    %fcmp:fpr(<2 x s64>) = G_FCMGE %zero_vec(<2 x s64>), %lhs
     $q0 = COPY %fcmp(<2 x s64>)
     RET_ReallyLR implicit $q0
 
@@ -157,6 +157,6 @@ body:             |
     %lhs:fpr(<2 x s64>) = COPY $q0
     %zero:gpr(s64) = G_CONSTANT i64 0
     %zero_vec:fpr(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    %fcmp:fpr(<2 x s64>) = G_FCMLTZ %lhs
+    %fcmp:fpr(<2 x s64>) = G_FCMGT %zero_vec(<2 x s64>), %lhs
     $q0 = COPY %fcmp(<2 x s64>)
     RET_ReallyLR implicit $q0

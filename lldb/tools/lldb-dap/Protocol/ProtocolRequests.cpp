@@ -276,4 +276,12 @@ json::Value toJSON(const SourceResponseBody &SA) {
   return std::move(Result);
 }
 
+bool fromJSON(const llvm::json::Value &Params, NextArguments &NA,
+              llvm::json::Path P) {
+  json::ObjectMapper OM(Params, P);
+  return OM && OM.map("threadId", NA.threadId) &&
+         OM.mapOptional("singleThread", NA.singleThread) &&
+         OM.mapOptional("granularity", NA.granularity);
+}
+
 } // namespace lldb_dap::protocol

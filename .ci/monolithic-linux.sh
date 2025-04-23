@@ -18,6 +18,7 @@ set -o pipefail
 
 MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
+INSTALL_DIR="${BUILD_DIR}/install"
 rm -rf "${BUILD_DIR}"
 
 ccache --zero-stats
@@ -53,12 +54,10 @@ trap at-exit EXIT
 
 projects="${1}"
 targets="${2}"
-runtimes="${3}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
 echo "--- cmake"
-
 export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
@@ -69,7 +68,7 @@ export LLVM_SYMBOLIZER_PATH=`which llvm-symbolizer`
 [[ ! -f "${LLVM_SYMBOLIZER_PATH}" ]] && echo "llvm-symbolizer not found!"
 
 # Set up all runtimes either way. libcxx is a dependency of LLDB.
-# If it ends up being unused, not much harm.
+# It will not be built unless it is used.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -D LLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
@@ -86,44 +85,69 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
-      -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON
+      -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
 echo "--- ninja"
-
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
 
+runtimes="${3}"
 runtime_targets="${4}"
 
-# Run runtimes tests.
-# We don't need to do a clean separate build of runtimes, because runtimes
-# will be built against just built clang, and because LIBCXX_TEST_PARAMS
-# and LIBCXXABI_TEST_PARAMS only affect lit configuration, which successfully
-# propagates without a clean build. Other that those two variables, builds
-# are supposed to be the same.
+# Compiling runtimes with just-built Clang and running their tests
+# as an additional testing for Clang.
 if [[ "${runtimes}" != "" ]]; then
   if [[ "${runtime_targets}" == "" ]]; then
     echo "Runtimes to build are specified, but targets are not."
     exit 1
   fi
 
+  echo "--- ninja install-clang"
+
+  ninja -C ${BUILD_DIR} install-clang install-clang-resource-headers
+
+  RUNTIMES_BUILD_DIR="${MONOREPO_ROOT}/build-runtimes"
+  INSTALL_DIR="${BUILD_DIR}/install"
+  mkdir -p ${RUNTIMES_BUILD_DIR}
+
   echo "--- cmake runtimes C++26"
 
-  cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
+  rm -rf "${RUNTIMES_BUILD_DIR}"
+  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
+      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      -D LIBCXX_CXX_ABI=libcxxabi \
+      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="std=c++26" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++26"
+      -D LIBCXXABI_TEST_PARAMS="std=c++26" \
+      -D LLVM_LIT_ARGS="${lit_args}"
 
   echo "--- ninja runtimes C++26"
 
-  ninja -vC "${BUILD_DIR}" ${runtime_targets}
+  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
 
   echo "--- cmake runtimes clang modules"
 
-  cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
+  # We don't need to do a clean build of runtimes, because LIBCXX_TEST_PARAMS
+  # and LIBCXXABI_TEST_PARAMS only affect lit configuration, which successfully
+  # propagates without a clean build. Other that those two variables, builds
+  # are supposed to be the same.
+
+  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
+      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
+      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+      -D LIBCXX_CXX_ABI=libcxxabi \
+      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
       -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
-      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang"
+      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
+      -D LLVM_LIT_ARGS="${lit_args}"
 
   echo "--- ninja runtimes clang modules"
 
-  ninja -vC "${BUILD_DIR}" ${runtime_targets}
+  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
 fi

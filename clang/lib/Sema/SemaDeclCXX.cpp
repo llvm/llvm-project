@@ -12154,33 +12154,31 @@ static bool isStdClassTemplate(Sema &S, QualType SugaredType, QualType *TypeArg,
   };
 
   ClassTemplateDecl *Template = nullptr;
-  const TemplateArgument *Arguments = nullptr;
-
-  QualType Ty = S.Context.getCanonicalType(SugaredType);
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    ClassTemplateSpecializationDecl *Specialization =
-        dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
-    if (!Specialization) {
-      ReportMatchingNameAsMalformed(RT->getDecl());
-      return false;
-    }
-
-    Template = Specialization->getSpecializedTemplate();
-    Arguments = Specialization->getTemplateArgs().data();
-  } else {
-    const TemplateSpecializationType *TST = nullptr;
-    if (auto *ICN = Ty->getAs<InjectedClassNameType>())
-      TST = ICN->getInjectedTST();
-    else
-      TST = Ty->getAs<TemplateSpecializationType>();
+  ArrayRef<TemplateArgument> Arguments;
+  {
+    const TemplateSpecializationType *TST =
+        SugaredType->getAsNonAliasTemplateSpecializationType();
+    if (!TST)
+      if (const auto *ICN = SugaredType->getAs<InjectedClassNameType>())
+        TST = ICN->getInjectedTST();
     if (TST) {
       Template = dyn_cast_or_null<ClassTemplateDecl>(
           TST->getTemplateName().getAsTemplateDecl());
-      Arguments = TST->template_arguments().begin();
+      Arguments = TST->template_arguments();
+    } else if (const RecordType *RT = SugaredType->getAs<RecordType>()) {
+      ClassTemplateSpecializationDecl *Specialization =
+          dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+      if (!Specialization) {
+        ReportMatchingNameAsMalformed(RT->getDecl());
+        return false;
+      }
+      Template = Specialization->getSpecializedTemplate();
+      Arguments = Specialization->getTemplateArgs().asArray();
     }
   }
+
   if (!Template) {
-    ReportMatchingNameAsMalformed(Ty->getAsTagDecl());
+    ReportMatchingNameAsMalformed(SugaredType->getAsTagDecl());
     return false;
   }
 
@@ -12200,7 +12198,8 @@ static bool isStdClassTemplate(Sema &S, QualType SugaredType, QualType *TypeArg,
     // template?
     TemplateParameterList *Params = Template->getTemplateParameters();
     if (Params->getMinRequiredArguments() != 1 ||
-        !isa<TemplateTypeParmDecl>(Params->getParam(0))) {
+        !isa<TemplateTypeParmDecl>(Params->getParam(0)) ||
+        Params->getParam(0)->isTemplateParameterPack()) {
       if (MalformedDecl)
         *MalformedDecl = TemplateClass;
       return false;
@@ -12214,8 +12213,21 @@ static bool isStdClassTemplate(Sema &S, QualType SugaredType, QualType *TypeArg,
     return false;
 
   // This is an instance of std::{ClassName}. Find the argument type.
-  if (TypeArg)
-    *TypeArg = Arguments[0].getAsType();
+  if (TypeArg) {
+    QualType ArgType = Arguments[0].getAsType();
+    // FIXME: Since TST only has as-written arguments, we have to perform the
+    // only kind of conversion applicable to type arguments; in Objective-C ARC:
+    // - If an explicitly-specified template argument type is a lifetime type
+    //   with no lifetime qualifier, the __strong lifetime qualifier is
+    //   inferred.
+    if (S.getLangOpts().ObjCAutoRefCount && ArgType->isObjCLifetimeType() &&
+        !ArgType.getObjCLifetime()) {
+      Qualifiers Qs;
+      Qs.setObjCLifetime(Qualifiers::OCL_Strong);
+      ArgType = S.Context.getQualifiedType(ArgType, Qs);
+    }
+    *TypeArg = ArgType;
+  }
 
   return true;
 }
@@ -19401,13 +19413,7 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
       Args = llvm::ArrayRef(AA->args_begin(), AA->args_size());
     else if (const auto *AB = dyn_cast<AcquiredBeforeAttr>(A))
       Args = llvm::ArrayRef(AB->args_begin(), AB->args_size());
-    else if (const auto *ETLF = dyn_cast<ExclusiveTrylockFunctionAttr>(A)) {
-      Arg = ETLF->getSuccessValue();
-      Args = llvm::ArrayRef(ETLF->args_begin(), ETLF->args_size());
-    } else if (const auto *STLF = dyn_cast<SharedTrylockFunctionAttr>(A)) {
-      Arg = STLF->getSuccessValue();
-      Args = llvm::ArrayRef(STLF->args_begin(), STLF->args_size());
-    } else if (const auto *LR = dyn_cast<LockReturnedAttr>(A))
+    else if (const auto *LR = dyn_cast<LockReturnedAttr>(A))
       Arg = LR->getArg();
     else if (const auto *LE = dyn_cast<LocksExcludedAttr>(A))
       Args = llvm::ArrayRef(LE->args_begin(), LE->args_size());
@@ -19415,9 +19421,10 @@ bool Sema::checkThisInStaticMemberFunctionAttributes(CXXMethodDecl *Method) {
       Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
     else if (const auto *AC = dyn_cast<AcquireCapabilityAttr>(A))
       Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
-    else if (const auto *AC = dyn_cast<TryAcquireCapabilityAttr>(A))
+    else if (const auto *AC = dyn_cast<TryAcquireCapabilityAttr>(A)) {
+      Arg = AC->getSuccessValue();
       Args = llvm::ArrayRef(AC->args_begin(), AC->args_size());
-    else if (const auto *RC = dyn_cast<ReleaseCapabilityAttr>(A))
+    } else if (const auto *RC = dyn_cast<ReleaseCapabilityAttr>(A))
       Args = llvm::ArrayRef(RC->args_begin(), RC->args_size());
 
     if (Arg && !Finder.TraverseStmt(Arg))

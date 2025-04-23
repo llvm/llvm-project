@@ -428,6 +428,150 @@ static LogicalResult verifyConvOpModes(T op) {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// ERROR_IF functions.
+// ERROR_IF is a predicate that must set an error if the condition holds.
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+static LogicalResult verifyConvOpErrorIf(T op) {
+  llvm::ArrayRef<int64_t> padding = op.getPad();
+  if (llvm::any_of(padding, [](int64_t p) { return p < 0; }))
+    return op.emitOpError("expect all padding values to be >= 0, got ")
+           << padding;
+
+  llvm::ArrayRef<int64_t> strides = op.getStride();
+  if (llvm::any_of(strides, [](int64_t s) { return s < 1; }))
+    return op.emitOpError("expect all stride values to be >= 1, got ")
+           << strides;
+
+  llvm::ArrayRef<int64_t> dilations = op.getDilation();
+  if (llvm::any_of(dilations, [](int64_t d) { return d < 1; }))
+    return op.emitOpError("expect all dilation values to be >= 1, got ")
+           << dilations;
+
+  const RankedTensorType outputType =
+      llvm::dyn_cast<RankedTensorType>(op.getOutput().getType());
+  if (!outputType)
+    // Skip following checks if output is not ranked
+    return success();
+
+  const RankedTensorType inputType =
+      llvm::dyn_cast<RankedTensorType>(op.getInput().getType());
+  const RankedTensorType weightType =
+      llvm::dyn_cast<RankedTensorType>(op.getWeight().getType());
+
+  if (inputType && weightType) {
+    const auto verifyOutputSize =
+        [&op](const int64_t inputSize, const int64_t kernelSize,
+              const int64_t outputSize, const int64_t padBefore,
+              const int64_t padAfter, const int64_t stride,
+              const int64_t dilation, const llvm::StringRef dimName,
+              const llvm::StringRef dimAxis,
+              const llvm::StringRef padBeforeName,
+              const llvm::StringRef padAfterName) -> LogicalResult {
+      if (inputSize == ShapedType::kDynamic ||
+          kernelSize == ShapedType::kDynamic)
+        return success();
+
+      // ERROR_IF: O != idiv_check(I - 1 + pa + pb - (K - 1) * d, s) + 1
+
+      const std::optional<int64_t> calculatedOutSizeMinusOne = idivCheck(
+          inputSize - 1 + padBefore + padAfter - (kernelSize - 1) * dilation,
+          stride);
+      if (!calculatedOutSizeMinusOne.has_value())
+        return op.emitOpError("expected input_")
+               << dimName << " - 1 + pad_" << padBeforeName << " + pad_"
+               << padAfterName << " - (kernel_" << dimName
+               << " - 1) * dilation_" << dimAxis
+               << " to be wholly divisible by stride_" << dimAxis << ", got ("
+               << inputSize << " - 1 + " << padBefore << " + " << padAfter
+               << " - (" << kernelSize << " - 1) * " << dilation << ") / "
+               << stride;
+
+      const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
+      if (outputSize != ShapedType::kDynamic && calculatedOutSize != outputSize)
+        return op.emitOpError("calculated output ")
+               << dimName << " did not match expected: "
+               << "calculated=" << calculatedOutSize
+               << ", expected=" << outputSize;
+
+      return success();
+    };
+
+    // input = [_,IH,IW,_], weight = [_,KH,KW,_], output = [_,OH,OW,_]
+    if constexpr (std::is_same<T, tosa::Conv2DOp>::value) {
+      if (failed(verifyOutputSize(
+              inputType.getDimSize(1), weightType.getDimSize(1),
+              outputType.getDimSize(1), padding[0], padding[1], strides[0],
+              dilations[0], "height", "y", "top", "bottom")))
+        return failure();
+
+      if (failed(verifyOutputSize(
+              inputType.getDimSize(2), weightType.getDimSize(2),
+              outputType.getDimSize(2), padding[2], padding[3], strides[1],
+              dilations[1], "width", "x", "left", "right")))
+        return failure();
+    }
+
+    // input = [_,IH,IW,_], weight = [KH,KW,_,_], output = [_,OH,OW,_]
+    if constexpr (std::is_same<T, tosa::DepthwiseConv2DOp>::value) {
+      if (failed(verifyOutputSize(
+              inputType.getDimSize(1), weightType.getDimSize(0),
+              outputType.getDimSize(1), padding[0], padding[1], strides[0],
+              dilations[0], "height", "y", "top", "bottom")))
+        return failure();
+
+      if (failed(verifyOutputSize(
+              inputType.getDimSize(2), weightType.getDimSize(1),
+              outputType.getDimSize(2), padding[2], padding[3], strides[1],
+              dilations[1], "width", "x", "left", "right")))
+        return failure();
+    }
+
+    // input = [_,ID,IH,IW,_], weight = [_,KD,KH,KW,_], output = [_,OD,OH,OW,_]
+    if constexpr (std::is_same<T, tosa::Conv3DOp>::value) {
+      if (failed(verifyOutputSize(
+              inputType.getDimSize(1), weightType.getDimSize(1),
+              outputType.getDimSize(1), padding[0], padding[1], strides[0],
+              dilations[0], "depth", "d", "front", "back")))
+        return failure();
+
+      if (failed(verifyOutputSize(
+              inputType.getDimSize(2), weightType.getDimSize(2),
+              outputType.getDimSize(2), padding[2], padding[3], strides[1],
+              dilations[1], "height", "y", "top", "bottom")))
+        return failure();
+
+      if (failed(verifyOutputSize(
+              inputType.getDimSize(3), weightType.getDimSize(3),
+              outputType.getDimSize(3), padding[4], padding[5], strides[2],
+              dilations[2], "width", "x", "left", "right")))
+        return failure();
+    }
+  }
+
+  const RankedTensorType biasType =
+      llvm::dyn_cast<RankedTensorType>(op.getBias().getType());
+  if (!biasType)
+    // Skip following checks if bias is not ranked
+    return success();
+
+  const int64_t biasChannels = biasType.getDimSize(0);
+  const int64_t outputChannels = outputType.getDimSize(3);
+  if (biasChannels == ShapedType::kDynamic ||
+      outputChannels == ShapedType::kDynamic)
+    // Skip following checks if biasChannels or outputChannels is dynamic dim
+    return success();
+
+  if (biasChannels != outputChannels && biasChannels != 1)
+    return op.emitOpError(
+               "bias channels expected to be equal to output channels (")
+           << outputChannels << ") or 1, got " << biasChannels;
+
+  return success();
+}
+
 // verify that inType and outType have same element types
 template <typename T>
 static LogicalResult verifySameElementTypes(T op, Type inType, Type outType) {
@@ -483,8 +627,7 @@ LogicalResult tosa::ArgMaxOp::verify() {
 
   const ArrayRef<int64_t> inputShape = inputType.getShape();
   const ArrayRef<int64_t> outputShape = resultType.getShape();
-  llvm::SmallVector<int64_t> expectedOutputShape(inputShape.begin(),
-                                                 inputShape.end());
+  llvm::SmallVector<int64_t> expectedOutputShape(inputShape);
   expectedOutputShape.erase(expectedOutputShape.begin() + axis);
   if (failed(verifyCompatibleShape(expectedOutputShape, outputShape)))
     return emitOpError("expected output shape '")
@@ -1447,19 +1590,26 @@ LogicalResult tosa::SliceOp::verify() {
                              /* outType = */ getOutput().getType())
           .failed())
     return failure();
-  auto inputType = llvm::dyn_cast<RankedTensorType>(getInput1().getType());
-  if (!inputType)
-    return success();
 
-  auto startShapeRank =
-      llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
-  if (inputType.getRank() != startShapeRank)
-    return emitOpError("length of start is not equal to rank of input shape");
+  const ShapeAdaptor inputShape(getInput1().getType());
+  if (inputShape.hasRank()) {
+    const auto inputRank = inputShape.getRank();
+    const ShapeAdaptor outputShape(getOutput().getType());
+    if (outputShape.hasRank() && inputRank != outputShape.getRank())
+      return emitOpError(
+                 "expect input1 and output to have the same ranks, got ")
+             << inputRank << " and " << outputShape.getRank();
 
-  auto sizeShapeRank =
-      llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
-  if (inputType.getRank() != sizeShapeRank)
-    return emitOpError("length of size is not equal to rank of input shape");
+    const auto startShapeRank =
+        llvm::cast<tosa::shapeType>(getStart().getType()).getRank();
+    if (inputRank != startShapeRank)
+      return emitOpError("length of start is not equal to rank of input shape");
+
+    const auto sizeShapeRank =
+        llvm::cast<tosa::shapeType>(getSize().getType()).getRank();
+    if (inputRank != sizeShapeRank)
+      return emitOpError("length of size is not equal to rank of input shape");
+  }
 
   return success();
 }
@@ -1878,7 +2028,8 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
       return op.emitOpError()
              << "expect " << tensorName << "_zp of 0, got " << zp;
     }
-    if (zpElemType.isInteger(16) && tensorUnsigned && zp != 32768) {
+    if (zpElemType.isInteger(16) && tensorUnsigned &&
+        zp != static_cast<int16_t>(32768)) {
       return op.emitOpError() << "expect " << tensorName
                               << "_zp of 0 or 32768 for unsigned int16 "
                               << tensorName << ", got " << zp;
@@ -2580,99 +2731,9 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
 }
 
 LogicalResult Conv2DOp::verify() {
-  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
+  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed() ||
+      verifyConvOpErrorIf(*this).failed())
     return failure();
-
-  llvm::ArrayRef<int64_t> padding = getPad();
-  if (llvm::any_of(padding, [](int64_t p) { return p < 0; }))
-    return emitOpError("expect all padding values to be >= 0, got ") << padding;
-
-  llvm::ArrayRef<int64_t> strides = getStride();
-  if (llvm::any_of(strides, [](int64_t s) { return s < 1; }))
-    return emitOpError("expect all stride values to be >= 1, got ") << strides;
-
-  llvm::ArrayRef<int64_t> dilations = getDilation();
-  if (llvm::any_of(dilations, [](int64_t d) { return d < 1; }))
-    return emitOpError("expect all dilation values to be >= 1, got ")
-           << dilations;
-
-  const RankedTensorType outputType =
-      llvm::dyn_cast<RankedTensorType>(getOutput().getType());
-  if (!outputType)
-    // Skip following checks if output is not ranked
-    return success();
-
-  const RankedTensorType inputType =
-      llvm::dyn_cast<RankedTensorType>(getInput().getType());
-  const RankedTensorType weightType =
-      llvm::dyn_cast<RankedTensorType>(getWeight().getType());
-
-  if (inputType && weightType) {
-    const auto verifyOutputSize =
-        [this](const int64_t inputSize, const int64_t kernelSize,
-               const int64_t outputSize, const int64_t padBefore,
-               const int64_t padAfter, const int64_t stride,
-               const int64_t dilation, const llvm::StringRef dimName,
-               const llvm::StringRef dimAxis,
-               const llvm::StringRef padBeforeName,
-               const llvm::StringRef padAfterName) -> LogicalResult {
-      if (inputSize == ShapedType::kDynamic ||
-          kernelSize == ShapedType::kDynamic)
-        return success();
-
-      const std::optional<int64_t> calculatedOutSizeMinusOne = idivCheck(
-          inputSize - 1 + padBefore + padAfter - (kernelSize - 1) * dilation,
-          stride);
-      if (!calculatedOutSizeMinusOne.has_value())
-        return emitOpError("expected input_")
-               << dimName << " - 1 + pad_" << padBeforeName << " + pad_"
-               << padAfterName << " - (kernel_" << dimName
-               << " - 1) * dilation_" << dimAxis
-               << " to be wholly divisible by stride_" << dimAxis << ", got ("
-               << inputSize << " - 1 + " << padBefore << " + " << padAfter
-               << " - (" << kernelSize << " - 1) * " << dilation << ") / "
-               << stride;
-
-      const int64_t calculatedOutSize = calculatedOutSizeMinusOne.value() + 1;
-      if (outputSize != ShapedType::kDynamic && calculatedOutSize != outputSize)
-        return emitOpError("calculated output ")
-               << dimName << " did not match expected: "
-               << "calculated=" << calculatedOutSize
-               << ", expected=" << outputSize;
-
-      return success();
-    };
-
-    if (failed(verifyOutputSize(
-            inputType.getDimSize(1), weightType.getDimSize(1),
-            outputType.getDimSize(1), padding[0], padding[1], strides[0],
-            dilations[0], "height", "y", "top", "bottom")))
-      return failure();
-
-    if (failed(verifyOutputSize(
-            inputType.getDimSize(2), weightType.getDimSize(2),
-            outputType.getDimSize(2), padding[2], padding[3], strides[1],
-            dilations[1], "width", "x", "left", "right")))
-      return failure();
-  }
-
-  const RankedTensorType biasType =
-      llvm::dyn_cast<RankedTensorType>(getBias().getType());
-  if (!biasType)
-    // Skip following checks if bias is not ranked
-    return success();
-
-  const int64_t biasChannels = biasType.getDimSize(0);
-  const int64_t outputChannels = outputType.getDimSize(3);
-  if (biasChannels == ShapedType::kDynamic ||
-      outputChannels == ShapedType::kDynamic)
-    // Skip following checks if biasChannels or outputChannels is dynamic dim
-    return success();
-
-  if (biasChannels != outputChannels && biasChannels != 1)
-    return emitOpError(
-               "bias channels expected to be equal to output channels (")
-           << outputChannels << ") or 1, got " << biasChannels;
   return success();
 }
 
@@ -2747,7 +2808,8 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
 }
 
 LogicalResult Conv3DOp::verify() {
-  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
+  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed() ||
+      verifyConvOpErrorIf(*this).failed())
     return failure();
   return success();
 }
@@ -2857,7 +2919,8 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
 }
 
 LogicalResult DepthwiseConv2DOp::verify() {
-  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
+  if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed() ||
+      verifyConvOpErrorIf(*this).failed())
     return failure();
   return success();
 }

@@ -22,6 +22,7 @@
 
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
@@ -315,6 +316,25 @@ struct SourceResponseBody {
   std::optional<std::string> mimeType;
 };
 llvm::json::Value toJSON(const SourceResponseBody &);
+
+/// Arguments for `next` request.
+struct NextArguments {
+  /// Specifies the thread for which to resume execution for one step (of the
+  /// given granularity).
+  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, all other suspended threads are not resumed.
+  bool singleThread = false;
+
+  /// Stepping granularity. If no granularity is specified, a granularity of
+  /// `statement` is assumed.
+  SteppingGranularity granularity = eSteppingGranularityStatement;
+};
+bool fromJSON(const llvm::json::Value &, NextArguments &, llvm::json::Path);
+
+/// Response to `next` request. This is just an acknowledgement, so no
+/// body field is required.
+using NextResponse = VoidResponse;
 
 } // namespace lldb_dap::protocol
 

@@ -1095,8 +1095,8 @@ def LLVM_TBAATagArrayAttr
 //===----------------------------------------------------------------------===//
 def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
   let parameters = (ins
-    "::llvm::APInt":$lower,
-    "::llvm::APInt":$upper
+    APIntParameter<"">:$lower,
+    APIntParameter<"">:$upper
   );
   let summary = "A range of two integers, corresponding to LLVM's ConstantRange";
   let description = [{
@@ -1363,6 +1363,15 @@ def LLVM_DependentLibrariesAttr
   }];
   let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$libs);
   let assemblyFormat = "`<` $libs `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// UWTableKindAttr
+//===----------------------------------------------------------------------===//
+
+def UWTableKindAttr : LLVM_Attr<"UWTableKind", "uwtableKind"> {
+  let parameters = (ins "uwtable::UWTableKind":$uwtableKind);
+  let assemblyFormat = "`<` $uwtableKind `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

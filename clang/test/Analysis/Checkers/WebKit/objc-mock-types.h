@@ -17,6 +17,7 @@ typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
 typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
+typedef struct CF_BRIDGED_TYPE(id) CGImage *CGImageRef;
 
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
@@ -149,6 +150,10 @@ __attribute__((objc_root_class))
 namespace WTF {
 
 void WTFCrash(void);
+
+#if __has_feature(objc_arc)
+#define RetainPtr RetainPtrArc
+#endif
 
 template<typename T> class RetainPtr;
 template<typename T> RetainPtr<T> adoptNS(T*);
