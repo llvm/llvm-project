@@ -257,6 +257,10 @@ public:
     return Def->getValueAsListOfDefs("allowedClauseValues");
   }
 
+  bool skipFlangUnparser() const {
+    return Def->getValueAsBit("skipFlangUnparser");
+  }
+
   bool isValueOptional() const { return Def->getValueAsBit("isValueOptional"); }
 
   bool isValueList() const { return Def->getValueAsBit("isValueList"); }

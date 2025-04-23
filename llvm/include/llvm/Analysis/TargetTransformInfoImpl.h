@@ -755,9 +755,9 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                                   VectorType *VecTy,
-                                                   unsigned Index) const {
+  virtual InstructionCost
+  getExtractWithExtendCost(unsigned Opcode, Type *Dst, VectorType *VecTy,
+                           unsigned Index, TTI::TargetCostKind CostKind) const {
     return 1;
   }
 

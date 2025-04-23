@@ -960,6 +960,8 @@ static void generateFlangClauseUnparse(const DirectiveLanguage &DirLang,
   OS << "\n";
 
   for (const Clause Clause : DirLang.getClauses()) {
+    if (Clause.skipFlangUnparser())
+      continue;
     if (!Clause.getFlangClass().empty()) {
       if (Clause.isValueOptional() && Clause.getDefaultValue().empty()) {
         OS << "void Unparse(const " << DirLang.getFlangClauseBaseClass()

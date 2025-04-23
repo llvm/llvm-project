@@ -3557,10 +3557,10 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-InstructionCost AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode,
-                                                         Type *Dst,
-                                                         VectorType *VecTy,
-                                                         unsigned Index) const {
+InstructionCost
+AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode, Type *Dst,
+                                         VectorType *VecTy, unsigned Index,
+                                         TTI::TargetCostKind CostKind) const {
 
   // Make sure we were given a valid extend opcode.
   assert((Opcode == Instruction::SExt || Opcode == Instruction::ZExt) &&
@@ -3575,7 +3575,6 @@ InstructionCost AArch64TTIImpl::getExtractWithExtendCost(unsigned Opcode,
 
   // Get the cost for the extract. We compute the cost (if any) for the extend
   // below.
-  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost = getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                             CostKind, Index, nullptr, nullptr);
 
@@ -4236,10 +4235,34 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   }
 
   if (isa<FixedVectorType>(ValTy) && ISD == ISD::SETCC) {
-    auto LT = getTypeLegalizationCost(ValTy);
-    // Cost v4f16 FCmp without FP16 support via converting to v4f32 and back.
-    if (LT.second == MVT::v4f16 && !ST->hasFullFP16())
-      return LT.first * 4; // fcvtl + fcvtl + fcmp + xtn
+    Type *ValScalarTy = ValTy->getScalarType();
+    if ((ValScalarTy->isHalfTy() && !ST->hasFullFP16()) ||
+        ValScalarTy->isBFloatTy()) {
+      auto *ValVTy = cast<FixedVectorType>(ValTy);
+
+      // FIXME: We currently scalarise these.
+      if (ValVTy->getNumElements() > 4)
+        return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred,
+                                         CostKind, Op1Info, Op2Info, I);
+
+      // Without dedicated instructions we promote [b]f16 compares to f32.
+      auto *PromotedTy =
+          VectorType::get(Type::getFloatTy(ValTy->getContext()), ValVTy);
+
+      InstructionCost Cost = 0;
+      // Promote operands to float vectors.
+      Cost += 2 * getCastInstrCost(Instruction::FPExt, PromotedTy, ValTy,
+                                   TTI::CastContextHint::None, CostKind);
+      // Compare float vectors.
+      Cost += getCmpSelInstrCost(Opcode, PromotedTy, CondTy, VecPred, CostKind,
+                                 Op1Info, Op2Info);
+      // During codegen we'll truncate the vector result from i32 to i16.
+      Cost +=
+          getCastInstrCost(Instruction::Trunc, VectorType::getInteger(ValVTy),
+                           VectorType::getInteger(PromotedTy),
+                           TTI::CastContextHint::None, CostKind);
+      return Cost;
+    }
   }
 
   // Treat the icmp in icmp(and, 0) as free, as we can make use of ands.
