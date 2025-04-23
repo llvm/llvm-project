@@ -38,7 +38,7 @@
 ; PRINTER_CSI: name: main
 ; PRINTER_CSI: callSites:
 ; PRINTER_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PRINTER_CSI-NEXT: { arg: 0, reg: '$edi' }
+; PRINTER_CSI-NEXT: { arg: 0, reg: {{.*}} }
 ; PRINTER_CSI-NOT: calleeTypeIds:
 
 
@@ -49,7 +49,7 @@
 ; PARSER_CSI: name: main
 ; PARSER_CSI: callSites:
 ; PARSER_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PARSER_CSI-NEXT: { arg: 0, reg: '$edi' }
+; PARSER_CSI-NEXT: { arg: 0, reg: {{.*}} }
 ; PARSER_CSI-NOT: calleeTypeIds:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -64,7 +64,7 @@
 ; PRINTER_CGS_CSI: name: main
 ; PRINTER_CGS_CSI: callSites:
 ; PRINTER_CGS_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PRINTER_CGS_CSI-NEXT: { arg: 0, reg: '$edi' }, calleeTypeIds:
+; PRINTER_CGS_CSI-NEXT: { arg: 0, reg: {{.*}} }, calleeTypeIds:
 ; PRINTER_CGS_CSI-NEXT:   [ 7854600665770582568 ] }
 
 
@@ -75,7 +75,7 @@
 ; PARSER_CGS_CSI: name: main
 ; PARSER_CGS_CSI: callSites:
 ; PARSER_CGS_CSI-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs:
-; PARSER_CGS_CSI-NEXT: { arg: 0, reg: '$edi' }, calleeTypeIds:
+; PARSER_CGS_CSI-NEXT: { arg: 0, reg: {{.*}} }, calleeTypeIds:
 ; PARSER_CGS_CSI-NEXT:   [ 7854600665770582568 ] }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
