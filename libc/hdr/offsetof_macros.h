@@ -11,7 +11,7 @@
 
 #ifdef LIBC_FULL_BUILD
 
-#include "include/llvm-libc-macros/offsetof-macros.h"
+#include "include/llvm-libc-macros/offsetof-macro.h"
 
 #else // Overlay mode
 
