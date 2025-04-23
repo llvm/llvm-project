@@ -12,7 +12,7 @@
 
 // RUN: mlir-opt --allow-unregistered-dialect \
 // RUN:   --test-gpu-subgroup-reduce-lowering="expand-to-shuffles target=gfx1030" %s \
-// RUN:   | FileCheck %s --check-prefix=CHECK-GFX1030
+// RUN:   | FileCheck %s --check-prefix=CHECK-GFX10
 
 // CHECK-SUB:  gpu.module @kernels {
 // CHECK-SHFL: gpu.module @kernels {
