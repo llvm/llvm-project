@@ -637,9 +637,7 @@ def ANDES_N45 : RISCVProcessorModel<"andes-n45",
                                      FeatureStdExtF,
                                      FeatureStdExtD,
                                      FeatureStdExtC,
-                                     FeatureStdExtZba,
-                                     FeatureStdExtZbb,
-                                     FeatureStdExtZbs]>;
+                                     FeatureStdExtB]>;
 
 def ANDES_NX45 : RISCVProcessorModel<"andes-nx45",
                                      NoSchedModel,
@@ -652,6 +650,4 @@ def ANDES_NX45 : RISCVProcessorModel<"andes-nx45",
                                       FeatureStdExtF,
                                       FeatureStdExtD,
                                       FeatureStdExtC,
-                                      FeatureStdExtZba,
-                                      FeatureStdExtZbb,
-                                      FeatureStdExtZbs]>;
+                                      FeatureStdExtB]>;
