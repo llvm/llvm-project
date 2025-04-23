@@ -1042,13 +1042,6 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     auto descOp = operand->get().getDefiningOp<xegpu::CreateNdDescOp>();
     unsigned operandIdx = operand->getOperandNumber();
 
-    auto srcTypedVal = dyn_cast<TypedValue<MemRefType>>(descOp.getSource());
-    if (!srcTypedVal)
-      return rewriter.notifyMatchFailure(
-          descOp, "expecting a memref typed value as the source");
-
-    auto descOffsets = descOp.getMixedOffsets();
-
     xegpu::LayoutAttr layout = descOp.getType().getLayoutAttr();
     if (!layout)
       return rewriter.notifyMatchFailure(
