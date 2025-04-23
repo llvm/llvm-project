@@ -5815,15 +5815,17 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
   Instruction *Inst = dyn_cast<Instruction>(V);
   if (!Inst)
     return;
-  Constant *C;
 
   switch (Inst->getOpcode()) {
-  case Instruction::Add:
+  case Instruction::Add: {
+    Constant *C;
     if (match(Inst->getOperand(1), m_ImmConstant(C)) &&
-        !C->containsUndefOrPoisonElement())
+        !C->containsUndefOrPoisonElement()) {
       if (Constant *NegC = ConstantExpr::getNeg(C))
         Offsets.emplace_back(Instruction::Add, NegC);
+    }
     break;
+  }
   case Instruction::Xor:
     if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
       Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
@@ -5869,8 +5871,6 @@ struct OffsetResult {
       return V0;
     case OffsetKind::Select:
       return Builder.CreateSelect(V0, V1, V2);
-    default:
-      llvm_unreachable("Unknown offset result kind");
     }
   }
 };
