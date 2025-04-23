@@ -165,6 +165,8 @@ body: |
 # Make sure we don't break SGPR or WWM handling, and also that we don't
 # block-spill WWM VGPRs that have already been spilled (the mask for the block
 # load/store should be 0x9 because we don't want to include v41 or v42).
+# Use all VGPRs up to v40, so the WWM registers v41 and v42 and the VGPR used
+# for SGPR spills remain within the block.
 
 ---
 name: other_regs
@@ -176,43 +178,55 @@ machineFunctionInfo:
     - '$vgpr42'
 body: |
   bb.0:
-    liveins: $sgpr30_sgpr31
+    liveins: $sgpr30_sgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
     ; W32-LABEL: name: other_regs
-    ; W32: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W32: liveins: $sgpr48, $sgpr30_sgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W32-NEXT: {{  $}}
-    ; W32-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; W32-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; W32-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; W32-NEXT: $sgpr0 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; W32-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr41, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; W32-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr42, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
+    ; W32-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr44, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
     ; W32-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0
     ; W32-NEXT: $m0 = S_MOV_B32 9
-    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.2, align 4, addrspace 5)
-    ; W32-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr1, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr42, implicit-def $m0, implicit-def $exec
+    ; W32-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.4, align 4, addrspace 5)
+    ; W32-NEXT: $vgpr44 = SI_SPILL_S32_TO_VGPR $sgpr48, 0, $vgpr44
+    ; W32-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr48, implicit-def $m0, implicit-def $exec
+    ; W32-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
+    ; W32-NEXT: $sgpr48 = SI_RESTORE_S32_FROM_VGPR $vgpr44, 0
     ; W32-NEXT: $m0 = S_MOV_B32 9
-    ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr41, implicit $vgpr42, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.2, align 4, addrspace 5)
-    ; W32-NEXT: $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; W32-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
-    ; W32-NEXT: $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    ; W32-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr41, implicit $vgpr42, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.4, align 4, addrspace 5)
+    ; W32-NEXT: $sgpr0 = S_OR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; W32-NEXT: $vgpr41 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    ; W32-NEXT: $vgpr42 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.2, addrspace 5)
+    ; W32-NEXT: $vgpr44 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.3, addrspace 5)
     ; W32-NEXT: $exec_lo = S_MOV_B32 killed $sgpr0
     ; W32-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
     ;
     ; W64-LABEL: name: other_regs
-    ; W64: liveins: $sgpr30_sgpr31, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
+    ; W64: liveins: $sgpr48, $sgpr30_sgpr31, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71
     ; W64-NEXT: {{  $}}
-    ; W64-NEXT: $sgpr0_sgpr1 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; W64-NEXT: $sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr41, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.1, addrspace 5)
+    ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr42, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
+    ; W64-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr44, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
     ; W64-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1
     ; W64-NEXT: $m0 = S_MOV_B32 9
-    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.2, align 4, addrspace 5)
-    ; W64-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr1, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr42, implicit-def $m0, implicit-def $exec
+    ; W64-NEXT: SCRATCH_STORE_BLOCK_SADDR $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0 :: (store (s1024) into %stack.4, align 4, addrspace 5)
+    ; W64-NEXT: $vgpr44 = SI_SPILL_S32_TO_VGPR $sgpr48, 0, $vgpr44
+    ; W64-NEXT: S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr48, implicit-def $m0, implicit-def $exec
+    ; W64-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
+    ; W64-NEXT: $sgpr48 = SI_RESTORE_S32_FROM_VGPR $vgpr44, 0
     ; W64-NEXT: $m0 = S_MOV_B32 9
-    ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr41, implicit $vgpr42, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.2, align 4, addrspace 5)
-    ; W64-NEXT: $sgpr0_sgpr1 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-    ; W64-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.0, addrspace 5)
-    ; W64-NEXT: $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    ; W64-NEXT: $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71 = SCRATCH_LOAD_BLOCK_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $m0, implicit $vgpr41, implicit $vgpr42, implicit $vgpr44, implicit $vgpr45, implicit $vgpr46, implicit $vgpr47, implicit $vgpr56, implicit $vgpr57, implicit $vgpr58, implicit $vgpr59, implicit $vgpr60, implicit $vgpr61, implicit $vgpr62, implicit $vgpr63 :: (load (s1024) from %stack.4, align 4, addrspace 5)
+    ; W64-NEXT: $sgpr0_sgpr1 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
+    ; W64-NEXT: $vgpr41 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.1, addrspace 5)
+    ; W64-NEXT: $vgpr42 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.2, addrspace 5)
+    ; W64-NEXT: $vgpr44 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.3, addrspace 5)
     ; W64-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1
     ; W64-NEXT: S_SETPC_B64_return $sgpr30_sgpr31
-    S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr42, implicit-def $m0, implicit-def $exec
+    S_NOP 0, implicit-def $vgpr40, implicit-def $vgpr41, implicit-def $vgpr43, implicit-def $sgpr22, implicit-def $sgpr48, implicit-def $m0, implicit-def $exec
+    S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40
+
     S_SETPC_B64_return $sgpr30_sgpr31
 ...
 

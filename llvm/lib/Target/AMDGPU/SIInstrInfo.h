@@ -671,6 +671,8 @@ public:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
+    case AMDGPU::SCRATCH_STORE_BLOCK_SVS:
+    case AMDGPU::SCRATCH_LOAD_BLOCK_SVS:
       return true;
     default:
       return false;
