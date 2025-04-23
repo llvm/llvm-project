@@ -5399,7 +5399,7 @@ void CodeGenModule::EmitExternalDeclaration(const DeclaratorDecl *D) {
   llvm::Constant *Addr = GetAddrOfGlobal(GD)->stripPointerCasts();
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     DI->EmitExternalVariable(
-      cast<llvm::GlobalVariable>(Addr->stripPointerCasts()), VD);
+        cast<llvm::GlobalVariable>(Addr->stripPointerCasts()), VD);
   } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     llvm::Function *Fn = cast<llvm::Function>(Addr);
     if (!Fn->getSubprogram())
