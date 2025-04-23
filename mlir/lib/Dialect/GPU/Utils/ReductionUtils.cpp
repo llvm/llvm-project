@@ -51,6 +51,7 @@ FailureOr<Value> mlir::createSubgroupDPPReduction(
     gpu::AllReduceOperation mode, const ClusterInfo &ci,
     amdgpu::Chipset chipset, function_ref<Value(Value)> packFn,
     function_ref<Value(Value)> unpackFn) {
+  
   Location loc = op.getLoc();
   Value dpp;
   Value res = input;
