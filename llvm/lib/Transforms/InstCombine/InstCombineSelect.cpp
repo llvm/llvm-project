@@ -2797,7 +2797,7 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
     //       of NAN, but IEEE-754 specifies the signbit of NAN values with
     //       fneg/fabs operations.
     if (match(TrueVal, m_FSub(m_PosZeroFP(), m_Specific(X))) &&
-        (cast<FPMathOperator>(CondVal)->hasNoNaNs() ||
+        (cast<FPMathOperator>(CondVal)->hasNoNaNs() || SI.hasNoNaNs() ||
          isKnownNeverNaN(X, /*Depth=*/0,
                          IC.getSimplifyQuery().getWithInstruction(
                              cast<Instruction>(CondVal))))) {

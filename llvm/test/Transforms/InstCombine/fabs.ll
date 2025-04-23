@@ -287,6 +287,17 @@ define double @select_fcmp_ole_zero_no_nnan_input_nofpclass_nan(double nofpclass
   ret double %fabs
 }
 
+define double @select_fcmp_ole_zero_select_nnan(double %x) {
+; CHECK-LABEL: @select_fcmp_ole_zero_select_nnan(
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    ret double [[FABS]]
+;
+  %lezero = fcmp ole double %x, 0.0
+  %negx = fsub double 0.0, %x
+  %fabs = select nnan i1 %lezero, double %negx, double %x
+  ret double %fabs
+}
+
 define double @select_fcmp_nnan_ole_zero(double %x) {
 ; CHECK-LABEL: @select_fcmp_nnan_ole_zero(
 ; CHECK-NEXT:    [[FABS:%.*]] = call double @llvm.fabs.f64(double [[X:%.*]])
