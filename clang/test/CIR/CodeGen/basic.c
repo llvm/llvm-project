@@ -253,3 +253,8 @@ size_type max_size(void) {
 
 // OGCG: define{{.*}} i64 @max_size()
 // OGCG:   ret i64 2305843009213693951
+
+enum {
+  um = 0,
+  dois = 1,
+};

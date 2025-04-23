@@ -141,3 +141,8 @@ void ref_local(short x) {
 // CHECK:   %[[Y_REF_ADDR:.*]] = cir.alloca !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>, ["y", init, const] {alignment = 8 : i64}
 // CHECK:   cir.store %[[ARG]], %[[X_ADDR]] : !s16i, !cir.ptr<!s16i>
 // CHECK:   cir.store %[[X_ADDR]], %[[Y_REF_ADDR]] : !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>
+
+enum {
+  um = 0,
+  dois = 1,
+};
