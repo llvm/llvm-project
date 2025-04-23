@@ -1778,7 +1778,7 @@ llvm.mlir.alias external @y5 : i32 {
 module {
   llvm.func @foo()
 
-  // expected-error@+1 {{only integer and string values are currently supported}}
+  // expected-error@below {{only integer and string values are currently supported}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
 }
 

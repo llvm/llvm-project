@@ -378,9 +378,9 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
 
 LogicalResult
 ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                       mlir::LLVM::ModFlagBehavior flagBehavior,
-                       mlir::StringAttr key, mlir::Attribute value) {
-  if (!isa<mlir::IntegerAttr, mlir::StringAttr>(value))
+                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
+                       Attribute value) {
+  if (!isa<IntegerAttr, StringAttr>(value))
     return emitError()
            << "only integer and string values are currently supported";
   return success();

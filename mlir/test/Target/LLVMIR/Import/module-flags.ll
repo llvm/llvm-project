@@ -19,9 +19,9 @@
 ; CHECK-SAME: #llvm.mlir.module_flag<override, "probe-stack", "inline-asm">]
 
 ; // -----
-; expected-warning@-2{{unsupported module flag value: !4 = !{!"foo", i32 1}}}
-!0 = !{ i32 1, !"foo", i32 1 }
-!1 = !{ i32 4, !"bar", i32 37 }
-!2 = !{ i32 2, !"qux", i32 42 }
-!3 = !{ i32 3, !"qux", !{ !"foo", i32 1 }}
-!llvm.module.flags = !{ !0, !1, !2, !3 }
+; expected-warning@-2 {{unsupported module flag value: !4 = !{!"foo", i32 1}}}
+!10 = !{ i32 1, !"foo", i32 1 }
+!11 = !{ i32 4, !"bar", i32 37 }
+!12 = !{ i32 2, !"qux", i32 42 }
+!13 = !{ i32 3, !"qux", !{ !"foo", i32 1 }}
+!llvm.module.flags = !{ !10, !11, !12, !13 }

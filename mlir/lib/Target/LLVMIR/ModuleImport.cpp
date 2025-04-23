@@ -533,10 +533,8 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
     } else {
       emitWarning(mlirModule.getLoc())
           << "unsupported module flag value: " << diagMD(val, llvmModule.get());
-    }
-
-    if (!valAttr)
       continue;
+    }
 
     moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
         convertModFlagBehaviorFromLLVM(behavior),
