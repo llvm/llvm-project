@@ -83,10 +83,12 @@ ld64.lld \
 
 # Convert executable to YAML for the test
 echo "#--- stmt_seq_macho.o.yaml"
-obj2yaml stmt_seq_macho.o | sed '1a IsLittleEndian: true'
+obj2yaml stmt_seq_macho.o | sed '1a\
+IsLittleEndian: true'
 echo ""
 echo "#--- stmt_seq_macho.exe.yaml"
-obj2yaml stmt_seq_macho.exe | sed '1a IsLittleEndian: true'
+obj2yaml stmt_seq_macho.exe | sed '1a\
+IsLittleEndian: true'
 
 #--- stmt-seq-macho.yaml
 #--- stmt_seq_macho.o.yaml
