@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """A script to generate FileCheck statements for mlir unit tests.
-
 This script is a utility to add FileCheck patterns to an mlir file.
 
 NOTE: The input .mlir is expected to be the output from the parser, not a
@@ -77,13 +76,16 @@ class VariableNamer:
         self.generate_in_parent_scope_left = n
 
     # Generate a substitution name for the given ssa value name.
-    def generate_name(self, source_variable_name):
+    def generate_name(self, source_variable_name, use_ssa_name):
 
         # Compute variable name
         variable_name = self.variable_names.pop(0) if len(self.variable_names) > 0 else ''
         if variable_name == '':
-            variable_name = "VAL_" + str(self.name_counter)
-            self.name_counter += 1
+            if use_ssa_name:
+                variable_name = source_variable_name.upper()
+            else:
+                variable_name = "VAL_" + str(self.name_counter)
+                self.name_counter += 1
 
         # Scope where variable name is saved
         scope = len(self.scopes) - 1
@@ -158,7 +160,7 @@ def get_num_ssa_results(input_line):
 
 
 # Process a line of input that has been split at each SSA identifier '%'.
-def process_line(line_chunks, variable_namer, strict_name_re=False):
+def process_line(line_chunks, variable_namer, use_ssa_name=False, strict_name_re=False):
     output_line = ""
 
     # Process the rest that contained an SSA value name.
@@ -178,7 +180,7 @@ def process_line(line_chunks, variable_namer, strict_name_re=False):
             output_line += "%[[" + variable + "]]"
         else:
             # Otherwise, generate a new variable.
-            variable = variable_namer.generate_name(ssa_name)
+            variable = variable_namer.generate_name(ssa_name, use_ssa_name)
             if strict_name_re:
                 # Use stricter regexp for the variable name, if requested.
                 # Greedy matching may cause issues with the generic '.*'
@@ -415,9 +417,11 @@ def main():
                 pad_depth = label_length if label_length < 21 else 4
                 output_line += " " * pad_depth
 
-                # Process the rest of the line.
+                # Process the rest of the line. Use the original SSA name to generate the LIT
+                # variable names.
+                use_ssa_names = True
                 output_line += process_line(
-                    [argument], variable_namer, args.strict_name_re
+                    [argument], variable_namer, use_ssa_names, args.strict_name_re
                 )
 
         # Append the output line.
