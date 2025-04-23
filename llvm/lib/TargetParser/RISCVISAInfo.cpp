@@ -720,6 +720,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // "rv64g_zicsr_zifencei".
   if (Baseline == 'g') {
     for (const char *Ext : RISCVGImplicationsZi) {
+      if (ISAInfo->Exts.count(Ext))
+        continue;
+
       auto Version = findDefaultVersion(Ext);
       assert(Version && "Default extension version not found?");
       ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
