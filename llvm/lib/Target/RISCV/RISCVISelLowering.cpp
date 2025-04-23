@@ -2909,7 +2909,7 @@ InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
   bool Log2CostModel =
       Subtarget.getVRGatherCostModel() == llvm::RISCVSubtarget::NLog2N;
   if (Log2CostModel && LMULCost.isValid()) {
-    unsigned Log = Log2_64(*LMULCost.getValue());
+    unsigned Log = Log2_64(LMULCost.getValue());
     if (Log > 0)
       return LMULCost * Log;
   }
