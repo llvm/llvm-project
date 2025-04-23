@@ -439,8 +439,12 @@ class DXILResourceMap {
   unsigned FirstCBuffer = 0;
   unsigned FirstSampler = 0;
 
-  /// Populate the map given the resource binding calls in the given module.
+  /// Populate all the resource instance data.
   void populate(Module &M, DXILResourceTypeMap &DRTM);
+  /// Populate the map given the resource binding calls in the given module.
+  void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
+  /// Analyze and populate the directions of the resource counters.
+  void populateCounterDirections(Module &M);
 
 public:
   using iterator = SmallVector<dxil::ResourceInfo>::iterator;

@@ -293,9 +293,8 @@ entry:
   DXILResourceMap &DRM = MAM->getResult<DXILResourceAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
-    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding)
       continue;
-    }
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
@@ -324,9 +323,8 @@ entry:
   DXILResourceMap &DRM = MAM->getResult<DXILResourceAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
-    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding)
       continue;
-    }
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
@@ -352,9 +350,8 @@ entry:
   DXILResourceMap &DRM = MAM->getResult<DXILResourceAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
-    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding)
       continue;
-    }
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
@@ -387,15 +384,16 @@ entry:
   ResourceCounterDirection *Dir = Dirs;
 
   for (const Function &F : M->functions()) {
-    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding)
       continue;
-    }
 
+    uint32_t ExpectedDirsIndex = 0;
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);
       const auto *const Binding = DRM.find(CI);
-      ASSERT_EQ(Binding->CounterDirection, *Dir);
-      Dir++;
+      ASSERT_TRUE(ExpectedDirsIndex < 2);
+      ASSERT_EQ(Binding->CounterDirection, Dir[ExpectedDirsIndex]);
+      ExpectedDirsIndex++;
     }
   }
 }
@@ -417,9 +415,8 @@ entry:
   DXILResourceMap &DRM = MAM->getResult<DXILResourceAnalysis>(*M);
 
   for (const Function &F : M->functions()) {
-    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding) {
+    if (F.getIntrinsicID() != Intrinsic::dx_resource_handlefrombinding)
       continue;
-    }
 
     for (const User *U : F.users()) {
       const CallInst *CI = cast<CallInst>(U);

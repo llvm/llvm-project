@@ -701,7 +701,8 @@ static bool isUpdateCounterIntrinsic(Function &F) {
   return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
 }
 
-void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
+void DXILResourceMap::populateResourceInfos(Module &M,
+                                            DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
 
   for (Function &F : M.functions()) {
@@ -778,7 +779,9 @@ void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
     // Adjust the resource binding to use the next ID.
     RI.setBindingID(NextID++);
   }
+}
 
+void DXILResourceMap::populateCounterDirections(Module &M) {
   for (Function &F : M.functions()) {
     if (!isUpdateCounterIntrinsic(F))
       continue;
@@ -806,14 +809,18 @@ void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
       Value *HandleArg = CI->getArgOperand(0);
       SmallVector<ResourceInfo *> RBInfos = findByUse(HandleArg);
       for (ResourceInfo *RBInfo : RBInfos) {
-        if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown ||
-            RBInfo->CounterDirection == Direction)
+        if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown)
           RBInfo->CounterDirection = Direction;
-        else
+        else if (RBInfo->CounterDirection != Direction)
           RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
       }
     }
   }
+}
+
+void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
+  populateResourceInfos(M, DRTM);
+  populateCounterDirections(M);
 }
 
 void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
@@ -849,9 +856,8 @@ SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
   // Found the create, return the binding
   case Intrinsic::dx_resource_handlefrombinding: {
     auto Pos = CallMap.find(CI);
-    ResourceInfo *It = &Infos[Pos->second];
-    assert(It != Infos.end() && "HandleFromBinding must be in resource map");
-    return {It};
+    assert(Pos != CallMap.end() && "HandleFromBinding must be in resource map");
+    return {&Infos[Pos->second]};
   }
   default:
     break;
