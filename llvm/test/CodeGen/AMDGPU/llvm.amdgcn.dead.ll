@@ -341,7 +341,7 @@ if.end:
   ret [32 x i32] %res
 }
 
-%non_trivial_types = type { i8, i16, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, <5 x i32>, i128, <7 x i16>}
+%non_trivial_types = type { i8, i16, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>, <5 x i32>, i128, [32 x i32] }
 
 define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr addrspace(1) %ptr1, i32 %v) #0 {
 ; ASM-DAG-LABEL: dead_non_trivial:
@@ -351,39 +351,127 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-DAG-NEXT:    s_wait_samplecnt 0x0
 ; ASM-DAG-NEXT:    s_wait_bvhcnt 0x0
 ; ASM-DAG-NEXT:    s_wait_kmcnt 0x0
-; ASM-DAG-NEXT:    v_mov_b32_e32 v24, v0
-; ASM-DAG-NEXT:    v_mov_b32_e32 v0, v1
+; ASM-DAG-NEXT:    s_clause 0x15
+; ASM-DAG-NEXT:    scratch_load_b32 v32, off, s32 offset:80
+; ASM-DAG-NEXT:    scratch_load_b32 v31, off, s32 offset:76
+; ASM-DAG-NEXT:    scratch_load_b32 v33, off, s32 offset:72
+; ASM-DAG-NEXT:    scratch_load_b32 v34, off, s32 offset:68
+; ASM-DAG-NEXT:    scratch_load_b32 v35, off, s32 offset:64
+; ASM-DAG-NEXT:    scratch_load_b32 v36, off, s32 offset:60
+; ASM-DAG-NEXT:    scratch_load_b32 v37, off, s32 offset:56
+; ASM-DAG-NEXT:    scratch_load_b32 v38, off, s32 offset:52
+; ASM-DAG-NEXT:    scratch_load_b32 v39, off, s32 offset:48
+; ASM-DAG-NEXT:    scratch_load_b32 v48, off, s32 offset:44
+; ASM-DAG-NEXT:    scratch_load_b32 v49, off, s32 offset:40
+; ASM-DAG-NEXT:    scratch_load_b32 v50, off, s32 offset:36
+; ASM-DAG-NEXT:    scratch_load_b32 v51, off, s32 offset:32
+; ASM-DAG-NEXT:    scratch_load_b32 v52, off, s32 offset:28
+; ASM-DAG-NEXT:    scratch_load_b32 v53, off, s32 offset:24
+; ASM-DAG-NEXT:    scratch_load_b32 v54, off, s32 offset:20
+; ASM-DAG-NEXT:    scratch_load_b32 v55, off, s32 offset:16
+; ASM-DAG-NEXT:    scratch_load_b32 v64, off, s32 offset:12
+; ASM-DAG-NEXT:    scratch_load_b32 v65, off, s32 offset:8
+; ASM-DAG-NEXT:    scratch_load_b32 v66, off, s32 offset:4
+; ASM-DAG-NEXT:    scratch_load_b32 v67, off, s32
+; ASM-DAG-NEXT:    scratch_load_b32 v68, off, s32 offset:84
+; ASM-DAG-NEXT:    v_and_b32_e32 v1, 1, v1
 ; ASM-DAG-NEXT:    s_mov_b32 s0, exec_lo
-; ASM-DAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; ASM-DAG-NEXT:    v_and_b32_e32 v1, 1, v24
+; ASM-DAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; ASM-DAG-NEXT:    v_cmpx_eq_u32_e32 1, v1
 ; ASM-DAG-NEXT:    s_cbranch_execz .LBB3_2
 ; ASM-DAG-NEXT:  ; %bb.1: ; %if.then
-; ASM-DAG-NEXT:    v_dual_mov_b32 v7, 0 :: v_dual_add_nc_u32 v0, 15, v23
-; ASM-DAG-NEXT:    v_mov_b32_e32 v3, 0x3e00
+; ASM-DAG-NEXT:    s_wait_loadcnt 0x0
+; ASM-DAG-NEXT:    v_dual_mov_b32 v8, 0 :: v_dual_add_nc_u32 v1, 15, v68
+; ASM-DAG-NEXT:    v_mov_b32_e32 v4, 0x3e00
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr2
-; ASM-DAG-NEXT:    ; implicit-def: $vgpr4
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr3
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr5
 ; ASM-DAG-NEXT:    ; implicit-def: $vgpr6
-; ASM-DAG-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
-; ASM-DAG-NEXT:    ; implicit-def: $vgpr13_vgpr14
-; ASM-DAG-NEXT:    ; implicit-def: $vgpr15_vgpr16
-; ASM-DAG-NEXT:    ; implicit-def: $vgpr17_vgpr18_vgpr19_vgpr20
-; ASM-DAG-NEXT:    global_store_b32 v[21:22], v0, off
-; ASM-DAG-NEXT:    ; implicit-def: $vgpr0
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr7
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr14_vgpr15
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr18
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr19
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr20
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr21
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr22
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr23
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr24
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr25
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr26
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr27
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr28
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr29
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr30
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr67
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr66
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr65
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr64
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr55
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr54
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr53
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr52
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr51
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr50
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr49
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr48
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr39
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr38
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr37
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr36
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr35
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr34
+; ASM-DAG-NEXT:    ; implicit-def: $vgpr33
+; ASM-DAG-NEXT:    global_store_b32 v[31:32], v1, off
 ; ASM-DAG-NEXT:  .LBB3_2: ; %if.end
 ; ASM-DAG-NEXT:    s_wait_alu 0xfffe
 ; ASM-DAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; ASM-DAG-NEXT:    v_dual_mov_b32 v1, v2 :: v_dual_mov_b32 v2, v3
-; ASM-DAG-NEXT:    v_dual_mov_b32 v3, v4 :: v_dual_mov_b32 v4, v5
-; ASM-DAG-NEXT:    v_dual_mov_b32 v5, v6 :: v_dual_mov_b32 v6, v7
-; ASM-DAG-NEXT:    v_dual_mov_b32 v7, v8 :: v_dual_mov_b32 v8, v9
-; ASM-DAG-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
-; ASM-DAG-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
-; ASM-DAG-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
-; ASM-DAG-NEXT:    v_dual_mov_b32 v15, v16 :: v_dual_mov_b32 v16, v17
-; ASM-DAG-NEXT:    v_dual_mov_b32 v17, v18 :: v_dual_mov_b32 v18, v19
-; ASM-DAG-NEXT:    v_mov_b32_e32 v19, v20
+; ASM-DAG-NEXT:    s_clause 0x16
+; ASM-DAG-NEXT:    scratch_store_b16 v0, v3, off offset:2
+; ASM-DAG-NEXT:    scratch_store_b8 v0, v2, off
+; ASM-DAG-NEXT:    scratch_store_b16 v0, v4, off offset:4
+; ASM-DAG-NEXT:    scratch_store_b16 v0, v5, off offset:6
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v6, off offset:8
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v7, off offset:12
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v8, off offset:16
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v13, off offset:48
+; ASM-DAG-NEXT:    scratch_store_b128 v0, v[9:12], off offset:32
+; ASM-DAG-NEXT:    scratch_store_b128 v0, v[14:17], off offset:64
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v18, off offset:80
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v19, off offset:84
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v20, off offset:88
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v21, off offset:92
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v22, off offset:96
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v23, off offset:100
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v24, off offset:104
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v25, off offset:108
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v26, off offset:112
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v27, off offset:116
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v28, off offset:120
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v29, off offset:124
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v30, off offset:128
+; ASM-DAG-NEXT:    s_wait_loadcnt 0x1
+; ASM-DAG-NEXT:    s_clause 0x12
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v67, off offset:132
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v66, off offset:136
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v65, off offset:140
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v64, off offset:144
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v55, off offset:148
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v54, off offset:152
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v53, off offset:156
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v52, off offset:160
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v51, off offset:164
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v50, off offset:168
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v49, off offset:172
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v48, off offset:176
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v39, off offset:180
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v38, off offset:184
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v37, off offset:188
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v36, off offset:192
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v35, off offset:196
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v34, off offset:200
+; ASM-DAG-NEXT:    scratch_store_b32 v0, v33, off offset:204
+; ASM-DAG-NEXT:    s_wait_loadcnt 0x0
 ; ASM-DAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; ASM-GISEL-LABEL: dead_non_trivial:
@@ -393,60 +481,147 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; ASM-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; ASM-GISEL-NEXT:    s_wait_kmcnt 0x0
-; ASM-GISEL-NEXT:    v_mov_b32_e32 v24, v0
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v0, v1 :: v_dual_mov_b32 v1, v2
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v2, v3 :: v_dual_mov_b32 v3, v4
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v4, v5 :: v_dual_mov_b32 v5, v6
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v6, v7 :: v_dual_mov_b32 v7, v19
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v19, v20 :: v_dual_and_b32 v20, 1, v24
-; ASM-GISEL-NEXT:    v_lshrrev_b32_e32 v24, 16, v18
-; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; ASM-GISEL-NEXT:    v_lshrrev_b32_e32 v25, 16, v7
-; ASM-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v20
-; ASM-GISEL-NEXT:    v_lshrrev_b32_e32 v20, 16, v17
-; ASM-GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
+; ASM-GISEL-NEXT:    s_clause 0x15
+; ASM-GISEL-NEXT:    scratch_load_b32 v33, off, s32
+; ASM-GISEL-NEXT:    scratch_load_b32 v34, off, s32 offset:4
+; ASM-GISEL-NEXT:    scratch_load_b32 v35, off, s32 offset:8
+; ASM-GISEL-NEXT:    scratch_load_b32 v36, off, s32 offset:12
+; ASM-GISEL-NEXT:    scratch_load_b32 v37, off, s32 offset:16
+; ASM-GISEL-NEXT:    scratch_load_b32 v38, off, s32 offset:20
+; ASM-GISEL-NEXT:    scratch_load_b32 v39, off, s32 offset:24
+; ASM-GISEL-NEXT:    scratch_load_b32 v48, off, s32 offset:28
+; ASM-GISEL-NEXT:    scratch_load_b32 v49, off, s32 offset:32
+; ASM-GISEL-NEXT:    scratch_load_b32 v50, off, s32 offset:36
+; ASM-GISEL-NEXT:    scratch_load_b32 v51, off, s32 offset:40
+; ASM-GISEL-NEXT:    scratch_load_b32 v52, off, s32 offset:44
+; ASM-GISEL-NEXT:    scratch_load_b32 v53, off, s32 offset:48
+; ASM-GISEL-NEXT:    scratch_load_b32 v54, off, s32 offset:52
+; ASM-GISEL-NEXT:    scratch_load_b32 v55, off, s32 offset:56
+; ASM-GISEL-NEXT:    scratch_load_b32 v64, off, s32 offset:60
+; ASM-GISEL-NEXT:    scratch_load_b32 v65, off, s32 offset:64
+; ASM-GISEL-NEXT:    scratch_load_b32 v66, off, s32 offset:68
+; ASM-GISEL-NEXT:    scratch_load_b32 v67, off, s32 offset:72
+; ASM-GISEL-NEXT:    scratch_load_b32 v31, off, s32 offset:76
+; ASM-GISEL-NEXT:    scratch_load_b32 v32, off, s32 offset:80
+; ASM-GISEL-NEXT:    scratch_load_b32 v68, off, s32 offset:84
+; ASM-GISEL-NEXT:    v_and_b32_e32 v1, 1, v1
+; ASM-GISEL-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; ASM-GISEL-NEXT:    v_cmpx_ne_u32_e32 0, v1
 ; ASM-GISEL-NEXT:    s_cbranch_execz .LBB3_2
 ; ASM-GISEL-NEXT:  ; %bb.1: ; %if.then
-; ASM-GISEL-NEXT:    s_movk_i32 s1, 0x3e00
-; ASM-GISEL-NEXT:    s_mov_b32 s2, 0
+; ASM-GISEL-NEXT:    s_mov_b32 s1, 0
+; ASM-GISEL-NEXT:    s_movk_i32 s2, 0x3e00
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
-; ASM-GISEL-NEXT:    s_lshr_b32 s3, s0, 16
-; ASM-GISEL-NEXT:    s_lshr_b32 s4, s0, 16
-; ASM-GISEL-NEXT:    s_lshr_b32 s5, s0, 16
-; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v25, s5 :: v_dual_add_nc_u32 v0, 15, v23
-; ASM-GISEL-NEXT:    v_mov_b32_e32 v2, s1
-; ASM-GISEL-NEXT:    v_mov_b32_e32 v6, s2
-; ASM-GISEL-NEXT:    v_mov_b32_e32 v20, s3
-; ASM-GISEL-NEXT:    v_mov_b32_e32 v24, s4
-; ASM-GISEL-NEXT:    global_store_b32 v[21:22], v0, off
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr0
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr1
+; ASM-GISEL-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_add_nc_u32 v1, 15, v68
+; ASM-GISEL-NEXT:    v_mov_b32_e32 v8, s1
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr2
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr3
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr4
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr5
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr13_vgpr14_vgpr15_vgpr16
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr17
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr18
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr7
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16_vgpr17
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr18
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr19
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr20
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr21
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr22
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr23
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr24
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr25
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr26
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr27
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr28
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr29
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr30
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr33
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr34
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr35
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr36
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr37
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr38
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr39
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr48
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr49
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr50
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr51
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr52
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr53
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr54
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr55
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr64
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr65
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr66
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr67
+; ASM-GISEL-NEXT:    global_store_b32 v[31:32], v1, off
 ; ASM-GISEL-NEXT:  .LBB3_2: ; %if.end
 ; ASM-GISEL-NEXT:    s_wait_alu 0xfffe
 ; ASM-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; ASM-GISEL-NEXT:    v_and_b32_e32 v17, 0xffff, v17
-; ASM-GISEL-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; ASM-GISEL-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; ASM-GISEL-NEXT:    v_lshl_or_b32 v20, v20, 16, v17
-; ASM-GISEL-NEXT:    v_lshl_or_b32 v17, v24, 16, v18
-; ASM-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; ASM-GISEL-NEXT:    v_lshl_or_b32 v18, v25, 16, v7
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v7, v8 :: v_dual_mov_b32 v8, v9
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v9, v10 :: v_dual_mov_b32 v10, v11
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v11, v12 :: v_dual_mov_b32 v12, v13
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v15
-; ASM-GISEL-NEXT:    v_dual_mov_b32 v15, v16 :: v_dual_mov_b32 v16, v20
+; ASM-GISEL-NEXT:    s_clause 0x16
+; ASM-GISEL-NEXT:    scratch_store_b8 v0, v2, off
+; ASM-GISEL-NEXT:    scratch_store_b16 v0, v3, off offset:2
+; ASM-GISEL-NEXT:    scratch_store_b16 v0, v4, off offset:4
+; ASM-GISEL-NEXT:    scratch_store_b16 v0, v5, off offset:6
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v6, off offset:8
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v7, off offset:12
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v8, off offset:16
+; ASM-GISEL-NEXT:    scratch_store_b128 v0, v[9:12], off offset:32
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v13, off offset:48
+; ASM-GISEL-NEXT:    scratch_store_b128 v0, v[14:17], off offset:64
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v18, off offset:80
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v19, off offset:84
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v20, off offset:88
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v21, off offset:92
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v22, off offset:96
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v23, off offset:100
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v24, off offset:104
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v25, off offset:108
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v26, off offset:112
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v27, off offset:116
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v28, off offset:120
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v29, off offset:124
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v30, off offset:128
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x15
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v33, off offset:132
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x14
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v34, off offset:136
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x13
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v35, off offset:140
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x12
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v36, off offset:144
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x11
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v37, off offset:148
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x10
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v38, off offset:152
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0xf
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v39, off offset:156
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0xe
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v48, off offset:160
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0xd
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v49, off offset:164
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0xc
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v50, off offset:168
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0xb
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v51, off offset:172
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0xa
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v52, off offset:176
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x9
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v53, off offset:180
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x8
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v54, off offset:184
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x7
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v55, off offset:188
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x6
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v64, off offset:192
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x5
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v65, off offset:196
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x4
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v66, off offset:200
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x3
+; ASM-GISEL-NEXT:    scratch_store_b32 v0, v67, off offset:204
+; ASM-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br i1 %cond, label %if.then, label %if.end
