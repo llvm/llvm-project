@@ -483,7 +483,7 @@ costShuffleViaVRegSplitting(const RISCVTTIImpl &TTI, MVT LegalVT,
   auto *SingleOpTy = FixedVectorType::get(Tp->getElementType(),
                                           LegalVT.getVectorNumElements());
 
-  unsigned E = *NumOfDests.getValue();
+  unsigned E = NumOfDests.getValue();
   unsigned NormalizedVF =
       LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
   unsigned NumOfSrcRegs = NormalizedVF / LegalVT.getVectorNumElements();

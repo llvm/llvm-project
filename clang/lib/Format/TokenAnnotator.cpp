@@ -3977,8 +3977,10 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   FormatToken *AfterLastAttribute = nullptr;
   FormatToken *ClosingParen = nullptr;
 
-  for (auto *Tok = FirstNonComment ? FirstNonComment->Next : nullptr; Tok;
-       Tok = Tok->Next) {
+  for (auto *Tok = FirstNonComment && FirstNonComment->isNot(tok::kw_using)
+                       ? FirstNonComment->Next
+                       : nullptr;
+       Tok; Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
     if (Tok->Previous->EndsCppAttributeGroup)
@@ -6240,8 +6242,6 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                     TT_ClassHeadName, tok::kw_operator)) {
     return true;
   }
-  if (Right.isAttribute())
-    return true;
   if (Left.is(TT_PointerOrReference))
     return false;
   if (Right.isTrailingComment()) {
@@ -6385,6 +6385,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return !Right.isOneOf(tok::l_brace, tok::semi, tok::equal, tok::l_paren,
                           tok::less, tok::coloncolon);
   }
+
+  if (Right.isAttribute())
+    return true;
 
   if (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))
     return Left.isNot(TT_AttributeSquare);
