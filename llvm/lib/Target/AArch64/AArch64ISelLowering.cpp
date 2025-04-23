@@ -16521,11 +16521,12 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   return false;
 }
 
-bool AArch64TargetLowering::shouldReduceLoadWidth(SDNode *Load,
-                                                  ISD::LoadExtType ExtTy,
-                                                  EVT NewVT) const {
+bool AArch64TargetLowering::shouldReduceLoadWidth(
+    SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+    std::optional<unsigned> ByteOffset) const {
   // TODO: This may be worth removing. Check regression tests for diffs.
-  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT))
+  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT,
+                                                 ByteOffset))
     return false;
 
   // If we're reducing the load width in order to avoid having to use an extra
