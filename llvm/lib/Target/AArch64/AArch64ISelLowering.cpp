@@ -8595,6 +8595,10 @@ static bool callConvSupportsVarArgs(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::C:
   case CallingConv::PreserveNone:
+  // SVE vector call is only partially supported, but it should
+  // support named arguments being passed. Any arguments being passed
+  // as varargs, are still unsupported.
+  case CallingConv::AArch64_SVE_VectorCall:
     return true;
   default:
     return false;
