@@ -1475,7 +1475,9 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
     }
   }
 
-  if (IsAnd && stripSignOnlyFPOps(LHS0) == stripSignOnlyFPOps(RHS0)) {
+  // This transform is not valid for a logical select.
+  if (!IsLogicalSelect && IsAnd &&
+      stripSignOnlyFPOps(LHS0) == stripSignOnlyFPOps(RHS0)) {
     // and (fcmp ord x, 0), (fcmp u* x, inf) -> fcmp o* x, inf
     // and (fcmp ord x, 0), (fcmp u* fabs(x), inf) -> fcmp o* x, inf
     if (Value *Left = matchIsFiniteTest(Builder, LHS, RHS))
