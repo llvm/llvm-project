@@ -190,6 +190,12 @@ public:
 
     Fn->addFnAttr("interrupt", Kind);
 
+    // Note: the ARMSaveFPAttr can only exist if we also have an interrupt
+    // attribute
+    const ARMSaveFPAttr *SaveFPAttr = FD->getAttr<ARMSaveFPAttr>();
+    if (SaveFPAttr)
+      Fn->addFnAttr("save-fp");
+
     ARMABIKind ABI = getABIInfo<ARMABIInfo>().getABIKind();
     if (ABI == ARMABIKind::APCS)
       return;

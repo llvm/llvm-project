@@ -897,6 +897,26 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPISMT",
+    srcs = [
+        "lib/CAPI/Dialect/SMT.cpp",
+        "lib/CAPI/Target/ExportSMTLIB.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/SMT.h",
+        "include/mlir-c/Target/ExportSMTLIB.h",
+    ],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":SMTDialect",
+        ":TargetSMTLIB",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIRegisterEverything",
     srcs = ["lib/CAPI/RegisterEverything/RegisterEverything.cpp"],
     hdrs = ["include/mlir-c/RegisterEverything.h"],
@@ -1559,7 +1579,6 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/AMDGPU/Transforms/*.h"]),
     includes = ["include"],
     deps = [
-        ":AffineDialect",
         ":AMDGPUDialect",
         ":AMDGPUPassIncGen",
         ":AMDGPUUtils",
@@ -6252,6 +6271,7 @@ td_library(
         ":BuiltinDialectTdFiles",
         ":DataLayoutInterfacesTdFiles",
         ":OpBaseTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -6345,10 +6365,11 @@ cc_library(
         ":PtrMemorySpaceInterfacesIncGen",
         ":PtrOpsEnumsGen",
         ":PtrOpsIncGen",
+        ":SideEffectInterfaces",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
-
 
 td_library(
     name = "SMTTdFiles",
@@ -6365,11 +6386,11 @@ td_library(
     includes = ["include"],
     deps = [
         ":AttrTdFiles",
-        ":OpBaseTdFiles",
-        ":SideEffectInterfacesTdFiles",
         ":BuiltinDialectTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
     ],
 )
 
@@ -6378,7 +6399,7 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Dialect/SMT/IR/SMT.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/SMT/IR/SMT.cpp.inc": ["-gen-op-defs"],
-          "include/mlir/Dialect/SMT/IR/SMTDialect.h.inc": [
+        "include/mlir/Dialect/SMT/IR/SMTDialect.h.inc": [
             "-gen-dialect-decls",
             "-dialect=smt",
         ],
@@ -8401,6 +8422,7 @@ cc_library(
         ":ToLLVMIRTranslation",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TransformUtils",
     ],
 )
 
@@ -8853,6 +8875,7 @@ cc_library(
         ":SCFToGPU",
         ":SCFTransformOps",
         ":SCFTransforms",
+        ":SMTDialect",
         ":SPIRVDialect",
         ":SPIRVPassIncGen",
         ":SPIRVTarget",
@@ -8862,7 +8885,6 @@ cc_library(
         ":ShapeToStandard",
         ":ShapeTransforms",
         ":ShapeTransformsPassIncGen",
-        ":SMTDialect",
         ":SparseTensorDialect",
         ":SparseTensorPipelines",
         ":SparseTensorTransformOps",

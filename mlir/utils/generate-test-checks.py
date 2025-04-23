@@ -295,6 +295,13 @@ def main():
         help="Names to be used in FileCheck regular expression to represent "
         "attributes in the order they are defined. Separate names with commas,"
         "commas, and leave empty entries for default names (e.g.: 'MAP0,,,MAP1')")
+    parser.add_argument(
+        "--strict_name_re",
+        type=bool,
+        default=False,
+        help="Set to true to use stricter regex for CHECK-SAME directives. "
+        "Use when Greedy matching causes issues with the generic '.*'",
+    )
 
     args = parser.parse_args()
 
@@ -401,12 +408,16 @@ def main():
             for argument in ssa_split[1:]:
                 output_line += "// " + args.check_prefix + "-SAME:  "
 
-                # Pad to align with the original position in the line.
-                output_line += " " * len(ssa_split[0])
+                # Pad to align with the original position in the line (i.e. where the label ends),
+                # unless the label is more than 20 chars long, in which case pad with 4 spaces
+                # (this is to avoid deep indentation).
+                label_length = len(ssa_split[0])
+                pad_depth = label_length if label_length < 21 else 4
+                output_line += " " * pad_depth
 
                 # Process the rest of the line.
                 output_line += process_line(
-                    [argument], variable_namer, strict_name_re=True
+                    [argument], variable_namer, args.strict_name_re
                 )
 
         # Append the output line.
