@@ -103,7 +103,7 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
 
   // Compute collapsed size: (the outmost stride * outmost dimension).
   SmallVector<OpFoldResult> ops{origStrides.front(), outmostDim};
-  OpFoldResult collapsedSize = computeProduct(loc, rewriter, ops);
+  OpFoldResult collapsedSize = affine::computeProduct(loc, rewriter, ops);
 
   return {newExtractStridedMetadata.getBaseBuffer(), linearizedIndex,
           origStrides, origOffset, collapsedSize};
