@@ -488,18 +488,19 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   ImagePtr = &Image;
 
   // Retrieve kernel environment object for the kernel.
-  GlobalTy KernelEnv(std::string(Name) + "_kernel_environment",
-                     sizeof(KernelEnvironment), &KernelEnvironment);
+  std::string EnvironmentName = std::string(Name) + "_kernel_environment";
   GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
-  if (auto Err =
-          GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv)) {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failed to read kernel environment for '%s': %s\n"
-       "Using default SPMD (2) execution mode\n",
-       Name, ErrStr.data());
-    assert(KernelEnvironment.Configuration.ReductionDataSize == 0 &&
-           "Default initialization failed.");
-    IsBareKernel = true;
+  if (GHandler.isSymbolInImage(GenericDevice, Image, EnvironmentName)) {
+    GlobalTy KernelEnv(EnvironmentName, sizeof(KernelEnvironment),
+                       &KernelEnvironment);
+    if (auto Err =
+            GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv))
+      return Err;
+  } else {
+    KernelEnvironment = KernelEnvironmentTy{};
+    DP("Failed to read kernel environment for '%s' Using default Bare (0) "
+       "execution mode\n",
+       Name);
   }
 
   // Create a metadata object for the exec mode global (auto-generated).

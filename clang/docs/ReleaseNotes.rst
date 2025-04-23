@@ -703,6 +703,8 @@ clang-format
 
 libclang
 --------
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+  in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
 - Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as

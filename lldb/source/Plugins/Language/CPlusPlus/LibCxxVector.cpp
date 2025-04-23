@@ -150,7 +150,8 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   m_element_type = data_sp->GetCompilerType().GetPointeeType();
   llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
   if (!size_or_err)
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
+                    "{0}");
   else {
     m_element_size = *size_or_err;
 

@@ -204,7 +204,8 @@ public:
       if (!clause.getArchitectures().empty())
         operation.setDeviceType(
             decodeDeviceType(clause.getArchitectures()[0].getIdentifierInfo()));
-    } else if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+    } else if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp,
+                                      DataOp>) {
       // Nothing to do here, these constructs don't have any IR for these, as
       // they just modify the other clauses IR.  So setting of `lastDeviceType`
       // (done above) is all we need.
@@ -243,7 +244,7 @@ public:
   }
 
   void VisitAsyncClause(const OpenACCAsyncClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, DataOp>) {
       if (!clause.hasIntExpr()) {
         operation.setAsyncOnlyAttr(
             handleDeviceTypeAffectedClause(operation.getAsyncOnlyAttr()));
@@ -278,7 +279,7 @@ public:
 
   void VisitIfClause(const OpenACCIfClause &clause) {
     if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, InitOp,
-                               ShutdownOp, SetOp>) {
+                               ShutdownOp, SetOp, DataOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else {
@@ -291,12 +292,7 @@ public:
   }
 
   void VisitDeviceNumClause(const OpenACCDeviceNumClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp>) {
-      operation.getDeviceNumOperandMutable().append(
-          createIntExpr(clause.getIntExpr()));
-    } else if constexpr (isOneOfTypes<OpTy, SetOp>) {
-      // This is only a separate case because the getter name is different in
-      // 'set' for some reason.
+    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp, SetOp>) {
       operation.getDeviceNumMutable().append(
           createIntExpr(clause.getIntExpr()));
     } else {

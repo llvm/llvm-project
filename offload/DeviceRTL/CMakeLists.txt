@@ -183,7 +183,7 @@ function(compileDeviceRTLLibrary target_name target_triple)
                       "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm" "-march=")
   install(TARGETS libomptarget-${target_name}
           PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-          DESTINATION ${OFFLOAD_INSTALL_LIBDIR})
+          DESTINATION "lib${LLVM_LIBDIR_SUFFIX}/${target_triple}")
 
   add_library(omptarget.${target_name}.all_objs OBJECT IMPORTED)
   set_property(TARGET omptarget.${target_name}.all_objs APPEND PROPERTY IMPORTED_OBJECTS

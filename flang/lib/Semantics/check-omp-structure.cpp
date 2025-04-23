@@ -3249,6 +3249,12 @@ CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
+CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
+CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
+CHECK_SIMPLE_CLAUSE(Relaxed, OMPC_relaxed)
+CHECK_SIMPLE_CLAUSE(Release, OMPC_release)
+CHECK_SIMPLE_CLAUSE(SeqCst, OMPC_seq_cst)
+CHECK_SIMPLE_CLAUSE(Fail, OMPC_fail)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTeams, OMPC_num_teams)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumThreads, OMPC_num_threads)
@@ -3259,53 +3265,6 @@ CHECK_REQ_SCALAR_INT_CLAUSE(ThreadLimit, OMPC_thread_limit)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Collapse, OMPC_collapse)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Safelen, OMPC_safelen)
 CHECK_REQ_CONSTANT_SCALAR_INT_CLAUSE(Simdlen, OMPC_simdlen)
-
-void OmpStructureChecker::Enter(const parser::OmpClause::AcqRel &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_acq_rel);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Acquire &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_acquire);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Release &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_release);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Relaxed &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_relaxed);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::SeqCst &) {
-  if (!isFailClause)
-    CheckAllowedClause(llvm::omp::Clause::OMPC_seq_cst);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpClause::Fail &) {
-  assert(!isFailClause && "Unexpected FAIL clause inside a FAIL clause?");
-  isFailClause = true;
-  CheckAllowedClause(llvm::omp::Clause::OMPC_fail);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpClause::Fail &) {
-  assert(isFailClause && "Expected to be inside a FAIL clause here");
-  isFailClause = false;
-}
-
-void OmpStructureChecker::Enter(const parser::OmpFailClause &) {
-  assert(!isFailClause && "Unexpected FAIL clause inside a FAIL clause?");
-  isFailClause = true;
-  CheckAllowedClause(llvm::omp::Clause::OMPC_fail);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpFailClause &) {
-  assert(isFailClause && "Expected to be inside a FAIL clause here");
-  isFailClause = false;
-}
 
 // Restrictions specific to each clause are implemented apart from the
 // generalized restrictions.

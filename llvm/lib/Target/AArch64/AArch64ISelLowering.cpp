@@ -1850,6 +1850,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
   }
 
+  // Handle partial reduction operations
+  if (EnablePartialReduceNodes && Subtarget->isSVEorStreamingSVEAvailable()) {
+    // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
+    // Other pairs will default to 'Expand'.
+    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
+    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+  }
+
   // Handle operations that are only available in non-streaming SVE mode.
   if (Subtarget->isSVEAvailable()) {
     for (auto VT : {MVT::nxv16i8,  MVT::nxv8i16, MVT::nxv4i32,  MVT::nxv2i64,
@@ -1888,7 +1896,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
     }
   }
-
 
   if (Subtarget->hasMOPS() && Subtarget->hasMTE()) {
     // Only required for llvm.aarch64.mops.memset.tag

@@ -3000,6 +3000,11 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   for (const auto &LibPath : HostTC.getFilePaths())
     LibraryPaths.emplace_back(LibPath);
 
+  // Check the target specific library path for the triple as well.
+  SmallString<128> P(D.Dir);
+  llvm::sys::path::append(P, "..", "lib", Triple.getTriple());
+  LibraryPaths.emplace_back(P);
+
   OptSpecifier LibomptargetBCPathOpt =
       Triple.isAMDGCN()  ? options::OPT_libomptarget_amdgpu_bc_path_EQ
       : Triple.isNVPTX() ? options::OPT_libomptarget_nvptx_bc_path_EQ
