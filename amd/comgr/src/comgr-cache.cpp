@@ -110,6 +110,7 @@ void saveCommandOutput(CachedCommandAdaptor &C, AddStreamFn &AddStream,
 
   CachedFileStream *CFS = FileOrErr->get();
   serializeCacheEntry(*CFS->OS, *Buffer, CapturedLogS);
+  ErrorHandler(CFS->commit(), "when commiting file stream");
 }
 
 bool readEntryFromCache(CachedCommandAdaptor &C, MemoryBuffer &CachedBuffer,
