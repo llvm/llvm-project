@@ -191,5 +191,6 @@ namespace DynamicCast {
   constexpr S* sptr = &s;
   struct Str {
     int b : reinterpret_cast<S*>(sptr) == reinterpret_cast<S*>(sptr);
+    int g : (S*)(void*)(sptr) == sptr;
   };
 }
