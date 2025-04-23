@@ -96,8 +96,8 @@ struct OneToOneIntrinsicOpConversion
   LogicalResult matchAndRewrite(x86vector::OneToOneIntrinsicOp op,
                                 PatternRewriter &rewriter) const override {
     return intrinsicRewrite(op, rewriter.getStringAttr(op.getIntrinsicName()),
-                            op.getIntrinsicOperands(rewriter), typeConverter,
-                            rewriter);
+                            op.getIntrinsicOperands(rewriter, typeConverter),
+                            typeConverter, rewriter);
   }
 
 private:
@@ -114,7 +114,8 @@ void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
 
 void mlir::configureX86VectorLegalizeForExportTarget(
     LLVMConversionTarget &target) {
-  target.addIllegalOp<MaskCompressOp, MaskRndScaleOp, MaskScaleFOp,
-                      Vp2IntersectOp, DotBF16Op, CvtPackedF32ToBF16Op, RsqrtOp,
-                      DotOp>();
+  target.addIllegalOp<
+      MaskCompressOp, MaskRndScaleOp, MaskScaleFOp, Vp2IntersectOp, DotBF16Op,
+      CvtPackedF32ToBF16Op, CvtPackedEvenIndexedBF16ToF32Op,
+      CvtPackedOddIndexedBF16ToF32Op, BcstBF16ToPackedF32Op, RsqrtOp, DotOp>();
 }
