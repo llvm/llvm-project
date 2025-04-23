@@ -112,7 +112,9 @@ std::string summarizeExpr(const Expr *E) {
       return getSimpleName(*E->getFoundDecl()).str();
     }
     std::string VisitCallExpr(const CallExpr *E) {
-      return Visit(E->getCallee());
+      std::string Result = Visit(E->getCallee());
+      Result += E->getNumArgs() == 0 ? "()" : "(...)";
+      return Result;
     }
     std::string
     VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
@@ -147,6 +149,9 @@ std::string summarizeExpr(const Expr *E) {
     }
 
     // Literals are just printed
+    std::string VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E) {
+      return "nullptr";
+    }
     std::string VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
       return E->getValue() ? "true" : "false";
     }
@@ -165,12 +170,14 @@ std::string summarizeExpr(const Expr *E) {
       std::string Result = "\"";
       if (E->containsNonAscii()) {
         Result += "...";
-      } else if (E->getLength() > 10) {
-        Result += E->getString().take_front(7);
-        Result += "...";
       } else {
         llvm::raw_string_ostream OS(Result);
-        llvm::printEscapedString(E->getString(), OS);
+        if (E->getLength() > 10) {
+          llvm::printEscapedString(E->getString().take_front(7), OS);
+          Result += "...";
+        } else {
+          llvm::printEscapedString(E->getString(), OS);
+        }
       }
       Result.push_back('"');
       return Result;
@@ -408,12 +415,14 @@ struct Callee {
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
-                   const Config &Cfg, std::optional<Range> RestrictRange)
+                   const Config &Cfg, std::optional<Range> RestrictRange,
+                   InlayHintOptions HintOptions)
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
-        TypeHintPolicy(this->AST.getPrintingPolicy()) {
+        TypeHintPolicy(this->AST.getPrintingPolicy()),
+        HintOptions(HintOptions) {
     bool Invalid = false;
     llvm::StringRef Buf =
         AST.getSourceManager().getBufferData(MainFileID, &Invalid);
@@ -1120,7 +1129,6 @@ private:
   // Otherwise, the hint shouldn't be shown.
   std::optional<Range> computeBlockEndHintRange(SourceRange BraceRange,
                                                 StringRef OptionalPunctuation) {
-    constexpr unsigned HintMinLineLimit = 2;
 
     auto &SM = AST.getSourceManager();
     auto [BlockBeginFileId, BlockBeginOffset] =
@@ -1148,7 +1156,7 @@ private:
     auto RBraceLine = SM.getLineNumber(RBraceFileId, RBraceOffset);
 
     // Don't show hint on trivial blocks like `class X {};`
-    if (BlockBeginLine + HintMinLineLimit - 1 > RBraceLine)
+    if (BlockBeginLine + HintOptions.HintMinLineLimit - 1 > RBraceLine)
       return std::nullopt;
 
     // This is what we attach the hint to, usually "}" or "};".
@@ -1178,17 +1186,20 @@ private:
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
+  InlayHintOptions HintOptions;
 };
 
 } // namespace
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  std::optional<Range> RestrictRange) {
+                                  std::optional<Range> RestrictRange,
+                                  InlayHintOptions HintOptions) {
   std::vector<InlayHint> Results;
   const auto &Cfg = Config::current();
   if (!Cfg.InlayHints.Enabled)
     return Results;
-  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange));
+  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange),
+                           HintOptions);
   Visitor.TraverseAST(AST.getASTContext());
 
   // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit
