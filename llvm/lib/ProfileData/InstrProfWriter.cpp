@@ -37,67 +37,7 @@
 
 using namespace llvm;
 
-// A struct to define how the data stream should be patched. For Indexed
-// profiling, only uint64_t data type is needed.
-struct PatchItem {
-  uint64_t Pos;         // Where to patch.
-  ArrayRef<uint64_t> D; // An array of source data.
-};
-
 namespace llvm {
-
-// A wrapper class to abstract writer stream with support of bytes
-// back patching.
-class ProfOStream {
-public:
-  ProfOStream(raw_fd_ostream &FD)
-      : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}
-  ProfOStream(raw_string_ostream &STR)
-      : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
-
-  [[nodiscard]] uint64_t tell() const { return OS.tell(); }
-  void write(uint64_t V) { LE.write<uint64_t>(V); }
-  void write32(uint32_t V) { LE.write<uint32_t>(V); }
-  void writeByte(uint8_t V) { LE.write<uint8_t>(V); }
-
-  // \c patch can only be called when all data is written and flushed.
-  // For raw_string_ostream, the patch is done on the target string
-  // directly and it won't be reflected in the stream's internal buffer.
-  void patch(ArrayRef<PatchItem> P) {
-    using namespace support;
-
-    if (IsFDOStream) {
-      raw_fd_ostream &FDOStream = static_cast<raw_fd_ostream &>(OS);
-      const uint64_t LastPos = FDOStream.tell();
-      for (const auto &K : P) {
-        FDOStream.seek(K.Pos);
-        for (uint64_t Elem : K.D)
-          write(Elem);
-      }
-      // Reset the stream to the last position after patching so that users
-      // don't accidentally overwrite data. This makes it consistent with
-      // the string stream below which replaces the data directly.
-      FDOStream.seek(LastPos);
-    } else {
-      raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
-      std::string &Data = SOStream.str(); // with flush
-      for (const auto &K : P) {
-        for (int I = 0, E = K.D.size(); I != E; I++) {
-          uint64_t Bytes =
-              endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
-          Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
-                       (const char *)&Bytes, sizeof(uint64_t));
-        }
-      }
-    }
-  }
-
-  // If \c OS is an instance of \c raw_fd_ostream, this field will be
-  // true. Otherwise, \c OS will be an raw_string_ostream.
-  bool IsFDOStream;
-  raw_ostream &OS;
-  support::endian::Writer LE;
-};
 
 class InstrProfRecordWriterTrait {
 public:

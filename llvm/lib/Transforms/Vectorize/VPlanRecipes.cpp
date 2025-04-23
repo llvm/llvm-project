@@ -274,7 +274,8 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
 bool VPRecipeBase::isPhi() const {
   return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
          (isa<VPInstruction>(this) &&
-          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
+          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI) ||
+         isa<VPIRPhi>(this);
 }
 
 bool VPRecipeBase::isScalarCast() const {
@@ -1206,6 +1207,7 @@ void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
+  assert(Variant != nullptr && "Can't create vector function.");
 
   FunctionType *VFTy = Variant->getFunctionType();
   // Add return type if intrinsic is overloaded on it.
@@ -1222,8 +1224,6 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
     Args.push_back(Arg);
   }
 
-  assert(Variant != nullptr && "Can't create vector function.");
-
   auto *CI = cast_or_null<CallInst>(getUnderlyingValue());
   SmallVector<OperandBundleDef, 1> OpBundles;
   if (CI)
@@ -1231,6 +1231,7 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
   applyFlags(*V);
+  V->setCallingConv(Variant->getCallingConv());
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -2721,7 +2722,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
@@ -2751,7 +2751,7 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
     NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
   }
   // Add metadata to the load, but setVectorValue to the reverse shuffle.
-  State.addMetadata(NewLI, LI);
+  State.addMetadata(NewLI, cast<LoadInst>(&Ingredient));
   if (Reverse)
     NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
   State.set(this, NewLI);
@@ -2779,7 +2779,6 @@ static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
 }
 
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
@@ -2811,7 +2810,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-  State.addMetadata(NewLI, LI);
+  State.addMetadata(NewLI, cast<LoadInst>(&Ingredient));
   Instruction *Res = NewLI;
   if (isReverse())
     Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
@@ -2854,8 +2853,6 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
-
   VPValue *StoredVPValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
@@ -2887,7 +2884,7 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
     NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
   else
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
-  State.addMetadata(NewSI, SI);
+  State.addMetadata(NewSI, cast<StoreInst>(&Ingredient));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2899,7 +2896,6 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
 
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
@@ -2934,7 +2930,7 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
-  State.addMetadata(NewSI, SI);
+  State.addMetadata(NewSI, cast<StoreInst>(&Ingredient));
 }
 
 InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,

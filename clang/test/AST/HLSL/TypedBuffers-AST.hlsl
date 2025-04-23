@@ -94,12 +94,12 @@ RESOURCE<float> Buffer;
 
 // Subsctript operators
 
-// CHECK: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
+// CHECK: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
@@ -110,12 +110,12 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} operator[] 'element_type &(unsigned int)'
+// CHECK-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
@@ -132,8 +132,8 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t

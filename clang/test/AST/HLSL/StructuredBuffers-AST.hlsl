@@ -127,12 +127,12 @@ RESOURCE<float> Buffer;
 
 // Subscript operators
 
-// CHECK-SUBSCRIPT: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
+// CHECK-SUBSCRIPT: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
 // CHECK-SUBSCRIPT-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: CompoundStmt
 // CHECK-SUBSCRIPT-NEXT: ReturnStmt
-// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-SUBSCRIPT-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-SUBSCRIPT-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-SUBSCRIPT-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-SUBSCRIPT-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
@@ -144,12 +144,12 @@ RESOURCE<float> Buffer;
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-SUBSCRIPT-NEXT: CXXMethodDecl {{.*}} operator[] 'element_type &(unsigned int)'
+// CHECK-SUBSCRIPT-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 // CHECK-SUBSCRIPT-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: CompoundStmt
 // CHECK-SUBSCRIPT-NEXT: ReturnStmt
-// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-SUBSCRIPT-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-SUBSCRIPT-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-SUBSCRIPT-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-SUBSCRIPT-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-SUBSCRIPT-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
@@ -161,8 +161,8 @@ RESOURCE<float> Buffer;
 // CHECK-SUBSCRIPT-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'Index' 'unsigned int'
 // CHECK-SUBSCRIPT-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
-// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'element_type &(unsigned int)'
+// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
+// CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 
 // Load method
 
@@ -170,8 +170,8 @@ RESOURCE<float> Buffer;
 // CHECK-LOAD-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-LOAD-NEXT: CompoundStmt
 // CHECK-LOAD-NEXT: ReturnStmt
-// CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-LOAD-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-LOAD-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-LOAD-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-LOAD-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-LOAD-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-LOAD-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
@@ -219,9 +219,9 @@ RESOURCE<float> Buffer;
 // CHECK-APPEND: CXXMethodDecl {{.*}} Append 'void (element_type)'
 // CHECK-APPEND-NEXT: ParmVarDecl {{.*}} value 'element_type'
 // CHECK-APPEND-NEXT: CompoundStmt
-// CHECK-APPEND-NEXT: BinaryOperator {{.*}} 'element_type' '='
-// CHECK-APPEND-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-APPEND-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-APPEND-NEXT: BinaryOperator {{.*}} 'hlsl_device element_type' '='
+// CHECK-APPEND-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-APPEND-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-APPEND-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-APPEND-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-APPEND-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
@@ -245,8 +245,8 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME: CXXMethodDecl {{.*}} Consume 'element_type ()'
 // CHECK-CONSUME-NEXT: CompoundStmt
 // CHECK-CONSUME-NEXT: ReturnStmt
-// CHECK-CONSUME-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-CONSUME-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-CONSUME-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-CONSUME-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-CONSUME-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-CONSUME-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-CONSUME-NEXT: MemberExpr {{.*}} '__hlsl_resource_t

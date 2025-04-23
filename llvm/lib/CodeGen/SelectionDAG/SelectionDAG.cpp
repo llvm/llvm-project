@@ -967,6 +967,9 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::INTRINSIC_W_CHAIN:
     // Handled by MemIntrinsicSDNode check after the switch.
     break;
+  case ISD::MDNODE_SDNODE:
+    ID.AddPointer(cast<MDNodeSDNode>(N)->getMD());
+    break;
   } // end switch (N->getOpcode())
 
   // MemIntrinsic nodes could also have subclass data, address spaces, and flags
@@ -4406,14 +4409,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case ISD::ATOMIC_LOAD: {
-    unsigned MemBits =
-        cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
     // If we are looking at the loaded value.
     if (Op.getResNo() == 0) {
-      if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
-        Known.Zero.setBitsFrom(MemBits);
-      else if (Op->getOpcode() == ISD::ATOMIC_LOAD &&
-               cast<AtomicSDNode>(Op)->getExtensionType() == ISD::ZEXTLOAD)
+      auto *AT = cast<AtomicSDNode>(Op);
+      unsigned MemBits = AT->getMemoryVT().getScalarSizeInBits();
+
+      // For atomic_load, prefer to use the extension type.
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        if (AT->getExtensionType() == ISD::ZEXTLOAD)
+          Known.Zero.setBitsFrom(MemBits);
+        else if (AT->getExtensionType() != ISD::SEXTLOAD &&
+                 TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
+          Known.Zero.setBitsFrom(MemBits);
+      } else if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         Known.Zero.setBitsFrom(MemBits);
     }
     break;
@@ -5252,22 +5260,29 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
   case ISD::ATOMIC_LOAD: {
-    Tmp = cast<AtomicSDNode>(Op)->getMemoryVT().getScalarSizeInBits();
+    auto *AT = cast<AtomicSDNode>(Op);
     // If we are looking at the loaded value.
     if (Op.getResNo() == 0) {
+      Tmp = AT->getMemoryVT().getScalarSizeInBits();
       if (Tmp == VTBits)
         return 1; // early-out
+
+      // For atomic_load, prefer to use the extension type.
+      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
+        switch (AT->getExtensionType()) {
+        default:
+          break;
+        case ISD::SEXTLOAD:
+          return VTBits - Tmp + 1;
+        case ISD::ZEXTLOAD:
+          return VTBits - Tmp;
+        }
+      }
+
       if (TLI->getExtendForAtomicOps() == ISD::SIGN_EXTEND)
         return VTBits - Tmp + 1;
       if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         return VTBits - Tmp;
-      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
-        ISD::LoadExtType ETy = cast<AtomicSDNode>(Op)->getExtensionType();
-        if (ETy == ISD::SEXTLOAD)
-          return VTBits - Tmp + 1;
-        if (ETy == ISD::ZEXTLOAD)
-          return VTBits - Tmp;
-      }
     }
     break;
   }
@@ -6310,6 +6325,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
+
+    if (OpOpcode == ISD::POISON)
+      return getPOISON(VT);
+
     if (N1.isUndef())
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
@@ -6330,6 +6349,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       Flags.setNonNeg(N1->getFlags().hasNonNeg());
       return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
     }
+
+    if (OpOpcode == ISD::POISON)
+      return getPOISON(VT);
+
     if (N1.isUndef())
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
@@ -8980,10 +9003,13 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDVTList VTList, ArrayRef<SDValue> Ops,
-                                MachineMemOperand *MMO) {
+                                MachineMemOperand *MMO,
+                                ISD::LoadExtType ExtType) {
   FoldingSetNodeID ID;
-  ID.AddInteger(MemVT.getRawBits());
   AddNodeIDNode(ID, Opcode, VTList, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<AtomicSDNode>(
+      dl.getIROrder(), Opcode, VTList, MemVT, MMO, ExtType));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void* IP = nullptr;
@@ -8992,8 +9018,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
     return SDValue(E, 0);
   }
 
-  auto *N = newSDNode<AtomicSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(),
-                                    VTList, MemVT, MMO);
+  auto *N = newSDNode<AtomicSDNode>(dl.getIROrder(), dl.getDebugLoc(), Opcode,
+                                    VTList, MemVT, MMO, ExtType);
   createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
@@ -9039,14 +9065,12 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
 }
 
-SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
-                                EVT VT, SDValue Chain, SDValue Ptr,
-                                MachineMemOperand *MMO) {
-  assert(Opcode == ISD::ATOMIC_LOAD && "Invalid Atomic Op");
-
+SDValue SelectionDAG::getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl,
+                                    EVT MemVT, EVT VT, SDValue Chain,
+                                    SDValue Ptr, MachineMemOperand *MMO) {
   SDVTList VTs = getVTList(VT, MVT::Other);
   SDValue Ops[] = {Chain, Ptr};
-  return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
+  return getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, VTs, Ops, MMO, ExtType);
 }
 
 /// getMergeValues - Create a MERGE_VALUES node from the given operands.

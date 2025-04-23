@@ -398,6 +398,11 @@ Improvements to Clang's diagnostics
   constructors to initialize their non-modifiable members. The diagnostic is
   not new; being controlled via a warning group is what's new. Fixes #GH41104
 
+- Analysis-based diagnostics (like ``-Wconsumed`` or ``-Wunreachable-code``)
+  can now be correctly controlled by ``#pragma clang diagnostic``. #GH42199
+
+- Improved Clang's error recovery for invalid function calls.
+
 - Improved bit-field diagnostics to consider the type specified by the
   ``preferred_type`` attribute. These diagnostics are controlled by the flags
   ``-Wpreferred-type-bitfield-enum-conversion`` and
@@ -405,6 +410,9 @@ Improvements to Clang's diagnostics
   they're only triggered if the authors are already making the choice to use
   ``preferred_type`` attribute.
 
+- ``-Winitializer-overrides`` and ``-Wreorder-init-list`` are now grouped under
+  the ``-Wc99-designator`` diagnostic group, as they also are about the
+  behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -675,6 +683,8 @@ clang-format
 
 libclang
 --------
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+  in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
 - Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as

@@ -11,9 +11,7 @@ void local_typedef(void) {
 }
 
 // CIR:      cir.func @local_typedef()
-// CIR:        cir.alloca !cir.record<struct "Struct" {!s32i}>,
-// CIR-SAME:       !cir.ptr<!cir.record<struct "Struct" {!s32i}>>, ["s"]
-// CIR-SAME:       {alignment = 4 : i64}
+// CIR:        cir.alloca !rec_Struct, !cir.ptr<!rec_Struct>, ["s"] {alignment = 4 : i64}
 // CIR:        cir.return
 
 // LLVM: %struct.Struct = type { i32 }
