@@ -762,6 +762,13 @@ define void @histogram_generates_vectors_crash(ptr %data_array, ptr noalias %ind
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[GEP_INDICES:%.*]] = getelementptr [1048576 x i32], ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[L_IDX:%.*]] = load i32, ptr [[GEP_INDICES]], align 4
+; CHECK-NEXT:    [[IDXPROM5:%.*]] = sext i32 [[L_IDX]] to i64
+; CHECK-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr [1048576 x i32], ptr [[DATA_ARRAY]], i64 [[IDXPROM5]]
+; CHECK-NEXT:    [[L_BUCKET:%.*]] = load i32, ptr [[GEP_BUCKET]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[L_BUCKET]], 1
+; CHECK-NEXT:    store i32 [[INC]], ptr [[GEP_BUCKET]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
@@ -778,7 +785,7 @@ for.body:
   %idxprom5 = sext i32 %l.idx to i64
   %gep.bucket = getelementptr [1048576 x i32], ptr %data_array, i64 %idxprom5
   %l.bucket = load i32, ptr %gep.bucket, align 4
-  %inc = add i32 %l.bucket, 0
+  %inc = add i32 %l.bucket, 1
   store i32 %inc, ptr %gep.bucket, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv, 1
