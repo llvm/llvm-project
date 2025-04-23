@@ -643,7 +643,6 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     for (const char *Ext : RISCVGImplications) {
       auto Version = findDefaultVersion(Ext);
       assert(Version && "Default extension version not found?");
-      // Postpone AddExtension until end of this function
       ISAInfo->Exts[std::string(Ext)] = {Version->Major, Version->Minor};
     }
     break;
@@ -788,6 +787,9 @@ Error RISCVISAInfo::checkDependency() {
     if (Exts.count("zcf") != 0)
       return getIncompatibleError("zclsd", "zcf");
   }
+
+  if (XLen != 32 && Exts.count("zilsd") != 0)
+    return getError("'zilsd' is only supported for 'rv32'");
 
   for (auto Ext : XqciExts)
     if (Exts.count(Ext.str()) && (XLen != 32))

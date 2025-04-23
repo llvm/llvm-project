@@ -72,7 +72,7 @@ private:
 
 /// Make TypeRange hashable.
 inline ::llvm::hash_code hash_value(TypeRange arg) {
-  return ::llvm::hash_combine_range(arg.begin(), arg.end());
+  return ::llvm::hash_combine_range(arg);
 }
 
 /// Emit a type range to the given output stream.
