@@ -1989,9 +1989,9 @@ bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
 
   bool ShouldExpand = false;
   bool RetainExpansion = false;
-  std::optional<unsigned> OrigNumExpansions =
+  UnsignedOrNone OrigNumExpansions =
       ExpansionTL.getTypePtr()->getNumExpansions();
-  std::optional<unsigned> NumExpansions = OrigNumExpansions;
+  UnsignedOrNone NumExpansions = OrigNumExpansions;
   if (TryExpandParameterPacks(ExpansionTL.getEllipsisLoc(),
                               Pattern.getSourceRange(), Unexpanded,
                               ShouldExpand, RetainExpansion, NumExpansions))
@@ -2001,7 +2001,7 @@ bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
          "Shouldn't preserve pack expansion when evaluating constraints");
   ExpandingFunctionParameterPack(OldParm);
   for (unsigned I = 0; I != *NumExpansions; ++I) {
-    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
+    Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), I);
     if (!TransformFunctionTypeParam(OldParm, /*indexAdjustment=*/0,
                                     /*NumExpansions=*/OrigNumExpansions,
                                     /*ExpectParameterPack=*/false))

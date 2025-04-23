@@ -173,7 +173,7 @@ void f(int);
 void g(int n) { f(n); } // OK
 void h(short n) { f(n); }
 // expected-error@#GH62096-err {{static assertion failed due to requirement 'sizeof(short) == 0'}} \
-// expected-note@-1{{in instantiation of function template specialization}} \
+// expected-note@-1{{while substituting deduced template arguments}} \
 // expected-note@-1{{while checking constraint satisfaction for template}}
 // expected-note@#GH62096-note1{{in instantiation}}
 // expected-note@#GH62096-note1{{while substituting template arguments into constraint expression here}}

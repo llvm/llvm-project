@@ -1064,7 +1064,7 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
     FunctionTemplateDecl *Template, ArrayRef<TemplateArgument> TemplateArgs,
     ConstraintSatisfaction &Satisfaction) {
-  SmallVector<const Expr *, 3> TemplateAC;
+  SmallVector<AssociatedConstraint, 3> TemplateAC;
   Template->getAssociatedConstraints(TemplateAC);
   if (TemplateAC.empty()) {
     Satisfaction.IsSatisfied = true;
