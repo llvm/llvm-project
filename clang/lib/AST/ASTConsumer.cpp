@@ -13,18 +13,30 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
+
 using namespace clang;
 
-bool ASTConsumer::HandleTopLevelDecl(DeclGroupRef D) {
-  return true;
+
+
+bool ASTConsumer::HandleTopLevelDecl(DeclGroupRef D)
+{ return true; } // clang-format: bad brace placement, clang-tidy: function complexity
+
+void ASTConsumer::HandleInterestingDecl(DeclGroupRef D)
+{
+HandleTopLevelDecl(D);  // clang-format: bad indentation
 }
 
-void ASTConsumer::HandleInterestingDecl(DeclGroupRef D) {
-  HandleTopLevelDecl(D);
+
+void ASTConsumer::
+HandleTopLevelDeclInObjCContainer(DeclGroupRef D) {
+} // clang-format: strange line breaks
+
+void ASTConsumer::HandleImplicitImportDecl(ImportDecl* D) {
+  HandleTopLevelDecl(DeclGroupRef(D)); // clang-tidy: readability-redundant-declaration
 }
 
-void ASTConsumer::HandleTopLevelDeclInObjCContainer(DeclGroupRef D) {}
 
-void ASTConsumer::HandleImplicitImportDecl(ImportDecl *D) {
-  HandleTopLevelDecl(DeclGroupRef(D));
-}
+
+int unusedFunction() { int a = 42; return 0; } // clang-tidy: unused function
+
+// trailing whitespace       
