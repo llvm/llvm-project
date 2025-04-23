@@ -634,7 +634,7 @@ bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
   BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
-  if (ParentFunc)
+  if (ParentFunc || (BAT && !BAT->isBATFunction(OrigFunc.getAddress())))
     NumColdSamples += Count;
 
   auto I = NamesToSamples.find(Func.getOneName());
@@ -756,11 +756,11 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     BinaryFunction *ParentFunc = getBATParentFunction(*Func);
+    if (IsFrom && (ParentFunc || (BAT && !BAT->isBATFunction(Func->getAddress()))))
+      NumColdSamples += Count;
+
     if (!ParentFunc)
       return std::pair{Func, IsRetOrCallCont};
-
-    if (IsFrom)
-      NumColdSamples += Count;
 
     return std::pair{ParentFunc, IsRetOrCallCont};
   };
@@ -1776,6 +1776,7 @@ void DataAggregator::processPreAggregated() {
     case AggregatedLBREntry::TRACE:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
                AggrEntry.Mispreds);
+      NumTotalSamples += AggrEntry.Count;
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
