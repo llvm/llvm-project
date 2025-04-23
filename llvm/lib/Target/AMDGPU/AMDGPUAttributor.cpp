@@ -749,6 +749,16 @@ private:
                                    UsedAssumedInformation))
       return true;
 
+    // Check all alloca instructions. FlatScratchInit is needed if there is an
+    // alloca in AS0 since that implies a cast from PRIVATE_ADDRESS.
+    auto AllocaNotInAS0 = [](Instruction &I) {
+      return cast<AllocaInst>(I).getAddressSpace() != AMDGPUAS::FLAT_ADDRESS;
+    };
+
+    if (!A.checkForAllInstructions(AllocaNotInAS0, *this, {Instruction::Alloca},
+                                   UsedAssumedInformation))
+      return true;
+
     // Check for addrSpaceCast from PRIVATE_ADDRESS in constant expressions
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 

@@ -385,9 +385,12 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::BR_JT, ISD::BRIND}, MVT::Other, Expand);
 
+  setOperationAction(ISD::FrameIndex, MVT::i64, Custom);
+
   // For R600, this is totally unsupported, just custom lower to produce an
   // error.
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
 
   // Library functions.  These default to Expand, but we have instructions
   // for them.

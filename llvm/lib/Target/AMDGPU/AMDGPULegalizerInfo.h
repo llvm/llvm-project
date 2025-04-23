@@ -246,6 +246,11 @@ public:
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
+
+  bool legalizeFrameIndex(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B) const;
+  bool legalizeDynStackAlloc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B) const;
 };
 } // End llvm namespace.
 #endif

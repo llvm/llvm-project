@@ -864,6 +864,24 @@ define amdgpu_kernel void @with_inline_asm() {
   ret void
 }
 
+define amdgpu_kernel void @alloca_in_as0(ptr %p) {
+; GFX9-LABEL: define amdgpu_kernel void @alloca_in_as0(
+; GFX9-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
+; GFX9-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4
+; GFX9-NEXT:    store ptr [[ALLOCA]], ptr [[P]], align 8
+; GFX9-NEXT:    ret void
+;
+; GFX10-LABEL: define amdgpu_kernel void @alloca_in_as0(
+; GFX10-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
+; GFX10-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4
+; GFX10-NEXT:    store ptr [[ALLOCA]], ptr [[P]], align 8
+; GFX10-NEXT:    ret void
+;
+  %alloca = alloca i32, align 4
+  store ptr %alloca, ptr %p
+  ret void
+}
+
 ;.
 ; GFX9: attributes #[[ATTR0]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }
 ; GFX9: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "target-cpu"="gfx900" "uniform-work-group-size"="false" }

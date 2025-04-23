@@ -4117,6 +4117,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                          InVals, /*IsThisReturn=*/false, SDValue());
 }
 
+SDValue SITargetLowering::lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
+  // Since address space information is lost here, we assume that an i64 frame
+  // index comes from an alloca in AS0.
+  SDLoc DL(Op);
+  auto *FI = cast<FrameIndexSDNode>(Op);
+  SDValue TFI = DAG.getFrameIndex(FI->getIndex(), MVT::i32);
+  return DAG.getAddrSpaceCast(DL, Op.getValueType(), TFI,
+                              AMDGPUAS::PRIVATE_ADDRESS,
+                              AMDGPUAS::FLAT_ADDRESS);
+}
+
 // This is similar to the default implementation in ExpandDYNAMIC_STACKALLOC,
 // except for:
 // 1. Stack growth direction(default: downwards, AMDGPU: upwards), and
@@ -4129,13 +4140,27 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDLoc dl(Op);
   EVT VT = Op.getValueType();
   SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+
+  // Since address space information is lost here, we assume that an i64 dynamic
+  // alloca comes from an alloca in AS0.
+  if (VT == MVT::i64) {
+    SDValue Align = Op.getOperand(2);
+    Size = DAG.getZExtOrTrunc(Size, dl, MVT::i32);
+    SDValue Ops[] = {Chain, Size, Align};
+    SDValue DynAlloc =
+        DAG.getNode(ISD::DYNAMIC_STACKALLOC, dl, {MVT::i32, MVT::Other}, Ops);
+    SDValue Cast = DAG.getAddrSpaceCast(
+        dl, VT, DynAlloc, AMDGPUAS::PRIVATE_ADDRESS, AMDGPUAS::FLAT_ADDRESS);
+    return DAG.getMergeValues({Cast, DynAlloc.getValue(1)}, dl);
+  }
+
   Register SPReg = Info->getStackPtrOffsetReg();
 
   // Chain the dynamic stack allocation so that it doesn't modify the stack
   // pointer when other instructions are using the stack.
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
-  SDValue Size = Op.getOperand(1);
   SDValue BaseAddr = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   Align Alignment = cast<ConstantSDNode>(Op.getOperand(2))->getAlignValue();
 
@@ -6087,6 +6112,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
     return lowerXMUL_LOHI(Op, DAG);
+  case ISD::FrameIndex:
+    return lowerFrameIndex(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
   case ISD::STACKSAVE:

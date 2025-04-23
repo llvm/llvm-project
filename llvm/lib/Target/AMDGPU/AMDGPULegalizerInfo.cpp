@@ -912,12 +912,15 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, S32, 16);
 
-  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({PrivatePtr});
+  getActionDefinitionsBuilder(G_FRAME_INDEX)
+      .legalFor({PrivatePtr})
+      .customFor({FlatPtr});
 
   // If the amount is divergent, we have to do a wave reduction to get the
   // maximum value, so this is expanded during RegBankSelect.
   getActionDefinitionsBuilder(G_DYN_STACKALLOC)
-    .legalFor({{PrivatePtr, S32}});
+      .legalFor({{PrivatePtr, S32}})
+      .customFor({FlatPtr, S32});
 
   getActionDefinitionsBuilder(G_STACKSAVE)
     .customFor({PrivatePtr});
@@ -2221,6 +2224,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
+  case TargetOpcode::G_FRAME_INDEX:
+    return legalizeFrameIndex(MI, MRI, B);
+  case TargetOpcode::G_DYN_STACKALLOC:
+    return legalizeDynStackAlloc(MI, MRI, B);
   default:
     return false;
   }
@@ -7666,5 +7673,27 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   }
 
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFrameIndex(MachineInstr &MI,
+                                             MachineRegisterInfo &MRI,
+                                             MachineIRBuilder &B) const {
+  MachineInstrBuilder FI = B.buildFrameIndex(
+      LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32), MI.getOperand(1).getIndex());
+  B.buildAddrSpaceCast(MI.getOperand(0).getReg(), FI);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeDynStackAlloc(MachineInstr &MI,
+                                                MachineRegisterInfo &MRI,
+                                                MachineIRBuilder &B) const {
+  MachineInstrBuilder Size = B.buildTrunc(S32, MI.getOperand(1));
+  Align Alignment(MI.getOperand(2).getImm());
+  MachineInstrBuilder DynStackAlloc = B.buildDynStackAlloc(
+      LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32), Size, Alignment);
+  B.buildAddrSpaceCast(MI.getOperand(0).getReg(), DynStackAlloc);
+  MI.eraseFromParent();
   return true;
 }
