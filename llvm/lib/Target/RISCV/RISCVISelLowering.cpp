@@ -18108,7 +18108,7 @@ static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc DL(N);
-  MVT VT = N->getSimpleValueType(0);
+  EVT VT = N->getValueType(0);
   SDValue InVec = N->getOperand(0);
   if (SDValue V = foldReduceOperandViaVQDOT(InVec, DL, DAG, Subtarget, TLI))
     return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, V);
