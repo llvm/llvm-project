@@ -31,10 +31,20 @@ void InitializePlatformInterceptors();
 // really defined to replace libc functions.
 #if !SANITIZER_FUCHSIA
 
+#if !SANITIZER_AIX
+# define ASAN_INTERCEPT_LONGJMP 1
+#else
+# define ASAN_INTERCEPT_LONGJMP 0
+#endif
+
 // Use macro to describe if specific function should be
 // intercepted on a given platform.
 #if !SANITIZER_WINDOWS
+#if !SANITIZER_AIX
 # define ASAN_INTERCEPT__LONGJMP 1
+#else
+# define ASAN_INTERCEPT__LONGJMP 0
+#endif
 # define ASAN_INTERCEPT_INDEX 1
 # define ASAN_INTERCEPT_PTHREAD_CREATE 1
 #else
@@ -56,7 +66,7 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT_SWAPCONTEXT 0
 #endif
 
-#if !SANITIZER_WINDOWS
+#if !SANITIZER_WINDOWS && !SANITIZER_AIX
 # define ASAN_INTERCEPT_SIGLONGJMP 1
 #else
 # define ASAN_INTERCEPT_SIGLONGJMP 0
@@ -84,10 +94,16 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION 0
 #endif
 
-#if !SANITIZER_WINDOWS
+#if !SANITIZER_WINDOWS && !SANITIZER_AIX
 # define ASAN_INTERCEPT___CXA_ATEXIT 1
 #else
 # define ASAN_INTERCEPT___CXA_ATEXIT 0
+#endif
+
+#if SANITIZER_AIX
+# define ASAN_INTERCEPT_EXIT 1
+#else
+# define ASAN_INTERCEPT_EXIT 0
 #endif
 
 #if SANITIZER_NETBSD
@@ -110,6 +126,15 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT_TRYJOIN 0
 #endif
 
+#if SANITIZER_AIX
+#define SANITIZER_INTERCEPT_STRCAT 0
+#define SANITIZER_INTERCEPT_STRCPY 0
+#else
+#define SANITIZER_INTERCEPT_STRCAT 1
+#define SANITIZER_INTERCEPT_STRCPY 1
+#endif
+
+
 #if SANITIZER_LINUX &&                                                \
     (defined(__arm__) || defined(__aarch64__) || defined(__i386__) || \
      defined(__x86_64__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64)
@@ -117,7 +142,7 @@ void InitializePlatformInterceptors();
 #else
 # define ASAN_INTERCEPT_VFORK 0
 #endif
-
+`
 #if SANITIZER_NETBSD
 # define ASAN_INTERCEPT_PTHREAD_ATFORK 1
 #else
