@@ -882,7 +882,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
       // If any of M's operands demand more bits than MinBW then M cannot be
       // performed safely in MinBW.
-      if (any_of(MI->operands(), [&DB, MinBW](Use &U) {
+      auto *Call = dyn_cast<CallBase>(MI);
+      auto Ops = Call ? Call->args() : MI->operands();
+      if (any_of(Ops, [&DB, MinBW](Use &U) {
             auto *CI = dyn_cast<ConstantInt>(U);
             // For constants shift amounts, check if the shift would result in
             // poison.

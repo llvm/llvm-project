@@ -1615,7 +1615,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe, VPWidenLoadRecipe>(&R))
+               VPWidenSelectRecipe, VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(
+              &R))
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
