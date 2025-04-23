@@ -37,8 +37,8 @@ LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf buf)) {
       
 .Lnosave:
       jmp %P[setjmp])" ::[retaddr] "i"(offsetof(__jmp_buf, sig_retaddr)),
-      [extra] "i"(offsetof(__jmp_buf, sig_extra)), [setjmp] "i"(setjmp),
-      [epilogue] "i"(sigsetjmp_epilogue)
+      [extra] "i"(offsetof(__jmp_buf, sig_extra)), [setjmp] "X"(setjmp),
+      [epilogue] "X"(sigsetjmp_epilogue)
       : "eax", "ebx", "ecx");
 }
 #endif
@@ -60,8 +60,8 @@ LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf, int)) {
       
 .Lnosave:
       jmp %P[setjmp])" ::[retaddr] "i"(offsetof(__jmp_buf, sig_retaddr)),
-      [extra] "i"(offsetof(__jmp_buf, sig_extra)), [setjmp] "i"(setjmp),
-      [epilogue] "i"(sigsetjmp_epilogue)
+      [extra] "i"(offsetof(__jmp_buf, sig_extra)), [setjmp] "X"(setjmp),
+      [epilogue] "X"(sigsetjmp_epilogue)
       : "rax", "rbx");
 }
 
