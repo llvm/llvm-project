@@ -1452,11 +1452,14 @@ void Sema::ActOnEndOfTranslationUnit() {
     // is left uninitialized unless it has static or thread storage duration.
     QualType Type = VD->getType();
     if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
-        Type.isConstQualified() && !VD->getAnyInitializer())
-      Diag(VD->getLocation(), diag::warn_default_init_const)
-          << Type << /*not a field*/0
-          << (VD->getStorageDuration() != SD_Static &&
-              VD->getStorageDuration() != SD_Thread);
+        Type.isConstQualified() && !VD->getAnyInitializer()) {
+      unsigned DiagID = diag::warn_default_init_const_unsafe;
+      if (VD->getStorageDuration() == SD_Static ||
+          VD->getStorageDuration() == SD_Thread)
+        DiagID = diag::warn_default_init_const;
+      Diag(VD->getLocation(), DiagID) << Type << /*not a field*/ 0;
+    }
+
 
     // Notify the consumer that we've completed a tentative definition.
     if (!VD->isInvalidDecl())

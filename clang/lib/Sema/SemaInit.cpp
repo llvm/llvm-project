@@ -6588,10 +6588,12 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // initializer present.
       if (!Initializer) {
         if (const FieldDecl *FD = GetConstField(Rec)) {
-          S.Diag(Var->getLocation(), diag::warn_default_init_const)
-              << Var->getType() << /*member*/ 1
-              << (Var->getStorageDuration() != SD_Static &&
-                  Var->getStorageDuration() != SD_Thread);
+          unsigned DiagID = diag::warn_default_init_const_unsafe;
+          if (Var->getStorageDuration() == SD_Static ||
+              Var->getStorageDuration() == SD_Thread)
+            DiagID = diag::warn_default_init_const;
+
+          S.Diag(Var->getLocation(), DiagID) << Var->getType() << /*member*/ 1;
           S.Diag(FD->getLocation(), diag::note_default_init_const_member) << FD;
         }
       }
