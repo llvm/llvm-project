@@ -143,13 +143,14 @@ namespace comparison_warning {
   template <typename...T>
   void f(T... ts) {
     (void)(ts == ...);
-    // expected-error@-1{{comparison in fold expression would evaluate to '(X == Y) == Z'}}
+    // expected-error@-1 2{{comparison in fold expression would evaluate to '(X == Y) == Z'}}
     (void)(ts < ...);
-    // expected-error@-1{{comparison in fold expression would evaluate to '(X < Y) < Z'}}
+    // expected-error@-1 2{{comparison in fold expression would evaluate to '(X < Y) < Z'}}
   }
 
   void test() {
     f(0, 1, 2); // expected-note{{in instantiation}}
+    f(0, 1); // expected-note{{in instantiation}}
     f(S{}, S{});
     f(0);
   }
