@@ -330,7 +330,7 @@ bool ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
     }
   }
   if (!HS.lookupModule(module.path.front().GetStringRef())) {
-    error_stream.Printf("error: Header search couldn't locate module %s\n",
+    error_stream.Printf("error: Header search couldn't locate module '%s'\n",
                         module.path.front().AsCString());
     return false;
   }
