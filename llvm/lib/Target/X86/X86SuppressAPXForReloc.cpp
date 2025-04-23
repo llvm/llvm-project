@@ -33,11 +33,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-suppress-apx-for-relocation"
 
-static cl::opt<bool> X86SuppressAPXForReloc(
-    DEBUG_TYPE,
-    cl::desc("Suppress APX features (EGPR, NDD and NF) for instructions with "
+static cl::opt<bool> X86EnableAPXForRelocation(
+    "x86-enable-apx-for-relocation",
+    cl::desc("Enable APX features (EGPR, NDD and NF) for instructions with "
              "relocations on x86-64 ELF"),
-    cl::init(true));
+    cl::init(false));
 
 namespace {
 class X86SuppressAPXForRelocationPass : public MachineFunctionPass {
@@ -82,7 +82,7 @@ static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
 bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
     MachineFunction &MF) {
   if (MF.getTarget().Options.MCOptions.X86APXRelaxRelocations ||
-      !X86SuppressAPXForReloc)
+      X86EnableAPXForRelocation)
     return false;
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   if (!ST.hasEGPR() && !ST.hasNDD() && !ST.hasNF())

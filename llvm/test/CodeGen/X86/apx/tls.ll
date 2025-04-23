@@ -18,7 +18,7 @@
 ; RUN: ld.lld  %t.o %t1.o -o %t.so
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.so | FileCheck %s --check-prefix=GOTTPOFF_LD_NOAPXRELAX
 
-; RUN: llc -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-suppress-apx-for-relocation=false
+; RUN: llc -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-enable-apx-for-relocation=true
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=GOTTPOFF_NOAPXRELAX_APXINSTR
 ; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 ; RUN: ld.lld  %t.o %t1.o -o %t.so
