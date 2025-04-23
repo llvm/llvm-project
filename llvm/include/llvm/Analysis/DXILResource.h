@@ -446,6 +446,13 @@ class DXILResourceMap {
   /// Analyze and populate the directions of the resource counters.
   void populateCounterDirections(Module &M);
 
+  /// Resolves a resource handle into a vector of ResourceInfos that
+  /// represent the possible unique creations of the handle. Certain cases are
+  /// ambiguous so multiple creation instructions may be returned. The resulting
+  /// ResourceInfo can be used to depuplicate unique handles that
+  /// reference the same resource
+  SmallVector<dxil::ResourceInfo *> findByUse(const Value *Key);
+
 public:
   using iterator = SmallVector<dxil::ResourceInfo>::iterator;
   using const_iterator = SmallVector<dxil::ResourceInfo>::const_iterator;
@@ -461,13 +468,6 @@ public:
     auto Pos = CallMap.find(Key);
     return Pos == CallMap.end() ? Infos.end() : (Infos.begin() + Pos->second);
   }
-
-  /// Resolves a resource handle into a vector of ResourceInfos that
-  /// represent the possible unique creations of the handle. Certain cases are
-  /// ambiguous so multiple creation instructions may be returned. The resulting
-  /// ResourceInfo can be used to depuplicate unique handles that
-  /// reference the same resource
-  SmallVector<dxil::ResourceInfo *> findByUse(const Value *Key);
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);
