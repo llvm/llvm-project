@@ -30,7 +30,10 @@ static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsAnonymousNamespace);
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D);
+static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
+static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
+                                   const DeclaratorDecl *D,
+                                   bool IsStatic = false);
 
 // A function to extract the appropriate relative path for a given info's
 // documentation. The path returned is a composite of the parent namespaces.
@@ -45,7 +48,7 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D);
 //
 // }
 // }
-llvm::SmallString<128>
+static llvm::SmallString<128>
 getInfoRelativePath(const llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
   llvm::SmallString<128> Path;
   for (auto R = Namespaces.rbegin(), E = Namespaces.rend(); R != E; ++R)
@@ -53,7 +56,7 @@ getInfoRelativePath(const llvm::SmallVectorImpl<doc::Reference> &Namespaces) {
   return Path;
 }
 
-llvm::SmallString<128> getInfoRelativePath(const Decl *D) {
+static llvm::SmallString<128> getInfoRelativePath(const Decl *D) {
   llvm::SmallVector<Reference, 4> Namespaces;
   // The third arg in populateParentNamespaces is a boolean passed by reference,
   // its value is not relevant in here so it's not used anywhere besides the
@@ -182,7 +185,7 @@ std::string ClangDocCommentVisitor::getCommandName(unsigned CommandID) const {
 
 // Serializing functions.
 
-std::string getSourceCode(const Decl *D, const SourceRange &R) {
+static std::string getSourceCode(const Decl *D, const SourceRange &R) {
   return Lexer::getSourceText(CharSourceRange::getTokenRange(R),
                               D->getASTContext().getSourceManager(),
                               D->getASTContext().getLangOpts())
@@ -236,7 +239,8 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
   return nullptr;
 }
 
-TypeInfo getTypeInfoForType(const QualType &T, const PrintingPolicy &Policy) {
+static TypeInfo getTypeInfoForType(const QualType &T,
+                                   const PrintingPolicy &Policy) {
   const TagDecl *TD = getTagDeclForType(T);
   if (!TD)
     return TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
@@ -316,7 +320,7 @@ static void InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
 // parameter. Since each variant is used once, it's not worth having a more
 // elaborate system to automatically deduce this information.
 template <typename ChildType>
-std::unique_ptr<Info> MakeAndInsertIntoParent(ChildType Child) {
+static std::unique_ptr<Info> MakeAndInsertIntoParent(ChildType Child) {
   if (Child.Namespace.empty()) {
     // Insert into unnamed parent namespace.
     auto ParentNS = std::make_unique<NamespaceInfo>();
@@ -378,15 +382,19 @@ static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
   for (const FieldDecl *F : D->fields()) {
     if (!shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, F))
       continue;
+    populateMemberTypeInfo(I, Access, F);
+  }
+  const auto *CxxRD = dyn_cast<CXXRecordDecl>(D);
+  if (!CxxRD)
+    return;
+  for (Decl *CxxDecl : CxxRD->decls()) {
+    auto *VD = dyn_cast<VarDecl>(CxxDecl);
+    if (!VD ||
+        !shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, VD))
+      continue;
 
-    auto &LO = F->getLangOpts();
-    // Use getAccessUnsafe so that we just get the default AS_none if it's not
-    // valid, as opposed to an assert.
-    MemberTypeInfo &NewMember = I.Members.emplace_back(
-        getTypeInfoForType(F->getTypeSourceInfo()->getType(), LO),
-        F->getNameAsString(),
-        getFinalAccessSpecifier(Access, F->getAccessUnsafe()));
-    populateMemberTypeInfo(NewMember, F);
+    if (VD->isStaticDataMember())
+      populateMemberTypeInfo(I, Access, VD, /*IsStatic=*/true);
   }
 }
 
@@ -489,8 +497,9 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                             InfoType::IT_namespace);
 }
 
-void PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
-                                const clang::Decl *D) {
+static void
+PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
+                           const clang::Decl *D) {
   if (const TemplateParameterList *ParamList =
           D->getDescribedTemplateParams()) {
     if (!TemplateInfo) {
@@ -503,8 +512,8 @@ void PopulateTemplateParameters(std::optional<TemplateInfo> &TemplateInfo,
   }
 }
 
-TemplateParamInfo TemplateArgumentToInfo(const clang::Decl *D,
-                                         const TemplateArgument &Arg) {
+static TemplateParamInfo TemplateArgumentToInfo(const clang::Decl *D,
+                                                const TemplateArgument &Arg) {
   // The TemplateArgument's pretty printing handles all the normal cases
   // well enough for our requirements.
   std::string Str;
@@ -568,7 +577,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   }
 }
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
+static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
   ASTContext& Context = D->getASTContext();
@@ -583,6 +592,17 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
     I.Description.emplace_back();
     parseFullComment(fc, I.Description.back());
   }
+}
+
+static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
+                                   const DeclaratorDecl *D, bool IsStatic) {
+  // Use getAccessUnsafe so that we just get the default AS_none if it's not
+  // valid, as opposed to an assert.
+  MemberTypeInfo &NewMember = I.Members.emplace_back(
+      getTypeInfoForType(D->getTypeSourceInfo()->getType(), D->getLangOpts()),
+      D->getNameAsString(),
+      getFinalAccessSpecifier(Access, D->getAccessUnsafe()), IsStatic);
+  populateMemberTypeInfo(NewMember, D);
 }
 
 static void
@@ -619,6 +639,7 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
               continue;
             FunctionInfo FI;
             FI.IsMethod = true;
+            FI.IsStatic = MD->isStatic();
             // The seventh arg in populateFunctionInfo is a boolean passed by
             // reference, its value is not relevant in here so it's not used
             // anywhere besides the function call.
@@ -702,7 +723,7 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
                  dyn_cast<ClassTemplatePartialSpecializationDecl *>(SpecOf))
       Specialization.SpecializationOf = getUSRForDecl(CTPSD);
 
-    // Parameters to the specilization. For partial specializations, get the
+    // Parameters to the specialization. For partial specializations, get the
     // parameters "as written" from the ClassTemplatePartialSpecializationDecl
     // because the non-explicit template parameters will have generated internal
     // placeholder names rather than the names the user typed that match the
@@ -755,6 +776,7 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
     return {};
 
   Func.IsMethod = true;
+  Func.IsStatic = D->isStatic();
 
   const NamedDecl *Parent = nullptr;
   if (const auto *SD =

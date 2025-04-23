@@ -43,13 +43,14 @@ static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
 }
 
 static FailureOr<LLVM::LLVMFuncOp>
-getFreeFn(const LLVMTypeConverter *typeConverter, ModuleOp module) {
+getFreeFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
+          ModuleOp module) {
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericFreeFn(module);
+    return LLVM::lookupOrCreateGenericFreeFn(b, module);
 
-  return LLVM::lookupOrCreateFreeFn(module);
+  return LLVM::lookupOrCreateFreeFn(b, module);
 }
 
 struct AllocOpLowering : public AllocLikeOpLLVMLowering {
@@ -223,8 +224,8 @@ struct DeallocOpLowering : public ConvertOpToLLVMPattern<memref::DeallocOp> {
   matchAndRewrite(memref::DeallocOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // Insert the `free` declaration if it is not already present.
-    FailureOr<LLVM::LLVMFuncOp> freeFunc =
-        getFreeFn(getTypeConverter(), op->getParentOfType<ModuleOp>());
+    FailureOr<LLVM::LLVMFuncOp> freeFunc = getFreeFn(
+        rewriter, getTypeConverter(), op->getParentOfType<ModuleOp>());
     if (failed(freeFunc))
       return failure();
     Value allocatedPtr;
@@ -834,7 +835,8 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
     // potential alignment
     auto elemSize = getSizeInBytes(loc, srcType.getElementType(), rewriter);
     auto copyFn = LLVM::lookupOrCreateMemRefCopyFn(
-        op->getParentOfType<ModuleOp>(), getIndexType(), sourcePtr.getType());
+        rewriter, op->getParentOfType<ModuleOp>(), getIndexType(),
+        sourcePtr.getType());
     if (failed(copyFn))
       return failure();
     rewriter.create<LLVM::CallOp>(loc, copyFn.value(),

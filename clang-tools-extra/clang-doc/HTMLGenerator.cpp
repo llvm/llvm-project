@@ -416,12 +416,14 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_UL));
   auto &ULBody = Out.back();
   for (const auto &M : Members) {
-    std::string Access = getAccessSpelling(M.Access).str();
-    if (Access != "")
-      Access = Access + " ";
+    StringRef Access = getAccessSpelling(M.Access);
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
     auto MemberDecl = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
-    MemberDecl->Children.emplace_back(std::make_unique<TextNode>(Access));
+    if (!Access.empty())
+      MemberDecl->Children.emplace_back(
+          std::make_unique<TextNode>(Access + " "));
+    if (M.IsStatic)
+      MemberDecl->Children.emplace_back(std::make_unique<TextNode>("static "));
     MemberDecl->Children.emplace_back(genReference(M.Type, ParentInfoDir));
     MemberDecl->Children.emplace_back(std::make_unique<TextNode>(" " + M.Name));
     if (!M.Description.empty())
@@ -739,6 +741,9 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   if (Access != "")
     FunctionHeader->Children.emplace_back(
         std::make_unique<TextNode>(Access + " "));
+  if (I.IsStatic)
+    FunctionHeader->Children.emplace_back(
+        std::make_unique<TextNode>("static "));
   if (I.ReturnType.Type.Name != "") {
     FunctionHeader->Children.emplace_back(
         genReference(I.ReturnType.Type, ParentInfoDir));

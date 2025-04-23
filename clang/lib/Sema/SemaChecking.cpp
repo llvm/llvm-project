@@ -511,7 +511,7 @@ struct BuiltinDumpStructGenerator {
     Args.reserve((TheCall->getNumArgs() - 2) + /*Format*/ 1 + Exprs.size());
     Args.assign(TheCall->arg_begin() + 2, TheCall->arg_end());
     Args.push_back(getStringLiteral(Format));
-    Args.insert(Args.end(), Exprs.begin(), Exprs.end());
+    llvm::append_range(Args, Exprs);
 
     // Register a note to explain why we're performing the call.
     Sema::CodeSynthesisContext Ctx;
