@@ -914,7 +914,7 @@ defm : VPatWidenBinarySDNode_VV_VX_WV_WX<add, anyext_oneuse, "PseudoVWADDU">;
 
 // DAGCombiner::hoistLogicOpWithSameOpcodeHands may hoist disjoint ors
 // to (ext (or disjoint (a, b)))
-multiclass VPatWidenOrDisjoint_VV<SDNode extop, string instruction_name> {
+multiclass VPatWidenOrDisjoint_VV_VX<SDNode extop, string instruction_name> {
   foreach vtiToWti = AllWidenableIntVectors in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
