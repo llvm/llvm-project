@@ -6,20 +6,93 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_ELF_H
-#define _LIBCPP_STACKTRACE_ELF_H
+#ifndef _LIBCPP_STACKTRACE_LINUX_H
+#define _LIBCPP_STACKTRACE_LINUX_H
 
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <functional>
-#include <string_view>
-#include <sys/fcntl.h>
-#include <unistd.h>
+#include "stacktrace/config.h"
+
+#if defined(_LIBCPP_STACKTRACE_LINUX)
+
+#  include <algorithm>
+#  include <array>
+#  include <cassert>
+#  include <cstddef>
+#  include <cstdlib>
+#  include <functional>
+#  include <link.h>
+#  include <stacktrace>
+#  include <string_view>
+#  include <unistd.h>
+
+#  include "stacktrace/config.h"
+#  include "stacktrace/context.h"
+#  include "stacktrace/utils.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
+
+struct context;
+
+struct linux {
+  context& cx_;
+  void ident_modules();
+  void symbolize();
+
+private:
+  void resolve_main_elf_syms(std::string_view elf_name);
+};
+
+struct images {
+  // How many images this contains, including the left/right sentinels.
+  unsigned count_{0};
+  std::array<image, k_max_images + 2> images_{};
+
+  int add(dl_phdr_info& info) {
+    assert(count_ < k_max_images);
+    auto isFirst        = (count_ == 0);
+    auto& image         = images_.at(count_++);
+    image.loaded_at_    = info.dlpi_addr;
+    image.slide_        = info.dlpi_addr;
+    image.name_         = info.dlpi_name;
+    image.is_main_prog_ = isFirst; // first one is the main ELF
+    if (image.name_.empty() && isFirst) {
+      static char buffer[PATH_MAX + 1];
+      uint32_t length = sizeof(buffer);
+      if (readlink("/proc/self/exe", buffer, length) > 0) {
+        image.name_ = buffer;
+      }
+    }
+    return count_ == k_max_images; // return nonzero if we're at the limit
+  }
+
+  static int callback(dl_phdr_info* info, size_t, void* self) { return (*(images*)(self)).add(*info); }
+
+  images() {
+    dl_iterate_phdr(images::callback, this);
+    images_[count_++] = {0uz, 0};  // sentinel at low end
+    images_[count_++] = {~0uz, 0}; // sentinel at high end
+    std::sort(images_.begin(), images_.begin() + count_ - 1);
+  }
+
+  image& operator[](size_t index) {
+    assert(index < count_);
+    return images_.at(index);
+  }
+
+  image* mainProg() {
+    for (auto& image : images_) {
+      if (image.is_main_prog_) {
+        return &image;
+      }
+    }
+    return nullptr;
+  }
+
+  static images& get() {
+    static images images;
+    return images;
+  }
+};
 
 // Includes ELF constants and structs copied from <elf.h>, with a few changes.
 
@@ -312,4 +385,6 @@ inline std::string_view Symbol::name() const { return elf_->strtab_.at(nameIndex
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif
+#endif // _LIBCPP_STACKTRACE_LINUX
+
+#endif // _LIBCPP_STACKTRACE_LINUX_H

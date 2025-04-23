@@ -181,6 +181,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 #    include <__stacktrace/basic_stacktrace.h>
+#    include <__stacktrace/impl.h>
 #    include <__stacktrace/stacktrace_entry.h>
 
 _LIBCPP_POP_MACROS
