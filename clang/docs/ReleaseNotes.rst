@@ -408,6 +408,10 @@ Improvements to Clang's diagnostics
   they're only triggered if the authors are already making the choice to use
   ``preferred_type`` attribute.
 
+- ``-Winitializer-overrides`` and ``-Wreorder-init-list`` are now grouped under
+  the ``-Wc99-designator`` diagnostic group, as they also are about the
+  behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
+
 Improvements to Clang's time-trace
 ----------------------------------
 

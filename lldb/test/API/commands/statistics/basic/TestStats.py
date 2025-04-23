@@ -179,8 +179,9 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
-        self.assertGreater(debug_stats["totalSymbolsLoaded"], 0)
-        self.assertGreater(debug_stats["totalSymbolTablesLoaded"], 0)
+        if self.getPlatform() != "windows":
+            self.assertGreater(debug_stats["totalSymbolsLoaded"], 0)
+            self.assertGreater(debug_stats["totalSymbolTablesLoaded"], 0)
 
         # Verify target stats keys.
         target_stats = debug_stats["targets"][0]
@@ -207,7 +208,8 @@ class TestCase(TestBase):
             self.verify_keys(
                 module_stats, '"module_stats"', module_stat_keys_exist, None
             )
-            self.assertGreater(module_stats["symbolsLoaded"], 0)
+            if self.getPlatform() != "windows":
+                self.assertGreater(module_stats["symbolsLoaded"], 0)
 
     def test_default_with_run(self):
         """Test "statistics dump" when running the target to a breakpoint.

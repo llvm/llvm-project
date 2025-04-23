@@ -2002,7 +2002,7 @@ public:
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
-          NewMemCheckCost = std::max(*NewMemCheckCost.getValue(),
+          NewMemCheckCost = std::max(NewMemCheckCost.getValue(),
                                      (InstructionCost::CostType)1);
 
           if (BestTripCount > 1)
@@ -5314,7 +5314,7 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // to estimate the cost of the loop and interleave until the cost of the
     // loop overhead is about 5% of the cost of the loop.
     unsigned SmallIC = std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(
-                                        SmallLoopCost / *LoopCost.getValue()));
+                                        SmallLoopCost / LoopCost.getValue()));
 
     // Interleave until store/load ports (estimated by max interleave count) are
     // saturated.
@@ -7659,7 +7659,7 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
                     << " (Estimated cost per lane: ");
   if (Cost.isValid()) {
-    double CostPerLane = double(*Cost.getValue()) / EstimatedWidth;
+    double CostPerLane = double(Cost.getValue()) / EstimatedWidth;
     LLVM_DEBUG(dbgs() << format("%.1f", CostPerLane));
   } else /* No point dividing an invalid cost - it will still be invalid */
     LLVM_DEBUG(dbgs() << "Invalid");
@@ -10478,7 +10478,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
 
   // The scalar cost should only be 0 when vectorizing with a user specified
   // VF/IC. In those cases, runtime checks should always be generated.
-  uint64_t ScalarC = *VF.ScalarCost.getValue();
+  uint64_t ScalarC = VF.ScalarCost.getValue();
   if (ScalarC == 0)
     return true;
 
@@ -10513,8 +10513,8 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = getEstimatedRuntimeVF(VF.Width, VScale);
-  uint64_t RtC = *TotalCost.getValue();
-  uint64_t Div = ScalarC * IntVF - *VF.Cost.getValue();
+  uint64_t RtC = TotalCost.getValue();
+  uint64_t Div = ScalarC * IntVF - VF.Cost.getValue();
   uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
 
   // Second, compute a minimum iteration count so that the cost of the

@@ -274,7 +274,7 @@ void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-int64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
+uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
@@ -412,7 +412,7 @@ bool GCNTTIImpl::isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
   return isLegalToVectorizeMemChain(ChainSizeInBytes, Alignment, AddrSpace);
 }
 
-int64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
+uint64_t GCNTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
   return 1024;
 }
 
@@ -1277,9 +1277,9 @@ static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
   // The penalty cost is computed relative to the cost of instructions and does
   // not model any storage costs.
   adjustThreshold += std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) *
-                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
   adjustThreshold += std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) *
-                     *ArgStackCost.getValue() * InlineConstants::getInstrCost();
+                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
   return adjustThreshold;
 }
 

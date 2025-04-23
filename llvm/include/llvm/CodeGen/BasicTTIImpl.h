@@ -475,19 +475,17 @@ public:
     return VF;
   }
 
-  bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty,
-                          const DataLayout &DL) const {
+  bool isIndexedLoadLegal(TTI::MemIndexedMode M, Type *Ty) const {
     EVT VT = getTLI()->getValueType(DL, Ty);
     return getTLI()->isIndexedLoadLegal(getISDIndexedMode(M), VT);
   }
 
-  bool isIndexedStoreLegal(TTI::MemIndexedMode M, Type *Ty,
-                           const DataLayout &DL) const {
+  bool isIndexedStoreLegal(TTI::MemIndexedMode M, Type *Ty) const {
     EVT VT = getTLI()->getValueType(DL, Ty);
     return getTLI()->isIndexedStoreLegal(getISDIndexedMode(M), VT);
   }
 
-  bool isLSRCostLess(TTI::LSRCost C1, TTI::LSRCost C2) const {
+  bool isLSRCostLess(const TTI::LSRCost &C1, const TTI::LSRCost &C2) const {
     return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
   }
 
@@ -1335,9 +1333,8 @@ public:
   }
 
   InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                           VectorType *VecTy,
-                                           unsigned Index) const {
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+                                           VectorType *VecTy, unsigned Index,
+                                           TTI::TargetCostKind CostKind) const {
     return thisT()->getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                        CostKind, Index, nullptr, nullptr) +
            thisT()->getCastInstrCost(Opcode, Dst, VecTy->getElementType(),
@@ -1468,7 +1465,7 @@ public:
   }
 
   InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, MaybeAlign Alignment, unsigned AddressSpace,
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
       const Instruction *I = nullptr) const {
@@ -1613,7 +1610,7 @@ public:
 
       // Scale the cost of the load by the fraction of legal instructions that
       // will be used.
-      Cost = divideCeil(UsedInsts.count() * *Cost.getValue(), NumLegalInsts);
+      Cost = divideCeil(UsedInsts.count() * Cost.getValue(), NumLegalInsts);
     }
 
     // Then plus the cost of interleave operation.
@@ -2881,7 +2878,7 @@ public:
           SubTp && SubTp->getElementType() == FTp->getElementType())
         return divideCeil(FTp->getNumElements(), SubTp->getNumElements());
     }
-    return *LT.first.getValue();
+    return LT.first.getValue();
   }
 
   InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *,
