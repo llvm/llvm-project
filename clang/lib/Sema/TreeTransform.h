@@ -16411,6 +16411,7 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       return true;
   }
 
+  bool WarnedOnComparison = false;
   for (unsigned I = 0; I != *NumExpansions; ++I) {
     Sema::ArgPackSubstIndexRAII SubstIndex(
         getSema(), LeftFold ? I : *NumExpansions - I - 1);
@@ -16439,6 +16440,13 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
       } else {
         Result = getDerived().RebuildBinaryOperator(E->getEllipsisLoc(),
                                                     E->getOperator(), LHS, RHS);
+        if(!WarnedOnComparison && Result.isUsable()) {
+            if(auto * BO = dyn_cast<BinaryOperator>(Result.get()); BO && BO->isComparisonOp()) {
+                WarnedOnComparison = true;
+                SemaRef.Diag(BO->getBeginLoc(), diag::warn_comparison_in_fold_expression)
+                        << BO->getOpcodeStr();
+            }
+        }
       }
     } else
       Result = Out;
