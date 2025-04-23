@@ -2558,8 +2558,8 @@ public:
     }
   }
 
-  void Unparse(const OmpAtomicDefaultMemOrderClause &x) {
-    Word(ToUpperCaseLetters(common::EnumToString(x.v)));
+  void Unparse(const common::OmpMemoryOrderType &x) {
+    Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
   void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }
@@ -2894,12 +2894,17 @@ public:
     Walk(x.v);
     Put(")");
   }
+  void Unparse(const OmpHintClause &x) {
+    Word("HINT(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
   void Unparse(const OmpAtomicClause &x) {
     common::visit(common::visitors{
                       [&](const OmpMemoryOrderClause &y) { Walk(y); },
                       [&](const OmpFailClause &y) { Walk(y); },
-                      [&](const OmpClause &z) { Walk(z); },
+                      [&](const OmpHintClause &y) { Walk(y); },
                   },
         x.u);
   }

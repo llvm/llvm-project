@@ -4071,7 +4071,7 @@ struct OmpAtClause {
 //    SEQ_CST | ACQ_REL | RELAXED |                 // since 5.0
 //    ACQUIRE | RELEASE                             // since 5.2
 struct OmpAtomicDefaultMemOrderClause {
-  using MemoryOrder = common::OmpAtomicDefaultMemOrderType;
+  using MemoryOrder = common::OmpMemoryOrderType;
   WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, MemoryOrder);
 };
 
@@ -4270,6 +4270,11 @@ struct OmpGrainsizeClause {
   TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
   MODIFIER_BOILERPLATE(OmpPrescriptiveness);
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
+};
+
+// Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
+struct OmpHintClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpHintClause, ScalarIntConstantExpr);
 };
 
 // Ref: [5.2: 214]
@@ -4817,10 +4822,10 @@ struct OpenMPAllocatorsConstruct {
 
 // 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
 //        memory-order-clause -> acq_rel
-//                               release
 //                               acquire
-//                               seq_cst
+//                               release
 //                               relaxed
+//                               seq_cst
 struct OmpMemoryOrderClause {
   WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
   CharBlock source;
@@ -4832,7 +4837,7 @@ struct OmpMemoryOrderClause {
 struct OmpAtomicClause {
   UNION_CLASS_BOILERPLATE(OmpAtomicClause);
   CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpClause> u;
+  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpHintClause> u;
 };
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]

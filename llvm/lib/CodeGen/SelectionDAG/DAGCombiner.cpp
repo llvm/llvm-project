@@ -6037,7 +6037,10 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
         LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
-    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
+    SDNodeFlags LogicFlags;
+    LogicFlags.setDisjoint(N->getFlags().hasDisjoint() &&
+                           ISD::isExtOpcode(HandOpcode));
+    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y, LogicFlags);
     if (HandOpcode == ISD::SIGN_EXTEND_INREG)
       return DAG.getNode(HandOpcode, DL, VT, Logic, N0.getOperand(1));
     return DAG.getNode(HandOpcode, DL, VT, Logic);
@@ -13833,10 +13836,9 @@ static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
 
   EVT OrigVT = ALoad->getValueType(0);
   assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
-  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomic(
-      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
+  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomicLoad(
+      ExtLoadType, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
       ALoad->getBasePtr(), ALoad->getMemOperand()));
-  NewALoad->setExtensionType(ExtLoadType);
   DAG.ReplaceAllUsesOfValueWith(
       SDValue(ALoad, 0),
       DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));

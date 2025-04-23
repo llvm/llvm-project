@@ -423,6 +423,10 @@ private:
                               clang::CharUnits alignment);
 
 public:
+  Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
+                                 llvm::StringRef fieldName,
+                                 unsigned fieldIndex);
+
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment,
                          bool insertIntoFnEntryBlock,
@@ -551,6 +555,9 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitMemberExpr(const MemberExpr *e);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.

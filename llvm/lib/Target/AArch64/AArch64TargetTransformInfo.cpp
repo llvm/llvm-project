@@ -1497,6 +1497,65 @@ static bool isAllActivePredicate(Value *Pred) {
   return (C && C->isAllOnesValue());
 }
 
+// Simplify `V` by only considering the operations that affect active lanes.
+// This function should only return existing Values or newly created Constants.
+static Value *stripInactiveLanes(Value *V, const Value *Pg) {
+  auto *Dup = dyn_cast<IntrinsicInst>(V);
+  if (Dup && Dup->getIntrinsicID() == Intrinsic::aarch64_sve_dup &&
+      Dup->getOperand(1) == Pg && isa<Constant>(Dup->getOperand(2)))
+    return ConstantVector::getSplat(
+        cast<VectorType>(V->getType())->getElementCount(),
+        cast<Constant>(Dup->getOperand(2)));
+
+  return V;
+}
+
+static std::optional<Instruction *>
+simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
+                          const SVEIntrinsicInfo &IInfo) {
+  const unsigned Opc = IInfo.getMatchingIROpode();
+  assert(Instruction::isBinaryOp(Opc) && "Expected a binary operation!");
+
+  Value *Pg = II.getOperand(0);
+  Value *Op1 = II.getOperand(1);
+  Value *Op2 = II.getOperand(2);
+  const DataLayout &DL = II.getDataLayout();
+
+  // Canonicalise constants to the RHS.
+  if (Instruction::isCommutative(Opc) && IInfo.inactiveLanesAreNotDefined() &&
+      isa<Constant>(Op1) && !isa<Constant>(Op2)) {
+    IC.replaceOperand(II, 1, Op2);
+    IC.replaceOperand(II, 2, Op1);
+    return &II;
+  }
+
+  // Only active lanes matter when simplifying the operation.
+  Op1 = stripInactiveLanes(Op1, Pg);
+  Op2 = stripInactiveLanes(Op2, Pg);
+
+  Value *SimpleII;
+  if (auto FII = dyn_cast<FPMathOperator>(&II))
+    SimpleII = simplifyBinOp(Opc, Op1, Op2, FII->getFastMathFlags(), DL);
+  else
+    SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
+
+  if (!SimpleII)
+    return std::nullopt;
+
+  if (IInfo.inactiveLanesAreNotDefined())
+    return IC.replaceInstUsesWith(II, SimpleII);
+
+  Value *Inactive = II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom());
+
+  // The intrinsic does nothing (e.g. sve.mul(pg, A, 1.0)).
+  if (SimpleII == Inactive)
+    return IC.replaceInstUsesWith(II, SimpleII);
+
+  // Inactive lanes must be preserved.
+  SimpleII = IC.Builder.CreateSelect(Pg, SimpleII, Inactive);
+  return IC.replaceInstUsesWith(II, SimpleII);
+}
+
 // Use SVE intrinsic info to eliminate redundant operands and/or canonicalise
 // to operations with less strict inactive lane requirements.
 static std::optional<Instruction *>
@@ -1536,6 +1595,11 @@ simplifySVEIntrinsic(InstCombiner &IC, IntrinsicInst &II,
       return &II;
     }
   }
+
+  // Operation specific simplifications.
+  if (IInfo.hasMatchingIROpode() &&
+      Instruction::isBinaryOp(IInfo.getMatchingIROpode()))
+    return simplifySVEIntrinsicBinOp(IC, II, IInfo);
 
   return std::nullopt;
 }
@@ -2220,68 +2284,6 @@ static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
   return std::nullopt;
 }
 
-// Simplify `V` by only considering the operations that affect active lanes.
-// This function should only return existing Values or newly created Constants.
-static Value *stripInactiveLanes(Value *V, const Value *Pg) {
-  auto *Dup = dyn_cast<IntrinsicInst>(V);
-  if (Dup && Dup->getIntrinsicID() == Intrinsic::aarch64_sve_dup &&
-      Dup->getOperand(1) == Pg && isa<Constant>(Dup->getOperand(2)))
-    return ConstantVector::getSplat(
-        cast<VectorType>(V->getType())->getElementCount(),
-        cast<Constant>(Dup->getOperand(2)));
-
-  return V;
-}
-
-static std::optional<Instruction *>
-instCombineSVEVectorMul(InstCombiner &IC, IntrinsicInst &II,
-                        const SVEIntrinsicInfo &IInfo) {
-  const unsigned Opc = IInfo.getMatchingIROpode();
-  if (!Instruction::isBinaryOp(Opc))
-    return std::nullopt;
-
-  Value *Pg = II.getOperand(0);
-  Value *Op1 = II.getOperand(1);
-  Value *Op2 = II.getOperand(2);
-  const DataLayout &DL = II.getDataLayout();
-
-  // Canonicalise constants to the RHS.
-  if (Instruction::isCommutative(Opc) && IInfo.inactiveLanesAreNotDefined() &&
-      isa<Constant>(Op1) && !isa<Constant>(Op2)) {
-    IC.replaceOperand(II, 1, Op2);
-    IC.replaceOperand(II, 2, Op1);
-    return &II;
-  }
-
-  // Only active lanes matter when simplifying the operation.
-  Op1 = stripInactiveLanes(Op1, Pg);
-  Op2 = stripInactiveLanes(Op2, Pg);
-
-  Value *SimpleII;
-  if (auto FII = dyn_cast<FPMathOperator>(&II))
-    SimpleII = simplifyBinOp(Opc, Op1, Op2, FII->getFastMathFlags(), DL);
-  else
-    SimpleII = simplifyBinOp(Opc, Op1, Op2, DL);
-
-  if (SimpleII) {
-    if (IInfo.inactiveLanesAreNotDefined())
-      return IC.replaceInstUsesWith(II, SimpleII);
-
-    Value *Inactive =
-        II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom());
-
-    // The intrinsic does nothing (e.g. sve.mul(pg, A, 1.0)).
-    if (SimpleII == Inactive)
-      return IC.replaceInstUsesWith(II, SimpleII);
-
-    // Inactive lanes must be preserved.
-    SimpleII = IC.Builder.CreateSelect(Pg, SimpleII, Inactive);
-    return IC.replaceInstUsesWith(II, SimpleII);
-  }
-
-  return instCombineSVEVectorBinOp(IC, II);
-}
-
 static std::optional<Instruction *> instCombineSVEUnpack(InstCombiner &IC,
                                                          IntrinsicInst &II) {
   Value *UnpackArg = II.getArgOperand(0);
@@ -2689,10 +2691,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEVectorFAdd(IC, II);
   case Intrinsic::aarch64_sve_fadd_u:
     return instCombineSVEVectorFAddU(IC, II);
-  case Intrinsic::aarch64_sve_fmul:
-    return instCombineSVEVectorMul(IC, II, IInfo);
   case Intrinsic::aarch64_sve_fmul_u:
-    return instCombineSVEVectorMul(IC, II, IInfo);
+    return instCombineSVEVectorBinOp(IC, II);
   case Intrinsic::aarch64_sve_fsub:
     return instCombineSVEVectorFSub(IC, II);
   case Intrinsic::aarch64_sve_fsub_u:
@@ -2703,10 +2703,6 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
-  case Intrinsic::aarch64_sve_mul:
-    return instCombineSVEVectorMul(IC, II, IInfo);
-  case Intrinsic::aarch64_sve_mul_u:
-    return instCombineSVEVectorMul(IC, II, IInfo);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
@@ -4618,7 +4614,7 @@ static bool isLoopSizeWithinBudget(Loop *L, const AArch64TTIImpl &TTI,
   }
 
   if (FinalSize)
-    *FinalSize = *LoopCost.getValue();
+    *FinalSize = LoopCost.getValue();
   return true;
 }
 

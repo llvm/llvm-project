@@ -9,6 +9,7 @@ respective anchor symbols, and prints the resulting file to stdout.
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import re
@@ -85,7 +86,7 @@ with open(args.input, "r") as f:
             exit("ERROR: unexpected input:\n%s" % line)
 
 # Read nm output: <symbol value> <symbol type> <symbol name>
-is_llvm_nm = os.path.basename(args.nmtool) == "llvm-nm"
+is_llvm_nm = os.path.basename(os.path.realpath(shutil.which(args.nmtool))) == "llvm-nm"
 nm_output = subprocess.run(
     [
         args.nmtool,
