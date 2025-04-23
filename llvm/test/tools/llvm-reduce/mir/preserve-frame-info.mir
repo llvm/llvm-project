@@ -22,10 +22,12 @@
 # RESULT-NEXT: hasTailCall:     true
 # RESULT-NEXT: savePoint:
 # RESULT-NEXT:   - point:           '%bb.1'
-# RESULT: restorePoint:
+# RESULT-NEXT:     registers:       []
+# RESULT-NEXT: restorePoint:
 # RESULT-NEXT:   - point:           '%bb.2'
+# RESULT-NEXT:     registers:       []
 
-# RESULT: fixedStack:
+# RESULT-NEXT: fixedStack:
 # RESULT-NEXT:  - { id: 0, offset: 56, size: 4, alignment: 8, callee-saved-register: '$sgpr44',
 # RESULT-NEXT:      callee-saved-restored: false }
 # RESULT-NEXT:  - { id: 1, offset: 52, size: 4, alignment: 4, callee-saved-register: '$sgpr43' }
