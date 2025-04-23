@@ -585,7 +585,7 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // |------------------------------------------------------|-------------------------------|
   // | cuda::atomic_load                                    | fence.sc.<scope>;             |
   // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | ld.acquire.<scope>;           |
-  // |------------------------------------------------------|-------------------------------|  
+  // |------------------------------------------------------|-------------------------------|
   // | cuda::atomic_store                                   | fence.sc.<scope>;             |
   // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | st.release.<scope>;           |
   // |------------------------------------------------------|-------------------------------|
@@ -1868,7 +1868,7 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
     case 1: {
       MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
       SDValue Imm = Ops[0];
-      if (MemTy != MVT::f16 && MemTy != MVT::v2f16 &&
+      if (MemTy != MVT::f16 && MemTy != MVT::v2f16 && MemTy != MVT::bf16 &&
           (isa<ConstantSDNode>(Imm) || isa<ConstantFPSDNode>(Imm))) {
         // Convert immediate to target constant
         if (MemTy == MVT::f32 || MemTy == MVT::f64) {
@@ -2824,8 +2824,8 @@ void NVPTXDAGToDAGISel::SelectCpAsyncBulkPrefetchL2(SDNode *N) {
   SDLoc DL(N);
   SmallVector<SDValue, 4> Ops(N->ops().slice(2, NumArgs));
   Ops.push_back(N->getOperand(0)); // Chain operand
-  
-  unsigned Opcode = IsCacheHint 
+
+  unsigned Opcode = IsCacheHint
   ?  NVPTX::CP_ASYNC_BULK_PREFETCH_CH
   :  NVPTX::CP_ASYNC_BULK_PREFETCH;
   ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Ops));
