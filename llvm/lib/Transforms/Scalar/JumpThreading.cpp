@@ -1362,12 +1362,12 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // farther than to a predecessor, we need to reuse the code from GVN's PRE.
   // It requires domination tree analysis, so for this simple case it is an
   // overkill.
-  bool TransfersExecution = false;
+  std::optional<bool> TransfersExecution = std::nullopt;
   if (PredsScanned.size() != AvailablePreds.size() &&
       !isSafeToSpeculativelyExecute(LoadI)) {
-    for (auto I = LoadBB->begin(); &*I != LoadI; ++I)
-      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
-        return false;
+    if (!isGuaranteedToTransferExecutionToSuccessor(LoadBB->begin(),
+                                                    LoadI->getIterator()))
+      return false;
     TransfersExecution = true;
   }
 
@@ -1411,10 +1411,18 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
         UnavailablePred->getTerminator()->getIterator());
     NewVal->setDebugLoc(LoadI->getDebugLoc());
     NewVal->copyMetadata(*LoadI);
-    // Drop UB-implying metadata if we do not know it is guaranteed to transfer
-    // the execution to the original load.
-    if (!TransfersExecution)
-      NewVal->dropUBImplyingAttrsAndMetadata();
+    NewVal->eraseMetadataIf([&](unsigned Kind, const MDNode *MD) {
+      if (Kind == LLVMContext::MD_dbg || Kind == LLVMContext::MD_annotation)
+        return false;
+      if (is_contained(Metadata::PoisonGeneratingIDs, Kind))
+        return false;
+      // Try to salvage UB-implying metadata if we know it is guaranteed to
+      // transfer the execution to the original load.
+      if (!TransfersExecution.has_value())
+        TransfersExecution = isGuaranteedToTransferExecutionToSuccessor(
+            LoadBB->begin(), LoadI->getIterator());
+      return !*TransfersExecution;
+    });
 
     AvailablePreds.emplace_back(UnavailablePred, NewVal);
   }

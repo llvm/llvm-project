@@ -1517,9 +1517,23 @@ void GVNPass::eliminatePartiallyRedundantLoad(
     }
 
     NewLoad->copyMetadata(*Load);
-    // Drop UB-implying metadata as we do not know if it is guaranteed to
-    // transfer the execution to the original load.
-    NewLoad->dropUBImplyingAttrsAndMetadata();
+    std::optional<bool> TransfersExecution = std::nullopt;
+    NewLoad->eraseMetadataIf([&](unsigned Kind, const MDNode *MD) {
+      if (Kind == LLVMContext::MD_dbg || Kind == LLVMContext::MD_annotation)
+        return false;
+      if (is_contained(Metadata::PoisonGeneratingIDs, Kind))
+        return false;
+      // Try to salvage UB-implying metadata if we know it is guaranteed to
+      // transfer the execution to the original load.
+      if (!TransfersExecution.has_value()) {
+        // TEST ONLY
+        assert(
+            is_contained(successors(NewLoad->getParent()), Load->getParent()));
+        TransfersExecution = isGuaranteedToTransferExecutionToSuccessor(
+            Load->getParent()->begin(), Load->getIterator());
+      }
+      return !*TransfersExecution;
+    });
 
     // Add the newly created load.
     ValuesPerBlock.push_back(
