@@ -1745,13 +1745,6 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
     return true;
-  case Intrinsic::riscv_seg2_load:
-  case Intrinsic::riscv_seg3_load:
-  case Intrinsic::riscv_seg4_load:
-  case Intrinsic::riscv_seg5_load:
-  case Intrinsic::riscv_seg6_load:
-  case Intrinsic::riscv_seg7_load:
-  case Intrinsic::riscv_seg8_load:
   case Intrinsic::riscv_seg2_load_mask:
   case Intrinsic::riscv_seg3_load_mask:
   case Intrinsic::riscv_seg4_load_mask:
@@ -1760,17 +1753,6 @@ bool RISCVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::riscv_seg7_load_mask:
   case Intrinsic::riscv_seg8_load_mask:
     return SetRVVLoadStoreInfo(/*PtrOp*/ 0, /*IsStore*/ false,
-                               /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
-  case Intrinsic::riscv_seg2_store:
-  case Intrinsic::riscv_seg3_store:
-  case Intrinsic::riscv_seg4_store:
-  case Intrinsic::riscv_seg5_store:
-  case Intrinsic::riscv_seg6_store:
-  case Intrinsic::riscv_seg7_store:
-  case Intrinsic::riscv_seg8_store:
-    // Operands are (vec, ..., vec, ptr, vl)
-    return SetRVVLoadStoreInfo(/*PtrOp*/ I.arg_size() - 2,
-                               /*IsStore*/ true,
                                /*IsUnitStrided*/ false, /*UsePtrVal*/ true);
   case Intrinsic::riscv_seg2_store_mask:
   case Intrinsic::riscv_seg3_store_mask:
@@ -10591,13 +10573,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   switch (IntNo) {
   default:
     break;
-  case Intrinsic::riscv_seg2_load:
-  case Intrinsic::riscv_seg3_load:
-  case Intrinsic::riscv_seg4_load:
-  case Intrinsic::riscv_seg5_load:
-  case Intrinsic::riscv_seg6_load:
-  case Intrinsic::riscv_seg7_load:
-  case Intrinsic::riscv_seg8_load:
   case Intrinsic::riscv_seg2_load_mask:
   case Intrinsic::riscv_seg3_load_mask:
   case Intrinsic::riscv_seg4_load_mask:
@@ -10620,12 +10595,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                   ContainerVT.getScalarSizeInBits();
     EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, NF);
 
-    // Masked: (pointer, mask, vl)
-    // Non-masked: (pointer, vl)
-    bool IsMasked = Op.getNumOperands() > 4;
+    // Operands: (chain, int_id, pointer, mask, vl)
     SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
-    SDValue Mask =
-        IsMasked ? Op.getOperand(3) : getAllOnesMask(ContainerVT, VL, DL, DAG);
+    SDValue Mask = Op.getOperand(3);
     MVT MaskVT = Mask.getSimpleValueType();
     if (MaskVT.isFixedLengthVector()) {
       MVT MaskContainerVT =
@@ -10699,13 +10671,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   switch (IntNo) {
   default:
     break;
-  case Intrinsic::riscv_seg2_store:
-  case Intrinsic::riscv_seg3_store:
-  case Intrinsic::riscv_seg4_store:
-  case Intrinsic::riscv_seg5_store:
-  case Intrinsic::riscv_seg6_store:
-  case Intrinsic::riscv_seg7_store:
-  case Intrinsic::riscv_seg8_store:
   case Intrinsic::riscv_seg2_store_mask:
   case Intrinsic::riscv_seg3_store_mask:
   case Intrinsic::riscv_seg4_store_mask:
@@ -10720,24 +10685,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Intrinsic::riscv_vsseg6_mask, Intrinsic::riscv_vsseg7_mask,
         Intrinsic::riscv_vsseg8_mask};
 
-    bool IsMasked = false;
-    switch (IntNo) {
-    case Intrinsic::riscv_seg2_store_mask:
-    case Intrinsic::riscv_seg3_store_mask:
-    case Intrinsic::riscv_seg4_store_mask:
-    case Intrinsic::riscv_seg5_store_mask:
-    case Intrinsic::riscv_seg6_store_mask:
-    case Intrinsic::riscv_seg7_store_mask:
-    case Intrinsic::riscv_seg8_store_mask:
-      IsMasked = true;
-      break;
-    default:
-      break;
-    }
-
-    // Non-masked: (chain, int_id, vec*, ptr, vl)
-    // Masked: (chain, int_id, vec*, ptr, mask, vl)
-    unsigned NF = Op->getNumOperands() - (IsMasked ? 5 : 4);
+    // Operands: (chain, int_id, vec*, ptr, mask, vl)
+    unsigned NF = Op->getNumOperands() - 5;
     assert(NF >= 2 && NF <= 8 && "Unexpected seg number");
     MVT XLenVT = Subtarget.getXLenVT();
     MVT VT = Op->getOperand(2).getSimpleValueType();
@@ -10747,8 +10696,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, NF);
 
     SDValue VL = Op.getOperand(Op.getNumOperands() - 1);
-    SDValue Mask = IsMasked ? Op.getOperand(Op.getNumOperands() - 2)
-                            : getAllOnesMask(ContainerVT, VL, DL, DAG);
+    SDValue Mask = Op.getOperand(Op.getNumOperands() - 2);
     MVT MaskVT = Mask.getSimpleValueType();
     if (MaskVT.isFixedLengthVector()) {
       MVT MaskContainerVT =
@@ -23823,10 +23771,10 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
 }
 
 static const Intrinsic::ID FixedVlsegIntrIds[] = {
-    Intrinsic::riscv_seg2_load, Intrinsic::riscv_seg3_load,
-    Intrinsic::riscv_seg4_load, Intrinsic::riscv_seg5_load,
-    Intrinsic::riscv_seg6_load, Intrinsic::riscv_seg7_load,
-    Intrinsic::riscv_seg8_load};
+    Intrinsic::riscv_seg2_load_mask, Intrinsic::riscv_seg3_load_mask,
+    Intrinsic::riscv_seg4_load_mask, Intrinsic::riscv_seg5_load_mask,
+    Intrinsic::riscv_seg6_load_mask, Intrinsic::riscv_seg7_load_mask,
+    Intrinsic::riscv_seg8_load_mask};
 
 /// Lower an interleaved load into a vlsegN intrinsic.
 ///
@@ -23877,10 +23825,11 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
   };
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
-
-  CallInst *VlsegN = Builder.CreateIntrinsic(
-      FixedVlsegIntrIds[Factor - 2], {VTy, LI->getPointerOperandType(), XLenTy},
-      {LI->getPointerOperand(), VL});
+  // All-ones mask.
+  Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
+  CallInst *VlsegN =
+      Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2], {VTy, XLenTy},
+                              {LI->getPointerOperand(), Mask, VL});
 
   for (unsigned i = 0; i < Shuffles.size(); i++) {
     Value *SubVec = Builder.CreateExtractValue(VlsegN, Indices[i]);
@@ -23891,10 +23840,10 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 }
 
 static const Intrinsic::ID FixedVssegIntrIds[] = {
-    Intrinsic::riscv_seg2_store, Intrinsic::riscv_seg3_store,
-    Intrinsic::riscv_seg4_store, Intrinsic::riscv_seg5_store,
-    Intrinsic::riscv_seg6_store, Intrinsic::riscv_seg7_store,
-    Intrinsic::riscv_seg8_store};
+    Intrinsic::riscv_seg2_store_mask, Intrinsic::riscv_seg3_store_mask,
+    Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
+    Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
+    Intrinsic::riscv_seg8_store_mask};
 
 /// Lower an interleaved store into a vssegN intrinsic.
 ///
@@ -23954,8 +23903,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   }
 
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-      SI->getModule(), FixedVssegIntrIds[Factor - 2],
-      {VTy, SI->getPointerOperandType(), XLenTy});
+      SI->getModule(), FixedVssegIntrIds[Factor - 2], {VTy, XLenTy});
 
   SmallVector<Value *, 10> Ops;
   SmallVector<int, 16> NewShuffleMask;
@@ -23975,7 +23923,10 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   // potentially under larger LMULs) because we checked that the fixed vector
   // type fits in isLegalInterleavedAccessType
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
-  Ops.append({SI->getPointerOperand(), VL});
+  // All-ones mask.
+  Value *StoreMask = ConstantVector::getSplat(
+      VTy->getElementCount(), ConstantInt::getTrue(SVI->getContext()));
+  Ops.append({SI->getPointerOperand(), StoreMask, VL});
 
   Builder.CreateCall(VssegNFunc, Ops);
 
@@ -24004,10 +23955,12 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(ResVTy)) {
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+    // All-ones mask.
+    Value *Mask = ConstantVector::getSplat(
+        FVTy->getElementCount(), ConstantInt::getTrue(LI->getContext()));
     Return =
-        Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
-                                {ResVTy, LI->getPointerOperandType(), XLenTy},
-                                {LI->getPointerOperand(), VL});
+        Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2], {ResVTy, XLenTy},
+                                {LI->getPointerOperand(), Mask, VL});
   } else {
     static const Intrinsic::ID IntrIds[] = {
         Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
@@ -24071,12 +24024,14 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(InVTy)) {
     Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-        SI->getModule(), FixedVssegIntrIds[Factor - 2],
-        {InVTy, SI->getPointerOperandType(), XLenTy});
+        SI->getModule(), FixedVssegIntrIds[Factor - 2], {InVTy, XLenTy});
 
     SmallVector<Value *, 10> Ops(InterleaveValues);
     Value *VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
-    Ops.append({SI->getPointerOperand(), VL});
+    // All-ones mask.
+    Value *Mask = ConstantVector::getSplat(
+        FVTy->getElementCount(), ConstantInt::getTrue(SI->getContext()));
+    Ops.append({SI->getPointerOperand(), Mask, VL});
 
     Builder.CreateCall(VssegNFunc, Ops);
   } else {
@@ -24198,15 +24153,9 @@ bool RISCVTargetLowering::lowerInterleavedVPLoad(
 
   Value *Return = nullptr;
   if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    static const Intrinsic::ID FixedMaskedVlsegIntrIds[] = {
-        Intrinsic::riscv_seg2_load_mask, Intrinsic::riscv_seg3_load_mask,
-        Intrinsic::riscv_seg4_load_mask, Intrinsic::riscv_seg5_load_mask,
-        Intrinsic::riscv_seg6_load_mask, Intrinsic::riscv_seg7_load_mask,
-        Intrinsic::riscv_seg8_load_mask};
-
-    Return = Builder.CreateIntrinsic(FixedMaskedVlsegIntrIds[Factor - 2],
-                                     {FVTy, XLenTy},
-                                     {Load->getArgOperand(0), Mask, EVL});
+    Return =
+        Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2], {FVTy, XLenTy},
+                                {Load->getArgOperand(0), Mask, EVL});
   } else {
     static const Intrinsic::ID IntrMaskIds[] = {
         Intrinsic::riscv_vlseg2_mask, Intrinsic::riscv_vlseg3_mask,
@@ -24318,15 +24267,9 @@ bool RISCVTargetLowering::lowerInterleavedVPStore(
       XLenTy);
 
   if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
-    static const Intrinsic::ID FixedMaskedVssegIntrIds[] = {
-        Intrinsic::riscv_seg2_store_mask, Intrinsic::riscv_seg3_store_mask,
-        Intrinsic::riscv_seg4_store_mask, Intrinsic::riscv_seg5_store_mask,
-        Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
-        Intrinsic::riscv_seg8_store_mask};
-
     SmallVector<Value *, 8> Operands(InterleaveOperands);
     Operands.append({Store->getArgOperand(1), Mask, EVL});
-    Builder.CreateIntrinsic(FixedMaskedVssegIntrIds[Factor - 2], {FVTy, XLenTy},
+    Builder.CreateIntrinsic(FixedVssegIntrIds[Factor - 2], {FVTy, XLenTy},
                             Operands);
     return true;
   }
