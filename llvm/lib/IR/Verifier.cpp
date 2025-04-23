@@ -5060,8 +5060,7 @@ void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
         &I);
   for (const auto &Op : MD->operands()) {
     auto *TypeMD = cast<MDNode>(Op.get());
-    MDString *TypeIdStr = cast<MDString>(TypeMD->getOperand(1));
-    Check(TypeIdStr->getString().ends_with(".generalized"),
+    Check(TypeMD->hasGeneralizedMDString(),
           "Invalid \"callee_type\" type identifier", &I);
   }
 }
