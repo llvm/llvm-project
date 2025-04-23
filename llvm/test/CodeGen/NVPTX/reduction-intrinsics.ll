@@ -316,17 +316,17 @@ define half @reduce_fmax_half(<8 x half> %in) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmax_half_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; CHECK-NEXT:    max.f16 %rs5, %rs3, %rs4;
-; CHECK-NEXT:    max.f16 %rs6, %rs5, %rs1;
-; CHECK-NEXT:    max.f16 %rs7, %rs6, %rs2;
-; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r3;
-; CHECK-NEXT:    max.f16 %rs10, %rs7, %rs8;
-; CHECK-NEXT:    max.f16 %rs11, %rs10, %rs9;
-; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r4;
-; CHECK-NEXT:    max.f16 %rs14, %rs11, %rs12;
-; CHECK-NEXT:    max.f16 %rs15, %rs14, %rs13;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    max.f16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs4, %rs5}, %r3;
+; CHECK-NEXT:    max.f16 %rs6, %rs4, %rs5;
+; CHECK-NEXT:    max.f16 %rs7, %rs6, %rs3;
+; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r2;
+; CHECK-NEXT:    max.f16 %rs10, %rs8, %rs9;
+; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
+; CHECK-NEXT:    max.f16 %rs13, %rs11, %rs12;
+; CHECK-NEXT:    max.f16 %rs14, %rs13, %rs10;
+; CHECK-NEXT:    max.f16 %rs15, %rs14, %rs7;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs15;
 ; CHECK-NEXT:    ret;
   %res = call half @llvm.vector.reduce.fmax(<8 x half> %in)
@@ -392,13 +392,13 @@ define float @reduce_fmax_float(<8 x float> %in) {
 ; CHECK-SM80-NEXT:  // %bb.0:
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmax_float_param_0+16];
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmax_float_param_0];
-; CHECK-SM80-NEXT:    max.f32 %r9, %r1, %r2;
-; CHECK-SM80-NEXT:    max.f32 %r10, %r9, %r3;
-; CHECK-SM80-NEXT:    max.f32 %r11, %r10, %r4;
-; CHECK-SM80-NEXT:    max.f32 %r12, %r11, %r5;
-; CHECK-SM80-NEXT:    max.f32 %r13, %r12, %r6;
-; CHECK-SM80-NEXT:    max.f32 %r14, %r13, %r7;
-; CHECK-SM80-NEXT:    max.f32 %r15, %r14, %r8;
+; CHECK-SM80-NEXT:    max.f32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    max.f32 %r10, %r5, %r6;
+; CHECK-SM80-NEXT:    max.f32 %r11, %r10, %r9;
+; CHECK-SM80-NEXT:    max.f32 %r12, %r3, %r4;
+; CHECK-SM80-NEXT:    max.f32 %r13, %r1, %r2;
+; CHECK-SM80-NEXT:    max.f32 %r14, %r13, %r12;
+; CHECK-SM80-NEXT:    max.f32 %r15, %r14, %r11;
 ; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r15;
 ; CHECK-SM80-NEXT:    ret;
 ;
@@ -409,9 +409,9 @@ define float @reduce_fmax_float(<8 x float> %in) {
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmax_float_param_0+16];
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmax_float_param_0];
-; CHECK-SM100-NEXT:    max.f32 %r9, %r1, %r2, %r3;
-; CHECK-SM100-NEXT:    max.f32 %r10, %r9, %r4, %r5;
-; CHECK-SM100-NEXT:    max.f32 %r11, %r10, %r6, %r7;
+; CHECK-SM100-NEXT:    max.f32 %r9, %r4, %r5, %r6;
+; CHECK-SM100-NEXT:    max.f32 %r10, %r1, %r2, %r3;
+; CHECK-SM100-NEXT:    max.f32 %r11, %r10, %r9, %r7;
 ; CHECK-SM100-NEXT:    max.f32 %r12, %r11, %r8;
 ; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r12;
 ; CHECK-SM100-NEXT:    ret;
@@ -500,17 +500,17 @@ define half @reduce_fmin_half(<8 x half> %in) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmin_half_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; CHECK-NEXT:    min.f16 %rs5, %rs3, %rs4;
-; CHECK-NEXT:    min.f16 %rs6, %rs5, %rs1;
-; CHECK-NEXT:    min.f16 %rs7, %rs6, %rs2;
-; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r3;
-; CHECK-NEXT:    min.f16 %rs10, %rs7, %rs8;
-; CHECK-NEXT:    min.f16 %rs11, %rs10, %rs9;
-; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r4;
-; CHECK-NEXT:    min.f16 %rs14, %rs11, %rs12;
-; CHECK-NEXT:    min.f16 %rs15, %rs14, %rs13;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    min.f16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs4, %rs5}, %r3;
+; CHECK-NEXT:    min.f16 %rs6, %rs4, %rs5;
+; CHECK-NEXT:    min.f16 %rs7, %rs6, %rs3;
+; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r2;
+; CHECK-NEXT:    min.f16 %rs10, %rs8, %rs9;
+; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
+; CHECK-NEXT:    min.f16 %rs13, %rs11, %rs12;
+; CHECK-NEXT:    min.f16 %rs14, %rs13, %rs10;
+; CHECK-NEXT:    min.f16 %rs15, %rs14, %rs7;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs15;
 ; CHECK-NEXT:    ret;
   %res = call half @llvm.vector.reduce.fmin(<8 x half> %in)
@@ -576,13 +576,13 @@ define float @reduce_fmin_float(<8 x float> %in) {
 ; CHECK-SM80-NEXT:  // %bb.0:
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmin_float_param_0+16];
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmin_float_param_0];
-; CHECK-SM80-NEXT:    min.f32 %r9, %r1, %r2;
-; CHECK-SM80-NEXT:    min.f32 %r10, %r9, %r3;
-; CHECK-SM80-NEXT:    min.f32 %r11, %r10, %r4;
-; CHECK-SM80-NEXT:    min.f32 %r12, %r11, %r5;
-; CHECK-SM80-NEXT:    min.f32 %r13, %r12, %r6;
-; CHECK-SM80-NEXT:    min.f32 %r14, %r13, %r7;
-; CHECK-SM80-NEXT:    min.f32 %r15, %r14, %r8;
+; CHECK-SM80-NEXT:    min.f32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    min.f32 %r10, %r5, %r6;
+; CHECK-SM80-NEXT:    min.f32 %r11, %r10, %r9;
+; CHECK-SM80-NEXT:    min.f32 %r12, %r3, %r4;
+; CHECK-SM80-NEXT:    min.f32 %r13, %r1, %r2;
+; CHECK-SM80-NEXT:    min.f32 %r14, %r13, %r12;
+; CHECK-SM80-NEXT:    min.f32 %r15, %r14, %r11;
 ; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r15;
 ; CHECK-SM80-NEXT:    ret;
 ;
@@ -593,9 +593,9 @@ define float @reduce_fmin_float(<8 x float> %in) {
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmin_float_param_0+16];
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmin_float_param_0];
-; CHECK-SM100-NEXT:    min.f32 %r9, %r1, %r2, %r3;
-; CHECK-SM100-NEXT:    min.f32 %r10, %r9, %r4, %r5;
-; CHECK-SM100-NEXT:    min.f32 %r11, %r10, %r6, %r7;
+; CHECK-SM100-NEXT:    min.f32 %r9, %r4, %r5, %r6;
+; CHECK-SM100-NEXT:    min.f32 %r10, %r1, %r2, %r3;
+; CHECK-SM100-NEXT:    min.f32 %r11, %r10, %r9, %r7;
 ; CHECK-SM100-NEXT:    min.f32 %r12, %r11, %r8;
 ; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r12;
 ; CHECK-SM100-NEXT:    ret;
@@ -684,17 +684,17 @@ define half @reduce_fmaximum_half(<8 x half> %in) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmaximum_half_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; CHECK-NEXT:    max.NaN.f16 %rs5, %rs3, %rs4;
-; CHECK-NEXT:    max.NaN.f16 %rs6, %rs5, %rs1;
-; CHECK-NEXT:    max.NaN.f16 %rs7, %rs6, %rs2;
-; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r3;
-; CHECK-NEXT:    max.NaN.f16 %rs10, %rs7, %rs8;
-; CHECK-NEXT:    max.NaN.f16 %rs11, %rs10, %rs9;
-; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r4;
-; CHECK-NEXT:    max.NaN.f16 %rs14, %rs11, %rs12;
-; CHECK-NEXT:    max.NaN.f16 %rs15, %rs14, %rs13;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    max.NaN.f16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs4, %rs5}, %r3;
+; CHECK-NEXT:    max.NaN.f16 %rs6, %rs4, %rs5;
+; CHECK-NEXT:    max.NaN.f16 %rs7, %rs6, %rs3;
+; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r2;
+; CHECK-NEXT:    max.NaN.f16 %rs10, %rs8, %rs9;
+; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
+; CHECK-NEXT:    max.NaN.f16 %rs13, %rs11, %rs12;
+; CHECK-NEXT:    max.NaN.f16 %rs14, %rs13, %rs10;
+; CHECK-NEXT:    max.NaN.f16 %rs15, %rs14, %rs7;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs15;
 ; CHECK-NEXT:    ret;
   %res = call half @llvm.vector.reduce.fmaximum(<8 x half> %in)
@@ -760,13 +760,13 @@ define float @reduce_fmaximum_float(<8 x float> %in) {
 ; CHECK-SM80-NEXT:  // %bb.0:
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmaximum_float_param_0+16];
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmaximum_float_param_0];
-; CHECK-SM80-NEXT:    max.NaN.f32 %r9, %r1, %r2;
-; CHECK-SM80-NEXT:    max.NaN.f32 %r10, %r9, %r3;
-; CHECK-SM80-NEXT:    max.NaN.f32 %r11, %r10, %r4;
-; CHECK-SM80-NEXT:    max.NaN.f32 %r12, %r11, %r5;
-; CHECK-SM80-NEXT:    max.NaN.f32 %r13, %r12, %r6;
-; CHECK-SM80-NEXT:    max.NaN.f32 %r14, %r13, %r7;
-; CHECK-SM80-NEXT:    max.NaN.f32 %r15, %r14, %r8;
+; CHECK-SM80-NEXT:    max.NaN.f32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    max.NaN.f32 %r10, %r5, %r6;
+; CHECK-SM80-NEXT:    max.NaN.f32 %r11, %r10, %r9;
+; CHECK-SM80-NEXT:    max.NaN.f32 %r12, %r3, %r4;
+; CHECK-SM80-NEXT:    max.NaN.f32 %r13, %r1, %r2;
+; CHECK-SM80-NEXT:    max.NaN.f32 %r14, %r13, %r12;
+; CHECK-SM80-NEXT:    max.NaN.f32 %r15, %r14, %r11;
 ; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r15;
 ; CHECK-SM80-NEXT:    ret;
 ;
@@ -777,9 +777,9 @@ define float @reduce_fmaximum_float(<8 x float> %in) {
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fmaximum_float_param_0+16];
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fmaximum_float_param_0];
-; CHECK-SM100-NEXT:    max.NaN.f32 %r9, %r1, %r2, %r3;
-; CHECK-SM100-NEXT:    max.NaN.f32 %r10, %r9, %r4, %r5;
-; CHECK-SM100-NEXT:    max.NaN.f32 %r11, %r10, %r6, %r7;
+; CHECK-SM100-NEXT:    max.NaN.f32 %r9, %r4, %r5, %r6;
+; CHECK-SM100-NEXT:    max.NaN.f32 %r10, %r1, %r2, %r3;
+; CHECK-SM100-NEXT:    max.NaN.f32 %r11, %r10, %r9, %r7;
 ; CHECK-SM100-NEXT:    max.NaN.f32 %r12, %r11, %r8;
 ; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r12;
 ; CHECK-SM100-NEXT:    ret;
@@ -868,17 +868,17 @@ define half @reduce_fminimum_half(<8 x half> %in) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fminimum_half_param_0];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; CHECK-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; CHECK-NEXT:    min.NaN.f16 %rs5, %rs3, %rs4;
-; CHECK-NEXT:    min.NaN.f16 %rs6, %rs5, %rs1;
-; CHECK-NEXT:    min.NaN.f16 %rs7, %rs6, %rs2;
-; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r3;
-; CHECK-NEXT:    min.NaN.f16 %rs10, %rs7, %rs8;
-; CHECK-NEXT:    min.NaN.f16 %rs11, %rs10, %rs9;
-; CHECK-NEXT:    mov.b32 {%rs12, %rs13}, %r4;
-; CHECK-NEXT:    min.NaN.f16 %rs14, %rs11, %rs12;
-; CHECK-NEXT:    min.NaN.f16 %rs15, %rs14, %rs13;
+; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r4;
+; CHECK-NEXT:    min.NaN.f16 %rs3, %rs1, %rs2;
+; CHECK-NEXT:    mov.b32 {%rs4, %rs5}, %r3;
+; CHECK-NEXT:    min.NaN.f16 %rs6, %rs4, %rs5;
+; CHECK-NEXT:    min.NaN.f16 %rs7, %rs6, %rs3;
+; CHECK-NEXT:    mov.b32 {%rs8, %rs9}, %r2;
+; CHECK-NEXT:    min.NaN.f16 %rs10, %rs8, %rs9;
+; CHECK-NEXT:    mov.b32 {%rs11, %rs12}, %r1;
+; CHECK-NEXT:    min.NaN.f16 %rs13, %rs11, %rs12;
+; CHECK-NEXT:    min.NaN.f16 %rs14, %rs13, %rs10;
+; CHECK-NEXT:    min.NaN.f16 %rs15, %rs14, %rs7;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs15;
 ; CHECK-NEXT:    ret;
   %res = call half @llvm.vector.reduce.fminimum(<8 x half> %in)
@@ -944,13 +944,13 @@ define float @reduce_fminimum_float(<8 x float> %in) {
 ; CHECK-SM80-NEXT:  // %bb.0:
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fminimum_float_param_0+16];
 ; CHECK-SM80-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fminimum_float_param_0];
-; CHECK-SM80-NEXT:    min.NaN.f32 %r9, %r1, %r2;
-; CHECK-SM80-NEXT:    min.NaN.f32 %r10, %r9, %r3;
-; CHECK-SM80-NEXT:    min.NaN.f32 %r11, %r10, %r4;
-; CHECK-SM80-NEXT:    min.NaN.f32 %r12, %r11, %r5;
-; CHECK-SM80-NEXT:    min.NaN.f32 %r13, %r12, %r6;
-; CHECK-SM80-NEXT:    min.NaN.f32 %r14, %r13, %r7;
-; CHECK-SM80-NEXT:    min.NaN.f32 %r15, %r14, %r8;
+; CHECK-SM80-NEXT:    min.NaN.f32 %r9, %r7, %r8;
+; CHECK-SM80-NEXT:    min.NaN.f32 %r10, %r5, %r6;
+; CHECK-SM80-NEXT:    min.NaN.f32 %r11, %r10, %r9;
+; CHECK-SM80-NEXT:    min.NaN.f32 %r12, %r3, %r4;
+; CHECK-SM80-NEXT:    min.NaN.f32 %r13, %r1, %r2;
+; CHECK-SM80-NEXT:    min.NaN.f32 %r14, %r13, %r12;
+; CHECK-SM80-NEXT:    min.NaN.f32 %r15, %r14, %r11;
 ; CHECK-SM80-NEXT:    st.param.b32 [func_retval0], %r15;
 ; CHECK-SM80-NEXT:    ret;
 ;
@@ -961,9 +961,9 @@ define float @reduce_fminimum_float(<8 x float> %in) {
 ; CHECK-SM100-NEXT:  // %bb.0:
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [reduce_fminimum_float_param_0+16];
 ; CHECK-SM100-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [reduce_fminimum_float_param_0];
-; CHECK-SM100-NEXT:    min.NaN.f32 %r9, %r1, %r2, %r3;
-; CHECK-SM100-NEXT:    min.NaN.f32 %r10, %r9, %r4, %r5;
-; CHECK-SM100-NEXT:    min.NaN.f32 %r11, %r10, %r6, %r7;
+; CHECK-SM100-NEXT:    min.NaN.f32 %r9, %r4, %r5, %r6;
+; CHECK-SM100-NEXT:    min.NaN.f32 %r10, %r1, %r2, %r3;
+; CHECK-SM100-NEXT:    min.NaN.f32 %r11, %r10, %r9, %r7;
 ; CHECK-SM100-NEXT:    min.NaN.f32 %r12, %r11, %r8;
 ; CHECK-SM100-NEXT:    st.param.b32 [func_retval0], %r12;
 ; CHECK-SM100-NEXT:    ret;
