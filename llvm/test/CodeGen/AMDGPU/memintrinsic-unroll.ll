@@ -16031,6 +16031,241 @@ entry:
   ret void
 }
 
+define void @memset_p0_sz19(ptr addrspace(0) %dst) {
+; CHECK-LABEL: memset_p0_sz19:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s4, 0x41414141
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0x41
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    v_mov_b32_e32 v4, s4
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0x4141
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_mov_b32_e32 v5, s5
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    flat_store_byte v[0:1], v6 offset:18
+; CHECK-NEXT:    flat_store_short v[0:1], v7 offset:16
+; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; ALIGNED-LABEL: memset_p0_sz19:
+; ALIGNED:       ; %bb.0: ; %entry
+; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; ALIGNED-NEXT:    v_mov_b32_e32 v2, 0x41
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:18
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:17
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:16
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:15
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:14
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:13
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:12
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:11
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:10
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:9
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:8
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:7
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:6
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:5
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:4
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:3
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:2
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2 offset:1
+; ALIGNED-NEXT:    flat_store_byte v[0:1], v2
+; ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; ALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; UNROLL3-LABEL: memset_p0_sz19:
+; UNROLL3:       ; %bb.0: ; %entry
+; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
+; UNROLL3-NEXT:    v_mov_b32_e32 v6, 0x41
+; UNROLL3-NEXT:    s_mov_b32 s5, s4
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, s4
+; UNROLL3-NEXT:    v_mov_b32_e32 v7, 0x4141
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
+; UNROLL3-NEXT:    v_mov_b32_e32 v5, s5
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
+; UNROLL3-NEXT:    flat_store_byte v[0:1], v6 offset:18
+; UNROLL3-NEXT:    flat_store_short v[0:1], v7 offset:16
+; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)
+; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  tail call void @llvm.memset.p0.i64(ptr addrspace(0) noundef nonnull %dst, i8 65, i64 19, i1 false)
+  ret void
+}
+
+define void @memset_p1_sz19(ptr addrspace(1) %dst) {
+; CHECK-LABEL: memset_p1_sz19:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0x41414141
+; CHECK-NEXT:    v_mov_b32_e32 v3, v2
+; CHECK-NEXT:    v_mov_b32_e32 v4, v2
+; CHECK-NEXT:    v_mov_b32_e32 v5, v2
+; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; CHECK-NEXT:    global_store_dword v[0:1], v2, off offset:15
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; ALIGNED-LABEL: memset_p1_sz19:
+; ALIGNED:       ; %bb.0: ; %entry
+; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; ALIGNED-NEXT:    v_mov_b32_e32 v2, 0x41
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:18
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:17
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:16
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:15
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:14
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:13
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:12
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:11
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:10
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:9
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:8
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:7
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:6
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:5
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:4
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:3
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:2
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off offset:1
+; ALIGNED-NEXT:    global_store_byte v[0:1], v2, off
+; ALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; UNROLL3-LABEL: memset_p1_sz19:
+; UNROLL3:       ; %bb.0: ; %entry
+; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, 0x41414141
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, v2
+; UNROLL3-NEXT:    v_mov_b32_e32 v5, v2
+; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; UNROLL3-NEXT:    global_store_dword v[0:1], v2, off offset:15
+; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  tail call void @llvm.memset.p1.i64(ptr addrspace(1) noundef nonnull %dst, i8 65, i64 19, i1 false)
+  ret void
+}
+
+define void @memset_p3_sz19(ptr addrspace(3) %dst) {
+; CHECK-LABEL: memset_p3_sz19:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_mov_b32 s4, 0x41414141
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0x41
+; CHECK-NEXT:    s_mov_b32 s5, s4
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0x4141
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, s5
+; CHECK-NEXT:    ds_write_b8 v0, v3 offset:18
+; CHECK-NEXT:    ds_write_b16 v0, v4 offset:16
+; CHECK-NEXT:    ds_write2_b64 v0, v[1:2], v[1:2] offset1:1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; ALIGNED-LABEL: memset_p3_sz19:
+; ALIGNED:       ; %bb.0: ; %entry
+; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; ALIGNED-NEXT:    v_mov_b32_e32 v1, 0x41
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:18
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:17
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:16
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:15
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:14
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:13
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:12
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:11
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:10
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:9
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:8
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:7
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:6
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:5
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:4
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:3
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:2
+; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:1
+; ALIGNED-NEXT:    ds_write_b8 v0, v1
+; ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
+; ALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; UNROLL3-LABEL: memset_p3_sz19:
+; UNROLL3:       ; %bb.0: ; %entry
+; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, 0x41
+; UNROLL3-NEXT:    s_mov_b32 s5, s4
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, 0x4141
+; UNROLL3-NEXT:    v_mov_b32_e32 v1, s4
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, s5
+; UNROLL3-NEXT:    ds_write_b8 v0, v3 offset:18
+; UNROLL3-NEXT:    ds_write_b16 v0, v4 offset:16
+; UNROLL3-NEXT:    ds_write2_b64 v0, v[1:2], v[1:2] offset1:1
+; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)
+; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  tail call void @llvm.memset.p3.i64(ptr addrspace(3) noundef nonnull %dst, i8 65, i64 19, i1 false)
+  ret void
+}
+
+define void @memset_p5_sz19(ptr addrspace(5) %dst) {
+; CHECK-LABEL: memset_p5_sz19:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0x41414141
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0x41
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0x4141
+; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
+; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:8
+; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:4
+; CHECK-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; CHECK-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:18
+; CHECK-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:16
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+;
+; ALIGNED-LABEL: memset_p5_sz19:
+; ALIGNED:       ; %bb.0: ; %entry
+; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; ALIGNED-NEXT:    v_mov_b32_e32 v1, 0x41
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:18
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:17
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:16
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:15
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:14
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:13
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:12
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:11
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:10
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:9
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:8
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:7
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:6
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:5
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:4
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:3
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:2
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen offset:1
+; ALIGNED-NEXT:    buffer_store_byte v1, v0, s[0:3], 0 offen
+; ALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; UNROLL3-LABEL: memset_p5_sz19:
+; UNROLL3:       ; %bb.0: ; %entry
+; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; UNROLL3-NEXT:    v_mov_b32_e32 v1, 0x41414141
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, 0x41
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, 0x4141
+; UNROLL3-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:12
+; UNROLL3-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:8
+; UNROLL3-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:4
+; UNROLL3-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; UNROLL3-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:18
+; UNROLL3-NEXT:    buffer_store_short v3, v0, s[0:3], 0 offen offset:16
+; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  tail call void @llvm.memset.p5.i64(ptr addrspace(5) noundef nonnull %dst, i8 65, i64 19, i1 false)
+  ret void
+}
 
 declare void @llvm.memcpy.p0.p0.i64(ptr addrspace(0) noalias nocapture writeonly, ptr addrspace(0) noalias nocapture readonly, i64, i1 immarg) #2
 declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg) #2
@@ -16046,4 +16281,10 @@ declare void @llvm.memmove.p5.p5.i64(ptr addrspace(5) nocapture writeonly, ptr a
 
 declare void @llvm.memmove.p0.p5.i64(ptr addrspace(0) nocapture writeonly, ptr addrspace(5) nocapture readonly, i64, i1 immarg) #2
 
+declare void @llvm.memset.p0.i64(ptr addrspace(0) nocapture writeonly, i8, i64, i1 immarg) #3
+declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg) #3
+declare void @llvm.memset.p3.i64(ptr addrspace(3) nocapture writeonly, i8, i64, i1 immarg) #3
+declare void @llvm.memset.p5.i64(ptr addrspace(5) nocapture writeonly, i8, i64, i1 immarg) #3
+
 attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
