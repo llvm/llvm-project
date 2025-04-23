@@ -15,7 +15,7 @@ set (FILES
   XMLTest.cpp
 )
 
-if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|AIX")
+if (UNIX)
   list(APPEND FILES
     posix/HostTest.cpp
     posix/SupportTest.cpp

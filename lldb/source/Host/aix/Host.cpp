@@ -93,7 +93,9 @@ static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
     return false;
 
   std::memcpy(&psinfoData, PsinfoBuffer->getBufferStart(), sizeof(psinfoData));
-  llvm::StringRef PathRef(&(psinfoData.pr_psargs[0]));
+  llvm::StringRef PathRef(
+      psinfoData.pr_psargs,
+      strnlen(psinfoData.pr_psargs, sizeof(psinfoData.pr_psargs)));
   if (PathRef.empty())
     return false;
 
@@ -118,6 +120,8 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   process_info.Clear();
   process_info.SetProcessID(pid);
 
+  if (pid == LLDB_INVALID_PROCESS_ID)
+    return false;
   // Get Executable path/Arch and Get User and Group IDs.
   if (!GetExePathAndIds(pid, process_info))
     return false;

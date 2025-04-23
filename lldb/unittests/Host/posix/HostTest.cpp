@@ -40,9 +40,9 @@ TEST_F(HostTest, GetProcessInfo) {
        triple.getEnvironment() == llvm::Triple::EnvironmentType::Android));
 
   ProcessInstanceInfo Info;
-#ifndef _AIX
-  ASSERT_FALSE(Host::GetProcessInfo(0, Info));
-#endif /* ifndef _AIX */
+
+  ASSERT_FALSE(Host::GetProcessInfo(LLDB_INVALID_PROCESS_ID, Info));
+
   ASSERT_TRUE(Host::GetProcessInfo(getpid(), Info));
 
   ASSERT_TRUE(Info.ProcessIDIsValid());
