@@ -3639,6 +3639,64 @@ make the function's CFI jump table canonical. See :ref:`the CFI documentation
   }];
 }
 
+def CFISaltDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Use ``__attribute__((cfi_salt("<salt>")))`` on a function declaration, function
+definition, or typedef to help distinguish CFI hashes between functions with
+the same type signature.
+
+Example use:
+
+.. code-block:: c
+
+  // .h file:
+  #define __cfi_salt __attribute__((cfi_salt("vogon")))
+
+  // Convenient typedefs to avoid nested declarator syntax.
+  typedef int (*fptr_t)(void); // Non-salted function call.
+  typedef int (*fptr_salted_t)(void) __cfi_salt;
+
+  struct widget_generator {
+    fptr_t init;
+    fptr_salted_t exec;
+    fptr_t teardown;
+  };
+
+  // 1st .c file:
+  static int internal_init(void) { /* ... */ }
+  static int internal_salted_exec(void) __cfi_salt { /* ... */ }
+  static int internal_teardown(void) { /* ... */ }
+
+  static struct widget_generator _generator = {
+    .init = internal_init,
+    .exec = internal_salted_exec,
+    .teardown = internal_teardown,
+  }
+
+  struct widget_generator *widget_gen = _generator;
+
+  // 2nd .c file:
+  int generate_a_widget(void) {
+    int ret;
+
+    // Called with non-salted CFI.
+    ret = widget_gen.init();
+    if (ret)
+      return ret;
+
+    // Called with salted CFI.
+    ret = widget_gen.exec();
+    if (ret)
+      return ret;
+
+    // Called with non-salted CFI.
+    return widget_gen.teardown();
+  }
+
+  }];
+}
+
 def DocCatTypeSafety : DocumentationCategory<"Type Safety Checking"> {
   let Content = [{
 Clang supports additional attributes to enable checking type safety properties
