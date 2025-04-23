@@ -3,13 +3,14 @@ Test lldb-dap stack trace containing x86 assembly
 """
 
 import lldbdap_testcase
+from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.decorators import skipUnlessArch, skipUnlessPlatform
 from lldbsuite.test.lldbtest import line_number
 
 
 class TestDAP_stacktrace_x86(lldbdap_testcase.DAPTestCaseBase):
     @skipUnlessArch("x86_64")
-    @skipUnlessPlatform(["linux"])
+    @skipUnlessPlatform(["linux"] + lldbplatformutil.getDarwinOSTriples())
     def test_stacktrace_x86(self):
         """
         Tests that lldb-dap steps through correctly and the source lines are correct in x86 assembly.
