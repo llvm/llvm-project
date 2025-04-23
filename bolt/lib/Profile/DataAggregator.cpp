@@ -756,7 +756,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     BinaryFunction *ParentFunc = getBATParentFunction(*Func);
-    if (IsFrom && (ParentFunc || (BAT && !BAT->isBATFunction(Func->getAddress()))))
+    if (IsFrom &&
+        (ParentFunc || (BAT && !BAT->isBATFunction(Func->getAddress()))))
       NumColdSamples += Count;
 
     if (!ParentFunc)
