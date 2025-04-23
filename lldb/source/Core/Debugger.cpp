@@ -257,7 +257,9 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       else
         m_statusline.reset();
     } else if (property_path ==
-               g_debugger_properties[ePropertyStatuslineFormat].name) {
+                   g_debugger_properties[ePropertyStatuslineFormat].name ||
+               property_path ==
+                   g_debugger_properties[ePropertySeparator].name) {
       // Statusline format changed. Redraw the statusline.
       RedrawStatusline();
     } else if (property_path ==
@@ -498,6 +500,19 @@ const FormatEntity::Entry *Debugger::GetStatuslineFormat() const {
 bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
   constexpr uint32_t idx = ePropertyStatuslineFormat;
   bool ret = SetPropertyAtIndex(idx, format);
+  RedrawStatusline();
+  return ret;
+}
+
+llvm::StringRef Debugger::GetSeparator() const {
+  constexpr uint32_t idx = ePropertySeparator;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+bool Debugger::SetSeparator(llvm::StringRef s) {
+  constexpr uint32_t idx = ePropertySeparator;
+  bool ret = SetPropertyAtIndex(idx, s);
   RedrawStatusline();
   return ret;
 }
@@ -1001,11 +1016,16 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
 
   // Turn off use-color if this is a dumb terminal.
   const char *term = getenv("TERM");
-  if (term && !strcmp(term, "dumb"))
+  auto disable_color = [&]() {
     SetUseColor(false);
+    SetSeparator("| ");
+  };
+
+  if (term && !strcmp(term, "dumb"))
+    disable_color();
   // Turn off use-color if we don't write to a terminal with color support.
   if (!GetOutputFileSP()->GetIsTerminalWithColors())
-    SetUseColor(false);
+    disable_color();
 
   if (Diagnostics::Enabled()) {
     m_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
