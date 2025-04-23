@@ -52794,8 +52794,8 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
               getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
                                             UserUndefs, UserBits)) {
             if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
-              SDValue Extract = extractSubVector(
-                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
+              SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
+                                                 RegVT.getSizeInBits());
               Extract = DAG.getBitcast(RegVT, Extract);
               return DCI.CombineTo(N, Extract, SDValue(User, 1));
             }
