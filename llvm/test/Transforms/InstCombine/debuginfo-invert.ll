@@ -11,7 +11,7 @@ define i32 @test(i32 noundef %x, i32 noundef %y) !dbg !10 {
 ; CHECK-NEXT:      #dbg_value(i32 [[X]], [[META15:![0-9]+]], !DIExpression(), [[META18:![0-9]+]])
 ; CHECK-NEXT:      #dbg_value(i32 [[Y]], [[META16:![0-9]+]], !DIExpression(), [[META18]])
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[X]], 0, !dbg [[DBG19:![0-9]+]]
-; CHECK-NEXT:      #dbg_value(i1 [[CMP_NOT]], [[META17:![0-9]+]], !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), [[META18]])
+; CHECK-NEXT:      #dbg_value(i1 [[CMP_NOT]], [[META17:![0-9]+]], !DIExpression(DW_OP_not, DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value), [[META18]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[Y]], 1, !dbg [[DBG20:![0-9]+]]
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP_NOT]], i32 0, i32 [[TMP0]], !dbg [[DBG20]]
 ; CHECK-NEXT:    ret i32 [[AND]], !dbg [[DBG21:![0-9]+]]
