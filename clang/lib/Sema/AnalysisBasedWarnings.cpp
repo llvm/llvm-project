@@ -2496,7 +2496,7 @@ template <typename... Ts>
 static bool areAnyEnabled(DiagnosticsEngine &D, SourceLocation Loc,
                           Ts... Diags) {
   return (!D.isIgnored(Diags, Loc) || ...);
-};
+}
 
 sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
     : S(s), IPData(std::make_unique<InterProceduralData>()),
