@@ -298,11 +298,12 @@ public:
   llvm::Error Run(const protocol::NextArguments &args) const override;
 };
 
-class StepInRequestHandler : public LegacyRequestHandler {
+class StepInRequestHandler : public RequestHandler<protocol::StepInArguments,
+                                                   protocol::StepInResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepIn"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error Run(const protocol::StepInArguments &args) const override;
 };
 
 class StepInTargetsRequestHandler : public LegacyRequestHandler {
