@@ -5,7 +5,7 @@
 define float @div_full(float %a, float %b) {
 ; CHECK-LABEL: div_full(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [div_full_param_0];

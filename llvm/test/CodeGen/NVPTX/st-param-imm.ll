@@ -403,7 +403,7 @@ define void @st_param_v2_f32_ii(float %val) {
 define void @st_param_v2_f32_ir(float %val) {
 ; CHECK-LABEL: st_param_v2_f32_ir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v2_f32_ir_param_0];
@@ -425,7 +425,7 @@ define void @st_param_v2_f32_ir(float %val) {
 define void @st_param_v2_f32_ri(float %val) {
 ; CHECK-LABEL: st_param_v2_f32_ri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v2_f32_ri_param_0];
@@ -467,7 +467,7 @@ define void @st_param_v2_f64_ii(double %val) {
 define void @st_param_v2_f64_ir(double %val) {
 ; CHECK-LABEL: st_param_v2_f64_ir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [st_param_v2_f64_ir_param_0];
@@ -489,7 +489,7 @@ define void @st_param_v2_f64_ir(double %val) {
 define void @st_param_v2_f64_ri(double %val) {
 ; CHECK-LABEL: st_param_v2_f64_ri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [st_param_v2_f64_ri_param_0];
@@ -1648,7 +1648,7 @@ define void @st_param_v4_f32_iiii() {
 define void @st_param_v4_f32_irrr(float %b, float %c, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_irrr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irrr_param_0];
@@ -1674,7 +1674,7 @@ define void @st_param_v4_f32_irrr(float %b, float %c, float %d) {
 define void @st_param_v4_f32_rirr(float %a, float %c, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_rirr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rirr_param_0];
@@ -1700,7 +1700,7 @@ define void @st_param_v4_f32_rirr(float %a, float %c, float %d) {
 define void @st_param_v4_f32_rrir(float %a, float %b, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_rrir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rrir_param_0];
@@ -1726,7 +1726,7 @@ define void @st_param_v4_f32_rrir(float %a, float %b, float %d) {
 define void @st_param_v4_f32_rrri(float %a, float %b, float %c) {
 ; CHECK-LABEL: st_param_v4_f32_rrri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rrri_param_0];
@@ -1752,7 +1752,7 @@ define void @st_param_v4_f32_rrri(float %a, float %b, float %c) {
 define void @st_param_v4_f32_iirr(float %c, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_iirr(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_iirr_param_0];
@@ -1777,7 +1777,7 @@ define void @st_param_v4_f32_iirr(float %c, float %d) {
 define void @st_param_v4_f32_irir(float %b, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_irir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irir_param_0];
@@ -1802,7 +1802,7 @@ define void @st_param_v4_f32_irir(float %b, float %d) {
 define void @st_param_v4_f32_irri(float %b, float %c) {
 ; CHECK-LABEL: st_param_v4_f32_irri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irri_param_0];
@@ -1827,7 +1827,7 @@ define void @st_param_v4_f32_irri(float %b, float %c) {
 define void @st_param_v4_f32_riir(float %a, float %d) {
 ; CHECK-LABEL: st_param_v4_f32_riir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_riir_param_0];
@@ -1852,7 +1852,7 @@ define void @st_param_v4_f32_riir(float %a, float %d) {
 define void @st_param_v4_f32_riri(float %a, float %c) {
 ; CHECK-LABEL: st_param_v4_f32_riri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_riri_param_0];
@@ -1877,7 +1877,7 @@ define void @st_param_v4_f32_riri(float %a, float %c) {
 define void @st_param_v4_f32_rrii(float %a, float %b) {
 ; CHECK-LABEL: st_param_v4_f32_rrii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_rrii_param_0];
@@ -1902,7 +1902,7 @@ define void @st_param_v4_f32_rrii(float %a, float %b) {
 define void @st_param_v4_f32_iiir(float %d) {
 ; CHECK-LABEL: st_param_v4_f32_iiir(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_iiir_param_0];
@@ -1926,7 +1926,7 @@ define void @st_param_v4_f32_iiir(float %d) {
 define void @st_param_v4_f32_iiri(float %c) {
 ; CHECK-LABEL: st_param_v4_f32_iiri(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_iiri_param_0];
@@ -1950,7 +1950,7 @@ define void @st_param_v4_f32_iiri(float %c) {
 define void @st_param_v4_f32_irii(float %b) {
 ; CHECK-LABEL: st_param_v4_f32_irii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_irii_param_0];
@@ -1974,7 +1974,7 @@ define void @st_param_v4_f32_irii(float %b) {
 define void @st_param_v4_f32_riii(float %a) {
 ; CHECK-LABEL: st_param_v4_f32_riii(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [st_param_v4_f32_riii_param_0];

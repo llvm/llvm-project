@@ -371,7 +371,7 @@ define void @generic_2xi64(ptr %a) {
 define void @generic_2xfloat(ptr %a) {
 ; CHECK-LABEL: generic_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -390,7 +390,7 @@ define void @generic_2xfloat(ptr %a) {
 define void @generic_4xfloat(ptr %a) {
 ; CHECK-LABEL: generic_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -412,7 +412,7 @@ define void @generic_2xdouble(ptr %a) {
 ; CHECK-LABEL: generic_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [generic_2xdouble_param_0];
@@ -792,7 +792,7 @@ define void @generic_volatile_2xi64(ptr %a) {
 define void @generic_volatile_2xfloat(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -811,7 +811,7 @@ define void @generic_volatile_2xfloat(ptr %a) {
 define void @generic_volatile_4xfloat(ptr %a) {
 ; CHECK-LABEL: generic_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -833,7 +833,7 @@ define void @generic_volatile_2xdouble(ptr %a) {
 ; CHECK-LABEL: generic_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [generic_volatile_2xdouble_param_0];
@@ -1196,7 +1196,7 @@ define void @global_2xi64(ptr addrspace(1) %a) {
 define void @global_2xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1215,7 +1215,7 @@ define void @global_2xfloat(ptr addrspace(1) %a) {
 define void @global_4xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1237,7 +1237,7 @@ define void @global_2xdouble(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [global_2xdouble_param_0];
@@ -1598,7 +1598,7 @@ define void @global_volatile_2xi64(ptr addrspace(1) %a) {
 define void @global_volatile_2xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1617,7 +1617,7 @@ define void @global_volatile_2xfloat(ptr addrspace(1) %a) {
 define void @global_volatile_4xfloat(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -1639,7 +1639,7 @@ define void @global_volatile_2xdouble(ptr addrspace(1) %a) {
 ; CHECK-LABEL: global_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [global_volatile_2xdouble_param_0];
@@ -2002,7 +2002,7 @@ define void @shared_2xi64(ptr addrspace(3) %a) {
 define void @shared_2xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2021,7 +2021,7 @@ define void @shared_2xfloat(ptr addrspace(3) %a) {
 define void @shared_4xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2043,7 +2043,7 @@ define void @shared_2xdouble(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [shared_2xdouble_param_0];
@@ -2404,7 +2404,7 @@ define void @shared_volatile_2xi64(ptr addrspace(3) %a) {
 define void @shared_volatile_2xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2423,7 +2423,7 @@ define void @shared_volatile_2xfloat(ptr addrspace(3) %a) {
 define void @shared_volatile_4xfloat(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2445,7 +2445,7 @@ define void @shared_volatile_2xdouble(ptr addrspace(3) %a) {
 ; CHECK-LABEL: shared_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [shared_volatile_2xdouble_param_0];
@@ -2808,7 +2808,7 @@ define void @local_2xi64(ptr addrspace(5) %a) {
 define void @local_2xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2827,7 +2827,7 @@ define void @local_2xfloat(ptr addrspace(5) %a) {
 define void @local_4xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -2849,7 +2849,7 @@ define void @local_2xdouble(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_2xdouble_param_0];
@@ -3210,7 +3210,7 @@ define void @local_volatile_2xi64(ptr addrspace(5) %a) {
 define void @local_volatile_2xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -3229,7 +3229,7 @@ define void @local_volatile_2xfloat(ptr addrspace(5) %a) {
 define void @local_volatile_4xfloat(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_4xfloat(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<9>;
+; CHECK-NEXT:    .reg .b32 %f<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -3251,7 +3251,7 @@ define void @local_volatile_2xdouble(ptr addrspace(5) %a) {
 ; CHECK-LABEL: local_volatile_2xdouble(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [local_volatile_2xdouble_param_0];

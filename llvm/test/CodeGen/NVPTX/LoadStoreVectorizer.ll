@@ -45,7 +45,7 @@ define half @fh(ptr %p) {
 ; ENABLED-LABEL: fh(
 ; ENABLED:       {
 ; ENABLED-NEXT:    .reg .b16 %rs<10>;
-; ENABLED-NEXT:    .reg .f32 %f<13>;
+; ENABLED-NEXT:    .reg .b32 %f<13>;
 ; ENABLED-NEXT:    .reg .b64 %rd<2>;
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
@@ -74,7 +74,7 @@ define half @fh(ptr %p) {
 ; DISABLED-LABEL: fh(
 ; DISABLED:       {
 ; DISABLED-NEXT:    .reg .b16 %rs<10>;
-; DISABLED-NEXT:    .reg .f32 %f<13>;
+; DISABLED-NEXT:    .reg .b32 %f<13>;
 ; DISABLED-NEXT:    .reg .b64 %rd<2>;
 ; DISABLED-EMPTY:
 ; DISABLED-NEXT:  // %bb.0:
@@ -121,7 +121,7 @@ define half @fh(ptr %p) {
 define float @ff(ptr %p) {
 ; ENABLED-LABEL: ff(
 ; ENABLED:       {
-; ENABLED-NEXT:    .reg .f32 %f<10>;
+; ENABLED-NEXT:    .reg .b32 %f<10>;
 ; ENABLED-NEXT:    .reg .b64 %rd<2>;
 ; ENABLED-EMPTY:
 ; ENABLED-NEXT:  // %bb.0:
@@ -137,7 +137,7 @@ define float @ff(ptr %p) {
 ;
 ; DISABLED-LABEL: ff(
 ; DISABLED:       {
-; DISABLED-NEXT:    .reg .f32 %f<10>;
+; DISABLED-NEXT:    .reg .b32 %f<10>;
 ; DISABLED-NEXT:    .reg .b64 %rd<2>;
 ; DISABLED-EMPTY:
 ; DISABLED-NEXT:  // %bb.0:

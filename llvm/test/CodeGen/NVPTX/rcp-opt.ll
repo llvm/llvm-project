@@ -9,7 +9,7 @@ target triple = "nvptx64-nvidia-cuda"
 define double @test1(double %in) {
 ; CHECK-LABEL: test1(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %fd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [test1_param_0];
@@ -27,7 +27,7 @@ define double @test1(double %in) {
 define double @test2(double %in) {
 ; CHECK-LABEL: test2(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %fd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [test2_param_0];
@@ -44,7 +44,7 @@ define double @test2(double %in) {
 define double @test3(double %in) {
 ; CHECK-LABEL: test3(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %fd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [test3_param_0];

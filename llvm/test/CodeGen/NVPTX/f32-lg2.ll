@@ -10,7 +10,7 @@ declare float @llvm.nvvm.lg2.approx.ftz.f(float)
 define float @lg2_float(float %0) {
 ; CHECK-LABEL: lg2_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [lg2_float_param_0];
@@ -25,7 +25,7 @@ define float @lg2_float(float %0) {
 define float @lg2_float_ftz(float %0) {
 ; CHECK-LABEL: lg2_float_ftz(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [lg2_float_ftz_param_0];

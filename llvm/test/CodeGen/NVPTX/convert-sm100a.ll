@@ -11,7 +11,7 @@ define i16 @cvt_rn_sf_e2m3x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_sf_e2m3x2_f32_param_0];
@@ -29,7 +29,7 @@ define i16 @cvt_rn_relu_sf_e2m3x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_relu_sf_e2m3x2_f32_param_0];
@@ -47,7 +47,7 @@ define i16 @cvt_rn_sf_e3m2x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_sf_e3m2x2_f32_param_0];
@@ -65,7 +65,7 @@ define i16 @cvt_rn_relu_sf_e3m2x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rn_relu_sf_e3m2x2_f32_param_0];
@@ -143,7 +143,7 @@ define i16 @cvt_rz_ue8m0x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_ue8m0x2_f32_param_0];
@@ -161,7 +161,7 @@ define i16 @cvt_rz_sf_ue8m0x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rz_sf_ue8m0x2_f32_param_0];
@@ -179,7 +179,7 @@ define i16 @cvt_rp_ue8m0x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rp_ue8m0x2_f32_param_0];
@@ -197,7 +197,7 @@ define i16 @cvt_rp_sf_ue8m0x2_f32(float %f1, float %f2) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_rp_sf_ue8m0x2_f32_param_0];

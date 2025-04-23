@@ -8,7 +8,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define float @fcopysign_f_f(float %a, float %b) {
 ; CHECK-LABEL: fcopysign_f_f(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b32 %f<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fcopysign_f_f_param_0];
@@ -23,7 +23,7 @@ define float @fcopysign_f_f(float %a, float %b) {
 define double @fcopysign_d_d(double %a, double %b) {
 ; CHECK-LABEL: fcopysign_d_d(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<4>;
+; CHECK-NEXT:    .reg .b64 %fd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_d_d_param_0];
@@ -39,7 +39,7 @@ define float @fcopysign_f_d(float %a, double %b) {
 ; CHECK-LABEL: fcopysign_f_d(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -63,7 +63,7 @@ define float @fcopysign_f_h(float %a, half %b) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [fcopysign_f_h_param_0];
@@ -86,7 +86,7 @@ define double @fcopysign_d_f(double %a, float %b) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_d_f_param_0];
@@ -109,7 +109,7 @@ define double @fcopysign_d_h(double %a, half %b) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .f64 %fd<5>;
+; CHECK-NEXT:    .reg .b64 %fd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [fcopysign_d_h_param_0];
