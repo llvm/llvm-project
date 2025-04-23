@@ -14,18 +14,20 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
+using namespace llvm;
+using namespace lldb_dap::protocol;
+
 namespace lldb_dap {
 
 /// Launch request; value of command field is 'launch'.
-llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
-    const protocol::LaunchRequestArguments &arguments) const {
+Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
   dap.stop_at_entry = arguments.stopOnEntry;
 
   if (!arguments.launchCommands.empty() && arguments.runInTerminal) {
-    return llvm::make_error<DAPError>("launchCommands and runInTerminal cannot "
-                                      "both be set, use one or the other.");
+    return make_error<DAPError>("launchCommands and runInTerminal cannot "
+                                "both be set, use one or the other.");
   }
 
   PrintWelcomeMessage();
@@ -36,12 +38,12 @@ llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
   // relative root for the .o files in order to be able to load debug info.
   const std::string debuggerRoot = dap.configuration.debuggerRoot.value_or("");
   if (!debuggerRoot.empty())
-    llvm::sys::fs::set_current_path(debuggerRoot);
+    sys::fs::set_current_path(debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
   // the targets - preRunCommands are run with the target.
-  if (llvm::Error err = dap.RunInitCommands())
+  if (Error err = dap.RunInitCommands())
     return err;
 
   dap.ConfigureSourceMaps();
@@ -49,18 +51,18 @@ llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
   lldb::SBError status;
   dap.SetTarget(dap.CreateTarget(status));
   if (status.Fail())
-    return llvm::make_error<DAPError>(status.GetCString());
+    return make_error<DAPError>(status.GetCString());
 
   // Run any pre run LLDB commands the user specified in the launch.json
-  if (llvm::Error err = dap.RunPreRunCommands())
+  if (Error err = dap.RunPreRunCommands())
     return err;
 
-  if (llvm::Error err = LaunchProcess(arguments))
+  if (Error err = LaunchProcess(arguments))
     return err;
 
   dap.RunPostRunCommands();
 
-  return protocol::LaunchResponseBody();
+  return Error::success();
 }
 
 void LaunchRequestHandler::PostRun() const {

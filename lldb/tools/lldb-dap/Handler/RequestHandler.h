@@ -169,9 +169,9 @@ class RequestHandler : public BaseRequestHandler {
   };
 
   virtual Resp Run(const Args &) const = 0;
-  
-  /// A hook for a handler to asynchrounsly run an operation after the handler
-  /// is complete.
+
+  /// A hook for a request handler to run additional operations after the
+  /// request response is sent but before the next request handler.
   virtual void PostRun() const {};
 
   protocol::ErrorResponseBody ToResponse(llvm::Error err) const {
@@ -286,7 +286,7 @@ class LaunchRequestHandler
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "launch"; }
-  llvm::Expected<protocol::LaunchResponseBody>
+  llvm::Error
   Run(const protocol::LaunchRequestArguments &arguments) const override;
   void PostRun() const override;
 };
