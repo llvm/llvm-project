@@ -24,8 +24,8 @@
 #  include "stacktrace/linux.h"
 #endif
 
-#if defined(_LIBCPP_STACKTRACE_APPLE)
-#  include "stacktrace/osx.h"
+#if defined(_LIBCPP_STACKTRACE_MACOS)
+#  include "stacktrace/macos.h"
 #endif
 
 #if defined(_LIBCPP_STACKTRACE_CAN_SPAWN_TOOLS)
@@ -173,10 +173,10 @@ _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE void context::do_stacktrace(size_t skip, 
   unwind unwind{*this};
   auto& collector = unwind;
 #endif
-#if defined(_LIBCPP_STACKTRACE_APPLE)
-  osx osx{*this};
-  auto& mod_ident  = osx;
-  auto& symbolizer = osx;
+#if defined(_LIBCPP_STACKTRACE_MACOS)
+  macos macos{*this};
+  auto& mod_ident  = macos;
+  auto& symbolizer = macos;
 #endif
 #if defined(_LIBCPP_STACKTRACE_LINUX)
   linux linux{*this};

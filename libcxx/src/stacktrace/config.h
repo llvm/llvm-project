@@ -20,7 +20,7 @@ namespace __stacktrace {
 #endif
 
 #if defined(__APPLE__)
-#  define _LIBCPP_STACKTRACE_APPLE
+#  define _LIBCPP_STACKTRACE_MACOS
 #endif
 
 #if defined(__linux__)
