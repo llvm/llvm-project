@@ -73,7 +73,7 @@ class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
 class Loop;
-class GISelKnownBits;
+class GISelValueTracking;
 class IntrinsicInst;
 class IRBuilderBase;
 struct KnownBits;
@@ -329,9 +329,6 @@ public:
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
-  virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
-                                     ArgListTy &Args) const {};
-
   static ISD::NodeType getExtendForContent(BooleanContent Content) {
     switch (Content) {
     case UndefinedBooleanContent:
@@ -350,7 +347,7 @@ public:
   explicit TargetLoweringBase(const TargetMachine &TM);
   TargetLoweringBase(const TargetLoweringBase &) = delete;
   TargetLoweringBase &operator=(const TargetLoweringBase &) = delete;
-  virtual ~TargetLoweringBase() = default;
+  virtual ~TargetLoweringBase();
 
   /// Return true if the target support strict float operation
   bool isStrictFPEnabled() const {
@@ -1826,9 +1823,13 @@ public:
   virtual bool ShouldShrinkFPConstant(EVT) const { return true; }
 
   /// Return true if it is profitable to reduce a load to a smaller type.
+  /// \p ByteOffset is only set if we know the pointer offset at compile time
+  /// otherwise we should assume that additional pointer math is required.
   /// Example: (i16 (trunc (i32 (load x))) -> i16 load x
-  virtual bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                                     EVT NewVT) const {
+  /// Example: (i16 (trunc (srl (i32 (load x)), 16)) -> i16 load x+2
+  virtual bool shouldReduceLoadWidth(
+      SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+      std::optional<unsigned> ByteOffset = std::nullopt) const {
     // By default, assume that it is cheaper to extract a subvector from a wide
     // vector load rather than creating multiple narrow vector loads.
     if (NewVT.isVector() && !SDValue(Load, 0).hasOneUse())
@@ -3464,6 +3465,34 @@ public:
     return false;
   }
 
+  // Get the preferred opcode for FP_TO_XINT nodes.
+  // By default, this checks if the provded operation is an illegal FP_TO_UINT
+  // and if so, checks if FP_TO_SINT is legal or custom for use as a
+  // replacement. If both UINT and SINT conversions are Custom, we choose SINT
+  // by default because that's the right thing on PPC.
+  virtual unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                             EVT ToVT) const {
+    if (isOperationLegal(Op, ToVT))
+      return Op;
+    switch (Op) {
+    case ISD::FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::FP_TO_SINT, ToVT))
+        return ISD::FP_TO_SINT;
+      break;
+    case ISD::STRICT_FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, ToVT))
+        return ISD::STRICT_FP_TO_SINT;
+      break;
+    case ISD::VP_FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, ToVT))
+        return ISD::VP_FP_TO_SINT;
+      break;
+    default:
+      break;
+    }
+    return Op;
+  }
+
   /// Create the IR node for the given complex deinterleaving operation.
   /// If one cannot be created using all the given inputs, nullptr should be
   /// returned.
@@ -3838,6 +3867,7 @@ public:
   TargetLowering &operator=(const TargetLowering &) = delete;
 
   explicit TargetLowering(const TargetMachine &TM);
+  ~TargetLowering() override;
 
   bool isPositionIndependent() const;
 
@@ -4159,7 +4189,7 @@ public:
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
   /// requested vector elements. This is for GISel.
-  virtual void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis,
+  virtual void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis,
                                               Register R, KnownBits &Known,
                                               const APInt &DemandedElts,
                                               const MachineRegisterInfo &MRI,
@@ -4169,7 +4199,7 @@ public:
   /// typically be inferred from the number of low known 0 bits. However, for a
   /// pointer with a non-integral address space, the alignment value may be
   /// independent from the known low bits.
-  virtual Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis,
+  virtual Align computeKnownAlignForTargetInstr(GISelValueTracking &Analysis,
                                                 Register R,
                                                 const MachineRegisterInfo &MRI,
                                                 unsigned Depth = 0) const;
@@ -4194,11 +4224,9 @@ public:
   /// information about sign bits to GlobalISel combiners. The DemandedElts
   /// argument allows us to only collect the minimum sign bits that are shared
   /// by the requested vector elements.
-  virtual unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
-                                                    Register R,
-                                                    const APInt &DemandedElts,
-                                                    const MachineRegisterInfo &MRI,
-                                                    unsigned Depth = 0) const;
+  virtual unsigned computeNumSignBitsForTargetInstr(
+      GISelValueTracking &Analysis, Register R, const APInt &DemandedElts,
+      const MachineRegisterInfo &MRI, unsigned Depth = 0) const;
 
   /// Attempt to simplify any target nodes based on the demanded vector
   /// elements, returning true on success. Otherwise, analyze the expression and
@@ -4259,6 +4287,7 @@ public:
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
   /// NaN.
   virtual bool isKnownNeverNaNForTargetNode(SDValue Op,
+                                            const APInt &DemandedElts,
                                             const SelectionDAG &DAG,
                                             bool SNaN = false,
                                             unsigned Depth = 0) const;
@@ -4565,6 +4594,9 @@ public:
       SelectionDAG & /*DAG*/, SmallVectorImpl<SDValue> & /*InVals*/) const {
     llvm_unreachable("Not Implemented");
   }
+
+  virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
+                                     ArgListTy &Args) const {}
 
   /// This structure contains the information necessary for lowering
   /// pointer-authenticating indirect calls.  It is equivalent to the "ptrauth"
@@ -4990,11 +5022,6 @@ public:
 
   bool verifyReturnAddressArgumentIsConstant(SDValue Op,
                                              SelectionDAG &DAG) const;
-
-#ifndef NDEBUG
-  /// Check the given SDNode.  Aborts if it is invalid.
-  virtual void verifyTargetSDNode(const SDNode *N) const {};
-#endif
 
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks

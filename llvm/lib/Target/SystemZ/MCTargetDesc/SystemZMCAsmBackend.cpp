@@ -111,7 +111,7 @@ public:
 
   // Override MCAsmBackend
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -138,11 +138,10 @@ SystemZMCAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-const MCFixupKindInfo &
-SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_390_NONE. They
   // do not require any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
@@ -160,7 +159,7 @@ void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,
                                      bool IsResolved,
                                      const MCSubtargetInfo *STI) const {
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return;
   unsigned Offset = Fixup.getOffset();
   unsigned BitSize = getFixupKindInfo(Kind).TargetSize;

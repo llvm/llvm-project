@@ -49,6 +49,9 @@ def SingleBitBitFieldConstantConversion :
   DiagGroup<"single-bit-bitfield-constant-conversion">;
 def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
                                            [SingleBitBitFieldConstantConversion]>;
+def PreferredTypeBitFieldEnumConversion
+    : DiagGroup<"preferred-type-bitfield-enum-conversion">;
+def PreferredTypeBitFieldWidth : DiagGroup<"preferred-type-bitfield-width">;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
@@ -64,8 +67,11 @@ def AlwaysInlineCoroutine :
   DiagGroup<"always-inline-coroutine">;
 def CoroNonAlignedAllocationFunction :
   DiagGroup<"coro-non-aligned-allocation-function">;
+def CoroTypeAwareAllocationFunction :
+  DiagGroup<"coro-type-aware-allocation-function">;
 def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine,
-                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction]>;
+                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction,
+                                        CoroTypeAwareAllocationFunction]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
 def ConstantConversion : DiagGroup<"constant-conversion",
                                    [BitFieldConstantConversion,
@@ -178,6 +184,13 @@ def AbstractFinalClass : DiagGroup<"abstract-final-class">;
 def FinalDtorNonFinalClass : DiagGroup<"final-dtor-non-final-class">;
 def GNUOffsetofExtensions : DiagGroup<"gnu-offsetof-extensions">;
 
+def InitializerOverrides : DiagGroup<"initializer-overrides">;
+// For compatibility with GCC; -Woverride-init = -Winitializer-overrides
+def : DiagGroup<"override-init", [InitializerOverrides]>;
+def ReorderCtor : DiagGroup<"reorder-ctor">;
+def ReorderInitList : DiagGroup<"reorder-init-list">;
+def Reorder : DiagGroup<"reorder", [ReorderCtor, ReorderInitList]>;
+
 def CXX11CompatDeprecatedWritableStr :
   DiagGroup<"c++11-compat-deprecated-writable-strings">;
 
@@ -244,7 +257,9 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
 def CXX20Designator : DiagGroup<"c++20-designator">;
 // Allow -Wno-c99-designator to be used to turn off all warnings on valid C99
 // designators (including the warning controlled by -Wc++20-designator).
-def C99Designator : DiagGroup<"c99-designator", [CXX20Designator]>;
+def C99Designator : DiagGroup<"c99-designator", [CXX20Designator,
+                                                 InitializerOverrides,
+                                                 ReorderInitList]>;
 def GNUDesignator : DiagGroup<"gnu-designator">;
 def DtorName : DiagGroup<"dtor-name">;
 
@@ -497,6 +512,7 @@ def GNUImaginaryConstant : DiagGroup<"gnu-imaginary-constant">;
 def IgnoredGCH : DiagGroup<"ignored-gch">;
 def IgnoredReferenceQualifiers : DiagGroup<"ignored-reference-qualifiers">;
 def IgnoredQualifiers : DiagGroup<"ignored-qualifiers", [IgnoredReferenceQualifiers]>;
+def IgnoredBaseClassQualifiers : DiagGroup<"ignored-base-class-qualifiers", [IgnoredQualifiers]>;
 def : DiagGroup<"import">;
 def GNUIncludeNext : DiagGroup<"gnu-include-next">;
 def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;
@@ -588,9 +604,6 @@ def NullabilityCompleteness : DiagGroup<"nullability-completeness",
 def NullArithmetic : DiagGroup<"null-arithmetic">;
 def NullCharacter : DiagGroup<"null-character">;
 def NullDereference : DiagGroup<"null-dereference">;
-def InitializerOverrides : DiagGroup<"initializer-overrides">;
-// For compatibility with GCC; -Woverride-init = -Winitializer-overrides
-def : DiagGroup<"override-init", [InitializerOverrides]>;
 def NonNull : DiagGroup<"nonnull">;
 def NonPODVarargs : DiagGroup<"non-pod-varargs">;
 def ClassVarargs : DiagGroup<"class-varargs", [NonPODVarargs]>;
@@ -912,9 +925,6 @@ def UsedButMarkedUnused : DiagGroup<"used-but-marked-unused">;
 def UsedSearchPath : DiagGroup<"search-path-usage">;
 def UserDefinedLiterals : DiagGroup<"user-defined-literals">;
 def UserDefinedWarnings : DiagGroup<"user-defined-warnings">;
-def ReorderCtor : DiagGroup<"reorder-ctor">;
-def ReorderInitList : DiagGroup<"reorder-init-list">;
-def Reorder : DiagGroup<"reorder", [ReorderCtor, ReorderInitList]>;
 def UndeclaredSelector : DiagGroup<"undeclared-selector">;
 def ImplicitAtomic : DiagGroup<"implicit-atomic-properties">;
 def AtomicAlignment : DiagGroup<"atomic-alignment">;
@@ -1607,6 +1617,9 @@ def HLSLExtension : DiagGroup<"hlsl-extensions", [HLSL202y]>;
 
 // Warning for mix packoffset and non-packoffset.
 def HLSLMixPackOffset : DiagGroup<"mix-packoffset">;
+
+// Warning for implicit resource bindings.
+def HLSLImplicitBinding : DiagGroup<"hlsl-implicit-binding">;
 
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;

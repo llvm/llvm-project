@@ -385,6 +385,18 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
   return DataSection;
 }
 
+MCSection *TargetLoweringObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionPrefix) const {
+  // Fallback to `getSectionForConstant` without `SectionPrefix` parameter if it
+  // is empty.
+  if (SectionPrefix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+  report_fatal_error(
+      "TargetLoweringObjectFile::getSectionForConstant that "
+      "accepts SectionPrefix is not implemented for the object file format");
+}
+
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(
     const Function &F, const MachineBasicBlock &MBB,
     const TargetMachine &TM) const {

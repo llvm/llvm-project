@@ -658,6 +658,16 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "'xwchc' and 'zcb' extensions are incompatible");
   }
 
+  for (StringRef Input : {"rv64i_zilsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zilsd' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv64i_zclsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zclsd' is only supported for 'rv32'");
+  }
+
   for (StringRef Input : {"rv32i_zcf_zclsd"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zclsd' and 'zcf' extensions are incompatible");
@@ -667,9 +677,9 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
        {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
         "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
         "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p4",
-        "rv64i_xqcilo0p2", "rv64i_xqcilia0p2", "rv64i_xqcibm0p4",
-        "rv64i_xqcibi0p2", "rv64i_xqcili0p2", "rv64i_xqcisim0p2",
-        "rv64i_xqcilb0p2", "rv64i_xqcisync0p2"}) {
+        "rv64i_xqciio0p1", "rv64i_xqcilo0p2", "rv64i_xqcilia0p2",
+        "rv64i_xqcibm0p4", "rv64i_xqcibi0p2", "rv64i_xqcili0p2",
+        "rv64i_xqcisim0p2", "rv64i_xqcilb0p2", "rv64i_xqcisync0p2"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -1076,6 +1086,7 @@ R"(All available -march extensions for RISC-V
     shvstvecd            1.0
     smaia                1.0
     smcdeleg             1.0
+    smcntrpmf            1.0
     smcsrind             1.0
     smdbltrp             1.0
     smepmp               1.0
@@ -1114,7 +1125,7 @@ R"(All available -march extensions for RISC-V
     xcvmac               1.0
     xcvmem               1.0
     xcvsimd              1.0
-    xmipscmove           1.0
+    xmipscmov            1.0
     xmipslsp             1.0
     xsfcease             1.0
     xsfvcp               1.0
@@ -1159,6 +1170,7 @@ Experimental extensions
     xqcics               0.2
     xqcicsr              0.2
     xqciint              0.4
+    xqciio               0.1
     xqcilb               0.2
     xqcili               0.2
     xqcilia              0.2

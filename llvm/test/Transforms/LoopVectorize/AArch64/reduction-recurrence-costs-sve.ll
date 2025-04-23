@@ -254,20 +254,16 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    br i1 [[TMP43]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP41]])
-; PRED-NEXT:    [[TMP45:%.*]] = call i32 @llvm.vscale.i32()
-; PRED-NEXT:    [[TMP46:%.*]] = mul i32 [[TMP45]], 4
-; PRED-NEXT:    [[TMP47:%.*]] = sub i32 [[TMP46]], 1
-; PRED-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 4 x i32> [[TMP29]], i32 [[TMP47]]
-; PRED-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[TMP28]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP44]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[TMP48:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT8]], %[[SCALAR_PH]] ], [ [[TMP48]], %[[LOOP]] ]
+; PRED-NEXT:    [[TMP45:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT8]], %[[SCALAR_PH]] ], [ [[TMP45]], %[[LOOP]] ]
 ; PRED-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[TMP52:%.*]] = add i64 [[Y]], 1
@@ -362,8 +358,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP7]]
+; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[TMP13]], i32 0
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 4
@@ -422,8 +417,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
 ; VSCALEFORTUNING2-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP16:%.*]], %[[VECTOR_BODY]] ]
-; VSCALEFORTUNING2-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 0
-; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[TMP7]]
+; VSCALEFORTUNING2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[INDEX]]
 ; VSCALEFORTUNING2-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[TMP8]], i32 0
 ; VSCALEFORTUNING2-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; VSCALEFORTUNING2-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP10]], 4
@@ -500,10 +494,10 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    [[TMP19:%.*]] = call i16 @llvm.vector.reduce.or.nxv8i16(<vscale x 8 x i16> [[TMP16]])
-; PRED-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ [[TMP19]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

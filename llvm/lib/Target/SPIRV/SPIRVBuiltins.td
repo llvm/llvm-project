@@ -67,6 +67,7 @@ def CoopMatr : BuiltinGroup;
 def ICarryBorrow : BuiltinGroup;
 def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
+def TernaryBitwiseINTEL : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -714,6 +715,9 @@ defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToImageINTEL", OpenCL_std, B
 defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSamplerINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSamplerINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSampledImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSampledImageINTEL>;
 
+// SPV_INTEL_ternary_bitwise_function builtin records:
+defm : DemangledNativeBuiltin<"__spirv_BitwiseFunctionINTEL", OpenCL_std, TernaryBitwiseINTEL, 4, 4, OpBitwiseFunctionINTEL>;
+
 //===----------------------------------------------------------------------===//
 // Class defining a work/sub group builtin that should be translated into a
 // SPIR-V instruction using the defined properties.
@@ -759,6 +763,7 @@ class GroupBuiltin<string name, Op operation> {
   bit NoGroupOperation = !or(IsElect, IsAllOrAny, IsAllEqual,
                              IsBallot, IsInverseBallot,
                              IsBallotBitExtract, IsBallotFindBit,
+                             !eq(operation, OpSubgroupMatrixMultiplyAccumulateINTEL),
                              !eq(operation, OpGroupNonUniformShuffle),
                              !eq(operation, OpGroupNonUniformShuffleXor),
                              !eq(operation, OpGroupNonUniformShuffleUp),
@@ -842,6 +847,9 @@ defm : DemangledGroupBuiltin<"group_ballot_find_lsb", OnlySub, OpGroupNonUniform
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindLSB", 2, 2, OpGroupNonUniformBallotFindLSB>;
 defm : DemangledGroupBuiltin<"group_ballot_find_msb", OnlySub, OpGroupNonUniformBallotFindMSB>;
 defm : DemangledGroupBuiltinWrapper<"__spirv_GroupNonUniformBallotFindMSB", 2, 2, OpGroupNonUniformBallotFindMSB>;
+
+// SPV_INTEL_subgroup_matrix_multiply_accumulate
+defm : DemangledGroupBuiltinWrapper<"__spirv_SubgroupMatrixMultiplyAccumulateINTEL", 4, 5, OpSubgroupMatrixMultiplyAccumulateINTEL>;
 
 // cl_khr_subgroup_shuffle
 defm : DemangledGroupBuiltin<"group_shuffle", OnlySub, OpGroupNonUniformShuffle>;

@@ -12,6 +12,7 @@
 #include <clc/internal/clc.h>
 #include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
+#include <clc/math/clc_native_divide.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
 

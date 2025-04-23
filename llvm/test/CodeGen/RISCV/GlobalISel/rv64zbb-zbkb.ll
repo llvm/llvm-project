@@ -405,7 +405,7 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 define i8 @srli_i8(i8 %a) nounwind {
 ; CHECK-LABEL: srli_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    srli a0, a0, 6
 ; CHECK-NEXT:    ret
   %1 = lshr i8 %a, 6

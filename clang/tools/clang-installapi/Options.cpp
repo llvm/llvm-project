@@ -691,7 +691,7 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
     if (A->getOption().getID() > (unsigned)OPT_UNKNOWN) {
       ClangDriverArgs.push_back(A->getSpelling().data());
     } else
-      llvm::copy(A->getValues(), std::back_inserter(ClangDriverArgs));
+      llvm::append_range(ClangDriverArgs, A->getValues());
   }
   return ClangDriverArgs;
 }
@@ -751,7 +751,7 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
     if (A->isClaimed())
       continue;
     FrontendArgs.emplace_back(A->getSpelling());
-    llvm::copy(A->getValues(), std::back_inserter(FrontendArgs));
+    llvm::append_range(FrontendArgs, A->getValues());
   }
 }
 
@@ -801,8 +801,7 @@ std::pair<LibAttrs, ReexportedInterfaces> Options::getReexportedLibraries() {
   PathSeq FwkSearchPaths(FEOpts.FwkPaths.begin(), FEOpts.FwkPaths.end());
   for (const PlatformType P : Platforms) {
     PathSeq PlatformSearchPaths = getPathsForPlatform(FEOpts.SystemFwkPaths, P);
-    FwkSearchPaths.insert(FwkSearchPaths.end(), PlatformSearchPaths.begin(),
-                          PlatformSearchPaths.end());
+    llvm::append_range(FwkSearchPaths, PlatformSearchPaths);
     for (const StringMapEntry<ArchitectureSet> &Lib :
          LinkerOpts.ReexportedFrameworks) {
       std::string Name = (Lib.getKey() + ".framework/" + Lib.getKey()).str();

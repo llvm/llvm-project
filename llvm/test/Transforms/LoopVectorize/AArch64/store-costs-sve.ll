@@ -28,8 +28,7 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
+; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP9]], i32 0
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = mul i64 [[TMP22]], 16
@@ -113,9 +112,9 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; PRED-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 16 x i1> [[TMP15]], i32 0
 ; PRED-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; PRED-NEXT:    br label [[LOOP:%.*]]
 ; PRED:       loop:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -163,14 +162,13 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DEFAULT:       vector.body:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 0
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META5:![0-9]+]]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TMP4]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = trunc <16 x i64> [[BROADCAST_SPLAT2]] to <16 x i8>
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = and <16 x i8> [[TMP5]], [[TMP7]]
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = and <16 x i8> [[TMP5]], [[TMP7]]
-; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
+; DEFAULT-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP10]], i32 0
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP10]], i32 16
 ; DEFAULT-NEXT:    store <16 x i8> [[TMP8]], ptr [[TMP12]], align 1, !alias.scope [[META8:![0-9]+]], !noalias [[META5]]
@@ -262,9 +260,9 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; PRED-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 2 x i1> [[TMP12]], i32 0
 ; PRED-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; PRED:       middle.block:
-; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED-NEXT:    br label [[EXIT:%.*]]
 ; PRED:       scalar.ph:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; PRED-NEXT:    br label [[LOOP:%.*]]
 ; PRED:       loop:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

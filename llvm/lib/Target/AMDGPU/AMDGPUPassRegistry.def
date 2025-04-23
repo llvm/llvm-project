@@ -102,7 +102,9 @@ MACHINE_FUNCTION_PASS("amdgpu-mark-last-scratch-load", AMDGPUMarkLastScratchLoad
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-long-branch-reg", GCNPreRALongBranchRegPass())
 MACHINE_FUNCTION_PASS("amdgpu-reserve-wwm-regs", AMDGPUReserveWWMRegsPass())
 MACHINE_FUNCTION_PASS("amdgpu-rewrite-partial-reg-uses", GCNRewritePartialRegUsesPass())
+MACHINE_FUNCTION_PASS("amdgpu-set-wave-priority", AMDGPUSetWavePriorityPass())
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizationsPass())
+MACHINE_FUNCTION_PASS("amdgpu-preload-kern-arg-prolog", AMDGPUPreloadKernArgPrologPass())
 MACHINE_FUNCTION_PASS("amdgpu-nsa-reassign", GCNNSAReassignPass())
 MACHINE_FUNCTION_PASS("gcn-create-vopd", GCNCreateVOPDPass())
 MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
@@ -113,6 +115,7 @@ MACHINE_FUNCTION_PASS("si-form-memory-clauses", SIFormMemoryClausesPass())
 MACHINE_FUNCTION_PASS("si-i1-copies", SILowerI1CopiesPass())
 MACHINE_FUNCTION_PASS("si-insert-hard-clauses", SIInsertHardClausesPass())
 MACHINE_FUNCTION_PASS("si-insert-waitcnts", SIInsertWaitcntsPass())
+MACHINE_FUNCTION_PASS("si-late-branch-lowering", SILateBranchLoweringPass())
 MACHINE_FUNCTION_PASS("si-load-store-opt", SILoadStoreOptimizerPass())
 MACHINE_FUNCTION_PASS("si-lower-control-flow", SILowerControlFlowPass())
 MACHINE_FUNCTION_PASS("si-lower-sgpr-spills", SILowerSGPRSpillsPass())
@@ -125,21 +128,12 @@ MACHINE_FUNCTION_PASS("si-optimize-exec-masking-pre-ra", SIOptimizeExecMaskingPr
 MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
 MACHINE_FUNCTION_PASS("si-post-ra-bundler", SIPostRABundlerPass())
 MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
+MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 #undef MACHINE_FUNCTION_PASS
 
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
-DUMMY_MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizationsPass())
-DUMMY_MACHINE_FUNCTION_PASS("amdgpu-rewrite-partial-reg-uses", GCNRewritePartialRegUsesPass())
-DUMMY_MACHINE_FUNCTION_PASS("amdgpu-set-wave-priority", AMDGPUSetWavePriorityPass())
-
-DUMMY_MACHINE_FUNCTION_PASS("si-late-branch-lowering", SILateBranchLoweringPass())
-DUMMY_MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
-// TODO: Move amdgpu-preload-kern-arg-prolog to MACHINE_FUNCTION_PASS since it
-// already exists.
-DUMMY_MACHINE_FUNCTION_PASS("amdgpu-preload-kern-arg-prolog", AMDGPUPreloadKernArgPrologPass())
-
 // Global ISel passes
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-prelegalizer-combiner", AMDGPUPreLegalizerCombinerPass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-postlegalizer-combiner", AMDGPUPostLegalizerCombinerPass())
@@ -149,9 +143,3 @@ DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbanklegalize", AMDGPURegBankLegalizePass(
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbank-combiner", AMDGPURegBankCombinerPass())
 
 #undef DUMMY_MACHINE_FUNCTION_PASS
-
-
-#define DUMMY_CGSCC_PASS(NAME, CREATE_PASS)
-DUMMY_CGSCC_PASS("amdgpu-annotate-kernel-features", AMDGPUAnnotateKernelFeaturesPass())
-
-#undef DUMMY_CGSCC_PASS

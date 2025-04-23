@@ -140,7 +140,7 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX10-NEXT:  .LBB0_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v5 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -297,7 +297,7 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX10-NEXT:  .LBB1_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v5 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -410,7 +410,7 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX10-NEXT:  .LBB2_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3d0800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v5 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -577,12 +577,12 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    s_cbranch_execz .LBB3_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0x800, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v4, v[2:3] offset:2047
 ; GFX10-NEXT:  .LBB3_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -700,12 +700,12 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    s_cbranch_execz .LBB4_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0x1000, v2
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v4, v[2:3]
 ; GFX10-NEXT:  .LBB4_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x61800, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:636
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -823,12 +823,12 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX10-NEXT:    s_cbranch_execz .LBB5_2
 ; GFX10-NEXT:  ; %bb.1: ; %if
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v3, v5, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v3, null, v3, v5, vcc_lo
 ; GFX10-NEXT:    flat_load_sbyte v6, v[2:3]
 ; GFX10-NEXT:  .LBB5_2: ; %endif
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v6
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)

@@ -11,38 +11,22 @@ define i32 @ctlz_i32(i32 %a) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    beqz a0, .LBB0_2
 ; RV32I-NEXT:  # %bb.1: # %cond.false
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    srli a1, a0, 1
-; RV32I-NEXT:    lui a2, 349525
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    addi a1, a2, 1365
-; RV32I-NEXT:    srli a2, a0, 2
-; RV32I-NEXT:    or a0, a0, a2
-; RV32I-NEXT:    srli a2, a0, 4
-; RV32I-NEXT:    or a0, a0, a2
-; RV32I-NEXT:    srli a2, a0, 8
-; RV32I-NEXT:    or a0, a0, a2
-; RV32I-NEXT:    srli a2, a0, 16
-; RV32I-NEXT:    or a0, a0, a2
-; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    srli a2, a0, 1
-; RV32I-NEXT:    and a1, a2, a1
-; RV32I-NEXT:    lui a2, 209715
-; RV32I-NEXT:    addi a2, a2, 819
-; RV32I-NEXT:    sub a0, a0, a1
-; RV32I-NEXT:    and a1, a0, a2
-; RV32I-NEXT:    srli a0, a0, 2
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    lui a2, 61681
-; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    srli a1, a0, 2
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    srli a1, a0, 4
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    addi a1, a2, -241
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    slli a1, a0, 8
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    slli a1, a0, 16
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 24
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 16
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    call __popcountsi2
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB0_2:
 ; RV32I-NEXT:    li a0, 32
@@ -61,71 +45,45 @@ declare i64 @llvm.ctlz.i64(i64, i1)
 define i64 @ctlz_i64(i64 %a) nounwind {
 ; RV32I-LABEL: ctlz_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 349525
-; RV32I-NEXT:    lui a3, 209715
-; RV32I-NEXT:    lui a5, 61681
-; RV32I-NEXT:    addi a4, a2, 1365
-; RV32I-NEXT:    addi a3, a3, 819
-; RV32I-NEXT:    addi a2, a5, -241
-; RV32I-NEXT:    bnez a1, .LBB1_2
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s1, a1
+; RV32I-NEXT:    srli a1, a0, 1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 4
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 16
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    call __popcountsi2
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    srli a0, s1, 1
+; RV32I-NEXT:    or a0, s1, a0
+; RV32I-NEXT:    srli a1, a0, 2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 4
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 8
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    srli a1, a0, 16
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    call __popcountsi2
+; RV32I-NEXT:    bnez s1, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    srli a1, a0, 1
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a1, a0, 2
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a1, a0, 4
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a1, a0, 8
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a1, a0, 16
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    srli a1, a0, 1
-; RV32I-NEXT:    and a1, a1, a4
-; RV32I-NEXT:    sub a0, a0, a1
-; RV32I-NEXT:    and a1, a0, a3
-; RV32I-NEXT:    srli a0, a0, 2
-; RV32I-NEXT:    and a0, a0, a3
-; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    srli a1, a0, 4
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    slli a1, a0, 8
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    slli a1, a0, 16
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 24
-; RV32I-NEXT:    addi a0, a0, 32
-; RV32I-NEXT:    li a1, 0
-; RV32I-NEXT:    ret
+; RV32I-NEXT:    addi a0, s0, 32
 ; RV32I-NEXT:  .LBB1_2:
-; RV32I-NEXT:    srli a0, a1, 1
-; RV32I-NEXT:    or a0, a1, a0
-; RV32I-NEXT:    srli a1, a0, 2
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a1, a0, 4
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a1, a0, 8
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    srli a1, a0, 16
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    srli a1, a0, 1
-; RV32I-NEXT:    and a1, a1, a4
-; RV32I-NEXT:    sub a0, a0, a1
-; RV32I-NEXT:    and a1, a0, a3
-; RV32I-NEXT:    srli a0, a0, 2
-; RV32I-NEXT:    and a0, a0, a3
-; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    srli a1, a0, 4
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    slli a1, a0, 8
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    slli a1, a0, 16
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
 ; RV32I-NEXT:    ret
 ;
 ; RV32XTHEADBB-LABEL: ctlz_i64:
@@ -399,6 +357,38 @@ define i64 @no_sexth_i64(i64 %a) nounwind {
   %shl = shl i64 %a, 49
   %shr = ashr exact i64 %shl, 48
   ret i64 %shr
+}
+
+define i32 @sext_sextinreg_sra(i16 %a) nounwind {
+; RV32I-LABEL: sext_sextinreg_sra:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a0, a0, 26
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sext_sextinreg_sra:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 10
+; RV32XTHEADBB-NEXT:    ret
+  %sext = sext i16 %a to i32
+  %shr = ashr exact i32 %sext, 10
+  ret i32 %shr
+}
+
+define i32 @sext_sextinreg_sra_2(i16 %a) nounwind {
+; RV32I-LABEL: sext_sextinreg_sra_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sext_sextinreg_sra_2:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 15
+; RV32XTHEADBB-NEXT:    ret
+  %sext = sext i16 %a to i32
+  %shr = ashr exact i32 %sext, 24
+  ret i32 %shr
 }
 
 define i32 @zexth_i32(i32 %a) nounwind {

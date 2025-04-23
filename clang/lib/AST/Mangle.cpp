@@ -540,9 +540,9 @@ private:
         GD = GlobalDecl(CtorD, Ctor_Complete);
       else if (const auto *DtorD = dyn_cast<CXXDestructorDecl>(D))
         GD = GlobalDecl(DtorD, Dtor_Complete);
-      else if (D->hasAttr<CUDAGlobalAttr>())
-        GD = GlobalDecl(cast<FunctionDecl>(D));
-      else
+      else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+        GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(D);
+      } else
         GD = GlobalDecl(D);
       MC->mangleName(GD, OS);
       return false;

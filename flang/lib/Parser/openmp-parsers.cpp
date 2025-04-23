@@ -425,6 +425,17 @@ TYPE_PARSER(construct<OmpDeviceModifier>(
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
 
+TYPE_PARSER(construct<OmpInteropRuntimeIdentifier>(
+    construct<OmpInteropRuntimeIdentifier>(charLiteralConstant) ||
+    construct<OmpInteropRuntimeIdentifier>(scalarIntConstantExpr)))
+
+TYPE_PARSER(construct<OmpInteropPreference>(verbatim("PREFER_TYPE"_tok) >>
+    parenthesized(nonemptyList(Parser<OmpInteropRuntimeIdentifier>{}))))
+
+TYPE_PARSER(construct<OmpInteropType>(
+    "TARGETSYNC" >> pure(OmpInteropType::Value::TargetSync) ||
+    "TARGET" >> pure(OmpInteropType::Value::Target)))
+
 TYPE_PARSER(construct<OmpIteratorSpecifier>(
     // Using Parser<TypeDeclarationStmt> or Parser<EntityDecl> has the problem
     // that they will attempt to treat what follows the '=' as initialization.
@@ -552,6 +563,11 @@ TYPE_PARSER(sourced(
 
 TYPE_PARSER(sourced(construct<OmpIfClause::Modifier>(OmpDirectiveNameParser{})))
 
+TYPE_PARSER(sourced(
+    construct<OmpInitClause::Modifier>(
+        construct<OmpInitClause::Modifier>(Parser<OmpInteropPreference>{})) ||
+    construct<OmpInitClause::Modifier>(Parser<OmpInteropType>{})))
+
 TYPE_PARSER(sourced(construct<OmpInReductionClause::Modifier>(
     Parser<OmpReductionIdentifier>{})))
 
@@ -619,6 +635,20 @@ static inline MOBClause makeMobClause(
 TYPE_PARSER(construct<OmpAffinityClause>(
     maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
+
+// 2.4 Requires construct [OpenMP 5.0]
+//        atomic-default-mem-order-clause ->
+//                               acq_rel
+//                               acquire
+//                               relaxed
+//                               release
+//                               seq_cst
+TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
+    "ACQ_REL" >> pure(common::OmpMemoryOrderType::Acq_Rel) ||
+    "ACQUIRE" >> pure(common::OmpMemoryOrderType::Acquire) ||
+    "RELAXED" >> pure(common::OmpMemoryOrderType::Relaxed) ||
+    "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
+    "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
 
 TYPE_PARSER(construct<OmpCancellationConstructTypeClause>(
     OmpDirectiveNameParser{}, maybe(parenthesized(scalarLogicalExpr))))
@@ -788,6 +818,13 @@ TYPE_PARSER(
 // OpenMPv5.2 12.5.2 detach-clause -> DETACH (event-handle)
 TYPE_PARSER(construct<OmpDetachClause>(Parser<OmpObject>{}))
 
+TYPE_PARSER(construct<OmpHintClause>(scalarIntConstantExpr))
+
+// init clause
+TYPE_PARSER(construct<OmpInitClause>(
+    maybe(nonemptyList(Parser<OmpInitClause::Modifier>{}) / ":"),
+    Parser<OmpObject>{}))
+
 // 2.8.1 ALIGNED (list: alignment)
 TYPE_PARSER(construct<OmpAlignedClause>(Parser<OmpObjectList>{},
     maybe(":" >> nonemptyList(Parser<OmpAlignedClause::Modifier>{}))))
@@ -920,13 +957,15 @@ TYPE_PARSER( //
     "HAS_DEVICE_ADDR" >>
         construct<OmpClause>(construct<OmpClause::HasDeviceAddr>(
             parenthesized(Parser<OmpObjectList>{}))) ||
-    "HINT" >> construct<OmpClause>(
-                  construct<OmpClause::Hint>(parenthesized(constantExpr))) ||
+    "HINT" >> construct<OmpClause>(construct<OmpClause::Hint>(
+                  parenthesized(Parser<OmpHintClause>{}))) ||
     "HOLDS" >> construct<OmpClause>(construct<OmpClause::Holds>(
                    parenthesized(Parser<OmpHoldsClause>{}))) ||
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
+    "INIT" >> construct<OmpClause>(construct<OmpClause::Init>(
+                  parenthesized(Parser<OmpInitClause>{}))) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
     "INITIALIZER" >> construct<OmpClause>(construct<OmpClause::Initializer>(
@@ -1016,6 +1055,8 @@ TYPE_PARSER( //
                           parenthesized(scalarIntExpr))) ||
     "TO" >> construct<OmpClause>(construct<OmpClause::To>(
                 parenthesized(Parser<OmpToClause>{}))) ||
+    "USE" >> construct<OmpClause>(construct<OmpClause::Use>(
+                 parenthesized(Parser<OmpObject>{}))) ||
     "USE_DEVICE_PTR" >> construct<OmpClause>(construct<OmpClause::UseDevicePtr>(
                             parenthesized(Parser<OmpObjectList>{}))) ||
     "USE_DEVICE_ADDR" >>
@@ -1165,36 +1206,25 @@ TYPE_PARSER(sourced(construct<OmpFailClause>(
 
 // 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
 //        memory-order-clause ->
-//                               seq_cst
 //                               acq_rel
-//                               release
 //                               acquire
 //                               relaxed
-TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
-    sourced("SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>()) ||
-        "ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
-        "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
-        "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
-        "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>())))))
-
-// 2.4 Requires construct [OpenMP 5.0]
-//        atomic-default-mem-order-clause ->
+//                               release
 //                               seq_cst
-//                               acq_rel
-//                               relaxed
-TYPE_PARSER(construct<OmpAtomicDefaultMemOrderClause>(
-    "SEQ_CST" >> pure(common::OmpAtomicDefaultMemOrderType::SeqCst) ||
-    "ACQ_REL" >> pure(common::OmpAtomicDefaultMemOrderType::AcqRel) ||
-    "RELAXED" >> pure(common::OmpAtomicDefaultMemOrderType::Relaxed)))
+TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
+    sourced("ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
+        "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
+        "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||
+        "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
+        "SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>())))))
 
 // 2.17.7 Atomic construct
 //        atomic-clause -> memory-order-clause | HINT(hint-expression)
 TYPE_PARSER(sourced(construct<OmpAtomicClause>(
     construct<OmpAtomicClause>(Parser<OmpMemoryOrderClause>{}) ||
     construct<OmpAtomicClause>("FAIL" >> Parser<OmpFailClause>{}) ||
-    construct<OmpAtomicClause>("HINT" >>
-        sourced(construct<OmpClause>(
-            construct<OmpClause::Hint>(parenthesized(constantExpr))))))))
+    construct<OmpAtomicClause>(
+        "HINT" >> parenthesized(Parser<OmpHintClause>{})))))
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]
 TYPE_PARSER(sourced(construct<OmpAtomicClauseList>(
@@ -1251,6 +1281,13 @@ TYPE_PARSER(sourced( //
             IsDirective(llvm::omp::Directive::OMPD_depobj)) >=
         Parser<OmpDirectiveSpecification>{})))
 
+// OMP 5.2 14.1 Interop construct
+TYPE_PARSER(sourced( //
+    construct<OpenMPInteropConstruct>(
+        predicated(OmpDirectiveNameParser{},
+            IsDirective(llvm::omp::Directive::OMPD_interop)) >=
+        Parser<OmpDirectiveSpecification>{})))
+
 // Standalone Constructs
 TYPE_PARSER(
     sourced( //
@@ -1263,7 +1300,9 @@ TYPE_PARSER(
         construct<OpenMPStandaloneConstruct>(Parser<OpenMPCancelConstruct>{}) ||
         construct<OpenMPStandaloneConstruct>(
             Parser<OmpMetadirectiveDirective>{}) ||
-        construct<OpenMPStandaloneConstruct>(Parser<OpenMPDepobjConstruct>{})) /
+        construct<OpenMPStandaloneConstruct>(Parser<OpenMPDepobjConstruct>{}) ||
+        construct<OpenMPStandaloneConstruct>(
+            Parser<OpenMPInteropConstruct>{})) /
     endOfLine)
 
 // Directives enclosing structured-block

@@ -135,8 +135,9 @@ private:
   //   ctx = ctx + reloc_offset
   //   ... (*(u8 *)(ctx + 1)) & 0x80 ...
   // which will be rejected by the verifier.
-  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                             EVT NewVT) const override {
+  bool
+  shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+                        std::optional<unsigned> ByteOffset) const override {
     return false;
   }
 

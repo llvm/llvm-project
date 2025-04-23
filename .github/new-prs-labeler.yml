@@ -7,6 +7,12 @@ ClangIR:
   - clang/tools/cir-*/**/*
   - clang/test/CIR/**/*
 
+clang:bytecode:
+  - clang/docs/ConstantInterpreter.rst
+  - clang/lib/AST/ByteCode/**/*
+  - clang/test/AST/ByteCode/**/*
+  - clang/unittests/AST/ByteCode/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*
@@ -637,6 +643,7 @@ hlsl:
   - clang/lib/Sema/HLSLExternalSemaSource.cpp
   - clang/lib/Sema/SemaHLSL.cpp
   - clang/lib/CodeGen/CGHLSLRuntime.*
+  - clang/lib/CodeGen/CGHLSLBuiltins.cpp
   - llvm/include/llvm/Frontend/HLSL/**
   - llvm/lib/Frontend/HLSL/**
 
@@ -659,6 +666,12 @@ backend:DirectX:
   - '**/*dxil*/**'
   - '**/*DXContainer*'
   - '**/*DXContainer*/**'
+  - clang/lib/Sema/SemaDirectX.cpp
+  - clang/include/clang/Sema/SemaDirectX.h
+  - clang/include/clang/Basic/BuiltinsDirectX.td
+  - clang/lib/CodeGen/TargetBuiltins/DirectX.cpp
+  - clang/test/CodeGenDirectX/**
+  - clang/test/SemaDirectX/**
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
