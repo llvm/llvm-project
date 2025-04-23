@@ -55,13 +55,6 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& operator<<(ostream& __os, const stacktrace_en
 
 namespace __stacktrace {
 
-/* Anchors for classes w/ vtables */
-// alloc::~alloc()                        = default;
-debug::~debug()                        = default;
-debug::dummy_ostream::~dummy_ostream() = default;
-fd_streambuf::~fd_streambuf()          = default;
-fd_istream::~fd_istream()              = default;
-
 /*
  * `to_string` Helpers
  */

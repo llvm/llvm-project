@@ -34,7 +34,7 @@ struct failed : std::runtime_error {
 or as a macro with exactly the string `1` then this is enabled (prints to `std::cerr`);
 otherwise its does nothing by returning a dummy stream. */
 struct _LIBCPP_HIDE_FROM_ABI debug : std::ostream {
-  _LIBCPP_HIDE_FROM_ABI virtual ~debug();
+  _LIBCPP_HIDE_FROM_ABI virtual ~debug() = default;
 
   _LIBCPP_HIDE_FROM_ABI static bool enabled() {
 #if defined(LIBCXX_STACKTRACE_DEBUG) && LIBCXX_STACKTRACE_DEBUG == 1
@@ -50,7 +50,7 @@ struct _LIBCPP_HIDE_FROM_ABI debug : std::ostream {
 
   /** No-op output stream. */
   struct _LIBCPP_HIDE_FROM_ABI dummy_ostream final : std::ostream {
-    _LIBCPP_HIDE_FROM_ABI virtual ~dummy_ostream();
+    _LIBCPP_HIDE_FROM_ABI virtual ~dummy_ostream() = default;
     friend std::ostream& operator<<(dummy_ostream& bogus, auto const&) { return bogus; }
   };
 
@@ -123,14 +123,14 @@ struct _LIBCPP_HIDE_FROM_ABI fd_streambuf final : std::streambuf {
   char* buf_;
   size_t size_;
   _LIBCPP_HIDE_FROM_ABI fd_streambuf(fd& fd, char* buf, size_t size) : fd_(fd), buf_(buf), size_(size) {}
-  _LIBCPP_HIDE_FROM_ABI virtual ~fd_streambuf();
+  _LIBCPP_HIDE_FROM_ABI virtual ~fd_streambuf() = default;
   _LIBCPP_HIDE_FROM_ABI int underflow() override;
 };
 
 /** Wraps an `FDInStreamBuffer` in an `istream` */
 struct fd_istream final : std::istream {
   fd_streambuf& buf_;
-  _LIBCPP_HIDE_FROM_ABI virtual ~fd_istream();
+  _LIBCPP_HIDE_FROM_ABI virtual ~fd_istream() = default;
   _LIBCPP_HIDE_FROM_ABI explicit fd_istream(fd_streambuf& buf) : std::istream(nullptr), buf_(buf) { rdbuf(&buf_); }
 };
 
