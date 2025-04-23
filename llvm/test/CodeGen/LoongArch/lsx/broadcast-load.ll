@@ -21,8 +21,8 @@ define <2 x i64> @should_not_be_optimized(ptr %ptr, ptr %dst){
 define <2 x i64> @vldrepl_d_unaligned_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_d_unaligned_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $a0, $a0, 4
-; CHECK-NEXT:    vreplgr2vr.d $vr0, $a0
+; CHECK-NEXT:    addi.d $a0, $a0, 4
+; CHECK-NEXT:    vldrepl.d $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %p = getelementptr i32, ptr %ptr, i32 1
   %tmp = load i64, ptr %p
@@ -34,8 +34,7 @@ define <2 x i64> @vldrepl_d_unaligned_offset(ptr %ptr) {
 define <16 x i8> @vldrepl_b(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.b $a0, $a0, 0
-; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
+; CHECK-NEXT:    vldrepl.b $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i8, ptr %ptr
   %tmp1 = insertelement <16 x i8> zeroinitializer, i8 %tmp, i32 0
@@ -46,8 +45,7 @@ define <16 x i8> @vldrepl_b(ptr %ptr) {
 define <16 x i8> @vldrepl_b_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_b_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.b $a0, $a0, 33
-; CHECK-NEXT:    vreplgr2vr.b $vr0, $a0
+; CHECK-NEXT:    vldrepl.b $vr0, $a0, 33
 ; CHECK-NEXT:    ret
   %p = getelementptr i8, ptr %ptr, i64 33
   %tmp = load i8, ptr %p
@@ -60,8 +58,7 @@ define <16 x i8> @vldrepl_b_offset(ptr %ptr) {
 define <8 x i16> @vldrepl_h(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, 0
-; CHECK-NEXT:    vreplgr2vr.h $vr0, $a0
+; CHECK-NEXT:    vldrepl.h $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i16, ptr %ptr
   %tmp1 = insertelement <8 x i16> zeroinitializer, i16 %tmp, i32 0
@@ -72,8 +69,7 @@ define <8 x i16> @vldrepl_h(ptr %ptr) {
 define <8 x i16> @vldrepl_h_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_h_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, 66
-; CHECK-NEXT:    vreplgr2vr.h $vr0, $a0
+; CHECK-NEXT:    vldrepl.h $vr0, $a0, 66
 ; CHECK-NEXT:    ret
   %p = getelementptr i16, ptr %ptr, i64 33
   %tmp = load i16, ptr %p
@@ -85,8 +81,7 @@ define <8 x i16> @vldrepl_h_offset(ptr %ptr) {
 define <4 x i32> @vldrepl_w(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_w:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
+; CHECK-NEXT:    vldrepl.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i32, ptr %ptr
   %tmp1 = insertelement <4 x i32> zeroinitializer, i32 %tmp, i32 0
@@ -97,8 +92,7 @@ define <4 x i32> @vldrepl_w(ptr %ptr) {
 define <4 x i32> @vldrepl_w_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_w_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 132
-; CHECK-NEXT:    vreplgr2vr.w $vr0, $a0
+; CHECK-NEXT:    vldrepl.w $vr0, $a0, 132
 ; CHECK-NEXT:    ret
   %p = getelementptr i32, ptr %ptr, i64 33
   %tmp = load i32, ptr %p
@@ -110,8 +104,7 @@ define <4 x i32> @vldrepl_w_offset(ptr %ptr) {
 define <2 x i64> @vldrepl_d(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $a0, $a0, 0
-; CHECK-NEXT:    vreplgr2vr.d $vr0, $a0
+; CHECK-NEXT:    vldrepl.d $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load i64, ptr %ptr
   %tmp1 = insertelement <2 x i64> zeroinitializer, i64 %tmp, i32 0
@@ -122,8 +115,7 @@ define <2 x i64> @vldrepl_d(ptr %ptr) {
 define <2 x i64> @vldrepl_d_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_d_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.d $a0, $a0, 264
-; CHECK-NEXT:    vreplgr2vr.d $vr0, $a0
+; CHECK-NEXT:    vldrepl.d $vr0, $a0, 264
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %ptr, i64 33
   %tmp = load i64, ptr %p
@@ -135,8 +127,7 @@ define <2 x i64> @vldrepl_d_offset(ptr %ptr) {
 define <4 x float> @vldrepl_w_flt(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_w_flt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.s $fa0, $a0, 0
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
+; CHECK-NEXT:    vldrepl.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load float, ptr %ptr
   %tmp1 = insertelement <4 x float> zeroinitializer, float %tmp, i32 0
@@ -147,8 +138,7 @@ define <4 x float> @vldrepl_w_flt(ptr %ptr) {
 define <4 x float> @vldrepl_w_flt_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_w_flt_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.s $fa0, $a0, 264
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
+; CHECK-NEXT:    vldrepl.w $vr0, $a0, 264
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %ptr, i64 33
   %tmp = load float, ptr %p
@@ -160,8 +150,7 @@ define <4 x float> @vldrepl_w_flt_offset(ptr %ptr) {
 define <2 x double> @vldrepl_d_dbl(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_d_dbl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.d $fa0, $a0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
+; CHECK-NEXT:    vldrepl.d $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %tmp = load double, ptr %ptr
   %tmp1 = insertelement <2 x double> zeroinitializer, double %tmp, i32 0
@@ -172,8 +161,7 @@ define <2 x double> @vldrepl_d_dbl(ptr %ptr) {
 define <2 x double> @vldrepl_d_dbl_offset(ptr %ptr) {
 ; CHECK-LABEL: vldrepl_d_dbl_offset:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fld.d $fa0, $a0, 264
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
+; CHECK-NEXT:    vldrepl.d $vr0, $a0, 264
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %ptr, i64 33
   %tmp = load double, ptr %p

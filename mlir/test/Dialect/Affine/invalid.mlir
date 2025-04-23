@@ -563,3 +563,17 @@ func.func @no_upper_bound() {
   }
   return
 }
+
+// -----
+
+func.func @invalid_symbol() {
+  affine.for %arg1 = 0 to 1 {
+    affine.for %arg2 = 0 to 26 {
+      affine.for %arg3 = 0 to 23 {
+        affine.apply affine_map<()[s0, s1] -> (s0 * 23 + s1)>()[%arg1, %arg3]
+        // expected-error@above {{dimensional operand cannot be used as a symbol}}
+      }
+    }
+  }
+  return
+}
