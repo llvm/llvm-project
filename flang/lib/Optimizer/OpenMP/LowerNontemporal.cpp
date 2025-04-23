@@ -11,9 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
@@ -31,16 +33,19 @@ class LowerNontemporalPass
 
     std::function<mlir::Value(mlir::Value)> getBaseOperand =
         [&](mlir::Value operand) -> mlir::Value {
-      if (mlir::isa<mlir::BlockArgument>(operand) ||
-          (mlir::isa<fir::AllocaOp>(operand.getDefiningOp())) ||
-          (mlir::isa<fir::DeclareOp>(operand.getDefiningOp())))
-        return operand;
-
-      Operation *definingOp = operand.getDefiningOp();
-      if (definingOp) {
-        for (Value srcOp : definingOp->getOperands()) {
-          return getBaseOperand(srcOp);
-        }
+      auto *defOp = operand.getDefiningOp();
+      while (defOp) {
+        llvm::TypeSwitch<Operation *>(defOp)
+            .Case<fir::ArrayCoorOp, fir::cg::XArrayCoorOp, fir::LoadOp>(
+                [&](auto op) {
+                  operand = op.getMemref();
+                  defOp = operand.getDefiningOp();
+                })
+            .Case<fir::BoxAddrOp>([&](auto op) {
+              operand = op.getVal();
+              defOp = operand.getDefiningOp();
+            })
+            .Default([&](auto op) { defOp = nullptr; });
       }
       return operand;
     };

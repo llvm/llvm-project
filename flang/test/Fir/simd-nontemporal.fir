@@ -25,6 +25,7 @@ func.func @_QPsimd_with_nontemporal_clause(%arg0: !fir.ref<i32> {fir.bindc_name 
         fir.store %arg2 to %11 : !fir.ref<i32>
         // CHECK:  %[[LOAD:.*]] = fir.load %[[A_DECL]] {nontemporal} : !fir.ref<i32>
         %12 = fir.load %2 : !fir.ref<i32>
+        // CHECK:  %[[LOAD1:.*]] = fir.load %{{.*}} : !fir.ref<i32>
         %13 = fir.load %4 : !fir.ref<i32>
         %14 = arith.addi %12, %13 : i32
         // CHECK: %[[ADD_VAL:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
@@ -63,6 +64,7 @@ func.func @_QPsimd_nontemporal_allocatable(%arg0: !fir.ref<!fir.box<!fir.heap<!f
         fir.store %arg3 to %16 : !fir.ref<i32>
         // CHECK:  %[[VAL1:.*]] = fir.load %[[X_DECL]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
         %17 = fir.load %3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+        // CHECK: %[[VAL2:.*]] = fir.load %{{.*}} : !fir.ref<i32>
         %18 = fir.load %16 : !fir.ref<i32>
         %19 = fir.convert %18 : (i32) -> i64
         // CHECK:  %[[BOX_ADDR:.*]] = fir.box_addr %[[VAL1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
@@ -72,7 +74,7 @@ func.func @_QPsimd_nontemporal_allocatable(%arg0: !fir.ref<!fir.box<!fir.heap<!f
         %22 = fir.shape_shift %21#0, %21#1 : (index, index) -> !fir.shapeshift<1>
         // CHECK:  %[[ARR_COOR:.*]] = fir.array_coor %[[BOX_ADDR]](%{{.*}}) %{{.*}} : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>, i64) -> !fir.ref<i32>
         %23 = fir.array_coor %20(%22) %19 : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>, i64) -> !fir.ref<i32>
-        // CHECK:  %[[VAL2:.*]] = fir.load %[[ARR_COOR]] {nontemporal} : !fir.ref<i32>
+        // CHECK:  %[[VAL3:.*]] = fir.load %[[ARR_COOR]] {nontemporal} : !fir.ref<i32>
         %24 = fir.load %23 : !fir.ref<i32>
         %25 = fir.load %4 : !fir.ref<i32>
         %26 = arith.addi %24, %25 : i32
