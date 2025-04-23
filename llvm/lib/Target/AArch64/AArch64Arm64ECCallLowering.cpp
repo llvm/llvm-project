@@ -78,9 +78,7 @@ public:
 private:
   int cfguard_module_flag = 0;
   FunctionType *GuardFnType = nullptr;
-  PointerType *GuardFnPtrType = nullptr;
   FunctionType *DispatchFnType = nullptr;
-  PointerType *DispatchFnPtrType = nullptr;
   Constant *GuardFnCFGlobal = nullptr;
   Constant *GuardFnGlobal = nullptr;
   Constant *DispatchFnGlobal = nullptr;
@@ -641,7 +639,7 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
     GuardFn = GuardFnCFGlobal;
   else
     GuardFn = GuardFnGlobal;
-  LoadInst *GuardCheckLoad = B.CreateLoad(GuardFnPtrType, GuardFn);
+  LoadInst *GuardCheckLoad = B.CreateLoad(PtrTy, GuardFn);
 
   // Create new call instruction. The CFGuard check should always be a call,
   // even if the original CallBase is an Invoke or CallBr instruction.
@@ -696,7 +694,7 @@ AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
   IRBuilder<> B(BB);
 
   // Load the global symbol as a pointer to the check function.
-  LoadInst *DispatchLoad = B.CreateLoad(DispatchFnPtrType, DispatchFnGlobal);
+  LoadInst *DispatchLoad = B.CreateLoad(PtrTy, DispatchFnGlobal);
 
   // Create new dispatch call instruction.
   Function *ExitThunk =
@@ -748,7 +746,7 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
     GuardFn = GuardFnCFGlobal;
   else
     GuardFn = GuardFnGlobal;
-  LoadInst *GuardCheckLoad = B.CreateLoad(GuardFnPtrType, GuardFn);
+  LoadInst *GuardCheckLoad = B.CreateLoad(PtrTy, GuardFn);
 
   // Create new call instruction. The CFGuard check should always be a call,
   // even if the original CallBase is an Invoke or CallBr instruction.
@@ -779,15 +777,10 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   VoidTy = Type::getVoidTy(M->getContext());
 
   GuardFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy}, false);
-  GuardFnPtrType = PointerType::get(M->getContext(), 0);
   DispatchFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy, PtrTy}, false);
-  DispatchFnPtrType = PointerType::get(M->getContext(), 0);
-  GuardFnCFGlobal =
-      M->getOrInsertGlobal("__os_arm64x_check_icall_cfg", GuardFnPtrType);
-  GuardFnGlobal =
-      M->getOrInsertGlobal("__os_arm64x_check_icall", GuardFnPtrType);
-  DispatchFnGlobal =
-      M->getOrInsertGlobal("__os_arm64x_dispatch_call", DispatchFnPtrType);
+  GuardFnCFGlobal = M->getOrInsertGlobal("__os_arm64x_check_icall_cfg", PtrTy);
+  GuardFnGlobal = M->getOrInsertGlobal("__os_arm64x_check_icall", PtrTy);
+  DispatchFnGlobal = M->getOrInsertGlobal("__os_arm64x_dispatch_call", PtrTy);
 
   // Mangle names of function aliases and add the alias name to
   // arm64ec_unmangled_name metadata to ensure a weak anti-dependency symbol is
