@@ -55,36 +55,42 @@ static inline void genOmpAtomicHintAndMemoryOrderClauses(
     mlir::omp::ClauseMemoryOrderKindAttr &memoryOrder) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (const Fortran::parser::OmpAtomicClause &clause : clauseList.v) {
-    if (const auto *hintClause =
-            std::get_if<Fortran::parser::OmpHintClause>(&clause.u)) {
-      const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
-      uint64_t hintExprValue = *Fortran::evaluate::ToInt64(*expr);
-      hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
-    } else if (const auto *ompMemoryOrderClause =
-                   std::get_if<Fortran::parser::OmpMemoryOrderClause>(
-                       &clause.u)) {
-      if (std::get_if<Fortran::parser::OmpClause::Acquire>(
-              &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Acquire);
-      } else if (std::get_if<Fortran::parser::OmpClause::Relaxed>(
-                     &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Relaxed);
-      } else if (std::get_if<Fortran::parser::OmpClause::SeqCst>(
-                     &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Seq_cst);
-      } else if (std::get_if<Fortran::parser::OmpClause::Release>(
-                     &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Release);
-      }
-    }
+    common::visit(
+        common::visitors{
+            [&](const parser::OmpMemoryOrderClause &s) {
+              auto kind = common::visit(
+                  common::visitors{
+                      [&](const parser::OmpClause::AcqRel &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
+                      },
+                      [&](const parser::OmpClause::Acquire &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Acquire;
+                      },
+                      [&](const parser::OmpClause::Relaxed &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+                      },
+                      [&](const parser::OmpClause::Release &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Release;
+                      },
+                      [&](const parser::OmpClause::SeqCst &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
+                      },
+                      [&](auto &&) -> mlir::omp::ClauseMemoryOrderKind {
+                        llvm_unreachable("Unexpected clause");
+                      },
+                  },
+                  s.v.u);
+              memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
+                  firOpBuilder.getContext(), kind);
+            },
+            [&](const parser::OmpHintClause &s) {
+              const auto *expr = Fortran::semantics::GetExpr(s.v);
+              uint64_t hintExprValue = *Fortran::evaluate::ToInt64(*expr);
+              hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
+            },
+            [&](const parser::OmpFailClause &) {},
+        },
+        clause.u);
   }
 }
 
