@@ -5,6 +5,7 @@
 ;   for (i = 0; i < n; i++)
 ;    A[i + 1] = A[i] * B[i] * C[i];
 
+; In this case, runtime checks are suggested, and there is a convergent operation.
 define void @rtchecks_needed(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: 'rtchecks_needed'
 ; CHECK-NEXT:    for.body:
@@ -76,6 +77,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+; In this case, no runtime checks are needed, and there is a convergent operation.
 define void @no_rtchecks(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d, ptr noalias %e) {
 ; CHECK-LABEL: 'no_rtchecks'
 ; CHECK-NEXT:    for.body:
