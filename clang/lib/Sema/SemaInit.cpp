@@ -6496,6 +6496,17 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
   return false;
 }
 
+static const FieldDecl *GetConstField(const RecordDecl *RD) {
+  for (const FieldDecl *FD : RD->fields()) {
+    QualType QT = FD->getType();
+    if (QT.isConstQualified())
+      return FD;
+    if (const auto *RD = QT->getAsRecordDecl())
+      return GetConstField(RD);
+  }
+  return nullptr;
+}
+
 void InitializationSequence::InitializeFrom(Sema &S,
                                             const InitializedEntity &Entity,
                                             const InitializationKind &Kind,
@@ -6563,13 +6574,26 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
   if (!S.getLangOpts().CPlusPlus &&
       Kind.getKind() == InitializationKind::IK_Default) {
-    RecordDecl *Rec = DestType->getAsRecordDecl();
-    if (Rec && Rec->hasUninitializedExplicitInitFields()) {
+    if (RecordDecl *Rec = DestType->getAsRecordDecl()) {
       VarDecl *Var = dyn_cast_or_null<VarDecl>(Entity.getDecl());
-      if (Var && !Initializer) {
-        S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
-            << /* Var-in-Record */ 1 << Rec;
-        emitUninitializedExplicitInitFields(S, Rec);
+      if (Rec->hasUninitializedExplicitInitFields()) {
+        if (Var && !Initializer) {
+          S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
+              << /* Var-in-Record */ 1 << Rec;
+          emitUninitializedExplicitInitFields(S, Rec);
+        }
+      }
+      // If the record has any members which are const (recursively checked),
+      // then we want to diagnose those as being unitialized if there is no
+      // initializer present.
+      if (!Initializer) {
+        if (const FieldDecl *FD = GetConstField(Rec)) {
+          S.Diag(Var->getLocation(), diag::warn_default_init_const)
+              << Var->getType() << /*member*/ 1
+              << (Var->getStorageDuration() != SD_Static &&
+                  Var->getStorageDuration() != SD_Thread);
+          S.Diag(FD->getLocation(), diag::note_default_init_const_member) << FD;
+        }
       }
     }
   }

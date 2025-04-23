@@ -140,6 +140,9 @@ C Language Changes
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
+- Clang now diagnoses ``const``-qualified object definitions without an
+  initializer, under the new warning ``-Wdefault-const-init`` (which is grouped
+  under ``-Wc++-compat``, as this construct is not compatible with C++). #GH19297
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^

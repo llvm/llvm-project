@@ -154,8 +154,9 @@ def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
+def DefaultConstInit : DiagGroup<"default-const-init">;
 
-def CXXCompat: DiagGroup<"c++-compat">;
+def CXXCompat: DiagGroup<"c++-compat", [DefaultConstInit]>;
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
 def GNUCaseRange : DiagGroup<"gnu-case-range">;
