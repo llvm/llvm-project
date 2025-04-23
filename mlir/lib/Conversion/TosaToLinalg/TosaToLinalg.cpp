@@ -1490,6 +1490,14 @@ public:
             return;
           };
 
+          // pre-process OutputZP as it can be unsigned
+          auto outBitwidth = outputTy.getElementType().getIntOrFloatBitWidth();
+          APInt OZp(outBitwidth, !op.getOutputUnsigned());
+          OZp = static_cast<int64_t>(*maybeOZp);
+          *maybeOZp = op.getOutputUnsigned()
+                          ? static_cast<int64_t>(OZp.getZExtValue())
+                          : OZp.getSExtValue();
+
           auto outputZp = createConstOpFromZpVal<int32_t>(
               op, *maybeOZp, nestedBuilder.getI32Type(), nestedBuilder);
 
