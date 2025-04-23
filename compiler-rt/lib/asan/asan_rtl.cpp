@@ -70,7 +70,6 @@ static void AsanDie() {
     } else {
       if (kHighShadowEnd)
         UnmapOrDie((void *)kLowShadowBeg, kHighShadowEnd - kLowShadowBeg);
-
     }
 #endif
   }
@@ -96,11 +95,11 @@ bool AsanInited() {
 bool replace_intrin_cached;
 
 #if !ASAN_FIXED_MAPPING
-#if !(SANITIZER_AIX && __powerpc64__)
+#  if !(SANITIZER_AIX && __powerpc64__)
 uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;
-#else
+#  else
 uptr kHighMemEnd;
-#endif
+#  endif
 #endif
 
 // -------------------------- Misc ---------------- {{{1
@@ -356,7 +355,7 @@ void PrintAddressSpaceLayout() {
            (void*)kHighShadowBeg, (void*)kHighShadowEnd);
   }
   if (kMidMemBeg) {
- // AIX shadowgap is always set to 0 for 64-bit.
+    // AIX shadowgap is always set to 0 for 64-bit.
 #if !SANITIZER_AIX || SANITIZER_WORDSIZE != 64
     Printf("|| `[%p, %p]` || ShadowGap3 ||\n",
            (void*)kShadowGap3Beg, (void*)kShadowGap3End);
@@ -371,10 +370,10 @@ void PrintAddressSpaceLayout() {
            (void*)kMidShadowBeg, (void*)kMidShadowEnd);
   }
 #if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
-  Printf("|| `[%p, %p]` || Mid2Shadow  ||\n",
-         (void*)kMid2ShadowBeg, (void*)kMid2ShadowEnd);
-  Printf("|| `[%p, %p]` || Mid3Shadow  ||\n",
-         (void*)kMid3ShadowBeg, (void*)kMid3ShadowEnd);
+  Printf("|| `[%p, %p]` || Mid2Shadow  ||\n", (void *)kMid2ShadowBeg,
+         (void *)kMid2ShadowEnd);
+  Printf("|| `[%p, %p]` || Mid3Shadow  ||\n", (void *)kMid3ShadowBeg,
+         (void *)kMid3ShadowEnd);
 #else
   Printf("|| `[%p, %p]` || ShadowGap  ||\n",
          (void*)kShadowGapBeg, (void*)kShadowGapEnd);
@@ -400,12 +399,10 @@ void PrintAddressSpaceLayout() {
   }
 // On AIX, for 64-bit, there are totally 3 mid memory regions.
 #if SANITIZER_AIX == 1 && SANITIZER_WORDSIZE == 64
-    Printf(" %p %p",
-           (void*)MEM_TO_SHADOW(kMid2ShadowBeg),
-           (void*)MEM_TO_SHADOW(kMid2ShadowEnd));
-    Printf(" %p %p",
-           (void*)MEM_TO_SHADOW(kMid3ShadowBeg),
-           (void*)MEM_TO_SHADOW(kMid3ShadowEnd));
+  Printf(" %p %p", (void *)MEM_TO_SHADOW(kMid2ShadowBeg),
+         (void *)MEM_TO_SHADOW(kMid2ShadowEnd));
+  Printf(" %p %p", (void *)MEM_TO_SHADOW(kMid3ShadowBeg),
+         (void *)MEM_TO_SHADOW(kMid3ShadowEnd));
 #endif
   Printf("\n");
   Printf("redzone=%zu\n", (uptr)flags()->redzone);
