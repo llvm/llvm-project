@@ -102,6 +102,10 @@ public:
     Flag flags;
   };
 
+  NativeProcessProtocol *GetCurrentProcess() {
+    return m_current_process;
+  }
+
 protected:
   MainLoop &m_mainloop;
   MainLoop::ReadHandleUP m_network_handle_up;

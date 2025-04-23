@@ -166,6 +166,24 @@ std::optional<GPUPluginConnectionInfo> LLDBServerPluginMockGPU::CreateConnection
   return std::nullopt;
 }
 
+std::optional<GPUActions> LLDBServerPluginMockGPU::NativeProcessIsStopping() {
+  NativeProcessProtocol *native_process = m_native_process.GetCurrentProcess();
+  // Show that we can return a valid GPUActions object from a stop event.
+  if (native_process->GetStopID() == 3) {
+    GPUActions actions;
+    actions.plugin_name = GetPluginName();
+    GPUBreakpointInfo bp;
+    bp.identifier = "3rd stop breakpoint";
+    bp.shlib = "a.out";
+    bp.function_name = "gpu_third_stop";
+    std::vector<GPUBreakpointInfo> breakpoints;
+    breakpoints.emplace_back(std::move(bp));
+    actions.breakpoints = std::move(breakpoints);
+    return actions;
+  }
+  return std::nullopt;
+}
+
 GPUPluginBreakpointHitResponse 
 LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
   Log *log = GetLog(GDBRLog::Plugin);
@@ -177,18 +195,19 @@ LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
             bp_identifier.c_str(), json_string.c_str());
 
   GPUPluginBreakpointHitResponse response;
+  response.actions.plugin_name = GetPluginName();
   if (bp_identifier == "gpu_initialize") {
     response.disable_bp = true;
     LLDB_LOGF(log, "LLDBServerPluginMockGPU::BreakpointWasHit(\"%s\") disabling breakpoint", 
               bp_identifier.c_str());
-    response.connect_info = CreateConnection();
+    response.actions.connect_info = CreateConnection();
   }
   return response;
 }
 
-void LLDBServerPluginMockGPU::InitializePluginInfo() {
-  m_info.name = GetPluginName();
-  m_info.description = "Mock GPU plugin";
+GPUActions LLDBServerPluginMockGPU::GetInitializeActions() {
+  GPUActions init_actions;
+  init_actions.plugin_name = GetPluginName();
   
   GPUBreakpointInfo bp1;
   bp1.identifier = "gpu_initialize";
@@ -204,6 +223,9 @@ void LLDBServerPluginMockGPU::InitializePluginInfo() {
   bp2.symbol_names.push_back("g_shlib_list");
   bp2.symbol_names.push_back("invalid_symbol");
 
-  m_info.breakpoints.emplace_back(std::move(bp1));
-  m_info.breakpoints.emplace_back(std::move(bp2));
+  std::vector<GPUBreakpointInfo> breakpoints;
+  breakpoints.emplace_back(std::move(bp1));
+  breakpoints.emplace_back(std::move(bp2));
+  init_actions.breakpoints = std::move(breakpoints);
+  return init_actions;
 }

@@ -604,8 +604,8 @@ StructuredData::ObjectSP GDBRemoteCommunicationClient::GetThreadsInfo() {
   return object_sp;
 }
 
-std::optional<std::vector<GPUPluginInfo>> 
-GDBRemoteCommunicationClient::GetGPUPluginInfos() {
+std::optional<std::vector<GPUActions>> 
+GDBRemoteCommunicationClient::GetGPUInitializeActions() {
   // Get JSON information containing any breakpoints and other information
   // required by any GPU plug-ins using the "jGPUPluginInitialize" packet.
   //
@@ -622,9 +622,9 @@ GDBRemoteCommunicationClient::GetGPUPluginInfos() {
       if (response.IsUnsupportedResponse()) {
         m_supports_gpu_plugins = eLazyBoolNo;
       } else if (!response.Empty()) {
-        if (llvm::Expected<std::vector<GPUPluginInfo>> info = 
-                llvm::json::parse<std::vector<GPUPluginInfo>>(response.Peek(), 
-                                                              "GPUPluginInfo"))
+        if (llvm::Expected<std::vector<GPUActions>> info = 
+                llvm::json::parse<std::vector<GPUActions>>(response.Peek(), 
+                                                            "GPUActions"))
           return std::move(*info);
         else
           llvm::consumeError(info.takeError());

@@ -18,8 +18,10 @@ namespace lldb_private {
 
 /// A class that represents a symbol value
 struct SymbolValue {
+  /// Name of the symbol.
   std::string name;
-  uint64_t value;
+  /// If the optional doesn't have a value, then the symbol was not available.
+  std::optional<uint64_t> value;
 };
 bool fromJSON(const llvm::json::Value &value, SymbolValue &data, 
               llvm::json::Path path);
@@ -38,18 +40,6 @@ bool fromJSON(const llvm::json::Value &value, GPUBreakpointInfo &data,
   llvm::json::Path path);
 
 llvm::json::Value toJSON(const GPUBreakpointInfo &data);
-
-
-struct GPUPluginInfo {
-  std::string name;
-  std::string description;
-  std::vector<GPUBreakpointInfo> breakpoints;
-};
-
-bool fromJSON(const llvm::json::Value &value, GPUPluginInfo &data,
-  llvm::json::Path path);
-
-llvm::json::Value toJSON(const GPUPluginInfo &data);
 
 struct GPUPluginBreakpointHitArgs {
   std::string plugin_name;
@@ -85,6 +75,28 @@ bool fromJSON(const llvm::json::Value &value, GPUPluginConnectionInfo &data,
 llvm::json::Value toJSON(const GPUPluginConnectionInfo &data);
 
 ///-----------------------------------------------------------------------------
+/// GPUActions
+///
+/// A structure that contains action to be taken after a stop or breakpoint hit
+/// event.
+///-----------------------------------------------------------------------------
+struct GPUActions {
+  /// The name of the plugin.
+  std::string plugin_name;
+  /// Optional new breakpoints to set.
+  std::optional<std::vector<GPUBreakpointInfo>> breakpoints;
+  /// If a GPU connection is available return a connect URL to use to reverse
+  /// connect to the GPU GDB server.
+  std::optional<GPUPluginConnectionInfo> connect_info;
+};
+
+bool fromJSON(const llvm::json::Value &value, 
+  GPUActions &data,
+  llvm::json::Path path);
+
+llvm::json::Value toJSON(const GPUActions &data);
+
+///-----------------------------------------------------------------------------
 /// GPUPluginBreakpointHitResponse
 ///
 /// A response structure from the GPU plugin from hitting a native breakpoint
@@ -94,10 +106,7 @@ struct GPUPluginBreakpointHitResponse {
   ///< Set to true if this berakpoint should be disabled.
   bool disable_bp = false; 
   /// Optional new breakpoints to set.
-  std::optional<std::vector<GPUBreakpointInfo>> breakpoints;
-  /// If a GPU connection is available return a connect URL to use to reverse
-  /// connect to the GPU GDB server.
-  std::optional<GPUPluginConnectionInfo> connect_info;
+  GPUActions actions;
 };
 
 bool fromJSON(const llvm::json::Value &value, 

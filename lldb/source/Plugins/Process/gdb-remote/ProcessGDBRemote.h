@@ -451,6 +451,9 @@ private:
                             const std::vector<GPUBreakpointInfo> &breakpoints);
 
   Status HandleConnectionRequest(const GPUPluginConnectionInfo &connection_info);
+
+  Status HandleGPUActions(const GPUActions &gpu_action);
+
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;

@@ -55,19 +55,20 @@ namespace lldb_private {
 
 namespace lldb_server {
 
-class LLDBServerPluginMockGPU : public lldb_private::lldb_server::LLDBServerPlugin {
+class LLDBServerPluginMockGPU : public LLDBServerPlugin {
 public:
-  LLDBServerPluginMockGPU(lldb_private::lldb_server::LLDBServerPlugin::GDBServer &native_process);
+  LLDBServerPluginMockGPU(LLDBServerPlugin::GDBServer &native_process);
   ~LLDBServerPluginMockGPU() override;
   llvm::StringRef GetPluginName() override;
   int GetEventFileDescriptorAtIndex(size_t idx) override;
   bool HandleEventFileDescriptorEvent(int fd) override;
-  std::optional<GPUPluginConnectionInfo> CreateConnection() override;
-  void InitializePluginInfo() override;
+  GPUActions GetInitializeActions() override;
+  std::optional<struct GPUActions> NativeProcessIsStopping() override;  
   GPUPluginBreakpointHitResponse 
   BreakpointWasHit(GPUPluginBreakpointHitArgs &args) override;
 
 private:
+  std::optional<GPUPluginConnectionInfo> CreateConnection();
   void CloseFDs();
   void AcceptAndMainLoopThread(std::unique_ptr<TCPSocket> listen_socket_up);
 
