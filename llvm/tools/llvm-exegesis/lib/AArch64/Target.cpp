@@ -9,9 +9,12 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 
-#ifdef __linux__
+#if defined(__aarch64__) && defined(__linux__)
 #include <linux/prctl.h> // For PR_PAC_* constants
 #include <sys/prctl.h>
+#ifndef PR_PAC_SET_ENABLED_KEYS
+#define PR_PAC_SET_ENABLED_KEYS 60
+#endif
 #endif
 
 #define GET_AVAILABLE_OPCODE_CHECKER
@@ -188,7 +191,7 @@ private:
       return Reason;
 
     if (isPointerAuth(Opcode)) {
-#ifdef __linux__
+#if defined(__aarch64__) && defined(__linux__)
       // Disable all PAC keys. Note that while we expect the measurements to
       // be the same with PAC keys disabled, they could potentially be lower
       // since authentication checks are bypassed.
