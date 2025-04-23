@@ -2512,7 +2512,7 @@ public:
 /// A recipe to represent inloop extended reduction operations, performing a
 /// reduction on a extended vector operand into a scalar value, and adding the
 /// result to a chain. This recipe is abstract and needs to be lowered to
-/// concrete recipes before codegen. The Operands are {ChainOp, VecOp,
+/// concrete recipes before codegen. The operands are {ChainOp, VecOp,
 /// [Condition]}.
 class VPExtendedReductionRecipe : public VPReductionRecipe {
   /// Opcode of the extend recipe will be lowered to.

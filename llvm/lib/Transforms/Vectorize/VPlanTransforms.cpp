@@ -2642,7 +2642,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   Type *RedTy = Ctx.Types.inferScalarType(Red);
   VPValue *VecOp = Red->getVecOp();
 
-  // Test if using extended-reduction is profitable and clamp the range.
+  // Clamp the range if using extended-reduction is profitable.
   auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
                                              Type *SrcTy) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -2687,8 +2687,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   Type *RedTy = Ctx.Types.inferScalarType(Red);
 
-  // Test if using mulutiply-accumulate-reduction is beneficial and clamp the
-  // range.
+  // Clamp the range if using multiply-accumulate-reduction is profitable.
   auto IsMulAccValidAndClampRange =
       [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
           VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
@@ -2766,7 +2765,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   return nullptr;
 }
 
-/// This function try to create abstract recipes from reduction recipe for
+/// This function tries to create abstract recipes from the reduction recipe for
 /// following optimizations and cost estimation.
 static void tryToCreateAbstractReductionRecipe(VPReductionRecipe *Red,
                                                VPCostContext &Ctx,
@@ -2789,7 +2788,7 @@ void VPlanTransforms::convertToAbstractRecipes(VPlan &Plan, VPCostContext &Ctx,
                                                VFRange &Range) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+    for (VPRecipeBase &R : *VPBB) {
       if (auto *Red = dyn_cast<VPReductionRecipe>(&R))
         tryToCreateAbstractReductionRecipe(Red, Ctx, Range);
     }
