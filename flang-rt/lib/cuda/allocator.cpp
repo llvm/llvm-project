@@ -60,7 +60,6 @@ static void initAllocations() {
   }
 }
 
-// Double the size of the allocation array when size if
 static void doubleAllocationArray() {
   unsigned newSize = maxDeviceAllocations * 2;
   DeviceAllocation *newArray = static_cast<DeviceAllocation *>(
