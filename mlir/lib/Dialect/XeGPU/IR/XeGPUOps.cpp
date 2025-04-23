@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
@@ -71,34 +72,6 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
   auto kind = attr.getValue();
   return kind == CachePolicy::CACHED || kind == CachePolicy::UNCACHED ||
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
-}
-
-// Checks if the given shape is evenly distributed based on the layout
-// and data factors provided by the LayoutAttr. The function ensures that
-// each dimension of the shape can be evenly divided by the corresponding
-// data factor, and the resulting quotient can be evenly divided by the
-// layout factor. Returns `true` if the shape is evenly distributed,
-// otherwise `false`.
-static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
-                              xegpu::LayoutAttr attr) {
-  assert(attr && "Layout attribute is missing.");
-  llvm::SmallVector<int32_t> defaults(shape.size(), 1);
-  llvm::ArrayRef<int32_t> layout, data;
-  if (auto sg_layout = attr.getSgLayout()) {
-    layout = sg_layout.asArrayRef();
-    auto sg_data = attr.getSgData();
-    data = sg_data ? sg_data.asArrayRef() : defaults;
-  } else {
-    layout = attr.getLaneLayout().asArrayRef();
-    auto lane_data = attr.getLaneData();
-    data = lane_data ? lane_data.asArrayRef() : defaults;
-  }
-  for (auto [dimSize, dataFactor, layoutFactor] :
-       llvm::zip_equal(shape, data, layout)) {
-    if (dimSize % dataFactor != 0 || (dimSize / dataFactor) % layoutFactor != 0)
-      return false;
-  }
-  return true;
 }
 
 static LogicalResult
@@ -674,10 +647,10 @@ LogicalResult ConvertLayoutOp::verify() {
         "expected srcMap and resMap be WgLayout or SgLayout at the same time.");
 
   auto shape = getSource().getType().getShape();
-  if (!isEvenDistributed(shape, srcMap))
+  if (!XeGPUDialect::isEvenlyDistributable(shape, srcMap))
     return emitOpError("invalid srcMap, data cannot be evenly distributed.");
 
-  if (!isEvenDistributed(shape, resMap))
+  if (!XeGPUDialect::isEvenlyDistributable(shape, resMap))
     return emitOpError("invalid resMap, data cannot be evenly distributed.");
 
   return mlir::success();
