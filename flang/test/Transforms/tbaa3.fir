@@ -63,7 +63,7 @@
 //       |  |- "global data/_QMdataEglob"
 //       |  |- "global data/_QMdataEglobt"
 //       |
-//       |- "direct data" - "direct data/_QMdataEgloba"
+//       |- "direct data"
 //       |  |
 //       |  |- "direct data/_QMdataEgloba"
 //       |  |- "direct data/_QMdataEglobat"
