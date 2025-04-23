@@ -2861,18 +2861,16 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
 
-static bool HasExistingGeneralizedTypeMD(llvm::Function *F) {
+static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
   llvm::MDNode *MD = F->getMetadata(llvm::LLVMContext::MD_type);
-  if (!MD || !isa<llvm::MDString>(MD->getOperand(1)))
+  if (!MD)
     return false;
-
-  llvm::MDString *TypeIdStr = cast<llvm::MDString>(MD->getOperand(1));
-  return TypeIdStr->getString().ends_with(".generalized");
+  return MD->hasGeneralizedMDString();
 }
 
 void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                                        llvm::Function *F) {
-  if (CodeGenOpts.CallGraphSection && !HasExistingGeneralizedTypeMD(F) &&
+  if (CodeGenOpts.CallGraphSection && !hasExistingGeneralizedTypeMD(F) &&
       (!F->hasLocalLinkage() ||
        F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                         /*IgnoreAssumeLikeCalls=*/true,
@@ -2891,7 +2889,7 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   llvm::Metadata *MD = CreateMetadataIdentifierForType(FD->getType());
   F->addTypeMetadata(0, MD);
   // Add the generalized identifier if not added already.
-  if (!HasExistingGeneralizedTypeMD(F))
+  if (!hasExistingGeneralizedTypeMD(F))
     F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
 
   // Emit a hash-based bit set entry for cross-DSO calls.
@@ -2911,9 +2909,7 @@ void CodeGenModule::CreateCalleeTypeMetadataForIcall(const QualType &QT,
       getLLVMContext(), {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
                              llvm::Type::getInt64Ty(getLLVMContext()), 0)),
                          TypeIdMD});
-  SmallVector<llvm::Metadata *, 1> TypeIdMDList;
-  TypeIdMDList.push_back(TypeTuple);
-  llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), TypeIdMDList);
+  llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), { TypeTuple });
   CB->setMetadata(llvm::LLVMContext::MD_callee_type, MDN);
 }
 

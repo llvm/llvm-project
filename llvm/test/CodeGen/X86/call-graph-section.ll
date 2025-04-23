@@ -1,4 +1,4 @@
-;; Tests that we store the type identifiers in .callgraph section of the binary.
+;; Tests that we store the type identifiers in .callgraph section of the object file.
 
 ; RUN: llc --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .callgraph - | FileCheck %s
