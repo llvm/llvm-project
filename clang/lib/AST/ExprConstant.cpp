@@ -2232,15 +2232,10 @@ static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
   // within RHS. We don't need to look at the characters of one string that
   // would appear before the start of the other string if they were merged.
   CharUnits Offset = RHS.Offset - LHS.Offset;
-  if (Offset.isNegative()) {
-    if (LHSString.Bytes.size() < (size_t)-Offset.getQuantity())
-      return false;
+  if (Offset.isNegative())
     LHSString.Bytes = LHSString.Bytes.drop_front(-Offset.getQuantity());
-  } else {
-    if (RHSString.Bytes.size() < (size_t)Offset.getQuantity())
-      return false;
+  else
     RHSString.Bytes = RHSString.Bytes.drop_front(Offset.getQuantity());
-  }
 
   bool LHSIsLonger = LHSString.Bytes.size() > RHSString.Bytes.size();
   StringRef Longer = LHSIsLonger ? LHSString.Bytes : RHSString.Bytes;
