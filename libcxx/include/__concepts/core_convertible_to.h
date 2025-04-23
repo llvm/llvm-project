@@ -14,7 +14,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [conv.general]/3 says "E is convertible to T" whenever "T t=E;" is well-formed.
 // We can't test for that, but we can test implicit convertibility by passing it
 // to a function. Unlike std::convertible_to, __core_convertible_to doesn't test
-// static_cast or handle cv void, while accepting move-only types.
+// static_cast or handle cv void, while accepting non-movable types.
 //
 // This is a conceptual __is_core_convertible.
 template <class _Tp, class _Up>
