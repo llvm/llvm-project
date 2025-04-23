@@ -3985,6 +3985,12 @@ TEST_F(TokenAnnotatorTest, IdentifierPackage) {
   EXPECT_FALSE(Tokens[0]->isObjCAccessSpecifier());
 }
 
+TEST_F(TokenAnnotatorTest, UserDefinedLiteral) {
+  auto Tokens = annotate("auto dollars = 2_$;");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_EQ(Tokens[3]->TokenText, "2_$");
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
