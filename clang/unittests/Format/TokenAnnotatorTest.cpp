@@ -2165,6 +2165,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   // FIXME:
   // EXPECT_TOKEN(Tokens[13], tok::l_paren, TT_LambdaDefinitionLParen);
   EXPECT_TOKEN(Tokens[17], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("auto foo{(std::function<int()>)[] { return 0; }};");
+  ASSERT_EQ(Tokens.size(), 23u) << Tokens;
+  EXPECT_TOKEN(Tokens[13], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[15], tok::l_brace, TT_LambdaLBrace);
+
+  Tokens = annotate("auto foo{(int (*)())[] { return 0; }};");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[11], tok::l_square, TT_LambdaLSquare);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_LambdaLBrace);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
