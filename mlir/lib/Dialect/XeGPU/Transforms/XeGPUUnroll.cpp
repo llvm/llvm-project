@@ -211,7 +211,8 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
         mixedOffsets[x] = addi(oldX, subOffX);
         mixedOffsets[y] = addi(oldY, subOffY);
         auto newOp = rewriter.create<xegpu::CreateNdDescOp>(
-          loc, newTdescTy, op.getSource(), mixedOffsets, op.getMixedSizes(), op.getMixedStrides());
+            loc, newTdescTy, op.getSource(), mixedOffsets, op.getMixedSizes(),
+            op.getMixedStrides());
         newOps.push_back(newOp);
       }
     }
@@ -304,20 +305,21 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
 
     auto elemTy = tdescTy.getElementType();
     auto newValueTy = valueTy.cloneWith(targetShape, elemTy);
-    auto newTdescTy = xegpu::TensorDescType::get(ctx, targetShape, elemTy, tdescTy.getEncoding(),
-        getLaneLayoutAttr(layout));
+    auto newTdescTy = xegpu::TensorDescType::get(ctx, targetShape, elemTy,
+                                                 tdescTy.getEncoding(),
+                                                 getLaneLayoutAttr(layout));
 
     auto numNewOps = computeProduct(grids);
     llvm::SmallVector<Type> convertedValTypes(numNewOps, newValueTy);
     llvm::SmallVector<Type> convertedTdescTypes(numNewOps, newTdescTy);
-    auto convertedValues = addPackOp(op.getValue(), convertedValTypes, targetShape, loc, rewriter);
+    auto convertedValues =
+        addPackOp(op.getValue(), convertedValTypes, targetShape, loc, rewriter);
     auto convertedTdescs = addPackOp(op.getTensorDesc(), convertedTdescTypes,
                                      targetShape, loc, rewriter);
 
     for (auto [v, t] : llvm::zip(convertedValues, convertedTdescs)) {
       rewriter.create<xegpu::StoreNdOp>(loc, v, t, op.getL1HintAttr(),
-                                           op.getL2HintAttr(),
-                                           op.getL3HintAttr());
+                                        op.getL2HintAttr(), op.getL3HintAttr());
     }
     rewriter.eraseOp(op);
     return success();
@@ -395,27 +397,27 @@ struct XeGPUUnrollPass final
 
   void runOnOperation() override {
     vector::UnrollVectorOptions options;
-    options.setNativeShapeFn(
-        [&](Operation *op) -> std::optional<SmallVector<int64_t>> {
-          if (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::StoreNdOp>(op)) {
-            xegpu::TensorDescType tdescTy;
-            if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
-              tdescTy = createNdOp.getType();
-            } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
-              tdescTy = loadNdOp.getTensorDescType();
-            } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
-              tdescTy = storeNdOp.getTensorDescType();
-            }
+    options.setNativeShapeFn([&](Operation *op)
+                                 -> std::optional<SmallVector<int64_t>> {
+      if (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::StoreNdOp>(op)) {
+        xegpu::TensorDescType tdescTy;
+        if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
+          tdescTy = createNdOp.getType();
+        } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
+          tdescTy = loadNdOp.getTensorDescType();
+        } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
+          tdescTy = storeNdOp.getTensorDescType();
+        }
 
-            if (auto layout = tdescTy.getLayoutAttr()) {
-              if (auto inst_data = layout.getInstData())
-                return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                            inst_data.asArrayRef().end());
-            }
-          }
+        if (auto layout = tdescTy.getLayoutAttr()) {
+          if (auto inst_data = layout.getInstData())
+            return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
+                                        inst_data.asArrayRef().end());
+        }
+      }
 
-          return std::nullopt;
-        });
+      return std::nullopt;
+    });
 
     auto funcOp = getOperation();
     RewritePatternSet patterns(&getContext());
@@ -432,7 +434,8 @@ struct XeGPUUnrollPass final
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
-    RewritePatternSet &patterns, const mlir::vector::UnrollVectorOptions &options) {
+    RewritePatternSet &patterns,
+    const mlir::vector::UnrollVectorOptions &options) {
   patterns.add<UnrollCreateNdOp, UnrollLoadNdOp, UnrollStoreNdOp>(
-        patterns.getContext(), options);
+      patterns.getContext(), options);
 }

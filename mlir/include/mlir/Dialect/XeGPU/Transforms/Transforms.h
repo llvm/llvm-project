@@ -13,7 +13,7 @@ namespace mlir {
 class RewritePatternSet;
 
 namespace vector {
-  struct UnrollVectorOptions;
+struct UnrollVectorOptions;
 } // namespace vector
 
 namespace xegpu {
