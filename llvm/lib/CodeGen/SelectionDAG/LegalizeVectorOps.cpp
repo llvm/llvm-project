@@ -469,8 +469,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::VECTOR_COMPRESS:
   case ISD::SCMP:
   case ISD::UCMP:
-  case ISD::PARTIAL_REDUCE_UMLA:
-  case ISD::PARTIAL_REDUCE_SMLA:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:
@@ -530,6 +528,11 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
       Action = TLI.getOperationAction(Node->getOpcode(), OpVT);
     break;
   }
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Action = TLI.getPartialReduceMLAAction(Node->getValueType(0),
+                                           Node->getOperand(1).getValueType());
+    break;
 
 #define BEGIN_REGISTER_VP_SDNODE(VPID, LEGALPOS, ...)                          \
   case ISD::VPID: {                                                            \
