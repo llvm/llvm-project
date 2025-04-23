@@ -4509,13 +4509,13 @@ entry:
 
 
 
-define <2 x i64> @fhsl_to_rev2i64(<2 x i64> %r) {
-; CHECK-SD-LABEL: fhsl_to_rev2i64:
+define <2 x i64> @fshl_to_rev2i64(<2 x i64> %r) {
+; CHECK-SD-LABEL: fshl_to_rev2i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
-; CHECK-GI-LABEL: fhsl_to_rev2i64:
+; CHECK-GI-LABEL: fshl_to_rev2i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    shl v1.2d, v0.2d, #32
 ; CHECK-GI-NEXT:    ushr v0.2d, v0.2d, #32
