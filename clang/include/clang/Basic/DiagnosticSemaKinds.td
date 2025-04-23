@@ -8687,10 +8687,17 @@ def err_typecheck_missing_return_type_incompatible : Error<
   "%diff{return type $ must match previous return type $|"
   "return type must match previous return type}0,1 when %select{block "
   "literal|lambda expression}2 has unspecified explicit return type">;
-
 def warn_compatible_implicit_pointer_conv : Warning<
-  "implicit conversion from %diff{$ to $|type to incompatible type}0,1 is not "
-  "permitted in C++">, InGroup<CXXCompat>, DefaultIgnore;
+  "implicit conversion when %select{"
+  "%diff{assigning to $ from type $|assigning to type from type}0,1|"
+  "%diff{passing $ to parameter of type $|passing type to parameter of type}0,1|"
+  "%diff{returning $ from a function with result type $|returning type from a function with result type}0,1|"
+  "<CLANG BUG IF YOU SEE THIS>|" // converting
+  "%diff{initializing $ with an expression of type $|initializing type with an expression of type}0,1|"
+  "%diff{sending $ to parameter of type $|sending type to parameter of type}0,1|"
+  "<CLANG BUG IF YOU SEE THIS>" // casting
+  "}2 is not permitted in C++">,
+  InGroup<ImplicitVoidPtrCast>, DefaultIgnore;
 def note_incomplete_class_and_qualified_id : Note<
   "conformance of forward class %0 to protocol %1 cannot be confirmed">;
 def warn_incompatible_qualified_id : Warning<

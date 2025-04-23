@@ -9102,7 +9102,7 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
       // Types are compatible ignoring the sign. Qualifier incompatibility
       // takes priority over sign incompatibility because the sign
       // warning can be disabled.
-      if (S.IsAssignConvertCompatible(ConvTy))
+      if (!S.IsAssignConvertCompatible(ConvTy))
         return ConvTy;
 
       return Sema::IncompatiblePointerSign;
