@@ -60,6 +60,14 @@ LogicalResult ComplexType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// Index Type
+//===----------------------------------------------------------------------===//
+
+unsigned IndexType::getStorageBitWidth() const {
+  return kInternalStorageBitWidth;
+}
+
+//===----------------------------------------------------------------------===//
 // Integer Type
 //===----------------------------------------------------------------------===//
 
@@ -85,6 +93,8 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
     return IntegerType();
   return IntegerType::get(getContext(), scale * getWidth(), getSignedness());
 }
+
+unsigned IntegerType::getStorageBitWidth() const { return getWidth(); }
 
 //===----------------------------------------------------------------------===//
 // Float Types

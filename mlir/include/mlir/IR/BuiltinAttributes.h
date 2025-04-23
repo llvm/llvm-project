@@ -548,7 +548,9 @@ public:
       std::enable_if_t<std::is_same<T, APInt>::value>;
   template <typename T, typename = APIntValueTemplateCheckT<T>>
   FailureOr<iterator_range_impl<IntElementIterator>> tryGetValues() const {
-    if (!getElementType().isIntOrIndex())
+    auto intLikeType =
+        llvm::dyn_cast<IntegerLikeTypeInterface>(getElementType());
+    if (!intLikeType)
       return failure();
     return iterator_range_impl<IntElementIterator>(getType(), raw_int_begin(),
                                                    raw_int_end());
