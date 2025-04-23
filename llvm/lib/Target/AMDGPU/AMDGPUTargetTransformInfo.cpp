@@ -1120,6 +1120,64 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
 }
 
+/// Certain shufflemasks may not be either Identity masks or InsertSubvector
+/// masks, but do not require instructions to produce. An example is if we are
+/// shuffling two <16 x i8> sources with the 16 element mask: {0, 1, 2, 3, 4, 5,
+/// 6, 7, 24, 25, 26, 27, poison, poison, posion, poison}. The result of this
+/// shuffle is {first v4i8 of src0, second v4i8 of src0, third v4i8 of src1,
+/// posion}. In order to produce this result, we do not need to insert shuffle
+/// code, as these vectors already exist the source registers. Thus, we simply
+/// need to ensure these registers are contiguous to produce the result.
+/// countIdentityPerms analyzes the \p Mask to count the number of such register
+/// aligned vectors (based on the provided \p ScalarSize ).
+static unsigned countIdentityPerms(ArrayRef<int> Mask, unsigned ScalarSize) {
+  unsigned IdentityPerms = 0;
+  unsigned EltsPerPerm = 32 / ScalarSize;
+  if (!EltsPerPerm)
+    return 0;
+
+  // Split the shuffle mask into a number of 32 bit wide shuffles.
+  for (unsigned PermCand = 0; PermCand < (Mask.size() / EltsPerPerm);
+       PermCand++) {
+    std::pair<int, int> BasisIndex(-1, -1);
+    bool FoundMismatch = false;
+
+    // Analyze the 32 bit mask for register-aligned vectors.
+    for (int PermElement = 0; PermElement < (int)EltsPerPerm; PermElement++) {
+      unsigned Index = PermCand * EltsPerPerm + PermElement;
+      assert(Index < Mask.size());
+      int MaskVal = Mask[Index];
+
+      // Maskval of -1 is dont-care.
+      if (MaskVal == -1)
+        continue;
+      if (BasisIndex.second == -1) {
+        // Check if this mask represents alignment to bit position in the
+        // regsiter.
+        if (PermElement > MaskVal || ((MaskVal - PermElement) % EltsPerPerm)) {
+          FoundMismatch = true;
+        }
+        BasisIndex = {MaskVal, PermElement};
+        continue;
+      }
+
+      if (MaskVal < BasisIndex.first) {
+        FoundMismatch = true;
+        break;
+      }
+
+      // Check if this mask is contiguous with the previously matched mask
+      if ((MaskVal - BasisIndex.first) != (PermElement - BasisIndex.second)) {
+        FoundMismatch = true;
+        break;
+      }
+    }
+    if (!FoundMismatch)
+      IdentityPerms += 1;
+  }
+  return IdentityPerms;
+}
+
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *VT, ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
@@ -1133,12 +1191,13 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   // Larger vector widths may require additional instructions, but are
   // typically cheaper than scalarized versions.
-  unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+  unsigned ScalarSize = DL.getTypeSizeInBits(VT->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      DL.getTypeSizeInBits(VT->getElementType()) == 16) {
+      ScalarSize == 16) {
     bool HasVOP3P = ST->hasVOP3PInsts();
     unsigned RequestedElts =
         count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
+    unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
     if (RequestedElts == 0)
       return 0;
     switch (Kind) {
@@ -1149,9 +1208,13 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // half of a register, so any swizzle of two elements is free.
       if (HasVOP3P && NumVectorElts == 2)
         return 0;
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(Mask.size(), 2) / 2;
+      unsigned IdentPerms = countIdentityPerms(Mask, ScalarSize);
+      assert(IdentPerms <= NumPerms);
+      NumPerms -= IdentPerms;
       // SK_Broadcast just reuses the same mask
-      unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
+      unsigned NumPermMasks =
+          Kind == (TTI::SK_Broadcast && NumPerms > 1) ? 1 : NumPerms;
       return NumPerms + NumPermMasks;
     }
     case TTI::SK_ExtractSubvector:
@@ -1166,9 +1229,13 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     case TTI::SK_PermuteTwoSrc:
     case TTI::SK_Splice:
     case TTI::SK_Select: {
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(Mask.size(), 2) / 2;
+      unsigned IdentPerms = countIdentityPerms(Mask, ScalarSize);
+      assert(IdentPerms <= NumPerms);
+      NumPerms -= IdentPerms;
       // SK_Select just reuses the same mask
-      unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
+      unsigned NumPermMasks =
+          Kind == (TTI::SK_Select && NumPerms > 1) ? 1 : NumPerms;
       return NumPerms + NumPermMasks;
     }
 
