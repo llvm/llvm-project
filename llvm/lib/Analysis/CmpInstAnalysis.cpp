@@ -76,11 +76,11 @@ Constant *llvm::getPredForFCmpCode(unsigned Code, Type *OpTy,
 std::optional<DecomposedBitTest>
 llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
                            bool LookThruTrunc, bool AllowNonZeroC,
-                           bool DecomposeBitMask) {
+                           bool DecomposeAnd) {
   using namespace PatternMatch;
 
   const APInt *OrigC;
-  if ((ICmpInst::isEquality(Pred) && !DecomposeBitMask) ||
+  if ((ICmpInst::isEquality(Pred) && !DecomposeAnd) ||
       !match(RHS, m_APIntAllowPoison(OrigC)))
     return std::nullopt;
 
@@ -102,7 +102,7 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
 
   switch (Pred) {
   default:
-    return std::nullopt;
+    llvm_unreachable("Unexpected predicate");
   case ICmpInst::ICMP_SLT: {
     // X < 0 is equivalent to (X & SignMask) != 0.
     if (C.isZero()) {
@@ -152,11 +152,14 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
   }
   case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_NE: {
-    assert(DecomposeBitMask);
+    assert(DecomposeAnd);
     const APInt *AndC;
     Value *AndVal;
     if (match(LHS, m_And(m_Value(AndVal), m_APIntAllowPoison(AndC)))) {
-      Result = {AndVal /*X*/, Pred /*Pred*/, *AndC /*Mask*/, *OrigC /*C*/};
+      LHS = AndVal;
+      Result.Mask = *AndC;
+      Result.C = C;
+      Result.Pred = Pred;
       break;
     }
 
@@ -175,9 +178,8 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
     Result.X = X;
     Result.Mask = Result.Mask.zext(X->getType()->getScalarSizeInBits());
     Result.C = Result.C.zext(X->getType()->getScalarSizeInBits());
-  } else if (!Result.X) {
+  } else
     Result.X = LHS;
-  }
 
   return Result;
 }
@@ -185,7 +187,7 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
 std::optional<DecomposedBitTest> llvm::decomposeBitTest(Value *Cond,
                                                         bool LookThruTrunc,
                                                         bool AllowNonZeroC,
-                                                        bool DecomposeBitMask) {
+                                                        bool DecomposeAnd) {
   using namespace PatternMatch;
   if (auto *ICmp = dyn_cast<ICmpInst>(Cond)) {
     // Don't allow pointers. Splat vectors are fine.
@@ -193,7 +195,7 @@ std::optional<DecomposedBitTest> llvm::decomposeBitTest(Value *Cond,
       return std::nullopt;
     return decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
                                 ICmp->getPredicate(), LookThruTrunc,
-                                AllowNonZeroC, DecomposeBitMask);
+                                AllowNonZeroC, DecomposeAnd);
   }
   Value *X;
   if (Cond->getType()->isIntOrIntVectorTy(1) &&

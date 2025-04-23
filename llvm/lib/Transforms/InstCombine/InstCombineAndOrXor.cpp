@@ -878,7 +878,7 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
     auto Res = llvm::decomposeBitTestICmp(
         ICmp->getOperand(0), ICmp->getOperand(1), Pred,
         /*LookThroughTrunc=*/true, /*AllowNonZeroC=*/false,
-        /*DecomposeBitMask=*/true);
+        /*DecomposeAnd=*/true);
     if (Res && Res->Pred == ICmpInst::ICMP_EQ) {
       X = Res->X;
       UnsetBitsMask = Res->Mask;
