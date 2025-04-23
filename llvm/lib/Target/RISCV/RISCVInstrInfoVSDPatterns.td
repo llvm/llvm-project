@@ -931,9 +931,9 @@ multiclass VPatWidenOrDisjoint_VV_VX<SDNode extop, string instruction_name> {
     }
   }
 }
-defm : VPatWidenOrDisjoint_VV<sext, "PseudoVWADD">;
-defm : VPatWidenOrDisjoint_VV<zext, "PseudoVWADDU">;
-defm : VPatWidenOrDisjoint_VV<anyext, "PseudoVWADDU">;
+defm : VPatWidenOrDisjoint_VV_VX<sext, "PseudoVWADD">;
+defm : VPatWidenOrDisjoint_VV_VX<zext, "PseudoVWADDU">;
+defm : VPatWidenOrDisjoint_VV_VX<anyext, "PseudoVWADDU">;
 
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, sext_oneuse, "PseudoVWSUB">;
 defm : VPatWidenBinarySDNode_VV_VX_WV_WX<sub, zext_oneuse, "PseudoVWSUBU">;
