@@ -2558,8 +2558,8 @@ public:
     }
   }
 
-  void Unparse(const OmpAtomicDefaultMemOrderClause &x) {
-    Word(ToUpperCaseLetters(common::EnumToString(x.v)));
+  void Unparse(const common::OmpMemoryOrderType &x) {
+    Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
   void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }

@@ -494,12 +494,13 @@ AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
                            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAtomicDefaultMemOrderClause
   CLAUSET_ENUM_CONVERT( //
-      convert, common::OmpAtomicDefaultMemOrderType,
-      AtomicDefaultMemOrder::MemoryOrder,
+      convert, common::OmpMemoryOrderType, AtomicDefaultMemOrder::MemoryOrder,
       // clang-format off
-      MS(AcqRel,   AcqRel)
+      MS(Acq_Rel,  AcqRel)
+      MS(Acquire,  Acquire)
       MS(Relaxed,  Relaxed)
-      MS(SeqCst,   SeqCst)
+      MS(Release,  Release)
+      MS(Seq_Cst,  SeqCst)
       // clang-format on
   );
 

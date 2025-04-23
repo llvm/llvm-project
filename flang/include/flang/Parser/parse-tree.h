@@ -4071,7 +4071,7 @@ struct OmpAtClause {
 //    SEQ_CST | ACQ_REL | RELAXED |                 // since 5.0
 //    ACQUIRE | RELEASE                             // since 5.2
 struct OmpAtomicDefaultMemOrderClause {
-  using MemoryOrder = common::OmpAtomicDefaultMemOrderType;
+  using MemoryOrder = common::OmpMemoryOrderType;
   WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, MemoryOrder);
 };
 
@@ -4822,10 +4822,10 @@ struct OpenMPAllocatorsConstruct {
 
 // 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
 //        memory-order-clause -> acq_rel
-//                               release
 //                               acquire
-//                               seq_cst
+//                               release
 //                               relaxed
+//                               seq_cst
 struct OmpMemoryOrderClause {
   WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
   CharBlock source;
