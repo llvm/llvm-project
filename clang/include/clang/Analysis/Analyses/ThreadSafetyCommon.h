@@ -271,26 +271,28 @@ private:
 // translateAttrExpr needs it, but that should be moved too.
 class CapabilityExpr {
 private:
-  /// The capability expression and whether it's negated.
-  llvm::PointerIntPair<const til::SExpr *, 1, bool> CapExpr;
+  static constexpr unsigned FlagNegative = 1u << 0;
+
+  /// The capability expression and flags.
+  llvm::PointerIntPair<const til::SExpr *, 1, unsigned> CapExpr;
 
   /// The kind of capability as specified by @ref CapabilityAttr::getName.
   StringRef CapKind;
 
 public:
-  CapabilityExpr() : CapExpr(nullptr, false) {}
+  CapabilityExpr() : CapExpr(nullptr, 0) {}
   CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg)
-      : CapExpr(E, Neg), CapKind(Kind) {}
+      : CapExpr(E, Neg ? FlagNegative : 0), CapKind(Kind) {}
 
   // Don't allow implicitly-constructed StringRefs since we'll capture them.
   template <typename T> CapabilityExpr(const til::SExpr *, T, bool) = delete;
 
   const til::SExpr *sexpr() const { return CapExpr.getPointer(); }
   StringRef getKind() const { return CapKind; }
-  bool negative() const { return CapExpr.getInt(); }
+  bool negative() const { return CapExpr.getInt() & FlagNegative; }
 
   CapabilityExpr operator!() const {
-    return CapabilityExpr(CapExpr.getPointer(), CapKind, !CapExpr.getInt());
+    return CapabilityExpr(CapExpr.getPointer(), CapKind, !negative());
   }
 
   bool equals(const CapabilityExpr &other) const {
