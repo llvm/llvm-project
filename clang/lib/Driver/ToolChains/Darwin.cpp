@@ -1327,6 +1327,26 @@ void DarwinClang::addClangTargetOptions(
     Action::OffloadKind DeviceOffloadKind) const {
 
   Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+
+  /* TO_UPSTREAM(BoundsSafety) ON*/
+  // When `-fbounds-safety` and new userspace Libc attributes are enabled
+  // set a macro that userspace Libc will look for to decide whether or not to
+  // enable -fbounds-safety annotations in its headers (rdar://84733153). This
+  // is only being set during the gradual enablement of new checks and will be
+  // removed once the transition is complete (rdar://137912561).
+  if (DriverArgs.hasFlagNoClaim(options::OPT_fbounds_safety,
+                                options::OPT_fno_bounds_safety, false)) {
+    LangOptions::BoundsSafetyNewChecksMaskIntTy NewChecks =
+        ParseBoundsSafetyNewChecksMaskFromArgs(DriverArgs,
+                                               /*DiagnosticsEngine=*/nullptr);
+    if (NewChecks & LangOptions::BS_CHK_LibCAttributes) {
+      bool TargetWithoutUserspaceLibc = false;
+      if (getTriple().isOSDarwin() && !TargetWithoutUserspaceLibc) {
+        CC1Args.push_back("-D__LIBC_STAGED_BOUNDS_SAFETY_ATTRIBUTES");
+      }
+    }
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF*/
 }
 
 /// Take a path that speculatively points into Xcode and return the
