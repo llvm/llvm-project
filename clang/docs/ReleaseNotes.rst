@@ -398,6 +398,8 @@ Improvements to Clang's diagnostics
   constructors to initialize their non-modifiable members. The diagnostic is
   not new; being controlled via a warning group is what's new. Fixes #GH41104
 
+- Analysis-based diagnostics (like ``-Wconsumed`` or ``-Wunreachable-code``)
+  can now be correctly controlled by ``#pragma clang diagnostic``. #GH42199
 
 - Improved Clang's error recovery for invalid function calls.
 
