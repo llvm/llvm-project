@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_OSX_H
-#define _LIBCPP_STACKTRACE_OSX_H
+#ifndef _LIBCPP_STACKTRACE_MACOS_H
+#define _LIBCPP_STACKTRACE_MACOS_H
 
 #include <__config>
 #include <__config_site>
@@ -19,7 +19,7 @@ namespace __stacktrace {
 
 struct context;
 
-struct osx {
+struct macos {
   context& cx_;
   void ident_modules();
   void symbolize();
@@ -28,4 +28,4 @@ struct osx {
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_OSX_H
+#endif // _LIBCPP_STACKTRACE_MACOS_H
