@@ -36,8 +36,10 @@ class StringRef;
 class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
+public:
   // Enum for the SPIR-V environment: OpenCL, Vulkan or Unkwnown.
   enum SPIRVEnvType { OpenCL, Vulkan, Unknown };
+
 private:
   const unsigned PointerSize;
   VersionTuple SPIRVVersion;
@@ -81,28 +83,21 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   unsigned getBound() const { return GR->getBound(); }
   bool canDirectlyComparePointers() const;
-  SPIRVEnvType getEnv() const {
-    if (TargetTriple.getOS() == Triple::Vulkan)
-      return Vulkan;
-    if (TargetTriple.getEnvironment() == Triple::OpenCL)
-      return OpenCL;
-    return Unknown;
+  void setEnv(SPIRVEnvType E) {
+    assert(E != Unknown && "Unknown environment is not allowed");
+    assert(Env == Unknown && "Environment is already set");
+
+    Env = E;
   }
-  // FIXME: For now, we rely only on the triple to determine the environment.
-  // However, a lot of frontends emit unknown OS or environment, which makes it
-  // difficult to determine the environment. We should consider adding other
-  // methods. For now, we will return true for both OpenCL and Unknown env.
-  bool isOpenCLEnv() const {
-    return getEnv() == OpenCL || getEnv() == Unknown;
-  }
-  // FIXME: For now, we rely only on the triple to determine the environment.
-  // However, a lot of frontends emit unknown OS or environment, which makes it
-  // difficult to determine the environment. We should consider adding other
-  // methods. For now, we will return true for both Vulkan and Unknown env.
-  bool isVulkanEnv() const {
-    return getEnv() == Vulkan || getEnv() == Unknown;
-  }
-  bool isLogicalSPIRV() const { return TargetTriple.getArch() == Triple::spirv; }
+  SPIRVEnvType getEnv() const { return Env; }
+  bool isOpenCLEnv() const { return getEnv() == OpenCL; }
+  bool isVulkanEnv() const { return getEnv() == Vulkan; }
+  // FIXME: This should check the triple arch instead, but a lot of places use
+  // this method now instead of `is[OpenCL/Vulkan]Env()`, and this is a
+  // shortcut to make sure `is[OpenCL/Vulkan]Env()` works as expected. When we
+  // change back all uses of `isLogicalSPIRV()` to `is[OpenCL/Vulkan]Env()`, we
+  // can implement this correctly again.
+  bool isLogicalSPIRV() const { return isVulkanEnv(); }
   const std::string &getTargetTripleAsStr() const { return TargetTriple.str(); }
   VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
   bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;

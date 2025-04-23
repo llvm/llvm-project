@@ -272,14 +272,37 @@ getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but this
   // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
   // at the same time.
-  if (!STI.isLogicalSPIRV())
+  if (STI.isOpenCLEnv())
     return SPIRV::ExecutionModel::Kernel;
 
+  if (STI.isVulkanEnv()) {
+    auto attribute = F.getFnAttribute("hlsl.shader");
+    if (!attribute.isValid()) {
+      report_fatal_error(
+          "This entry point lacks mandatory hlsl.shader attribute.");
+    }
+
+    const auto value = attribute.getValueAsString();
+    if (value == "compute")
+      return SPIRV::ExecutionModel::GLCompute;
+
+    report_fatal_error(
+        "This HLSL entry point is not supported by this backend.");
+  }
+
+  assert(STI.getEnv() == Unknown);
+  // Can we rely on "hlsl.shader" attribute? Is it mandatory for Vulkan env? If
+  // so, we can set Env to Vulkan whenever we find it, and to OpenCL otherwise.
+
+  // We will now change the Env based on the attribute, so we need to strip
+  // `const` out of the ref to STI.
+  SPIRVSubtarget *NonConstSTI = const_cast<SPIRVSubtarget *>(&STI);
   auto attribute = F.getFnAttribute("hlsl.shader");
   if (!attribute.isValid()) {
-    report_fatal_error(
-        "This entry point lacks mandatory hlsl.shader attribute.");
+    NonConstSTI->setEnv(SPIRVSubtarget::OpenCL);
+    return SPIRV::ExecutionModel::Kernel;
   }
+  NonConstSTI->setEnv(SPIRVSubtarget::Vulkan);
 
   const auto value = attribute.getValueAsString();
   if (value == "compute")
@@ -444,6 +467,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    // EntryPoints can help us to determine the environment we're working on.
+    // Therefore, we need a non-const pointer to SPIRVSubtarget to update the
+    // environment if we need to.
+    const SPIRVSubtarget *ST =
+        static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);

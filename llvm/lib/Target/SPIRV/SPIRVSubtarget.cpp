@@ -83,6 +83,14 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   }
   OpenCLVersion = VersionTuple(2, 2);
 
+  // Set the environment based on the target triple.
+  if (TargetTriple.getOS() == Triple::Vulkan)
+    Env = Vulkan;
+  else if (TargetTriple.getEnvironment() == Triple::OpenCL)
+    Env = OpenCL;
+  else
+    Env = Unknown;
+
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();

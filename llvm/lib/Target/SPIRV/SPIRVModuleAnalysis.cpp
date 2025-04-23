@@ -151,11 +151,11 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     // TODO: Add support for VulkanMemoryModel.
     // FIXME: At the moment, there's a possibility that both `isOpenCLEnv()` and
     // `isVulkanEnv()` return true. This is because the Triple is not always
-    // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but this
-    // should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be true
-    // at the same time.
+    // precise enough. For now, we'll rely instead on `isLogicalSPIRV()`, but
+    // this should be changed when `isOpenCLEnv()` and `isVulkanEnv()` cannot be
+    // true at the same time.
     MAI.Mem = !ST->isLogicalSPIRV() ? SPIRV::MemoryModel::OpenCL
-                                : SPIRV::MemoryModel::GLSL450;
+                                    : SPIRV::MemoryModel::GLSL450;
     if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
       unsigned PtrSize = ST->getPointerSize();
       MAI.Addr = PtrSize == 32   ? SPIRV::AddressingModel::Physical32
@@ -1808,7 +1808,11 @@ void addInstrRequirements(const MachineInstr &MI,
     // not allowed to produce
     // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
-    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
+
+    // FIXME: For now, `isOpenCLEnv()` is not precise enough. Instead, we're
+    // using `isLogicalSPIRV()`, but we should change this when `isOpenCLEnv()`
+    // is precise enough.
+    if (isImageTypeWithUnknownFormat(TypeDef) && ST.isLogicalSPIRV())
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
@@ -1821,7 +1825,11 @@ void addInstrRequirements(const MachineInstr &MI,
     // not allowed to produce
     // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
-    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
+
+    // FIXME: For now, `isOpenCLEnv()` is not precise enough. Instead, we're
+    // using `isLogicalSPIRV()`, but we should change this when `isOpenCLEnv()`
+    // is precise enough.
+    if (isImageTypeWithUnknownFormat(TypeDef) && ST.isLogicalSPIRV())
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
     break;
   }
