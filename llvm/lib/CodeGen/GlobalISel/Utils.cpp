@@ -1385,7 +1385,8 @@ bool llvm::isBuildVectorConstantSplat(const Register Reg,
                                       const MachineRegisterInfo &MRI,
                                       int64_t SplatValue, bool AllowUndef) {
   if (auto SplatValAndReg = getAnyConstantSplat(Reg, MRI, AllowUndef))
-    return mi_match(SplatValAndReg->VReg, MRI, m_SpecificICst(SplatValue));
+    return SplatValAndReg->Value.getSExtValue() == SplatValue;
+
   return false;
 }
 

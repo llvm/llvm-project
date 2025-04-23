@@ -46,8 +46,10 @@ class TestStatusline(PExpectTest):
         self.child.expect(re.escape("a.out | main.c:2:11 | bre"))
         self.child.setwinsize(terminal_height, terminal_width)
 
+        # Change the separator.
+        self.expect('set set separator "S "', ["a.out S main.c:2:11"])
+
         # Change the format.
-        self.expect('set set separator "S"')
         self.expect(
             'set set statusline-format "target = {${target.file.basename}} ${separator}"',
             ["target = a.out S"],
