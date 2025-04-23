@@ -205,8 +205,9 @@ static CostType calculateFunctionCosts(GetTTIFn GetTTI, Module &M,
             TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
         assert(Cost != InstructionCost::getMax());
         // Assume expensive if we can't tell the cost of an instruction.
-        CostType CostVal = Cost.isValid() ? Cost.getValue()
-                                          : TargetTransformInfo::TCC_Expensive;
+        CostType CostVal = Cost.isValid()
+                               ? Cost.getValue()
+                               : (CostType)TargetTransformInfo::TCC_Expensive;
         assert((FnCost + CostVal) >= FnCost && "Overflow!");
         FnCost += CostVal;
       }
