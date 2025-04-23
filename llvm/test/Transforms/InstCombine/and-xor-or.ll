@@ -4338,7 +4338,7 @@ define i16 @or_disjoint_zext_zext(i8 %x, i4 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@or_disjoint_zext_zext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i4 [[Y]] to i8
-; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
@@ -4351,7 +4351,7 @@ define i16 @or_disjoint_zext_zext(i8 %x, i4 %y) {
 define i16 @or_disjoint_zext_zext_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@or_disjoint_zext_zext_2
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R1:%.*]] = or i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[Y]], [[X]]
 ; CHECK-NEXT:    [[R:%.*]] = zext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
@@ -4494,7 +4494,7 @@ define i16 @or_disjoint_sext_sext(i8 %x, i4 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@or_disjoint_sext_sext
 ; CHECK-SAME: (i8 [[X:%.*]], i4 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y]] to i8
-; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
@@ -4507,7 +4507,7 @@ define i16 @or_disjoint_sext_sext(i8 %x, i4 %y) {
 define i16 @or_disjoint_sext_sext_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@or_disjoint_sext_sext_2
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[R1:%.*]] = or i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[R1:%.*]] = or disjoint i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[R:%.*]] = sext i8 [[R1]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
