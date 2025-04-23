@@ -21,7 +21,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_NORMALIZEMEMREFS
+#define GEN_PASS_DEF_NORMALIZEMEMREFSPASS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -40,7 +40,7 @@ namespace {
 /// to call a non-normalizable function, we treat that function as
 /// non-normalizable as well. We assume external functions to be normalizable.
 struct NormalizeMemRefs
-    : public memref::impl::NormalizeMemRefsBase<NormalizeMemRefs> {
+    : public memref::impl::NormalizeMemRefsPassBase<NormalizeMemRefs> {
   void runOnOperation() override;
   void normalizeFuncOpMemRefs(func::FuncOp funcOp, ModuleOp moduleOp);
   bool areMemRefsNormalizable(func::FuncOp funcOp);
@@ -52,11 +52,6 @@ struct NormalizeMemRefs
 };
 
 } // namespace
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::memref::createNormalizeMemRefsPass() {
-  return std::make_unique<NormalizeMemRefs>();
-}
 
 void NormalizeMemRefs::runOnOperation() {
   LLVM_DEBUG(llvm::dbgs() << "Normalizing Memrefs...\n");
