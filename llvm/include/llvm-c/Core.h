@@ -386,12 +386,6 @@ typedef enum {
   LLVMAtomicRMWBinOpFMin, /**< Sets the value if it's smaller than the
                            original using an floating point comparison and
                            return the old one */
-  LLVMAtomicRMWBinOpFMaximum, /**< Sets the value if it's greater than the
-                           original using an floating point comparison and
-                           return the old one */
-  LLVMAtomicRMWBinOpFMinimum, /**< Sets the value if it's smaller than the
-                           original using an floating point comparison and
-                           return the old one */
   LLVMAtomicRMWBinOpUIncWrap, /**< Increments the value, wrapping back to zero
                                when incremented above input value */
   LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
@@ -399,6 +393,12 @@ typedef enum {
   LLVMAtomicRMWBinOpUSubCond, /**<Subtracts the value only if no unsigned
                                  overflow */
   LLVMAtomicRMWBinOpUSubSat,  /**<Subtracts the value, clamping to zero */
+  LLVMAtomicRMWBinOpFMaximum, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMinimum, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {

@@ -43,3 +43,170 @@ define float @test_atomicrmw_fsub_f32(ptr %ptr, float %value) {
   ret float %res
 }
 
+define float @atomicrmw_fmin_float(ptr %ptr, float %value) {
+; CHECK-LABEL: @atomicrmw_fmin_float(
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret float [[TMP6]]
+;
+  %res = atomicrmw fmin ptr %ptr, float %value seq_cst
+  ret float %res
+}
+
+define float @atomicrmw_fmax_float(ptr %ptr, float %value) {
+; CHECK-LABEL: @atomicrmw_fmax_float(
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret float [[TMP6]]
+;
+  %res = atomicrmw fmax ptr %ptr, float %value seq_cst
+  ret float %res
+}
+
+define double @atomicrmw_fmin_double(ptr %ptr, double %value) {
+; CHECK-LABEL: @atomicrmw_fmin_double(
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmin ptr %ptr, double %value seq_cst
+  ret double %res
+}
+
+define double @atomicrmw_fmax_double(ptr %ptr, double %value) {
+; CHECK-LABEL: @atomicrmw_fmax_double(
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmax ptr %ptr, double %value seq_cst
+  ret double %res
+}
+
+define float @atomicrmw_fminimum_float(ptr %ptr, float %value) {
+; CHECK-LABEL: @atomicrmw_fminimum_float(
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.minimum.f32(float [[LOADED]], float [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret float [[TMP6]]
+;
+  %res = atomicrmw fminimum ptr %ptr, float %value seq_cst
+  ret float %res
+}
+
+define float @atomicrmw_fmaximum_float(ptr %ptr, float %value) {
+; CHECK-LABEL: @atomicrmw_fmaximum_float(
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.maximum.f32(float [[LOADED]], float [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret float [[TMP6]]
+;
+  %res = atomicrmw fmaximum ptr %ptr, float %value seq_cst
+  ret float %res
+}
+
+define double @atomicrmw_fminimum_double(ptr %ptr, double %value) {
+; CHECK-LABEL: @atomicrmw_fminimum_double(
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.minimum.f64(double [[LOADED]], double [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fminimum ptr %ptr, double %value seq_cst
+  ret double %res
+}
+
+define double @atomicrmw_fmaximum_double(ptr %ptr, double %value) {
+; CHECK-LABEL: @atomicrmw_fmaximum_double(
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.maximum.f64(double [[LOADED]], double [[VALUE:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; CHECK-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmaximum ptr %ptr, double %value seq_cst
+  ret double %res
+}

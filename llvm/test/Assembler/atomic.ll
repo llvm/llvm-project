@@ -108,5 +108,11 @@ define void @fp_vector_atomicrmw(ptr %x, <2 x half> %val) {
   ; CHECK: %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
   %atomic.fmin = atomicrmw fmin ptr %x, <2 x half> %val seq_cst
 
+  ; CHECK: %atomic.fmaximum = atomicrmw fmaximum ptr %x, <2 x half> %val seq_cst
+  %atomic.fmaximum = atomicrmw fmaximum ptr %x, <2 x half> %val seq_cst
+
+  ; CHECK: %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
+  %atomic.fminimum = atomicrmw fminimum ptr %x, <2 x half> %val seq_cst
+
   ret void
 }
