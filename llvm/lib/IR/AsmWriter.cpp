@@ -141,7 +141,7 @@ static OrderMap orderModule(const Module *M) {
   OrderMap OM;
 
   auto orderConstantValue = [&OM](const Value *V) {
-    if (isa<Constant>(V) || isa<InlineAsm>(V))
+    if (isa<Constant, InlineAsm>(V))
       orderValue(V, OM);
   };
 
@@ -1625,7 +1625,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (isa<ConstantAggregateZero>(CV) || isa<ConstantTargetNone>(CV)) {
+  if (isa<ConstantAggregateZero, ConstantTargetNone>(CV)) {
     Out << "zeroinitializer";
     return;
   }
@@ -1741,7 +1741,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     return;
   }
 
-  if (isa<ConstantVector>(CV) || isa<ConstantDataVector>(CV)) {
+  if (isa<ConstantVector, ConstantDataVector>(CV)) {
     auto *CVVTy = cast<FixedVectorType>(CV->getType());
     Type *ETy = CVVTy->getElementType();
 
@@ -1751,7 +1751,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     // TODO: Remove this block when the UseConstant{Int,FP}ForFixedLengthSplat
     // options are removed.
     if (auto *SplatVal = CV->getSplatValue()) {
-      if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+      if (isa<ConstantInt, ConstantFP>(SplatVal)) {
         Out << "splat (";
         WriterCtx.TypePrinter->print(ETy, Out);
         Out << ' ';
@@ -1803,7 +1803,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     // options are removed.
     if (CE->getOpcode() == Instruction::ShuffleVector) {
       if (auto *SplatVal = CE->getSplatValue()) {
-        if (isa<ConstantInt>(SplatVal) || isa<ConstantFP>(SplatVal)) {
+        if (isa<ConstantInt, ConstantFP>(SplatVal)) {
           Out << "splat (";
           WriterCtx.TypePrinter->print(SplatVal->getType(), Out);
           Out << ' ';
@@ -4760,9 +4760,8 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
 
     // Select, Store, ShuffleVector, CmpXchg and AtomicRMW always print all
     // types.
-    if (isa<SelectInst>(I) || isa<StoreInst>(I) || isa<ShuffleVectorInst>(I) ||
-        isa<ReturnInst>(I) || isa<AtomicCmpXchgInst>(I) ||
-        isa<AtomicRMWInst>(I)) {
+    if (isa<SelectInst, StoreInst, ShuffleVectorInst, ReturnInst,
+            AtomicCmpXchgInst, AtomicRMWInst>(I)) {
       PrintAllTypes = true;
     } else {
       for (unsigned i = 1, E = I.getNumOperands(); i != E; ++i) {
@@ -5194,7 +5193,7 @@ void Value::print(raw_ostream &ROS, bool IsForDebug) const {
   bool ShouldInitializeAllMetadata = false;
   if (auto *I = dyn_cast<Instruction>(this))
     ShouldInitializeAllMetadata = isReferencingMDNode(*I);
-  else if (isa<Function>(this) || isa<MetadataAsValue>(this))
+  else if (isa<Function, MetadataAsValue>(this))
     ShouldInitializeAllMetadata = true;
 
   ModuleSlotTracker MST(getModuleFromVal(this), ShouldInitializeAllMetadata);
@@ -5240,7 +5239,7 @@ void Value::print(raw_ostream &ROS, ModuleSlotTracker &MST,
     OS << ' ';
     AsmWriterContext WriterCtx(&TypePrinter, MST.getMachine());
     WriteConstantInternal(OS, C, WriterCtx);
-  } else if (isa<InlineAsm>(this) || isa<Argument>(this)) {
+  } else if (isa<InlineAsm, Argument>(this)) {
     this->printAsOperand(OS, /* PrintType */ true, MST);
   } else {
     llvm_unreachable("Unknown value to print out!");

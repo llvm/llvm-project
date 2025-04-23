@@ -696,7 +696,7 @@ bool GCPtrTracker::removeValidUnrelocatedDefs(const BasicBlock *BB,
             ValidUnrelocatedPointerDef = true;
         }
       }
-    } else if ((isa<GetElementPtrInst>(I) || isa<BitCastInst>(I)) &&
+    } else if (isa<GetElementPtrInst, BitCastInst>(I) &&
                containsGCPtrType(I.getType())) {
       // GEP/bitcast of unrelocated pointer is legal by itself but this def
       // shouldn't appear in any AvailableSet.

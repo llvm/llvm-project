@@ -321,8 +321,8 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
     if (isa<ConstantExpr>(C))
       return false;
 
-    if (isa<ConstantInt>(C) || isa<GlobalVariable>(C) || isa<ConstantFP>(C) ||
-        isa<ConstantPointerNull>(C) || isa<Function>(C))
+    if (isa<ConstantInt, GlobalVariable, ConstantFP, ConstantPointerNull,
+            Function>(C))
       return true;
 
     if (C->getType()->isVectorTy())

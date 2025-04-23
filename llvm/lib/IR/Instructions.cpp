@@ -333,7 +333,7 @@ unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
 
 bool CallBase::isIndirectCall() const {
   const Value *V = getCalledOperand();
-  if (isa<Function>(V) || isa<Constant>(V))
+  if (isa<Function, Constant>(V))
     return false;
   return !isInlineAsm();
 }
@@ -1809,7 +1809,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
     return false;
 
   // Check to see if Mask is valid.
-  if (isa<UndefValue>(Mask) || isa<ConstantAggregateZero>(Mask))
+  if (isa<UndefValue, ConstantAggregateZero>(Mask))
     return true;
 
   // NOTE: Through vector ConstantInt we have the potential to support more
@@ -1857,7 +1857,7 @@ void ShuffleVectorInst::getShuffleMask(const Constant *Mask,
   Result.reserve(EC.getKnownMinValue());
 
   if (EC.isScalable()) {
-    assert((isa<ConstantAggregateZero>(Mask) || isa<UndefValue>(Mask)) &&
+    assert((isa<ConstantAggregateZero, UndefValue>(Mask)) &&
            "Scalable vector shuffle mask must be undef or zeroinitializer");
     int MaskVal = isa<UndefValue>(Mask) ? -1 : 0;
     for (unsigned I = 0; I < EC.getKnownMinValue(); ++I)

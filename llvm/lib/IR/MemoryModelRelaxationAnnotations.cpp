@@ -164,6 +164,7 @@ static bool isReadWriteMemCall(const Instruction &I) {
 }
 
 bool llvm::canInstructionHaveMMRAs(const Instruction &I) {
-  return isa<LoadInst>(I) || isa<StoreInst>(I) || isa<AtomicCmpXchgInst>(I) ||
-         isa<AtomicRMWInst>(I) || isa<FenceInst>(I) || isReadWriteMemCall(I);
+  return isa<LoadInst, StoreInst, AtomicCmpXchgInst, AtomicRMWInst, FenceInst>(
+             I) ||
+         isReadWriteMemCall(I);
 }

@@ -1046,14 +1046,13 @@ template <> struct isa_impl<GlobalIFunc, Value> {
 
 template <> struct isa_impl<GlobalValue, Value> {
   static inline bool doit(const Value &Val) {
-    return isa<GlobalObject>(Val) || isa<GlobalAlias>(Val);
+    return isa<GlobalObject, GlobalAlias>(Val);
   }
 };
 
 template <> struct isa_impl<GlobalObject, Value> {
   static inline bool doit(const Value &Val) {
-    return isa<GlobalVariable>(Val) || isa<Function>(Val) ||
-           isa<GlobalIFunc>(Val);
+    return isa<GlobalVariable, Function, GlobalIFunc>(Val);
   }
 };
 

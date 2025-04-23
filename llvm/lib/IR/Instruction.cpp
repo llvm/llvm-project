@@ -1219,7 +1219,7 @@ bool Instruction::isLaunderOrStripInvariantGroup() const {
 }
 
 bool Instruction::isDebugOrPseudoInst() const {
-  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
+  return isa<DbgInfoIntrinsic, PseudoProbeInst>(this);
 }
 
 const Instruction *

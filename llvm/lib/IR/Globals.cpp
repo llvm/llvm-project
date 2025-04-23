@@ -322,7 +322,7 @@ bool GlobalValue::isDeclaration() const {
     return F->empty() && !F->isMaterializable();
 
   // Aliases and ifuncs are always definitions.
-  assert(isa<GlobalAlias>(this) || isa<GlobalIFunc>(this));
+  assert((isa<GlobalAlias, GlobalIFunc>(this)));
   return false;
 }
 

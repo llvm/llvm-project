@@ -249,7 +249,7 @@ public:
       : RawLocation(RawLocation) {
     // Allow ValueAsMetadata, empty MDTuple, DIArgList.
     assert(RawLocation && "unexpected null RawLocation");
-    assert(isa<ValueAsMetadata>(RawLocation) || isa<DIArgList>(RawLocation) ||
+    assert((isa<ValueAsMetadata, DIArgList>(RawLocation)) ||
            (isa<MDNode>(RawLocation) &&
             !cast<MDNode>(RawLocation)->getNumOperands()));
   }
@@ -1791,7 +1791,7 @@ public:
   bool isTiedToInvoke() const {
     const Value *Token = getArgOperand(0);
 
-    return isa<LandingPadInst>(Token) || isa<InvokeInst>(Token);
+    return isa<LandingPadInst, InvokeInst>(Token);
   }
 
   /// The statepoint with which this gc.relocate is associated.
