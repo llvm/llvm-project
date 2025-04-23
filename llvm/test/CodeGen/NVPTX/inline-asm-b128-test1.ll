@@ -35,11 +35,10 @@ define void @test_b128_input_from_load(ptr nocapture readonly %data) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd2, [test_b128_input_from_load_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd3, %rd2;
-; CHECK-NEXT:    ld.global.u64 %rd4, [%rd3+8];
-; CHECK-NEXT:    ld.global.u64 %rd5, [%rd3];
-; CHECK-NEXT:    mov.b128 %rq1, {%rd5, %rd4};
+; CHECK-NEXT:    ld.global.v2.u64 {%rd4, %rd5}, [%rd3];
 ; CHECK-NEXT:    mov.b64 %rd6, value;
 ; CHECK-NEXT:    cvta.global.u64 %rd1, %rd6;
+; CHECK-NEXT:    mov.b128 %rq1, {%rd4, %rd5};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    { st.b128 [%rd1], %rq1; }
 ; CHECK-NEXT:    // end inline asm
@@ -94,8 +93,7 @@ define void @test_store_b128_output() {
 ; CHECK-NEXT:    mov.b128 {%rd1, %rd2}, %rq1;
 ; CHECK-NEXT:    add.cc.s64 %rd3, %rd1, 1;
 ; CHECK-NEXT:    addc.cc.s64 %rd4, %rd2, 0;
-; CHECK-NEXT:    st.global.u64 [value+8], %rd4;
-; CHECK-NEXT:    st.global.u64 [value], %rd3;
+; CHECK-NEXT:    st.global.v2.u64 [value], {%rd3, %rd4};
 ; CHECK-NEXT:    ret;
   %1 = tail call i128 asm "{ mov.b128 $0, 41; }", "=q"()
   %add = add nsw i128 %1, 1
@@ -113,17 +111,15 @@ define void @test_use_of_b128_output(ptr nocapture readonly %data) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_use_of_b128_output_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.global.u64 %rd3, [%rd2+8];
-; CHECK-NEXT:    ld.global.u64 %rd4, [%rd2];
-; CHECK-NEXT:    mov.b128 %rq2, {%rd4, %rd3};
+; CHECK-NEXT:    ld.global.v2.u64 {%rd3, %rd4}, [%rd2];
+; CHECK-NEXT:    mov.b128 %rq2, {%rd3, %rd4};
 ; CHECK-NEXT:    // begin inline asm
 ; CHECK-NEXT:    { mov.b128 %rq1, %rq2; }
 ; CHECK-NEXT:    // end inline asm
 ; CHECK-NEXT:    mov.b128 {%rd5, %rd6}, %rq1;
 ; CHECK-NEXT:    add.cc.s64 %rd7, %rd5, 1;
 ; CHECK-NEXT:    addc.cc.s64 %rd8, %rd6, 0;
-; CHECK-NEXT:    st.global.u64 [value], %rd7;
-; CHECK-NEXT:    st.global.u64 [value+8], %rd8;
+; CHECK-NEXT:    st.global.v2.u64 [value], {%rd7, %rd8};
 ; CHECK-NEXT:    ret;
   %1 = addrspacecast ptr %data to ptr addrspace(1)
   %2 = load <2 x i64>, ptr addrspace(1) %1, align 16
