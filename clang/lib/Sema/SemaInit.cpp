@@ -8328,10 +8328,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
       // If this is a call, allow conversion to a transparent union.
       ExprResult CurInitExprRes = CurInit;
-      if (ConvTy != Sema::Compatible &&
-          Entity.isParameterKind() &&
-          S.CheckTransparentUnionArgumentConstraints(Step->Type, CurInitExprRes)
-            == Sema::Compatible)
+      if (!S.IsAssignConvertCompatible(ConvTy) && Entity.isParameterKind() &&
+          S.CheckTransparentUnionArgumentConstraints(
+              Step->Type, CurInitExprRes) == Sema::Compatible)
         ConvTy = Sema::Compatible;
       if (CurInitExprRes.isInvalid())
         return ExprError();
