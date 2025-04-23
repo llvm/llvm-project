@@ -38,11 +38,11 @@ def A0  : RegisterClass<"MyTarget", [i32], 32, (add a0)>;
 // CHECK-NEXT: // MIs[0] src
 // CHECK-NEXT: GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s8,
 // CHECK-NEXT: // (anyext:{ *:[i16] } i8:{ *:[i8] }:$src)  =>  (EXTRACT_SUBREG:{ *:[i16] } (INSERT_SUBREG:{ *:[i32] } (IMPLICIT_DEF:{ *:[i32] }), A0b:{ *:[i8] }:$src, lo8:{ *:[i32] }), lo16:{ *:[i32] })
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/1,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/2, /*Opcode*/GIMT_Encode2(TargetOpcode::IMPLICIT_DEF),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/2, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_ConstrainSelectedInstOperands, /*InsnID*/2,
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::INSERT_SUBREG),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,

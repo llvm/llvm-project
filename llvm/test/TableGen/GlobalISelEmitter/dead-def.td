@@ -12,8 +12,8 @@ def I2 : I<(outs GPR32:$other_name, GPR32:$same_name), (ins GPR32:$rs), []>;
 def : Pat<(abs i32:$x), (I1 (I2 $x))>;
 
 // CHECK-LABEL: // (abs:{ *:[i32] } i32:{ *:[i32] }:$x)  =>  (I1:{ *:[i32] } (I2:{ *:[i32] }:{ *:[i32] } ?:{ *:[i32] }:$x))
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/GILLT_s32,
-// CHECK-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/1,
+// CHECK-NEXT: GIR_MakeVirtualTempReg, /*TempRegID*/0,
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(MyTarget::I2),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define),
 // CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/1, /*TempRegID*/1, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
