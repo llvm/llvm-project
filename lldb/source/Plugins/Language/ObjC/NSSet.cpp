@@ -391,7 +391,8 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
+  if (idx == UINT32_MAX ||
+      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSSetISyntheticFrontEnd' cannot find "
         "index of child '%s'",
@@ -527,7 +528,8 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   const char *item_name = name.GetCString();
   const uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
+  if (idx == UINT32_MAX ||
+      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::NSCFSetSyntheticFrontEnd' cannot find "
         "index of child '%s'",
@@ -664,7 +666,8 @@ llvm::Expected<size_t> lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<
     D32, D64>::GetIndexOfChildWithName(ConstString name) {
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
+  if (idx == UINT32_MAX ||
+      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::GenericNSSetMSyntheticFrontEnd' cannot "
         "find index of child '%s'",

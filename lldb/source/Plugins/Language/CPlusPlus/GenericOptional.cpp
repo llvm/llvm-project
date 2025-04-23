@@ -39,7 +39,14 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (name == "$$dereference$$")
       return 0;
-    return formatters::ExtractIndexFromString(name.GetCString());
+    size_t idx = formatters::ExtractIndexFromString(name.GetCString());
+    if (idx == UINT32_MAX) {
+      return llvm::createStringError(
+          "'SyntheticChildrenFrontend::GenericOptionalFrontend' cannot find "
+          "index of child '%s'",
+          name.AsCString());
+    }
+    return idx;
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {

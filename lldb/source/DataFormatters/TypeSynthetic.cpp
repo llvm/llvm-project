@@ -67,7 +67,9 @@ TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(ConstString name) {
       }
     }
   }
-  return UINT32_MAX;
+  return llvm::createStringError(
+      "'SyntheticChildrenFrontEnd::FrontEnd' cannot find index of child '%s'",
+      name.AsCString());
 }
 
 std::string TypeFilterImpl::GetDescription() {

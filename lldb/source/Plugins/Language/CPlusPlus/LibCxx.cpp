@@ -465,9 +465,10 @@ ExtractLibcxxStringInfo(ValueObject &valobj) {
     return {};
 
   auto index_or_err = l->GetIndexOfChildWithName("__data_");
-  if (!index_or_err)
+  if (!index_or_err) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Types), index_or_err.takeError(), "{0}");
-  return {};
+    return {};
+  }
 
   StringLayout layout =
       *index_or_err == 0 ? StringLayout::DSC : StringLayout::CSD;

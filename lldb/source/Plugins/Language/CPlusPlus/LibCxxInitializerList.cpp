@@ -103,9 +103,20 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (!m_start)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+  if (!m_start) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::LibcxxInitializerListSyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
+  }
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::LibcxxInitializerListSyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
+  }
+  return idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

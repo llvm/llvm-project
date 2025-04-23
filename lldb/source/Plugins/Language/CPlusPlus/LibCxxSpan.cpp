@@ -134,7 +134,14 @@ llvm::Expected<size_t> lldb_private::formatters::
         "'SyntheticChildrenFrontEnd::LibcxxStdSpanSyntheticFrontEnd' cannot "
         "find index of child '%s'",
         name.AsCString());
-  return ExtractIndexFromString(name.GetCString());
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::LibcxxStdSpanSyntheticFrontEnd' cannot "
+        "find index of child '%s'",
+        name.AsCString());
+  }
+  return idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

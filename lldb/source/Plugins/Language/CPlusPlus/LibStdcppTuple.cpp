@@ -98,7 +98,15 @@ LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
 
 llvm::Expected<size_t>
 LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  return ExtractIndexFromString(name.GetCString());
+  size_t index = formatters::ExtractIndexFromString(name.GetCString());
+  if (index == UINT32_MAX) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::LibStdcppTupleSyntheticFrontEnd' cannot "
+        "find index of "
+        "child '%s'",
+        name.AsCString());
+  }
+  return index;
 }
 
 SyntheticChildrenFrontEnd *

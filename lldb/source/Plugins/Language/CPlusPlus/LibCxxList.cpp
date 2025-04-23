@@ -107,7 +107,14 @@ private:
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return ExtractIndexFromString(name.GetCString());
+    size_t idx = ExtractIndexFromString(name.GetCString());
+    if (idx == UINT32_MAX) {
+      return llvm::createStringError(
+          "'SyntheticChildrenFrontend::AbstractListFrontEnd' cannot find index "
+          "of child '%s'",
+          name.AsCString());
+    }
+    return idx;
   }
   lldb::ChildCacheState Update() override;
 

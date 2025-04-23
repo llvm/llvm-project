@@ -7159,7 +7159,9 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return UINT32_MAX;
+  return llvm::createStringError("'SyntheticChildrenFrontEnd::TypeSystemClang' "
+                                 "cannot find index of child '%s'",
+                                 name.str().c_str());
 }
 
 CompilerType

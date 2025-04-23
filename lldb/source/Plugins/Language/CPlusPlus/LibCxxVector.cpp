@@ -171,7 +171,15 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
         "'SyntheticChildrenFrontEnd::LibcxxStdVectorSyntheticFrontEnd' cannot "
         "find index of child '%s'",
         name.AsCString());
-  return ExtractIndexFromString(name.GetCString());
+  size_t index = formatters::ExtractIndexFromString(name.GetCString());
+  if (index == UINT32_MAX) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontEnd::LibcxxStdVectorSyntheticFrontEnd' cannot "
+        "find index of "
+        "child '%s'",
+        name.AsCString());
+  }
+  return index;
 }
 
 lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
@@ -273,7 +281,8 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
         name.AsCString());
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
+  if (idx == UINT32_MAX ||
+      (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxVectorBoolSyntheticFrontEnd' cannot "
         "find index of child '%s'",

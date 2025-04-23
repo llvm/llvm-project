@@ -395,7 +395,14 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  return ExtractIndexFromString(name.GetCString());
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::LibcxxStdMapSyntheticFrontEnd' cannot "
+        "find index of child '%s'",
+        name.AsCString());
+  }
+  return idx;
 }
 
 SyntheticChildrenFrontEnd *

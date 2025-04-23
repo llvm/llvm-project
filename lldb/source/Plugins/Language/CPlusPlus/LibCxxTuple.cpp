@@ -21,7 +21,14 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return formatters::ExtractIndexFromString(name.GetCString());
+    size_t idx = formatters::ExtractIndexFromString(name.GetCString());
+    if (idx == UINT32_MAX) {
+      return llvm::createStringError(
+          "'SyntheticChildrenFrontend::TupleFrontEnd' cannot find index of "
+          "child '%s'",
+          name.AsCString());
+    }
+    return idx;
   }
 
   lldb::ChildCacheState Update() override;

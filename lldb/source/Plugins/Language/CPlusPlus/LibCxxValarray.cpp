@@ -131,7 +131,14 @@ lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
         "'SyntheticChildrenFrontEnd::LibcxxStdValarraySyntheticFrontEnd' "
         "cannot find index of child '%s'",
         name.AsCString());
-  return ExtractIndexFromString(name.GetCString());
+  size_t idx = ExtractIndexFromString(name.GetCString());
+  if (idx == UINT32_MAX) {
+    return llvm::createStringError(
+        "'SyntheticChildrenFrontend::LibcxxStdValarraySyntheticFrontEnd' "
+        "cannot find index of child '%s'",
+        name.AsCString());
+  }
+  return idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

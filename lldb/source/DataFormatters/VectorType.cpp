@@ -272,7 +272,8 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
+    if (idx == UINT32_MAX ||
+        (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
       return llvm::createStringError(
           "'SyntheticChildrenFrontEnd::VectorTypeSyntheticFrontEnd' cannot "
           "find index of child '%s'",
