@@ -514,7 +514,8 @@ if(build_runtimes)
     list(APPEND extra_cmake_args "-DCMAKE_PROGRAM_PATH=${CMAKE_PROGRAM_PATH}")
   endif()
 
-  if("offload" IN_LIST LLVM_ENABLE_RUNTIMES)
+  # TODO: We need to consider passing it as '-DRUNTIMES_x86_64_LLVM_ENABLE_RUNTIMES'.
+  if("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
     # With ROCm 6.3 the ROCr runtime and the thunk layer share a single repository.
     # No need to provide a separate path for ROCt.
     if (OFFLOAD_EXTERNAL_PROJECT_UNIFIED_ROCR)
@@ -575,7 +576,7 @@ if(build_runtimes)
     if (${LIBOMPTARGET_BUILD_DEVICE_FORTRT})
       set(FORTRT_DEP FortranRuntime)
     endif()
-    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager rocm-device-libs offload-arch ${HSA_DEP} ${AMDGPU_ARCH_DEP} ${FORTRT_DEP})
+    foreach(dep opt llvm-link llvm-extract clang clang-offload-packager clang-nvlink-wrapper rocm-device-libs offload-arch ${HSA_DEP} ${AMDGPU_ARCH_DEP} ${FORTRT_DEP})
       if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
         list(APPEND extra_deps ${dep})
       endif()
