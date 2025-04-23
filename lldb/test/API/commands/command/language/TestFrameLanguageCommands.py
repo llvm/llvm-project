@@ -25,7 +25,7 @@ class TestCase(TestBase):
         )
 
         # Run a `language cplusplus` command.
-        self.expect(f"demangle _Z1fv", startstr="_Z1fv ---> f()")
+        self.expect("demangle _Z1fv", startstr="_Z1fv ---> f()")
         # Test prefix matching.
         self.expect("dem _Z1fv", startstr="_Z1fv ---> f()")
 
