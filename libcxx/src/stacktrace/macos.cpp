@@ -8,9 +8,10 @@
 
 #include "stacktrace/config.h"
 
-#if defined(_LIBCPP_STACKTRACE_APPLE)
+#if defined(_LIBCPP_STACKTRACE_MACOS)
 
-#  include "stacktrace/osx.h"
+#  include "stacktrace/context.h"
+#  include "stacktrace/macos.h"
 
 #  include <algorithm>
 #  include <array>
@@ -18,9 +19,6 @@
 #  include <mach-o/dyld.h>
 #  include <mach-o/loader.h>
 
-#  include "stacktrace/config.h"
-#  include "stacktrace/context.h"
-#  include "stacktrace/utils.h"
 #  include <__stacktrace/basic_stacktrace.h>
 #  include <__stacktrace/stacktrace_entry.h>
 
@@ -67,7 +65,7 @@ bool enum_modules(unsigned& count, auto& images) {
   return true;
 }
 
-void osx::ident_modules() {
+void macos::ident_modules() {
   static unsigned imageCount;
   static std::array<Image, kMaxImages + 2> images;
   static bool atomicInitialized = enum_modules(imageCount, images);
@@ -102,7 +100,7 @@ void symbolize_entry(entry& entry) {
   }
 }
 
-void osx::symbolize() {
+void macos::symbolize() {
   for (auto& entry : cx_.__entries_) {
     symbolize_entry(entry);
   }
@@ -111,4 +109,4 @@ void osx::symbolize() {
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STACKTRACE_APPLE
+#endif // _LIBCPP_STACKTRACE_MACOS

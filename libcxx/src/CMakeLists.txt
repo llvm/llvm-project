@@ -41,7 +41,7 @@ set(LIBCXX_SOURCES
   ryu/d2s.cpp
   ryu/f2s.cpp
   stacktrace/linux.cpp
-  stacktrace/osx.cpp
+  stacktrace/macos.cpp
   stacktrace/stacktrace.cpp
   stacktrace/tools.cpp
   stacktrace/unwind.cpp

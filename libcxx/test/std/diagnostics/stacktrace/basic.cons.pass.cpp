@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// ADDITIONAL_COMPILE_FLAGS: -O1 -g
+// REQUIRES: std-at-least-c++23
+// ADDITIONAL_COMPILE_FLAGS: -g
 
 #include <stacktrace>
 

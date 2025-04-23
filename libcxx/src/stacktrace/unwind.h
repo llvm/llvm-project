@@ -14,9 +14,7 @@
 #include <cstddef>
 #include <cstdlib>
 
-#include "stacktrace/config.h"
 #include "stacktrace/context.h"
-#include "stacktrace/utils.h"
 #include <__stacktrace/basic_stacktrace.h>
 #include <__stacktrace/stacktrace_entry.h>
 

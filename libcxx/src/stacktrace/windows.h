@@ -9,6 +9,8 @@
 #ifndef _LIBCPP_STACKTRACE_WIN_IMPL_H
 #define _LIBCPP_STACKTRACE_WIN_IMPL_H
 
+#include "stacktrace/config.h"
+
 #if defined(_LIBCPP_STACKTRACE_WINDOWS)
 // windows.h must be first
 #  include <windows.h>
