@@ -139,12 +139,12 @@ protected:
 
   bool isUnrollable(Attribute attr) const {
     auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
-    return layout && layout.isSgLayout();
+    return layout && layout.isSgLayout() && layout.getInstData() != nullptr;
   }
 
   xegpu::LayoutAttr getLaneLayoutAttr(Attribute attr) const {
     auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
-    if (!layout)
+    if (!layout || layout.getLaneLayout() == nullptr)
       return xegpu::LayoutAttr();
     return xegpu::LayoutAttr::get(
         layout.getContext(), nullptr /* sg_layout */, nullptr /* sg_data */,
@@ -233,7 +233,48 @@ struct UnrollLoadNdOp : public UnrollPattern<xegpu::LoadNdOp> {
   using UnrollPattern<xegpu::LoadNdOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::LoadNdOp op,
                                 PatternRewriter &rewriter) const override {
-    return failure();
+
+    auto loc = op.getLoc();
+    auto ctx = op.getContext();
+    auto valueTy = op.getType();
+    auto tdescTy = op.getTensorDescType();
+    auto layout = tdescTy.getLayout();
+
+    if (!isUnrollable(layout))
+      return failure();
+
+    auto maybeTargetShape = getTargetShape(options, op);
+    if (!maybeTargetShape)
+      return failure();
+    auto targetShape = *maybeTargetShape;
+
+    auto maybeGrids = computeGrids(tdescTy.getShape(), targetShape);
+    if (!maybeGrids)
+      return failure();
+    auto grids = *maybeGrids;
+
+    auto elemTy = tdescTy.getElementType();
+    auto newValueTy = valueTy.cloneWith(targetShape, elemTy);
+    auto newTdescTy = xegpu::TensorDescType::get(ctx, targetShape, elemTy,
+                                                 tdescTy.getEncoding(),
+                                                 getLaneLayoutAttr(layout));
+
+    auto numNewOps = computeProduct(grids);
+    llvm::SmallVector<Type> convertedTdescTypes(numNewOps, newTdescTy);
+    auto convertedTdescs = addPackOp(op.getTensorDesc(), convertedTdescTypes,
+                                     targetShape, loc, rewriter);
+
+    llvm::SmallVector<Value> newOps;
+    for (auto t : convertedTdescs) {
+      auto newOp =
+          rewriter.create<xegpu::LoadNdOp>(loc, newValueTy, t, op->getAttrs());
+      newOps.push_back(newOp);
+    }
+
+    auto castOp = addUnpackOp(newOps, op.getType(), targetShape, loc, rewriter);
+
+    rewriter.replaceOp(op, castOp);
+    return success();
   }
 };
 
@@ -265,11 +306,12 @@ struct UnrollStoreNdOp : public UnrollPattern<xegpu::StoreNdOp> {
     auto newTdescTy = xegpu::TensorDescType::get(ctx, targetShape, elemTy, tdescTy.getEncoding(),
         getLaneLayoutAttr(layout));
 
-    auto numNewOps = std::accumulate(grids.begin(), grids.end(), 1, std::multiplies<int64_t>());
+    auto numNewOps = computeProduct(grids);
     llvm::SmallVector<Type> convertedValTypes(numNewOps, newValueTy);
-    llvm::SmallVector<Type> convertedTileTypes(numNewOps, newTdescTy);
+    llvm::SmallVector<Type> convertedTdescTypes(numNewOps, newTdescTy);
     auto convertedValues = addPackOp(op.getValue(), convertedValTypes, targetShape, loc, rewriter);
-    auto convertedTdescs = addPackOp(op.getTensorDesc(), convertedTileTypes, targetShape, loc, rewriter);
+    auto convertedTdescs = addPackOp(op.getTensorDesc(), convertedTdescTypes,
+                                     targetShape, loc, rewriter);
 
     for (auto [v, t] : llvm::zip(convertedValues, convertedTdescs)) {
       rewriter.create<xegpu::StoreNdOp>(loc, v, t, op.getL1HintAttr(),
@@ -380,7 +422,8 @@ struct XeGPUUnrollPass final
 
     auto funcOp = getOperation();
     RewritePatternSet patterns(&getContext());
-    patterns.add<UnrollCreateNdOp, UnrollStoreNdOp>(patterns.getContext(), options);
+    patterns.add<UnrollCreateNdOp, UnrollLoadNdOp, UnrollStoreNdOp>(
+        patterns.getContext(), options);
 
     // GreedyRewriteConfig config;
     // config.fold = false;
