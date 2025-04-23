@@ -16,6 +16,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Lex/DependencyDirectivesScanner.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -117,6 +118,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The cache of PCM files.
   IntrusiveRefCntPtr<ModuleCache> ModCache;
+
+  /// Functor for getting the dependency preprocessor directives of a file.
+  std::unique_ptr<DependencyDirectivesGetter> GetDependencyDirectives;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -746,6 +750,11 @@ public:
   /// Create the preprocessor, using the invocation, file, and source managers,
   /// and replace any existing one with it.
   void createPreprocessor(TranslationUnitKind TUKind);
+
+  void setDependencyDirectivesGetter(
+      std::unique_ptr<DependencyDirectivesGetter> Getter) {
+    GetDependencyDirectives = std::move(Getter);
+  }
 
   std::string getSpecificModuleCachePath(StringRef ModuleHash);
   std::string getSpecificModuleCachePath() {
