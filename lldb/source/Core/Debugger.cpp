@@ -257,7 +257,9 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       else
         m_statusline.reset();
     } else if (property_path ==
-               g_debugger_properties[ePropertyStatuslineFormat].name) {
+                   g_debugger_properties[ePropertyStatuslineFormat].name ||
+               property_path ==
+                   g_debugger_properties[ePropertySeparator].name) {
       // Statusline format changed. Redraw the statusline.
       RedrawStatusline();
     } else if (property_path ==
