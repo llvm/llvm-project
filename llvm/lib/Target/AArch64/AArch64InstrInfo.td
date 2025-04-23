@@ -882,11 +882,20 @@ def AArch64cmltz : PatFrag<(ops node:$lhs),
 def AArch64cmtst : PatFrag<(ops node:$LHS, node:$RHS),
                            (vnot (AArch64cmeqz (and node:$LHS, node:$RHS)))>;
 
-def AArch64fcmeqz: SDNode<"AArch64ISD::FCMEQz", SDT_AArch64fcmpz>;
-def AArch64fcmgez: SDNode<"AArch64ISD::FCMGEz", SDT_AArch64fcmpz>;
-def AArch64fcmgtz: SDNode<"AArch64ISD::FCMGTz", SDT_AArch64fcmpz>;
-def AArch64fcmlez: SDNode<"AArch64ISD::FCMLEz", SDT_AArch64fcmpz>;
-def AArch64fcmltz: SDNode<"AArch64ISD::FCMLTz", SDT_AArch64fcmpz>;
+def AArch64fcmeqz : PatFrag<(ops node:$lhs),
+                            (AArch64fcmeq node:$lhs, immAllZerosV)>;
+
+def AArch64fcmgez : PatFrag<(ops node:$lhs),
+                            (AArch64fcmge node:$lhs, immAllZerosV)>;
+
+def AArch64fcmgtz : PatFrag<(ops node:$lhs),
+                            (AArch64fcmgt node:$lhs, immAllZerosV)>;
+
+def AArch64fcmlez : PatFrag<(ops node:$lhs),
+                            (AArch64fcmge immAllZerosV, node:$lhs)>;
+
+def AArch64fcmltz : PatFrag<(ops node:$lhs),
+                            (AArch64fcmgt immAllZerosV, node:$lhs)>;
 
 def AArch64fcvtxn_n: SDNode<"AArch64ISD::FCVTXN", SDTFPRoundOp>;
 def AArch64fcvtxnsdr: PatFrags<(ops node:$Rn),
@@ -5678,6 +5687,17 @@ def : Pat<(v4i32 (bswap (v4i32 V128:$Rn))),
           (v4i32 (REV32v16i8 (v4i32 V128:$Rn)))>;
 def : Pat<(v2i64 (bswap (v2i64 V128:$Rn))),
           (v2i64 (REV64v16i8 (v2i64 V128:$Rn)))>;
+
+// Patterns for funnel shifts to be matched to equivalent REV instructions
+def : Pat<(v2i64 (or (v2i64 (AArch64vshl (v2i64 V128:$Rn), (i32 32))), 
+                     (v2i64 (AArch64vlshr (v2i64 V128:$Rn), (i32 32))))), 
+          (v2i64 (REV64v4i32 (v2i64 V128:$Rn)))>;
+def : Pat<(v4i32 (or (v4i32 (AArch64vshl (v4i32 V128:$Rn), (i32 16))), 
+                     (v4i32 (AArch64vlshr (v4i32 V128:$Rn), (i32 16))))), 
+          (v4i32 (REV32v8i16 (v4i32 V128:$Rn)))>;
+def : Pat<(v2i32 (or (v2i32 (AArch64vshl (v2i32 V64:$Rn), (i32 16))), 
+                     (v2i32 (AArch64vlshr (v2i32 V64:$Rn), (i32 16))))), 
+          (v2i32 (REV32v4i16 (v2i32 V64:$Rn)))>;
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three vector instructions.

@@ -196,6 +196,24 @@ public:
   }
 };
 
+class AnyResourceExtType : public TargetExtType {
+public:
+  AnyResourceExtType() = delete;
+  AnyResourceExtType(const AnyResourceExtType &) = delete;
+  AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
+
+  static bool classof(const TargetExtType *T) {
+    return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
+           isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
+           isa<FeedbackTextureExtType>(T) || isa<CBufferExtType>(T) ||
+           isa<SamplerExtType>(T);
+  }
+
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
 /// The dx.Layout target extension type
 ///
 /// `target("dx.Layout", <Type>, <size>, [offsets...])`

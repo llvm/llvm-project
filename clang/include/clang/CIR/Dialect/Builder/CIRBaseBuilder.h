@@ -166,8 +166,7 @@ public:
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     auto valueAttr = mlir::IntegerAttr::get(
         mlir::IntegerType::get(type.getContext(), 64), value);
-    return cir::ConstPtrAttr::get(
-        getContext(), mlir::cast<cir::PointerType>(type), valueAttr);
+    return cir::ConstPtrAttr::get(type, valueAttr);
   }
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
@@ -189,6 +188,12 @@ public:
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
                            mlir::Value dst) {
     return create<cir::StoreOp>(loc, val, dst);
+  }
+
+  cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
+                                   mlir::Value base, llvm::StringRef name,
+                                   unsigned index) {
+    return create<cir::GetMemberOp>(loc, resultTy, base, name, index);
   }
 
   mlir::Value createDummyValue(mlir::Location loc, mlir::Type type,

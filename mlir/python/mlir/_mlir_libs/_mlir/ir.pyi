@@ -45,9 +45,8 @@ from __future__ import annotations
 import abc
 import collections
 from collections.abc import Callable, Sequence
-import io
 from pathlib import Path
-from typing import Any, BinaryIO, ClassVar, TypeVar, overload
+from typing import Any, BinaryIO, ClassVar, Literal, TypeVar, overload
 
 __all__ = [
     "AffineAddExpr",
@@ -196,6 +195,19 @@ class _OperationBase:
         Detaches the operation from its parent block.
         """
     def erase(self) -> None: ...
+
+    @overload
+    def get_asm(
+        binary: Literal[True],
+        large_elements_limit: int | None = None,
+        enable_debug_info: bool = False,
+        pretty_debug_info: bool = False,
+        print_generic_op_form: bool = False,
+        use_local_scope: bool = False,
+        assume_verified: bool = False,
+        skip_regions: bool = False,
+    ) -> bytes: ...
+    @overload
     def get_asm(
         self,
         binary: bool = False,
@@ -206,19 +218,14 @@ class _OperationBase:
         use_local_scope: bool = False,
         assume_verified: bool = False,
         skip_regions: bool = False,
-    ) -> io.BytesIO | io.StringIO:
+    ) -> str:
         """
-        Gets the assembly form of the operation with all options available.
+        Returns the assembly form of the operation.
 
-        Args:
-          binary: Whether to return a bytes (True) or str (False) object. Defaults to
-            False.
-          ... others ...: See the print() method for common keyword arguments for
-            configuring the printout.
-        Returns:
-          Either a bytes or str object, depending on the setting of the 'binary'
-          argument.
+        See the print() method for common keyword arguments for configuring
+        the output.
         """
+
     def move_after(self, other: _OperationBase) -> None:
         """
         Puts self immediately after the other operation in its parent block.

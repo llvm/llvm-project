@@ -398,6 +398,8 @@ Improvements to Clang's diagnostics
   constructors to initialize their non-modifiable members. The diagnostic is
   not new; being controlled via a warning group is what's new. Fixes #GH41104
 
+- Analysis-based diagnostics (like ``-Wconsumed`` or ``-Wunreachable-code``)
+  can now be correctly controlled by ``#pragma clang diagnostic``. #GH42199
 
 - Improved Clang's error recovery for invalid function calls.
 
@@ -681,6 +683,8 @@ clang-format
 
 libclang
 --------
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+  in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
 - Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as
