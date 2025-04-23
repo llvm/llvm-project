@@ -367,7 +367,7 @@ private:
   bool matchClustered = false;
 };
 
-FailureOr<Value>
+static FailureOr<Value>
 createSubgroupDPPReduction(PatternRewriter &rewriter, gpu::SubgroupReduceOp op,
                            Value input, gpu::AllReduceOperation mode,
                            const ClusterInfo &ci, amdgpu::Chipset chipset) {
@@ -501,13 +501,13 @@ struct ScalarSubgroupReduceToDPP final
 
     if (ci->clusterStride != 1)
       return rewriter.notifyMatchFailure(
-          op, "Supgroup reductions using DPP are currently only available for "
+          op, "Subgroup reductions using DPP are currently only available for "
               "clusters of contiguous lanes.");
 
     Type valueTy = op.getType();
     if (!valueTy.isIntOrFloat())
       return rewriter.notifyMatchFailure(
-          op, "value type is not a compatible scalar");
+          op, "Value type is not a compatible scalar.");
 
     FailureOr<Value> dpp = createSubgroupDPPReduction(
         rewriter, op, op.getValue(), op.getOp(), *ci, chipset);
