@@ -3977,8 +3977,10 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   FormatToken *AfterLastAttribute = nullptr;
   FormatToken *ClosingParen = nullptr;
 
-  for (auto *Tok = FirstNonComment ? FirstNonComment->Next : nullptr; Tok;
-       Tok = Tok->Next) {
+  for (auto *Tok = FirstNonComment && FirstNonComment->isNot(tok::kw_using)
+                       ? FirstNonComment->Next
+                       : nullptr;
+       Tok; Tok = Tok->Next) {
     if (Tok->is(TT_StartOfName))
       SeenName = true;
     if (Tok->Previous->EndsCppAttributeGroup)
