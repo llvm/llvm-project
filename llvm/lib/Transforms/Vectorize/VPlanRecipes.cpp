@@ -1137,10 +1137,10 @@ InstructionCost VPIRInstruction::computeCost(ElementCount VF,
   return 0;
 }
 
-void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
+void VPIRInstruction::extractLastLaneOfFirstOperand(VPBuilder &Builder) {
   assert(isa<PHINode>(getInstruction()) &&
-         "can only add exiting operands to phi nodes");
-  assert(getNumOperands() == 1 && "must have a single operand");
+         "can only update exiting operands to phi nodes");
+  assert(getNumOperands() > 0 && "must have at least one operand");
   VPValue *Exiting = getOperand(0);
   if (!Exiting->isLiveIn()) {
     LLVMContext &Ctx = getInstruction().getContext();

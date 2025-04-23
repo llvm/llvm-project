@@ -2505,20 +2505,29 @@ void VPlanTransforms::handleUncountableEarlyExit(
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
   for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
-    PHINode &ExitPhi = ExitIRI->getIRPhi();
-    VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
-
+    // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
+    // a single predecessor and 1 if it has two.
+    unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
     if (OrigLoop->getUniqueExitBlock()) {
-      // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
-      // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
-      // which is coming from the original latch.
-      VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-      ExitIRI->addOperand(IncomingFromLatch);
-      ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
+      // If VPEarlyExitBlock has two predecessors, they are already ordered such
+      // that early exit is second (and latch exit is first), by construction.
+      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
+      // ordered the other way around, and it is the order of the latter which
+      // corresponds to the order of operands of VPEarlyExitBlock's phi recipes.
+      // Therefore, if early exit (UncountableExitingBlock) is the first
+      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
+      // thereby bringing them to match VPEarlyExitBlock's predecessor order,
+      // with early exit being last (second). Otherwise they already match.
+      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) ==
+          UncountableExitingBlock)
+        ExitIRI->swapOperands();
+
+      // The first of two operands corresponds to the latch exit, via MiddleVPBB
+      // predecessor. Extract its last lane.
+      ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);
     }
 
+    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     auto IsVector = [](ElementCount VF) { return VF.isVector(); };
     // When the VFs are vectors, need to add `extract` to get the incoming value
     // from early exit. When the range contains scalar VF, limit the range to
@@ -2526,14 +2535,15 @@ void VPlanTransforms::handleUncountableEarlyExit(
     // and vector VFs.
     if (!IncomingFromEarlyExit->isLiveIn() &&
         LoopVectorizationPlanner::getDecisionAndClampRange(IsVector, Range)) {
+      // Update the incoming value from the early exit.
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
       IncomingFromEarlyExit = EarlyExitB.createNaryOp(
           Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
           nullptr, "early.exit.value");
+      ExitIRI->setOperand(EarlyExitIdx, IncomingFromEarlyExit);
     }
-    ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 
