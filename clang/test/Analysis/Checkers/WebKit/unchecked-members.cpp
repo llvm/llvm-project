@@ -50,3 +50,12 @@ namespace ignore_unions {
   void forceTmplToInstantiate(FooTmpl<CheckedObj>) { }
 
 } // namespace ignore_unions
+
+namespace checked_ptr_ref_ptr_capable {
+
+  RefCountableAndCheckable* provide();
+  void foo() {
+    RefPtr<RefCountableAndCheckable> foo = provide();
+  }
+
+} // checked_ptr_ref_ptr_capable
