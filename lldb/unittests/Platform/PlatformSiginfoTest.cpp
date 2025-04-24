@@ -62,7 +62,7 @@ public:
       uint64_t bit_offset;
       std::string name;
       field_type = field_type.GetFieldAtIndex(
-          field_type.GetIndexOfChildWithName(field_name, false), name,
+          *field_type.GetIndexOfChildWithName(field_name, false), name,
           &bit_offset, nullptr, nullptr);
       ASSERT_TRUE(field_type);
       total_offset += bit_offset;
