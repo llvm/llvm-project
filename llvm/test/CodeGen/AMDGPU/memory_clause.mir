@@ -292,7 +292,7 @@ body:             |
 # GCN-NEXT: %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_R1 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_R1 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec
 # GCN-NEXT: KILL undef %2:sgpr_128{{$}}
-# GCN-NEXT: IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
+# GCN-NEXT: IMAGE_STORE_V4_V2_R1 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec
 
 ---
 name:            image_clause
@@ -311,9 +311,9 @@ body:             |
     %3:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_R1 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     %4:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_R1 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     %5:vreg_128 = IMAGE_SAMPLE_LZ_V4_V2_R1 %0, %1, undef %2:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
-    IMAGE_STORE_V4_V2 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
-    IMAGE_STORE_V4_V2 %4, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
-    IMAGE_STORE_V4_V2 %5, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    IMAGE_STORE_V4_V2_R1 %3, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    IMAGE_STORE_V4_V2_R1 %4, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    IMAGE_STORE_V4_V2_R1 %5, %0, %1, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
 ...
 
 # GCN-LABEL: {{^}}name: mixed_clause{{$}}

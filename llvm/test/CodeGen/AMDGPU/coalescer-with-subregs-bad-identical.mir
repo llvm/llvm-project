@@ -46,7 +46,7 @@ body: |
     %4.sub5:sgpr_256 = COPY %1
     %4.sub6:sgpr_256 = COPY %1
     %4.sub7:sgpr_256 = COPY killed %1
-    %5:vgpr_32 = IMAGE_LOAD_V1_V4 killed %3, killed %4, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, addrspace 4)
+    %5:vgpr_32 = IMAGE_LOAD_V1_V4_R1 killed %3, killed %4, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, addrspace 4)
     %6:vgpr_32 = nofpexcept V_MAD_F32_e64 0, killed %5, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %7:vgpr_32 = nofpexcept V_RCP_F32_e32 killed %6, implicit $mode, implicit $exec
     %8:vgpr_32 = nofpexcept V_MUL_F32_e32 0, killed %7, implicit $mode, implicit $exec
