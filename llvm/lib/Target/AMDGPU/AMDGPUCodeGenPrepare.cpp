@@ -2123,7 +2123,7 @@ static bool isPtrKnownNeverNull(const Value *V, const DataLayout &DL,
   // Pointer cannot be null if it's a block address, GV or alloca.
   // NOTE: We don't support extern_weak, but if we did, we'd need to check for
   // it as the symbol could be null in such cases.
-  if (isa<BlockAddress>(V) || isa<GlobalValue>(V) || isa<AllocaInst>(V))
+  if (isa<BlockAddress, GlobalValue, AllocaInst>(V))
     return true;
 
   // Check nonnull arguments.

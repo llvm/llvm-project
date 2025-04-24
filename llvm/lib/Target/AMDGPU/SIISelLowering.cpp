@@ -7370,8 +7370,7 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
 /// not necessary.
 static bool isKnownNonNull(SDValue Val, SelectionDAG &DAG,
                            const AMDGPUTargetMachine &TM, unsigned AddrSpace) {
-  if (isa<FrameIndexSDNode>(Val) || isa<GlobalAddressSDNode>(Val) ||
-      isa<BasicBlockSDNode>(Val))
+  if (isa<FrameIndexSDNode, GlobalAddressSDNode, BasicBlockSDNode>(Val))
     return true;
 
   if (auto *ConstVal = dyn_cast<ConstantSDNode>(Val))
