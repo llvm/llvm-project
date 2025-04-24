@@ -3287,6 +3287,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       ASTFileSignature StoredSignature;
       std::string ImportedFile;
       std::string StoredFile;
+      bool IgnoreImportedByNote = false;
 
       // For prebuilt and explicit modules first consult the file map for
       // an override. Note that here we don't search prebuilt module
@@ -3317,7 +3318,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
           ImportedFile = StoredFile;
-        } else {
+        } else if (!getDiags().isIgnored(diag::warn_lazy_pcm_mismatch,
+                                         CurrentImportLoc)) {
           auto ImportedFileRef =
               PP.getFileManager().getOptionalFileRef(ImportedFile);
           auto StoredFileRef =
@@ -3327,6 +3329,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             Diag(diag::warn_lazy_pcm_mismatch) << ImportedFile << StoredFile;
             Diag(diag::note_module_file_imported_by)
                 << F.FileName << !F.ModuleName.empty() << F.ModuleName;
+            IgnoreImportedByNote = true;
           }
         }
       }
@@ -3361,7 +3364,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                       .getModuleCache()
                                       .getInMemoryModuleCache()
                                       .isPCMFinal(F.FileName);
-      if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
+      if (!IgnoreImportedByNote &&
+          (isDiagnosedResult(Result, Capabilities) || recompilingFinalized))
         Diag(diag::note_module_file_imported_by)
             << F.FileName << !F.ModuleName.empty() << F.ModuleName;
 
