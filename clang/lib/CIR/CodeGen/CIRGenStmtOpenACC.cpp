@@ -170,6 +170,7 @@ public:
         break;
       }
     } else {
+      // Combined Constructs left.
       return clauseNotImplemented(clause);
     }
   }
@@ -203,11 +204,13 @@ public:
       if (!clause.getArchitectures().empty())
         operation.setDeviceType(
             decodeDeviceType(clause.getArchitectures()[0].getIdentifierInfo()));
-    } else if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+    } else if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp,
+                                      DataOp>) {
       // Nothing to do here, these constructs don't have any IR for these, as
       // they just modify the other clauses IR.  So setting of `lastDeviceType`
       // (done above) is all we need.
     } else {
+      // update, data, loop, routine, combined remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -221,6 +224,7 @@ public:
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("num_workers not valid on serial");
     } else {
+      // Combined Remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -234,12 +238,13 @@ public:
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("vector_length not valid on serial");
     } else {
+      // Combined remain.
       return clauseNotImplemented(clause);
     }
   }
 
   void VisitAsyncClause(const OpenACCAsyncClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, DataOp>) {
       if (!clause.hasIntExpr()) {
         operation.setAsyncOnlyAttr(
             handleDeviceTypeAffectedClause(operation.getAsyncOnlyAttr()));
@@ -250,6 +255,7 @@ public:
             createIntExpr(clause.getIntExpr()), &range));
       }
     } else {
+      // Data, enter data, exit data, update, wait, combined remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -266,19 +272,41 @@ public:
         llvm_unreachable("var-list version of self shouldn't get here");
       }
     } else {
+      // update and combined remain.
       return clauseNotImplemented(clause);
     }
   }
 
   void VisitIfClause(const OpenACCIfClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, InitOp,
+                               ShutdownOp, SetOp, DataOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else {
       // 'if' applies to most of the constructs, but hold off on lowering them
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
+      // Enter data, exit data, host_data, update, wait, combined remain.
       return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitDeviceNumClause(const OpenACCDeviceNumClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp, SetOp>) {
+      operation.getDeviceNumMutable().append(
+          createIntExpr(clause.getIntExpr()));
+    } else {
+      llvm_unreachable(
+          "init, shutdown, set, are only valid device_num constructs");
+    }
+  }
+
+  void VisitDefaultAsyncClause(const OpenACCDefaultAsyncClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, SetOp>) {
+      operation.getDefaultAsyncMutable().append(
+          createIntExpr(clause.getIntExpr()));
+    } else {
+      llvm_unreachable("set, is only valid device_num constructs");
     }
   }
 };

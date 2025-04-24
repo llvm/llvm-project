@@ -27,6 +27,20 @@ class CIR_Attr<string name, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
+class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
+    : CIR_Attr<name, attrMnemonic, !listconcat(traits, [TypedAttrInterface])> {
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+
+  let assemblyFormat = [{}];
+}
+
 class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
     : CIR_Attr<name, attrMnemonic, traits> {
   let returnType = "bool";
@@ -64,43 +78,23 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
 // ZeroAttr
 //===----------------------------------------------------------------------===//
 
-def ZeroAttr : CIR_Attr<"Zero", "zero", [TypedAttrInterface]> {
+def ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
   let summary = "Attribute to represent zero initialization";
   let description = [{
     The ZeroAttr is used to indicate zero initialization on structs.
   }];
-
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
-
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "mlir::Type":$type), [{
-      return $_get(type.getContext(), type);
-    }]>
-  ];
-
-  let assemblyFormat = [{}];
 }
 
 //===----------------------------------------------------------------------===//
 // UndefAttr
 //===----------------------------------------------------------------------===//
 
-def UndefAttr : CIR_Attr<"Undef", "undef", [TypedAttrInterface]> {
+def UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
   let summary = "Represent an undef constant";
   let description = [{
     The UndefAttr represents an undef constant, corresponding to LLVM's notion
     of undef.
   }];
-
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
-
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "mlir::Type":$type), [{
-      return $_get(type.getContext(), type);
-    }]>
-  ];
-
-  let assemblyFormat = [{}];
 }
 
 //===----------------------------------------------------------------------===//
@@ -114,7 +108,7 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
     value of the specified integer type.
   }];
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "llvm::APInt":$value);
+                        APIntParameter<"">:$value);
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "const llvm::APInt &":$value), [{
@@ -202,6 +196,11 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
         zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
 
       return $_get(type.getContext(), type, elts, zeros);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::ArrayType":$type,
+                                        "mlir::Attribute":$elts,
+                                        "int":$trailingZerosNum), [{
+      return $_get(type.getContext(), type, elts, trailingZerosNum);
     }]>
   ];
 
@@ -234,11 +233,7 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
                                         "mlir::IntegerAttr":$value), [{
       return $_get(type.getContext(), mlir::cast<cir::PointerType>(type),
                    value);
-    }]>,
-    AttrBuilder<(ins "mlir::Type":$type,
-                     "mlir::IntegerAttr":$value), [{
-      return $_get($_ctxt, mlir::cast<cir::PointerType>(type), value);
-    }]>,
+    }]>
   ];
   let extraClassDeclaration = [{
     bool isNullValue() const { return getValue().getInt() == 0; }
