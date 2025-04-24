@@ -169,6 +169,7 @@ Changes to the RISC-V Backend
   which is also the default.
 * `-mcpu=xiangshan-kunminghu` was added.
 * `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
+* `-mcpu=andes-a45` and `-mcpu=andes-ax45` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
