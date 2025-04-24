@@ -85,7 +85,6 @@
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
@@ -160,7 +159,6 @@ class ReconvergeCFGHelper {
 private:
   // MachineConvergenceInfo &ConvergenceInfo;
   MachineCycleInfo &CycleInfo;
-  MachineUniformityInfo &UI;
   MachineDominatorTree &DomTree;
 
   unsigned NumFlowNodes = 0;
@@ -185,10 +183,10 @@ private:
   } OpenSetScan;
 
 public:
-  ReconvergeCFGHelper(MachineCycleInfo &CycleInfo, MachineUniformityInfo &UI,
+  ReconvergeCFGHelper(MachineCycleInfo &CycleInfo,
                       MachineDominatorTree &DomTree)
       : /*ConvergenceInfo(convergenceInfo),*/
-        CycleInfo(CycleInfo), UI(UI), DomTree(DomTree) {}
+        CycleInfo(CycleInfo), DomTree(DomTree) {}
 
   void run();
 
@@ -450,7 +448,13 @@ void ReconvergeCFGHelper::run() {
     Nodes.emplace_back(
         std::make_unique<WaveNode>(Block, CycleInfo.getCycle(Block)));
     WaveNode *WN = Nodes.back().get();
-    WN->IsDivergent = UI.hasDivergentTerminator(*Block);
+    auto TerminatorMI = Block->getFirstTerminator();
+    if (TerminatorMI != Block->end()) {
+      WN->IsDivergent = (TerminatorMI->getOpcode() == AMDGPU::SI_BRCOND);
+    } else {
+      // Handle the case where there's no terminator.
+      WN->IsDivergent = false;
+    }
     NodeForBlock.insert(std::make_pair(Block, WN));
   }
 
@@ -2102,7 +2106,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineCycleInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addUsedIfAvailable<MachineUniformityAnalysisPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -2124,7 +2127,6 @@ private:
   MachineDominatorTree *DomTree = nullptr;
   // MachineConvergenceInfo ConvergenceInfo;
   MachineCycleInfo *CycleInfo;
-  MachineUniformityInfo *UI = nullptr;
   GCNLaneMaskUtils LMU;
   const SIInstrInfo *TII;
 };
@@ -2157,13 +2159,9 @@ bool AMDGPUWaveTransform::runOnMachineFunction(MachineFunction &MF) {
 
   // ConvergenceInfo = computeMachineConvergenceInfo(MF, *DomTree);
   CycleInfo = &getAnalysis<MachineCycleInfoWrapperPass>().getCycleInfo();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  UI = MFI.getMachineUniformityInfo();
-  assert(UI && "wave transform needs MachineUniformityAnalysis");
-  LLVM_DEBUG(UI->print(dbgs()));
 
   // Step 1: Compute reconverging Wave CFG
-  ReconvergeCFGHelper ReconvergeHelper(*CycleInfo, *UI, *DomTree);
+  ReconvergeCFGHelper ReconvergeHelper(*CycleInfo, *DomTree);
   ReconvergeHelper.run();
 
   ControlFlowRewriter CFRewriter(MF, ReconvergeHelper);

@@ -1192,7 +1192,7 @@ public:
   bool addGlobalInstructionSelect() override;
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
-  void addPreRegAlloc() override;
+  // void addPreRegAlloc() override;
 
   FunctionPass *createSGPRAllocPass(bool Optimized);
   FunctionPass *createVGPRAllocPass(bool Optimized);
@@ -1565,10 +1565,10 @@ void GCNPassConfig::addFastRegAlloc() {
   TargetPassConfig::addFastRegAlloc();
 }
 
-void GCNPassConfig::addPreRegAlloc() {
-  if (WaveTransformCF && getOptLevel() == CodeGenOptLevel::None)
-    addPass(&AMDGPUPreWaveTransformID);
-}
+// void GCNPassConfig::addPreRegAlloc() {
+//   if (WaveTransformCF && getOptLevel() == CodeGenOptLevel::None)
+//     addPass(&AMDGPUPreWaveTransformID);
+// }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
   if (EnableDCEInRA)
@@ -1613,9 +1613,9 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // We need to do some preparation pass with MachineUniformityInfo analysis
   // right before PHIElimination in order to set up information we need
   // for WaveTransform.
-  if (WaveTransformCF) {
-    insertPass(&LiveVariablesID, &AMDGPUPreWaveTransformID);
-  }
+  // if (WaveTransformCF) {
+  //   insertPass(&LiveVariablesID, &AMDGPUPreWaveTransformID);
+  // }
 
   TargetPassConfig::addOptimizedRegAlloc();
 }

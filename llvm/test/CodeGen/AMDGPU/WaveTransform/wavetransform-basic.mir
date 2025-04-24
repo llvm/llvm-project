@@ -29,6 +29,33 @@ body:             |
   bb.2:
     S_ENDPGM 0
 ...
+
+---
+
+# CFG-LABEL: Wave CFG for if_then_divergent_with_no_terminator:
+# CFG-NEXT:    bb.0 (#0) -> bb.1(*) bb.2(*) [LatestPostDom: bb.2] [divergent]
+# CFG-NEXT:    bb.1 (#1) -> bb.2(*)
+# CFG-NEXT:    bb.2 (#2) [secondary]
+
+name: if_then_divergent_with_no_terminator
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0
+
+    %8:vgpr_32 = COPY $vgpr0
+    %15:sreg_32 = S_MOV_B32 0
+    %16:sreg_32 = V_CMP_EQ_U32_e64 %8, killed %15, implicit $exec
+    SI_BRCOND killed %16, %bb.2
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
 ---
 
 # CFG-LABEL: Wave CFG for if_then_else_divergent:
