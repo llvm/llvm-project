@@ -160,8 +160,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     UnwindLogMsg("using architectural default unwind method");
   }
 
-  AddressRange addr_range;
-  m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
+  m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx);
 
   if (m_sym_ctx.symbol) {
     UnwindLogMsg("with pc value of 0x%" PRIx64 ", symbol name is '%s'",
@@ -185,15 +184,9 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   // If we were able to find a symbol/function, set addr_range to the bounds of
   // that symbol/function. else treat the current pc value as the start_pc and
   // record no offset.
-  if (addr_range.GetBaseAddress().IsValid()) {
-    m_start_pc = addr_range.GetBaseAddress();
-    if (m_current_pc.GetSection() == m_start_pc.GetSection()) {
-      m_current_offset = m_current_pc.GetOffset() - m_start_pc.GetOffset();
-    } else if (m_current_pc.GetModule() == m_start_pc.GetModule()) {
-      // This means that whatever symbol we kicked up isn't really correct ---
-      // we should not cross section boundaries ... We really should NULL out
-      // the function/symbol in this case unless there is a bad assumption here
-      // due to inlined functions?
+  if (m_sym_ctx_valid) {
+    m_start_pc = m_sym_ctx.GetFunctionOrSymbolAddress();
+    if (m_current_pc.GetModule() == m_start_pc.GetModule()) {
       m_current_offset =
           m_current_pc.GetFileAddress() - m_start_pc.GetFileAddress();
     }
@@ -498,8 +491,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     return;
   }
 
-  AddressRange addr_range;
-  m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
+  m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx);
 
   if (m_sym_ctx.symbol) {
     UnwindLogMsg("with pc value of 0x%" PRIx64 ", symbol name is '%s'", pc,
@@ -523,9 +515,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     // Don't decrement if we're "above" an asynchronous event like
     // sigtramp.
     decr_pc_and_recompute_addr_range = false;
-  } else if (!addr_range.GetBaseAddress().IsValid() ||
-             addr_range.GetBaseAddress().GetSection() != m_current_pc.GetSection() ||
-             addr_range.GetBaseAddress().GetOffset() != m_current_pc.GetOffset()) {
+  } else if (Address addr = m_sym_ctx.GetFunctionOrSymbolAddress();
+             addr != m_current_pc) {
     // If our "current" pc isn't the start of a function, decrement the pc
     // if we're up the stack.
     if (m_behaves_like_zeroth_frame)
@@ -558,7 +549,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     Address temporary_pc;
     temporary_pc.SetLoadAddress(pc - 1, &process->GetTarget());
     m_sym_ctx.Clear(false);
-    m_sym_ctx_valid = temporary_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
+    m_sym_ctx_valid = temporary_pc.ResolveFunctionScope(m_sym_ctx);
 
     UnwindLogMsg("Symbol is now %s",
                  GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
@@ -567,8 +558,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   // If we were able to find a symbol/function, set addr_range_ptr to the
   // bounds of that symbol/function. else treat the current pc value as the
   // start_pc and record no offset.
-  if (addr_range.GetBaseAddress().IsValid()) {
-    m_start_pc = addr_range.GetBaseAddress();
+  if (m_sym_ctx_valid) {
+    m_start_pc = m_sym_ctx.GetFunctionOrSymbolAddress();
     m_current_offset = pc - m_start_pc.GetLoadAddress(&process->GetTarget());
     m_current_offset_backed_up_one = m_current_offset;
     if (decr_pc_and_recompute_addr_range &&
@@ -1939,8 +1930,7 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
                  GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
     m_current_offset_backed_up_one = m_current_offset;
 
-    AddressRange addr_range;
-    m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx, &addr_range);
+    m_sym_ctx_valid = m_current_pc.ResolveFunctionScope(m_sym_ctx);
 
     UnwindLogMsg("Symbol is now %s",
                  GetSymbolOrFunctionName(m_sym_ctx).AsCString(""));
@@ -1949,9 +1939,11 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
     Process *process = exe_ctx.GetProcessPtr();
     Target *target = &process->GetTarget();
 
-    m_start_pc = addr_range.GetBaseAddress();
-    m_current_offset =
-        m_current_pc.GetLoadAddress(target) - m_start_pc.GetLoadAddress(target);
+    if (m_sym_ctx_valid) {
+      m_start_pc = m_sym_ctx.GetFunctionOrSymbolAddress();
+      m_current_offset = m_current_pc.GetLoadAddress(target) -
+                         m_start_pc.GetLoadAddress(target);
+    }
   }
 }
 
