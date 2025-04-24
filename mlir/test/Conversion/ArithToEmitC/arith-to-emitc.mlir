@@ -771,3 +771,74 @@ func.func @arith_truncf(%arg0: f64) -> f16 {
 
   return %truncd1 : f16
 }
+
+// -----
+
+func.func @float_opaque_conversion(%arg0: f80, %arg1: f80) {
+  // CHECK-LABEL: float_opaque_conversion
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: f80, %[[Arg1:[^ ]*]]: f80)
+
+  // CHECK-DAG: [[arg1_cast:[^ ]*]] = builtin.unrealized_conversion_cast %[[Arg1]] : f80 to !emitc.opaque<"f80"> 
+  // CHECK-DAG: [[arg0_cast:[^ ]*]] = builtin.unrealized_conversion_cast %[[Arg0]] : f80 to !emitc.opaque<"f80"> 
+  // CHECK: "emitc.constant"() <{value = #emitc.opaque<"f80">}> : () -> !emitc.opaque<"f80">
+  %10 = arith.constant 0.0 : f80
+  // CHECK: emitc.add [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"f80">, !emitc.opaque<"f80">) -> !emitc.opaque<"f80">
+  %2 = arith.addf %arg0, %arg1 : f80
+  // CHECK: [[EQ:[^ ]*]] = emitc.cmp eq, [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"f80">, !emitc.opaque<"f80">) -> i1
+  // CHECK: [[NotNaNArg0:[^ ]*]] = emitc.cmp eq, [[arg0_cast]], [[arg0_cast]] : (!emitc.opaque<"f80">, !emitc.opaque<"f80">) -> i1
+  // CHECK: [[NotNaNArg1:[^ ]*]] = emitc.cmp eq, [[arg1_cast]], [[arg1_cast]] : (!emitc.opaque<"f80">, !emitc.opaque<"f80">) -> i1
+  // CHECK: [[Ordered:[^ ]*]] = emitc.logical_and [[NotNaNArg0]], [[NotNaNArg1]] : i1, i1
+  // CHECK: emitc.logical_and [[Ordered]], [[EQ]] : i1, i1
+  %11 = arith.cmpf oeq, %arg0, %arg1 : f80
+  // CHECK: emitc.unary_minus [[arg0_cast]] : (!emitc.opaque<"f80">) -> !emitc.opaque<"f80">
+  %12 = arith.negf %arg0 : f80
+  // CHECK: [[V0:[^ ]*]] = emitc.cast [[arg0_cast]] : !emitc.opaque<"f80"> to ui32
+  // CHECK: [[V1:[^ ]*]] = emitc.cast [[V0]] : ui32 to i32
+  %7 = arith.fptoui %arg0 : f80 to i32
+  // CHECK: emitc.cast [[V1]] : i32 to !emitc.opaque<"f80">
+  %8 = arith.sitofp %7 : i32 to f80
+  // CHECK: [[trunc:[^ ]*]] = emitc.cast [[arg0_cast]] : !emitc.opaque<"f80"> to f32
+  %13 = arith.truncf %arg0 : f80 to f32
+  // CHECK: emitc.cast [[trunc]] : f32 to !emitc.opaque<"f80">
+  %15 = arith.extf %13 : f32 to f80
+  return
+}
+
+// -----
+
+func.func @int_opaque_conversion(%arg0: i80, %arg1: i80, %arg2: i1) {
+  // CHECK-LABEL: int_opaque_conversion
+  // CHECK-SAME: (%[[Arg0:[^ ]*]]: i80, %[[Arg1:[^ ]*]]: i80, %[[Arg2:[^ ]*]]: i1)
+
+  // CHECK-DAG: [[arg1_cast:[^ ]*]] = builtin.unrealized_conversion_cast %[[Arg1]] : i80 to !emitc.opaque<"i80"> 
+  // CHECK-DAG: [[arg0_cast:[^ ]*]] = builtin.unrealized_conversion_cast %[[Arg0]] : i80 to !emitc.opaque<"i80">
+  // CHECK: "emitc.constant"() <{value = #emitc.opaque<"i80">}> : () -> !emitc.opaque<"i80">
+  %10 = arith.constant 0 : i80
+  // CHECK: emitc.div [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> !emitc.opaque<"i80">
+  %3 = arith.divui %arg0, %arg1 : i80
+  // CHECK: emitc.add [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> !emitc.opaque<"i80">
+  %2 = arith.addi %arg0, %arg1 : i80
+  // CHECK: emitc.bitwise_and [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> !emitc.opaque<"i80">
+  %14 = arith.andi %arg0, %arg1 : i80
+  // CHECK: [[Bitwidth:[^ ]*]] = "emitc.constant"() <{value = #emitc.opaque<"opaque_shift_bitwidth">}> : () -> !emitc.opaque<"i80">
+  // CHECK: [[LT:[^ ]*]] = emitc.cmp lt, [[arg1_cast]], [[Bitwidth]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> i1
+  // CHECK: [[Poison:[^ ]*]] = "emitc.constant"() <{value = #emitc.opaque<"opaque_shift_poison">}> : () -> !emitc.opaque<"i80">
+  // CHECK: [[Exp:[^ ]*]] = emitc.expression : !emitc.opaque<"i80"> {
+  // CHECK: [[LShift:[^ ]*]] = emitc.bitwise_left_shift [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> !emitc.opaque<"i80">
+  // CHECK: emitc.conditional [[LT]], [[LShift]], [[Poison]] : !emitc.opaque<"i80">
+  // CHECK: emitc.yield {{.*}} : !emitc.opaque<"i80">
+  // CHECK: }
+  %12 = arith.shli %arg0, %arg1 : i80
+  // CHECK: emitc.cmp eq, [[arg0_cast]], [[arg1_cast]] : (!emitc.opaque<"i80">, !emitc.opaque<"i80">) -> i1
+  %11 = arith.cmpi eq, %arg0, %arg1 : i80
+  // CHECK: emitc.conditional %[[Arg2]], [[arg0_cast]], [[arg1_cast]] : !emitc.opaque<"i80">
+  %13 = arith.select %arg2, %arg0, %arg1 : i80
+  // CHECK: [[V0:[^ ]*]] = emitc.cast [[arg0_cast]] : !emitc.opaque<"i80"> to ui8
+  // CHECK: emitc.cast [[V0]] : ui8 to i8
+  %15 = arith.trunci %arg0 : i80 to i8
+  // CHECK: [[V1:[^ ]*]] = emitc.cast [[arg0_cast]] : !emitc.opaque<"i80"> to f32
+  %9 = arith.uitofp %arg0 : i80 to f32
+  // CHECK: emitc.cast [[V1]] : f32 to !emitc.opaque<"i80">
+  %6 = arith.fptosi %9 : f32 to i80
+  return
+}

@@ -15,27 +15,11 @@ func.func @arith_cast_vector(%arg0: vector<5xf32>) -> vector<5xi32> {
 }
 
 // -----
-func.func @arith_cast_f80(%arg0: f80) -> i32 {
-  // expected-error @+1 {{failed to legalize operation 'arith.fptosi'}}
-  %t = arith.fptosi %arg0 : f80 to i32
-  return %t: i32
-}
-
-// -----
 
 func.func @arith_cast_f128(%arg0: f128) -> i32 {
   // expected-error @+1 {{failed to legalize operation 'arith.fptosi'}}
   %t = arith.fptosi %arg0 : f128 to i32
   return %t: i32
-}
-
-
-// -----
-
-func.func @arith_cast_to_f80(%arg0: i32) -> f80 {
-  // expected-error @+1 {{failed to legalize operation 'arith.sitofp'}}
-  %t = arith.sitofp %arg0 : i32 to f80
-  return %t: f80
 }
 
 // -----

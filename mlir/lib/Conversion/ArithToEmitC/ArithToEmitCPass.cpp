@@ -30,8 +30,41 @@ namespace {
 struct ConvertArithToEmitC
     : public impl::ConvertArithToEmitCBase<ConvertArithToEmitC> {
   void runOnOperation() override;
+
+  /// Applies conversion to opaque types for f80 and i80 types, both unsupported
+  /// in emitc. Used to test the pass with opaque types.
+  void populateOpaqueTypeConversions(TypeConverter &converter);
 };
 } // namespace
+
+void ConvertArithToEmitC::populateOpaqueTypeConversions(
+    TypeConverter &converter) {
+  converter.addConversion([](Type type) -> std::optional<Type> {
+    if (type.isF80())
+      return emitc::OpaqueType::get(type.getContext(), "f80");
+    if (type.isInteger() && type.getIntOrFloatBitWidth() == 80)
+      return emitc::OpaqueType::get(type.getContext(), "i80");
+    return type;
+  });
+
+  converter.addTypeAttributeConversion(
+      [](Type type,
+         Attribute attrToConvert) -> TypeConverter::AttributeConversionResult {
+        if (auto floatAttr = llvm::dyn_cast<FloatAttr>(attrToConvert)) {
+          if (floatAttr.getType().isF80()) {
+            return emitc::OpaqueAttr::get(type.getContext(), "f80");
+          }
+          return {};
+        }
+        if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attrToConvert)) {
+          if (intAttr.getType().isInteger() &&
+              intAttr.getType().getIntOrFloatBitWidth() == 80) {
+            return emitc::OpaqueAttr::get(type.getContext(), "i80");
+          }
+        }
+        return {};
+      });
+}
 
 void ConvertArithToEmitC::runOnOperation() {
   ConversionTarget target(getContext());
@@ -42,8 +75,8 @@ void ConvertArithToEmitC::runOnOperation() {
   RewritePatternSet patterns(&getContext());
 
   TypeConverter typeConverter;
-  typeConverter.addConversion([](Type type) { return type; });
 
+  populateOpaqueTypeConversions(typeConverter);
   populateArithToEmitCPatterns(typeConverter, patterns);
 
   if (failed(
