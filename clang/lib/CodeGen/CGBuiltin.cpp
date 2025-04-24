@@ -910,6 +910,7 @@ class StructFieldAccess
 
 public:
   const Expr *ArrayIndex = nullptr;
+  QualType ArrayElementTy;
 
   const Expr *VisitMemberExpr(const MemberExpr *E) {
     if (AddrOfSeen && E->getType()->isArrayType())
@@ -925,6 +926,7 @@ public:
 
     AddrOfSeen = false; // '&ptr->array[idx]' is okay.
     ArrayIndex = E->getIdx();
+    ArrayElementTy = E->getBase()->getType();
     return Visit(E->getBase());
   }
   const Expr *VisitCastExpr(const CastExpr *E) {
@@ -1059,15 +1061,17 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
     }
   }
 
+  // __counted_by on either a flexible array member or a pointer into a struct
+  // with a flexible array member.
   if (const auto *ME = dyn_cast<MemberExpr>(E))
-    // This is either a flexible array member or a pointer into a struct with a
-    // flexible array member.
-    return emitCountedByMemberSize(ME, Idx, EmittedE, Type, ResType);
+    return emitCountedByMemberSize(ME, Idx, EmittedE, Visitor.ArrayElementTy,
+                                   Type, ResType);
 
+  // __counted_by on a pointer in a struct.
   if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E);
       ICE && ICE->getCastKind() == CK_LValueToRValue)
-    // This may be a pointer.
-    return emitCountedByPointerSize(ICE, Idx, EmittedE, Type, ResType);
+    return emitCountedByPointerSize(ICE, Idx, EmittedE, Visitor.ArrayElementTy,
+                                    Type, ResType);
 
   return nullptr;
 }
@@ -1111,7 +1115,7 @@ GetCountFieldAndIndex(CodeGenFunction &CGF, const MemberExpr *ME,
 
 llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     const ImplicitCastExpr *E, const Expr *Idx, llvm::Value *EmittedE,
-    unsigned Type, llvm::IntegerType *ResType) {
+    QualType CastedArrayElementTy, unsigned Type, llvm::IntegerType *ResType) {
   assert(E->getCastKind() == CK_LValueToRValue &&
          "must be an LValue to RValue cast");
 
@@ -1144,24 +1148,25 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //
   //    count = ptr->count;
   //
-  //    array_base_size = sizeof (*ptr->array);
-  //    array_size = count * array_base_size;
+  //    array_element_size = sizeof (*ptr->array);
+  //    array_size = count * array_element_size;
   //
   //    result = array_size;
   //
   //    cmp = (result >= 0)
   //    return cmp ? result : 0;
   //
-  // 2) '&ptr->array[idx]':
+  // 2) '&((cast) ptr->array)[idx]':
   //
   //    count = ptr->count;
   //    index = idx;
   //
-  //    array_base_size = sizeof (*ptr->array_base_size);
-  //    array_size = count * array_base_size;
+  //    array_element_size = sizeof (*ptr->array);
+  //    array_size = count * array_element_size;
   //
-  //    index_size = index * array_base_size;
+  //    casted_array_element_size = sizeof (*((cast) ptr->array));
   //
+  //    index_size = index * casted_array_element_size;
   //    result = array_size - index_size;
   //
   //    cmp = (result >= 0)
@@ -1169,27 +1174,41 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //        cmp  = (cmp && index > 0)
   //    return cmp ? result : 0;
 
-  bool IsSigned = CountFD->getType()->isSignedIntegerType();
+  auto GetElementBaseSize = [&](QualType ElementTy) {
+    CharUnits ElementSize =
+        getContext().getTypeSizeInChars(ElementTy->getPointeeType());
 
-  //  array_base_size = sizeof (*ptr->array);
-  ASTContext &Ctx = getContext();
-  QualType ArrayBaseTy = ArrayBaseFD->getType()->getPointeeType();
-  CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayBaseTy);
-  if (BaseSize.isZero()) {
-    // This might be a __sized_by on a 'void *', which counts bytes, not
-    // elements.
-    auto *CAT = ArrayBaseFD->getType()->getAs<CountAttributedType>();
-    if (CAT->getKind() != CountAttributedType::SizedBy &&
-        CAT->getKind() != CountAttributedType::SizedByOrNull)
-      // Okay, not sure what it is now.
-      // FIXME: Should this be an assert?
+    if (ElementSize.isZero()) {
+      // This might be a __sized_by on a 'void *', which counts bytes, not
+      // elements.
+      auto *CAT = ElementTy->getAs<CountAttributedType>();
+      if (!CAT || (CAT->getKind() != CountAttributedType::SizedBy &&
+                   CAT->getKind() != CountAttributedType::SizedByOrNull))
+        // Okay, not sure what it is now.
+        // FIXME: Should this be an assert?
+        return std::optional<CharUnits>();
+
+      ElementSize = CharUnits::One();
+    }
+
+    return std::optional<CharUnits>(ElementSize);
+  };
+
+  // Get the sizes of the original array element and the casted array element,
+  // if different.
+  std::optional<CharUnits> ArrayElementBaseSize =
+      GetElementBaseSize(ArrayBaseFD->getType());
+  if (!ArrayElementBaseSize)
+    return nullptr;
+
+  std::optional<CharUnits> CastedArrayElementBaseSize = ArrayElementBaseSize;
+  if (!CastedArrayElementTy.isNull() && CastedArrayElementTy->isPointerType()) {
+    CastedArrayElementBaseSize = GetElementBaseSize(CastedArrayElementTy);
+    if (!CastedArrayElementBaseSize)
       return nullptr;
-
-    BaseSize = CharUnits::One();
   }
 
-  auto *ArrayBaseSize =
-      llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
+  bool IsSigned = CountFD->getType()->isSignedIntegerType();
 
   //  count = ptr->count;
   //  index = ptr->index;
@@ -1199,30 +1218,38 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   if (!Count)
     return nullptr;
 
-  //  array_size = count * array_base_size;
-  Value *ArraySize = Builder.CreateMul(Count, ArrayBaseSize, "array_size",
+  //  array_element_size = sizeof (*ptr->array)
+  auto *ArrayElementSize = llvm::ConstantInt::get(
+      ResType, ArrayElementBaseSize->getQuantity(), IsSigned);
+
+  //  casted_array_element_size = sizeof (*((cast) ptr->array));
+  auto *CastedArrayElementSize = llvm::ConstantInt::get(
+      ResType, CastedArrayElementBaseSize->getQuantity(), IsSigned);
+
+  //  array_size = count * array_element_size;
+  Value *ArraySize = Builder.CreateMul(Count, ArrayElementSize, "array_size",
                                        !IsSigned, IsSigned);
 
   // Option (1) 'ptr->array'
-  //   result = array_size
-  Value *Res = ArraySize;
+  //  result = array_size
+  Value *Result = ArraySize;
 
-  if (Idx) { // Option (2) '&ptr->array[idx]'
-    //  index_size = index * array_base_size;
-    Value *IndexSize = Builder.CreateMul(ArrayBaseSize, Index, "index_size",
-                                         !IsSigned, IsSigned);
+  if (Idx) { // Option (2) '&((cast) ptr->array)[idx]'
+    //  index_size = index * casted_array_element_size;
+    Value *IndexSize = Builder.CreateMul(Index, CastedArrayElementSize,
+                                         "index_size", !IsSigned, IsSigned);
 
     //  result = result - index_size;
-    Res = Builder.CreateSub(Res, IndexSize, "result", !IsSigned, IsSigned);
+    Result =
+        Builder.CreateSub(Result, IndexSize, "result", !IsSigned, IsSigned);
   }
 
-  return EmitPositiveResultOrZero(*this, Res, Index, ResType, IsSigned);
+  return EmitPositiveResultOrZero(*this, Result, Index, ResType, IsSigned);
 }
 
-llvm::Value *
-CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
-                                         llvm::Value *EmittedE, unsigned Type,
-                                         llvm::IntegerType *ResType) {
+llvm::Value *CodeGenFunction::emitCountedByMemberSize(
+    const MemberExpr *ME, const Expr *Idx, llvm::Value *EmittedE,
+    QualType CastedArrayElementTy, unsigned Type, llvm::IntegerType *ResType) {
   const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
   if (!FD)
     return nullptr;
@@ -1264,25 +1291,27 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   //
   //    count = ptr->count;
   //
-  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_element_size = sizeof (*ptr->array);
   //    flexible_array_member_size =
-  //            count * flexible_array_member_base_size;
+  //        count * flexible_array_member_element_size;
   //
   //    result = flexible_array_member_size;
   //
   //    cmp = (result >= 0)
   //    return cmp ? result : 0;
   //
-  // 2) '&ptr->array[idx]':
+  // 2) '&((cast) ptr->array)[idx]':
   //
   //    count = ptr->count;
   //    index = idx;
   //
-  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_element_size = sizeof (*ptr->array);
   //    flexible_array_member_size =
-  //            count * flexible_array_member_base_size;
+  //        count * flexible_array_member_element_size;
   //
-  //    index_size = index * flexible_array_member_base_size;
+  //    casted_flexible_array_member_element_size =
+  //        sizeof (*((cast) ptr->array));
+  //    index_size = index * casted_flexible_array_member_element_size;
   //
   //    result = flexible_array_member_size - index_size;
   //
@@ -1296,9 +1325,9 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   //    count = ptr->count;
   //    sizeof_struct = sizeof (struct s);
   //
-  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_element_size = sizeof (*ptr->array);
   //    flexible_array_member_size =
-  //            count * flexible_array_member_base_size;
+  //        count * flexible_array_member_element_size;
   //
   //    field_offset = offsetof (struct s, field);
   //    offset_diff = sizeof_struct - field_offset;
@@ -1308,19 +1337,19 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   //    cmp = (result >= 0)
   //    return cmp ? result : 0;
   //
-  // 4) '&ptr->field_array[idx]':
+  // 4) '&((cast) ptr->field_array)[idx]':
   //
   //    count = ptr->count;
   //    index = idx;
   //    sizeof_struct = sizeof (struct s);
   //
-  //    flexible_array_member_base_size = sizeof (*ptr->array);
+  //    flexible_array_member_element_size = sizeof (*ptr->array);
   //    flexible_array_member_size =
-  //            count * flexible_array_member_base_size;
+  //        count * flexible_array_member_element_size;
   //
-  //    field_base_size = sizeof (*ptr->field_array);
+  //    casted_field_element_size = sizeof (*((cast) ptr->field_array));
   //    field_offset = offsetof (struct s, field)
-  //    field_offset += index * field_base_size;
+  //    field_offset += index * casted_field_element_size;
   //
   //    offset_diff = sizeof_struct - field_offset;
   //
@@ -1334,7 +1363,6 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   bool IsSigned = CountFD->getType()->isSignedIntegerType();
 
   QualType FlexibleArrayMemberTy = FlexibleArrayMemberFD->getType();
-  QualType FieldTy = FD->getType();
 
   // Explicit cast because otherwise the CharWidth will promote an i32's into
   // u64's leading to overflows.
@@ -1358,31 +1386,43 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
   if (!Count)
     return nullptr;
 
-  //  flexible_array_member_base_size = sizeof (*ptr->array);
+  //  flexible_array_member_element_size = sizeof (*ptr->array);
   const ArrayType *ArrayTy = Ctx.getAsArrayType(FlexibleArrayMemberTy);
   CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-  auto *FlexibleArrayMemberBaseSize =
+  auto *FlexibleArrayMemberElementSize =
       llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
 
-  //  flexible_array_member_size =
-  //          count * flexible_array_member_base_size;
+  //  flexible_array_member_size = count * flexible_array_member_element_size;
   Value *FlexibleArrayMemberSize =
-      Builder.CreateMul(Count, FlexibleArrayMemberBaseSize,
+      Builder.CreateMul(Count, FlexibleArrayMemberElementSize,
                         "flexible_array_member_size", !IsSigned, IsSigned);
 
-  Value *Res = nullptr;
+  Value *Result = nullptr;
   if (FlexibleArrayMemberFD == FD) {
-    if (Idx) { // Option (2) '&ptr->array[idx]'
-      //  index_size = index * flexible_array_member_base_size;
-      Value *IndexSize = Builder.CreateMul(FlexibleArrayMemberBaseSize, Index,
-                                           "index_size", !IsSigned, IsSigned);
+    if (Idx) { // Option (2) '&((cast) ptr->array)[idx]'
+      //  casted_flexible_array_member_element_size =
+      //      sizeof (*((cast) ptr->array));
+      llvm::ConstantInt *CastedFlexibleArrayMemberElementSize =
+          FlexibleArrayMemberElementSize;
+      if (!CastedArrayElementTy.isNull() &&
+          CastedArrayElementTy->isPointerType()) {
+        CharUnits BaseSize =
+            Ctx.getTypeSizeInChars(CastedArrayElementTy->getPointeeType());
+        CastedFlexibleArrayMemberElementSize =
+            llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
+      }
+
+      //  index_size = index * casted_flexible_array_member_element_size;
+      Value *IndexSize =
+          Builder.CreateMul(Index, CastedFlexibleArrayMemberElementSize,
+                            "index_size", !IsSigned, IsSigned);
 
       //  result = flexible_array_member_size - index_size;
-      Res = Builder.CreateSub(FlexibleArrayMemberSize, IndexSize, "result",
-                              !IsSigned, IsSigned);
+      Result = Builder.CreateSub(FlexibleArrayMemberSize, IndexSize, "result",
+                                 !IsSigned, IsSigned);
     } else { // Option (1) 'ptr->array'
       //  result = flexible_array_member_size;
-      Res = FlexibleArrayMemberSize;
+      Result = FlexibleArrayMemberSize;
     }
   } else {
     //  sizeof_struct = sizeof (struct s);
@@ -1392,29 +1432,36 @@ CodeGenFunction::emitCountedByMemberSize(const MemberExpr *ME, const Expr *Idx,
     Value *SizeofStruct =
         llvm::ConstantInt::get(ResType, Size.getKnownMinValue() / CharWidth);
 
-    if (Idx) { // Option (4) '&ptr->field_array[idx]'
-      //  field_base_size = sizeof (*ptr->field_array);
-      const ArrayType *ArrayTy = Ctx.getAsArrayType(FieldTy);
-      CharUnits BaseSize = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-      auto *FieldBaseSize =
+    if (Idx) { // Option (4) '&((cast) ptr->field_array)[idx]'
+      //  casted_field_element_size = sizeof (*((cast) ptr->field_array));
+      CharUnits BaseSize;
+      if (!CastedArrayElementTy.isNull() &&
+          CastedArrayElementTy->isPointerType()) {
+        BaseSize =
+            Ctx.getTypeSizeInChars(CastedArrayElementTy->getPointeeType());
+      } else {
+        const ArrayType *ArrayTy = Ctx.getAsArrayType(FD->getType());
+        BaseSize = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
+      }
+
+      llvm::ConstantInt *CastedFieldElementSize =
           llvm::ConstantInt::get(ResType, BaseSize.getQuantity(), IsSigned);
 
-      //  field_offset += index * field_base_size;
-      Value *Mul = Builder.CreateMul(Index, FieldBaseSize, "field_offset",
-                                     !IsSigned, IsSigned);
+      //  field_offset += index * casted_field_element_size;
+      Value *Mul = Builder.CreateMul(Index, CastedFieldElementSize,
+                                     "field_offset", !IsSigned, IsSigned);
       FieldOffset = Builder.CreateAdd(FieldOffset, Mul);
     }
     // Option (3) '&ptr->field', and Option (4) continuation.
-
     //  offset_diff = flexible_array_member_offset - field_offset;
     Value *OffsetDiff = Builder.CreateSub(SizeofStruct, FieldOffset,
                                           "offset_diff", !IsSigned, IsSigned);
 
     //  result = offset_diff + flexible_array_member_size;
-    Res = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
+    Result = Builder.CreateAdd(FlexibleArrayMemberSize, OffsetDiff, "result");
   }
 
-  return EmitPositiveResultOrZero(*this, Res, Index, ResType, IsSigned);
+  return EmitPositiveResultOrZero(*this, Result, Index, ResType, IsSigned);
 }
 
 /// Returns a Value corresponding to the size of the given expression.

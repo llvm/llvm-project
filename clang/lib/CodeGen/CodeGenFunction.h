@@ -5412,11 +5412,14 @@ private:
                                  unsigned Type, llvm::IntegerType *ResType);
 
   llvm::Value *emitCountedByMemberSize(const MemberExpr *E, const Expr *Idx,
-                                       llvm::Value *EmittedE, unsigned Type,
+                                       llvm::Value *EmittedE,
+                                       QualType CastedArrayElementTy,
+                                       unsigned Type,
                                        llvm::IntegerType *ResType);
 
   llvm::Value *emitCountedByPointerSize(const ImplicitCastExpr *E,
                                         const Expr *Idx, llvm::Value *EmittedE,
+                                        QualType CastedArrayElementTy,
                                         unsigned Type,
                                         llvm::IntegerType *ResType);
 
