@@ -853,7 +853,7 @@ void SmartPtrModeling::handleBoolConversion(const CallEvent &Call,
 
     const LocationContext *LC = C.getLocationContext();
     InnerPointerVal = C.getSValBuilder().conjureSymbolVal(
-        CallExpr, LC, InnerPointerType, C.blockCount());
+        Call, InnerPointerType, C.blockCount());
     State = State->set<TrackedRegionMap>(ThisRegion, InnerPointerVal);
   }
 
