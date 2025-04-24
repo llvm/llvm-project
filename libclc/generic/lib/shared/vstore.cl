@@ -75,57 +75,35 @@ VSTORE_ADDR_SPACES(double)
 VSTORE_ADDR_SPACES(half)
 #endif
 
-/* vstore_half are legal even without cl_khr_fp16 */
-#if __clang_major__ < 6
-#define DECLARE_HELPER(STYPE, AS, builtin)                                     \
-  void __clc_vstore_half_##STYPE##_helper##AS(STYPE, AS half *);
-#else
-#define DECLARE_HELPER(STYPE, AS, __builtin)                                   \
-  _CLC_DEF void __clc_vstore_half_##STYPE##_helper##AS(STYPE s, AS half *d) {  \
-    __builtin(s, d);                                                           \
-  }
-#endif
+#define VEC_STORE1(val, ROUNDF, BUILTIN) BUILTIN(ROUNDF(val), &mem[offset++]);
 
-DECLARE_HELPER(float, __private, __builtin_store_halff);
-DECLARE_HELPER(float, __global, __builtin_store_halff);
-DECLARE_HELPER(float, __local, __builtin_store_halff);
+#define VEC_STORE2(val, ROUNDF, BUILTIN)                                       \
+  VEC_STORE1(val.lo, ROUNDF, BUILTIN)                                          \
+  VEC_STORE1(val.hi, ROUNDF, BUILTIN)
+#define VEC_STORE3(val, ROUNDF, BUILTIN)                                       \
+  VEC_STORE1(val.s0, ROUNDF, BUILTIN)                                          \
+  VEC_STORE1(val.s1, ROUNDF, BUILTIN)                                          \
+  VEC_STORE1(val.s2, ROUNDF, BUILTIN)
+#define VEC_STORE4(val, ROUNDF, BUILTIN)                                       \
+  VEC_STORE2(val.lo, ROUNDF, BUILTIN)                                          \
+  VEC_STORE2(val.hi, ROUNDF, BUILTIN)
+#define VEC_STORE8(val, ROUNDF, BUILTIN)                                       \
+  VEC_STORE4(val.lo, ROUNDF, BUILTIN)                                          \
+  VEC_STORE4(val.hi, ROUNDF, BUILTIN)
+#define VEC_STORE16(val, ROUNDF, BUILTIN)                                      \
+  VEC_STORE8(val.lo, ROUNDF, BUILTIN)                                          \
+  VEC_STORE8(val.hi, ROUNDF, BUILTIN)
 
-#ifdef cl_khr_fp64
-DECLARE_HELPER(double, __private, __builtin_store_half);
-DECLARE_HELPER(double, __global, __builtin_store_half);
-DECLARE_HELPER(double, __local, __builtin_store_half);
-#endif
-
-#define VEC_STORE1(STYPE, AS, val, ROUNDF)                                     \
-  __clc_vstore_half_##STYPE##_helper##AS(ROUNDF(val), &mem[offset++]);
-
-#define VEC_STORE2(STYPE, AS, val, ROUNDF)                                     \
-  VEC_STORE1(STYPE, AS, val.lo, ROUNDF)                                        \
-  VEC_STORE1(STYPE, AS, val.hi, ROUNDF)
-#define VEC_STORE3(STYPE, AS, val, ROUNDF)                                     \
-  VEC_STORE1(STYPE, AS, val.s0, ROUNDF)                                        \
-  VEC_STORE1(STYPE, AS, val.s1, ROUNDF)                                        \
-  VEC_STORE1(STYPE, AS, val.s2, ROUNDF)
-#define VEC_STORE4(STYPE, AS, val, ROUNDF)                                     \
-  VEC_STORE2(STYPE, AS, val.lo, ROUNDF)                                        \
-  VEC_STORE2(STYPE, AS, val.hi, ROUNDF)
-#define VEC_STORE8(STYPE, AS, val, ROUNDF)                                     \
-  VEC_STORE4(STYPE, AS, val.lo, ROUNDF)                                        \
-  VEC_STORE4(STYPE, AS, val.hi, ROUNDF)
-#define VEC_STORE16(STYPE, AS, val, ROUNDF)                                    \
-  VEC_STORE8(STYPE, AS, val.lo, ROUNDF)                                        \
-  VEC_STORE8(STYPE, AS, val.hi, ROUNDF)
-
-#define __FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, STYPE, AS, ROUNDF)              \
+#define __FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, ROUNDF, BUILTIN)            \
   _CLC_OVERLOAD _CLC_DEF void vstore_half##SUFFIX(TYPE vec, size_t offset,     \
                                                   AS half *mem) {              \
     offset *= VEC_SIZE;                                                        \
-    VEC_STORE##VEC_SIZE(STYPE, AS, vec, ROUNDF)                                \
+    VEC_STORE##VEC_SIZE(vec, ROUNDF, BUILTIN)                                  \
   }                                                                            \
   _CLC_OVERLOAD _CLC_DEF void vstorea_half##SUFFIX(TYPE vec, size_t offset,    \
                                                    AS half *mem) {             \
     offset *= OFFSET;                                                          \
-    VEC_STORE##VEC_SIZE(STYPE, AS, vec, ROUNDF)                                \
+    VEC_STORE##VEC_SIZE(vec, ROUNDF, BUILTIN)                                  \
   }
 
 _CLC_DEF _CLC_OVERLOAD float __clc_noop(float x) { return x; }
@@ -246,15 +224,15 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rte(double x) {
 }
 #endif
 
-#define __XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, STYPE, AS)                     \
-  __FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, STYPE, AS, __clc_noop)                \
-  __FUNC(SUFFIX##_rtz, VEC_SIZE, OFFSET, TYPE, STYPE, AS, __clc_rtz)           \
-  __FUNC(SUFFIX##_rtn, VEC_SIZE, OFFSET, TYPE, STYPE, AS, __clc_rtn)           \
-  __FUNC(SUFFIX##_rtp, VEC_SIZE, OFFSET, TYPE, STYPE, AS, __clc_rtp)           \
-  __FUNC(SUFFIX##_rte, VEC_SIZE, OFFSET, TYPE, STYPE, AS, __clc_rte)
+#define __XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)                   \
+  __FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, __clc_noop, BUILTIN)              \
+  __FUNC(SUFFIX##_rtz, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtz, BUILTIN)         \
+  __FUNC(SUFFIX##_rtn, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtn, BUILTIN)         \
+  __FUNC(SUFFIX##_rtp, VEC_SIZE, OFFSET, TYPE, AS, __clc_rtp, BUILTIN)         \
+  __FUNC(SUFFIX##_rte, VEC_SIZE, OFFSET, TYPE, AS, __clc_rte, BUILTIN)
 
-#define FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, STYPE, AS)                        \
-  __XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, STYPE, AS)
+#define FUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)                      \
+  __XFUNC(SUFFIX, VEC_SIZE, OFFSET, TYPE, AS, BUILTIN)
 
 #define __CLC_BODY "vstore_half.inc"
 #include <clc/math/gentype.inc>
