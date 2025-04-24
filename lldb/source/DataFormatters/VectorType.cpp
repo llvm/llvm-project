@@ -276,8 +276,8 @@ public:
         (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
       return llvm::createStringError(
           "'SyntheticChildrenFrontEnd::VectorTypeSyntheticFrontEnd' cannot "
-          "find index of child '%s'",
-          name.AsCString());
+          "find index of child '%s'. (idx='" PRIu32 "')",
+          name.AsCString(), idx);
     return idx;
   }
 

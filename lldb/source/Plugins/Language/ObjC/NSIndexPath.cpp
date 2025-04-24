@@ -133,7 +133,7 @@ public:
         (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
       return llvm::createStringError(
           "'SyntheticChildrenFrontEnd::NSIndexPathSyntheticFrontEnd' cannot "
-          "find index of child '%s'. (idx='%d')",
+          "find index of child '%s'. (idx='" PRIu32 "')",
           name.AsCString(), idx);
     return idx;
   }

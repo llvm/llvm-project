@@ -129,7 +129,8 @@ lldb_private::formatters::LibcxxStdValarraySyntheticFrontEnd::
   if (!m_start || !m_finish)
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxStdValarraySyntheticFrontEnd' "
-        "cannot find index of child '%s'. (m_start='%d', m_finish='%d')",
+        "cannot find index of child '%s'. (m_start='" PRIu32
+        "', m_finish='" PRIu32 "')",
         name.AsCString(), m_start, m_finish);
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {

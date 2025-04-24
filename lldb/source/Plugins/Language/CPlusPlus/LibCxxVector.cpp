@@ -169,7 +169,8 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
   if (!m_start || !m_finish)
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxStdVectorSyntheticFrontEnd' cannot "
-        "find index of child '%s'. (m_start='%d', m_finish='%d')",
+        "find index of child '%s'. (m_start='" PRIu32 "', m_finish='" PRIu32
+        "')",
         name.AsCString(), m_start, m_finish);
   size_t index = formatters::ExtractIndexFromString(name.GetCString());
   if (index == UINT32_MAX) {
@@ -277,7 +278,8 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
   if (!m_count || !m_base_data_address)
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxVectorBoolSyntheticFrontEnd' cannot "
-        "find index of child '%s'. (m_count='%d', m_base_data_address='%d')",
+        "find index of child '%s'. (m_count='" PRIu32
+        "', m_base_data_address='" PRIu32 "')",
         name.AsCString(), m_count, m_base_data_address);
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
@@ -285,8 +287,8 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxVectorBoolSyntheticFrontEnd' cannot "
-        "find index of child '%s'",
-        name.AsCString());
+        "find index of child '%s'. (idx='" PRIu32 "')",
+        name.AsCString(), idx);
   return idx;
 }
 

@@ -534,7 +534,7 @@ llvm::Expected<size_t> lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontend::NSArrayMSyntheticFrontEndBase' cannot "
-        "find index of child '%s'. (idx='%d')",
+        "find index of child '%s'. (idx='" PRIu32 "')",
         name.AsCString(), idx);
   return idx;
 }
@@ -624,7 +624,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
       (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors()))
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::ObjCClassSyntheticChildrenFrontEnd' "
-        "cannot find index of child '%s'. (idx='%d')",
+        "cannot find index of child '%s'. (idx='" PRIu32 "')",
         name.AsCString(), idx);
   return idx;
 }
