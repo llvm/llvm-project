@@ -1381,6 +1381,70 @@ def GetGlobalOp : CIR_Op<"get_global",
 }
 
 //===----------------------------------------------------------------------===//
+// GetMemberOp
+//===----------------------------------------------------------------------===//
+
+def GetMemberOp : CIR_Op<"get_member"> {
+  let summary = "Get the address of a member of a record";
+  let description = [{
+    The `cir.get_member` operation gets the address of a particular named
+    member from the input record.
+
+    It expects a pointer to the base record as well as the name of the member
+    and its field index.
+
+    Example:
+    ```mlir
+    // Suppose we have a record with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 8>
+    !ty_B = !cir.record<"struct.B" {!s32i, !s8i}>
+
+    // Get the address of the member at index 1.
+    %1 = cir.get_member %0[1] {name = "i"} : (!cir.ptr<!ty_B>) -> !cir.ptr<!s8i>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    StrAttr:$name,
+    IndexAttr:$index_attr);
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+    $addr `[` $index_attr `]` attr-dict
+    `:` qualified(type($addr)) `->` qualified(type($result))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type,
+                   "mlir::Value":$value,
+                   "llvm::StringRef":$name,
+                   "unsigned":$index),
+    [{
+      mlir::APInt fieldIdx(64, index);
+      build($_builder, $_state, type, value, name, fieldIdx);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the index of the record member being accessed.
+    uint64_t getIndex() { return getIndexAttr().getZExtValue(); }
+
+    /// Return the record type pointed by the base pointer.
+    cir::PointerType getAddrTy() { return getAddr().getType(); }
+
+    /// Return the result type.
+    cir::PointerType getResultTy() {
+      return mlir::cast<cir::PointerType>(getResult().getType());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -1487,6 +1551,50 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
     }]>];
+}
+
+//===----------------------------------------------------------------------===//
+// StackSaveOp & StackRestoreOp
+//===----------------------------------------------------------------------===//
+
+def StackSaveOp : CIR_Op<"stacksave"> {
+  let summary = "remembers the current state of the function stack";
+  let description = [{
+    Saves current state of the function stack. Returns a pointer to an opaque object
+    that later can be passed into cir.stackrestore.
+    This is used during the lowering of variable length array allocas.
+
+    This operation corresponds to LLVM intrinsic `stacksave`.
+
+    ```mlir
+    %0 = cir.stacksave : <!u8i>
+    ```
+  }];
+
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "attr-dict `:` qualified(type($result))";
+}
+
+def StackRestoreOp : CIR_Op<"stackrestore"> {
+  let summary = "restores the state of the function stack";
+  let description = [{
+    Restore the state of the function stack to the state it was
+    in when the corresponding cir.stacksave executed.
+    This is used during the lowering of variable length array allocas.
+
+    This operation corresponds to LLVM intrinsic `stackrestore`.
+
+    ```mlir
+    %0 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
+    %1 = cir.stacksave : <!u8i>
+    cir.store %1, %0 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.stackrestore %2 : !cir.ptr<!u8i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
 //===----------------------------------------------------------------------===//
