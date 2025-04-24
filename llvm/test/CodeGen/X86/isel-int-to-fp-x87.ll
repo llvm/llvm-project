@@ -7,46 +7,24 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes I686,GISEL-I686
 
 define void @test_int8_to_float(i8 %x, ptr %p) nounwind {
-; SDAG-X64-LABEL: test_int8_to_float:
-; SDAG-X64:       # %bb.0: # %entry
-; SDAG-X64-NEXT:    movsbl %dil, %eax
-; SDAG-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fstps (%rsi)
-; SDAG-X64-NEXT:    retq
+; X64-LABEL: test_int8_to_float:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstps (%rsi)
+; X64-NEXT:    retq
 ;
-; GISEL-X64-LABEL: test_int8_to_float:
-; GISEL-X64:       # %bb.0: # %entry
-; GISEL-X64-NEXT:    shlw $8, %di
-; GISEL-X64-NEXT:    sarw $8, %di
-; GISEL-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fstps (%rsi)
-; GISEL-X64-NEXT:    retq
-;
-; SDAG-I686-LABEL: test_int8_to_float:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    pushl %eax
-; SDAG-I686-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SDAG-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    filds {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fstps (%ecx)
-; SDAG-I686-NEXT:    popl %eax
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_int8_to_float:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    pushl %eax
-; GISEL-I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-I686-NEXT:    shlw $8, %ax
-; GISEL-I686-NEXT:    sarw $8, %ax
-; GISEL-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    filds {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fstps (%ecx)
-; GISEL-I686-NEXT:    popl %eax
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_int8_to_float:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    pushl %eax
+; I686-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; I686-NEXT:    filds {{[0-9]+}}(%esp)
+; I686-NEXT:    fstps (%ecx)
+; I686-NEXT:    popl %eax
+; I686-NEXT:    retl
 entry:
   %conv = sitofp i8 %x to float
   store float %conv, ptr %p, align 4
@@ -61,27 +39,16 @@ define void @test_int16_to_float(i16 %x, ptr %p) nounwind {
 ; X64-NEXT:    fstps (%rsi)
 ; X64-NEXT:    retq
 ;
-; SDAG-I686-LABEL: test_int16_to_float:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    pushl %eax
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
-; SDAG-I686-NEXT:    movw %cx, {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    filds {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fstps (%eax)
-; SDAG-I686-NEXT:    popl %eax
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_int16_to_float:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    pushl %eax
-; GISEL-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    filds {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fstps (%ecx)
-; GISEL-I686-NEXT:    popl %eax
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_int16_to_float:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    pushl %eax
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; I686-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; I686-NEXT:    filds {{[0-9]+}}(%esp)
+; I686-NEXT:    fstps (%eax)
+; I686-NEXT:    popl %eax
+; I686-NEXT:    retl
 entry:
   %conv = sitofp i16 %x to float
   store float %conv, ptr %p, align 4
@@ -96,27 +63,16 @@ define void @test_int32_to_float(i32 %x, ptr %p) nounwind {
 ; X64-NEXT:    fstps (%rsi)
 ; X64-NEXT:    retq
 ;
-; SDAG-I686-LABEL: test_int32_to_float:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    pushl %eax
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SDAG-I686-NEXT:    movl %ecx, (%esp)
-; SDAG-I686-NEXT:    fildl (%esp)
-; SDAG-I686-NEXT:    fstps (%eax)
-; SDAG-I686-NEXT:    popl %eax
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_int32_to_float:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    pushl %eax
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-I686-NEXT:    movl %eax, (%esp)
-; GISEL-I686-NEXT:    fildl (%esp)
-; GISEL-I686-NEXT:    fstps (%ecx)
-; GISEL-I686-NEXT:    popl %eax
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_int32_to_float:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    pushl %eax
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; I686-NEXT:    movl %ecx, (%esp)
+; I686-NEXT:    fildl (%esp)
+; I686-NEXT:    fstps (%eax)
+; I686-NEXT:    popl %eax
+; I686-NEXT:    retl
 entry:
   %conv = sitofp i32 %x to float
   store float %conv, ptr %p, align 4
@@ -131,28 +87,12 @@ define void @test_int64_to_float(i64 %x, ptr %p) nounwind {
 ; X64-NEXT:    fstps (%rsi)
 ; X64-NEXT:    retq
 ;
-; SDAG-I686-LABEL: test_int64_to_float:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    fildll {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fstps (%eax)
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_int64_to_float:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    pushl %esi
-; GISEL-I686-NEXT:    subl $8, %esp
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; GISEL-I686-NEXT:    movl %esp, %esi
-; GISEL-I686-NEXT:    movl %eax, (%esp)
-; GISEL-I686-NEXT:    movl %ecx, 4(%esi)
-; GISEL-I686-NEXT:    fildll (%esp)
-; GISEL-I686-NEXT:    fstps (%edx)
-; GISEL-I686-NEXT:    addl $8, %esp
-; GISEL-I686-NEXT:    popl %esi
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_int64_to_float:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    fildll {{[0-9]+}}(%esp)
+; I686-NEXT:    fstps (%eax)
+; I686-NEXT:    retl
 entry:
   %conv = sitofp i64 %x to float
   store float %conv, ptr %p, align 4
@@ -160,40 +100,21 @@ entry:
 }
 
 define x86_fp80 @test_int8to_longdouble(i8 %a) nounwind {
-; SDAG-X64-LABEL: test_int8to_longdouble:
-; SDAG-X64:       # %bb.0:
-; SDAG-X64-NEXT:    movsbl %dil, %eax
-; SDAG-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    retq
+; X64-LABEL: test_int8to_longdouble:
+; X64:       # %bb.0:
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    retq
 ;
-; GISEL-X64-LABEL: test_int8to_longdouble:
-; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    shlw $8, %di
-; GISEL-X64-NEXT:    sarw $8, %di
-; GISEL-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    retq
-;
-; SDAG-I686-LABEL: test_int8to_longdouble:
-; SDAG-I686:       # %bb.0:
-; SDAG-I686-NEXT:    pushl %eax
-; SDAG-I686-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    filds {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    popl %eax
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_int8to_longdouble:
-; GISEL-I686:       # %bb.0:
-; GISEL-I686-NEXT:    pushl %eax
-; GISEL-I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    shlw $8, %ax
-; GISEL-I686-NEXT:    sarw $8, %ax
-; GISEL-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    filds {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    popl %eax
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_int8to_longdouble:
+; I686:       # %bb.0:
+; I686-NEXT:    pushl %eax
+; I686-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; I686-NEXT:    filds {{[0-9]+}}(%esp)
+; I686-NEXT:    popl %eax
+; I686-NEXT:    retl
   %conv = sitofp i8 %a to x86_fp80
   ret x86_fp80 %conv
 }
@@ -243,44 +164,23 @@ define x86_fp80 @test_int64_to_longdouble(i64 %a, ptr %p) nounwind {
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    retq
 ;
-; SDAG-I686-LABEL: test_int64_to_longdouble:
-; SDAG-I686:       # %bb.0:
-; SDAG-I686-NEXT:    fildll {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_int64_to_longdouble:
-; GISEL-I686:       # %bb.0:
-; GISEL-I686-NEXT:    subl $12, %esp
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-I686-NEXT:    movl %esp, %edx
-; GISEL-I686-NEXT:    movl %eax, (%esp)
-; GISEL-I686-NEXT:    movl %ecx, 4(%edx)
-; GISEL-I686-NEXT:    fildll (%esp)
-; GISEL-I686-NEXT:    addl $12, %esp
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_int64_to_longdouble:
+; I686:       # %bb.0:
+; I686-NEXT:    fildll {{[0-9]+}}(%esp)
+; I686-NEXT:    retl
   %conv = sitofp i64 %a to x86_fp80
   ret x86_fp80 %conv
 }
 
 
 define void @test_int8to_double(i8 %x, ptr %p) nounwind {
-; SDAG-X64-LABEL: test_int8to_double:
-; SDAG-X64:       # %bb.0: # %entry
-; SDAG-X64-NEXT:    movsbl %dil, %eax
-; SDAG-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fstpl (%rsi)
-; SDAG-X64-NEXT:    retq
-;
-; GISEL-X64-LABEL: test_int8to_double:
-; GISEL-X64:       # %bb.0: # %entry
-; GISEL-X64-NEXT:    shlw $8, %di
-; GISEL-X64-NEXT:    sarw $8, %di
-; GISEL-X64-NEXT:    movw %di, -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    filds -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fstpl (%rsi)
-; GISEL-X64-NEXT:    retq
+; X64-LABEL: test_int8to_double:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    filds -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fstpl (%rsi)
+; X64-NEXT:    retq
 ;
 ; I686-LABEL: test_int8to_double:
 ; I686:       # %bb.0: # %entry

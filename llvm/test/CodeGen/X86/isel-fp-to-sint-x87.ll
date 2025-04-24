@@ -7,126 +7,66 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes I686,GISEL-I686
 
 define i8 @test_float_to_int8(float %input) nounwind {
-; SDAG-X64-LABEL: test_float_to_int8:
-; SDAG-X64:       # %bb.0: # %entry
-; SDAG-X64-NEXT:    flds {{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; SDAG-X64-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SDAG-X64-NEXT:    retq
+; X64-LABEL: test_float_to_int8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    flds {{[0-9]+}}(%rsp)
+; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    orl $3072, %eax # imm = 0xC00
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    retq
 ;
-; GISEL-X64-LABEL: test_float_to_int8:
-; GISEL-X64:       # %bb.0: # %entry
-; GISEL-X64-NEXT:    flds {{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; GISEL-X64-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; GISEL-X64-NEXT:    # kill: def $al killed $al killed $ax
-; GISEL-X64-NEXT:    retq
-;
-; SDAG-I686-LABEL: test_float_to_int8:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    subl $8, %esp
-; SDAG-I686-NEXT:    flds {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    addl $8, %esp
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_float_to_int8:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    subl $8, %esp
-; GISEL-I686-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    # kill: def $al killed $al killed $ax
-; GISEL-I686-NEXT:    addl $8, %esp
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_float_to_int8:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    subl $8, %esp
+; I686-NEXT:    flds {{[0-9]+}}(%esp)
+; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    orl $3072, %eax # imm = 0xC00
+; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    fistps {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    addl $8, %esp
+; I686-NEXT:    retl
 entry:
     %conv = fptosi float %input to i8
     ret i8 %conv
 }
 
 define i8 @test_longdouble_to_int8(x86_fp80 %input) nounwind {
-; SDAG-X64-LABEL: test_longdouble_to_int8:
-; SDAG-X64:       # %bb.0: # %entry
-; SDAG-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; SDAG-X64-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SDAG-X64-NEXT:    retq
+; X64-LABEL: test_longdouble_to_int8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
+; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    orl $3072, %eax # imm = 0xC00
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    retq
 ;
-; GISEL-X64-LABEL: test_longdouble_to_int8:
-; GISEL-X64:       # %bb.0: # %entry
-; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; GISEL-X64-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; GISEL-X64-NEXT:    # kill: def $al killed $al killed $ax
-; GISEL-X64-NEXT:    retq
-;
-; SDAG-I686-LABEL: test_longdouble_to_int8:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    subl $8, %esp
-; SDAG-I686-NEXT:    fldt {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    addl $8, %esp
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_longdouble_to_int8:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    subl $8, %esp
-; GISEL-I686-NEXT:    fldt {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    # kill: def $al killed $al killed $ax
-; GISEL-I686-NEXT:    addl $8, %esp
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_longdouble_to_int8:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    subl $8, %esp
+; I686-NEXT:    fldt {{[0-9]+}}(%esp)
+; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    orl $3072, %eax # imm = 0xC00
+; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    fistps {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    addl $8, %esp
+; I686-NEXT:    retl
 entry:
     %conv = fptosi x86_fp80 %input to i8
     ret i8 %conv
@@ -278,38 +218,21 @@ define i64 @test_float_to_int64(float %input) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
-; SDAG-I686-LABEL: test_float_to_int64:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    subl $20, %esp
-; SDAG-I686-NEXT:    flds {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SDAG-I686-NEXT:    addl $20, %esp
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_float_to_int64:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    subl $20, %esp
-; GISEL-I686-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; GISEL-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    movl 4(%ecx), %edx
-; GISEL-I686-NEXT:    addl $20, %esp
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_float_to_int64:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    subl $20, %esp
+; I686-NEXT:    flds {{[0-9]+}}(%esp)
+; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    orl $3072, %eax # imm = 0xC00
+; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    fistpll {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I686-NEXT:    addl $20, %esp
+; I686-NEXT:    retl
 entry:
     %conv = fptosi float %input to i64
     ret i64 %conv
@@ -329,70 +252,39 @@ define i64 @test_longdouble_to_int64(x86_fp80 %input) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
-; SDAG-I686-LABEL: test_longdouble_to_int64:
-; SDAG-I686:       # %bb.0: # %entry
-; SDAG-I686-NEXT:    subl $20, %esp
-; SDAG-I686-NEXT:    fldt {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SDAG-I686-NEXT:    addl $20, %esp
-; SDAG-I686-NEXT:    retl
-;
-; GISEL-I686-LABEL: test_longdouble_to_int64:
-; GISEL-I686:       # %bb.0: # %entry
-; GISEL-I686-NEXT:    subl $20, %esp
-; GISEL-I686-NEXT:    fldt {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; GISEL-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; GISEL-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; GISEL-I686-NEXT:    movl 4(%ecx), %edx
-; GISEL-I686-NEXT:    addl $20, %esp
-; GISEL-I686-NEXT:    retl
+; I686-LABEL: test_longdouble_to_int64:
+; I686:       # %bb.0: # %entry
+; I686-NEXT:    subl $20, %esp
+; I686-NEXT:    fldt {{[0-9]+}}(%esp)
+; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    orl $3072, %eax # imm = 0xC00
+; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    fistpll {{[0-9]+}}(%esp)
+; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; I686-NEXT:    addl $20, %esp
+; I686-NEXT:    retl
 entry:
     %conv = fptosi x86_fp80 %input to i64
     ret i64 %conv
 }
 
 define i8 @test_double_to_int8(double %input) nounwind {
-; SDAG-X64-LABEL: test_double_to_int8:
-; SDAG-X64:       # %bb.0: # %entry
-; SDAG-X64-NEXT:    fldl {{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; SDAG-X64-NEXT:    orl $3072, %eax # imm = 0xC00
-; SDAG-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; SDAG-X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SDAG-X64-NEXT:    retq
-;
-; GISEL-X64-LABEL: test_double_to_int8:
-; GISEL-X64:       # %bb.0: # %entry
-; GISEL-X64-NEXT:    fldl {{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; GISEL-X64-NEXT:    orl $3072, %eax # imm = 0xC00
-; GISEL-X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
-; GISEL-X64-NEXT:    # kill: def $al killed $al killed $ax
-; GISEL-X64-NEXT:    retq
+; X64-LABEL: test_double_to_int8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    fldl {{[0-9]+}}(%rsp)
+; X64-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    orl $3072, %eax # imm = 0xC00
+; X64-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fistps -{{[0-9]+}}(%rsp)
+; X64-NEXT:    fldcw -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    retq
 ;
 ; I686-LABEL: test_double_to_int8:
 ; I686:       # %bb.0: # %entry
