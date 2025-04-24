@@ -658,6 +658,16 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
               "'xwchc' and 'zcb' extensions are incompatible");
   }
 
+  for (StringRef Input : {"rv64i_zilsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zilsd' is only supported for 'rv32'");
+  }
+
+  for (StringRef Input : {"rv64i_zclsd"}) {
+    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+              "'zclsd' is only supported for 'rv32'");
+  }
+
   for (StringRef Input : {"rv32i_zcf_zclsd"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zclsd' and 'zcf' extensions are incompatible");
@@ -1076,6 +1086,7 @@ R"(All available -march extensions for RISC-V
     shvstvecd            1.0
     smaia                1.0
     smcdeleg             1.0
+    smcntrpmf            1.0
     smcsrind             1.0
     smdbltrp             1.0
     smepmp               1.0

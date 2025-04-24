@@ -129,6 +129,7 @@
 ; CHECK-NEXT:   sifive7                          - SiFive 7-Series processors.
 ; CHECK-NEXT:   smaia                            - 'Smaia' (Advanced Interrupt Architecture Machine Level).
 ; CHECK-NEXT:   smcdeleg                         - 'Smcdeleg' (Counter Delegation Machine Level).
+; CHECK-NEXT:   smcntrpmf                        - 'Smcntrpmf' (Cycle and Instret Privilege Mode Filtering).
 ; CHECK-NEXT:   smcsrind                         - 'Smcsrind' (Indirect CSR Access Machine Level).
 ; CHECK-NEXT:   smdbltrp                         - 'Smdbltrp' (Double Trap Machine Level).
 ; CHECK-NEXT:   smepmp                           - 'Smepmp' (Enhanced Physical Memory Protection).

@@ -7,6 +7,12 @@ ClangIR:
   - clang/tools/cir-*/**/*
   - clang/test/CIR/**/*
 
+clang:bytecode:
+  - clang/docs/ConstantInterpreter.rst
+  - clang/lib/AST/ByteCode/**/*
+  - clang/test/AST/ByteCode/**/*
+  - clang/unittests/AST/ByteCode/**/*
+
 clang:dataflow:
   - clang/include/clang/Analysis/FlowSensitive/**/*
   - clang/lib/Analysis/FlowSensitive/**/*

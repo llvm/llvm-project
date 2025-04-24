@@ -1272,7 +1272,7 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // |--------------------------|
     // | VarSize objects          |
     // |--------------------------| <-- SP
-    if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
+    if (StackID == TargetStackID::ScalableVector) {
       assert(!RI->hasStackRealignment(MF) &&
              "Can't index across variable sized realign");
       // We don't expect any extra RVV alignment padding, as the stack size
@@ -1795,15 +1795,10 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     MFI.CreateFixedSpillStackObject(
         QCIInterruptPushAmount, -static_cast<int64_t>(QCIInterruptPushAmount));
   } else if (RVFI->isPushable(MF)) {
-    // Allocate a fixed object that covers all the registers that are pushed.
-    if (unsigned PushedRegs = RVFI->getRVPushRegs()) {
-      int64_t PushedRegsBytes =
-          static_cast<int64_t>(PushedRegs) * (STI.getXLen() / 8);
-      MFI.CreateFixedSpillStackObject(PushedRegsBytes, -PushedRegsBytes);
-    }
+    // Allocate a fixed object that covers the full push.
+    if (int64_t PushSize = RVFI->getRVPushStackSize())
+      MFI.CreateFixedSpillStackObject(PushSize, -PushSize);
   } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
-    // Allocate a fixed object that covers all of the stack allocated by the
-    // libcall.
     int64_t LibCallFrameSize =
         alignTo((STI.getXLen() / 8) * LibCallRegs, getStackAlign());
     MFI.CreateFixedSpillStackObject(LibCallFrameSize, -LibCallFrameSize);
@@ -2114,10 +2109,12 @@ TargetStackID::Value RISCVFrameLowering::getStackIDForScalableVectors() const {
 }
 
 // Synthesize the probe loop.
-static void emitStackProbeInline(MachineFunction &MF, MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI, DebugLoc DL,
+static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
                                  Register TargetReg, bool IsRVV) {
   assert(TargetReg != RISCV::X2 && "New top of stack cannot already be in SP");
+
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  MachineFunction &MF = *MBB.getParent();
 
   auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
@@ -2207,7 +2204,7 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
       MachineBasicBlock::iterator MBBI = MI->getIterator();
       DebugLoc DL = MBB.findDebugLoc(MBBI);
       Register TargetReg = MI->getOperand(1).getReg();
-      emitStackProbeInline(MF, MBB, MBBI, DL, TargetReg,
+      emitStackProbeInline(MBBI, DL, TargetReg,
                            (MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV));
       MBBI->eraseFromParent();
     }

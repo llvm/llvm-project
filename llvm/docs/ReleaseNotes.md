@@ -167,6 +167,9 @@ Changes to the RISC-V Backend
 * Adds assembler support for ``.option exact``, which disables automatic compression,
   and branch and linker relaxation. This can be disabled with ``.option noexact``,
   which is also the default.
+* `-mcpu=xiangshan-kunminghu` was added.
+* `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
+* `-mcpu=andes-a45` and `-mcpu=andes-ax45` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -233,6 +236,10 @@ Changes to LLDB
 * The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
   from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
   handling in LLDB 20, these options have had no effect.
+* LLDB now supports `process continue --reverse` when used with debug servers
+  supporting reverse execution, such as [rr](https://rr-project.org).
+  When using reverse execution, `process continue --forward` returns to the
+  forward execution.
 
 ### Changes to lldb-dap
 
