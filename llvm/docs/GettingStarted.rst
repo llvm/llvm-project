@@ -306,9 +306,9 @@ Package                                                     Version      Notes
 
 .. note::
 
-   #. Only needed if you want to run the automated test suite. Python 3.8.0
-      or later is needed on Windows if a substitute (virtual) drive is used
-      to access LLVM source code due to ``MAX_PATH`` limitations.
+   #. Only needed if you want to run the automated test suite in the
+      ``llvm/test`` directory, or if you plan to utilize any Python libraries,
+      utilities, or bindings.
    #. Optional, adds compression / uncompression capabilities to selected LLVM
       tools.
    #. Optional, you can use any other build tool supported by CMake.
