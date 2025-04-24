@@ -193,7 +193,7 @@ EXECUTION OPTIONS
 
 .. option:: --report-failures-only
 
- Only include unresolved, timed out, failed and unexpectedly passed tests in the report.
+ Only include failures (see :ref:`test-status-results`) in the report.
 
 .. option:: --resultdb-output RESULTDB_OUTPUT
 
@@ -384,9 +384,8 @@ ADDITIONAL OPTIONS
 EXIT STATUS
 -----------
 
-:program:`lit` will exit with an exit code of 1 if there are any failures (i.e.
-unresolved, timed out, failed or unexpectedly passed tests, see also
-:option:`--report-failures-only`) and :option:`--ignore-fail` has not been
+:program:`lit` will exit with an exit code of 1 if there are any failures
+(see :ref:`test-status-results`) and :option:`--ignore-fail` has not been
 passed.  Otherwise, it will exit with the status 0.  Other exit codes are used
 for non-test related failures (for example a user error or an internal program
 error).
@@ -463,8 +462,10 @@ Each test ultimately produces one of the following eight results:
 
 **TIMEOUT**
 
- The test was run, but it timed out before it was able to complete. This is
- considered a failure.
+ The test was run, but it timed out before it was able to complete.
+
+Unresolved (**UNRESOLVED**), timed out (**TIMEOUT**), failed (**FAIL**) and
+unexpectedly passed (**XPASS**) tests are considered failures.
 
 Depending on the test format tests may produce additional information about
 their status (generally only for failures).  See the :ref:`output-options`
