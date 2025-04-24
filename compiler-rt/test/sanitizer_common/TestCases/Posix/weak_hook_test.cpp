@@ -7,6 +7,9 @@
 // FIXME: Implement.
 // XFAIL: hwasan
 
+// AIX does not define strcasestr.
+// UNSUPPORTED: target={{.*aix.*}}
+
 #include <assert.h>
 #include <string.h>
 #if defined(_GNU_SOURCE)

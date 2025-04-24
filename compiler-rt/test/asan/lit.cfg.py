@@ -45,7 +45,7 @@ config.substitutions.append(
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-if config.host_os not in ["FreeBSD", "NetBSD"]:
+if config.host_os not in ["FreeBSD", "NetBSD", "AIX"]:
     libdl_flag = "-ldl"
 else:
     libdl_flag = ""

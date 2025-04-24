@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: target={{.*(linux|solaris).*}}
+// AIX does not have header sys/mount.h.
+// UNSUPPORTED: target={{.*(linux|solaris|aix).*}}
 
 #include <sys/types.h>
 

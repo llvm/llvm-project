@@ -3,7 +3,10 @@
 // Make sure ___asan_gen_* strings do not end up in the symbol table.
 
 // RUN: %clang_asan %s -o %t.exe
-// RUN: nm %t.exe | FileCheck %s
+// RUN: nm %if target={{.*aix.*}} %{ -X32_64 %} %t.exe | FileCheck %s
+
+// UNSUPPORTED: target={{.*aix.*}}
+
 
 int x, y, z;
 int main() { return 0; }

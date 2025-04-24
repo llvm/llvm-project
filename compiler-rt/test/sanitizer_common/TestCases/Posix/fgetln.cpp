@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 // fgetln is BSD-only.
-// UNSUPPORTED: target={{.*(linux|solaris).*}}
+// UNSUPPORTED: target={{.*(linux|solaris|aix).*}}
 
 #include <assert.h>
 #include <stdio.h>

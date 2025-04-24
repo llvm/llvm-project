@@ -1,6 +1,7 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 //
-// UNSUPPORTED: darwin, target={{.*(linux|solaris).*}}
+// The usage of getfsspec() on aix is not right in this file.
+// UNSUPPORTED: darwin, target={{.*(linux|solaris|aix).*}}
 
 #include <assert.h>
 #include <errno.h>

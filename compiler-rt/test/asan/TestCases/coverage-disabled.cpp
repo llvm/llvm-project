@@ -10,6 +10,9 @@
 //
 // UNSUPPORTED: android
 
+// FIXME: support -fsanitize-coverage on AIX
+// UNSUPPORTED: target={{.*aix.*}}
+
 int main(int argc, char **argv) {
   return 0;
 }
