@@ -3923,7 +3923,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
   // Data == nullptr means the calling module has trap behaviour for this check.
   llvm::Value *DataIsNotNullPtr =
       Builder.CreateICmpNE(Data, llvm::ConstantPointerNull::get(Int8PtrTy));
-  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail);
+  // TODO: since there is no data, we don't know the CheckKind, and therefore
+  // cannot inspect CGM.getCodeGenOpts().SanitizeMergeHandlers. We default to
+  // NoMerge = false. Users can disable merging by disabling optimization.
+  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail,
+                /*NoMerge=*/false);
 
   llvm::StructType *SourceLocationTy =
       llvm::StructType::get(VoidPtrTy, Int32Ty, Int32Ty);
@@ -3962,7 +3966,11 @@ void CodeGenFunction::EmitCfiCheckFail() {
       EmitCheck(std::make_pair(Cond, Ordinal), SanitizerHandler::CFICheckFail,
                 {}, {Data, Addr, ValidVtable});
     else
-      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail);
+      // TODO: we can't rely on CGM.getCodeGenOpts().SanitizeMergeHandlers.
+      // Although the compiler allows SanitizeMergeHandlers to be set
+      // independently of CGM.getLangOpts().Sanitize, Driver/SanitizerArgs.cpp
+      // requires that SanitizeMergeHandlers is a subset of Sanitize.
+      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail, /*NoMerge=*/false);
   }
 
   FinishFunction();
