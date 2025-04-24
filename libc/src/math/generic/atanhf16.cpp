@@ -70,14 +70,14 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
     // The Taylor expansion of atanh(x) is:
     //    atanh(x) = x + x^3/3 + x^5/5 + x^7/7 + x^9/9 + x^11/11
     //             = x * [1 + x^2/3 + x^4/5 + x^6/7 + x^8/9 + x^10/11]
-    // When |x| < 2^-7 (0x0200U), this can be approximated by:
+    // When |x| < 2^-5 (0x0800U), this can be approximated by:
     //    atanh(x) ≈ x + (1/3)*x^3
-    if (LIBC_UNLIKELY(x_abs < 0x0200U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x0800U)) {
       float xf = x;
       return fputil::cast<float16>(xf + 0x1.555556p-2f * xf * xf * xf);
     }
 
-    // For 2^-7 <= |x| <= 0x1.fccp-3 (~0.24):
+    // For 2^-5 <= |x| <= 0x1.fccp-3 (~0.24):
     //   Let t = x^2.
     //   Define P(t) ≈ (1/3)*t + (1/5)*t^2 + (1/7)*t^3 + (1/9)*t^4 + (1/11)*t^5.
     // Coefficients (from Sollya, RN, hexadecimal):
