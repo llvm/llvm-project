@@ -255,5 +255,79 @@ void acc_parallel(int cond) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } attributes {asyncOnly = [#acc.device_type<nvidia>, #acc.device_type<radeon>]}
 
+#pragma acc parallel num_gangs(1)
+  {}
+  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: acc.parallel num_gangs({%[[ONE_CAST]] : si32}) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel num_gangs(cond)
+  {}
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: acc.parallel num_gangs({%[[CONV_CAST]] : si32}) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel num_gangs(1, cond, 2)
+  {}
+  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: acc.parallel num_gangs({%[[ONE_CAST]] : si32, %[[CONV_CAST]] : si32, %[[TWO_CAST]] : si32}) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel num_gangs(1) device_type(radeon) num_gangs(cond)
+  {}
+  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: acc.parallel num_gangs({%[[ONE_CAST]] : si32}, {%[[CONV_CAST]] : si32} [#acc.device_type<radeon>]) {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel num_gangs(1, cond, 2) device_type(radeon) num_gangs(4, 5, 6)
+  {}
+  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[FOUR_LITERAL:.*]] = cir.const #cir.int<4> : !s32i
+  // CHECK-NEXT: %[[FOUR_CAST:.*]] = builtin.unrealized_conversion_cast %[[FOUR_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[FIVE_LITERAL:.*]] = cir.const #cir.int<5> : !s32i
+  // CHECK-NEXT: %[[FIVE_CAST:.*]] = builtin.unrealized_conversion_cast %[[FIVE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[SIX_LITERAL:.*]] = cir.const #cir.int<6> : !s32i
+  // CHECK-NEXT: %[[SIX_CAST:.*]] = builtin.unrealized_conversion_cast %[[SIX_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: acc.parallel num_gangs({%[[ONE_CAST]] : si32, %[[CONV_CAST]] : si32, %[[TWO_CAST]] : si32}, {%[[FOUR_CAST]] : si32, %[[FIVE_CAST]] : si32, %[[SIX_CAST]] : si32} [#acc.device_type<radeon>])
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel num_gangs(1, cond, 2) device_type(radeon, nvidia) num_gangs(4, 5, 6)
+  {}
+  // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load %[[COND]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[FOUR_LITERAL:.*]] = cir.const #cir.int<4> : !s32i
+  // CHECK-NEXT: %[[FOUR_CAST:.*]] = builtin.unrealized_conversion_cast %[[FOUR_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[FIVE_LITERAL:.*]] = cir.const #cir.int<5> : !s32i
+  // CHECK-NEXT: %[[FIVE_CAST:.*]] = builtin.unrealized_conversion_cast %[[FIVE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[SIX_LITERAL:.*]] = cir.const #cir.int<6> : !s32i
+  // CHECK-NEXT: %[[SIX_CAST:.*]] = builtin.unrealized_conversion_cast %[[SIX_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: acc.parallel num_gangs({%[[ONE_CAST]] : si32, %[[CONV_CAST]] : si32, %[[TWO_CAST]] : si32}, {%[[FOUR_CAST]] : si32, %[[FIVE_CAST]] : si32, %[[SIX_CAST]] : si32} [#acc.device_type<radeon>], {%[[FOUR_CAST]] : si32, %[[FIVE_CAST]] : si32, %[[SIX_CAST]] : si32} [#acc.device_type<nvidia>])
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
   // CHECK-NEXT: cir.return
 }
