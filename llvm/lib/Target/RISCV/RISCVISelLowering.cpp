@@ -11543,7 +11543,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
       SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
       Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, Src, ZeroIdx);
-      // Freeze the source so we can increase it's use count.
+      // Freeze the source so we can increase its use count.
       Src = DAG.getFreeze(Src);
       SDValue Even = lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, Src,
                                DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
