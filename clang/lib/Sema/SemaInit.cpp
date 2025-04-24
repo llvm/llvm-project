@@ -8302,6 +8302,12 @@ ExprResult InitializationSequence::Perform(Sema &S,
             Kind.getRange().getEnd());
       } else {
         CurInit = new (S.Context) ImplicitValueInitExpr(Step->Type);
+        // Note the return value isn't used to return a ExprError() when
+        // initialization fails . For struct initialization allows all field
+        // assignments to be checked rather than bailing on the first error.
+        S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                          AssignmentAction::Initializing,
+                                          Step->Type, CurInit.get());
       }
       break;
     }
@@ -8322,10 +8328,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
       // If this is a call, allow conversion to a transparent union.
       ExprResult CurInitExprRes = CurInit;
-      if (ConvTy != Sema::Compatible &&
-          Entity.isParameterKind() &&
-          S.CheckTransparentUnionArgumentConstraints(Step->Type, CurInitExprRes)
-            == Sema::Compatible)
+      if (!S.IsAssignConvertCompatible(ConvTy) && Entity.isParameterKind() &&
+          S.CheckTransparentUnionArgumentConstraints(
+              Step->Type, CurInitExprRes) == Sema::Compatible)
         ConvTy = Sema::Compatible;
       if (CurInitExprRes.isInvalid())
         return ExprError();
@@ -8347,6 +8352,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
         }
       }
+
+      // Note the return value isn't used to return a ExprError() when
+      // initialization fails. For struct initialization this allows all field
+      // assignments to be checked rather than bailing on the first error.
+      S.BoundsSafetyCheckInitialization(Entity, Kind,
+                                        getAssignmentAction(Entity, true),
+                                        Step->Type, InitialCurInit.get());
 
       bool Complained;
       if (S.DiagnoseAssignmentResult(ConvTy, Kind.getLocation(),

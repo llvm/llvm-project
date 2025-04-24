@@ -223,6 +223,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     UsePath = false;
 
   // Build the path into the object.
+  bool OnePastEnd = isOnePastEnd();
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
 
@@ -251,9 +252,10 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       Ptr = Ptr.expand();
       const Descriptor *Desc = Ptr.getFieldDesc();
       unsigned Index;
-      if (Ptr.isOnePastEnd())
+      if (Ptr.isOnePastEnd()) {
         Index = Ptr.getArray().getNumElems();
-      else
+        OnePastEnd = false;
+      } else
         Index = Ptr.getIndex();
 
       QualType ElemType = Desc->getElemQualType();
@@ -304,8 +306,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   std::reverse(Path.begin(), Path.end());
 
   if (UsePath)
-    return APValue(Base, Offset, Path,
-                   /*IsOnePastEnd=*/!isElementPastEnd() && isOnePastEnd());
+    return APValue(Base, Offset, Path, OnePastEnd);
 
   return APValue(Base, Offset, APValue::NoLValuePath());
 }
@@ -568,6 +569,48 @@ bool Pointer::pointsToLiteral() const {
 
   const Expr *E = block()->getDescriptor()->asExpr();
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
+}
+
+std::optional<std::pair<Pointer, Pointer>>
+Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return std::nullopt;
+
+  if (A.asBlockPointer().Pointee != B.asBlockPointer().Pointee)
+    return std::nullopt;
+  if (A.isRoot() && B.isRoot())
+    return std::nullopt;
+
+  if (A == B)
+    return std::make_pair(A, B);
+
+  auto getBase = [](const Pointer &P) -> Pointer {
+    if (P.isArrayElement())
+      return P.expand().getArray();
+    return P.getBase();
+  };
+
+  Pointer IterA = A;
+  Pointer IterB = B;
+  Pointer CurA = IterA;
+  Pointer CurB = IterB;
+  for (;;) {
+    if (IterA.asBlockPointer().Base > IterB.asBlockPointer().Base) {
+      CurA = IterA;
+      IterA = getBase(IterA);
+    } else {
+      CurB = IterB;
+      IterB = getBase(IterB);
+    }
+
+    if (IterA == IterB)
+      return std::make_pair(CurA, CurB);
+
+    if (IterA.isRoot() && IterB.isRoot())
+      return std::nullopt;
+  }
+
+  llvm_unreachable("The loop above should've returned.");
 }
 
 std::optional<APValue> Pointer::toRValue(const Context &Ctx,

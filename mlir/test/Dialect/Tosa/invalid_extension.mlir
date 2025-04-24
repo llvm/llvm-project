@@ -26,9 +26,9 @@ func.func @test_conv2d(%arg0: tensor<1x4x4x4xi8>, %arg1: tensor<8x1x1x4xi4>, %ar
 }
 
 // -----
-func.func @test_conv3d(%arg0: tensor<1x4x8x21x17xi16>, %arg1: tensor<34x1x1x1x17xi8>, %arg2: tensor<34xi48>, %arg3: tensor<1xi16>, %arg4: tensor<1xi8>) -> tensor<1x4x8x21x34xi48> {
+func.func @test_conv3d(%arg0: tensor<1x4x8x21x17xi16>, %arg1: tensor<34x1x1x1x17xi8>, %arg2: tensor<21xi48>, %arg3: tensor<1xi16>, %arg4: tensor<1xi8>) -> tensor<1x4x8x21x34xi48> {
   // expected-error@+1 {{'tosa.conv3d' op illegal: requires [int16] but not enabled in target}}
-  %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = i48, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>} : (tensor<1x4x8x21x17xi16>, tensor<34x1x1x1x17xi8>, tensor<34xi48>, tensor<1xi16>, tensor<1xi8>) -> tensor<1x4x8x21x34xi48>
+  %0 = tosa.conv3d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = i48, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>} : (tensor<1x4x8x21x17xi16>, tensor<34x1x1x1x17xi8>, tensor<21xi48>, tensor<1xi16>, tensor<1xi8>) -> tensor<1x4x8x21x34xi48>
   return %0 : tensor<1x4x8x21x34xi48>
 }
 
@@ -313,17 +313,17 @@ func.func @test_identity(%arg0: tensor<13x21x3xi4>) -> tensor<13x21x3xi4> {
 func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable.read' op illegal: requires [variable]}}
-  %0 = tosa.variable.read @stored_var : tensor<2x4x8xi16>
+  // expected-error@+1 {{'tosa.variable_read' op illegal: requires [variable]}}
+  %0 = tosa.variable_read @stored_var : tensor<2x4x8xi8>
   return
 }
 
 // -----
-func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
+func.func @test_variable_write_type(%arg0: tensor<2x4x8xi8>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable.write' op illegal: requires [variable]}}
-  tosa.variable.write @stored_var, %arg0 : tensor<2x4x8xi16>
+  // expected-error@+1 {{'tosa.variable_write' op illegal: requires [variable]}}
+  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi8>
   return
 }
 
@@ -445,10 +445,10 @@ func.func @test_conv2d_non_const_input_zp(%arg0: tensor<1x4x4x4xi8>, %arg1: tens
 
 // -----
 
-func.func @test_conv3d_non_const_weight_zp(%arg0: tensor<1x4x8x21x17xi8>, %arg1: tensor<34x1x1x1x17xi8>, %arg2: tensor<34xi32>, %arg3: tensor<1xi8>) -> tensor<1x4x8x21x34xi32> {
+func.func @test_conv3d_non_const_weight_zp(%arg0: tensor<1x4x8x21x17xi8>, %arg1: tensor<34x1x1x1x17xi8>, %arg2: tensor<21xi32>, %arg3: tensor<1xi8>) -> tensor<1x4x8x21x34xi32> {
   %input_zp = "tosa.const"() {values = dense<0> : tensor<1xi8> } : () -> tensor<1xi8>
   // expected-error@+1 {{'tosa.conv3d' op expected compile time resolvable constant, but got variable value for operand #4}}
-  %0 = tosa.conv3d %arg0, %arg1, %arg2, %input_zp, %arg3 {acc_type = i32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>} : (tensor<1x4x8x21x17xi8>, tensor<34x1x1x1x17xi8>, tensor<34xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x8x21x34xi32>
+  %0 = tosa.conv3d %arg0, %arg1, %arg2, %input_zp, %arg3 {acc_type = i32, dilation = array<i64: 1, 1, 1>, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>} : (tensor<1x4x8x21x17xi8>, tensor<34x1x1x1x17xi8>, tensor<21xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x8x21x34xi32>
   return %0 : tensor<1x4x8x21x34xi32>
 }
 

@@ -801,8 +801,7 @@ std::pair<LibAttrs, ReexportedInterfaces> Options::getReexportedLibraries() {
   PathSeq FwkSearchPaths(FEOpts.FwkPaths.begin(), FEOpts.FwkPaths.end());
   for (const PlatformType P : Platforms) {
     PathSeq PlatformSearchPaths = getPathsForPlatform(FEOpts.SystemFwkPaths, P);
-    FwkSearchPaths.insert(FwkSearchPaths.end(), PlatformSearchPaths.begin(),
-                          PlatformSearchPaths.end());
+    llvm::append_range(FwkSearchPaths, PlatformSearchPaths);
     for (const StringMapEntry<ArchitectureSet> &Lib :
          LinkerOpts.ReexportedFrameworks) {
       std::string Name = (Lib.getKey() + ".framework/" + Lib.getKey()).str();

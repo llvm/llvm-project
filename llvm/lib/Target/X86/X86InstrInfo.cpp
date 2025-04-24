@@ -1035,12 +1035,11 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
   return ShAmt < 4 && ShAmt > 0;
 }
 
-static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
-                                   MachineInstr &CmpValDefInstr,
-                                   const MachineRegisterInfo *MRI,
-                                   MachineInstr **AndInstr,
-                                   const TargetRegisterInfo *TRI,
-                                   bool &NoSignFlag, bool &ClearsOverflowFlag) {
+static bool
+findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
+                       const MachineRegisterInfo *MRI, MachineInstr **AndInstr,
+                       const TargetRegisterInfo *TRI, const X86Subtarget &ST,
+                       bool &NoSignFlag, bool &ClearsOverflowFlag) {
   if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
         CmpInstr.getOpcode() == X86::TEST64rr) &&
       !(CmpValDefInstr.getOpcode() == X86::COPY &&
@@ -1103,7 +1102,8 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
   if (VregDefInstr->getParent() != CmpValDefInstr.getParent())
     return false;
 
-  if (X86::isAND(VregDefInstr->getOpcode())) {
+  if (X86::isAND(VregDefInstr->getOpcode()) &&
+      (!ST.hasNF() || VregDefInstr->modifiesRegister(X86::EFLAGS, TRI))) {
     // Get a sequence of instructions like
     //   %reg = and* ...                    // Set EFLAGS
     //   ...                                // EFLAGS not changed
@@ -5433,7 +5433,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         MachineInstr *AndInstr = nullptr;
         if (IsCmpZero &&
             findRedundantFlagInstr(CmpInstr, Inst, MRI, &AndInstr, TRI,
-                                   NoSignFlag, ClearsOverflowFlag)) {
+                                   Subtarget, NoSignFlag, ClearsOverflowFlag)) {
           assert(AndInstr != nullptr && X86::isAND(AndInstr->getOpcode()));
           MI = AndInstr;
           break;

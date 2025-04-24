@@ -102,8 +102,7 @@ struct CIRRecordLowering final {
     mlir::Type type = getCharType();
     return numberOfChars == CharUnits::One()
                ? type
-               : cir::ArrayType::get(type.getContext(), type,
-                                     numberOfChars.getQuantity());
+               : cir::ArrayType::get(type, numberOfChars.getQuantity());
   }
 
   mlir::Type getStorageType(const FieldDecl *fieldDecl) {

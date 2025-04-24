@@ -53,6 +53,10 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
+  static std::unique_ptr<VPlan>
+  buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
+                DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
+
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turing \p Plan's
   /// flat CFG into a hierarchical CFG. It also creates a VPValue expression for
   /// the original trip count. It will also introduce a dedicated VPBasicBlock
