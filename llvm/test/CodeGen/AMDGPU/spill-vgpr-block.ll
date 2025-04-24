@@ -14,12 +14,13 @@ define i32 @non_entry_func(i32 %x) {
 ; CHECK-NEXT:    scratch_store_b32 off, v2, s32 offset:100 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s0
-; CHECK-NEXT:    s_mov_b32 m0, 0x110003
 ; CHECK-NEXT:    v_writelane_b32 v2, s48, 0
+; CHECK-NEXT:    s_mov_b32 m0, 0x110003
+; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    ; transferring at most v40 v41 v56 v60 ; 128-byte Folded Spill
 ; CHECK-NEXT:    scratch_store_block off, v[40:71], s32 offset:4
 ; CHECK-NEXT:    s_mov_b32 m0, 1
-; CHECK-NEXT:    v_mov_b32_e32 v1, v0
+; CHECK-NEXT:    v_writelane_b32 v2, s49, 1
 ; CHECK-NEXT:    ; transferring at most v120 ; 128-byte Folded Spill
 ; CHECK-NEXT:    scratch_store_block off, v[120:151], s32
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -32,6 +33,7 @@ define i32 @non_entry_func(i32 %x) {
 ; CHECK-NEXT:    ; transferring at most v40 v41 v56 v60 ; 128-byte Folded Reload
 ; CHECK-NEXT:    scratch_load_block v[40:71], off, s32 offset:4
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    v_readlane_b32 s49, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s48, v2, 0
 ; CHECK-NEXT:    s_xor_saveexec_b32 s0, -1
 ; CHECK-NEXT:    scratch_load_b32 v2, off, s32 offset:100 ; 4-byte Folded Reload
@@ -41,7 +43,7 @@ define i32 @non_entry_func(i32 %x) {
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %local = alloca i32, i32 3, addrspace(5)
   store i32 %x, ptr addrspace(5) %local
-  call void asm "s_nop", "~{v0},~{v8},~{v40},~{v41},~{v49},~{v52},~{v56},~{v60},~{v120},~{s0},~{s48}"()
+  call void asm "s_nop", "~{v0},~{v8},~{v40},~{v41},~{v49},~{v52},~{v56},~{v60},~{v120},~{s0},~{s48},~{s49}"()
   ret i32 %x
 }
 

@@ -149,6 +149,14 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       if (LIS)
         LIS->removeAllRegUnitsForPhysReg(Reg);
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -165,6 +173,8 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   // Restore all registers immediately before the return and any
   // terminators that precede it.
   MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
+  const MachineBasicBlock::iterator BeforeRestoresI =
+      I == RestoreBlock.begin() ? I : std::prev(I);
 
   // FIXME: Just emit the readlane/writelane directly
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
@@ -188,6 +198,15 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
       if (LIS)
         LIS->removeAllRegUnitsForPhysReg(Reg);
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&RestoreBlock, BeforeRestoresI,
+                                    RestoreBlock.getFirstTerminator());
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
