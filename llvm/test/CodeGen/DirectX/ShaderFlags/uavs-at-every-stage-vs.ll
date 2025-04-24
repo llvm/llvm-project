@@ -13,8 +13,8 @@ target triple = "dxil-pc-shadermodel6.5-vertex"
 ; CHECK: Note: shader requires additional functionality:
 ; CHECK:        UAVs at every shader stage
 
-; CHECK: Function test : 0x00000000
-define void @test() "hlsl.export" {
+; CHECK: Function VSMain : 0x00000000
+define void @VSMain() {
   ; RWBuffer<float> Buf : register(u0, space0)
   %buf0 = call target("dx.TypedBuffer", float, 1, 0, 1)
        @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0t(
