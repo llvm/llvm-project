@@ -65,6 +65,13 @@ ol_device_handle_t TestEnvironment::getDevice() {
   static ol_device_handle_t Device = nullptr;
 
   if (!Device) {
+    if (const char *EnvStr = getenv("OFFLOAD_UNITTEST_PLATFORM")) {
+      if (SelectedPlatform != "")
+        errs() << "Warning: --platform argument ignored as "
+                  "OFFLOAD_UNITTEST_PLATFORM env var overrides it.\n";
+      SelectedPlatform = EnvStr;
+    }
+
     if (SelectedPlatform != "") {
       olIterateDevices(
           [](ol_device_handle_t D, void *Data) {

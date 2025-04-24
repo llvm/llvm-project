@@ -63,3 +63,37 @@ add_offload_testsuite(check-offload
   EXCLUDE_FROM_CHECK_ALL
   DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
+
+# Add liboffload unit tests based on available devices rather than configured targets
+macro(add_offload_unittest_suite target_name)
+  set(OFFLOAD_PLATFORM ${target_name})
+  string(TOLOWER "${OFFLOAD_PLATFORM}" SUITE_NAME)
+
+  configure_lit_site_cfg(
+    ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.site.cfg.in
+    ${CMAKE_CURRENT_BINARY_DIR}/unit/${SUITE_NAME}/lit.site.cfg
+    MAIN_CONFIG
+    ${CMAKE_CURRENT_SOURCE_DIR}/unit/lit.cfg.py)
+
+  add_lit_testsuite(check-offload-unit-${SUITE_NAME} "Running offload unittest suite for ${SUITE_NAME}"
+    ${CMAKE_CURRENT_BINARY_DIR}/unit/${SUITE_NAME}
+    EXCLUDE_FROM_CHECK_ALL
+    DEPENDS OffloadUnitTests)
+
+  list(APPEND OFFLOAD_UNIT_TEST_SUITES ${CMAKE_CURRENT_BINARY_DIR}/unit/${SUITE_NAME})
+endmacro()
+
+set (OFFLOAD_UNIT_TEST_SUITES "")
+
+if (LIBOMPTARGET_FOUND_NVIDIA_GPU)
+  add_offload_unittest_suite("CUDA")
+endif()
+
+if (LIBOMPTARGET_FOUND_AMDGPU_GPU)
+  add_offload_unittest_suite("AMDGPU")
+endif()
+
+add_lit_testsuite(check-offload-unit "Running offload unittest suites"
+  ${OFFLOAD_UNIT_TEST_SUITES}
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS LLVMOffload OffloadUnitTests)
