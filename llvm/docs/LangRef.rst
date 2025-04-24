@@ -12895,12 +12895,16 @@ vectors of the same size, and the selection is done element by element.
 If the condition is an i1 and the value arguments are vectors of the
 same size, then an entire vector is selected.
 
+Note that violations of poison-generating flags for both arms may not result in poison return values.
+For simplicity, if :ref:`fast-math flags <fastmath>` are present, they are only applied to the result, not both arms.
+
 Example:
 """"""""
 
 .. code-block:: llvm
 
-      %X = select i1 true, i8 17, i8 42          ; yields i8:17
+      %X = select i1 true, i8 17, i8 42                   ; yields i8:17
+      %Y = select nnan i1 true, float 0.0, float NaN      ; yields float:0.0
 
 
 .. _i_freeze:
