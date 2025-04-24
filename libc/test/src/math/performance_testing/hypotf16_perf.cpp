@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
+#include "PerfTest.h"
 
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/math/hypotf16.h"
 
-BINARY_OP_SINGLE_OUTPUT_PERF(float16, float16, LIBC_NAMESPACE::hypotf16,
-                             LIBC_NAMESPACE::fputil::hypot<float16>,
-                             "hypotf16_perf.log")
+int main() {
+  BINARY_INPUT_SINGLE_OUTPUT_PERF(float16, float16, LIBC_NAMESPACE::hypotf16,
+                                  LIBC_NAMESPACE::fputil::hypot<float16>,
+                                  "hypotf16_perf.log")
+  return 0;
+}

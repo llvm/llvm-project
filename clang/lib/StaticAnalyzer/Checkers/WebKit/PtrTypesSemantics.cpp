@@ -436,6 +436,13 @@ bool isRetainPtr(const CXXRecordDecl *R) {
   return false;
 }
 
+bool isSmartPtr(const CXXRecordDecl *R) {
+  assert(R);
+  if (auto *TmplR = R->getTemplateInstantiationPattern())
+    return isSmartPtrClass(safeGetName(TmplR));
+  return false;
+}
+
 bool isPtrConversion(const FunctionDecl *F) {
   assert(F);
   if (isCtorOfRefCounted(F))

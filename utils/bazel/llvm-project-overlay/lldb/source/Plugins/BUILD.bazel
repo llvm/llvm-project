@@ -238,8 +238,8 @@ cc_library(
 
 objc_library(
     name = "PluginPlatformMacOSXObjCXX",
-    srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["Platform/MacOSX/objcxx/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],

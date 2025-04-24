@@ -34,7 +34,7 @@ namespace members {
   private:
     RefCountable* a = nullptr;
   };
-}
+} // members
 
 namespace ignore_unions {
   union Foo {
@@ -49,7 +49,7 @@ namespace ignore_unions {
   };
 
   void forceTmplToInstantiate(RefPtr<RefCountable>) {}
-}
+} // ignore_unions
 
 namespace ignore_system_header {
 
@@ -67,4 +67,13 @@ namespace ignore_non_ref_countable {
   struct Bar {
     Foo* foo;
   };
-}
+} // ignore_non_ref_countable
+
+namespace checked_ptr_ref_ptr_capable {
+
+  RefCountableAndCheckable* provide();
+  void foo() {
+    CheckedPtr<RefCountableAndCheckable> foo = provide();
+  }
+
+} // checked_ptr_ref_ptr_capable

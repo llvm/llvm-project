@@ -941,7 +941,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   // atomic operation refers to the same address in each thread, then each
   // thread after the first sees the value written by the previous thread as
   // original value.
-  if (isa<AtomicRMWInst>(V) || isa<AtomicCmpXchgInst>(V))
+  if (isa<AtomicRMWInst, AtomicCmpXchgInst>(V))
     return true;
 
   if (const IntrinsicInst *Intrinsic = dyn_cast<IntrinsicInst>(V)) {

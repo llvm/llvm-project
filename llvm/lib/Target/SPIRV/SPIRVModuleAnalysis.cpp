@@ -2029,6 +2029,8 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
                   {MachineOperand::CreateReg(ResTypeReg, false)});
       }
     }
+
+    MF->getProperties().set(MachineFunctionProperties::Property::NoPHIs);
   }
 }
 

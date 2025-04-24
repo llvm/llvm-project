@@ -14,7 +14,7 @@ define ptx_kernel void @foo(i64 %img, ptr %red, i32 %idx) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -38,7 +38,7 @@ define ptx_kernel void @bar(ptr %red, i32 %idx) {
 ; CHECK-LABEL: bar(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -61,7 +61,7 @@ define ptx_kernel void @baz(ptr %red, i32 %idx) {
 ; CHECK-LABEL: baz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<8>;
+; CHECK-NEXT:    .reg .b32 %f<8>;
 ; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:

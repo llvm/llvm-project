@@ -396,11 +396,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    // TODO: These should be set to LibCall, but this currently breaks
+    //   the Linux kernel build. See #101786. Lacks i128 tests, too.
     if (Subtarget.is64Bit())
-      setOperationAction(ISD::CTPOP, MVT::i128, LibCall);
+      setOperationAction(ISD::CTPOP, MVT::i128, Expand);
     else
-      setOperationAction(ISD::CTPOP, MVT::i32, LibCall);
-    setOperationAction(ISD::CTPOP, MVT::i64, LibCall);
+      setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   }
 
   if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||

@@ -222,7 +222,8 @@ struct Recipe_match {
       return false;
 
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
-           "recipe with matched opcode the expected number of operands");
+           "recipe with matched opcode does not have the expected number of "
+           "operands");
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
     if (all_of_tuple_elements(IdxSeq, [R](auto Op, unsigned Idx) {

@@ -118,6 +118,29 @@ defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
+def riscv_atomic_asextload : PatFrag<(ops node:$ptr), (atomic_load node:$ptr), [{
+  ISD::LoadExtType ETy = cast<AtomicSDNode>(N)->getExtensionType();
+  return ETy == ISD::EXTLOAD || ETy == ISD::SEXTLOAD;
+}]>;
+
+def riscv_atomic_asextload_8 : PatFrag<(ops node:$ptr),
+                                       (riscv_atomic_asextload node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = i8;
+}
+
+def riscv_atomic_asextload_16 : PatFrag<(ops node:$ptr),
+                                        (riscv_atomic_asextload node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = i16;
+}
+
+def riscv_atomic_asextload_32 : PatFrag<(ops node:$ptr),
+                                        (riscv_atomic_asextload node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = i32;
+}
+
 let IsAtomic = 1 in {
 // An atomic load operation that does not need either acquire or release
 // semantics.
@@ -165,16 +188,20 @@ class seq_cst_store<PatFrag base>
 // any ordering. This is necessary because AtomicExpandPass has added fences to
 // atomic load/stores and changed them to unordered ones.
 let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<relaxed_load<atomic_load_8>,  LB>;
-  def : LdPat<relaxed_load<atomic_load_16>, LH>;
-  def : LdPat<relaxed_load<atomic_load_32>, LW>;
+  def : LdPat<relaxed_load<riscv_atomic_asextload_8>,  LB>;
+  def : LdPat<relaxed_load<riscv_atomic_asextload_16>, LH>;
 
   def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, XLenVT>;
   def : StPat<relaxed_store<atomic_store_16>, SH, GPR, XLenVT>;
   def : StPat<relaxed_store<atomic_store_32>, SW, GPR, XLenVT>;
 }
 
+let Predicates = [HasAtomicLdSt, IsRV32] in {
+  def : LdPat<relaxed_load<atomic_load_32>, LW>;
+}
+
 let Predicates = [HasAtomicLdSt, IsRV64] in {
+  def : LdPat<relaxed_load<riscv_atomic_asextload_32>, LW>;
   def : LdPat<relaxed_load<atomic_load_64>, LD, i64>;
   def : StPat<relaxed_store<atomic_store_64>, SD, GPR, i64>;
 }
