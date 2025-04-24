@@ -215,7 +215,7 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
 }
 
 ScheduleDAGInstrs *
-SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const  {
+SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   // Use GenericScheduler if requested on CL or for Z10, which has no sched
   // model.
   if (GenericSched ||
@@ -223,7 +223,7 @@ SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const  {
     return nullptr;
 
   ScheduleDAGMILive *DAG =
-    new ScheduleDAGMILive(C, std::make_unique<SystemZPreRASchedStrategy>(C));
+      new ScheduleDAGMILive(C, std::make_unique<SystemZPreRASchedStrategy>(C));
   DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   return DAG;
 }
