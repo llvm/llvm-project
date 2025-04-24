@@ -5,12 +5,44 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+lzcnt | FileCheck %s --check-prefixes=X64,X64-LZCNT
 
 define i1 @lshr_ctlz_cmpeq_one_i64(i64 %in) nounwind {
-; X86-LABEL: lshr_ctlz_cmpeq_one_i64:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sete %al
-; X86-NEXT:    retl
+; X86-BSR-LABEL: lshr_ctlz_cmpeq_one_i64:
+; X86-BSR:       # %bb.0:
+; X86-BSR-NEXT:    pushl %esi
+; X86-BSR-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BSR-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BSR-NEXT:    xorl %eax, %eax
+; X86-BSR-NEXT:    movl %edx, %esi
+; X86-BSR-NEXT:    orl %ecx, %esi
+; X86-BSR-NEXT:    je .LBB0_1
+; X86-BSR-NEXT:  # %bb.2: # %cond.false
+; X86-BSR-NEXT:    testl %ecx, %ecx
+; X86-BSR-NEXT:    jne .LBB0_3
+; X86-BSR-NEXT:  # %bb.4: # %cond.false
+; X86-BSR-NEXT:    bsrl %edx, %ecx
+; X86-BSR-NEXT:    xorl $31, %ecx
+; X86-BSR-NEXT:    orl $32, %ecx
+; X86-BSR-NEXT:    jmp .LBB0_5
+; X86-BSR-NEXT:  .LBB0_1:
+; X86-BSR-NEXT:    movl $64, %ecx
+; X86-BSR-NEXT:    jmp .LBB0_5
+; X86-BSR-NEXT:  .LBB0_3:
+; X86-BSR-NEXT:    bsrl %ecx, %ecx
+; X86-BSR-NEXT:    xorl $31, %ecx
+; X86-BSR-NEXT:  .LBB0_5: # %cond.end
+; X86-BSR-NEXT:    shrdl $6, %eax, %ecx
+; X86-BSR-NEXT:    shrl $6, %eax
+; X86-BSR-NEXT:    xorl $1, %ecx
+; X86-BSR-NEXT:    orl %eax, %ecx
+; X86-BSR-NEXT:    sete %al
+; X86-BSR-NEXT:    popl %esi
+; X86-BSR-NEXT:    retl
+;
+; X86-LZCNT-LABEL: lshr_ctlz_cmpeq_one_i64:
+; X86-LZCNT:       # %bb.0:
+; X86-LZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-LZCNT-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-LZCNT-NEXT:    sete %al
+; X86-LZCNT-NEXT:    retl
 ;
 ; X64-LABEL: lshr_ctlz_cmpeq_one_i64:
 ; X64:       # %bb.0:
@@ -58,12 +90,42 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) nounwind {
 }
 
 define i1 @lshr_ctlz_cmpne_zero_i64(i64 %in) nounwind {
-; X86-LABEL: lshr_ctlz_cmpne_zero_i64:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    sete %al
-; X86-NEXT:    retl
+; X86-BSR-LABEL: lshr_ctlz_cmpne_zero_i64:
+; X86-BSR:       # %bb.0:
+; X86-BSR-NEXT:    pushl %esi
+; X86-BSR-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-BSR-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BSR-NEXT:    xorl %eax, %eax
+; X86-BSR-NEXT:    movl %edx, %esi
+; X86-BSR-NEXT:    orl %ecx, %esi
+; X86-BSR-NEXT:    je .LBB2_1
+; X86-BSR-NEXT:  # %bb.2: # %cond.false
+; X86-BSR-NEXT:    testl %ecx, %ecx
+; X86-BSR-NEXT:    jne .LBB2_3
+; X86-BSR-NEXT:  # %bb.4: # %cond.false
+; X86-BSR-NEXT:    bsrl %edx, %ecx
+; X86-BSR-NEXT:    xorl $31, %ecx
+; X86-BSR-NEXT:    orl $32, %ecx
+; X86-BSR-NEXT:    jmp .LBB2_5
+; X86-BSR-NEXT:  .LBB2_1:
+; X86-BSR-NEXT:    movl $64, %ecx
+; X86-BSR-NEXT:    jmp .LBB2_5
+; X86-BSR-NEXT:  .LBB2_3:
+; X86-BSR-NEXT:    bsrl %ecx, %ecx
+; X86-BSR-NEXT:    xorl $31, %ecx
+; X86-BSR-NEXT:  .LBB2_5: # %cond.end
+; X86-BSR-NEXT:    shrl $6, %ecx
+; X86-BSR-NEXT:    orl %eax, %ecx
+; X86-BSR-NEXT:    setne %al
+; X86-BSR-NEXT:    popl %esi
+; X86-BSR-NEXT:    retl
+;
+; X86-LZCNT-LABEL: lshr_ctlz_cmpne_zero_i64:
+; X86-LZCNT:       # %bb.0:
+; X86-LZCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-LZCNT-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-LZCNT-NEXT:    sete %al
+; X86-LZCNT-NEXT:    retl
 ;
 ; X64-LABEL: lshr_ctlz_cmpne_zero_i64:
 ; X64:       # %bb.0:
