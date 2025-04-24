@@ -199,9 +199,7 @@ unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
   if (!TM.getTargetTriple().isAMDGCN())
     return 128;
 
-  bool IsDynamicVGPR = false;
-  if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
-    IsDynamicVGPR = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
+  bool IsDynamicVGPR = AMDGPU::getIsDynamicVGPR(F);
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
 

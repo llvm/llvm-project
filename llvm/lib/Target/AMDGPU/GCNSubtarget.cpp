@@ -405,9 +405,7 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
 std::pair<unsigned, unsigned>
 GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
                                unsigned NumSGPRs, unsigned NumVGPRs) const {
-  bool IsDynamicVGPR = isDynamicVGPREnabled();
-  if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
-    IsDynamicVGPR = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
+  bool IsDynamicVGPR = AMDGPU::getIsDynamicVGPR(F);
 
   auto [MinOcc, MaxOcc] = getOccupancyWithWorkGroupSizes(LDSSize, F);
   unsigned SGPROcc = getOccupancyWithNumSGPRs(NumSGPRs);
@@ -504,9 +502,7 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
     const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
-  bool IsDynamicVGPR = isDynamicVGPREnabled();
-  if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
-    IsDynamicVGPR = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
+  bool IsDynamicVGPR = isDynamicVGPREnabled() || AMDGPU::getIsDynamicVGPR(F);
 
   // Compute maximum number of VGPRs function can use using default/requested
   // minimum number of waves per execution unit.

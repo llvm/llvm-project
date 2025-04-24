@@ -48,13 +48,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
-    IsDynamicVGPREnabled =
-        F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
-
-  // FIXME: Remove after all users are migrated to the attribute.
-  if (ST.isDynamicVGPREnabled())
-    IsDynamicVGPREnabled = true;
+  IsDynamicVGPREnabled =
+      ST.isDynamicVGPREnabled() || AMDGPU::getIsDynamicVGPR(F);
 
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();
