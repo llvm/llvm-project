@@ -12880,7 +12880,10 @@ class <t_firstclass>` type.
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
    for selects that return :ref:`supported floating-point types
-   <fastmath_return_types>`.
+   <fastmath_return_types>`. Note that the violation of poison-generating flags on
+   non-selected arm may not result in :ref:`poison <poisonvalues>` return value.
+   For simplicity, if :ref:`fast-math flags <fastmath>` are present, they are only
+   applied to the result, not both arms.
 
 Semantics:
 """"""""""
@@ -12894,9 +12897,6 @@ vectors of the same size, and the selection is done element by element.
 
 If the condition is an i1 and the value arguments are vectors of the
 same size, then an entire vector is selected.
-
-Note that violations of poison-generating flags for both arms may not result in poison return values.
-For simplicity, if :ref:`fast-math flags <fastmath>` are present, they are only applied to the result, not both arms.
 
 Example:
 """"""""
