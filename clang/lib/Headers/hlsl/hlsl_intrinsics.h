@@ -215,6 +215,53 @@ const inline double4 dst(double4 Src0, double4 Src1) {
 }
 
 //===----------------------------------------------------------------------===//
+// faceforward builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T faceforward(T N, T I, T Ng)
+/// \brief Flips the surface-normal (if needed) to face in a direction opposite
+/// to \a I. Returns the result in terms of \a N.
+/// \param N The resulting floating-point surface-normal vector.
+/// \param I A floating-point, incident vector that points from the view
+/// position to the shading position.
+/// \param Ng A floating-point surface-normal vector.
+///
+/// Return a floating-point, surface normal vector that is facing the view
+/// direction.
+
+template <typename T>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> faceforward(T N, T I, T Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+faceforward(T N, T I, T Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+template <int L>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline __detail::HLSL_FIXED_VECTOR<half, L> faceforward(
+    __detail::HLSL_FIXED_VECTOR<half, L> N,
+    __detail::HLSL_FIXED_VECTOR<half, L> I,
+    __detail::HLSL_FIXED_VECTOR<half, L> Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+template <int L>
+const inline __detail::HLSL_FIXED_VECTOR<float, L>
+faceforward(__detail::HLSL_FIXED_VECTOR<float, L> N,
+            __detail::HLSL_FIXED_VECTOR<float, L> I,
+            __detail::HLSL_FIXED_VECTOR<float, L> Ng) {
+  return __detail::faceforward_impl(N, I, Ng);
+}
+
+//===----------------------------------------------------------------------===//
 // fmod builtins
 //===----------------------------------------------------------------------===//
 
