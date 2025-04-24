@@ -5207,6 +5207,8 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
+        ":AMDGPUUtils",
         ":AffineDialect",
         ":AffineUtils",
         ":ArithDialect",
