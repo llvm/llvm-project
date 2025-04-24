@@ -8,21 +8,17 @@
 
 // REQUIRES: std-at-least-c++23
 
-#include <cassert>
-#include <stacktrace>
-
 /*
   (19.6.5) Formatting support [stacktrace.format]
 
-  template<> struct formatter<stacktrace_entry>;                            [1]
-  template<class Allocator> struct formatter<basic_stacktrace<Allocator>>;  [2]
+  template<> struct formatter<stacktrace_entry>;              
 */
+
+#include <cassert>
+// #include <stacktrace>
 
 int main(int, char**) {
   /*
-    [1]
-    template<> struct formatter<stacktrace_entry>;
-
     formatter<stacktrace_entry> interprets format-spec as a stacktrace-entry-format-spec.
     The syntax of format specifications is as follows:
 
@@ -33,18 +29,6 @@ int main(int, char**) {
 
     A stacktrace_entry object se is formatted as if by copying to_string(se) through the output iterator
     of the context with additional padding and adjustments as specified by the format specifiers.
-  */
-
-  // TODO(stacktrace23): needs `formatter`
-
-  /*
-    [2]
-    template<class Allocator> struct formatter<basic_stacktrace<Allocator>>;
-    
-    For formatter<basic_stacktrace<Allocator>>, format-spec is empty.
-    
-    A basic_stacktrace<Allocator> object s is formatted as if by copying to_string(s) through the
-    output iterator of the context.
   */
 
   // TODO(stacktrace23): needs `formatter`
