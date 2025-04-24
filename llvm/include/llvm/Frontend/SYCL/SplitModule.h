@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// Functionality to split a module by categories.
+// Functionality to split a module for SYCL Offloading Kind.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_FRONTEND_SYCL_SPLIT_MODULE_H
