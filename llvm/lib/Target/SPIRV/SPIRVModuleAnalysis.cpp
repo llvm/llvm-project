@@ -1799,6 +1799,20 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
+  case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate))
+      report_fatal_error(
+          "OpSubgroupMatrixMultiplyAccumulateINTEL instruction requires the "
+          "following SPIR-V "
+          "extension: SPV_INTEL_subgroup_matrix_multiply_accumulate",
+          false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate);
+    Reqs.addCapability(
+        SPIRV::Capability::SubgroupMatrixMultiplyAccumulateINTEL);
+    break;
+  }
   case SPIRV::OpBitwiseFunctionINTEL: {
     if (!ST.canUseExtension(
             SPIRV::Extension::SPV_INTEL_ternary_bitwise_function))
@@ -2015,6 +2029,8 @@ static void patchPhis(const Module &M, SPIRVGlobalRegistry *GR,
                   {MachineOperand::CreateReg(ResTypeReg, false)});
       }
     }
+
+    MF->getProperties().set(MachineFunctionProperties::Property::NoPHIs);
   }
 }
 

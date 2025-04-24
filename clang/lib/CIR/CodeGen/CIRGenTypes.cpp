@@ -153,7 +153,7 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   // out, don't do it.  This includes virtual base classes which get laid out
   // when a class is translated, even though they aren't embedded by-value into
   // the class.
-  if (const CXXRecordDecl *crd = dyn_cast<CXXRecordDecl>(rd)) {
+  if (isa<CXXRecordDecl>(rd)) {
     assert(!cir::MissingFeatures::cxxSupport());
     cgt.getCGModule().errorNYI(rd->getSourceRange(),
                                "isSafeToConvert: CXXRecordDecl");
@@ -237,7 +237,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   assert(insertResult && "isSafeToCovert() should have caught this.");
 
   // Force conversion of non-virtual base classes recursively.
-  if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
+  if (isa<CXXRecordDecl>(rd)) {
     cgm.errorNYI(rd->getSourceRange(), "CXXRecordDecl");
   }
 
@@ -443,6 +443,27 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
     assert(!qualType->isBitIntType() && "Bit field with type _BitInt NYI");
 
   return convertedType;
+}
+
+/// Return record layout info for the given record decl.
+const CIRGenRecordLayout &
+CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
+  const auto *key = astContext.getTagDeclType(rd).getTypePtr();
+
+  // If we have already computed the layout, return it.
+  auto it = cirGenRecordLayouts.find(key);
+  if (it != cirGenRecordLayouts.end())
+    return *it->second;
+
+  // Compute the type information.
+  convertRecordDeclType(rd);
+
+  // Now try again.
+  it = cirGenRecordLayouts.find(key);
+
+  assert(it != cirGenRecordLayouts.end() &&
+         "Unable to find record layout information for type");
+  return *it->second;
 }
 
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {

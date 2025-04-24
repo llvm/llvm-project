@@ -43,14 +43,15 @@ public:
 
   bool shouldBuildLookupTables() const { return false; }
 
-  TargetTransformInfo::PopcntSupportKind getPopcntSupport(unsigned TyWidth) {
+  TargetTransformInfo::PopcntSupportKind
+  getPopcntSupport(unsigned TyWidth) const {
     if (TyWidth == 32)
       return TTI::PSK_FastHardware;
     return TTI::PSK_Software;
   }
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind) {
+                                TTI::TargetCostKind CostKind) const {
     assert(Ty->isIntegerTy());
     unsigned BitSize = Ty->getPrimitiveSizeInBits();
     // There is no cost model for constants with a bit size of 0. Return
@@ -80,13 +81,13 @@ public:
   InstructionCost getIntImmCostInst(unsigned Opc, unsigned Idx,
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
-                                    Instruction *Inst = nullptr) {
+                                    Instruction *Inst = nullptr) const {
     return getIntImmCost(Imm, Ty, CostKind);
   }
 
   InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                       const APInt &Imm, Type *Ty,
-                                      TTI::TargetCostKind CostKind) {
+                                      TTI::TargetCostKind CostKind) const {
     return getIntImmCost(Imm, Ty, CostKind);
   }
 
@@ -94,7 +95,8 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr) {
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const {
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
     switch (ISD) {

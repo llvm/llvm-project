@@ -43,11 +43,11 @@ public:
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
   unsigned getHardwareNumberOfRegisters(bool Vec) const;
-  unsigned getNumberOfRegisters(bool Vec) const;
+  unsigned getNumberOfRegisters(unsigned ClassID) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const;
   unsigned getMinVectorRegisterBitWidth() const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AddrSpace) const;
@@ -57,13 +57,14 @@ public:
                                    unsigned AddrSpace) const;
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
+  unsigned getMaxInterleaveFactor(ElementCount VF) const;
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                 const Instruction *I = nullptr);
+                                 const Instruction *I = nullptr) const;
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
+                                     unsigned Index, Value *Op0,
+                                     Value *Op1) const;
 };
 
 } // end namespace llvm

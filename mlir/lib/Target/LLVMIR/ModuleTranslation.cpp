@@ -805,6 +805,14 @@ static Value getPHISourceValue(Block *current, Block *pred,
         return switchOp.getCaseOperands(i.index())[index];
   }
 
+  if (auto indBrOp = dyn_cast<LLVM::IndirectBrOp>(terminator)) {
+    // For indirect branches we take operands for each successor.
+    for (const auto &i : llvm::enumerate(indBrOp->getSuccessors())) {
+      if (indBrOp->getSuccessor(i.index()) == current)
+        return indBrOp.getSuccessorOperands(i.index())[index];
+    }
+  }
+
   if (auto invokeOp = dyn_cast<LLVM::InvokeOp>(terminator)) {
     return invokeOp.getNormalDest() == current
                ? invokeOp.getNormalDestOperands()[index]
