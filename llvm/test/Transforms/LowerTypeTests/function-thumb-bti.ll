@@ -40,8 +40,10 @@ define i1 @foo(ptr %p) {
 
 ; And check the actual jump table asm string:
 
-; BTI:   call void asm sideeffect "bti\0Ab.w $0\0Abti\0Ab.w $1\0A", "s,s"(ptr @f.cfi, ptr @g.cfi)
-; NOBTI: call void asm sideeffect "b.w $0\0Ab.w $1\0A", "s,s"(ptr @f.cfi, ptr @g.cfi)
+; BTI:      call void asm sideeffect "bti\0Ab.w $0\0A", "s"(ptr @f.cfi)
+; BTI-NEXT: call void asm sideeffect "bti\0Ab.w $0\0A", "s"(ptr @g.cfi)
+; NOBTI:      call void asm sideeffect "b.w $0\0A", "s"(ptr @f.cfi)
+; NOBTI-NEXT: call void asm sideeffect "b.w $0\0A", "s"(ptr @g.cfi)
 
 ; BTI: attributes [[ATTRS]] = { naked noinline "target-features"="+thumb-mode,+pacbti" }
 ; NOBTI: attributes [[ATTRS]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }

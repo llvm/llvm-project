@@ -415,7 +415,17 @@ class Sema;
       // If we are not performing a reference binding, we can skip comparing
       // the types, which has a noticeable performance impact.
       if (!ReferenceBinding) {
-        assert(First || C.hasSameUnqualifiedType(getFromType(), getToType(2)));
+#ifndef NDEBUG
+        auto Decay = [&](QualType T) {
+          return (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
+                                                           : T;
+        };
+        // The types might differ if there is an array-to-pointer conversion
+        // an function-to-pointer conversion, or lvalue-to-rvalue conversion.
+        // In some cases, this may happen even if First is not set.
+        assert(C.hasSameUnqualifiedType(Decay(getFromType()),
+                                        Decay(getToType(2))));
+#endif
         return true;
       }
       if (!C.hasSameType(getFromType(), getToType(2)))
@@ -963,6 +973,10 @@ class Sema;
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
     unsigned IsADLCandidate : 1;
 
+    /// Whether FinalConversion has been set.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFinalConversion : 1;
+
     /// Whether this is a rewritten candidate, and if so, of what kind?
     LLVM_PREFERRED_TYPE(OverloadCandidateRewriteKind)
     unsigned RewriteKind : 2;
@@ -1012,7 +1026,7 @@ class Sema;
         if (!C.isInitialized() || !C.isPerfect(Ctx))
           return false;
       }
-      if (isa_and_nonnull<CXXConversionDecl>(Function))
+      if (HasFinalConversion)
         return FinalConversion.isPerfect(Ctx);
       return true;
     }
@@ -1050,7 +1064,7 @@ class Sema;
         : IsSurrogate(false), IgnoreObjectArgument(false),
           TookAddressOfOverload(false), StrictPackMatch(false),
           IsADLCandidate(llvm::to_underlying(CallExpr::NotADL)),
-          RewriteKind(CRK_None) {}
+          HasFinalConversion(false), RewriteKind(CRK_None) {}
   };
 
   struct DeferredTemplateOverloadCandidate {
@@ -1336,6 +1350,9 @@ class Sema;
     iterator end() { return Candidates.end(); }
 
     size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
+
+    size_t nonDeferredCandidatesCount() const { return Candidates.size(); }
+
     bool empty() const {
       return Candidates.empty() && DeferredCandidatesCount == 0;
     }

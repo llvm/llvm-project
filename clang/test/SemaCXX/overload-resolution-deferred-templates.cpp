@@ -183,3 +183,24 @@ void h(short n) { f(n); }
 }
 
 #endif
+
+template<typename ...Ts>
+struct t1 {
+};
+struct t6 {
+  template<typename T = int>
+  operator t1<float>() {
+    return {};
+  }
+};
+
+void testT6() {
+  t6 v6;
+  v6.operator t1<float>();
+}
+
+
+using a = void(int &);
+template <typename c> void d(c &);
+void f(a);
+template <class> void f(bool j) { f(&d<int>); }

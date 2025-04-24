@@ -1108,7 +1108,7 @@ bool OverloadCandidateSet::OperatorRewriteInfo::shouldAddReversed(
 }
 
 void OverloadCandidateSet::destroyCandidates() {
-  for (iterator i = begin(), e = end(); i != e; ++i) {
+  for (iterator i = Candidates.begin(), e = Candidates.end(); i != e; ++i) {
     for (auto &C : i->Conversions)
       C.~ImplicitConversionSequence();
     if (!i->Viable && i->FailureKind == ovl_fail_bad_deduction)
@@ -2275,17 +2275,16 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // handling here.
     if (ToType->isArrayParameterType()) {
       FromType = S.Context.getArrayParameterType(FromType);
-      SCS.First = ICK_HLSL_Array_RValue;
     } else if (FromType->isArrayParameterType()) {
       const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
       FromType = APT->getConstantArrayType(S.Context);
-      SCS.First = ICK_HLSL_Array_RValue;
-    } else {
-      SCS.First = ICK_Identity;
     }
 
-    if (S.Context.getCanonicalType(FromType) !=
-        S.Context.getCanonicalType(ToType))
+    SCS.First = ICK_HLSL_Array_RValue;
+
+    // Don't consider qualifiers, which include things like address spaces
+    if (FromType.getCanonicalType().getUnqualifiedType() !=
+        ToType.getCanonicalType().getUnqualifiedType())
       return false;
 
     SCS.setAllToTypes(ToType);
@@ -2519,6 +2518,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   ImplicitConversionKind SecondConv;
   switch (Conv) {
   case Sema::Compatible:
+  case Sema::CompatibleVoidPtrToNonVoidPtr: // __attribute__((overloadable))
     SecondConv = ICK_C_Only_Conversion;
     break;
   // For our purposes, discarding qualifiers is just as bad as using an
@@ -4079,6 +4079,9 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
     }
     if (CXXConversionDecl *Conversion
                  = dyn_cast<CXXConversionDecl>(Best->Function)) {
+
+      assert(Best->HasFinalConversion);
+
       // C++ [over.ics.user]p1:
       //
       //   [...] If the user-defined conversion is specified by a
@@ -5162,6 +5165,9 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
   OverloadCandidateSet::iterator Best;
   switch (CandidateSet.BestViableFunction(S, DeclLoc, Best)) {
   case OR_Success:
+
+    assert(Best->HasFinalConversion);
+
     // C++ [over.ics.ref]p1:
     //
     //   [...] If the parameter binds directly to the result of
@@ -8174,6 +8180,7 @@ void Sema::AddConversionCandidate(
   Candidate.FinalConversion.setAsIdentityConversion();
   Candidate.FinalConversion.setFromType(ConvType);
   Candidate.FinalConversion.setAllToTypes(ToType);
+  Candidate.HasFinalConversion = true;
   Candidate.Viable = true;
   Candidate.ExplicitCallArguments = 1;
   Candidate.StrictPackMatch = StrictPackMatch;
@@ -8278,6 +8285,7 @@ void Sema::AddConversionCandidate(
   switch (ICS.getKind()) {
   case ImplicitConversionSequence::StandardConversion:
     Candidate.FinalConversion = ICS.Standard;
+    Candidate.HasFinalConversion = true;
 
     // C++ [over.ics.user]p3:
     //   If the user-defined conversion is specified by a specialization of a
@@ -10756,6 +10764,8 @@ bool clang::isBetterOverloadCandidate(
       Cand1.Function && Cand2.Function &&
       isa<CXXConversionDecl>(Cand1.Function) &&
       isa<CXXConversionDecl>(Cand2.Function)) {
+
+    assert(Cand1.HasFinalConversion && Cand2.HasFinalConversion);
     // First check whether we prefer one of the conversion functions over the
     // other. This only distinguishes the results in non-standard, extension
     // cases such as the conversion from a lambda closure type to a function
@@ -11227,7 +11237,7 @@ void OverloadCandidateSet::PerfectViableFunction(
     Sema &S, SourceLocation Loc, OverloadCandidateSet::iterator &Best) {
 
   Best = end();
-  for (auto It = begin(); It != end(); ++It) {
+  for (auto It = Candidates.begin(); It != Candidates.end(); ++It) {
 
     if (!It->isPerfectMatch(S.getASTContext()))
       continue;
@@ -11267,7 +11277,8 @@ OverloadingResult OverloadCandidateSet::BestViableFunctionImpl(
 
   llvm::SmallVector<OverloadCandidate *, 16> Candidates;
   Candidates.reserve(this->Candidates.size());
-  std::transform(begin(), end(), std::back_inserter(Candidates),
+  std::transform(this->Candidates.begin(), this->Candidates.end(),
+                 std::back_inserter(Candidates),
                  [](OverloadCandidate &Cand) { return &Cand; });
 
   if (S.getLangOpts().CUDA)
@@ -13040,7 +13051,8 @@ SmallVector<OverloadCandidate *, 32> OverloadCandidateSet::CompleteCandidates(
   // be prohibitive, so we make a set of pointers and sort those.
   SmallVector<OverloadCandidate*, 32> Cands;
   if (OCD == OCD_AllCandidates) Cands.reserve(size());
-  for (iterator Cand = begin(), LastCand = end(); Cand != LastCand; ++Cand) {
+  for (iterator Cand = Candidates.begin(), LastCand = Candidates.end();
+       Cand != LastCand; ++Cand) {
     if (!Filter(*Cand))
       continue;
     switch (OCD) {
@@ -13117,7 +13129,8 @@ void OverloadCandidateSet::NoteCandidates(
     NoteCandidates(S, Args, Cands, Opc, OpLoc);
 
   if (OCD == OCD_AmbiguousCandidates)
-    MaybeDiagnoseAmbiguousConstraints(S, {begin(), end()});
+    MaybeDiagnoseAmbiguousConstraints(S,
+                                      {Candidates.begin(), Candidates.end()});
 }
 
 void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
@@ -14694,6 +14707,8 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   // the UnresolvedLookupExpr was type-dependent.
   if (OverloadResult == OR_Success) {
     const FunctionDecl *FDecl = Best->Function;
+    if (LangOpts.CUDA)
+      CUDA().recordPotentialODRUsedVariable(Args, CandidateSet);
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
 
@@ -16245,7 +16260,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   // we filter them out to produce better error diagnostics, ie to avoid
   // showing 2 failed overloads instead of one.
   bool IgnoreSurrogateFunctions = false;
-  if (CandidateSet.size() == 1 && Record->getAsCXXRecordDecl()->isLambda()) {
+  if (CandidateSet.nonDeferredCandidatesCount() == 1 &&
+      Record->getAsCXXRecordDecl()->isLambda()) {
     const OverloadCandidate &Candidate = *CandidateSet.begin();
     if (!Candidate.Viable &&
         Candidate.FailureKind == ovl_fail_constraints_not_satisfied)

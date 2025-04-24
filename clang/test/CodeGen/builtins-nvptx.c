@@ -245,6 +245,14 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
 // CHECK: call double @llvm.nvvm.rcp.rn.d
   double td4 = __nvvm_rcp_rn_d(d2);
 
+// CHECK: call float @llvm.nvvm.fabs.f32
+  float t6 = __nvvm_fabs_f(f1);
+// CHECK: call float @llvm.nvvm.fabs.ftz.f32
+  float t7 = __nvvm_fabs_ftz_f(f2);
+
+// CHECK: call double @llvm.fabs.f64
+  double td5 = __nvvm_fabs_d(d1);
+
 // CHECK: call void @llvm.nvvm.membar.cta()
   __nvvm_membar_cta();
 // CHECK: call void @llvm.nvvm.membar.gl()
@@ -1181,9 +1189,9 @@ __device__ void nvvm_cvt_sm100a_sm101a_sm120a() {
 __device__ void nvvm_abs_neg_bf16_bf16x2_sm80() {
 #if __CUDA_ARCH__ >= 800
 
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.abs.bf16(bfloat 0xR3DCD)
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fabs.bf16(bfloat 0xR3DCD)
   __nvvm_abs_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.abs.bf16x2(<2 x bfloat> splat (bfloat 0xR3DCD))
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> splat (bfloat 0xR3DCD))
   __nvvm_abs_bf16x2(BF16X2);
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.neg.bf16(bfloat 0xR3DCD)

@@ -127,10 +127,11 @@
 //   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
 //   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
 
-def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
-def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
-def llvm_local_ptr_ty   : LLVMQualPointerType<5>;  // (local)ptr
-def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;  // (tensor memory)ptr
+def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
+def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
+def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
+def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
+def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 
 //
 // MISC
@@ -691,15 +692,15 @@ class CP_ASYNC_BULK_TENSOR_G2S_INTR<int dim, string mode> {
   list<LLVMType> Im2ColOffsetsTy = !listsplat(llvm_i16_ty, NumIm2ColOffsets);
   list<LLVMType> TensorDimsTy = !listsplat(llvm_i32_ty, dim);
   list<LLVMType> ArgsTy = !listconcat(
-                          [llvm_shared_ptr_ty,  // dst_smem_ptr
-                           llvm_shared_ptr_ty,  // mbarrier_smem_ptr
-                           llvm_ptr_ty],        // tensormap_ptr
-                           TensorDimsTy,        // actual tensor dims
-                           Im2ColOffsetsTy,     // im2col offsets
-                          [llvm_i16_ty,         // cta_mask
-                           llvm_i64_ty,         // cache_hint
-                           llvm_i1_ty,          // Flag for cta_mask
-                           llvm_i1_ty]          // Flag for cache_hint
+                          [llvm_shared_cluster_ptr_ty,  // dst_shared_cluster_ptr
+                           llvm_shared_ptr_ty,          // mbarrier_smem_ptr
+                           llvm_ptr_ty],                // tensormap_ptr
+                           TensorDimsTy,                // actual tensor dims
+                           Im2ColOffsetsTy,             // im2col offsets
+                          [llvm_i16_ty,                 // cta_mask
+                           llvm_i64_ty,                 // cache_hint
+                           llvm_i1_ty,                  // Flag for cta_mask
+                           llvm_i1_ty]                  // Flag for cache_hint
                           );
 
   int TempFlagsStartIdx = !add(dim, 5);
@@ -1039,18 +1040,18 @@ let TargetPrefix = "nvvm" in {
 // Abs
 //
 
-  def int_nvvm_fabs_ftz_f : ClangBuiltin<"__nvvm_fabs_ftz_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_f : ClangBuiltin<"__nvvm_fabs_f">,
-      DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem, IntrSpeculatable]>;
-  def int_nvvm_fabs_d : ClangBuiltin<"__nvvm_fabs_d">,
-      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem, IntrSpeculatable]>;
+  def int_nvvm_fabs_ftz :
+      DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
 
+  def int_nvvm_fabs :
+      DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
 //
 // Abs, Neg bf16, bf16x2
 //
 
-  foreach unary = ["abs", "neg"] in {
+  foreach unary = ["neg"] in {
     def int_nvvm_ # unary # _bf16 :
       ClangBuiltin<!strconcat("__nvvm_", unary, "_bf16")>,
       DefaultAttrsIntrinsic<[llvm_bfloat_ty], [llvm_bfloat_ty], [IntrNoMem]>;
@@ -1908,6 +1909,22 @@ def int_nvvm_ptr_param_to_gen: DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                      [llvm_anyptr_ty],
                                    [IntrNoMem, IntrSpeculatable, IntrNoCallback],
                                    "llvm.nvvm.ptr.param.to.gen">;
+
+// Represents an explicit hole in the LLVM IR type system. It may be inserted by
+// the compiler in cases where a pointer is of the wrong type. In the backend
+// this intrinsic will be folded away and not equate to any instruction. It
+// should not be used by any frontend and should only be considered well defined
+// when added in the following cases:
+//
+//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
+//    function to convert the address space from generic (0) to param (101).
+//    This accounts for the fact that the parameter symbols will occupy this
+//    space when lowered during ISel.
+//
+def int_nvvm_internal_addrspace_wrap :
+  DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
+                        [IntrNoMem, IntrSpeculatable, NoUndef<ArgIndex<0>>,
+                         NoUndef<RetIndex>]>;
 
 // Move intrinsics, used in nvvm internally
 
@@ -5118,7 +5135,7 @@ def int_nvvm_mapa
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.mapa">;
 def int_nvvm_mapa_shared_cluster
-  : DefaultAttrsIntrinsic<[llvm_shared_ptr_ty], [llvm_shared_ptr_ty, llvm_i32_ty],
+  : DefaultAttrsIntrinsic<[llvm_shared_cluster_ptr_ty], [llvm_shared_ptr_ty, llvm_i32_ty],
               [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>],
               "llvm.nvvm.mapa.shared.cluster">;
 def int_nvvm_getctarank
@@ -5218,14 +5235,14 @@ def int_nvvm_discard_L2 : DefaultAttrsIntrinsic<[],
 // From Global to Shared Cluster
 def int_nvvm_cp_async_bulk_global_to_shared_cluster
   : DefaultAttrsIntrinsic<[],
-      [llvm_shared_ptr_ty, // dst_smem_ptr
-       llvm_shared_ptr_ty, // mbarrier_ptr
-       llvm_global_ptr_ty, // src_gmem_ptr
-       llvm_i32_ty,        // copy_size
-       llvm_i16_ty,        // cta_mask
-       llvm_i64_ty,        // cache_hint
-       llvm_i1_ty,         // Flag for cta_mask
-       llvm_i1_ty],        // Flag for cache_hint
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_global_ptr_ty,         // src_gmem_ptr
+       llvm_i32_ty,                // copy_size
+       llvm_i16_ty,                // cta_mask
+       llvm_i64_ty,                // cache_hint
+       llvm_i1_ty,                 // Flag for cta_mask
+       llvm_i1_ty],                // Flag for cache_hint
       [IntrConvergent, IntrArgMemOnly,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
@@ -5235,10 +5252,10 @@ def int_nvvm_cp_async_bulk_global_to_shared_cluster
 // From Shared CTA to Shared Cluster
 def int_nvvm_cp_async_bulk_shared_cta_to_cluster
   : DefaultAttrsIntrinsic<[],
-      [llvm_shared_ptr_ty, // dst_smem_ptr
-       llvm_shared_ptr_ty, // mbarrier_ptr
-       llvm_shared_ptr_ty, // src_smem_ptr
-       llvm_i32_ty],       // copy_size
+      [llvm_shared_cluster_ptr_ty, // dst_shared_cluster_ptr
+       llvm_shared_ptr_ty,         // mbarrier_ptr
+       llvm_shared_ptr_ty,         // src_smem_ptr
+       llvm_i32_ty],               // copy_size
       [IntrConvergent, IntrArgMemOnly,
        WriteOnly<ArgIndex<0>>, ReadOnly<ArgIndex<2>>,
        NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,

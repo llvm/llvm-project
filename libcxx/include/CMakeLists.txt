@@ -1027,7 +1027,6 @@ set(files
   mdspan
   memory
   memory_resource
-  module.modulemap
   mutex
   new
   numbers
@@ -1667,8 +1666,16 @@ set(files
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
+# We generate the modulemap file so that we can include __config_site in it. For now, we don't know how to
+# make __config_site modular when per-target runtime directories are used.
+if (NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "textual header \"__config_site\"")
+endif()
+configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
+
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler"
+                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
@@ -1722,6 +1729,12 @@ if (LIBCXX_INSTALL_HEADERS)
 
   # Install the generated IWYU file to the generic include dir.
   install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+    DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    COMPONENT cxx-headers)
+
+  # Install the generated modulemap file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)

@@ -107,7 +107,7 @@ static_assert(k1 == 1, "");
 static_assert((&arr[0] - &arr[1]) == -1, "");
 
 constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}} \
-                                       // expected-note {{arithmetic involving unrelated objects}}
+                                       // both-note {{arithmetic involving unrelated objects}}
 
 static_assert((arr + 0) == arr, "");
 static_assert(&arr[0] == arr, "");
@@ -760,4 +760,14 @@ namespace PointerSubscript {
   static_assert(foo<int>() == 0);
   struct S{};
   static_assert((foo<S>(), true));
+}
+
+namespace OnePastEndDiag {
+
+  constexpr int a(const int *b) {
+    return *b; // both-note {{read of dereferenced one-past-the-end pointer}}
+  }
+  constexpr int foo[] = {1,2};
+  constexpr int k = a(foo + 2); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{in call to 'a(&foo[2])'}}
 }

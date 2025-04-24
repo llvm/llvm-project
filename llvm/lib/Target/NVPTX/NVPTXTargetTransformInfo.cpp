@@ -74,7 +74,7 @@ static bool isNVVMAtomic(const IntrinsicInst *II) {
   }
 }
 
-bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
+bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
   // Without inter-procedural analysis, we conservatively assume that arguments
   // to __device__ functions are divergent.
   if (const Argument *Arg = dyn_cast<Argument>(V))
@@ -185,8 +185,6 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::ceil, FTZ_MustBeOff};
     case Intrinsic::nvvm_ceil_ftz_f:
       return {Intrinsic::ceil, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fabs_d:
-      return {Intrinsic::fabs, FTZ_Any};
     case Intrinsic::nvvm_floor_d:
       return {Intrinsic::floor, FTZ_Any};
     case Intrinsic::nvvm_floor_f:
@@ -426,12 +424,13 @@ static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   case Intrinsic::nvvm_isspacep_local:
     return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
   case Intrinsic::nvvm_isspacep_shared:
+    // If shared cluster this can't be evaluated at compile time.
+    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER)
+      return std::nullopt;
     return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
   case Intrinsic::nvvm_isspacep_shared_cluster:
-    // We can't tell shared from shared_cluster at compile time from AS alone,
-    // but it can't be either is AS is not shared.
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED ? std::nullopt
-                                               : std::optional{false};
+    return AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER ||
+           AS == NVPTXAS::ADDRESS_SPACE_SHARED;
   case Intrinsic::nvvm_isspacep_const:
     return AS == NVPTXAS::ADDRESS_SPACE_CONST;
   default:
@@ -485,7 +484,7 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 InstructionCost
 NVPTXTTIImpl::getInstructionCost(const User *U,
                                  ArrayRef<const Value *> Operands,
-                                 TTI::TargetCostKind CostKind) {
+                                 TTI::TargetCostKind CostKind) const {
   if (const auto *CI = dyn_cast<CallInst>(U))
     if (const auto *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
       // Without this implementation getCallCost() would return the number
@@ -514,8 +513,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args,
-    const Instruction *CxtI) {
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -541,9 +539,9 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
   }
 }
 
-void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
-                                           TTI::UnrollingPreferences &UP,
-                                           OptimizationRemarkEmitter *ORE) {
+void NVPTXTTIImpl::getUnrollingPreferences(
+    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
+    OptimizationRemarkEmitter *ORE) const {
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Enable partial unrolling and runtime unrolling, but reduce the
@@ -555,7 +553,7 @@ void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 }
 
 void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::PeelingPreferences &PP) {
+                                         TTI::PeelingPreferences &PP) const {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
