@@ -4378,6 +4378,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
                                              /*SeparateBeginEndCalls=*/true);
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
+  bool isOffloadEntry =
+      isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
@@ -4402,6 +4405,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           .Case([&](omp::TargetEnterDataOp enterDataOp) -> LogicalResult {
             if (failed(checkImplementationStatus(*enterDataOp)))
               return failure();
+            if (!isOffloadEntry)
+              return success();
 
             if (auto ifVar = enterDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
@@ -4422,6 +4427,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           .Case([&](omp::TargetExitDataOp exitDataOp) -> LogicalResult {
             if (failed(checkImplementationStatus(*exitDataOp)))
               return failure();
+            if (!isOffloadEntry)
+              return success();
 
             if (auto ifVar = exitDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
@@ -4442,6 +4449,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
           .Case([&](omp::TargetUpdateOp updateDataOp) -> LogicalResult {
             if (failed(checkImplementationStatus(*updateDataOp)))
               return failure();
+            if (!isOffloadEntry)
+              return success();
 
             if (auto ifVar = updateDataOp.getIfExpr())
               ifCond = moduleTranslation.lookupValue(ifVar);
@@ -4467,6 +4476,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   if (failed(result))
     return failure();
+  if (!isOffloadEntry)
+    return success();
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   MapInfoData mapData;
