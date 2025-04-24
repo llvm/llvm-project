@@ -573,14 +573,17 @@ define dso_local <2 x float> @multiuse_of_single_value_from_vbroadcast_load(ptr 
 ; X64-AVX-LABEL: multiuse_of_single_value_from_vbroadcast_load:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    pushq %rbx
+; X64-AVX-NEXT:    subq $16, %rsp
 ; X64-AVX-NEXT:    movq %rsi, %rbx
-; X64-AVX-NEXT:    vmovsd 32(%rsi), %xmm0 # xmm0 = mem[0],zero
-; X64-AVX-NEXT:    vmovsd %xmm0, (%rdi)
+; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX-NEXT:    vmovlps %xmm0, (%rdi)
 ; X64-AVX-NEXT:    vmovaps 32(%rsi), %xmm0
 ; X64-AVX-NEXT:    callq ccosf@PLT
 ; X64-AVX-NEXT:    vmovlps %xmm0, 32(%rbx)
-; X64-AVX-NEXT:    vmovddup 32(%rbx), %xmm0 # xmm0 = mem[0,0]
+; X64-AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; X64-AVX-NEXT:    callq ccosf@PLT
+; X64-AVX-NEXT:    addq $16, %rsp
 ; X64-AVX-NEXT:    popq %rbx
 ; X64-AVX-NEXT:    retq
   %p1 = getelementptr [5 x <2 x float>], ptr %arr, i64 0, i64 3
