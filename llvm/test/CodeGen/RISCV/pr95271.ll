@@ -6,8 +6,29 @@ define i32 @PR95271(ptr %p) {
 ; RV32I-LABEL: PR95271:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    lui a1, 349525
+; RV32I-NEXT:    addi a1, a1, 1365
 ; RV32I-NEXT:    addi a0, a0, 1
-; RV32I-NEXT:    tail __popcountsi2
+; RV32I-NEXT:    srli a2, a0, 1
+; RV32I-NEXT:    and a1, a2, a1
+; RV32I-NEXT:    lui a2, 209715
+; RV32I-NEXT:    addi a2, a2, 819
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    and a1, a0, a2
+; RV32I-NEXT:    srli a0, a0, 2
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    lui a2, 61681
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    srli a1, a0, 4
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    addi a1, a2, -241
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    slli a1, a0, 8
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    slli a1, a0, 16
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    srli a0, a0, 24
+; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: PR95271:
 ; RV64I:       # %bb.0:
