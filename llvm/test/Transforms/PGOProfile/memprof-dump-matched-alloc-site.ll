@@ -30,7 +30,6 @@
 
 ;--- memprof-dump-matched-alloc-site.yaml
 ---
----
 HeapProfileRecords:
   - GUID:            _Z2f3v
     AllocSites:
@@ -45,6 +44,7 @@ HeapProfileRecords:
           TotalLifetime:   0
           TotalLifetimeAccessDensity: 0
     CallSites:
+      # Kept empty here because this section is irrelevant for this test.
 ...
 ;--- memprof-dump-matched-alloc-site.ll
 ; CHECK: MemProf notcold context with id 12978026349401156968 has total profiled size 3 is matched with 3 frames

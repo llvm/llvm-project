@@ -818,9 +818,9 @@ static bool isAllocationWithHotColdVariant(const Function *Callee,
 
 struct AllocMatchInfo {
   uint64_t TotalSize = 0;
+  size_t NumFramesMatched = 0;
   AllocationType AllocType = AllocationType::None;
   bool Matched = false;
-  size_t NumFramesMatched = 0;
 };
 
 DenseMap<uint64_t, SmallVector<CallEdgeTy, 0>>
@@ -1153,8 +1153,8 @@ readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
             if (ClPrintMemProfMatchInfo) {
               assert(FullStackId != 0);
               FullStackIdToAllocMatchInfo[FullStackId] = {
-                  AllocInfo->Info.getTotalSize(), AllocType, /*Matched=*/true,
-                  InlinedCallStack.size()};
+                  AllocInfo->Info.getTotalSize(), InlinedCallStack.size(),
+                  AllocType, /*Matched=*/true};
             }
           }
         }
