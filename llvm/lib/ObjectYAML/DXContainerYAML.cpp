@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -80,7 +81,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       NewP.Constants.RegisterSpace = Constants.RegisterSpace;
     } else if (auto *RDV = dyn_cast<object::DirectX::RootDescriptorView_V1_0>(
                    &ParamView)) {
-      llvm::Expected<dxbc::RootDescriptor_V1_0> DescriptorOrErr = RDV->read();
+      llvm::Expected<dxbc::RST0::v0::RootDescriptor> DescriptorOrErr =
+          RDV->read();
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);
       auto Descriptor = *DescriptorOrErr;
@@ -89,7 +91,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
     } else if (auto *RDV = dyn_cast<object::DirectX::RootDescriptorView_V1_1>(
                    &ParamView)) {
-      llvm::Expected<dxbc::RootDescriptor_V1_1> DescriptorOrErr = RDV->read();
+      llvm::Expected<dxbc::RST0::v1::RootDescriptor> DescriptorOrErr =
+          RDV->read();
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);
       auto Descriptor = *DescriptorOrErr;

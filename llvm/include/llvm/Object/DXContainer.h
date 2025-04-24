@@ -161,8 +161,8 @@ struct RootDescriptorView_V1_0 : RootParameterView {
                  llvm::to_underlying(dxbc::RootParameterType::UAV)));
   }
 
-  llvm::Expected<dxbc::RootDescriptor_V1_0> read() {
-    return readParameter<dxbc::RootDescriptor_V1_0>();
+  llvm::Expected<dxbc::RST0::v0::RootDescriptor> read() {
+    return readParameter<dxbc::RST0::v0::RootDescriptor>();
   }
 };
 
@@ -177,8 +177,8 @@ struct RootDescriptorView_V1_1 : RootParameterView {
                  llvm::to_underlying(dxbc::RootParameterType::UAV)));
   }
 
-  llvm::Expected<dxbc::RootDescriptor_V1_1> read() {
-    return readParameter<dxbc::RootDescriptor_V1_1>();
+  llvm::Expected<dxbc::RST0::v1::RootDescriptor> read() {
+    return readParameter<dxbc::RST0::v1::RootDescriptor>();
   }
 };
 
@@ -229,9 +229,9 @@ public:
     case dxbc::RootParameterType::SRV:
     case dxbc::RootParameterType::UAV:
       if (Version == 1)
-        DataSize = sizeof(dxbc::RootDescriptor_V1_0);
+        DataSize = sizeof(dxbc::RST0::v0::RootDescriptor);
       else
-        DataSize = sizeof(dxbc::RootDescriptor_V1_1);
+        DataSize = sizeof(dxbc::RST0::v1::RootDescriptor);
       break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0
