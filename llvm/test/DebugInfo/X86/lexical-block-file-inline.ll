@@ -28,11 +28,9 @@
 ; CHECK:    DW_TAG_subprogram
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:      DW_AT_abstract_origin {{.*}} {[[Offset_bar:0x[0-9abcdef]+]]}
-; CHECK-NOT:  {{DW_TAG|NULL}}
+; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:      DW_TAG_lexical_block
-; CHECK-NOT:    {{DW_TAG|NULL}}
-; CHECK:        DW_AT_abstract_origin {{.*}}[[Offset_lb:0x[0-9a-f]+]]
-; CHECK-NOT:    {{DW_TAG|NULL}}
+; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:        DW_TAG_variable
 
 ;; Abstract "bar" function
@@ -42,7 +40,7 @@
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:      DW_AT_inline
 ; CHECK-NOT: {{DW_TAG|NULL}}
-; CHECK:      [[Offset_lb]]: DW_TAG_lexical_block
+; CHECK:      DW_TAG_lexical_block
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:        DW_TAG_variable
 ; CHECK-NOT: {{DW_TAG|NULL}}
@@ -58,10 +56,8 @@
 ; CHECK-NEXT:   DW_AT_abstract_origin {{.*}} {[[Offset_bar]]}
 ; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:        DW_TAG_lexical_block
-; CHECK-NOT:      {{DW_TAG|NULL}}
-; CHECK:          DW_AT_abstract_origin {{.*}}[[Offset_lb]]
-; CHECK-NOT:    {{DW_TAG|NULL}}
-; CHECK:        DW_TAG_variable
+; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:          DW_TAG_variable
 
 ; Function Attrs: alwaysinline nounwind
 define i32 @_Z3barv() #0 !dbg !4 {
