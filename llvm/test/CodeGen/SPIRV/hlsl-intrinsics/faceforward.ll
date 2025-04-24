@@ -22,7 +22,7 @@ entry:
   ret half %spv.faceforward
 }
 
-define noundef float @smoothstep_float(float noundef %a, float noundef %b, float noundef %c) {
+define noundef float @faceforward_float(float noundef %a, float noundef %b, float noundef %c) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#float_32]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]

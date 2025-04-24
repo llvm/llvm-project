@@ -80,7 +80,7 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
            E->getArg(2)->getType()->hasFloatingRepresentation() &&
            "FaceForward operands must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/N->getType(), Intrinsic::spv_smoothstep,
+        /*ReturnType=*/N->getType(), Intrinsic::spv_faceforward,
         ArrayRef<Value *>{N, I, Ng}, /*FMFSource=*/nullptr, "spv.faceforward");
   }
   }
