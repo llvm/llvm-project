@@ -395,7 +395,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
-    setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
+    setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    // TODO: These should be set to LibCall, but this currently breaks
+    //   the Linux kernel build. See #101786. Lacks i128 tests, too.
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::CTPOP, MVT::i128, Expand);
+    else
+      setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   }
 
   if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
@@ -2909,7 +2916,7 @@ InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
   bool Log2CostModel =
       Subtarget.getVRGatherCostModel() == llvm::RISCVSubtarget::NLog2N;
   if (Log2CostModel && LMULCost.isValid()) {
-    unsigned Log = Log2_64(*LMULCost.getValue());
+    unsigned Log = Log2_64(LMULCost.getValue());
     if (Log > 0)
       return LMULCost * Log;
   }
@@ -16046,6 +16053,7 @@ struct NodeExtensionHelper {
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
     case ISD::OR:
+    case RISCVISD::OR_VL:
       return RISCVISD::VWADD_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -16069,6 +16077,7 @@ struct NodeExtensionHelper {
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
     case ISD::OR:
+    case RISCVISD::OR_VL:
       return RISCVISD::VWADDU_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -16126,6 +16135,7 @@ struct NodeExtensionHelper {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
     case ISD::OR:
+    case RISCVISD::OR_VL:
       return SupportsExt == ExtKind::SExt ? RISCVISD::VWADD_W_VL
                                           : RISCVISD::VWADDU_W_VL;
     case ISD::SUB:
@@ -16316,6 +16326,8 @@ struct NodeExtensionHelper {
     case RISCVISD::VFWADD_W_VL:
     case RISCVISD::VFWSUB_W_VL:
       return true;
+    case RISCVISD::OR_VL:
+      return Root->getFlags().hasDisjoint();
     case ISD::SHL:
       return Root->getValueType(0).isScalableVector() &&
              Subtarget.hasStdExtZvbb();
@@ -16401,6 +16413,7 @@ struct NodeExtensionHelper {
     case ISD::OR:
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
+    case RISCVISD::OR_VL:
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
     case RISCVISD::FADD_VL:
@@ -16617,6 +16630,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   case ISD::OR:
   case RISCVISD::ADD_VL:
   case RISCVISD::SUB_VL:
+  case RISCVISD::OR_VL:
   case RISCVISD::FADD_VL:
   case RISCVISD::FSUB_VL:
     // add|sub|fadd|fsub-> vwadd(u)|vwsub(u)|vfwadd|vfwsub
@@ -16667,7 +16681,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 
 /// Combine a binary or FMA operation to its equivalent VW or VW_W form.
 /// The supported combines are:
-/// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
+/// add | add_vl | or disjoint | or_vl disjoint -> vwadd(u) | vwadd(u)_w
 /// sub | sub_vl -> vwsub(u) | vwsub(u)_w
 /// mul | mul_vl -> vwmul(u) | vwmul_su
 /// shl | shl_vl -> vwsll
@@ -19503,6 +19517,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::VWSUB_W_VL:
   case RISCVISD::VWSUBU_W_VL:
     return performVWADDSUBW_VLCombine(N, DCI, Subtarget);
+  case RISCVISD::OR_VL:
   case RISCVISD::SUB_VL:
   case RISCVISD::MUL_VL:
     return combineOp_VLToVWOp_VL(N, DCI, Subtarget);

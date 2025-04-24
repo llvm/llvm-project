@@ -3258,9 +3258,9 @@ bool X86TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return false;
 }
 
-bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
-                                              ISD::LoadExtType ExtTy,
-                                              EVT NewVT) const {
+bool X86TargetLowering::shouldReduceLoadWidth(
+    SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+    std::optional<unsigned> ByteOffset) const {
   assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
 
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF
@@ -43786,7 +43786,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return TLO.CombineTo(Op, Insert);
     }
     case X86ISD::VPERMI: {
-      // Simplify PERMPD/PERMQ to extract_subvector.
+      // Simplify 256-bit PERMPD/PERMQ to extract_subvector.
       // TODO: This should be done in shuffle combining.
       if (VT == MVT::v4f64 || VT == MVT::v4i64) {
         SmallVector<int, 4> Mask;
@@ -43798,6 +43798,16 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           SDValue Insert = insertSubVector(UndefVec, Ext, 0, TLO.DAG, DL, 128);
           return TLO.CombineTo(Op, Insert);
         }
+      }
+      // Simplify 512-bit PERMPD/PERMQ to 256-bit variant on lower half.
+      if (VT == MVT::v8f64 || VT == MVT::v8i64) {
+        SDLoc DL(Op);
+        SDValue Ext0 = extractSubVector(Op.getOperand(0), 0, TLO.DAG, DL, 256);
+        SDValue ExtOp = TLO.DAG.getNode(Opc, DL, Ext0.getValueType(), Ext0,
+                                        Op.getOperand(1));
+        SDValue UndefVec = TLO.DAG.getUNDEF(VT);
+        SDValue Insert = insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, 256);
+        return TLO.CombineTo(Op, Insert);
       }
       break;
     }
@@ -52794,8 +52804,8 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
               getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
                                             UserUndefs, UserBits)) {
             if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
-              SDValue Extract = extractSubVector(
-                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
+              SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
+                                                 RegVT.getSizeInBits());
               Extract = DAG.getBitcast(RegVT, Extract);
               return DCI.CombineTo(N, Extract, SDValue(User, 1));
             }
