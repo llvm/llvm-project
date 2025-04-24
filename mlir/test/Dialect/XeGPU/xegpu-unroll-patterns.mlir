@@ -29,6 +29,7 @@ gpu.module @test {
   }
 
   //-----
+
   // CHECK-LABEL: test_store_nd
   // CHECK-SAME: [[arg0:%.+]]: memref<24x32xf32>
   // CHECK-COUNT-6: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]][{{.*}}] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>

@@ -12,4 +12,5 @@ mlir_target_link_libraries(MLIRXeGPUTestPasses PUBLIC
   MLIRPass
   MLIRTransforms
   MLIRGPUDialect
+  MLIRXeGPUTransforms
 )

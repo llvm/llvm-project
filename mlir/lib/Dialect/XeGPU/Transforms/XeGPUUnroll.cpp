@@ -389,48 +389,6 @@ struct UnrollAtomicRMWOp : public UnrollPattern<xegpu::AtomicRMWOp> {
     return failure();
   }
 };
-
-struct XeGPUUnrollPass final
-    : public xegpu::impl::XeGPUUnrollBase<XeGPUUnrollPass> {
-  XeGPUUnrollPass() = default;
-  XeGPUUnrollPass(const XeGPUUnrollPass &pass) = default;
-
-  void runOnOperation() override {
-    vector::UnrollVectorOptions options;
-    options.setNativeShapeFn([&](Operation *op)
-                                 -> std::optional<SmallVector<int64_t>> {
-      if (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::StoreNdOp>(op)) {
-        xegpu::TensorDescType tdescTy;
-        if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
-          tdescTy = createNdOp.getType();
-        } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
-          tdescTy = loadNdOp.getTensorDescType();
-        } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
-          tdescTy = storeNdOp.getTensorDescType();
-        }
-
-        if (auto layout = tdescTy.getLayoutAttr()) {
-          if (auto inst_data = layout.getInstData())
-            return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                        inst_data.asArrayRef().end());
-        }
-      }
-
-      return std::nullopt;
-    });
-
-    auto funcOp = getOperation();
-    RewritePatternSet patterns(&getContext());
-    patterns.add<UnrollCreateNdOp, UnrollLoadNdOp, UnrollStoreNdOp>(
-        patterns.getContext(), options);
-
-    // GreedyRewriteConfig config;
-    // config.fold = false;
-    // config.cseConstants = false;
-    (void)applyPatternsGreedily(funcOp, std::move(patterns));
-    return;
-  }
-};
 } // namespace
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
