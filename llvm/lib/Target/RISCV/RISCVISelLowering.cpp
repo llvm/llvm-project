@@ -9576,11 +9576,11 @@ getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
   return SmallerVT;
 }
 
-static bool isValidInsertExtractIndex(SDValue Idx) {
+static bool isValidVisniInsertExtractIndex(SDValue Idx) {
   auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
   if (!IdxC || isNullConstant(Idx))
     return false;
-  return IdxC->getZExtValue() < 32;
+  return isUInt<5>(IdxC->getZExtValue());
 }
 
 // Custom-legalize INSERT_VECTOR_ELT so that the value is inserted into the
@@ -9696,7 +9696,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
 
     // Use ri.vinsert.v.x if available.
     if (Subtarget.hasVendorXRivosVisni() && VecVT.isInteger() &&
-        isValidInsertExtractIndex(Idx)) {
+        isValidVisniInsertExtractIndex(Idx)) {
       unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
       if (VecVT.isFixedLengthVector() && isa<ConstantSDNode>(Idx) &&
           Idx->getAsZExtVal() + 1 == VecVT.getVectorNumElements())
@@ -9915,7 +9915,7 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   // Use ri.vextract.x.v if available.
   // TODO: Avoid index 0 and just use the vmv.x.s
   if (Subtarget.hasVendorXRivosVisni() && EltVT.isInteger() &&
-      isValidInsertExtractIndex(Idx)) {
+      isValidVisniInsertExtractIndex(Idx)) {
     SDValue Elt = DAG.getNode(RISCVISD::RI_VEXTRACT, DL, XLenVT, Vec, Idx);
     return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt);
   }
