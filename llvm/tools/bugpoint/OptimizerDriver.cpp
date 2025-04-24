@@ -111,7 +111,7 @@ void BugDriver::EmitProgressBitcode(const Module &M, const std::string &ID,
   outs() << " " << getPassesString(PassesToRun) << "\n";
 }
 
-cl::opt<bool> SilencePasses(
+static cl::opt<bool> SilencePasses(
     "silence-passes",
     cl::desc("Suppress output of running passes (both stdout and stderr)"));
 
@@ -203,8 +203,7 @@ bool BugDriver::runPasses(Module &Program,
   } else
     Args.push_back(tool);
 
-  for (unsigned i = 0, e = OptArgs.size(); i != e; ++i)
-    Args.push_back(OptArgs[i]);
+  llvm::append_range(Args, OptArgs);
   // Pin to legacy PM since bugpoint has lots of infra and hacks revolving
   // around the legacy PM.
   Args.push_back("-bugpoint-enable-legacy-pm");

@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -75,6 +76,7 @@ private:
   Module &Mod;
   const DataLayout &DL;
   const GCNSubtarget &ST;
+
   /// The scalar type to convert to
   Type *const ConvertToScalar;
   /// The set of visited Instructions
@@ -123,6 +125,44 @@ public:
     TargetLoweringBase::LegalizeKind LK =
         TLI->getTypeConversion(EltTy->getContext(), EVT::getEVT(EltTy, false));
     return LK.first != TargetLoweringBase::TypeLegal;
+  }
+
+  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
+
+  bool isCoercionProfitable(Instruction *II) {
+    SmallPtrSet<Instruction *, 4> CVisited;
+    SmallVector<Instruction *, 4> UserList;
+
+    // Check users for profitable conditions (across block user which can
+    // natively handle the illegal vector).
+    for (User *V : II->users())
+      if (auto *UseInst = dyn_cast<Instruction>(V))
+        UserList.push_back(UseInst);
+
+    auto IsLookThru = [](Instruction *II) {
+      if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
+        return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
+      return isa<PHINode, ShuffleVectorInst, InsertElementInst,
+                 ExtractElementInst, CastInst>(II);
+    };
+
+    while (!UserList.empty()) {
+      auto CII = UserList.pop_back_val();
+      if (!CVisited.insert(CII).second)
+        continue;
+
+      if (CII->getParent() == II->getParent() && !IsLookThru(II))
+        continue;
+
+      if (isOpLegal(CII))
+        return true;
+
+      if (IsLookThru(CII))
+        for (User *V : CII->users())
+          if (auto *UseInst = dyn_cast<Instruction>(V))
+            UserList.push_back(UseInst);
+    }
+    return false;
   }
 
   LiveRegOptimizer(Module &Mod, const GCNSubtarget &ST)
@@ -259,6 +299,9 @@ bool LiveRegOptimizer::optimizeLiveType(
     if (!shouldReplace(II->getType()))
       continue;
 
+    if (!isCoercionProfitable(II))
+      continue;
+
     if (PHINode *Phi = dyn_cast<PHINode>(II)) {
       PhiNodes.insert(Phi);
       // Collect all the incoming values of problematic PHI nodes.
@@ -367,11 +410,11 @@ bool LiveRegOptimizer::optimizeLiveType(
   for (Instruction *U : Uses) {
     // Replace all converted operands for a use.
     for (auto [OpIdx, Op] : enumerate(U->operands())) {
-      if (ValMap.contains(Op) && ValMap[Op]) {
+      if (Value *Val = ValMap.lookup(Op)) {
         Value *NewVal = nullptr;
         if (BBUseValMap.contains(U->getParent()) &&
-            BBUseValMap[U->getParent()].contains(ValMap[Op]))
-          NewVal = BBUseValMap[U->getParent()][ValMap[Op]];
+            BBUseValMap[U->getParent()].contains(Val))
+          NewVal = BBUseValMap[U->getParent()][Val];
         else {
           BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
           // We may pick up ops that were previously converted for users in
@@ -478,7 +521,6 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
 PreservedAnalyses
 AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-
   AssumptionCache &AC = FAM.getResult<AssumptionAnalysis>(F);
   UniformityInfo &UI = FAM.getResult<UniformityInfoAnalysis>(F);
 

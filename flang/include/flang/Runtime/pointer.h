@@ -12,7 +12,7 @@
 #ifndef FORTRAN_RUNTIME_POINTER_H_
 #define FORTRAN_RUNTIME_POINTER_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 namespace Fortran::runtime {
@@ -117,7 +117,8 @@ bool RTDECL(PointerIsAssociatedWith)(
 
 // Fortran POINTERs are allocated with an extra validation word after their
 // payloads in order to detect erroneous deallocations later.
-RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t);
+RT_API_ATTRS void *AllocateValidatedPointerPayload(
+    std::size_t, int allocatorIdx = 0);
 RT_API_ATTRS bool ValidatePointerPayload(const ISO::CFI_cdesc_t &);
 
 } // extern "C"

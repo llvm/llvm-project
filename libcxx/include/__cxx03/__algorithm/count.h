@@ -16,9 +16,9 @@
 #include <__cxx03/__bit/popcount.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__fwd/bit_reference.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

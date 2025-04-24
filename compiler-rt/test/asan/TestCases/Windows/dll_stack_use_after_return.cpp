@@ -4,6 +4,8 @@
 // RUN: %clang_cl_asan %LD %Od %s %Fe%t.dll -fsanitize-address-use-after-return=always
 // RUN: not %run %t %t.dll 2>&1 | FileCheck %s
 
+// UNSUPPORTED: msvc
+
 #include <malloc.h>
 
 char *x;

@@ -1,7 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/clc.h>
+#include <clc/math/clc_tanpi.h>
 
-#include <math/clc_tanpi.h>
+#define FUNCTION tanpi
+#define __CLC_BODY <clc/shared/unary_def.inc>
 
-#define __CLC_FUNC tanpi
-#define __CLC_BODY <clc_sw_unary.inc>
 #include <clc/math/gentype.inc>

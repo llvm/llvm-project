@@ -143,8 +143,3 @@ void ConvertComplexToLibmPass::runOnOperation() {
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertComplexToLibmPass() {
-  return std::make_unique<ConvertComplexToLibmPass>();
-}

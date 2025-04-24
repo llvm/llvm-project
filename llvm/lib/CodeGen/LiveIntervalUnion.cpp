@@ -96,7 +96,7 @@ LiveIntervalUnion::print(raw_ostream &OS, const TargetRegisterInfo *TRI) const {
 // Verify the live intervals in this union and add them to the visited set.
 void LiveIntervalUnion::verify(LiveVirtRegBitSet& VisitedVRegs) {
   for (SegmentIter SI = Segments.begin(); SI.valid(); ++SI)
-    VisitedVRegs.set(SI.value()->reg());
+    VisitedVRegs.set(SI.value()->reg().id());
 }
 #endif //!NDEBUG
 

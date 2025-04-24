@@ -102,11 +102,7 @@ class LVDWARFReader final : public LVBinaryReader {
   }
 
   // Remove offset from global map.
-  void removeGlobalOffset(LVOffset Offset) {
-    LVOffsetElementMap::iterator Iter = GlobalOffsets.find(Offset);
-    if (Iter != GlobalOffsets.end())
-      GlobalOffsets.erase(Iter);
-  }
+  void removeGlobalOffset(LVOffset Offset) { GlobalOffsets.erase(Offset); }
 
   // Get the location information for DW_AT_data_member_location.
   void processLocationMember(dwarf::Attribute Attr,

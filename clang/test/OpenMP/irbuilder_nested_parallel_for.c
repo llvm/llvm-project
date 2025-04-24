@@ -78,10 +78,8 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    br label [[OMP_PARALLEL:%.*]]
 // CHECK:       omp_parallel:
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z14parallel_for_0v..omp_par)
-// CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK:       omp.par.outlined.exit:
-// CHECK-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK:       omp.par.exit.split:
+// CHECK-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// CHECK:       omp.par.exit:
 // CHECK-NEXT:    ret void
 //
 //
@@ -147,7 +145,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK:       omp_loop.inc:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER]]
-// CHECK:       omp.par.outlined.exit.exitStub:
+// CHECK:       omp.par.exit.exitStub:
 // CHECK-NEXT:    ret void
 //
 //
@@ -231,10 +229,8 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[GEP_R_ADDR20:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG17]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[R_ADDR]], ptr [[GEP_R_ADDR20]], align 8
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14parallel_for_1Pfid..omp_par.4, ptr [[STRUCTARG17]])
-// CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT16:%.*]]
-// CHECK:       omp.par.outlined.exit16:
-// CHECK-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK:       omp.par.exit.split:
+// CHECK-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// CHECK:       omp.par.exit:
 // CHECK-NEXT:    ret void
 //
 //
@@ -264,16 +260,14 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[GEP_R_ADDR3:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR3]], align 8
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14parallel_for_1Pfid..omp_par, ptr [[STRUCTARG]])
-// CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK:       omp.par.outlined.exit:
-// CHECK-NEXT:    br label [[OMP_PAR_EXIT7_SPLIT:%.*]]
-// CHECK:       omp.par.exit7.split:
+// CHECK-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// CHECK:       omp.par.exit7:
 // CHECK-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]]
 // CHECK:       omp.par.region.parallel.after:
 // CHECK-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK:       omp.par.pre_finalize:
-// CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT16_EXITSTUB:%.*]]
-// CHECK:       omp.par.outlined.exit16.exitStub:
+// CHECK-NEXT:    br label [[OMP_PAR_EXIT16_EXITSTUB:%.*]]
+// CHECK:       omp.par.exit.exitStub:
 // CHECK-NEXT:    ret void
 //
 //
@@ -352,7 +346,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK:       omp_loop.inc:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER]]
-// CHECK:       omp.par.outlined.exit.exitStub:
+// CHECK:       omp.par.exit7.exitStub:
 // CHECK-NEXT:    ret void
 //
 //
@@ -444,10 +438,8 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[GEP_R_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[R_ADDR]], ptr [[GEP_R_ADDR]], align 8
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par.23, ptr [[STRUCTARG]])
-// CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT184:%.*]]
-// CHECK:       omp.par.outlined.exit184:
-// CHECK-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK:       omp.par.exit.split:
+// CHECK-NEXT:    br label [[OMP_PAR_EXIT184:%.*]]
+// CHECK:       omp.par.exit:
 // CHECK-NEXT:    store i32 0, ptr [[I185]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_17]], ptr [[AGG_CAPTURED186]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[I185]], ptr [[TMP0]], align 8
@@ -457,7 +449,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    call void @__captured_stmt.19(ptr [[DOTCOUNT_ADDR188]], ptr [[AGG_CAPTURED186]])
 // CHECK-NEXT:    [[DOTCOUNT189:%.*]] = load i32, ptr [[DOTCOUNT_ADDR188]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER190:%.*]]
-// CHECK:       omp_loop.preheader190:
+// CHECK:       omp_loop.preheader187:
 // CHECK-NEXT:    store i32 0, ptr [[P_LOWERBOUND204]], align 4
 // CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[DOTCOUNT189]], 1
 // CHECK-NEXT:    store i32 [[TMP3]], ptr [[P_UPPERBOUND205]], align 4
@@ -469,13 +461,13 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], [[TMP4]]
 // CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER191:%.*]]
-// CHECK:       omp_loop.header191:
+// CHECK:       omp_loop.header188:
 // CHECK-NEXT:    [[OMP_LOOP_IV197:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER190]] ], [ [[OMP_LOOP_NEXT199:%.*]], [[OMP_LOOP_INC194:%.*]] ]
 // CHECK-NEXT:    br label [[OMP_LOOP_COND192:%.*]]
-// CHECK:       omp_loop.cond192:
+// CHECK:       omp_loop.cond189:
 // CHECK-NEXT:    [[OMP_LOOP_CMP198:%.*]] = icmp ult i32 [[OMP_LOOP_IV197]], [[TMP7]]
 // CHECK-NEXT:    br i1 [[OMP_LOOP_CMP198]], label [[OMP_LOOP_BODY193:%.*]], label [[OMP_LOOP_EXIT195:%.*]]
-// CHECK:       omp_loop.body193:
+// CHECK:       omp_loop.body190:
 // CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[OMP_LOOP_IV197]], [[TMP4]]
 // CHECK-NEXT:    call void @__captured_stmt.20(ptr [[I185]], i32 [[TMP8]], ptr [[AGG_CAPTURED187]])
 // CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[A_ADDR]], align 4
@@ -486,15 +478,15 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[R_ADDR]], align 8
 // CHECK-NEXT:    store float [[CONV202]], ptr [[TMP11]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_INC194]]
-// CHECK:       omp_loop.inc194:
+// CHECK:       omp_loop.inc191:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT199]] = add nuw i32 [[OMP_LOOP_IV197]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER191]]
-// CHECK:       omp_loop.exit195:
+// CHECK:       omp_loop.exit192:
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM207]])
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM208:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM208]])
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER196:%.*]]
-// CHECK:       omp_loop.after196:
+// CHECK:       omp_loop.after193:
 // CHECK-NEXT:    ret void
 //
 //
@@ -573,10 +565,8 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[GEP_R_ADDR217:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG214]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR217]], align 8
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par.22, ptr [[STRUCTARG214]])
-// CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT159:%.*]]
-// CHECK:       omp.par.outlined.exit159:
-// CHECK-NEXT:    br label [[OMP_PAR_EXIT11_SPLIT:%.*]]
-// CHECK:       omp.par.exit11.split:
+// CHECK-NEXT:    br label [[OMP_PAR_EXIT159:%.*]]
+// CHECK:       omp.par.exit11:
 // CHECK-NEXT:    store i32 0, ptr [[I160]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_15]], ptr [[AGG_CAPTURED161]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[I160]], ptr [[TMP10]], align 8
@@ -586,7 +576,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    call void @__captured_stmt.17(ptr [[DOTCOUNT_ADDR163]], ptr [[AGG_CAPTURED161]])
 // CHECK-NEXT:    [[DOTCOUNT164:%.*]] = load i32, ptr [[DOTCOUNT_ADDR163]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER165:%.*]]
-// CHECK:       omp_loop.preheader165:
+// CHECK:       omp_loop.preheader163:
 // CHECK-NEXT:    store i32 0, ptr [[P_LOWERBOUND179]], align 4
 // CHECK-NEXT:    [[TMP13:%.*]] = sub i32 [[DOTCOUNT164]], 1
 // CHECK-NEXT:    store i32 [[TMP13]], ptr [[P_UPPERBOUND180]], align 4
@@ -598,24 +588,24 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP15]], [[TMP14]]
 // CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER166:%.*]]
-// CHECK:       omp_loop.header166:
+// CHECK:       omp_loop.header164:
 // CHECK-NEXT:    [[OMP_LOOP_IV172:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER165]] ], [ [[OMP_LOOP_NEXT174:%.*]], [[OMP_LOOP_INC169:%.*]] ]
 // CHECK-NEXT:    br label [[OMP_LOOP_COND167:%.*]]
-// CHECK:       omp_loop.cond167:
+// CHECK:       omp_loop.cond165:
 // CHECK-NEXT:    [[OMP_LOOP_CMP173:%.*]] = icmp ult i32 [[OMP_LOOP_IV172]], [[TMP17]]
 // CHECK-NEXT:    br i1 [[OMP_LOOP_CMP173]], label [[OMP_LOOP_BODY168:%.*]], label [[OMP_LOOP_EXIT170:%.*]]
-// CHECK:       omp_loop.exit170:
+// CHECK:       omp_loop.exit168:
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM182]])
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM183:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM183]])
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER171:%.*]]
-// CHECK:       omp_loop.after171:
+// CHECK:       omp_loop.after169:
 // CHECK-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]]
 // CHECK:       omp.par.region.parallel.after:
 // CHECK-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK:       omp.par.pre_finalize:
 // CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT184_EXITSTUB:%.*]]
-// CHECK:       omp_loop.body168:
+// CHECK:       omp_loop.body166:
 // CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OMP_LOOP_IV172]], [[TMP14]]
 // CHECK-NEXT:    call void @__captured_stmt.18(ptr [[I160]], i32 [[TMP18]], ptr [[AGG_CAPTURED162]])
 // CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[LOADGEP_A_ADDR]], align 4
@@ -626,7 +616,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[LOADGEP_R_ADDR]], align 8
 // CHECK-NEXT:    store float [[CONV177]], ptr [[TMP21]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_INC169]]
-// CHECK:       omp_loop.inc169:
+// CHECK:       omp_loop.inc167:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT174]] = add nuw i32 [[OMP_LOOP_IV172]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER166]]
 // CHECK:       omp_loop.body:
@@ -643,7 +633,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK:       omp_loop.inc:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER]]
-// CHECK:       omp.par.outlined.exit184.exitStub:
+// CHECK:       omp.par.exit.exitStub:
 // CHECK-NEXT:    ret void
 //
 //
@@ -731,10 +721,8 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[GEP_R_ADDR3:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR3]], align 8
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par, ptr [[STRUCTARG]])
-// CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK:       omp.par.outlined.exit:
-// CHECK-NEXT:    br label [[OMP_PAR_EXIT46_SPLIT:%.*]]
-// CHECK:       omp.par.exit46.split:
+// CHECK-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// CHECK:       omp.par.exit46:
 // CHECK-NEXT:    store i32 0, ptr [[I75]], align 4
 // CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_9]], ptr [[AGG_CAPTURED76]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[I75]], ptr [[TMP10]], align 8
@@ -770,7 +758,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK:       omp_loop.after86:
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM99:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    br label [[OMP_PARALLEL213:%.*]]
-// CHECK:       omp_parallel213:
+// CHECK:       omp_parallel210:
 // CHECK-NEXT:    [[GEP_A_ADDR210:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG209]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[LOADGEP_A_ADDR]], ptr [[GEP_A_ADDR210]], align 8
 // CHECK-NEXT:    [[GEP_B_ADDR211:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG209]], i32 0, i32 1
@@ -779,9 +767,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR212]], align 8
 // CHECK-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par.21, ptr [[STRUCTARG209]])
 // CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT134:%.*]]
-// CHECK:       omp.par.outlined.exit134:
-// CHECK-NEXT:    br label [[OMP_PAR_EXIT105_SPLIT:%.*]]
-// CHECK:       omp.par.exit105.split:
+// CHECK:       omp.par.exit105:
 // CHECK-NEXT:    store i32 0, ptr [[I135]], align 4
 // CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_13]], ptr [[AGG_CAPTURED136]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[I135]], ptr [[TMP18]], align 8
@@ -791,7 +777,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    call void @__captured_stmt.15(ptr [[DOTCOUNT_ADDR138]], ptr [[AGG_CAPTURED136]])
 // CHECK-NEXT:    [[DOTCOUNT139:%.*]] = load i32, ptr [[DOTCOUNT_ADDR138]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_PREHEADER140:%.*]]
-// CHECK:       omp_loop.preheader140:
+// CHECK:       omp_loop.preheader139:
 // CHECK-NEXT:    store i32 0, ptr [[P_LOWERBOUND154]], align 4
 // CHECK-NEXT:    [[TMP21:%.*]] = sub i32 [[DOTCOUNT139]], 1
 // CHECK-NEXT:    store i32 [[TMP21]], ptr [[P_UPPERBOUND155]], align 4
@@ -803,24 +789,24 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], [[TMP22]]
 // CHECK-NEXT:    [[TMP25:%.*]] = add i32 [[TMP24]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER141:%.*]]
-// CHECK:       omp_loop.header141:
+// CHECK:       omp_loop.header140:
 // CHECK-NEXT:    [[OMP_LOOP_IV147:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER140]] ], [ [[OMP_LOOP_NEXT149:%.*]], [[OMP_LOOP_INC144:%.*]] ]
 // CHECK-NEXT:    br label [[OMP_LOOP_COND142:%.*]]
-// CHECK:       omp_loop.cond142:
+// CHECK:       omp_loop.cond141:
 // CHECK-NEXT:    [[OMP_LOOP_CMP148:%.*]] = icmp ult i32 [[OMP_LOOP_IV147]], [[TMP25]]
 // CHECK-NEXT:    br i1 [[OMP_LOOP_CMP148]], label [[OMP_LOOP_BODY143:%.*]], label [[OMP_LOOP_EXIT145:%.*]]
-// CHECK:       omp_loop.exit145:
+// CHECK:       omp_loop.exit144:
 // CHECK-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM157]])
 // CHECK-NEXT:    [[OMP_GLOBAL_THREAD_NUM158:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM158]])
 // CHECK-NEXT:    br label [[OMP_LOOP_AFTER146:%.*]]
-// CHECK:       omp_loop.after146:
+// CHECK:       omp_loop.after145:
 // CHECK-NEXT:    br label [[OMP_PAR_REGION9_PARALLEL_AFTER:%.*]]
 // CHECK:       omp.par.region9.parallel.after:
 // CHECK-NEXT:    br label [[OMP_PAR_PRE_FINALIZE10:%.*]]
 // CHECK:       omp.par.pre_finalize10:
 // CHECK-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT159_EXITSTUB:%.*]]
-// CHECK:       omp_loop.body143:
+// CHECK:       omp_loop.body142:
 // CHECK-NEXT:    [[TMP26:%.*]] = add i32 [[OMP_LOOP_IV147]], [[TMP22]]
 // CHECK-NEXT:    call void @__captured_stmt.16(ptr [[I135]], i32 [[TMP26]], ptr [[AGG_CAPTURED137]])
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[LOADGEP_A_ADDR]], align 4
@@ -831,7 +817,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[LOADGEP_R_ADDR]], align 8
 // CHECK-NEXT:    store float [[CONV152]], ptr [[TMP29]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_INC144]]
-// CHECK:       omp_loop.inc144:
+// CHECK:       omp_loop.inc143:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT149]] = add nuw i32 [[OMP_LOOP_IV147]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER141]]
 // CHECK:       omp_loop.body83:
@@ -862,7 +848,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK:       omp_loop.inc25:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT30]] = add nuw i32 [[OMP_LOOP_IV28]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER22]]
-// CHECK:       omp.par.outlined.exit159.exitStub:
+// CHECK:       omp.par.exit11.exitStub:
 // CHECK-NEXT:    ret void
 //
 //
@@ -941,7 +927,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK:       omp_loop.inc119:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT124]] = add nuw i32 [[OMP_LOOP_IV122]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER116]]
-// CHECK:       omp.par.outlined.exit134.exitStub:
+// CHECK:       omp.par.exit105.exitStub:
 // CHECK-NEXT:    ret void
 //
 //
@@ -1020,7 +1006,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK:       omp_loop.inc60:
 // CHECK-NEXT:    [[OMP_LOOP_NEXT65]] = add nuw i32 [[OMP_LOOP_IV63]], 1
 // CHECK-NEXT:    br label [[OMP_LOOP_HEADER57]]
-// CHECK:       omp.par.outlined.exit.exitStub:
+// CHECK:       omp.par.exit46.exitStub:
 // CHECK-NEXT:    ret void
 //
 //
@@ -1512,9 +1498,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_parallel:
 // CHECK-DEBUG-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 0, ptr @_Z14parallel_for_0v..omp_par), !dbg [[DBG14:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK-DEBUG:       omp.par.outlined.exit:
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK-DEBUG:       omp.par.exit.split:
+// CHECK-DEBUG:       omp.par.exit:
 // CHECK-DEBUG-NEXT:    ret void, !dbg [[DBG18:![0-9]+]]
 //
 //
@@ -1581,7 +1565,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_loop.inc:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1, !dbg [[DBG27]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER]], !dbg [[DBG27]]
-// CHECK-DEBUG:       omp.par.outlined.exit.exitStub:
+// CHECK-DEBUG:       omp.par.exit.exitStub:
 // CHECK-DEBUG-NEXT:    ret void
 //
 //
@@ -1677,9 +1661,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    store ptr [[R_ADDR]], ptr [[GEP_R_ADDR20]], align 8
 // CHECK-DEBUG-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB6]], i32 1, ptr @_Z14parallel_for_1Pfid..omp_par.4, ptr [[STRUCTARG17]]), !dbg [[DBG82:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT16:%.*]]
-// CHECK-DEBUG:       omp.par.outlined.exit16:
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK-DEBUG:       omp.par.exit.split:
+// CHECK-DEBUG:       omp.par.exit:
 // CHECK-DEBUG-NEXT:    ret void, !dbg [[DBG84:![0-9]+]]
 //
 //
@@ -1710,15 +1692,13 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR3]], align 8
 // CHECK-DEBUG-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB8]], i32 1, ptr @_Z14parallel_for_1Pfid..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG88:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK-DEBUG:       omp.par.outlined.exit:
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT7_SPLIT:%.*]]
-// CHECK-DEBUG:       omp.par.exit7.split:
+// CHECK-DEBUG:       omp.par.exit7:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]], !dbg [[DBG92:![0-9]+]]
 // CHECK-DEBUG:       omp.par.region.parallel.after:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK-DEBUG:       omp.par.pre_finalize:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT16_EXITSTUB:%.*]], !dbg [[DBG92]]
-// CHECK-DEBUG:       omp.par.outlined.exit16.exitStub:
+// CHECK-DEBUG:       omp.par.exit.exitStub:
 // CHECK-DEBUG-NEXT:    ret void
 //
 //
@@ -1798,7 +1778,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_loop.inc:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1, !dbg [[DBG100]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER]], !dbg [[DBG100]]
-// CHECK-DEBUG:       omp.par.outlined.exit.exitStub:
+// CHECK-DEBUG:       omp.par.exit7.exitStub:
 // CHECK-DEBUG-NEXT:    ret void
 //
 //
@@ -1901,10 +1881,8 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    [[GEP_R_ADDR:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 2
 // CHECK-DEBUG-NEXT:    store ptr [[R_ADDR]], ptr [[GEP_R_ADDR]], align 8
 // CHECK-DEBUG-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB13]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par.23, ptr [[STRUCTARG]]), !dbg [[DBG140:![0-9]+]]
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT184:%.*]]
-// CHECK-DEBUG:       omp.par.outlined.exit184:
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK-DEBUG:       omp.par.exit.split:
+// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT184:%.*]]
+// CHECK-DEBUG:       omp.par.exit:
 // CHECK-DEBUG-NEXT:      #dbg_declare(ptr [[I185]], [[META144:![0-9]+]], !DIExpression(), [[META147:![0-9]+]])
 // CHECK-DEBUG-NEXT:    store i32 0, ptr [[I185]], align 4, !dbg [[META147]]
 // CHECK-DEBUG-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_17]], ptr [[AGG_CAPTURED186]], i32 0, i32 0, !dbg [[DBG148:![0-9]+]]
@@ -1915,7 +1893,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    call void @__captured_stmt.19(ptr [[DOTCOUNT_ADDR188]], ptr [[AGG_CAPTURED186]]), !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    [[DOTCOUNT189:%.*]] = load i32, ptr [[DOTCOUNT_ADDR188]], align 4, !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_PREHEADER190:%.*]], !dbg [[DBG148]]
-// CHECK-DEBUG:       omp_loop.preheader190:
+// CHECK-DEBUG:       omp_loop.preheader187:
 // CHECK-DEBUG-NEXT:    store i32 0, ptr [[P_LOWERBOUND204]], align 4, !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    [[TMP3:%.*]] = sub i32 [[DOTCOUNT189]], 1, !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    store i32 [[TMP3]], ptr [[P_UPPERBOUND205]], align 4, !dbg [[DBG148]]
@@ -1927,13 +1905,13 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], [[TMP4]], !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], 1, !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER191:%.*]], !dbg [[DBG148]]
-// CHECK-DEBUG:       omp_loop.header191:
+// CHECK-DEBUG:       omp_loop.header188:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_IV197:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER190]] ], [ [[OMP_LOOP_NEXT199:%.*]], [[OMP_LOOP_INC194:%.*]] ], !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_COND192:%.*]], !dbg [[DBG148]]
-// CHECK-DEBUG:       omp_loop.cond192:
+// CHECK-DEBUG:       omp_loop.cond189:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_CMP198:%.*]] = icmp ult i32 [[OMP_LOOP_IV197]], [[TMP7]], !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    br i1 [[OMP_LOOP_CMP198]], label [[OMP_LOOP_BODY193:%.*]], label [[OMP_LOOP_EXIT195:%.*]], !dbg [[DBG148]]
-// CHECK-DEBUG:       omp_loop.body193:
+// CHECK-DEBUG:       omp_loop.body190:
 // CHECK-DEBUG-NEXT:    [[TMP8:%.*]] = add i32 [[OMP_LOOP_IV197]], [[TMP4]], !dbg [[DBG150:![0-9]+]]
 // CHECK-DEBUG-NEXT:    call void @__captured_stmt.20(ptr [[I185]], i32 [[TMP8]], ptr [[AGG_CAPTURED187]]), !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    [[TMP9:%.*]] = load i32, ptr [[A_ADDR]], align 4, !dbg [[DBG151:![0-9]+]]
@@ -1944,15 +1922,15 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[R_ADDR]], align 8, !dbg [[DBG153:![0-9]+]]
 // CHECK-DEBUG-NEXT:    store float [[CONV202]], ptr [[TMP11]], align 4, !dbg [[DBG154:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_INC194]], !dbg [[DBG148]]
-// CHECK-DEBUG:       omp_loop.inc194:
+// CHECK-DEBUG:       omp_loop.inc191:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT199]] = add nuw i32 [[OMP_LOOP_IV197]], 1, !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER191]], !dbg [[DBG148]]
-// CHECK-DEBUG:       omp_loop.exit195:
+// CHECK-DEBUG:       omp_loop.exit192:
 // CHECK-DEBUG-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB42]], i32 [[OMP_GLOBAL_THREAD_NUM207]]), !dbg [[DBG148]]
 // CHECK-DEBUG-NEXT:    [[OMP_GLOBAL_THREAD_NUM208:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB42]]), !dbg [[DBG150]]
 // CHECK-DEBUG-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB43:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM208]]), !dbg [[DBG150]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_AFTER196:%.*]], !dbg [[DBG148]]
-// CHECK-DEBUG:       omp_loop.after196:
+// CHECK-DEBUG:       omp_loop.after193:
 // CHECK-DEBUG-NEXT:    ret void, !dbg [[DBG155:![0-9]+]]
 //
 //
@@ -2033,9 +2011,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR217]], align 8
 // CHECK-DEBUG-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB18]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par.22, ptr [[STRUCTARG214]]), !dbg [[DBG166:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT159:%.*]]
-// CHECK-DEBUG:       omp.par.outlined.exit159:
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT11_SPLIT:%.*]]
-// CHECK-DEBUG:       omp.par.exit11.split:
+// CHECK-DEBUG:       omp.par.exit11:
 // CHECK-DEBUG-NEXT:      #dbg_declare(ptr [[I160]], [[META170:![0-9]+]], !DIExpression(), [[META173:![0-9]+]])
 // CHECK-DEBUG-NEXT:    store i32 0, ptr [[I160]], align 4, !dbg [[META173]]
 // CHECK-DEBUG-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_15]], ptr [[AGG_CAPTURED161]], i32 0, i32 0, !dbg [[DBG174:![0-9]+]]
@@ -2046,7 +2022,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    call void @__captured_stmt.17(ptr [[DOTCOUNT_ADDR163]], ptr [[AGG_CAPTURED161]]), !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    [[DOTCOUNT164:%.*]] = load i32, ptr [[DOTCOUNT_ADDR163]], align 4, !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_PREHEADER165:%.*]], !dbg [[DBG174]]
-// CHECK-DEBUG:       omp_loop.preheader165:
+// CHECK-DEBUG:       omp_loop.preheader163:
 // CHECK-DEBUG-NEXT:    store i32 0, ptr [[P_LOWERBOUND179]], align 4, !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    [[TMP13:%.*]] = sub i32 [[DOTCOUNT164]], 1, !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    store i32 [[TMP13]], ptr [[P_UPPERBOUND180]], align 4, !dbg [[DBG174]]
@@ -2058,24 +2034,24 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    [[TMP16:%.*]] = sub i32 [[TMP15]], [[TMP14]], !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    [[TMP17:%.*]] = add i32 [[TMP16]], 1, !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER166:%.*]], !dbg [[DBG174]]
-// CHECK-DEBUG:       omp_loop.header166:
+// CHECK-DEBUG:       omp_loop.header164:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_IV172:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER165]] ], [ [[OMP_LOOP_NEXT174:%.*]], [[OMP_LOOP_INC169:%.*]] ], !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_COND167:%.*]], !dbg [[DBG174]]
-// CHECK-DEBUG:       omp_loop.cond167:
+// CHECK-DEBUG:       omp_loop.cond165:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_CMP173:%.*]] = icmp ult i32 [[OMP_LOOP_IV172]], [[TMP17]], !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    br i1 [[OMP_LOOP_CMP173]], label [[OMP_LOOP_BODY168:%.*]], label [[OMP_LOOP_EXIT170:%.*]], !dbg [[DBG174]]
-// CHECK-DEBUG:       omp_loop.exit170:
+// CHECK-DEBUG:       omp_loop.exit168:
 // CHECK-DEBUG-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB39]], i32 [[OMP_GLOBAL_THREAD_NUM182]]), !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    [[OMP_GLOBAL_THREAD_NUM183:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB39]]), !dbg [[DBG176:![0-9]+]]
 // CHECK-DEBUG-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB40:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM183]]), !dbg [[DBG176]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_AFTER171:%.*]], !dbg [[DBG174]]
-// CHECK-DEBUG:       omp_loop.after171:
+// CHECK-DEBUG:       omp_loop.after169:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_REGION_PARALLEL_AFTER:%.*]], !dbg [[DBG177:![0-9]+]]
 // CHECK-DEBUG:       omp.par.region.parallel.after:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK-DEBUG:       omp.par.pre_finalize:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT184_EXITSTUB:%.*]], !dbg [[DBG177]]
-// CHECK-DEBUG:       omp_loop.body168:
+// CHECK-DEBUG:       omp_loop.body166:
 // CHECK-DEBUG-NEXT:    [[TMP18:%.*]] = add i32 [[OMP_LOOP_IV172]], [[TMP14]], !dbg [[DBG176]]
 // CHECK-DEBUG-NEXT:    call void @__captured_stmt.18(ptr [[I160]], i32 [[TMP18]], ptr [[AGG_CAPTURED162]]), !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    [[TMP19:%.*]] = load i32, ptr [[LOADGEP_A_ADDR]], align 4, !dbg [[DBG178:![0-9]+]]
@@ -2086,7 +2062,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[LOADGEP_R_ADDR]], align 8, !dbg [[DBG180:![0-9]+]]
 // CHECK-DEBUG-NEXT:    store float [[CONV177]], ptr [[TMP21]], align 4, !dbg [[DBG181:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_INC169]], !dbg [[DBG174]]
-// CHECK-DEBUG:       omp_loop.inc169:
+// CHECK-DEBUG:       omp_loop.inc167:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT174]] = add nuw i32 [[OMP_LOOP_IV172]], 1, !dbg [[DBG174]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER166]], !dbg [[DBG174]]
 // CHECK-DEBUG:       omp_loop.body:
@@ -2103,7 +2079,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_loop.inc:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1, !dbg [[DBG162]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER]], !dbg [[DBG162]]
-// CHECK-DEBUG:       omp.par.outlined.exit184.exitStub:
+// CHECK-DEBUG:       omp.par.exit.exitStub:
 // CHECK-DEBUG-NEXT:    ret void
 //
 //
@@ -2193,9 +2169,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR3]], align 8
 // CHECK-DEBUG-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB23]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG197:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK-DEBUG:       omp.par.outlined.exit:
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT46_SPLIT:%.*]]
-// CHECK-DEBUG:       omp.par.exit46.split:
+// CHECK-DEBUG:       omp.par.exit46:
 // CHECK-DEBUG-NEXT:      #dbg_declare(ptr [[I75]], [[META201:![0-9]+]], !DIExpression(), [[META204:![0-9]+]])
 // CHECK-DEBUG-NEXT:    store i32 0, ptr [[I75]], align 4, !dbg [[META204]]
 // CHECK-DEBUG-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_9]], ptr [[AGG_CAPTURED76]], i32 0, i32 0, !dbg [[DBG205:![0-9]+]]
@@ -2232,7 +2206,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_loop.after86:
 // CHECK-DEBUG-NEXT:    [[OMP_GLOBAL_THREAD_NUM99:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB31:[0-9]+]]), !dbg [[DBG208:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_PARALLEL213:%.*]]
-// CHECK-DEBUG:       omp_parallel213:
+// CHECK-DEBUG:       omp_parallel210:
 // CHECK-DEBUG-NEXT:    [[GEP_A_ADDR210:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG209]], i32 0, i32 0
 // CHECK-DEBUG-NEXT:    store ptr [[LOADGEP_A_ADDR]], ptr [[GEP_A_ADDR210]], align 8
 // CHECK-DEBUG-NEXT:    [[GEP_B_ADDR211:%.*]] = getelementptr { ptr, ptr, ptr }, ptr [[STRUCTARG209]], i32 0, i32 1
@@ -2241,9 +2215,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    store ptr [[LOADGEP_R_ADDR]], ptr [[GEP_R_ADDR212]], align 8
 // CHECK-DEBUG-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB31]], i32 1, ptr @_Z14parallel_for_2Pfid..omp_par.21, ptr [[STRUCTARG209]]), !dbg [[DBG209:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT134:%.*]]
-// CHECK-DEBUG:       omp.par.outlined.exit134:
-// CHECK-DEBUG-NEXT:    br label [[OMP_PAR_EXIT105_SPLIT:%.*]]
-// CHECK-DEBUG:       omp.par.exit105.split:
+// CHECK-DEBUG:       omp.par.exit105:
 // CHECK-DEBUG-NEXT:      #dbg_declare(ptr [[I135]], [[META213:![0-9]+]], !DIExpression(), [[META216:![0-9]+]])
 // CHECK-DEBUG-NEXT:    store i32 0, ptr [[I135]], align 4, !dbg [[META216]]
 // CHECK-DEBUG-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_13]], ptr [[AGG_CAPTURED136]], i32 0, i32 0, !dbg [[DBG217:![0-9]+]]
@@ -2254,7 +2226,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    call void @__captured_stmt.15(ptr [[DOTCOUNT_ADDR138]], ptr [[AGG_CAPTURED136]]), !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    [[DOTCOUNT139:%.*]] = load i32, ptr [[DOTCOUNT_ADDR138]], align 4, !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_PREHEADER140:%.*]], !dbg [[DBG217]]
-// CHECK-DEBUG:       omp_loop.preheader140:
+// CHECK-DEBUG:       omp_loop.preheader139:
 // CHECK-DEBUG-NEXT:    store i32 0, ptr [[P_LOWERBOUND154]], align 4, !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    [[TMP21:%.*]] = sub i32 [[DOTCOUNT139]], 1, !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    store i32 [[TMP21]], ptr [[P_UPPERBOUND155]], align 4, !dbg [[DBG217]]
@@ -2266,24 +2238,24 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    [[TMP24:%.*]] = sub i32 [[TMP23]], [[TMP22]], !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    [[TMP25:%.*]] = add i32 [[TMP24]], 1, !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER141:%.*]], !dbg [[DBG217]]
-// CHECK-DEBUG:       omp_loop.header141:
+// CHECK-DEBUG:       omp_loop.header140:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_IV147:%.*]] = phi i32 [ 0, [[OMP_LOOP_PREHEADER140]] ], [ [[OMP_LOOP_NEXT149:%.*]], [[OMP_LOOP_INC144:%.*]] ], !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_COND142:%.*]], !dbg [[DBG217]]
-// CHECK-DEBUG:       omp_loop.cond142:
+// CHECK-DEBUG:       omp_loop.cond141:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_CMP148:%.*]] = icmp ult i32 [[OMP_LOOP_IV147]], [[TMP25]], !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    br i1 [[OMP_LOOP_CMP148]], label [[OMP_LOOP_BODY143:%.*]], label [[OMP_LOOP_EXIT145:%.*]], !dbg [[DBG217]]
-// CHECK-DEBUG:       omp_loop.exit145:
+// CHECK-DEBUG:       omp_loop.exit144:
 // CHECK-DEBUG-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB36]], i32 [[OMP_GLOBAL_THREAD_NUM157]]), !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    [[OMP_GLOBAL_THREAD_NUM158:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB36]]), !dbg [[DBG219:![0-9]+]]
 // CHECK-DEBUG-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB37:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM158]]), !dbg [[DBG219]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_AFTER146:%.*]], !dbg [[DBG217]]
-// CHECK-DEBUG:       omp_loop.after146:
+// CHECK-DEBUG:       omp_loop.after145:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_REGION9_PARALLEL_AFTER:%.*]], !dbg [[DBG220:![0-9]+]]
 // CHECK-DEBUG:       omp.par.region9.parallel.after:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_PRE_FINALIZE10:%.*]]
 // CHECK-DEBUG:       omp.par.pre_finalize10:
 // CHECK-DEBUG-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT159_EXITSTUB:%.*]], !dbg [[DBG220]]
-// CHECK-DEBUG:       omp_loop.body143:
+// CHECK-DEBUG:       omp_loop.body142:
 // CHECK-DEBUG-NEXT:    [[TMP26:%.*]] = add i32 [[OMP_LOOP_IV147]], [[TMP22]], !dbg [[DBG219]]
 // CHECK-DEBUG-NEXT:    call void @__captured_stmt.16(ptr [[I135]], i32 [[TMP26]], ptr [[AGG_CAPTURED137]]), !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    [[TMP27:%.*]] = load i32, ptr [[LOADGEP_A_ADDR]], align 4, !dbg [[DBG221:![0-9]+]]
@@ -2294,7 +2266,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[LOADGEP_R_ADDR]], align 8, !dbg [[DBG223:![0-9]+]]
 // CHECK-DEBUG-NEXT:    store float [[CONV152]], ptr [[TMP29]], align 4, !dbg [[DBG224:![0-9]+]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_INC144]], !dbg [[DBG217]]
-// CHECK-DEBUG:       omp_loop.inc144:
+// CHECK-DEBUG:       omp_loop.inc143:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT149]] = add nuw i32 [[OMP_LOOP_IV147]], 1, !dbg [[DBG217]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER141]], !dbg [[DBG217]]
 // CHECK-DEBUG:       omp_loop.body83:
@@ -2325,7 +2297,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_loop.inc25:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT30]] = add nuw i32 [[OMP_LOOP_IV28]], 1, !dbg [[DBG193]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER22]], !dbg [[DBG193]]
-// CHECK-DEBUG:       omp.par.outlined.exit159.exitStub:
+// CHECK-DEBUG:       omp.par.exit11.exitStub:
 // CHECK-DEBUG-NEXT:    ret void
 //
 //
@@ -2405,7 +2377,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_loop.inc119:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT124]] = add nuw i32 [[OMP_LOOP_IV122]], 1, !dbg [[DBG241]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER116]], !dbg [[DBG241]]
-// CHECK-DEBUG:       omp.par.outlined.exit134.exitStub:
+// CHECK-DEBUG:       omp.par.exit105.exitStub:
 // CHECK-DEBUG-NEXT:    ret void
 //
 //
@@ -2485,7 +2457,7 @@ void parallel_for_2(float *r, int a, double b) {
 // CHECK-DEBUG:       omp_loop.inc60:
 // CHECK-DEBUG-NEXT:    [[OMP_LOOP_NEXT65]] = add nuw i32 [[OMP_LOOP_IV63]], 1, !dbg [[DBG257]]
 // CHECK-DEBUG-NEXT:    br label [[OMP_LOOP_HEADER57]], !dbg [[DBG257]]
-// CHECK-DEBUG:       omp.par.outlined.exit.exitStub:
+// CHECK-DEBUG:       omp.par.exit46.exitStub:
 // CHECK-DEBUG-NEXT:    ret void
 //
 //

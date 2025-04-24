@@ -81,9 +81,14 @@ public:
   enum BinaryType {
     eBinaryTypeInvalid = 0,
     eBinaryTypeUnknown,
-    eBinaryTypeKernel,    /// kernel binary
-    eBinaryTypeUser,      /// user process binary
-    eBinaryTypeStandalone /// standalone binary / firmware
+    /// kernel binary
+    eBinaryTypeKernel,
+    /// user process binary, dyld addr
+    eBinaryTypeUser,
+    /// user process binary, dyld_all_image_infos addr
+    eBinaryTypeUserAllImageInfos,
+    /// standalone binary / firmware
+    eBinaryTypeStandalone
   };
 
   struct LoadableData {
@@ -743,6 +748,7 @@ public:
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
+  std::string GetObjectName() const;
 
 protected:
   // Member variables.

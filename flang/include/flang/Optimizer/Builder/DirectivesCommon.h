@@ -54,7 +54,8 @@ struct AddrAndBoundsInfo {
 inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
                                                 mlir::Value symAddr,
                                                 bool isOptional,
-                                                mlir::Location loc) {
+                                                mlir::Location loc,
+                                                bool unwrapFirBox = true) {
   mlir::Value rawInput = symAddr;
   if (auto declareOp =
           mlir::dyn_cast_or_null<hlfir::DeclareOp>(symAddr.getDefiningOp())) {
@@ -80,7 +81,8 @@ inline AddrAndBoundsInfo getDataOperandBaseAddr(fir::FirOpBuilder &builder,
     // all address/dimension retrievals. For Fortran optional though, leave
     // the load generation for later so it can be done in the appropriate
     // if branches.
-    if (mlir::isa<fir::ReferenceType>(symAddr.getType()) && !isOptional) {
+    if (unwrapFirBox && mlir::isa<fir::ReferenceType>(symAddr.getType()) &&
+        !isOptional) {
       mlir::Value addr = builder.create<fir::LoadOp>(loc, symAddr);
       return AddrAndBoundsInfo(addr, rawInput, isPresent, boxTy);
     }
@@ -201,7 +203,8 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
 template <typename BoundsOp, typename BoundsType>
 llvm::SmallVector<mlir::Value>
 genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
-                 fir::ExtendedValue dataExv, bool isAssumedSize) {
+                 fir::ExtendedValue dataExv, bool isAssumedSize,
+                 bool strideIncludeLowerExtent = false) {
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
   llvm::SmallVector<mlir::Value> bounds;
@@ -211,23 +214,30 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const unsigned rank = dataExv.rank();
+  mlir::Value cumulativeExtent = one;
   for (unsigned dim = 0; dim < rank; ++dim) {
     mlir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
     mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
     mlir::Value ub;
     mlir::Value lb = zero;
-    mlir::Value ext = fir::factory::readExtent(builder, loc, dataExv, dim);
+    mlir::Value extent = fir::factory::readExtent(builder, loc, dataExv, dim);
     if (isAssumedSize && dim + 1 == rank) {
-      ext = zero;
+      extent = zero;
       ub = lb;
     } else {
       // ub = extent - 1
-      ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
+      ub = builder.create<mlir::arith::SubIOp>(loc, extent, one);
+    }
+    mlir::Value stride = one;
+    if (strideIncludeLowerExtent) {
+      stride = cumulativeExtent;
+      cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+          loc, cumulativeExtent, extent);
     }
 
-    mlir::Value bound =
-        builder.create<BoundsOp>(loc, boundTy, lb, ub, ext, one, false, baseLb);
+    mlir::Value bound = builder.create<BoundsOp>(loc, boundTy, lb, ub, extent,
+                                                 stride, false, baseLb);
     bounds.push_back(bound);
   }
   return bounds;

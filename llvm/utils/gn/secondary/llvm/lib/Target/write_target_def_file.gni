@@ -1,0 +1,36 @@
+import("//llvm/lib/Target/targets.gni")
+import("//llvm/utils/gn/build/write_cmake_config.gni")
+
+template("write_target_def_file") {
+  assert(defined(invoker.key), "must set 'key' in $target_name")
+  assert(defined(invoker.value), "must set 'value' in $target_name")
+
+  write_cmake_config(target_name) {
+    input = "$target_name.in"
+    output = "$target_gen_dir/$target_name"
+
+    if (defined(invoker.all_targets)) {
+      all_targets = invoker.all_targets
+    } else {
+      all_targets = llvm_targets_to_build
+    }
+
+    if (defined(invoker.visibility)) {
+      visibility = invoker.visibility
+    }
+
+    # Build something like
+    # `LLVM_ENUM_ASM_PARSERS=LLVM_ASM_PARSER(ARM)\nLLVM_ASM_PARSER(X86)\n`. Note
+    # that \n is a literal '\' followed by a literal 'n', not a newline
+    # character.  (write_cmake_config.py replaces that with a real newline).
+    value = ""
+    foreach(target, all_targets) {
+      value = "$value${invoker.value}($target)\n"
+    }
+    if (all_targets == []) {
+      not_needed(invoker, [ "value" ])
+    }
+    values = [ "${invoker.key}=$value" ]
+  }
+}
+

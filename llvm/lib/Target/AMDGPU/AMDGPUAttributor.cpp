@@ -17,14 +17,11 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define DEBUG_TYPE "amdgpu-attributor"
-
-namespace llvm {
-void initializeCycleInfoWrapperPassPass(PassRegistry &);
-} // namespace llvm
 
 using namespace llvm;
 
@@ -110,6 +107,8 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
                                                     : QUEUE_PTR;
   case Intrinsic::trap:
+  case Intrinsic::debugtrap:
+  case Intrinsic::ubsantrap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
       return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
                                                       : QUEUE_PTR;
@@ -1235,6 +1234,8 @@ static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
   return false;
 }
 
+// TODO: Migrate to range merge of amdgpu-agpr-alloc.
+// FIXME: Why is this using Attribute::NoUnwind?
 struct AAAMDGPUNoAGPR
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>,
@@ -1250,7 +1251,10 @@ struct AAAMDGPUNoAGPR
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    if (F->hasFnAttribute("amdgpu-no-agpr"))
+    auto [MinNumAGPR, MaxNumAGPR] =
+        AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                        /*OnlyFirstRequired=*/true);
+    if (MinNumAGPR == 0)
       indicateOptimisticFixpoint();
   }
 
@@ -1297,7 +1301,7 @@ struct AAAMDGPUNoAGPR
       return ChangeStatus::UNCHANGED;
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
     return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, "amdgpu-no-agpr")});
+                           {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
   }
 
   const std::string getName() const override { return "AAAMDGPUNoAGPR"; }

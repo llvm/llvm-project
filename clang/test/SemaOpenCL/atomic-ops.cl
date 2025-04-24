@@ -159,7 +159,7 @@ void memory_checks(atomic_int *Ap, int *p, int val) {
   (void)__opencl_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_relaxed, memory_scope_work_group);
 }
 
-void synchscope_checks(atomic_int *Ap, int scope) {
+void syncscope_checks(atomic_int *Ap, int scope) {
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_work_item); // expected-error{{synchronization scope argument to atomic operation is invalid}}
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_work_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_device);

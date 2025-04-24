@@ -19,9 +19,9 @@ using namespace MIPatternMatch;
 
 AMDGPUCombinerHelper::AMDGPUCombinerHelper(
     GISelChangeObserver &Observer, MachineIRBuilder &B, bool IsPreLegalize,
-    GISelKnownBits *KB, MachineDominatorTree *MDT, const LegalizerInfo *LI,
+    GISelValueTracking *VT, MachineDominatorTree *MDT, const LegalizerInfo *LI,
     const GCNSubtarget &STI)
-    : CombinerHelper(Observer, B, IsPreLegalize, KB, MDT, LI), STI(STI),
+    : CombinerHelper(Observer, B, IsPreLegalize, VT, MDT, LI), STI(STI),
       TII(*STI.getInstrInfo()) {}
 
 LLVM_READNONE

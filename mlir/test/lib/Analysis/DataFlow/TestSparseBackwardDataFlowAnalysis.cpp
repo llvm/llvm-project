@@ -41,7 +41,7 @@ struct WrittenToLatticeValue {
 
   ChangeResult addWrites(const SetVector<StringAttr> &writes) {
     int sizeBefore = this->writes.size();
-    this->writes.insert(writes.begin(), writes.end());
+    this->writes.insert_range(writes);
     int sizeAfter = this->writes.size();
     return sizeBefore == sizeAfter ? ChangeResult::NoChange
                                    : ChangeResult::Change;

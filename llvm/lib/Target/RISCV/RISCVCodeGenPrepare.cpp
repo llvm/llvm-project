@@ -113,9 +113,10 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
 // vfredosum.vs v8, v8, v10
 // vfmv.f.s fa0, v8
 //
-// This mainly affects ordered fadd reductions, since other types of reduction
-// typically use element-wise vectorisation in the loop body. This tries to
-// vectorize any scalar phis that feed into a fadd reduction:
+// This mainly affects ordered fadd reductions and VP reductions that have a
+// scalar start value, since other types of reduction typically use element-wise
+// vectorisation in the loop body. This tries to vectorize any scalar phis that
+// feed into these reductions:
 //
 // loop:
 // %phi = phi <float> [ ..., %entry ], [ %acc, %loop ]
@@ -137,7 +138,8 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
-  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd)
+  if (I.getIntrinsicID() != Intrinsic::vector_reduce_fadd &&
+      !isa<VPReductionIntrinsic>(&I))
     return false;
 
   auto *PHI = dyn_cast<PHINode>(I.getOperand(0));

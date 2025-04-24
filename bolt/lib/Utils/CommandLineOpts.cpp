@@ -80,6 +80,12 @@ cl::opt<bool> EqualizeBBCounts(
              "in non-LBR and shrink wrapping)"),
     cl::ZeroOrMore, cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
+llvm::cl::opt<bool> ForcePatch(
+    "force-patch",
+    llvm::cl::desc("force patching of original entry points to ensure "
+                   "execution follows only the new/optimized code."),
+    llvm::cl::Hidden, llvm::cl::cat(BoltCategory));
+
 cl::opt<bool> RemoveSymtab("remove-symtab", cl::desc("Remove .symtab section"),
                            cl::cat(BoltCategory));
 

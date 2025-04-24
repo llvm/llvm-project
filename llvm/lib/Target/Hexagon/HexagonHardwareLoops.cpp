@@ -24,6 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -85,13 +86,6 @@ static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::Hidden,
                                             "instructions"));
 
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
-
-namespace llvm {
-
-  FunctionPass *createHexagonHardwareLoops();
-  void initializeHexagonHardwareLoopsPass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -731,6 +725,11 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
                                                Register IVReg,
                                                int64_t IVBump,
                                                Comparison::Kind Cmp) const {
+  LLVM_DEBUG(llvm::dbgs() << "Loop: " << *Loop << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Initial Value: " << *Start << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "End Value: " << *End << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Inc/Dec Value: " << IVBump << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Comparison: " << Cmp << "\n");
   // Cannot handle comparison EQ, i.e. while (A == B).
   if (Cmp == Comparison::EQ)
     return nullptr;
@@ -825,7 +824,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   // a computation of it into the preheader.
 
   // If the induction variable bump is not a power of 2, quit.
-  // Othwerise we'd need a general integer division.
+  // Otherwise we'd need a general integer division.
   if (!isPowerOf2_64(std::abs(IVBump)))
     return nullptr;
 
@@ -846,6 +845,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   if (IVBump < 0) {
     std::swap(Start, End);
     IVBump = -IVBump;
+    std::swap(CmpLess, CmpGreater);
   }
   // Cmp may now have a wrong direction, e.g.  LEs may now be GEs.
   // Signedness, and "including equality" are preserved.
@@ -989,7 +989,45 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     CountSR = 0;
   }
 
-  return new CountValue(CountValue::CV_Register, CountR, CountSR);
+  const TargetRegisterClass *PredRC = &Hexagon::PredRegsRegClass;
+  Register MuxR = CountR;
+  unsigned MuxSR = CountSR;
+  // For the loop count to be valid unsigned number, CmpLess should imply
+  // Dist >= 0. Similarly, CmpGreater should imply Dist < 0. We can skip the
+  // check if the initial distance is zero and the comparison is LTu || LTEu.
+  if (!(Start->isImm() && StartV == 0 && Comparison::isUnsigned(Cmp) &&
+        CmpLess) &&
+      (CmpLess || CmpGreater)) {
+    // Generate:
+    //   DistCheck = CMP_GT DistR,  0   --> CmpLess
+    //   DistCheck = CMP_GT DistR, -1   --> CmpGreater
+    Register DistCheckR = MRI->createVirtualRegister(PredRC);
+    const MCInstrDesc &DistCheckD = TII->get(Hexagon::C2_cmpgti);
+    BuildMI(*PH, InsertPos, DL, DistCheckD, DistCheckR)
+        .addReg(DistR, 0, DistSR)
+        .addImm((CmpLess) ? 0 : -1);
+
+    // Generate:
+    //   MUXR = MUX DistCheck, CountR, 1   --> CmpLess
+    //   MUXR = MUX DistCheck, 1, CountR   --> CmpGreater
+    MuxR = MRI->createVirtualRegister(IntRC);
+    if (CmpLess) {
+      const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxir);
+      BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
+          .addReg(DistCheckR)
+          .addReg(CountR, 0, CountSR)
+          .addImm(1);
+    } else {
+      const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxri);
+      BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
+          .addReg(DistCheckR)
+          .addImm(1)
+          .addReg(CountR, 0, CountSR);
+    }
+    MuxSR = 0;
+  }
+
+  return new CountValue(CountValue::CV_Register, MuxR, MuxSR);
 }
 
 /// Return true if the operation is invalid within hardware loop.
@@ -1398,10 +1436,10 @@ bool HexagonHardwareLoops::phiMayWrapOrUnderflow(
 /// counter if it is <= 1. We only need to perform this analysis if the
 /// initial value is a register.
 ///
-/// This function assumes the initial value may underfow unless proven
+/// This function assumes the initial value may underflow unless proven
 /// otherwise. If the type is signed, then we don't care because signed
 /// underflow is undefined. We attempt to prove the initial value is not
-/// zero by perfoming a crude analysis of the loop counter. This function
+/// zero by performing a crude analysis of the loop counter. This function
 /// checks if the initial value is used in any comparison prior to the loop
 /// and, if so, assumes the comparison is a range check. This is inexact,
 /// but will catch the simple cases.
