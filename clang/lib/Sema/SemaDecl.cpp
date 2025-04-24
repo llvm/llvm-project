@@ -6108,7 +6108,7 @@ static bool isFromSystemHeader(SourceManager &SM, const Decl *D) {
          SM.isInSystemMacro(D->getLocation());
 }
 
-static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo* II) {
+static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo *II) {
   if (!II)
     return false;
 
