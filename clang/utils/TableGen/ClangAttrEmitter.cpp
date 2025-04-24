@@ -3421,7 +3421,7 @@ namespace {
       // in reverse.
       std::vector<const Record *> SuperClasses = R->getSuperClasses();
       for (const Record *R : reverse(SuperClasses)) {
-        if (AttrClass *SuperClass = findClassByRecord(R);)
+        if (AttrClass *SuperClass = findClassByRecord(R))
           return SuperClass;
       }
       return nullptr;
