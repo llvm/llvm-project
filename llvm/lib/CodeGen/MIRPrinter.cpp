@@ -558,26 +558,29 @@ void MIRPrinter::convertCallSiteObjects(yaml::MachineFunction &YMF,
                                         const MachineFunction &MF,
                                         ModuleSlotTracker &MST) {
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
-  for (auto CSInfo : MF.getCallSitesInfo()) {
+  for (auto CSInfoMap : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
     yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
-    MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
+    MachineBasicBlock::const_instr_iterator CallI =
+        CSInfoMap.first->getIterator();
     CallLocation.BlockNum = CallI->getParent()->getNumber();
     // Get call instruction offset from the beginning of block.
     CallLocation.Offset =
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
+
+    auto [ArgRegPairs, CalleeTypeIds] = CSInfoMap.second;
     // Construct call arguments and theirs forwarding register info.
-    for (auto ArgReg : CSInfo.second.ArgRegPairs) {
+    for (auto ArgReg : ArgRegPairs) {
       yaml::CallSiteInfo::ArgRegPair YmlArgReg;
       YmlArgReg.ArgNo = ArgReg.ArgNo;
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
     }
     // Get type ids.
-    for (auto *CalleeTypeId : CSInfo.second.CalleeTypeIds) {
+    for (auto *CalleeTypeId : CalleeTypeIds) {
       YmlCS.CalleeTypeIds.push_back(CalleeTypeId->getZExtValue());
     }
     YMF.CallSitesInfo.push_back(std::move(YmlCS));
