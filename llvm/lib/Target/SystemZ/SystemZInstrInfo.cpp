@@ -2162,26 +2162,20 @@ bool SystemZInstrInfo::isLoadAndTestAsCmp(const MachineInstr &MI) const {
   return (MI.getOpcode() == SystemZ::LTEBR ||
           MI.getOpcode() == SystemZ::LTDBR ||
           MI.getOpcode() == SystemZ::LTXBR) &&
-    MI.getOperand(0).isDead();
+         MI.getOperand(0).isDead();
 }
 
 bool SystemZInstrInfo::isCompareZero(const MachineInstr &Compare) const {
   if (isLoadAndTestAsCmp(Compare))
     return true;
   return Compare.isCompare() && Compare.getNumExplicitOperands() == 2 &&
-    Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
+         Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
 }
 
-unsigned SystemZInstrInfo::
-getCompareSourceReg(const MachineInstr &Compare) const {
-  unsigned reg = 0;
-  if (Compare.isCompare())
-    reg = Compare.getOperand(0).getReg();
-  else if (isLoadAndTestAsCmp(Compare))
-    reg = Compare.getOperand(1).getReg();
-  assert(reg);
-
-  return reg;
+Register
+SystemZInstrInfo::getCompareSourceReg(const MachineInstr &Compare) const {
+  assert(isCompareZero(Compare) && "Expected a compare with 0.");
+  return Compare.getOperand(isLoadAndTestAsCmp(Compare) ? 1 : 0).getReg();
 }
 
 bool SystemZInstrInfo::

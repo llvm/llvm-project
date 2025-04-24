@@ -50,16 +50,19 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // Num instructions left to schedule.
   unsigned NumLeft;
 
-  // Tru if latency scheduling is enabled.
+  // True if latency scheduling is enabled.
   bool ShouldReduceLatency;
 
   // Keep track of currently live registers.
-  struct VRegSet : std::set<Register> {
-    void dump(std::string Msg);
-    size_type count(Register Reg) const {
-      assert(Reg.isVirtual());
-      return std::set<Register>::count(Reg);
-    }
+  class VRegSet {
+    std::set<Register> Regs;
+
+  public:
+    void clear() { Regs.clear(); }
+    void insert(Register Reg);
+    void erase(Register Reg);
+    bool count(Register Reg) const;
+    void dump() const;
   } LiveRegs;
 
   // True if MI is also using the register it defines.
@@ -70,7 +73,7 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   unsigned getRemLat(SchedBoundary *Zone) const;
 
   // A large group of stores at the bottom is spread upwards.
-  std::set<const SUnit*> StoresGroup;
+  std::set<const SUnit *> StoresGroup;
   bool FirstStoreInGroupScheduled;
   void initializeStoresGroup();
 
@@ -86,7 +89,8 @@ protected:
                     SchedBoundary *Zone) const override;
 
 public:
-  SystemZPreRASchedStrategy(const MachineSchedContext *C) : GenericScheduler(C) {
+  SystemZPreRASchedStrategy(const MachineSchedContext *C)
+      : GenericScheduler(C) {
     initializePrioRegClasses(C->MF->getRegInfo().getTargetRegisterInfo());
   }
 
