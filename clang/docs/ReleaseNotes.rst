@@ -419,6 +419,8 @@ Improvements to Clang's diagnostics
 - ``-Winitializer-overrides`` and ``-Wreorder-init-list`` are now grouped under
   the ``-Wc99-designator`` diagnostic group, as they also are about the
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
+- ``-Wreserved-identifier`` now fires on reserved parameter names in a function
+  declaration which is not a definition.
 
 Improvements to Clang's time-trace
 ----------------------------------

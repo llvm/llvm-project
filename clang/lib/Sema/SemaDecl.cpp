@@ -10438,6 +10438,15 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // Finally, we know we have the right number of parameters, install them.
   NewFD->setParams(Params);
 
+  // If this declarator is a declaration and not a definition, its parameters
+  // will not be pushed onto a scope chain. That means we will not issue any
+  // reserved identifier warnings for the declaration, but we will for the
+  // definition. Handle those here.
+  if (!Params.empty() && !D.isFunctionDefinition()) {
+    for (const ParmVarDecl *PVD : Params)
+      warnOnReservedIdentifier(PVD);
+  }
+
   if (D.getDeclSpec().isNoreturnSpecified())
     NewFD->addAttr(
         C11NoReturnAttr::Create(Context, D.getDeclSpec().getNoreturnSpecLoc()));
@@ -15333,7 +15342,6 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   if (D.isInvalidType())
     New->setInvalidDecl();
 
-  warnOnReservedIdentifier(New);
   CheckExplicitObjectParameter(*this, New, ExplicitThisLoc);
 
   assert(S->isFunctionPrototypeScope());
