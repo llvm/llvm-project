@@ -214,53 +214,51 @@ define <vscale x 4 x i64> @udot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    uunpklo z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z5.h, z3.b
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z6.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z7.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z24.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z7.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z24.s, z5.h
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z25.s, z3.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.s, z4.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z26.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z6.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z27.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z28.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z29.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.s, z5.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z26.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z27.d, z7.s
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z7.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z28.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z24.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z6.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z29.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z25.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z30.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z31.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z8.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z9.d, z5.s
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z30.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z31.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z24.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z8.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z25.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z9.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z27.d, z27.d, z29.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z6.d, z28.d
+; CHECK-NEWLOWERING-NEXT:    mul z7.d, z7.d, z24.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z27.d, z28.d
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z4.d, z4.d, z5.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z7.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z9.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z2, z27
-; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z24.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mul z6.d, z6.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z29.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z5.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z2, z7
+; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z31.d, z9.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z9, [sp] // 16-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z31.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z3, z4
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z4.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z3, z6
 ; CHECK-NEWLOWERING-NEXT:    mla z3.d, p0/m, z30.d, z8.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
 ; CHECK-NEWLOWERING-NEXT:    add z1.d, z3.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    addvl sp, sp, #2
 ; CHECK-NEWLOWERING-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    udot z0.d, z5.h, z4.h
-; CHECK-NEWLOWERING-NEXT:    udot z1.d, z2.h, z3.h
 ; CHECK-NEWLOWERING-NEXT:    ret
 entry:
   %a.wide = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -292,47 +290,45 @@ define <vscale x 4 x i64> @sdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
-; CHECK-NEWLOWERING-NEXT:    sunpklo z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    sunpklo z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z5.h, z3.b
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    sdot z0.d, z5.h, z4.h
-; CHECK-NEWLOWERING-NEXT:    sdot z1.d, z2.h, z3.h
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z6.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z7.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z24.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z7.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z24.s, z5.h
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z25.s, z3.h
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.s, z4.h
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z26.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z6.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z27.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z28.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z29.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.s, z5.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z26.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z27.d, z7.s
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z7.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z28.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z24.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z6.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z29.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z25.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z30.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z31.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z8.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z9.d, z5.s
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z30.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z31.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z24.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z8.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z25.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z9.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z27.d, z27.d, z29.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z6.d, z28.d
+; CHECK-NEWLOWERING-NEXT:    mul z7.d, z7.d, z24.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z27.d, z28.d
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z4.d, z4.d, z5.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z7.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z9.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z2, z27
-; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z24.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mul z6.d, z6.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z29.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z5.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z2, z7
+; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z31.d, z9.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z9, [sp] // 16-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z31.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z3, z4
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z4.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z3, z6
 ; CHECK-NEWLOWERING-NEXT:    mla z3.d, p0/m, z30.d, z8.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
@@ -427,45 +423,45 @@ define <vscale x 4 x i64> @usdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    uunpklo z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z5.h, z3.b
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z6.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z7.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z24.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z7.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z24.s, z5.h
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z25.s, z3.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.s, z4.h
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z26.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z6.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z27.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z28.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z29.d, z5.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.s, z5.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z26.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z27.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z7.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z28.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z24.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z6.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z29.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z25.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z30.d, z4.s
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z7.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z31.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z8.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z9.d, z5.s
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z30.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z31.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z24.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z8.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z25.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z9.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z27.d, z27.d, z29.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z6.d, z28.d
+; CHECK-NEWLOWERING-NEXT:    mul z7.d, z7.d, z24.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z27.d, z28.d
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z4.d, z4.d, z5.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z7.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z9.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z2, z27
-; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z24.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mul z6.d, z6.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z29.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z5.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z2, z7
+; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z31.d, z9.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z9, [sp] // 16-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z31.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z3, z4
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z4.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z3, z6
 ; CHECK-NEWLOWERING-NEXT:    mla z3.d, p0/m, z30.d, z8.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
@@ -560,45 +556,45 @@ define <vscale x 4 x i64> @sudot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i
 ; CHECK-NEWLOWERING-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
 ; CHECK-NEWLOWERING-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
-; CHECK-NEWLOWERING-NEXT:    sunpklo z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    sunpklo z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z5.h, z3.b
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.h, z3.b
 ; CHECK-NEWLOWERING-NEXT:    ptrue p0.d
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z6.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.s, z4.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z7.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.s, z5.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z24.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z7.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z24.s, z5.h
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z25.s, z3.h
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.s, z4.h
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z26.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z6.d, z6.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z27.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z28.d, z7.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z29.d, z5.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.s, z5.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z26.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z27.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z7.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z28.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z24.d, z24.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z6.d, z6.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z29.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z25.d, z25.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z30.d, z4.s
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z7.d, z7.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z31.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z8.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z9.d, z5.s
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z30.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z31.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z24.d, z24.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z8.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z25.d, z25.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z9.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z27.d, z27.d, z29.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z6.d, z28.d
+; CHECK-NEWLOWERING-NEXT:    mul z7.d, z7.d, z24.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z27.d, z28.d
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    mul z4.d, z4.d, z5.d
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z7.d
-; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z9.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z2, z27
-; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z24.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mul z6.d, z6.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z26.d, z29.d
+; CHECK-NEWLOWERING-NEXT:    mla z0.d, p0/m, z2.d, z5.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z2, z7
+; CHECK-NEWLOWERING-NEXT:    mla z2.d, p0/m, z31.d, z9.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z9, [sp] // 16-byte Folded Reload
-; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z31.d, z3.d
-; CHECK-NEWLOWERING-NEXT:    movprfx z3, z4
+; CHECK-NEWLOWERING-NEXT:    mla z1.d, p0/m, z4.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    movprfx z3, z6
 ; CHECK-NEWLOWERING-NEXT:    mla z3.d, p0/m, z30.d, z8.d
 ; CHECK-NEWLOWERING-NEXT:    ldr z8, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
@@ -731,27 +727,27 @@ define <vscale x 4 x i64> @udot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale
 ;
 ; CHECK-NEWLOWERING-LABEL: udot_no_bin_op_8to64:
 ; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    uunpklo z3.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    uunpklo z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    uunpklo z4.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    uunpklo z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z5.s, z2.h
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z6.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z7.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z24.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z25.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    uunpklo z6.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z7.d, z5.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z24.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z25.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z5.d, z5.s
+; CHECK-NEWLOWERING-NEXT:    uunpklo z3.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    uunpkhi z4.d, z4.s
 ; CHECK-NEWLOWERING-NEXT:    uunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    uunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    uunpklo z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z4.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z7.d
 ; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z6.d
-; CHECK-NEWLOWERING-NEXT:    add z4.d, z25.d, z24.d
-; CHECK-NEWLOWERING-NEXT:    add z2.d, z3.d, z2.d
+; CHECK-NEWLOWERING-NEXT:    add z5.d, z5.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    add z2.d, z4.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    add z1.d, z24.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z5.d, z0.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z7.d, z1.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z4.d, z0.d
 ; CHECK-NEWLOWERING-NEXT:    add z1.d, z2.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    ret
   %a.ext = zext <vscale x 16 x i8> %a to <vscale x 16 x i64>
@@ -773,27 +769,27 @@ define <vscale x 4 x i64> @sdot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale
 ;
 ; CHECK-NEWLOWERING-LABEL: sdot_no_bin_op_8to64:
 ; CHECK-NEWLOWERING:       // %bb.0:
-; CHECK-NEWLOWERING-NEXT:    sunpklo z3.h, z2.b
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.h, z2.b
+; CHECK-NEWLOWERING-NEXT:    sunpklo z2.h, z2.b
 ; CHECK-NEWLOWERING-NEXT:    sunpklo z4.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.s, z2.h
-; CHECK-NEWLOWERING-NEXT:    sunpklo z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z5.s, z2.h
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.s, z3.h
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z6.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z4.d, z4.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z7.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z24.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z25.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.s, z2.h
+; CHECK-NEWLOWERING-NEXT:    sunpklo z6.d, z4.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z7.d, z5.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z24.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z25.d, z2.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z5.d, z5.s
+; CHECK-NEWLOWERING-NEXT:    sunpklo z3.d, z3.s
+; CHECK-NEWLOWERING-NEXT:    sunpkhi z4.d, z4.s
 ; CHECK-NEWLOWERING-NEXT:    sunpkhi z2.d, z2.s
-; CHECK-NEWLOWERING-NEXT:    sunpkhi z3.d, z3.s
-; CHECK-NEWLOWERING-NEXT:    sunpklo z5.d, z5.s
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z4.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z0.d, z7.d
 ; CHECK-NEWLOWERING-NEXT:    add z1.d, z1.d, z6.d
-; CHECK-NEWLOWERING-NEXT:    add z4.d, z25.d, z24.d
-; CHECK-NEWLOWERING-NEXT:    add z2.d, z3.d, z2.d
+; CHECK-NEWLOWERING-NEXT:    add z5.d, z5.d, z25.d
+; CHECK-NEWLOWERING-NEXT:    add z0.d, z2.d, z0.d
+; CHECK-NEWLOWERING-NEXT:    add z2.d, z4.d, z3.d
+; CHECK-NEWLOWERING-NEXT:    add z1.d, z24.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    add z0.d, z5.d, z0.d
-; CHECK-NEWLOWERING-NEXT:    add z1.d, z7.d, z1.d
-; CHECK-NEWLOWERING-NEXT:    add z0.d, z4.d, z0.d
 ; CHECK-NEWLOWERING-NEXT:    add z1.d, z2.d, z1.d
 ; CHECK-NEWLOWERING-NEXT:    ret
   %a.ext = sext <vscale x 16 x i8> %a to <vscale x 16 x i64>
