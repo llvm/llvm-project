@@ -22,6 +22,7 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_THREADSAFETYCOMMON_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTraverse.h"
@@ -272,27 +273,34 @@ private:
 class CapabilityExpr {
 private:
   static constexpr unsigned FlagNegative = 1u << 0;
+  static constexpr unsigned FlagReentrant = 1u << 1;
 
   /// The capability expression and flags.
-  llvm::PointerIntPair<const til::SExpr *, 1, unsigned> CapExpr;
+  llvm::PointerIntPair<const til::SExpr *, 2, unsigned> CapExpr;
 
   /// The kind of capability as specified by @ref CapabilityAttr::getName.
   StringRef CapKind;
 
 public:
   CapabilityExpr() : CapExpr(nullptr, 0) {}
-  CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg)
-      : CapExpr(E, Neg ? FlagNegative : 0), CapKind(Kind) {}
+  CapabilityExpr(const til::SExpr *E, StringRef Kind, bool Neg, bool Reentrant)
+      : CapExpr(E, (Neg ? FlagNegative : 0) | (Reentrant ? FlagReentrant : 0)),
+        CapKind(Kind) {}
+  // Infers `Kind` and `Reentrant` from `QT`.
+  CapabilityExpr(const til::SExpr *E, QualType QT, bool Neg);
 
   // Don't allow implicitly-constructed StringRefs since we'll capture them.
-  template <typename T> CapabilityExpr(const til::SExpr *, T, bool) = delete;
+  template <typename T>
+  CapabilityExpr(const til::SExpr *, T, bool, bool) = delete;
 
   const til::SExpr *sexpr() const { return CapExpr.getPointer(); }
   StringRef getKind() const { return CapKind; }
   bool negative() const { return CapExpr.getInt() & FlagNegative; }
+  bool reentrant() const { return CapExpr.getInt() & FlagReentrant; }
 
   CapabilityExpr operator!() const {
-    return CapabilityExpr(CapExpr.getPointer(), CapKind, !negative());
+    return CapabilityExpr(CapExpr.getPointer(), CapKind, !negative(),
+                          reentrant());
   }
 
   bool equals(const CapabilityExpr &other) const {
@@ -388,10 +396,6 @@ public:
 
   // Translate a variable reference.
   til::LiteralPtr *createVariable(const VarDecl *VD);
-
-  // Create placeholder for this: we don't know the VarDecl on construction yet.
-  std::pair<til::LiteralPtr *, StringRef>
-  createThisPlaceholder(const Expr *Exp);
 
   // Translate a clang statement or expression to a TIL expression.
   // Also performs substitution of variables; Ctx provides the context.
