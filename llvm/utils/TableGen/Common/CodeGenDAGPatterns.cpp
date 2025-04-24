@@ -1078,8 +1078,8 @@ std::string TreePredicateFn::getPredCode() const {
   if (isAtomic()) {
     if ((isAnyExtLoad() + isSignExtLoad() + isZeroExtLoad()) > 1)
       PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and "
-                      "IsZeroExtLoad are mutually exclusive");
+                      "IsAnyExtLoad, IsSignExtLoad, and IsZeroExtLoad are "
+                      "mutually exclusive");
 
     if (isAnyExtLoad())
       Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != ISD::EXTLOAD) "
