@@ -116,8 +116,7 @@ class HeaderIncludesDirectPerFileCallback : public PPCallbacks {
   HeaderSearch &HSI;
   raw_ostream *OutputFile;
   bool OwnsOutputFile;
-  using DependencyMap =
-      llvm::DenseMap<FileEntryRef, SmallVector<FileEntryRef>>;
+  using DependencyMap = llvm::DenseMap<FileEntryRef, SmallVector<FileEntryRef>>;
   DependencyMap Dependencies;
 
 public:
@@ -132,8 +131,8 @@ public:
       delete OutputFile;
   }
 
-  HeaderIncludesDirectPerFileCallback
-      (const HeaderIncludesDirectPerFileCallback &) = delete;
+  HeaderIncludesDirectPerFileCallback(
+      const HeaderIncludesDirectPerFileCallback &) = delete;
   HeaderIncludesDirectPerFileCallback &
   operator=(const HeaderIncludesDirectPerFileCallback &) = delete;
 
@@ -380,8 +379,8 @@ void HeaderIncludesDirectPerFileCallback::EndOfMainFile() {
 
   // Sort the files so that the output does not depend on the DenseMap order.
   SmallVector<FileEntryRef> SourceFiles;
-  for (auto F = Dependencies.begin(), FEnd = Dependencies.end();
-       F != FEnd; ++F) {
+  for (auto F = Dependencies.begin(), FEnd = Dependencies.end(); F != FEnd;
+       ++F) {
     SourceFiles.push_back(F->first);
   }
   llvm::sort(SourceFiles, [](const FileEntryRef &LHS, const FileEntryRef &RHS) {
@@ -431,8 +430,9 @@ void HeaderIncludesDirectPerFileCallback::InclusionDirective(
   Dependencies[*FromFile].push_back(*File);
 }
 
-void HeaderIncludesDirectPerFileCallback::moduleImport(
-    SourceLocation ImportLoc, ModuleIdPath Path, const Module *Imported) {
+void HeaderIncludesDirectPerFileCallback::moduleImport(SourceLocation ImportLoc,
+                                                       ModuleIdPath Path,
+                                                       const Module *Imported) {
   if (!Imported)
     return;
 
