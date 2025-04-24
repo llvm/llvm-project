@@ -81,18 +81,7 @@ VLOAD_ADDR_SPACES(half)
 
 /* vload_half are legal even without cl_khr_fp16 */
 /* no vload_half for double */
-#if __clang_major__ < 6
-float __clc_vload_half_float_helper__constant(const __constant half *);
-float __clc_vload_half_float_helper__global(const __global half *);
-float __clc_vload_half_float_helper__local(const __local half *);
-float __clc_vload_half_float_helper__private(const __private half *);
-
-#define VEC_LOAD1(val, AS)                                                     \
-  val = __clc_vload_half_float_helper##AS(&mem[offset++]);
-#else
 #define VEC_LOAD1(val, AS) val = __builtin_load_halff(&mem[offset++]);
-#endif
-
 #define VEC_LOAD2(val, AS)                                                     \
   VEC_LOAD1(val.lo, AS)                                                        \
   VEC_LOAD1(val.hi, AS)
