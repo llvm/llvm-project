@@ -113,6 +113,44 @@ static DecodeStatus DecodeMR23RegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static const MCPhysReg FPRDecoderTable[] = {
+    Xtensa::F0,  Xtensa::F1,  Xtensa::F2,  Xtensa::F3, Xtensa::F4,  Xtensa::F5,
+    Xtensa::F6,  Xtensa::F7,  Xtensa::F8,  Xtensa::F9, Xtensa::F10, Xtensa::F11,
+    Xtensa::F12, Xtensa::F13, Xtensa::F14, Xtensa::F15};
+
+static DecodeStatus DecodeFPRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  if (RegNo >= std::size(FPRDecoderTable))
+    return MCDisassembler::Fail;
+
+  MCPhysReg Reg = FPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Reg));
+  return MCDisassembler::Success;
+}
+
+static const MCPhysReg URDecoderTable[] = {Xtensa::FCR, 232, Xtensa::FSR, 233};
+
+static DecodeStatus DecodeURRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                          uint64_t Address,
+                                          const void *Decoder) {
+  const llvm::MCSubtargetInfo STI =
+      ((const MCDisassembler *)Decoder)->getSubtargetInfo();
+
+  if (RegNo > 255)
+    return MCDisassembler::Fail;
+
+  for (unsigned i = 0; i < std::size(URDecoderTable); i += 2) {
+    if (URDecoderTable[i + 1] == RegNo) {
+      MCPhysReg Reg = URDecoderTable[i];
+      Inst.addOperand(MCOperand::createReg(Reg));
+      return MCDisassembler::Success;
+    }
+  }
+
+  return MCDisassembler::Fail;
+}
+
 struct DecodeRegister {
   MCPhysReg Reg;
   uint32_t RegNo;
