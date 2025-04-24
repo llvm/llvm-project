@@ -43,8 +43,9 @@ public:
   void add(DefinedImportData *sym) { imports.push_back(sym); }
   bool empty() { return imports.empty(); }
   void create();
-  std::vector<Chunk *> getChunks();
-  std::vector<Chunk *> getDataChunks();
+  ArrayRef<Chunk *> getChunks() { return addresses; }
+  std::vector<Chunk *> getRDataChunks();
+  ArrayRef<Chunk *> getDataChunks() { return moduleHandles; }
   ArrayRef<Chunk *> getCodeChunks() { return thunks; }
   ArrayRef<Chunk *> getCodePData() { return pdata; }
   ArrayRef<Chunk *> getCodeUnwindInfo() { return unwindinfo; }

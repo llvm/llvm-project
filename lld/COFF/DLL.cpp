@@ -891,19 +891,12 @@ void IdataContents::create(COFFLinkerContext &ctx) {
   dirs.push_back(make<NullChunk>(sizeof(ImportDirectoryTableEntry), 4));
 }
 
-std::vector<Chunk *> DelayLoadContents::getChunks() {
+std::vector<Chunk *> DelayLoadContents::getRDataChunks() {
   std::vector<Chunk *> v;
   v.insert(v.end(), dirs.begin(), dirs.end());
   v.insert(v.end(), names.begin(), names.end());
   v.insert(v.end(), hintNames.begin(), hintNames.end());
   v.insert(v.end(), dllNames.begin(), dllNames.end());
-  return v;
-}
-
-std::vector<Chunk *> DelayLoadContents::getDataChunks() {
-  std::vector<Chunk *> v;
-  v.insert(v.end(), moduleHandles.begin(), moduleHandles.end());
-  v.insert(v.end(), addresses.begin(), addresses.end());
   return v;
 }
 

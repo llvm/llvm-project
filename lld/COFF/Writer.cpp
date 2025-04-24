@@ -1083,7 +1083,7 @@ void Writer::createSections() {
   pdataSec = createSection(".pdata", data | r);
   idataSec = createSection(".idata", data | r);
   edataSec = createSection(".edata", data | r);
-  didatSec = createSection(".didat", data | r);
+  didatSec = createSection(".didat", data | r | w);
   if (isArm64EC(ctx.config.machine))
     a64xrmSec = createSection(".a64xrm", data | r);
   rsrcSec = createSection(".rsrc", data | r);
@@ -1329,6 +1329,8 @@ void Writer::appendImportThunks() {
     delayIdata.create();
     for (Chunk *c : delayIdata.getChunks())
       didatSec->addChunk(c);
+    for (Chunk *c : delayIdata.getRDataChunks())
+      rdataSec->addChunk(c);
     for (Chunk *c : delayIdata.getDataChunks())
       dataSec->addChunk(c);
     for (Chunk *c : delayIdata.getCodeChunks())
