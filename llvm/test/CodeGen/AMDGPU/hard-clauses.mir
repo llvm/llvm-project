@@ -630,20 +630,29 @@ body: |
     ; CHECK-LABEL: name: flat_global_load
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; CHECK-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr {
+    ; CHECK-NEXT:   S_CLAUSE 1
+    ; CHECK-NEXT:   $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT: }
     ;
     ; GFX11-LABEL: name: flat_global_load
     ; GFX11: liveins: $vgpr0_vgpr1
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX11-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr {
+    ; GFX11-NEXT:   S_CLAUSE 1
+    ; GFX11-NEXT:   $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX11-NEXT: }
     ;
     ; GFX12-LABEL: name: flat_global_load
     ; GFX12: liveins: $vgpr0_vgpr1
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX12-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr {
+    ; GFX12-NEXT:   S_CLAUSE 1
+    ; GFX12-NEXT:   $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: }
     $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
 ...
