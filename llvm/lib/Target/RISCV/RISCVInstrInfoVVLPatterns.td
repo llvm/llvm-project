@@ -2034,22 +2034,26 @@ multiclass VPatWidenOrDisjointVL_VV_VX<SDNode extop, string instruction_name> {
     defvar wti = vtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                  GetVTypePredicates<wti>.Predicates) in {
-      def : Pat<(wti.Vector (extop (vti.Vector
-                                     (riscv_or_vl_is_add_oneuse
-                                       vti.RegClass:$rs2, vti.RegClass:$rs1,
-                                       undef, srcvalue, srcvalue)),
-                                    VMV0:$vm, VLOpFrag)),
+      def : Pat<(wti.Vector
+                  (extop
+                    (vti.Vector
+                      (riscv_or_vl_is_add_oneuse
+                        vti.RegClass:$rs2, vti.RegClass:$rs1,
+                        undef, srcvalue, srcvalue)),
+                    VMV0:$vm, VLOpFrag)),
                 (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX#"_MASK")
-                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
-                   vti.RegClass:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
-       def : Pat<(wti.Vector (extop (vti.Vector
-                                     (riscv_or_vl_is_add_oneuse
-                                       vti.RegClass:$rs2, (SplatPat (XLenVT GPR:$rs1)),
-                                       undef, srcvalue, srcvalue)),
-                                    VMV0:$vm, VLOpFrag)),
+                 (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                 vti.RegClass:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
+       def : Pat<(wti.Vector
+                   (extop
+                     (vti.Vector
+                       (riscv_or_vl_is_add_oneuse
+                         vti.RegClass:$rs2, (SplatPat (XLenVT GPR:$rs1)),
+                         undef, srcvalue, srcvalue)),
+                     VMV0:$vm, VLOpFrag)),
                 (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX#"_MASK")
-                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
-                   GPR:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
+                 (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                 GPR:$rs1, VMV0:$vm, GPR:$vl, vti.Log2SEW, TA_MA)>;
     }
   }
 }
