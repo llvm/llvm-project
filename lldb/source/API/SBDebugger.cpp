@@ -926,7 +926,6 @@ SBTarget SBDebugger::GetDummyTarget() {
   return sb_target;
 }
 
-#if ENABLE_CLIENT_TELEMETRY
 void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
   LLDB_INSTRUMENT_VA(this);
   if (m_opaque_sp) {
@@ -937,7 +936,6 @@ void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
               "Could not send telemetry from SBDebugger - debugger was null.");
   }
 }
-#endif
 
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {
   LLDB_INSTRUMENT_VA(this, target);

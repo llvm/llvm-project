@@ -159,7 +159,7 @@ lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
 /// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
-#if ENABLE_CLIENT_TELEMETRY
+#ifndef SWIG
 class TelemetryDispatcher {
 public:
   TelemetryDispatcher(lldb::SBDebugger *debugger) {
