@@ -128,6 +128,7 @@ on support follow.
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
      ``Smcdeleg``      Supported
+     ``Smcntrpmf``     Supported
      ``Smcsrind``      Supported
      ``Smdbltrp``      Supported
      ``Smepmp``        Supported

@@ -3867,6 +3867,58 @@ static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
   return Matcher.getNode(ISD::CTLZ_ZERO_UNDEF, DL, VT, Not);
 }
 
+// Fold sub(x, mul(divrem(x,y)[0], y)) to divrem(x, y)[1]
+static SDValue foldRemainderIdiom(SDNode *N, SelectionDAG &DAG,
+                                  const SDLoc &DL) {
+  assert(N->getOpcode() == ISD::SUB && "Node must be a SUB");
+  SDValue Sub0 = N->getOperand(0);
+  SDValue Sub1 = N->getOperand(1);
+
+  auto CheckAndFoldMulCase = [&](SDValue DivRem, SDValue MaybeY) -> SDValue {
+    if ((DivRem.getOpcode() == ISD::SDIVREM ||
+         DivRem.getOpcode() == ISD::UDIVREM) &&
+        DivRem.getResNo() == 0 && DivRem.getOperand(0) == Sub0 &&
+        DivRem.getOperand(1) == MaybeY) {
+      return SDValue(DivRem.getNode(), 1);
+    }
+    return SDValue();
+  };
+
+  if (Sub1.getOpcode() == ISD::MUL) {
+    // (sub x, (mul divrem(x,y)[0], y))
+    SDValue Mul0 = Sub1.getOperand(0);
+    SDValue Mul1 = Sub1.getOperand(1);
+
+    if (SDValue Res = CheckAndFoldMulCase(Mul0, Mul1))
+      return Res;
+
+    if (SDValue Res = CheckAndFoldMulCase(Mul1, Mul0))
+      return Res;
+
+  } else if (Sub1.getOpcode() == ISD::SHL) {
+    // Handle (sub x, (shl divrem(x,y)[0], C)) where y = 1 << C
+    SDValue Shl0 = Sub1.getOperand(0);
+    SDValue Shl1 = Sub1.getOperand(1);
+    // Check if Shl0 is divrem(x, Y)[0]
+    if ((Shl0.getOpcode() == ISD::SDIVREM ||
+         Shl0.getOpcode() == ISD::UDIVREM) &&
+        Shl0.getResNo() == 0 && Shl0.getOperand(0) == Sub0) {
+
+      SDValue Divisor = Shl0.getOperand(1);
+
+      ConstantSDNode *DivC = isConstOrConstSplat(Divisor);
+      ConstantSDNode *ShC = isConstOrConstSplat(Shl1);
+      if (!DivC || !ShC)
+        return SDValue();
+
+      if (DivC->getAPIntValue().isPowerOf2() &&
+          DivC->getAPIntValue().logBase2() == ShC->getAPIntValue())
+        return SDValue(Shl0.getNode(), 1);
+    }
+  }
+  return SDValue();
+}
+
 // Since it may not be valid to emit a fold to zero for vector initializers
 // check if we can before folding.
 static SDValue tryFoldToZero(const SDLoc &DL, const TargetLowering &TLI, EVT VT,
@@ -4092,6 +4144,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return V;
 
   if (SDValue V = foldSubToUSubSat(VT, N, DL))
+    return V;
+
+  if (SDValue V = foldRemainderIdiom(N, DAG, DL))
     return V;
 
   // (A - B) - 1  ->  add (xor B, -1), A
@@ -5982,7 +6037,10 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
         LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
-    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);
+    SDNodeFlags LogicFlags;
+    LogicFlags.setDisjoint(N->getFlags().hasDisjoint() &&
+                           ISD::isExtOpcode(HandOpcode));
+    SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y, LogicFlags);
     if (HandOpcode == ISD::SIGN_EXTEND_INREG)
       return DAG.getNode(HandOpcode, DL, VT, Logic, N0.getOperand(1));
     return DAG.getNode(HandOpcode, DL, VT, Logic);
@@ -6635,7 +6693,7 @@ bool DAGCombiner::isAndLoadExtLoad(ConstantSDNode *AndC, LoadSDNode *LoadN,
       !TLI.isLoadExtLegal(ISD::ZEXTLOAD, LoadResultTy, ExtVT))
     return false;
 
-  if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT))
+  if (!TLI.shouldReduceLoadWidth(LoadN, ISD::ZEXTLOAD, ExtVT, /*ByteOffset=*/0))
     return false;
 
   return true;
@@ -6646,9 +6704,11 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
                                     unsigned ShAmt) {
   if (!LDST)
     return false;
+
   // Only allow byte offsets.
   if (ShAmt % 8)
     return false;
+  const unsigned ByteShAmt = ShAmt / 8;
 
   // Do not generate loads of non-round integer types since these can
   // be expensive (and would be wrong if the type is not byte sized).
@@ -6672,8 +6732,6 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
 
   // Ensure that this isn't going to produce an unsupported memory access.
   if (ShAmt) {
-    assert(ShAmt % 8 == 0 && "ShAmt is byte offset");
-    const unsigned ByteShAmt = ShAmt / 8;
     const Align LDSTAlign = LDST->getAlign();
     const Align NarrowAlign = commonAlignment(LDSTAlign, ByteShAmt);
     if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
@@ -6713,7 +6771,7 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
         Load->getMemoryVT().getSizeInBits() < MemVT.getSizeInBits() + ShAmt)
       return false;
 
-    if (!TLI.shouldReduceLoadWidth(Load, ExtType, MemVT))
+    if (!TLI.shouldReduceLoadWidth(Load, ExtType, MemVT, ByteShAmt))
       return false;
   } else {
     assert(isa<StoreSDNode>(LDST) && "It is not a Load nor a Store SDNode");
@@ -12586,8 +12644,13 @@ SDValue DAGCombiner::visitPARTIAL_REDUCE_MLA(SDNode *N) {
   if (LHSExtOpVT != RHSExtOp.getValueType() || LHSOpcode != RHSOpcode)
     return SDValue();
 
-  // FIXME: Add a check to only perform the DAG combine if there is lowering
-  // provided by the target
+  // Only perform the DAG combine if there is custom lowering provided by the
+  // target
+  auto *Context = DAG.getContext();
+  if (!TLI.isPartialReduceMLALegalOrCustom(
+          TLI.getTypeToTransformTo(*Context, N->getValueType(0)),
+          TLI.getTypeToTransformTo(*Context, LHSExtOpVT)))
+    return SDValue();
 
   bool ExtIsSigned = LHSOpcode == ISD::SIGN_EXTEND;
 
@@ -13778,10 +13841,9 @@ static SDValue tryToFoldExtOfAtomicLoad(SelectionDAG &DAG,
 
   EVT OrigVT = ALoad->getValueType(0);
   assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
-  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomic(
-      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
+  auto *NewALoad = cast<AtomicSDNode>(DAG.getAtomicLoad(
+      ExtLoadType, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
       ALoad->getBasePtr(), ALoad->getMemOperand()));
-  NewALoad->setExtensionType(ExtLoadType);
   DAG.ReplaceAllUsesOfValueWith(
       SDValue(ALoad, 0),
       DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));
@@ -25181,7 +25243,8 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG,
 /// If we are extracting a subvector from a wide vector load, convert to a
 /// narrow load to eliminate the extraction:
 /// (extract_subvector (load wide vector)) --> (load narrow vector)
-static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
+static SDValue narrowExtractedVectorLoad(SDNode *Extract, const SDLoc &DL,
+                                         SelectionDAG &DAG) {
   // TODO: Add support for big-endian. The offset calculation must be adjusted.
   if (DAG.getDataLayout().isBigEndian())
     return SDValue();
@@ -25211,15 +25274,16 @@ static SDValue narrowExtractedVectorLoad(SDNode *Extract, SelectionDAG &DAG) {
 
   // It's fine to use TypeSize here as we know the offset will not be negative.
   TypeSize Offset = VT.getStoreSize() * (Index / NumElts);
+  std::optional<unsigned> ByteOffset;
+  if (Offset.isFixed())
+    ByteOffset = Offset.getFixedValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT))
+  if (!TLI.shouldReduceLoadWidth(Ld, Ld->getExtensionType(), VT, ByteOffset))
     return SDValue();
 
   // The narrow load will be offset from the base address of the old load if
   // we are extracting from something besides index 0 (little-endian).
-  SDLoc DL(Extract);
-
   // TODO: Use "BaseIndexOffset" to make this more effective.
   SDValue NewAddr = DAG.getMemBasePlusOffset(Ld->getBasePtr(), Offset, DL);
 
@@ -25403,7 +25467,7 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     return DAG.getUNDEF(NVT);
 
   if (TLI.isOperationLegalOrCustomOrPromote(ISD::LOAD, NVT))
-    if (SDValue NarrowLoad = narrowExtractedVectorLoad(N, DAG))
+    if (SDValue NarrowLoad = narrowExtractedVectorLoad(N, DL, DAG))
       return NarrowLoad;
 
   // Combine an extract of an extract into a single extract_subvector.

@@ -16597,7 +16597,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   BD->setCaptures(Context, Captures, BSI->CXXThisCaptureIndex != 0);
 
   // Pop the block scope now but keep it alive to the end of this function.
-  AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
+  AnalysisBasedWarnings::Policy WP =
+      AnalysisWarnings.getPolicyInEffectAt(Body->getEndLoc());
   PoppedFunctionScopePtr ScopeRAII = PopFunctionScopeInfo(&WP, BD, BlockTy);
 
   BlockExpr *Result = new (Context)
@@ -19516,11 +19517,29 @@ static ExprResult rebuildPotentialResultsAsNonOdrUsed(Sema &S, Expr *E,
     return false;
   };
 
+  // Check whether this expression may be odr-used in CUDA/HIP.
+  auto MaybeCUDAODRUsed = [&]() -> bool {
+    if (!S.LangOpts.CUDA)
+      return false;
+    LambdaScopeInfo *LSI = S.getCurLambda();
+    if (!LSI)
+      return false;
+    auto *DRE = dyn_cast<DeclRefExpr>(E);
+    if (!DRE)
+      return false;
+    auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+    if (!VD)
+      return false;
+    return LSI->CUDAPotentialODRUsedVars.count(VD);
+  };
+
   // Mark that this expression does not constitute an odr-use.
   auto MarkNotOdrUsed = [&] {
-    S.MaybeODRUseExprs.remove(E);
-    if (LambdaScopeInfo *LSI = S.getCurLambda())
-      LSI->markVariableExprAsNonODRUsed(E);
+    if (!MaybeCUDAODRUsed()) {
+      S.MaybeODRUseExprs.remove(E);
+      if (LambdaScopeInfo *LSI = S.getCurLambda())
+        LSI->markVariableExprAsNonODRUsed(E);
+    }
   };
 
   // C++2a [basic.def.odr]p2:
