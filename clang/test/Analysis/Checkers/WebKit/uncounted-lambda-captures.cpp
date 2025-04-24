@@ -374,10 +374,13 @@ void trivial_lambda() {
 
 bool call_lambda_var_decl() {
   RefCountable* ref_countable = make_obj();
-  auto lambda = [&]() -> bool {
+  auto lambda1 = [&]() -> bool {
     return ref_countable->next();
   };
-  return lambda();
+  auto lambda2 = [=]() -> bool {
+    return ref_countable->next();
+  };
+  return lambda1() && lambda2();
 }
 
 void lambda_with_args(RefCountable* obj) {
