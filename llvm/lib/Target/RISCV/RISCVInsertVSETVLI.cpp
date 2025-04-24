@@ -94,10 +94,6 @@ static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
   }
 }
 
-static bool isVInsertInstr(const MachineInstr &MI) {
-  return RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::RI_VINSERT;
-}
-
 static bool isVExtractInstr(const MachineInstr &MI) {
   return RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::RI_VEXTRACT;
 }
@@ -550,12 +546,6 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     assert(!RISCVII::hasVLOp(TSFlags));
     // TODO: LMUL can be any larger value (without cost)
     Res.TailPolicy = false;
-    Res.MaskPolicy = false;
-  }
-
-  if (isVInsertInstr(MI)) {
-    // TODO: LMUL can be any larger value (without cost)
-    Res.MaskPolicy = false;
   }
 
   return Res;

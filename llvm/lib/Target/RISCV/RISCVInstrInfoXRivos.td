@@ -131,17 +131,16 @@ def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
 
 
 def ri_vextract : SDNode<"RISCVISD::RI_VEXTRACT",
-                          SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
-                                               SDTCisInt<2>,
-                                               SDTCisInt<1>]>>;
+                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
+                                              SDTCisInt<2>,
+                                              SDTCisInt<1>]>>;
 
 def ri_vinsert_vl : SDNode<"RISCVISD::RI_VINSERT_VL",
-                            SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
-                                                 SDTCisInt<0>,
-                                                 SDTCisVT<2, XLenVT>,
-                                                 SDTCisVT<3, XLenVT>,
-                                                 SDTCisVT<4, XLenVT>]>>;
-
+                           SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                SDTCisInt<0>,
+                                                SDTCisVT<2, XLenVT>,
+                                                SDTCisVT<3, XLenVT>,
+                                                SDTCisVT<4, XLenVT>]>>;
 
 let Predicates = [HasVendorXRivosVisni], mayLoad = 0, mayStore = 0,
     hasSideEffects = 0, HasSEWOp = 1 in
@@ -150,7 +149,7 @@ foreach m = MxList in {
   let VLMul = m.value in {
     let BaseInstr = RI_VEXTRACT in
     def PseudoRI_VEXTRACT_  # mx :
-      Pseudo<(outs GPR:$rd), (ins m.vrclass:$rs2, uimm6:$idx, ixlenimm:$sew),
+      Pseudo<(outs GPR:$rd), (ins m.vrclass:$rs2, uimm5:$idx, ixlenimm:$sew),
              []>,
       RISCVVPseudo;
 
