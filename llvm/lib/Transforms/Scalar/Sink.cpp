@@ -300,6 +300,7 @@ PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MemorySSAAnalysis>();
   return PA;
 }
 
@@ -326,8 +327,10 @@ namespace {
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<DominatorTreeWrapperPass>();
       AU.addRequired<LoopInfoWrapperPass>();
+      AU.addRequired<MemorySSAWrapperPass>();
       AU.addPreserved<DominatorTreeWrapperPass>();
       AU.addPreserved<LoopInfoWrapperPass>();
+      AU.addPreserved<MemorySSAWrapperPass>();
     }
   };
 } // end anonymous namespace
@@ -336,6 +339,7 @@ char SinkingLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(SinkingLegacyPass, "sink", "Code sinking", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(SinkingLegacyPass, "sink", "Code sinking", false, false)
 
