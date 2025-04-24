@@ -95,19 +95,78 @@ class OpenACCClauseCIREmitter final
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
 
-  // Handle a clause affected by the 'device-type' to the point that they need
-  // to have the attributes added in the correct/corresponding order, such as
-  // 'num_workers' or 'vector_length' on a compute construct. For cases where we
-  // don't have an expression 'argument' that needs to be added to an operand
-  // and only care about the 'device-type' list, we can use this with 'argument'
-  // as 'std::nullopt'.   If 'argument' is NOT 'std::nullopt' (that is, has a
-  // value), argCollection must also be non-null. For cases where we don't have
-  // an argument that needs to be added to an additional one (such as asyncOnly)
-  // we can use this with 'argument' as std::nullopt.
-  mlir::ArrayAttr handleDeviceTypeAffectedClause(
-      mlir::ArrayAttr existingDeviceTypes,
-      std::optional<mlir::Value> argument = std::nullopt,
-      mlir::MutableOperandRange *argCollection = nullptr) {
+  // Overload of this function that only returns the device-types list.
+  mlir::ArrayAttr
+  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes) {
+    mlir::ValueRange argument;
+    mlir::MutableOperandRange range{operation};
+
+    return handleDeviceTypeAffectedClause(existingDeviceTypes, argument, range);
+  }
+  // Overload of this function for when 'segments' aren't necessary.
+  mlir::ArrayAttr
+  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes,
+                                 mlir::ValueRange argument,
+                                 mlir::MutableOperandRange argCollection) {
+    llvm::SmallVector<int32_t> segments;
+    assert(argument.size() <= 1 &&
+           "Overload only for cases where segments don't need to be added");
+    return handleDeviceTypeAffectedClause(existingDeviceTypes, argument,
+                                          argCollection, segments);
+  }
+
+  // Handle a clause affected by the 'device_type' to the point that they need
+  // to have attributes added in the correct/corresponding order, such as
+  // 'num_workers' or 'vector_length' on a compute construct. The 'argument' is
+  // a collection of operands that need to be appended to the `argCollection` as
+  // we're adding a 'device_type' entry.  If there is more than 0 elements in
+  // the 'argument', the collection must be non-null, as it is needed to add to
+  // it.
+  // As some clauses, such as 'num_gangs' or 'wait' require a 'segments' list to
+  // be maintained, this takes a list of segments that will be updated with the
+  // proper counts as 'argument' elements are added.
+  //
+  // In MLIR, the 'operands' are stored as a large array, with a separate array
+  // of 'segments' that show which 'operand' applies to which 'operand-kind'.
+  // That is, a 'num_workers' operand-kind or 'num_vectors' operand-kind.
+  //
+  // So the operands array might have 4 elements, but the 'segments' array will
+  // be something like:
+  //
+  // {0, 0, 0, 2, 0, 1, 1, 0, 0...}
+  //
+  // Where each position belongs to a specific 'operand-kind'.  So that
+  // specifies that whichever operand-kind corresponds with index '3' has 2
+  // elements, and should take the 1st 2 operands off the list (since all
+  // preceding values are 0). operand-kinds corresponding to 5 and 6 each have
+  // 1 element.
+  //
+  // Fortunately, the `MutableOperandRange` append function actually takes care
+  // of that for us at the 'top level'.
+  //
+  // However, in cases like `num_gangs' or 'wait', where each individual
+  // 'element' might be itself array-like, there is a separate 'segments' array
+  // for them. So in the case of:
+  //
+  // device_type(nvidia, radeon) num_gangs(1, 2, 3)
+  //
+  // We have to emit that as TWO arrays into the IR (where the device_type is an
+  // attribute), so they look like:
+  //
+  // num_gangs({One : i32, Two : i32, Three : i32} [#acc.device_type<nvidia>],\
+  //           {One : i32, Two : i32, Three : i32} [#acc.device_type<radeon>])
+  //
+  // When stored in the 'operands' list, the top-level 'segment' for
+  // 'num_gangs' just shows 6 elements. In order to get the array-like
+  // apperance, the 'numGangsSegments' list is kept as well. In the above case,
+  // we've inserted 6 operands, so the 'numGangsSegments' must contain 2
+  // elements, 1 per array, and each will have a value of 3.  The verifier will
+  // ensure that the collections counts are correct.
+  mlir::ArrayAttr
+  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes,
+                                 mlir::ValueRange argument,
+                                 mlir::MutableOperandRange argCollection,
+                                 llvm::SmallVector<int32_t> &segments) {
     llvm::SmallVector<mlir::Attribute> deviceTypes;
 
     // Collect the 'existing' device-type attributes so we can re-create them
@@ -126,18 +185,18 @@ class OpenACCClauseCIREmitter final
            lastDeviceTypeClause->getArchitectures()) {
         deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
             builder.getContext(), decodeDeviceType(arch.getIdentifierInfo())));
-        if (argument) {
-          assert(argCollection);
-          argCollection->append(*argument);
+        if (!argument.empty()) {
+          argCollection.append(argument);
+          segments.push_back(argument.size());
         }
       }
     } else {
       // Else, we just add a single for 'none'.
       deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
           builder.getContext(), mlir::acc::DeviceType::None));
-      if (argument) {
-        assert(argCollection);
-        argCollection->append(*argument);
+      if (!argument.empty()) {
+        argCollection.append(argument);
+        segments.push_back(argument.size());
       }
     }
 
@@ -170,7 +229,8 @@ public:
         break;
       }
     } else {
-      // Combined Constructs left.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -210,7 +270,8 @@ public:
       // they just modify the other clauses IR.  So setting of `lastDeviceType`
       // (done above) is all we need.
     } else {
-      // update, data, loop, routine, combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. update, data, loop, routine, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -220,11 +281,12 @@ public:
       mlir::MutableOperandRange range = operation.getNumWorkersMutable();
       operation.setNumWorkersDeviceTypeAttr(handleDeviceTypeAffectedClause(
           operation.getNumWorkersDeviceTypeAttr(),
-          createIntExpr(clause.getIntExpr()), &range));
+          createIntExpr(clause.getIntExpr()), range));
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("num_workers not valid on serial");
     } else {
-      // Combined Remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -234,11 +296,12 @@ public:
       mlir::MutableOperandRange range = operation.getVectorLengthMutable();
       operation.setVectorLengthDeviceTypeAttr(handleDeviceTypeAffectedClause(
           operation.getVectorLengthDeviceTypeAttr(),
-          createIntExpr(clause.getIntExpr()), &range));
+          createIntExpr(clause.getIntExpr()), range));
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("vector_length not valid on serial");
     } else {
-      // Combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -252,10 +315,12 @@ public:
         mlir::MutableOperandRange range = operation.getAsyncOperandsMutable();
         operation.setAsyncOperandsDeviceTypeAttr(handleDeviceTypeAffectedClause(
             operation.getAsyncOperandsDeviceTypeAttr(),
-            createIntExpr(clause.getIntExpr()), &range));
+            createIntExpr(clause.getIntExpr()), range));
       }
     } else {
-      // Data, enter data, exit data, update, wait, combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain. Data, enter data, exit data,
+      // update, wait, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -272,7 +337,8 @@ public:
         llvm_unreachable("var-list version of self shouldn't get here");
       }
     } else {
-      // update and combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. If, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -286,7 +352,9 @@ public:
       // 'if' applies to most of the constructs, but hold off on lowering them
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
-      // Enter data, exit data, host_data, update, wait, combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Enter data, exit data, host_data, update, wait, combined
+      // constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -298,6 +366,29 @@ public:
     } else {
       llvm_unreachable(
           "init, shutdown, set, are only valid device_num constructs");
+    }
+  }
+
+  void VisitNumGangsClause(const OpenACCNumGangsClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, KernelsOp>) {
+      llvm::SmallVector<mlir::Value> values;
+
+      for (const Expr *E : clause.getIntExprs())
+        values.push_back(createIntExpr(E));
+
+      llvm::SmallVector<int32_t> segments;
+      if (operation.getNumGangsSegments())
+        llvm::copy(*operation.getNumGangsSegments(),
+                   std::back_inserter(segments));
+
+      mlir::MutableOperandRange range = operation.getNumGangsMutable();
+      operation.setNumGangsDeviceTypeAttr(handleDeviceTypeAffectedClause(
+          operation.getNumGangsDeviceTypeAttr(), values, range, segments));
+      operation.setNumGangsSegments(llvm::ArrayRef<int32_t>{segments});
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
     }
   }
 
