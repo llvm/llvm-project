@@ -359,8 +359,7 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
     return *found_index;
 
   return llvm::createStringError(
-      "'ValueObjectSynthetic' cannot find index "
-      "of child '%s'",
+      "'ValueObjectSynthetic' cannot find index of child '%s'",
       name.AsCString());
 }
 
