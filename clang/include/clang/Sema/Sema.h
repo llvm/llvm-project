@@ -8132,6 +8132,11 @@ public:
     /// Compatible - the types are compatible according to the standard.
     Compatible,
 
+    /// CompatibleVoidPtrToNonVoidPtr - The types are compatible in C because
+    /// a void * can implicitly convert to another pointer type, which we
+    /// differentiate for better diagnostic behavior.
+    CompatibleVoidPtrToNonVoidPtr,
+
     /// PointerToInt - The assignment converts a pointer to an int, which we
     /// accept as an extension.
     PointerToInt,
@@ -8346,6 +8351,18 @@ public:
                                                  QualType SrcType,
                                                  QualType DstType);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
+
+  bool IsAssignConvertCompatible(AssignConvertType ConvTy) {
+    switch (ConvTy) {
+    default:
+      return false;
+    case Compatible:
+    case CompatiblePointerDiscardsQualifiers:
+    case CompatibleVoidPtrToNonVoidPtr:
+      return true;
+    }
+    llvm_unreachable("impossible");
+  }
 
   /// DiagnoseAssignmentResult - Emit a diagnostic, if required, for the
   /// assignment conversion type specified by ConvTy.  This returns true if the

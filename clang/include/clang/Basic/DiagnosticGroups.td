@@ -155,7 +155,8 @@ def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
 
-def CXXCompat: DiagGroup<"c++-compat">;
+def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
+def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast]>;
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
 def GNUCaseRange : DiagGroup<"gnu-case-range">;
