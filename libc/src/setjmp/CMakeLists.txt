@@ -1,13 +1,12 @@
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_object_library(
+    sigsetjmp_epilogue
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.sigsetjmp_epilogue
+  )
 endif()
-
-add_object_library(
-  sigsetjmp_epilogue
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.sigsetjmp_epilogue
-)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
