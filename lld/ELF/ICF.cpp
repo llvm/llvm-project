@@ -357,8 +357,9 @@ static SmallVector<Symbol *> getRelocTargetSyms(const InputSection *sec) {
   return getReloc(sec, rel.relas);
 }
 
-// Checks if relocation has semantics beyond just the offset. We identify
-// such relocations to prevent ICF to preserve correctness.
+// A non-trivial relocation should ideally not be split by Machine outliner
+// but it's not illegal to split it in which case ICF shouldn't fold outlined
+// functions containing these relocations.
 static bool isTrivialRelocationType(uint16_t emachine, RelType type) {
   if (emachine == EM_AARCH64) {
     switch (type) {
@@ -367,6 +368,35 @@ static bool isTrivialRelocationType(uint16_t emachine, RelType type) {
     case R_AARCH64_ADR_GOT_PAGE:
     case R_AARCH64_LD64_GOT_LO12_NC:
     case R_AARCH64_LD64_GOTPAGE_LO15:
+    case R_AARCH64_TLSIE_MOVW_GOTTPREL_G1:
+    case R_AARCH64_TLSIE_MOVW_GOTTPREL_G0_NC:
+    case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case R_AARCH64_TLSIE_LD_GOTTPREL_PREL19:
+    case R_AARCH64_TLSDESC_LD_PREL19:
+    case R_AARCH64_TLSDESC_ADR_PREL21:
+    case R_AARCH64_TLSDESC_ADR_PAGE21:
+    case R_AARCH64_TLSDESC_LD64_LO12:
+    case R_AARCH64_TLSDESC_ADD_LO12:
+    case R_AARCH64_TLSDESC_OFF_G1:
+    case R_AARCH64_TLSDESC_OFF_G0_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G0:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G0_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G1:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G1_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G2:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G2_NC:
+    case R_AARCH64_AUTH_MOVW_GOTOFF_G3:
+    case R_AARCH64_AUTH_GOT_LD_PREL19:
+    case R_AARCH64_AUTH_LD64_GOTOFF_LO15:
+    case R_AARCH64_AUTH_ADR_GOT_PAGE:
+    case R_AARCH64_AUTH_LD64_GOT_LO12_NC:
+    case R_AARCH64_AUTH_LD64_GOTPAGE_LO15:
+    case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
+    case R_AARCH64_AUTH_GOT_ADR_PREL_LO21:
+    case R_AARCH64_AUTH_TLSDESC_ADR_PAGE21:
+    case R_AARCH64_AUTH_TLSDESC_LD64_LO12:
+    case R_AARCH64_AUTH_TLSDESC_ADD_LO12:
       return false;
     }
   }
