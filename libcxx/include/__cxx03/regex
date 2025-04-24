@@ -794,11 +794,9 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/back_insert_iterator.h>
-#include <__cxx03/__iterator/default_sentinel.h>
 #include <__cxx03/__iterator/wrap_iter.h>
 #include <__cxx03/__locale>
 #include <__cxx03/__memory/shared_ptr.h>
-#include <__cxx03/__memory_resource/polymorphic_allocator.h>
 #include <__cxx03/__type_traits/is_swappable.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/pair.h>
@@ -814,14 +812,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 
 // [iterator.range]
 #include <__cxx03/__iterator/access.h>
-#include <__cxx03/__iterator/data.h>
-#include <__cxx03/__iterator/empty.h>
-#include <__cxx03/__iterator/reverse_access.h>
-#include <__cxx03/__iterator/size.h>
-
-// [re.syn]
-#include <__cxx03/compare>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -5820,7 +5810,6 @@ _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <__cxx03/atomic>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/iosfwd>
 #  include <__cxx03/iterator>

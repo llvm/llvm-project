@@ -33,6 +33,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2761,6 +2762,8 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
@@ -2773,7 +2776,7 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::AtomicOpValue V = {v, elementType, false, false};
   llvm::OpenMPIRBuilder::AtomicOpValue X = {x, elementType, false, false};
-  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
+  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO, allocaIP));
   return success();
 }
 
@@ -4532,13 +4535,17 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
   builder.restoreIP(allocaIP);
 
   omp::VariableCaptureKind capture = omp::VariableCaptureKind::ByRef;
-
+  LLVM::TypeToLLVMIRTranslator typeToLLVMIRTranslator(
+      ompBuilder.M.getContext());
+  unsigned alignmentValue = 0;
   // Find the associated MapInfoData entry for the current input
   for (size_t i = 0; i < mapData.MapClause.size(); ++i)
     if (mapData.OriginalValue[i] == input) {
       auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
       capture = mapOp.getMapCaptureType();
-
+      // Get information of alignment of mapped object
+      alignmentValue = typeToLLVMIRTranslator.getPreferredAlignment(
+          mapOp.getVarType(), ompBuilder.M.getDataLayout());
       break;
     }
 
@@ -4562,9 +4569,34 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
     break;
   }
   case omp::VariableCaptureKind::ByRef: {
-    retVal = builder.CreateAlignedLoad(
+    llvm::LoadInst *loadInst = builder.CreateAlignedLoad(
         v->getType(), v,
         ompBuilder.M.getDataLayout().getPrefTypeAlign(v->getType()));
+    // CreateAlignedLoad function creates similar LLVM IR:
+    // %res = load ptr, ptr %input, align 8
+    // This LLVM IR does not contain information about alignment
+    // of the loaded value. We need to add !align metadata to unblock
+    // optimizer. The existence of the !align metadata on the instruction
+    // tells the optimizer that the value loaded is known to be aligned to
+    // a boundary specified by the integer value in the metadata node.
+    // Example:
+    // %res = load ptr, ptr %input, align 8, !align !align_md_node
+    //                                 ^         ^
+    //                                 |         |
+    //            alignment of %input address    |
+    //                                           |
+    //                                     alignment of %res object
+    if (v->getType()->isPointerTy() && alignmentValue) {
+      llvm::MDBuilder MDB(builder.getContext());
+      loadInst->setMetadata(
+          llvm::LLVMContext::MD_align,
+          llvm::MDNode::get(builder.getContext(),
+                            MDB.createConstant(llvm::ConstantInt::get(
+                                llvm::Type::getInt64Ty(builder.getContext()),
+                                alignmentValue))));
+    }
+    retVal = loadInst;
+
     break;
   }
   case omp::VariableCaptureKind::This:
@@ -4688,12 +4720,18 @@ static uint64_t getTypeByteSize(mlir::Type type, const DataLayout &dl) {
 template <typename OpTy>
 static uint64_t getReductionDataSize(OpTy &op) {
   if (op.getNumReductionVars() > 0) {
-    assert(op.getNumReductionVars() == 1 &&
-           "Only 1 reduction variable currently supported");
-    mlir::Type reductionVarTy = op.getReductionVars()[0].getType();
+    SmallVector<omp::DeclareReductionOp> reductions;
+    collectReductionDecls(op, reductions);
+
+    llvm::SmallVector<mlir::Type> members;
+    members.reserve(reductions.size());
+    for (omp::DeclareReductionOp &red : reductions)
+      members.push_back(red.getType());
     Operation *opp = op.getOperation();
+    auto structType = mlir::LLVM::LLVMStructType::getLiteral(
+        opp->getContext(), members, /*isPacked=*/false);
     DataLayout dl = DataLayout(opp->getParentOfType<ModuleOp>());
-    return getTypeByteSize(reductionVarTy, dl);
+    return getTypeByteSize(structType, dl);
   }
   return 0;
 }
@@ -4789,8 +4827,6 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
       (maxThreadsVal >= 0 && maxThreadsVal < combinedMaxThreadsVal))
     combinedMaxThreadsVal = maxThreadsVal;
 
-  // Calculate reduction data size, limited to single reduction variable for
-  // now.
   int32_t reductionDataSize = 0;
   if (isGPU && capturedOp) {
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp))

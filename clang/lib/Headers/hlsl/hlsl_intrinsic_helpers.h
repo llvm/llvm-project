@@ -35,6 +35,11 @@ length_vec_impl(vector<T, N> X) {
 #endif
 }
 
+template <typename T>
+constexpr vector<T, 4> dst_impl(vector<T, 4> Src0, vector<T, 4> Src1) {
+  return {1, Src0[1] * Src1[1], Src0[2], Src1[3]};
+}
+
 template <typename T> constexpr T distance_impl(T X, T Y) {
   return length_impl(X - Y);
 }
@@ -107,6 +112,18 @@ constexpr vector<T, N> smoothstep_vec_impl(vector<T, N> Min, vector<T, N> Max,
   vector<T, N> S = saturate((X - Min) / (Max - Min));
   return (3 - 2 * S) * S * S;
 #endif
+}
+
+template <typename T> constexpr vector<T, 4> lit_impl(T NDotL, T NDotH, T M) {
+  bool DiffuseCond = NDotL < 0;
+  T Diffuse = select<T>(DiffuseCond, 0, NDotL);
+  vector<T, 4> Result = {1, Diffuse, 0, 1};
+  // clang-format off
+  bool SpecularCond = or(DiffuseCond, (NDotH < 0));
+  // clang-format on
+  T SpecularExp = exp(log(NDotH) * M);
+  Result[2] = select<T>(SpecularCond, 0, SpecularExp);
+  return Result;
 }
 
 } // namespace __detail

@@ -1571,6 +1571,13 @@ def combine_shuffle_concat : GICombineRule<
         [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
 
+// Combines shuffles of vector into build_vector
+def combine_shuffle_vector_to_build_vector : GICombineRule<
+  (defs root:$root),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
+    [{ return Helper.matchCombineShuffleToBuildVector(*${root}); }]),
+  (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
+
 def insert_vector_element_idx_undef : GICombineRule<
    (defs root:$root),
    (match (G_IMPLICIT_DEF $idx),
@@ -1860,6 +1867,13 @@ def anyext_of_anyext : ext_of_ext_opcodes<G_ANYEXT, G_ANYEXT>;
 def anyext_of_zext : ext_of_ext_opcodes<G_ANYEXT, G_ZEXT>;
 def anyext_of_sext : ext_of_ext_opcodes<G_ANYEXT, G_SEXT>;
 
+def sext_inreg_of_sext_inreg : GICombineRule<
+   (defs root:$dst, build_fn_matchinfo:$matchinfo),
+   (match (G_SEXT_INREG $x, $src, $a):$other,
+          (G_SEXT_INREG $dst, $x, $b):$root,
+          [{ return Helper.matchRedundantSextInReg(*${root}, *${other}, ${matchinfo}); }]),
+   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 // Push cast through build vector.
 class buildvector_of_opcode<Instruction castOpcode> : GICombineRule <
   (defs root:$root, build_fn_matchinfo:$matchinfo),
@@ -1907,7 +1921,8 @@ def cast_of_cast_combines: GICombineGroup<[
   sext_of_anyext,
   anyext_of_anyext,
   anyext_of_zext,
-  anyext_of_sext
+  anyext_of_sext,
+  sext_inreg_of_sext_inreg,
 ]>;
 
 def cast_combines: GICombineGroup<[

@@ -43,6 +43,7 @@ public:
     VK_TLSDESC_LOAD_LO,
     VK_TLSDESC_ADD_LO,
     VK_TLSDESC_CALL,
+    VK_QC_ABS20,
   };
 
 private:

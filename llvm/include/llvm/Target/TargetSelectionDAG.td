@@ -313,6 +313,10 @@ def SDTSubVecInsert : SDTypeProfile<1, 3, [ // subvector insert
   SDTCisSubVecOfVec<2, 1>, SDTCisSameAs<0,1>, SDTCisInt<3>
 ]>;
 
+def SDTPartialReduceMLA : SDTypeProfile<1, 3, [ // partial reduce mla
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>
+]>;
+
 def SDTPrefetch : SDTypeProfile<0, 4, [     // prefetch
   SDTCisPtrTy<0>, SDTCisSameAs<1, 2>, SDTCisSameAs<1, 3>, SDTCisInt<1>
 ]>;
@@ -512,6 +516,11 @@ def vecreduce_fmin  : SDNode<"ISD::VECREDUCE_FMIN", SDTFPVecReduce>;
 def vecreduce_fmax  : SDNode<"ISD::VECREDUCE_FMAX", SDTFPVecReduce>;
 def vecreduce_fminimum : SDNode<"ISD::VECREDUCE_FMINIMUM", SDTFPVecReduce>;
 def vecreduce_fmaximum : SDNode<"ISD::VECREDUCE_FMAXIMUM", SDTFPVecReduce>;
+
+def partial_reduce_umla : SDNode<"ISD::PARTIAL_REDUCE_UMLA",
+                                 SDTPartialReduceMLA>;
+def partial_reduce_smla : SDNode<"ISD::PARTIAL_REDUCE_SMLA",
+                                 SDTPartialReduceMLA>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -1825,6 +1834,8 @@ defm atomic_load_min  : binary_atomic_op<atomic_load_min>;
 defm atomic_load_max  : binary_atomic_op<atomic_load_max>;
 defm atomic_load_umin : binary_atomic_op<atomic_load_umin>;
 defm atomic_load_umax : binary_atomic_op<atomic_load_umax>;
+defm atomic_load_uinc_wrap : binary_atomic_op<atomic_load_uinc_wrap>;
+defm atomic_load_udec_wrap : binary_atomic_op<atomic_load_udec_wrap>;
 defm atomic_cmp_swap  : ternary_atomic_op<atomic_cmp_swap>;
 
 /// Atomic load which zeroes the excess high bits.

@@ -3713,7 +3713,8 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         if (StringLit) {
           SFINAETrap Trap(*this);
           CheckTemplateArgumentInfo CTAI;
-          TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
+          TemplateArgumentLoc Arg(
+              TemplateArgument(StringLit, /*IsCanonical=*/false), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
                   /*ArgumentPackIndex=*/0, CTAI, CTAK_Specified) ||
@@ -5610,7 +5611,7 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
   llvm::SmallVector<Module*, 8> OwningModules;
   OwningModules.push_back(Owner);
   auto Merged = Context.getModulesWithMergedDefinition(Def);
-  OwningModules.insert(OwningModules.end(), Merged.begin(), Merged.end());
+  llvm::append_range(OwningModules, Merged);
 
   diagnoseMissingImport(Loc, Def, Def->getLocation(), OwningModules, MIK,
                         Recover);

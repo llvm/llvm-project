@@ -1725,8 +1725,8 @@ private:
   ObjCTypeParamList *parseObjCTypeParamList();
   ObjCTypeParamList *parseObjCTypeParamListOrProtocolRefs(
       ObjCTypeParamListScope &Scope, SourceLocation &lAngleLoc,
-      SmallVectorImpl<IdentifierLocPair> &protocolIdents,
-      SourceLocation &rAngleLoc, bool mayBeProtocolList = true);
+      SmallVectorImpl<IdentifierLoc> &protocolIdents, SourceLocation &rAngleLoc,
+      bool mayBeProtocolList = true);
 
   void HelperActionsForIvarDeclarations(ObjCContainerDecl *interfaceDecl,
                                         SourceLocation atLoc,
@@ -1942,8 +1942,7 @@ private:
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false,
-                           bool *HasTrailingComma = nullptr);
+                           bool EarlyTypoCorrection = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -3169,6 +3168,8 @@ private:
                                SourceLocation *endLoc = nullptr);
   ExprResult ParseExtIntegerArgument();
 
+  void ParsePtrauthQualifier(ParsedAttributes &Attrs);
+
   VirtSpecifiers::Specifier isCXX11VirtSpecifier(const Token &Tok) const;
   VirtSpecifiers::Specifier isCXX11VirtSpecifier() const {
     return isCXX11VirtSpecifier(Tok);
@@ -3737,7 +3738,7 @@ private:
     SmallVector<Expr *> getAllExprs() {
       SmallVector<Expr *> Out;
       Out.push_back(DevNumExpr);
-      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+      llvm::append_range(Out, QueueIdExprs);
       return Out;
     }
   };
@@ -3816,8 +3817,7 @@ private:
                                SourceLocation Loc,
                                llvm::SmallVectorImpl<Expr *> &IntExprs);
   /// Parses the 'device-type-list', which is a list of identifiers.
-  bool ParseOpenACCDeviceTypeList(
-      llvm::SmallVector<std::pair<IdentifierInfo *, SourceLocation>> &Archs);
+  bool ParseOpenACCDeviceTypeList(llvm::SmallVector<IdentifierLoc> &Archs);
   /// Parses the 'async-argument', which is an integral value with two
   /// 'special' values that are likely negative (but come from Macros).
   OpenACCIntExprParseResult ParseOpenACCAsyncArgument(OpenACCDirectiveKind DK,
@@ -3949,10 +3949,8 @@ private:
     return false;
   }
 
-  bool ParseModuleName(
-      SourceLocation UseLoc,
-      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
-      bool IsImport);
+  bool ParseModuleName(SourceLocation UseLoc,
+                       SmallVectorImpl<IdentifierLoc> &Path, bool IsImport);
 
   //===--------------------------------------------------------------------===//
   // C++11/G++: Type Traits [Type-Traits.html in the GCC manual]

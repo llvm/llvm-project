@@ -842,7 +842,7 @@ extern "C" __device__ double test_cbrt(double x) {
 //
 // FINITEONLY-LABEL: @test_ceilf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ceil.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ceil.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_ceilf(
@@ -866,7 +866,7 @@ extern "C" __device__ float test_ceilf(float x) {
 //
 // FINITEONLY-LABEL: @test_ceil(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ceil.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ceil.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_ceil(
@@ -890,7 +890,7 @@ extern "C" __device__ double test_ceil(double x) {
 //
 // FINITEONLY-LABEL: @test_copysignf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.copysign.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.copysign.f32(float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_copysignf(
@@ -914,7 +914,7 @@ extern "C" __device__ float test_copysignf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_copysign(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.copysign.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.copysign.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_copysign(
@@ -1274,7 +1274,7 @@ extern "C" __device__ double test_erfinv(double x) {
 //
 // FINITEONLY-LABEL: @test_exp10f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.exp10.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.exp10.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_exp10f(
@@ -1322,7 +1322,7 @@ extern "C" __device__ double test_exp10(double x) {
 //
 // FINITEONLY-LABEL: @test_exp2f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.exp2.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.exp2.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_exp2f(
@@ -1370,7 +1370,7 @@ extern "C" __device__ double test_exp2(double x) {
 //
 // FINITEONLY-LABEL: @test_expf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.exp.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.exp.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_expf(
@@ -1466,7 +1466,7 @@ extern "C" __device__ double test_expm1(double x) {
 //
 // FINITEONLY-LABEL: @test_fabsf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.fabs.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.fabs.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_fabsf(
@@ -1490,7 +1490,7 @@ extern "C" __device__ float test_fabsf(float x) {
 //
 // FINITEONLY-LABEL: @test_fabs(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fabs.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fabs.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_fabs(
@@ -1586,7 +1586,7 @@ extern "C" __device__ float test_fdividef(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_floorf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.floor.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.floor.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_floorf(
@@ -1610,7 +1610,7 @@ extern "C" __device__ float test_floorf(float x) {
 //
 // FINITEONLY-LABEL: @test_floor(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.floor.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.floor.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_floor(
@@ -1634,7 +1634,7 @@ extern "C" __device__ double test_floor(double x) {
 //
 // FINITEONLY-LABEL: @test_fmaf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.fma.f32(float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]], float nofpclass(nan inf) [[Z:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_fmaf(
@@ -1658,7 +1658,7 @@ extern "C" __device__ float test_fmaf(float x, float y, float z) {
 //
 // FINITEONLY-LABEL: @test_fma(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fma.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]], double nofpclass(nan inf) [[Z:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_fma(
@@ -1682,7 +1682,7 @@ extern "C" __device__ double test_fma(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_fma_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fma.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]], double nofpclass(nan inf) [[Z:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_fma_rn(
@@ -1706,7 +1706,7 @@ extern "C" __device__ double test_fma_rn(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_fmaxf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.maxnum.f32(float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_fmaxf(
@@ -1730,7 +1730,7 @@ extern "C" __device__ float test_fmaxf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_fmax(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.maxnum.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_fmax(
@@ -1754,7 +1754,7 @@ extern "C" __device__ double test_fmax(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_fminf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.minnum.f32(float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_fminf(
@@ -1778,7 +1778,7 @@ extern "C" __device__ float test_fminf(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_fmin(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.minnum.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_fmin(
@@ -1843,13 +1843,29 @@ extern "C" __device__ double test_fmod(double x, double y) {
   return fmod(x, y);
 }
 
-// CHECK-LABEL: @test_frexpf(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
-// CHECK-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12:![0-9]+]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
-// CHECK-NEXT:    ret float [[TMP2]]
+// DEFAULT-LABEL: @test_frexpf(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X:%.*]])
+// DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12:![0-9]+]]
+// DEFAULT-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
+// DEFAULT-NEXT:    ret float [[TMP2]]
+//
+// FINITEONLY-LABEL: @test_frexpf(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float nofpclass(nan inf) [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// FINITEONLY-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12:![0-9]+]]
+// FINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
+// FINITEONLY-NEXT:    ret float [[TMP2]]
+//
+// APPROX-LABEL: @test_frexpf(
+// APPROX-NEXT:  entry:
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X:%.*]])
+// APPROX-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// APPROX-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12:![0-9]+]]
+// APPROX-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
+// APPROX-NEXT:    ret float [[TMP2]]
 //
 // AMDGCNSPIRV-LABEL: @test_frexpf(
 // AMDGCNSPIRV-NEXT:  entry:
@@ -1863,13 +1879,29 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
   return frexpf(x, y);
 }
 
-// CHECK-LABEL: @test_frexp(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
-// CHECK-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12]]
-// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
-// CHECK-NEXT:    ret double [[TMP2]]
+// DEFAULT-LABEL: @test_frexp(
+// DEFAULT-NEXT:  entry:
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X:%.*]])
+// DEFAULT-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12]]
+// DEFAULT-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
+// DEFAULT-NEXT:    ret double [[TMP2]]
+//
+// FINITEONLY-LABEL: @test_frexp(
+// FINITEONLY-NEXT:  entry:
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double nofpclass(nan inf) [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// FINITEONLY-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12]]
+// FINITEONLY-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
+// FINITEONLY-NEXT:    ret double [[TMP2]]
+//
+// APPROX-LABEL: @test_frexp(
+// APPROX-NEXT:  entry:
+// APPROX-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X:%.*]])
+// APPROX-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// APPROX-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12]]
+// APPROX-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
+// APPROX-NEXT:    ret double [[TMP2]]
 //
 // AMDGCNSPIRV-LABEL: @test_frexp(
 // AMDGCNSPIRV-NEXT:  entry:
@@ -2522,7 +2554,7 @@ extern "C" __device__ double test_jn(int x, double y) {
 //
 // FINITEONLY-LABEL: @test_ldexpf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ldexp.f32.i32(float nofpclass(nan inf) [[X:%.*]], i32 [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_ldexpf(
@@ -2546,7 +2578,7 @@ extern "C" __device__ float test_ldexpf(float x, int y) {
 //
 // FINITEONLY-LABEL: @test_ldexp(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ldexp.f64.i32(double nofpclass(nan inf) [[X:%.*]], i32 [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_ldexp(
@@ -2619,7 +2651,7 @@ extern "C" __device__ double test_lgamma(double x) {
 //
 // FINITEONLY-LABEL: @test_llrintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -2647,7 +2679,7 @@ extern "C" __device__ long long int test_llrintf(float x) {
 //
 // FINITEONLY-LABEL: @test_llrint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -2675,7 +2707,7 @@ extern "C" __device__ long long int test_llrint(double x) {
 //
 // FINITEONLY-LABEL: @test_llroundf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.round.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.round.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -2703,7 +2735,7 @@ extern "C" __device__ long long int test_llroundf(float x) {
 //
 // FINITEONLY-LABEL: @test_llround(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.round.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.round.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -2730,7 +2762,7 @@ extern "C" __device__ long long int test_llround(double x) {
 //
 // FINITEONLY-LABEL: @test_log10f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log10.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log10.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_log10f(
@@ -2826,7 +2858,7 @@ extern "C" __device__ double test_log1p(double x) {
 //
 // FINITEONLY-LABEL: @test_log2f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log2.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log2.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_log2f(
@@ -2922,7 +2954,7 @@ extern "C" __device__ double test_logb(double x) {
 //
 // FINITEONLY-LABEL: @test_logf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_logf(
@@ -2947,7 +2979,7 @@ extern "C" __device__ float test_logf(float x) {
 //
 // FINITEONLY-LABEL: @test_lrintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.rint.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -2975,7 +3007,7 @@ extern "C" __device__ long int test_lrintf(float x) {
 //
 // FINITEONLY-LABEL: @test_lrint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.rint.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -3003,7 +3035,7 @@ extern "C" __device__ long int test_lrint(double x) {
 //
 // FINITEONLY-LABEL: @test_lroundf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.round.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract float @llvm.round.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi float [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -3031,7 +3063,7 @@ extern "C" __device__ long int test_lroundf(float x) {
 //
 // FINITEONLY-LABEL: @test_lround(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.round.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract double @llvm.round.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = fptosi double [[TMP0]] to i64
 // FINITEONLY-NEXT:    ret i64 [[CONV_I]]
 //
@@ -3795,7 +3827,7 @@ extern "C" __device__ double test_nan_fill() {
 //
 // FINITEONLY-LABEL: @test_nearbyintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.nearbyint.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.nearbyint.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_nearbyintf(
@@ -3819,7 +3851,7 @@ extern "C" __device__ float test_nearbyintf(float x) {
 //
 // FINITEONLY-LABEL: @test_nearbyint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.nearbyint.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.nearbyint.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_nearbyint(
@@ -4581,7 +4613,7 @@ extern "C" __device__ double test_rhypot(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_rintf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.rint.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.rint.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_rintf(
@@ -4605,7 +4637,7 @@ extern "C" __device__ float test_rintf(float x) {
 //
 // FINITEONLY-LABEL: @test_rint(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.rint.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.rint.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_rint(
@@ -4893,7 +4925,7 @@ extern "C" __device__ double test_rnorm4d(double x, double y, double z, double w
 //
 // FINITEONLY-LABEL: @test_roundf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.round.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.round.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_roundf(
@@ -4917,7 +4949,7 @@ extern "C" __device__ float test_roundf(float x) {
 //
 // FINITEONLY-LABEL: @test_round(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.round.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.round.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_round(
@@ -4993,7 +5025,7 @@ extern "C" __device__ double test_rsqrt(double x) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[CONV_I]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ldexp.f32.i32(float nofpclass(nan inf) [[X:%.*]], i32 [[CONV_I]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_scalblnf(
@@ -5025,7 +5057,7 @@ extern "C" __device__ float test_scalblnf(float x, long int y) {
 // FINITEONLY-NEXT:  entry:
 // FINITEONLY-NEXT:    [[SPEC_STORE_SELECT_I:%.*]] = tail call i64 @llvm.smax.i64(i64 [[Y:%.*]], i64 -2147483648)
 // FINITEONLY-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SPEC_STORE_SELECT_I]] to i32
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[CONV_I]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ldexp.f64.i32(double nofpclass(nan inf) [[X:%.*]], i32 [[CONV_I]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_scalbln(
@@ -5053,7 +5085,7 @@ extern "C" __device__ double test_scalbln(double x, long int y) {
 //
 // FINITEONLY-LABEL: @test_scalbnf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.ldexp.f32.i32(float nofpclass(nan inf) [[X:%.*]], i32 [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_scalbnf(
@@ -5077,7 +5109,7 @@ extern "C" __device__ float test_scalbnf(float x, int y) {
 //
 // FINITEONLY-LABEL: @test_scalbn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ldexp.f64.i32(double [[X:%.*]], i32 [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.ldexp.f64.i32(double nofpclass(nan inf) [[X:%.*]], i32 [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_scalbn(
@@ -5427,7 +5459,7 @@ extern "C" __device__ double test_sinpi(double x) {
 //
 // FINITEONLY-LABEL: @test_sqrtf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.sqrt.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.sqrt.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_sqrtf(
@@ -5451,7 +5483,7 @@ extern "C" __device__ float test_sqrtf(float x) {
 //
 // FINITEONLY-LABEL: @test_sqrt(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.sqrt.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.sqrt.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_sqrt(
@@ -5619,7 +5651,7 @@ extern "C" __device__ double test_tgamma(double x) {
 //
 // FINITEONLY-LABEL: @test_truncf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.trunc.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.trunc.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_truncf(
@@ -5643,7 +5675,7 @@ extern "C" __device__ float test_truncf(float x) {
 //
 // FINITEONLY-LABEL: @test_trunc(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.trunc.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.trunc.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_trunc(
@@ -6163,7 +6195,7 @@ extern "C" __device__ float test___fdividef(float x, float y) {
 //
 // FINITEONLY-LABEL: @test__fmaf_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.fma.f32(float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.fma.f32(float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]], float nofpclass(nan inf) [[Z:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test__fmaf_rn(
@@ -6235,7 +6267,7 @@ extern "C" __device__ float test___frcp_rn(float x) {
 //
 // FINITEONLY-LABEL: @test___frsqrt_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.amdgcn.rsq.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.amdgcn.rsq.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test___frsqrt_rn(
@@ -6307,7 +6339,7 @@ extern "C" __device__ float test___fsub_rn(float x, float y) {
 //
 // FINITEONLY-LABEL: @test___log10f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log10.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log10.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test___log10f(
@@ -6331,7 +6363,7 @@ extern "C" __device__ float test___log10f(float x) {
 //
 // FINITEONLY-LABEL: @test___log2f(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.amdgcn.log.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.amdgcn.log.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test___log2f(
@@ -6355,7 +6387,7 @@ extern "C" __device__ float test___log2f(float x) {
 //
 // FINITEONLY-LABEL: @test___logf(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log.f32(float [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.log.f32(float nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test___logf(
@@ -6631,7 +6663,7 @@ extern "C" __device__ double test___drcp_rn(double x) {
 //
 // FINITEONLY-LABEL: @test___dsqrt_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.sqrt.f64(double [[X:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.sqrt.f64(double nofpclass(nan inf) [[X:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test___dsqrt_rn(
@@ -6655,7 +6687,7 @@ extern "C" __device__ double test___dsqrt_rn(double x) {
 //
 // FINITEONLY-LABEL: @test__fma_rn(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fma.f64(double [[X:%.*]], double [[Y:%.*]], double [[Z:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.fma.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]], double nofpclass(nan inf) [[Z:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test__fma_rn(
@@ -6679,7 +6711,7 @@ extern "C" __device__ double test__fma_rn(double x, double y, double z) {
 //
 // FINITEONLY-LABEL: @test_float_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.minnum.f32(float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_float_min(
@@ -6703,7 +6735,7 @@ extern "C" __device__ float test_float_min(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_float_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef float @llvm.maxnum.f32(float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret float [[TMP0]]
 //
 // APPROX-LABEL: @test_float_max(
@@ -6727,7 +6759,7 @@ extern "C" __device__ float test_float_max(float x, float y) {
 //
 // FINITEONLY-LABEL: @test_double_min(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.minnum.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_double_min(
@@ -6751,7 +6783,7 @@ extern "C" __device__ double test_double_min(double x, double y) {
 //
 // FINITEONLY-LABEL: @test_double_max(
 // FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call nnan ninf contract noundef double @llvm.maxnum.f64(double nofpclass(nan inf) [[X:%.*]], double nofpclass(nan inf) [[Y:%.*]])
 // FINITEONLY-NEXT:    ret double [[TMP0]]
 //
 // APPROX-LABEL: @test_double_max(

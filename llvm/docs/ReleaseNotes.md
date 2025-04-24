@@ -85,6 +85,14 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added the `execute-only` target feature, which indicates that the generated
+  program code doesn't contain any inline data, and there are no data accesses
+  to code sections. On ELF targets this property is indicated by the
+  `SHF_AARCH64_PURECODE` section flag.
+  ([#125687](https://github.com/llvm/llvm-project/pull/125687),
+  [#132196](https://github.com/llvm/llvm-project/pull/132196),
+  [#133084](https://github.com/llvm/llvm-project/pull/133084))
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -159,6 +167,9 @@ Changes to the RISC-V Backend
 * Adds assembler support for ``.option exact``, which disables automatic compression,
   and branch and linker relaxation. This can be disabled with ``.option noexact``,
   which is also the default.
+* `-mcpu=xiangshan-kunminghu` was added.
+* `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
+* `-mcpu=andes-a45` and `-mcpu=andes-ax45` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -225,6 +236,10 @@ Changes to LLDB
 * The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
   from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
   handling in LLDB 20, these options have had no effect.
+* LLDB now supports `process continue --reverse` when used with debug servers
+  supporting reverse execution, such as [rr](https://rr-project.org).
+  When using reverse execution, `process continue --forward` returns to the
+  forward execution.
 
 ### Changes to lldb-dap
 

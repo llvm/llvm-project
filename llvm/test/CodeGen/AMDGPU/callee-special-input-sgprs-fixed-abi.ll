@@ -198,11 +198,11 @@ define hidden void @use_workgroup_id_yz() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_x:
 ; GCN-NOT: s6
-; GCN: s_getpc_b64 s[4:5]
-; GCN-NEXT: s_add_u32 s4, s4, use_workgroup_id_x@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s5, s5, use_workgroup_id_x@rel32@hi+12
+; GCN: s_getpc_b64 s[6:7]
+; GCN-NEXT: s_add_u32 s6, s6, use_workgroup_id_x@rel32@lo+4
+; GCN-NEXT: s_addc_u32 s7, s7, use_workgroup_id_x@rel32@hi+12
 ; GCN-NOT: s6
-; GCN: s_mov_b32 s12, s6
+; GCN: s_mov_b32 s12, s4
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
@@ -217,7 +217,7 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_y:
 ; GCN-NOT: s12
-; GCN: s_mov_b32 s13, s7
+; GCN: s_mov_b32 s13, s5
 ; GCN-NOT: s12
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -233,7 +233,7 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_z:
 ; GCN-NOT: s12
 ; GCN-NOT: s13
-; GCN: s_mov_b32 s14, s7
+; GCN: s_mov_b32 s14, s5
 ; GCN-NOT: s12
 ; GCN-NOT: s13
 
@@ -250,8 +250,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_z() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_xy:
 ; GCN-NOT: s14
-; GCN: s_mov_b32 s12, s6
-; GCN-NEXT: s_mov_b32 s13, s7
+; GCN: s_mov_b32 s12, s4
+; GCN-NEXT: s_mov_b32 s13, s5
 ; GCN-NOT: s14
 
 ; GCN: s_mov_b32 s32, 0
@@ -266,9 +266,9 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xy() #1 {
 }
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_xyz:
-; GCN: s_mov_b32 s12, s6
-; GCN: s_mov_b32 s13, s7
-; GCN: s_mov_b32 s14, s8
+; GCN: s_mov_b32 s12, s4
+; GCN: s_mov_b32 s13, s5
+; GCN: s_mov_b32 s14, s6
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
 
@@ -283,8 +283,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xyz() #1 {
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_xz:
 
 ; GCN-NOT: s13
-; GCN: s_mov_b32 s12, s6
-; GCN-NEXT: s_mov_b32 s14, s7
+; GCN: s_mov_b32 s12, s4
+; GCN-NEXT: s_mov_b32 s14, s5
 ; GCN-NOT: s13
 
 ; GCN: s_mov_b32 s32, 0
@@ -300,8 +300,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xz() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_use_workgroup_id_yz:
 
-; GCN: s_mov_b32 s13, s7
-; GCN: s_mov_b32 s14, s8
+; GCN: s_mov_b32 s13, s5
+; GCN: s_mov_b32 s14, s6
 
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -382,7 +382,7 @@ define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
 
 ; GCN-NOT: s13
 ; GCN-NOT: s14
-; GCN-DAG: s_mov_b32 s12, s6
+; GCN-DAG: s_mov_b32 s12, s4
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
 ; GCN-NOT: s13
 ; GCN-NOT: s14
@@ -400,7 +400,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_x() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workgroup_id_y:
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: s_mov_b32 s13, s7
+; GCN-DAG: s_mov_b32 s13, s5
 
 ; GCN-DAG: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -415,7 +415,7 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_y() #1 {
 
 ; GCN-LABEL: {{^}}kern_indirect_other_arg_use_workgroup_id_z:
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: s_mov_b32 s14, s7
+; GCN-DAG: s_mov_b32 s14, s5
 
 ; GCN: s_mov_b32 s32, 0
 ; GCN: s_swappc_b64
@@ -474,7 +474,7 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 1
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
-; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
+; GCN: .amdhsa_user_sgpr_flat_scratch_init 0
 ; GCN: .amdhsa_user_sgpr_private_segment_size 0
 ; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_x 1
@@ -499,7 +499,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input(i8) #1 {
 ; GCN: .amdhsa_user_sgpr_queue_ptr 1
 ; GCN: .amdhsa_user_sgpr_kernarg_segment_ptr 0
 ; GCN: .amdhsa_user_sgpr_dispatch_id 1
-; GCN: .amdhsa_user_sgpr_flat_scratch_init 1
+; GCN: .amdhsa_user_sgpr_flat_scratch_init 0
 ; GCN: .amdhsa_user_sgpr_private_segment_size 0
 ; GCN: .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; GCN: .amdhsa_system_sgpr_workgroup_id_x 1

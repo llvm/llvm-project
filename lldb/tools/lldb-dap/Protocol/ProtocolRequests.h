@@ -22,6 +22,7 @@
 
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
@@ -29,6 +30,26 @@
 #include <string>
 
 namespace lldb_dap::protocol {
+
+/// Arguments for `cancel` request.
+struct CancelArguments {
+  /// The ID (attribute `seq`) of the request to cancel. If missing no request
+  /// is cancelled.
+  ///
+  /// Both a `requestId` and a `progressId` can be specified in one request.
+  std::optional<int64_t> requestId;
+
+  /// The ID (attribute `progressId`) of the progress to cancel. If missing no
+  /// progress is cancelled.
+  ///
+  /// Both a `requestId` and a `progressId` can be specified in one request.
+  std::optional<int64_t> progressId;
+};
+bool fromJSON(const llvm::json::Value &, CancelArguments &, llvm::json::Path);
+
+/// Response to `cancel` request. This is just an acknowledgement, so no body
+/// field is required.
+using CancelResponseBody = VoidResponse;
 
 /// Arguments for `disconnect` request.
 struct DisconnectArguments {
@@ -80,7 +101,7 @@ enum PathFormat : unsigned { ePatFormatPath, ePathFormatURI };
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
   /// The ID of the debug adapter.
-  std::string adatperID;
+  std::string adapterID;
 
   /// The ID of the client using this adapter.
   std::optional<std::string> clientID;
@@ -93,7 +114,7 @@ struct InitializeRequestArguments {
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
-  std::optional<PathFormat> pathFormat = ePatFormatPath;
+  PathFormat pathFormat = ePatFormatPath;
 
   /// If true all line numbers are 1-based (default).
   std::optional<bool> linesStartAt1;
@@ -215,6 +236,47 @@ struct SourceResponseBody {
   std::optional<std::string> mimeType;
 };
 llvm::json::Value toJSON(const SourceResponseBody &);
+
+/// Arguments for `next` request.
+struct NextArguments {
+  /// Specifies the thread for which to resume execution for one step (of the
+  /// given granularity).
+  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, all other suspended threads are not resumed.
+  bool singleThread = false;
+
+  /// Stepping granularity. If no granularity is specified, a granularity of
+  /// `statement` is assumed.
+  SteppingGranularity granularity = eSteppingGranularityStatement;
+};
+bool fromJSON(const llvm::json::Value &, NextArguments &, llvm::json::Path);
+
+/// Response to `next` request. This is just an acknowledgement, so no
+/// body field is required.
+using NextResponse = VoidResponse;
+
+/// Arguments for `stepIn` request.
+struct StepInArguments {
+  /// Specifies the thread for which to resume execution for one step-into (of
+  /// the given granularity).
+  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, all other suspended threads are not resumed.
+  bool singleThread = false;
+
+  /// Id of the target to step into.
+  std::optional<uint64_t> targetId;
+
+  /// Stepping granularity. If no granularity is specified, a granularity of
+  /// `statement` is assumed.
+  SteppingGranularity granularity = eSteppingGranularityStatement;
+};
+bool fromJSON(const llvm::json::Value &, StepInArguments &, llvm::json::Path);
+
+/// Response to `stepIn` request. This is just an acknowledgement, so no
+/// body field is required.
+using StepInResponse = VoidResponse;
 
 } // namespace lldb_dap::protocol
 

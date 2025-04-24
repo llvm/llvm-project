@@ -283,7 +283,7 @@ template <class _ValueType,
               __deque_block_size<_ValueType, _DiffType>::value
 #  endif
           >
-class _LIBCPP_TEMPLATE_VIS __deque_iterator {
+class __deque_iterator {
   typedef _MapPointer __map_iterator;
 
 public:
@@ -444,9 +444,9 @@ private:
         __ptr_(__p) {}
 
   template <class _Tp, class _Ap>
-  friend class _LIBCPP_TEMPLATE_VIS deque;
+  friend class deque;
   template <class _Vp, class _Pp, class _Rp, class _MP, class _Dp, _Dp>
-  friend class _LIBCPP_TEMPLATE_VIS __deque_iterator;
+  friend class __deque_iterator;
 
   template <class>
   friend struct __segmented_iterator_traits;
@@ -486,7 +486,7 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
     __deque_block_size<_ValueType, _DiffType>::value;
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS deque {
+class deque {
 public:
   // types:
 

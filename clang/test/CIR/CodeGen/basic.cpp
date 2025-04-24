@@ -54,3 +54,51 @@ int f4(const int i) {
 // CHECK:   cir.store %[[ARG_VAL]], %[[RV]] : !s32i, !cir.ptr<!s32i>
 // CHECK:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CHECK:   cir.return %[[R]] : !s32i
+
+int *f5() {
+  int *p = nullptr;
+  {
+    int x = 0;
+    p = &x;
+    *p = 42;
+  }
+  *p = 43;
+  return p;
+}
+
+// CHECK:      cir.func @f5() -> !cir.ptr<!s32i>
+// CHECK-NEXT:   %[[RET_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
+// CHECK-NEXT:   %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p", init] {alignment = 8 : i64}
+// CHECK-NEXT:   %[[NULLPTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
+// CHECK-NEXT:   cir.store %[[NULLPTR]], %[[P_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT:   cir.scope {
+// CHECK-NEXT:     %[[X_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CHECK-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK-NEXT:     cir.store %[[ZERO]], %[[X_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:     cir.store %[[X_ADDR]], %[[P_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT:     %[[FOURTYTWO:.*]] = cir.const #cir.int<42> : !s32i
+// CHECK-NEXT:     %[[P:.*]] = cir.load deref %[[P_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:     cir.store %[[FOURTYTWO]], %[[P]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:   }
+// CHECK-NEXT:   %[[FOURTYTHREE:.*]] = cir.const #cir.int<43> : !s32i
+// CHECK-NEXT:   %[[P:.*]] = cir.load deref %[[P_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:   cir.store %[[FOURTYTHREE]], %[[P]] : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:   %[[P:.*]] = cir.load %[[P_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:   cir.store %[[P]], %[[RET_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT:   %[[RET_VAL:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK-NEXT:   cir.return %[[RET_VAL]] : !cir.ptr<!s32i>
+
+using size_type = unsigned long;
+using _Tp = unsigned long;
+
+size_type max_size() {
+  return size_type(~0) / sizeof(_Tp);
+}
+
+// CHECK: cir.func @max_size()
+// CHECK:   %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
+// CHECK:   %1 = cir.const #cir.int<0> : !s32i
+// CHECK:   %2 = cir.unary(not, %1) : !s32i, !s32i
+// CHECK:   %3 = cir.cast(integral, %2 : !s32i), !u64i
+// CHECK:   %4 = cir.const #cir.int<8> : !u64i
+// CHECK:   %5 = cir.binop(div, %3, %4) : !u64i
