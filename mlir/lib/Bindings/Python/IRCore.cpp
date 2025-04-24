@@ -332,33 +332,6 @@ nb::object PyBlock::getCapsule() {
 
 namespace {
 
-class PyRegionIterator {
-public:
-  PyRegionIterator(PyOperationRef operation)
-      : operation(std::move(operation)) {}
-
-  PyRegionIterator &dunderIter() { return *this; }
-
-  PyRegion dunderNext() {
-    operation->checkValid();
-    if (nextIndex >= mlirOperationGetNumRegions(operation->get())) {
-      throw nb::stop_iteration();
-    }
-    MlirRegion region = mlirOperationGetRegion(operation->get(), nextIndex++);
-    return PyRegion(operation, region);
-  }
-
-  static void bind(nb::module_ &m) {
-    nb::class_<PyRegionIterator>(m, "RegionIterator")
-        .def("__iter__", &PyRegionIterator::dunderIter)
-        .def("__next__", &PyRegionIterator::dunderNext);
-  }
-
-private:
-  PyOperationRef operation;
-  int nextIndex = 0;
-};
-
 /// Regions of an op are fixed length and indexed numerically so are represented
 /// with a sequence-like container.
 class PyRegionList : public Sliceable<PyRegionList, PyRegion> {
@@ -372,15 +345,6 @@ public:
                                : length,
                   step),
         operation(std::move(operation)) {}
-
-  PyRegionIterator dunderIter() {
-    operation->checkValid();
-    return PyRegionIterator(operation);
-  }
-
-  static void bindDerived(ClassTy &c) {
-    c.def("__iter__", &PyRegionList::dunderIter);
-  }
 
 private:
   /// Give the parent CRTP class access to hook implementations below.
@@ -4105,7 +4069,6 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   PyOpOperandList::bind(m);
   PyOpResultList::bind(m);
   PyOpSuccessors::bind(m);
-  PyRegionIterator::bind(m);
   PyRegionList::bind(m);
 
   // Debug bindings.

@@ -82,12 +82,16 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:           OP 1: func.return
     walk_operations("", op)
 
-    # CHECK:    Region iter: <mlir.{{.+}}.RegionIterator
-    # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
-    # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
-    print("   Region iter:", iter(op.regions))
-    print("    Block iter:", iter(op.regions[-1]))
-    print("Operation iter:", iter(op.regions[-1].blocks[-1]))
+    # CHECK:    Regions: [<mlir.{{.+}}.Region object at {{.+}}>]
+    # CHECK:     Blocks: [<mlir.{{.+}}.Block object at {{.+}}>]
+    # CHECK: Operations: [<mlir.{{.+}}.FuncOp object at {{.+}}>]
+    print("   Regions:", [*op.regions])
+    print("    Blocks:", [*op.regions[-1]])
+    print("Operations:", [*op.regions[-1].blocks[-1]])
+
+    # Make sure the iterator uses offsets and the resulting list is empty.
+    # CHECK: []
+    print([*op.regions[1:]])
 
     try:
         op.regions[-42]
