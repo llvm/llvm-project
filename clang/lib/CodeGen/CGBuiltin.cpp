@@ -1088,7 +1088,8 @@ static llvm::Value *EmitPositiveResultOrZero(CodeGenFunction &CGF,
     Cmp = CGF.Builder.CreateAnd(CGF.Builder.CreateIsNotNeg(Index), Cmp);
 
   //  return cmp ? result : 0
-  return CGF.Builder.CreateSelect(Cmp, Res, ConstantInt::get(ResType, 0, IsSigned));
+  return CGF.Builder.CreateSelect(Cmp, Res,
+                                  ConstantInt::get(ResType, 0, IsSigned));
 }
 
 static std::pair<llvm::Value *, llvm::Value *>
