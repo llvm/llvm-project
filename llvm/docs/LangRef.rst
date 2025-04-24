@@ -12881,9 +12881,9 @@ class <t_firstclass>` type.
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
    for selects that return :ref:`supported floating-point types
    <fastmath_return_types>`. Note that the violation of poison-generating flags on
-   non-selected arm may not result in :ref:`poison <poisonvalues>` return value.
-   For simplicity, if :ref:`fast-math flags <fastmath>` are present, they are only
-   applied to the result, not both arms.
+   the non-selected arm does not result in a :ref:`poison <poisonvalues>` return value.
+   If :ref:`fast-math flags <fastmath>` are present, they are only applied to the result,
+   not both arms.
 
 Semantics:
 """"""""""
@@ -12905,6 +12905,7 @@ Example:
 
       %X = select i1 true, i8 17, i8 42                   ; yields i8:17
       %Y = select nnan i1 true, float 0.0, float NaN      ; yields float:0.0
+      %Z = select nnan i1 false, float 0.0, float NaN     ; yields float:poison
 
 
 .. _i_freeze:
