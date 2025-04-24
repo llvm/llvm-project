@@ -40,21 +40,19 @@ static bool reportError(LLVMContext *Ctx, Twine Message,
   return true;
 }
 
-static bool reportValueError(LLVMContext *Ctx, Twine ParamName, uint32_t Value,
-                             DiagnosticSeverity Severity = DS_Error) {
+static bool reportValueError(LLVMContext *Ctx, Twine ParamName,
+                             uint32_t Value) {
   Ctx->diagnose(DiagnosticInfoGeneric(
-      "Invalid value for " + ParamName + ": " + Twine(Value), Severity));
+      "Invalid value for " + ParamName + ": " + Twine(Value), DS_Error));
   return true;
 }
 
-static bool extractMdIntValue(uint32_t &Value, MDNode *Node,
-                              unsigned int OpId) {
-  auto *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get());
-  if (CI == nullptr)
-    return true;
-
-  Value = CI->getZExtValue();
-  return false;
+static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
+                                                 unsigned int OpId) {
+  if (auto *CI =
+          mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get()))
+    return CI->getZExtValue();
+  return std::nullopt;
 }
 
 static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
@@ -63,7 +61,9 @@ static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   if (RootFlagNode->getNumOperands() != 2)
     return reportError(Ctx, "Invalid format for RootFlag Element");
 
-  if (extractMdIntValue(RSD.Flags, RootFlagNode, 1))
+  if (std::optional<uint32_t> Val = extractMdIntValue(RootFlagNode, 1))
+    RSD.Flags = *Val;
+  else
     return reportError(Ctx, "Invalid value for RootFlag");
 
   return false;
@@ -79,22 +79,24 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   NewParameter.Header.ParameterType =
       llvm::to_underlying(dxbc::RootParameterType::Constants32Bit);
 
-  uint32_t SV;
-  if (extractMdIntValue(SV, RootConstantNode, 1))
+  if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 1))
+    NewParameter.Header.ShaderVisibility = *Val;
+  else
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
-  NewParameter.Header.ShaderVisibility = SV;
-
-  if (extractMdIntValue(NewParameter.Constants.ShaderRegister, RootConstantNode,
-                        2))
+  if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 2))
+    NewParameter.Constants.ShaderRegister = *Val;
+  else
     return reportError(Ctx, "Invalid value for ShaderRegister");
 
-  if (extractMdIntValue(NewParameter.Constants.RegisterSpace, RootConstantNode,
-                        3))
+  if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 3))
+    NewParameter.Constants.RegisterSpace = *Val;
+  else
     return reportError(Ctx, "Invalid value for RegisterSpace");
 
-  if (extractMdIntValue(NewParameter.Constants.Num32BitValues, RootConstantNode,
-                        4))
+  if (std::optional<uint32_t> Val = extractMdIntValue(RootConstantNode, 4))
+    NewParameter.Constants.Num32BitValues = *Val;
+  else
     return reportError(Ctx, "Invalid value for Num32BitValues");
 
   RSD.Parameters.push_back(NewParameter);
@@ -148,32 +150,6 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 
 static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-static bool verifyShaderVisibility(uint32_t Flags) {
-  switch (Flags) {
-
-  case llvm::to_underlying(dxbc::ShaderVisibility::All):
-  case llvm::to_underlying(dxbc::ShaderVisibility::Vertex):
-  case llvm::to_underlying(dxbc::ShaderVisibility::Hull):
-  case llvm::to_underlying(dxbc::ShaderVisibility::Domain):
-  case llvm::to_underlying(dxbc::ShaderVisibility::Geometry):
-  case llvm::to_underlying(dxbc::ShaderVisibility::Pixel):
-  case llvm::to_underlying(dxbc::ShaderVisibility::Amplification):
-  case llvm::to_underlying(dxbc::ShaderVisibility::Mesh):
-    return true;
-  }
-
-  return false;
-}
-
-static bool verifyParameterType(uint32_t Type) {
-  switch (Type) {
-  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-    return true;
-  }
-
-  return false;
-}
-
 static bool verifyVersion(uint32_t Version) {
   return (Version == 1 || Version == 2);
 }
@@ -189,11 +165,11 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
   }
 
   for (const auto &P : RSD.Parameters) {
-    if (!verifyShaderVisibility(P.Header.ShaderVisibility))
+    if (!dxbc::isValidShaderVisibility(P.Header.ShaderVisibility))
       return reportValueError(Ctx, "ShaderVisibility",
-                              (uint32_t)P.Header.ShaderVisibility);
+                              P.Header.ShaderVisibility);
 
-    assert(verifyParameterType(P.Header.ParameterType) &&
+    assert(dxbc::isValidParameterType(P.Header.ParameterType) &&
            "Invalid value for ParameterType");
   }
 
@@ -265,6 +241,10 @@ analyzeModule(Module &M) {
     }
 
     mcdxbc::RootSignatureDesc RSD;
+    // Clang emits the root signature data in dxcontainer following a specific
+    // sequence. First the header, then the root parameters. The header is
+    // always 24 bytes long, this is why we have 24 here.
+    RSD.RootParameterOffset = 24U;
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
@@ -307,26 +287,25 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << "\n";
     OS << indent(Space) << "Version: " << RS.Version << "\n";
     OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << "\n";
-    OS << indent(Space) << "RootParametersOffset: " << RSHSize << "\n";
+    OS << indent(Space) << "RootParametersOffset: " << RS.RootParameterOffset
+       << "\n";
     OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
-    OS << indent(Space)
-       << "StaticSamplersOffset: " << RSHSize + RS.Parameters.size_in_bytes()
+    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
        << "\n";
 
     Space++;
     for (auto const &P : RS.Parameters) {
-      OS << indent(Space)
-         << "Parameter Type: " << (uint32_t)P.Header.ParameterType << "\n";
-      OS << indent(Space)
-         << "Shader Visibility: " << (uint32_t)P.Header.ShaderVisibility
+      OS << indent(Space) << "- Parameter Type: " << P.Header.ParameterType
          << "\n";
+      OS << indent(Space + 2)
+         << "Shader Visibility: " << P.Header.ShaderVisibility << "\n";
       switch (P.Header.ParameterType) {
       case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-        OS << indent(Space) << "Register Space: " << P.Constants.RegisterSpace
-           << "\n";
-        OS << indent(Space) << "Shader Register: " << P.Constants.ShaderRegister
-           << "\n";
-        OS << indent(Space)
+        OS << indent(Space + 2)
+           << "Register Space: " << P.Constants.RegisterSpace << "\n";
+        OS << indent(Space + 2)
+           << "Shader Register: " << P.Constants.ShaderRegister << "\n";
+        OS << indent(Space + 2)
            << "Num 32 Bit Values: " << P.Constants.Num32BitValues << "\n";
         break;
       }
