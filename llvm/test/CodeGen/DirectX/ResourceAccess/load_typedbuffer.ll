@@ -38,7 +38,7 @@ define void @load_float4(i32 %index, i32 %elemindex) {
 }
 
 ; CHECK-LABEL: define void @load_float(
-define void @load_float(i32 %index, i32 %elemindex) {
+define void @load_float(i32 %index) {
   %buffer = call target("dx.TypedBuffer", float, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
 
