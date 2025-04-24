@@ -104,7 +104,7 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
                 totalFrames, i, "total frames should include a pagination offset"
             )
 
-    @skipIfWindows
+    @skipUnlessDarwin
     def test_stackTraceWithFormat(self):
         """
         Tests the 'stackTrace' packet on a thread with an extended backtrace using stack trace formats.
