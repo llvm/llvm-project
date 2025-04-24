@@ -312,7 +312,7 @@ const RecVec *SetTheory::expand(const Record *Set) {
     return &I->second;
 
   // This is the first time we see Set. Find a suitable expander.
-  for (const auto &[SuperClass, Loc] : Set->getSuperClasses()) {
+  for (const Record *SuperClass : Set->getSuperClasses()) {
     // Skip unnamed superclasses.
     if (!isa<StringInit>(SuperClass->getNameInit()))
       continue;

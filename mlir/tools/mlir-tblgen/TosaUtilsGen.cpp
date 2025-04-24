@@ -100,13 +100,11 @@ Availability::Availability(const llvm::Record *def) : def(def) {
 }
 
 StringRef Availability::getClass() const {
-  SmallVector<const Record *, 1> parentClass;
-  def->getDirectSuperClasses(parentClass);
-  if (parentClass.size() != 1) {
+  if (def->getDirectSuperClasses().size() != 1) {
     PrintFatalError(def->getLoc(),
                     "expected to only have one direct superclass");
   }
-  return parentClass.front()->getName();
+  return def->getDirectSuperClasses().front().first->getName();
 }
 
 StringRef Availability::getQueryFnRetType() const {

@@ -704,8 +704,8 @@ struct TupleExpander : SetTheory::Expander {
                         "Register tuple redefines register '" + Name + "'.");
 
       // Copy Proto super-classes.
-      for (const auto &[Super, Loc] : Proto->getSuperClasses())
-        NewReg->addSuperClass(Super, Loc);
+      for (const auto &[Super, Loc] : Proto->getDirectSuperClasses())
+        NewReg->addDirectSuperClass(Super, Loc);
 
       // Copy Proto fields.
       for (unsigned i = 0, e = Proto->getValues().size(); i != e; ++i) {
