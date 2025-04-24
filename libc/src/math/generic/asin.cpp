@@ -161,8 +161,8 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   //   asin(x) = y = pi/2 - 2 * asin( sqrt( (1 - x)/2 ) )
   // Let u = (1 - x)/2, then:
   //   asin(x) = pi/2 - 2 * asin( sqrt(u) )
-  // Moreover, since 0.5 < x <= 1:
-  //   0 <= u < 1/4, and 0 <= sqrt(u) < 0.5,
+  // Moreover, since 0.5 <= x < 1:
+  //   0 < u <= 1/4, and 0 < sqrt(u) <= 0.5,
   // And hence we can reuse the same polynomial approximation of asin(x) when
   // |x| <= 0.5:
   //   asin(x) ~ pi/2 - 2 * sqrt(u) * P(u),
