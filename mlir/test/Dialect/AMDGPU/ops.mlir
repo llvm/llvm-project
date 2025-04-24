@@ -157,3 +157,10 @@ func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> 
   %0 = amdgpu.wmma %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xf16>
   func.return %0 : vector<8xf16>
 }
+
+// CHECK-LABEL: func @swizzle_bitmode
+func.func @swizzle_bitmode(%arg0 : f32) -> f32 {
+  // CHECK: amdgpu.swizzle_bitmode
+  %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : f32
+  func.return %0 : f32
+}

@@ -16,19 +16,19 @@
 
 namespace lldb_dap {
 
-// Instruction Breakpoint
 InstructionBreakpoint::InstructionBreakpoint(DAP &d,
                                              const llvm::json::Object &obj)
-    : Breakpoint(d, obj), instructionAddressReference(LLDB_INVALID_ADDRESS),
-      offset(GetInteger<int64_t>(obj, "offset").value_or(0)) {
+    : Breakpoint(d, obj), m_instruction_address_reference(LLDB_INVALID_ADDRESS),
+      m_offset(GetInteger<int64_t>(obj, "offset").value_or(0)) {
   GetString(obj, "instructionReference")
       .value_or("")
-      .getAsInteger(0, instructionAddressReference);
-  instructionAddressReference += offset;
+      .getAsInteger(0, m_instruction_address_reference);
+  m_instruction_address_reference += m_offset;
 }
 
 void InstructionBreakpoint::SetBreakpoint() {
-  bp = dap.target.BreakpointCreateByAddress(instructionAddressReference);
+  m_bp =
+      m_dap.target.BreakpointCreateByAddress(m_instruction_address_reference);
   Breakpoint::SetBreakpoint();
 }
 

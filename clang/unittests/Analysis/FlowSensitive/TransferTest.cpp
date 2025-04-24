@@ -4888,7 +4888,7 @@ TEST(TransferTest, PointerEquality) {
 
       // We won't duplicate all of the tests above with `!=`, as we know that
       // the implementation simply negates the result of the `==` comparison.
-      // Instaed, just spot-check one case.
+      // Instead, just spot-check one case.
       bool p1_ne_p1 = (p1 != p1);
 
       (void)0; // [[p]]

@@ -1897,6 +1897,9 @@ struct FoldReshapeWithGenericOpByCollapsing
                                          "fusion blocked by control function");
     }
 
+    // Set the insertion point after `producer` because there could be uses
+    // of `producer` between it and the `tensor.collapse_shape` op.
+    rewriter.setInsertionPointAfter(producer);
     std::optional<CollapseResult> collapseResult =
         collapseOpIterationDims(producer, collapsableIterationDims, rewriter);
     if (!collapseResult) {
@@ -2324,10 +2327,9 @@ struct LinalgElementwiseOpFusionPass
     // Add constant folding patterns.
     populateConstantFoldLinalgOperations(patterns, defaultControlFn);
 
-    // Use TopDownTraversal for compile time reasons
-    GreedyRewriteConfig grc;
-    grc.useTopDownTraversal = true;
-    (void)applyPatternsGreedily(op, std::move(patterns), grc);
+    // Use TopDownTraversal for compile time reasons.
+    (void)applyPatternsGreedily(op, std::move(patterns),
+                                GreedyRewriteConfig().setUseTopDownTraversal());
   }
 };
 

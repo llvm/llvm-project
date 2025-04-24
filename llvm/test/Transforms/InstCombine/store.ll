@@ -49,8 +49,7 @@ define void @test2(ptr %P) {
 
 define void @store_at_gep_off_null_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    store i32 poison, ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 poison, ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr = getelementptr inbounds i32, ptr null, i64 %offset

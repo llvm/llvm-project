@@ -767,7 +767,7 @@ inline bool CompatibleTypes(const mlir::Type &type,
 
 bool TosaValidation::CheckVariable(Operation *op) {
   if (isa<mlir::tosa::VariableOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
+    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
 
     if (variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has already been declared";
@@ -786,8 +786,7 @@ bool TosaValidation::CheckVariable(Operation *op) {
 bool TosaValidation::CheckVariableReadOrWrite(Operation *op) {
   if (isa<mlir::tosa::VariableReadOp>(op) ||
       isa<mlir::tosa::VariableWriteOp>(op)) {
-    auto nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
-
+    mlir::StringAttr nameAttr = cast<mlir::StringAttr>(op->getAttr("name"));
     if (!variablesMap.count(nameAttr)) {
       op->emitOpError() << "name has not been declared";
       return false;
@@ -979,8 +978,63 @@ bool checkErrorIfResize(Operation *op) {
   return true;
 }
 
+bool checkErrorIfMul(Operation *op) {
+  auto mul = dyn_cast<tosa::MulOp>(op);
+  if (!mul)
+    return true;
+
+  // REQUIRE(0 <= shift && shift <= 63);
+  // REQUIRE(is_same<in_t,int32_t>() || shift == 0);
+  ElementsAttr shift_elem;
+  if (!matchPattern(mul.getShift(), m_Constant(&shift_elem))) {
+    return true;
+  }
+  int32_t shift = shift_elem.getValues<IntegerAttr>()[0].getInt();
+  auto inputElemType = getElementTypeOrSelf(mul.getInput1());
+  if (inputElemType.isInteger(32)) {
+    // 0 <= shift <= 63 for int32_t type
+    if (shift < 0 || shift > 63) {
+      op->emitOpError() << "requires 0 <= shift && shift <= 63, but got: "
+                        << shift;
+      return false;
+    }
+  } else {
+    // shift must be 0 for all other types
+    if (shift != 0) {
+      op->emitOpError() << "requires shift = 0 for all input data types that "
+                           "are not int32_t, but got: "
+                        << shift;
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool checkErrorIfTable(Operation *op) {
+  auto table = dyn_cast<tosa::TableOp>(op);
+  if (!table)
+    return true;
+
+  // REQUIRE(length(table) == TABLE_SIZE) where TABLE_SIZE is 256 or 513
+  const auto inputElemType = getElementTypeOrSelf(table.getInput1().getType());
+  const int tableSize = inputElemType.isInteger(8) ? 256 : 513;
+
+  const ShapeAdaptor tableShape(table.getTable().getType());
+  if (tableShape.hasStaticShape()) {
+    const auto numElements = tableShape.getNumElements();
+    if (numElements != tableSize) {
+      op->emitOpError() << "requires table size of " << tableSize << ", got "
+                        << numElements;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
-  if (!checkErrorIfResize(op))
+  if (!checkErrorIfResize(op) || !checkErrorIfMul(op) || !checkErrorIfTable(op))
     return failure();
   return success();
 }
@@ -1018,15 +1072,8 @@ void TosaValidation::runOnOperation() {
     if (op->getDialect() != tosaDialect)
       return;
 
-    // Profile-Extension based validation should be performed at the beginning.
-    if (strictOpSpecAlignment &&
-        failed(profileComp.checkProfile(op, targetEnv)))
-      return signalPassFailure();
-
-    if (strictOpSpecAlignment &&
-        failed(profileComp.checkExtension(op, targetEnv)))
-      return signalPassFailure();
-
+    // perform valid element type check at the beginning to
+    // protect rest of code against quantized element types
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {
@@ -1043,6 +1090,14 @@ void TosaValidation::runOnOperation() {
         return signalPassFailure();
       }
     }
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkProfile(op, targetEnv)))
+      return signalPassFailure();
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkExtension(op, targetEnv)))
+      return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&
         failed(profileComp.checkInvalid(op))) {

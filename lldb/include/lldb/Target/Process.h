@@ -1589,6 +1589,52 @@ public:
   size_t ReadMemoryFromInferior(lldb::addr_t vm_addr, void *buf, size_t size,
                                 Status &error);
 
+  // Callback definition for read Memory in chunks
+  //
+  // Status, the status returned from ReadMemoryFromInferior
+  // addr_t, the bytes_addr, start + bytes read so far.
+  // void*, pointer to the bytes read
+  // bytes_size, the count of bytes read for this chunk
+  typedef std::function<IterationAction(
+      lldb_private::Status &error, lldb::addr_t bytes_addr, const void *bytes,
+      lldb::offset_t bytes_size)>
+      ReadMemoryChunkCallback;
+
+  /// Read of memory from a process in discrete chunks, terminating
+  /// either when all bytes are read, or the supplied callback returns
+  /// IterationAction::Stop
+  ///
+  /// \param[in] vm_addr
+  ///     A virtual load address that indicates where to start reading
+  ///     memory from.
+  ///
+  /// \param[in] buf
+  ///    If NULL, a buffer of \a chunk_size will be created and used for the
+  ///    callback. If non NULL, this buffer must be at least \a chunk_size bytes
+  ///    and will be used for storing chunked memory reads.
+  ///
+  /// \param[in] chunk_size
+  ///     The minimum size of the byte buffer, and the chunk size of memory
+  ///     to read.
+  ///
+  /// \param[in] total_size
+  ///     The total number of bytes to read.
+  ///
+  /// \param[in] callback
+  ///     The callback to invoke when a chunk is read from memory.
+  ///
+  /// \return
+  ///     The number of bytes that were actually read into \a buf and
+  ///     written to the provided callback.
+  ///     If the returned number is greater than zero, yet less than \a
+  ///     size, then this function will get called again with \a
+  ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
+  ///     returned in the case of an error.
+  lldb::offset_t ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
+                                    lldb::addr_t chunk_size,
+                                    lldb::offset_t total_size,
+                                    ReadMemoryChunkCallback callback);
+
   /// Read a NULL terminated C string from memory
   ///
   /// This function will read a cache page at a time until the NULL

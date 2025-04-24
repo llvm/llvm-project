@@ -491,6 +491,8 @@ public:
     return args;
   }
 
+  std::string GetObjectName() const;
+
 protected:
   void AssertModuleLock();
 

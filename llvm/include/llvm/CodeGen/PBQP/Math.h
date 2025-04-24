@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -33,13 +34,13 @@ public:
   /// Construct a PBQP vector with initializer.
   Vector(unsigned Length, PBQPNum InitVal)
     : Length(Length), Data(std::make_unique<PBQPNum []>(Length)) {
-    std::fill(Data.get(), Data.get() + Length, InitVal);
+    std::fill(begin(), end(), InitVal);
   }
 
   /// Copy construct a PBQP vector.
   Vector(const Vector &V)
     : Length(V.Length), Data(std::make_unique<PBQPNum []>(Length)) {
-    std::copy(V.Data.get(), V.Data.get() + Length, Data.get());
+    llvm::copy(V, begin());
   }
 
   /// Move construct a PBQP vector.
@@ -48,12 +49,16 @@ public:
     V.Length = 0;
   }
 
+  // Iterator-based access.
+  const PBQPNum *begin() const { return Data.get(); }
+  const PBQPNum *end() const { return Data.get() + Length; }
+  PBQPNum *begin() { return Data.get(); }
+  PBQPNum *end() { return Data.get() + Length; }
+
   /// Comparison operator.
   bool operator==(const Vector &V) const {
     assert(Length != 0 && Data && "Invalid vector");
-    if (Length != V.Length)
-      return false;
-    return std::equal(Data.get(), Data.get() + Length, V.Data.get());
+    return llvm::equal(*this, V);
   }
 
   /// Return the length of the vector
@@ -80,15 +85,14 @@ public:
   Vector& operator+=(const Vector &V) {
     assert(Length != 0 && Data && "Invalid vector");
     assert(Length == V.Length && "Vector length mismatch.");
-    std::transform(Data.get(), Data.get() + Length, V.Data.get(), Data.get(),
-                   std::plus<PBQPNum>());
+    std::transform(begin(), end(), V.begin(), begin(), std::plus<PBQPNum>());
     return *this;
   }
 
   /// Returns the index of the minimum value in this vector
   unsigned minIndex() const {
     assert(Length != 0 && Data && "Invalid vector");
-    return std::min_element(Data.get(), Data.get() + Length) - Data.get();
+    return llvm::min_element(*this) - begin();
   }
 
 private:
@@ -98,8 +102,8 @@ private:
 
 /// Return a hash_value for the given vector.
 inline hash_code hash_value(const Vector &V) {
-  unsigned *VBegin = reinterpret_cast<unsigned*>(V.Data.get());
-  unsigned *VEnd = reinterpret_cast<unsigned*>(V.Data.get() + V.Length);
+  const unsigned *VBegin = reinterpret_cast<const unsigned *>(V.begin());
+  const unsigned *VEnd = reinterpret_cast<const unsigned *>(V.end());
   return hash_combine(V.Length, hash_combine_range(VBegin, VEnd));
 }
 
@@ -108,12 +112,7 @@ inline hash_code hash_value(const Vector &V) {
 template <typename OStream>
 OStream& operator<<(OStream &OS, const Vector &V) {
   assert((V.getLength() != 0) && "Zero-length vector badness.");
-
-  OS << "[ " << V[0];
-  for (unsigned i = 1; i < V.getLength(); ++i)
-    OS << ", " << V[i];
-  OS << " ]";
-
+  OS << "[ " << llvm::interleaved(V) << " ]";
   return OS;
 }
 

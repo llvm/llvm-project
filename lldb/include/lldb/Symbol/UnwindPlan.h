@@ -356,11 +356,11 @@ public:
 
     void RemoveRegisterInfo(uint32_t reg_num);
 
-    lldb::addr_t GetOffset() const { return m_offset; }
+    int64_t GetOffset() const { return m_offset; }
 
-    void SetOffset(lldb::addr_t offset) { m_offset = offset; }
+    void SetOffset(int64_t offset) { m_offset = offset; }
 
-    void SlideOffset(lldb::addr_t offset) { m_offset += offset; }
+    void SlideOffset(int64_t offset) { m_offset += offset; }
 
     const FAValue &GetCFAValue() const { return m_cfa_value; }
     FAValue &GetCFAValue() { return m_cfa_value; }
@@ -420,7 +420,7 @@ public:
 
   protected:
     typedef std::map<uint32_t, AbstractRegisterLocation> collection;
-    lldb::addr_t m_offset = 0; // Offset into the function for this row
+    int64_t m_offset = 0; // Offset into the function for this row
 
     FAValue m_cfa_value;
     FAValue m_afa_value;
@@ -450,11 +450,12 @@ public:
   void InsertRow(Row row, bool replace_existing = false);
 
   // Returns a pointer to the best row for the given offset into the function's
-  // instructions. If offset is -1 it indicates that the function start is
-  // unknown - the final row in the UnwindPlan is returned. In practice, the
-  // UnwindPlan for a function with no known start address will be the
-  // architectural default UnwindPlan which will only have one row.
-  const UnwindPlan::Row *GetRowForFunctionOffset(int offset) const;
+  // instructions. If offset is std::nullopt it indicates that the function
+  // start is unknown - the final row in the UnwindPlan is returned. In
+  // practice, the UnwindPlan for a function with no known start address will be
+  // the architectural default UnwindPlan which will only have one row.
+  const UnwindPlan::Row *
+  GetRowForFunctionOffset(std::optional<int64_t> offset) const;
 
   lldb::RegisterKind GetRegisterKind() const { return m_register_kind; }
 
@@ -464,7 +465,7 @@ public:
     m_return_addr_register = regnum;
   }
 
-  uint32_t GetReturnAddressRegister() { return m_return_addr_register; }
+  uint32_t GetReturnAddressRegister() const { return m_return_addr_register; }
 
   uint32_t GetInitialCFARegister() const {
     if (m_row_list.empty())
@@ -479,7 +480,7 @@ public:
     m_plan_valid_ranges = std::move(ranges);
   }
 
-  bool PlanValidAtAddress(Address addr);
+  bool PlanValidAtAddress(Address addr) const;
 
   bool IsValidRowIndex(uint32_t idx) const;
 
@@ -535,21 +536,9 @@ public:
     m_plan_is_sourced_from_compiler = eLazyBoolCalculate;
     m_plan_is_valid_at_all_instruction_locations = eLazyBoolCalculate;
     m_plan_is_for_signal_trap = eLazyBoolCalculate;
-    m_lsda_address.Clear();
-    m_personality_func_addr.Clear();
   }
 
   const RegisterInfo *GetRegisterInfo(Thread *thread, uint32_t reg_num) const;
-
-  Address GetLSDAAddress() const { return m_lsda_address; }
-
-  void SetLSDAAddress(Address lsda_addr) { m_lsda_address = lsda_addr; }
-
-  Address GetPersonalityFunctionPtr() const { return m_personality_func_addr; }
-
-  void SetPersonalityFunctionPtr(Address presonality_func_ptr) {
-    m_personality_func_addr = presonality_func_ptr;
-  }
 
 private:
   std::vector<Row> m_row_list;
@@ -565,13 +554,6 @@ private:
   lldb_private::LazyBool m_plan_is_sourced_from_compiler;
   lldb_private::LazyBool m_plan_is_valid_at_all_instruction_locations;
   lldb_private::LazyBool m_plan_is_for_signal_trap;
-
-  Address m_lsda_address; // Where the language specific data area exists in the
-                          // module - used
-                          // in exception handling.
-  Address m_personality_func_addr; // The address of a pointer to the
-                                   // personality function - used in
-                                   // exception handling.
 };                                 // class UnwindPlan
 
 } // namespace lldb_private

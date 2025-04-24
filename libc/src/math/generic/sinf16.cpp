@@ -87,6 +87,11 @@ LLVM_LIBC_FUNCTION(float16, sinf16, (float16 x)) {
   }
 
   if (xbits.is_inf_or_nan()) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
+
     if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);

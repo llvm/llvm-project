@@ -99,6 +99,7 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: AssumedRankOpConversion
+// PASSES-NEXT: LowerRepackArraysPass
 // PASSES-NEXT: SimplifyFIROperations
 // PASSES-NEXT: AddAliasTags
 

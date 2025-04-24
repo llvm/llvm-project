@@ -126,12 +126,15 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): At #2 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #3 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #4 Interval # 2
-; CHECK-NEXT:  LV(REG): At #5 Interval # 3
+; CHECK-NEXT:  LV(REG): At #5 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #6 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #7 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #8 Interval # 3
-; CHECK-NEXT:  LV(REG): At #9 Interval # 2
+; CHECK-NEXT:  LV(REG): At #9 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #10 Interval # 3
+; CHECK-NEXT:  LV(REG): At #11 Interval # 3
+; CHECK-NEXT:  LV(REG): At #12 Interval # 2
+; CHECK-NEXT:  LV(REG): At #13 Interval # 2
 ; CHECK-NEXT:  LV(REG): VF = vscale x 4
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
@@ -374,12 +377,15 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): At #2 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #3 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #4 Interval # 2
-; CHECK-NEXT:  LV(REG): At #5 Interval # 3
+; CHECK-NEXT:  LV(REG): At #5 Interval # 2
 ; CHECK-NEXT:  LV(REG): At #6 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #7 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #8 Interval # 3
-; CHECK-NEXT:  LV(REG): At #9 Interval # 2
+; CHECK-NEXT:  LV(REG): At #9 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #10 Interval # 3
+; CHECK-NEXT:  LV(REG): At #11 Interval # 3
+; CHECK-NEXT:  LV(REG): At #12 Interval # 2
+; CHECK-NEXT:  LV(REG): At #13 Interval # 2
 ; CHECK-NEXT:  LV(REG): VF = vscale x 4
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers

@@ -9,6 +9,7 @@
 #include "flang/Runtime/CUDA/memory.h"
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Runtime/CUDA/descriptor.h"
@@ -26,7 +27,12 @@ void *RTDEF(CUFMemAlloc)(
   void *ptr = nullptr;
   if (bytes != 0) {
     if (type == kMemTypeDevice) {
-      CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
+      if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
+        CUDA_REPORT_IF_ERROR(
+            cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));
+      } else {
+        CUDA_REPORT_IF_ERROR(cudaMalloc((void **)&ptr, bytes));
+      }
     } else if (type == kMemTypeManaged || type == kMemTypeUnified) {
       CUDA_REPORT_IF_ERROR(
           cudaMallocManaged((void **)&ptr, bytes, cudaMemAttachGlobal));

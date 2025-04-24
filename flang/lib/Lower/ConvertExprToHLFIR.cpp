@@ -212,19 +212,25 @@ private:
     auto charType = mlir::dyn_cast<fir::CharacterType>(resultValueType);
     if (charType && charType.hasDynamicLen())
       return fir::BoxCharType::get(charType.getContext(), charType.getFKind());
+
+    // When volatile is enabled, enable volatility on the designatory type.
+    const bool isVolatile = false;
+
     // Arrays with non default lower bounds or dynamic length or dynamic extent
     // need a fir.box to hold the dynamic or lower bound information.
     if (fir::hasDynamicSize(resultValueType) ||
         mayHaveNonDefaultLowerBounds(partInfo))
-      return fir::BoxType::get(resultValueType);
+      return fir::BoxType::get(resultValueType, isVolatile);
+
     // Non simply contiguous ref require a fir.box to carry the byte stride.
     if (mlir::isa<fir::SequenceType>(resultValueType) &&
         !Fortran::evaluate::IsSimplyContiguous(
             designatorNode, getConverter().getFoldingContext(),
             /*namedConstantSectionsAreAlwaysContiguous=*/false))
-      return fir::BoxType::get(resultValueType);
+      return fir::BoxType::get(resultValueType, isVolatile);
+
     // Other designators can be handled as raw addresses.
-    return fir::ReferenceType::get(resultValueType);
+    return fir::ReferenceType::get(resultValueType, isVolatile);
   }
 
   template <typename T>
@@ -279,7 +285,8 @@ private:
   gen(const Fortran::evaluate::SymbolRef &symbolRef) {
     if (std::optional<fir::FortranVariableOpInterface> varDef =
             getSymMap().lookupVariableDefinition(symbolRef)) {
-      if (symbolRef->test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
+      if (symbolRef.get().GetUltimate().test(
+              Fortran::semantics::Symbol::Flag::CrayPointee)) {
         // The pointee is represented with a descriptor inheriting
         // the shape and type parameters of the pointee.
         // We have to update the base_addr to point to the current
@@ -414,8 +421,13 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ReferenceType, fir::BoxType,
-              fir::ClassType>([&](auto t) -> mlir::Type {
+        .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(
+            [&](auto t) -> mlir::Type {
+              using FIRT = decltype(t);
+              return FIRT::get(changeElementType(t.getEleTy(), newEleTy),
+                               t.isVolatile());
+            })
+        .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
           return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
@@ -1818,7 +1830,10 @@ private:
       assert(compType && "failed to retrieve component type");
       mlir::Value compShape =
           designatorBuilder.genComponentShape(sym, compType);
-      mlir::Type designatorType = builder.getRefType(compType);
+      const bool isDesignatorVolatile =
+          fir::isa_volatile_type(baseOp.getType());
+      mlir::Type designatorType =
+          builder.getRefType(compType, isDesignatorVolatile);
 
       mlir::Type fieldElemType = hlfir::getFortranElementType(compType);
       llvm::SmallVector<mlir::Value, 1> typeParams;

@@ -1680,10 +1680,6 @@ translated into the LLVM ``convergent`` attribute, which indicates that the call
 instructions of a function with this attribute cannot be made control-dependent
 on any additional values.
 
-In languages designed for SPMD/SIMT programming model, e.g. OpenCL or CUDA,
-the call instructions of a function with this attribute must be executed by
-all work items or threads in a work group or sub group.
-
 This attribute is different from ``noduplicate`` because it allows duplicating
 function calls if it can be proved that the duplicated function calls are
 not made control-dependent on any additional values, e.g., unrolling a loop
@@ -2179,6 +2175,34 @@ Also see the documentation for `@available
   }];
 }
 
+def PtrAuthDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "__ptrauth";
+  let Content = [{
+The ``__ptrauth`` qualifier allows the programmer to directly control
+how pointers are signed when they are stored in a particular variable.
+This can be used to strengthen the default protections of pointer
+authentication and make it more difficult for an attacker to escalate
+an ability to alter memory into full control of a process.
+
+.. code-block:: c
+
+  #include <ptrauth.h>
+
+  typedef void (*my_callback)(const void*);
+  my_callback __ptrauth(ptrauth_key_process_dependent_code, 1, 0xe27a) callback;
+
+The first argument to ``__ptrauth`` is the name of the signing key.
+Valid key names for the target are defined in ``<ptrauth.h>``.
+
+The second argument to ``__ptrauth`` is a flag (0 or 1) specifying whether
+the object should use address discrimination.
+
+The third argument to ``__ptrauth`` is a 16-bit non-negative integer which
+allows additional discrimination between objects.
+  }];
+}
+
 def ExternalSourceSymbolDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -2659,6 +2683,19 @@ The semantics are as follows:
   handler, where the offset from "lr" to the preferred return address depends on
   the execution state of the code which generated the exception. In this case
   a sequence equivalent to "movs pc, lr" will be used.
+  }];
+}
+
+def ARMInterruptSaveFPDocs : Documentation {
+    let Category = DocCatFunction;
+  let Heading = "interrupt_save_fp (ARM)";
+  let Content = [{
+Clang supports the GNU style ``__attribute__((interrupt_save_fp("TYPE")))``
+on ARM targets. This attribute behaves the same way as the ARM interrupt
+attribute, except the general purpose floating point registers are also saved,
+along with FPEXC and FPSCR. Note, even on M-class CPUs, where the floating
+point context can be automatically saved depending on the FPCCR, the general
+purpose floating point registers will be saved.
   }];
 }
 
@@ -6502,10 +6539,12 @@ only N==1 is supported.
 def PatchableFunctionEntryDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-``__attribute__((patchable_function_entry(N,M)))`` is used to generate M NOPs
-before the function entry and N-M NOPs after the function entry. This attribute
-takes precedence over the command line option ``-fpatchable-function-entry=N,M``.
-``M`` defaults to 0 if omitted.
+``__attribute__((patchable_function_entry(N,M,Section)))`` is used to generate M
+NOPs before the function entry and N-M NOPs after the function entry, with a record of
+the entry stored in section ``Section``. This attribute takes precedence over the
+command line option ``-fpatchable-function-entry=N,M,Section``. ``M`` defaults to 0
+if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section name if
+set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
 aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64 targets.
@@ -7515,9 +7554,11 @@ the field it is attached to, and it may also lead to emission of automatic fix-i
 hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-* Attribute attached to functions: The attribute does not suppress
-  ``-Wunsafe-buffer-usage`` inside the function to which it is attached.
-  These warnings still need to be addressed.
+* Attribute attached to functions: The attribute suppresses all
+  ``-Wunsafe-buffer-usage`` warnings within the function it is attached to, as the
+  function is now classified as unsafe. The attribute should be used carefully, as it
+  will silence all unsafe operation warnings inside the function; including any new
+  unsafe operations introduced in the future.
 
   The attribute is warranted even if the only way a function can overflow
   the buffer is by violating the function's preconditions. For example, it

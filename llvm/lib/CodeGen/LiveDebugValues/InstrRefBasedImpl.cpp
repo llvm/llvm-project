@@ -4218,9 +4218,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   }
 
   // Sort PHIs to validate into RPO-order.
-  SmallVector<LDVSSAPhi *, 8> SortedPHIs;
-  for (auto &PHI : CreatedPHIs)
-    SortedPHIs.push_back(PHI);
+  SmallVector<LDVSSAPhi *, 8> SortedPHIs(CreatedPHIs);
 
   llvm::sort(SortedPHIs, [&](LDVSSAPhi *A, LDVSSAPhi *B) {
     return BBToOrder[&A->getParent()->BB] < BBToOrder[&B->getParent()->BB];

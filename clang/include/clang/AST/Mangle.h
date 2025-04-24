@@ -182,8 +182,8 @@ public:
 
 class ItaniumMangleContext : public MangleContext {
 public:
-  using DiscriminatorOverrideTy =
-      std::optional<unsigned> (*)(ASTContext &, const NamedDecl *);
+  using DiscriminatorOverrideTy = UnsignedOrNone (*)(ASTContext &,
+                                                     const NamedDecl *);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D,
                                 bool IsAux = false)
       : MangleContext(C, D, MK_Itanium, IsAux) {}

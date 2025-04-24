@@ -729,6 +729,11 @@ static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
   // complicated.
   if (isa<FixedVectorType>(AccessTy)) {
     TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
+    // If the type size and the store size don't match, we would need to do more
+    // than just bitcast to translate between an extracted/insertable subvectors
+    // and the accessed value.
+    if (AccTS * 8 != DL.getTypeSizeInBits(AccessTy))
+      return false;
     TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
     return AccTS.isKnownMultipleOf(VecTS);
   }
@@ -813,15 +818,17 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
     if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
       unsigned ElementSize = DL->getTypeSizeInBits(ElemTy) / 8;
-      unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
-      // Expand vector if required to match padding of inner type,
-      // i.e. odd size subvectors.
-      // Storage size of new vector must match that of alloca for correct
-      // behaviour of byte offsets and GEP computation.
-      if (NumElems * ElementSize != AllocaSize)
-        NumElems = AllocaSize / ElementSize;
-      if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
-        VectorTy = FixedVectorType::get(ElemTy, NumElems);
+      if (ElementSize > 0) {
+        unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
+        // Expand vector if required to match padding of inner type,
+        // i.e. odd size subvectors.
+        // Storage size of new vector must match that of alloca for correct
+        // behaviour of byte offsets and GEP computation.
+        if (NumElems * ElementSize != AllocaSize)
+          NumElems = AllocaSize / ElementSize;
+        if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
+          VectorTy = FixedVectorType::get(ElemTy, NumElems);
+      }
     }
   }
 
@@ -861,7 +868,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
   Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
+  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
+                         "does not match the type's size\n");
+    return false;
+  }
+  unsigned ElementSize = ElementSizeInBits / 8;
+  assert(ElementSize > 0);
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 
@@ -1068,9 +1082,9 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
 
   if (!IsAMDHSA) {
     CallInst *LocalSizeY =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {}, {});
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_y, {});
     CallInst *LocalSizeZ =
-        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {}, {});
+        Builder.CreateIntrinsic(Intrinsic::r600_read_local_size_z, {});
 
     ST.makeLIDRangeMetadata(LocalSizeY);
     ST.makeLIDRangeMetadata(LocalSizeZ);
@@ -1113,7 +1127,7 @@ AMDGPUPromoteAllocaImpl::getLocalSizeYZ(IRBuilder<> &Builder) {
   //   } hsa_kernel_dispatch_packet_t
   //
   CallInst *DispatchPtr =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {}, {});
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_dispatch_ptr, {});
   DispatchPtr->addRetAttr(Attribute::NoAlias);
   DispatchPtr->addRetAttr(Attribute::NonNull);
   F.removeFnAttr("amdgpu-no-dispatch-ptr");

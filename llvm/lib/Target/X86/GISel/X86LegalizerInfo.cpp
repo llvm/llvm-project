@@ -99,10 +99,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS, G_FCOSH, G_FACOS,
-                               G_FSIN, G_FSINH, G_FASIN, G_FTAN, G_FTANH,
-                               G_FATAN, G_FATAN2, G_FPOW, G_FEXP, G_FEXP2,
-                               G_FEXP10, G_FLOG, G_FLOG2, G_FLOG10})
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
+                               G_FSIN,   G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
+                               G_FATAN,  G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
+                               G_FEXP10, G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI})
       .libcall();
 
   getActionDefinitionsBuilder(G_FSQRT)
@@ -373,22 +373,16 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // load/store: add more corner cases
   for (unsigned Op : {G_LOAD, G_STORE}) {
     auto &Action = getActionDefinitionsBuilder(Op);
-    Action.legalForTypesWithMemDesc({{s8, p0, s1, 1},
-                                     {s8, p0, s8, 1},
-                                     {s16, p0, s8, 1},
+    Action.legalForTypesWithMemDesc({{s8, p0, s8, 1},
                                      {s16, p0, s16, 1},
-                                     {s32, p0, s8, 1},
-                                     {s32, p0, s16, 1},
                                      {s32, p0, s32, 1},
                                      {s80, p0, s80, 1},
                                      {p0, p0, p0, 1},
                                      {v4s8, p0, v4s8, 1}});
     if (Is64Bit)
-      Action.legalForTypesWithMemDesc({{s64, p0, s8, 1},
-                                       {s64, p0, s16, 1},
-                                       {s64, p0, s32, 1},
-                                       {s64, p0, s64, 1},
-                                       {v2s32, p0, v2s32, 1}});
+      Action.legalForTypesWithMemDesc(
+          {{s64, p0, s64, 1}, {v2s32, p0, v2s32, 1}});
+
     if (HasSSE1)
       Action.legalForTypesWithMemDesc({{v4s32, p0, v4s32, 1}});
     if (HasSSE2)
@@ -407,6 +401,21 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                                        {v32s16, p0, v32s16, 1},
                                        {v16s32, p0, v16s32, 1},
                                        {v8s64, p0, v8s64, 1}});
+
+    // X86 supports extending loads but not stores for GPRs
+    if (Op == G_LOAD) {
+      Action.legalForTypesWithMemDesc({{s8, p0, s1, 1},
+                                       {s16, p0, s8, 1},
+                                       {s32, p0, s8, 1},
+                                       {s32, p0, s16, 1}});
+      if (Is64Bit)
+        Action.legalForTypesWithMemDesc(
+            {{s64, p0, s8, 1}, {s64, p0, s16, 1}, {s64, p0, s32, 1}});
+    } else {
+      Action.customIf([=](const LegalityQuery &Query) {
+        return Query.Types[0] != Query.MMODescrs[0].MemoryTy;
+      });
+    }
     Action.widenScalarToNextPow2(0, /*Min=*/8)
         .clampScalar(0, s8, sMaxScalar)
         .scalarize(0);
@@ -660,6 +669,8 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return legalizeFPTOUI(MI, MRI, Helper);
   case TargetOpcode::G_UITOFP:
     return legalizeUITOFP(MI, MRI, Helper);
+  case TargetOpcode::G_STORE:
+    return legalizeNarrowingStore(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -752,6 +763,22 @@ bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
   }
 
   return false;
+}
+
+bool X86LegalizerInfo::legalizeNarrowingStore(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              LegalizerHelper &Helper) const {
+  auto &Store = cast<GStore>(MI);
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineMemOperand &MMO = **Store.memoperands_begin();
+  MachineFunction &MF = MIRBuilder.getMF();
+  LLT ValTy = MRI.getType(Store.getValueReg());
+  auto *NewMMO = MF.getMachineMemOperand(&MMO, MMO.getPointerInfo(), ValTy);
+
+  Helper.Observer.changingInstr(Store);
+  Store.setMemRefs(MF, {NewMMO});
+  Helper.Observer.changedInstr(Store);
+  return true;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,

@@ -9,9 +9,6 @@
 #ifndef _LIBCPP___CXX03___UTILITY_PAIR_H
 #define _LIBCPP___CXX03___UTILITY_PAIR_H
 
-#include <__cxx03/__compare/common_comparison_category.h>
-#include <__cxx03/__compare/synth_three_way.h>
-#include <__cxx03/__concepts/different_from.h>
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/array.h>
 #include <__cxx03/__fwd/pair.h>
@@ -21,7 +18,6 @@
 #include <__cxx03/__tuple/tuple_indices.h>
 #include <__cxx03/__tuple/tuple_like_no_subrange.h>
 #include <__cxx03/__tuple/tuple_size.h>
-#include <__cxx03/__type_traits/common_reference.h>
 #include <__cxx03/__type_traits/common_type.h>
 #include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/decay.h>

@@ -2593,6 +2593,19 @@ class Type(Structure):
         """
         return Type.from_result(conf.lib.clang_getCanonicalType(self), (self,))
 
+    def get_fully_qualified_name(self, policy, with_global_ns_prefix=False):
+        """
+        Get the fully qualified name for a type.
+
+        This includes full qualification of all template parameters.
+
+        policy - This PrintingPolicy can further refine the type formatting
+        with_global_ns_prefix - If true, prepend '::' to qualified names
+        """
+        return _CXString.from_result(
+            conf.lib.clang_getFullyQualifiedName(self, policy, with_global_ns_prefix)
+        )
+
     def is_const_qualified(self):
         """Determine whether a Type has the "const" qualifier set.
 
@@ -3486,6 +3499,14 @@ class File(ClangObject):
     def __repr__(self):
         return "<File: %s>" % (self.name)
 
+    def __eq__(self, other) -> bool:
+        return isinstance(other, File) and bool(
+            conf.lib.clang_File_isEqual(self, other)
+        )
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
     @staticmethod
     def from_result(res, arg):
         assert isinstance(res, c_object_p)
@@ -3973,6 +3994,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getFile", [TranslationUnit, c_interop_string], c_object_p),
     ("clang_getFileName", [File], _CXString),
     ("clang_getFileTime", [File], c_uint),
+    ("clang_File_isEqual", [File, File], bool),
     ("clang_getIBOutletCollectionType", [Cursor], Type),
     ("clang_getIncludedFile", [Cursor], c_object_p),
     (
@@ -4022,6 +4044,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getTypeSpelling", [Type], _CXString),
     ("clang_hashCursor", [Cursor], c_uint),
     ("clang_isAttribute", [CursorKind], bool),
+    ("clang_getFullyQualifiedName", [Type, PrintingPolicy, c_uint], _CXString),
     ("clang_isConstQualifiedType", [Type], bool),
     ("clang_isCursorDefinition", [Cursor], bool),
     ("clang_isDeclaration", [CursorKind], bool),

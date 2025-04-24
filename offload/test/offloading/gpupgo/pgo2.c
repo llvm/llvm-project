@@ -1,27 +1,27 @@
 // RUN: %libomptarget-compile-generic -fprofile-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.llvm.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %basename_t.llvm.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-HOST"
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %target_triple.%basename_t.llvm.profraw \
 // RUN:     | %fcheck-generic --check-prefix="LLVM-DEVICE"
 
 // RUN: %libomptarget-compile-generic -fprofile-instr-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.clang.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %basename_t.clang.profraw | %fcheck-generic \
 // RUN:     --check-prefix="CLANG-HOST"
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %target_triple.%basename_t.clang.profraw | \
 // RUN:     %fcheck-generic --check-prefix="CLANG-DEV"
 
 // RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.nogpu.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %basename_t.nogpu.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-HOST"
 // RUN: not test -e %target_triple.%basename_t.nogpu.profraw
@@ -30,10 +30,10 @@
 // RUN:     -Xarch_device -fprofile-instr-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.hidf.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %basename_t.hidf.profraw | %fcheck-generic \
 // RUN:     --check-prefix="LLVM-HOST"
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %target_triple.%basename_t.hidf.profraw \
 // RUN:     | %fcheck-generic --check-prefix="CLANG-DEV"
 
@@ -41,14 +41,14 @@
 // RUN:     -Xarch_host -fprofile-instr-generate
 // RUN: env LLVM_PROFILE_FILE=%basename_t.hfdi.profraw \
 // RUN:     %libomptarget-run-generic 2>&1
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %basename_t.hfdi.profraw | %fcheck-generic \
 // RUN:     --check-prefix="CLANG-HOST"
-// RUN: llvm-profdata show --all-functions --counts \
+// RUN: %profdata show --all-functions --counts \
 // RUN:     %target_triple.%basename_t.hfdi.profraw \
 // RUN:     | %fcheck-generic --check-prefix="LLVM-DEVICE"
 
-// REQUIRES: gpu
+// REQUIRES: amdgpu
 // REQUIRES: pgo
 
 int main() {

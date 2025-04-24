@@ -511,11 +511,17 @@ void AArch64TargetELFStreamer::finish() {
       })) {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
-    for (auto &F : *Text)
-      if (auto *DF = dyn_cast<MCDataFragment>(&F))
-        if (!DF->getContents().empty())
-          return;
-    Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
+    bool Empty = true;
+    for (auto &F : *Text) {
+      if (auto *DF = dyn_cast<MCDataFragment>(&F)) {
+        if (!DF->getContents().empty()) {
+          Empty = false;
+          break;
+        }
+      }
+    }
+    if (Empty)
+      Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
   }
 
   MCSectionELF *MemtagSec = nullptr;

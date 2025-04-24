@@ -1575,8 +1575,7 @@ static void addSymbolizer(
   ArrayRef<uint64_t> LabelAddrsRef = SymbolizerPtr->getReferencedAddresses();
   // Copy and sort to remove duplicates.
   std::vector<uint64_t> LabelAddrs;
-  LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
-                    LabelAddrsRef.end());
+  llvm::append_range(LabelAddrs, LabelAddrsRef);
   llvm::sort(LabelAddrs);
   LabelAddrs.resize(llvm::unique(LabelAddrs) - LabelAddrs.begin());
   // Add the labels.
@@ -2073,8 +2072,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (Start < SectionAddr || StopAddress <= Start)
         continue;
 
-      for (size_t i = 0; i < SymbolsHere.size(); ++i)
-        FoundDisasmSymbolSet.insert(SymNamesHere[i]);
+      FoundDisasmSymbolSet.insert_range(SymNamesHere);
 
       // The end is the section end, the beginning of the next symbol, or
       // --stop-address.

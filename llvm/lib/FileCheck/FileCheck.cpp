@@ -1640,13 +1640,11 @@ static const char *DefaultCommentPrefixes[] = {"COM", "RUN"};
 
 static void addDefaultPrefixes(FileCheckRequest &Req) {
   if (Req.CheckPrefixes.empty()) {
-    for (const char *Prefix : DefaultCheckPrefixes)
-      Req.CheckPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CheckPrefixes, DefaultCheckPrefixes);
     Req.IsDefaultCheckPrefix = true;
   }
   if (Req.CommentPrefixes.empty())
-    for (const char *Prefix : DefaultCommentPrefixes)
-      Req.CommentPrefixes.push_back(Prefix);
+    llvm::append_range(Req.CommentPrefixes, DefaultCommentPrefixes);
 }
 
 struct PrefixMatcher {

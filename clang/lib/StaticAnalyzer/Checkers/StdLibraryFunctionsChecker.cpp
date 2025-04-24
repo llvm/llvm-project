@@ -1585,7 +1585,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
       if (LookupRes.empty())
         return std::nullopt;
 
-      // Prioritze typedef declarations.
+      // Prioritize typedef declarations.
       // This is needed in case of C struct typedefs. E.g.:
       //   typedef struct FILE FILE;
       // In this case, we have a RecordDecl 'struct FILE' with the name 'FILE'
