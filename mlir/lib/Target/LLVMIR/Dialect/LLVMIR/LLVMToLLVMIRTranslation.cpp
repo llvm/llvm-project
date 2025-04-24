@@ -16,6 +16,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/MDBuilder.h"
@@ -273,10 +274,25 @@ static void convertLinkerOptionsOp(ArrayAttr options,
 static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>())
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
+    llvm::Metadata *valueMetadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
+            .Case<StringAttr>([&](auto strAttr) {
+              return llvm::MDString::get(builder.getContext(),
+                                         strAttr.getValue());
+            })
+            .Case<IntegerAttr>([&](auto intAttr) {
+              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                  llvm::Type::getInt32Ty(builder.getContext()),
+                  intAttr.getInt()));
+            })
+            .Default([](auto) { return nullptr; });
+
+    assert(valueMetadata && "expected valid metadata");
     llvmModule->addModuleFlag(
         convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
-        flagAttr.getKey().getValue(), flagAttr.getValue());
+        flagAttr.getKey().getValue(), valueMetadata);
+  }
 }
 
 static LogicalResult
