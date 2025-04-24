@@ -8,16 +8,16 @@ namespace clang {
 
 namespace {
 struct OffloadArchToStringMap {
-  OffloadArch arch;
-  const char *arch_name;
-  const char *virtual_arch_name;
+  OffloadArch Arch;
+  const char *ArchName;
+  const char *VirtualArchName;
 };
 } // namespace
 
 #define SM2(sm, ca) {OffloadArch::SM_##sm, "sm_" #sm, ca}
 #define SM(sm) SM2(sm, "compute_" #sm)
 #define GFX(gpu) {OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn"}
-static const OffloadArchToStringMap arch_names[] = {
+static const OffloadArchToStringMap ArchNames[] = {
     // clang-format off
     {OffloadArch::UNUSED, "", ""},
     SM2(20, "compute_20"), SM2(21, "compute_20"), // Fermi
@@ -97,30 +97,30 @@ static const OffloadArchToStringMap arch_names[] = {
 #undef GFX
 
 const char *OffloadArchToString(OffloadArch A) {
-  auto result = std::find_if(
-      std::begin(arch_names), std::end(arch_names),
-      [A](const OffloadArchToStringMap &map) { return A == map.arch; });
-  if (result == std::end(arch_names))
+  auto Result = std::find_if(
+      std::begin(ArchNames), std::end(ArchNames),
+      [A](const OffloadArchToStringMap &Map) { return A == Map.Arch; });
+  if (Result == std::end(ArchNames))
     return "unknown";
-  return result->arch_name;
+  return Result->ArchName;
 }
 
 const char *OffloadArchToVirtualArchString(OffloadArch A) {
-  auto result = std::find_if(
-      std::begin(arch_names), std::end(arch_names),
-      [A](const OffloadArchToStringMap &map) { return A == map.arch; });
-  if (result == std::end(arch_names))
+  auto Result = std::find_if(
+      std::begin(ArchNames), std::end(ArchNames),
+      [A](const OffloadArchToStringMap &Map) { return A == Map.Arch; });
+  if (Result == std::end(ArchNames))
     return "unknown";
-  return result->virtual_arch_name;
+  return Result->VirtualArchName;
 }
 
 OffloadArch StringToOffloadArch(llvm::StringRef S) {
-  auto result = std::find_if(
-      std::begin(arch_names), std::end(arch_names),
-      [S](const OffloadArchToStringMap &map) { return S == map.arch_name; });
-  if (result == std::end(arch_names))
+  auto Result = std::find_if(
+      std::begin(ArchNames), std::end(ArchNames),
+      [S](const OffloadArchToStringMap &Map) { return S == Map.ArchName; });
+  if (Result == std::end(ArchNames))
     return OffloadArch::UNKNOWN;
-  return result->arch;
+  return Result->Arch;
 }
 
 } // namespace clang
