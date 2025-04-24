@@ -388,7 +388,6 @@ public:
   SGPRSaveKind getKind() const { return Kind; }
 };
 
-
 struct VGPRBlock2IndexFunctor {
   using argument_type = Register;
   unsigned operator()(Register Reg) const {
