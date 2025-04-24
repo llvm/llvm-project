@@ -9661,8 +9661,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   if (auto *UncountableExitingBlock =
           Legal->getUncountableEarlyExitingBlock()) {
     VPlanTransforms::runPass(VPlanTransforms::handleUncountableEarlyExit, *Plan,
-                             *PSE.getSE(), OrigLoop, UncountableExitingBlock,
-                             RecipeBuilder, Range);
+                             OrigLoop, UncountableExitingBlock, RecipeBuilder,
+                             Range);
   }
   DenseMap<VPValue *, VPValue *> IVEndValues;
   addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
