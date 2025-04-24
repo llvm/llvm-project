@@ -7136,7 +7136,7 @@ multiclass SIMDCmpTwoVector<bit U, bits<5> opc, string asm,
 
 // FP Comparisons support only S and D element sizes (and H for v8.2a).
 multiclass SIMDFPCmpTwoVector<bit U, bit S, bits<5> opc,
-                              string asm, SDNode OpNode> {
+                              string asm, SDPatternOperator OpNode> {
 
   let mayRaiseFPException = 1, Uses = [FPCR] in {
   let Predicates = [HasNEON, HasFullFP16] in {
