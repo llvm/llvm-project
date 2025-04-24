@@ -298,6 +298,8 @@ LIBC_INLINE static double log2_eval(double x) {
 }
 
 // x should be positive, normal finite value
+// TODO: Simplify range reduction and polynomial degree for float16.
+//       See issue #137190.
 LIBC_INLINE static float log_eval_f(float x) {
   // For x = 2^ex * (1 + mx), logf(x) = ex * logf(2) + logf(1 + mx).
   using FPBits = fputil::FPBits<float>;
@@ -318,9 +320,8 @@ LIBC_INLINE static float log_eval_f(float x) {
   //   > P = fpminimax(log(1 + x)/x, 6, [|SG...|], [0, 2^-7]);
   //   > Q = (P - 1) / x;
   //   > for i from 0 to degree(Q) do print(coeff(Q, i));
-  static constexpr float COEFFS[6] = {-0x1p-1f,        0x1.555556p-2f,
-                                      -0x1.00022ep-2f, 0x1.9ea056p-3f,
-                                      -0x1.e50324p-2f, 0x1.c018fp3f};
+  constexpr float COEFFS[6] = {-0x1p-1f,       0x1.555556p-2f,  -0x1.00022ep-2f,
+                               0x1.9ea056p-3f, -0x1.e50324p-2f, 0x1.c018fp3f};
 
   float dx2 = dx * dx;
 
