@@ -427,6 +427,7 @@ struct SignatureElement {
 
 static_assert(sizeof(SignatureElement) == 4 * sizeof(uint32_t),
               "PSV Signature elements must fit in 16 bytes.");
+
 } // namespace v0
 
 namespace v1 {
@@ -467,6 +468,7 @@ struct RuntimeInfo : public v0::RuntimeInfo {
       sys::swapByteOrder(GeomData.MaxVertexCount);
   }
 };
+
 } // namespace v1
 
 namespace v2 {
