@@ -466,10 +466,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
                (UseX87 && typeInSet(0, {s80})(Query));
       });
 
-  //TODO: f32 and f64 FABS require xmm support
-  getActionDefinitionsBuilder(G_FABS)
-      .legalFor(UseX87, {s8, s80})
-      .lower();
+  getActionDefinitionsBuilder(G_FABS).legalFor(UseX87, {s8, s80}).lower();
 
   // fp comparison
   getActionDefinitionsBuilder(G_FCMP)
