@@ -725,9 +725,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractLast:
   case VPInstruction::ExtractPenultimateLane: {
-    unsigned Offset = getOpcode() == VPInstruction::ExtractLastLane ? 1 : 2;
+    unsigned Offset = getOpcode() == VPInstruction::ExtractLast ? 1 : 2;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -853,7 +853,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 }
 
 bool VPInstruction::isVectorToScalar() const {
-  return getOpcode() == VPInstruction::ExtractLastLane ||
+  return getOpcode() == VPInstruction::ExtractLast ||
          getOpcode() == VPInstruction::ExtractPenultimateLane ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
@@ -924,7 +924,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::AnyOf:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractLast:
   case VPInstruction::ExtractPenultimateLane:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
@@ -1043,8 +1043,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Broadcast:
     O << "broadcast";
     break;
-  case VPInstruction::ExtractLastLane:
-    O << "extract-last-lane";
+  case VPInstruction::ExtractLast:
+    O << "extract-last";
     break;
   case VPInstruction::ExtractPenultimateLane:
     O << "extract-penultimate-lane";
@@ -1149,7 +1149,7 @@ void VPIRInstruction::extractLastLaneOfFirstOperand(VPBuilder &Builder) {
   if (Exiting->isLiveIn())
     return;
 
-  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastLane, {Exiting});
+  Exiting = Builder.createNaryOp(VPInstruction::ExtractLast, {Exiting});
   setOperand(0, Exiting);
 }
 

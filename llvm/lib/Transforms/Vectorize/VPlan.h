@@ -878,8 +878,9 @@ public:
     Broadcast,
     ComputeFindLastIVResult,
     ComputeReductionResult,
-    // Extracts the last lane from its operand.
-    ExtractLastLane,
+    // Extracts the last lane from its operand if it is a vector, or the last
+    // part if scalar.
+    ExtractLast,
     // Extracts the second-to-last lane from its operand.
     ExtractPenultimateLane,
     LogicalAnd, // Non-poison propagating logical And.
