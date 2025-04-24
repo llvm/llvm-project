@@ -820,7 +820,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.features.Enable(
       Fortran::common::LanguageFeature::SaveMainProgram,
       args.hasFlag(clang::driver::options::OPT_fsave_main_program,
-                   clang::driver::options::OPT_fno_save_main_program, false));
+                   clang::driver::options::OPT_fno_save_main_program, true));
 
   if (args.hasArg(
           clang::driver::options::OPT_falternative_parameter_statement)) {
