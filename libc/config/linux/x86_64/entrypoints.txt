@@ -662,6 +662,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     # math.h C23 _Float16 entrypoints
     libc.src.math.acosf16
     libc.src.math.acoshf16
+    libc.src.math.acospif16
     libc.src.math.asinf16
     libc.src.math.asinhf16
     libc.src.math.canonicalizef16
