@@ -125,6 +125,43 @@ class OpenACCClauseCIREmitter final
   // As some clauses, such as 'num_gangs' or 'wait' require a 'segments' list to
   // be maintained, this takes a list of segments that will be updated with the
   // proper counts as 'argument' elements are added.
+  //
+  // In MLIR, the 'operands' are stored as a large array, with a separate array
+  // of 'segments' that show which 'operand' applies to which 'operand-kind'.
+  // That is, a 'num_workers' operand-kind or 'num_vectors' operand-kind.
+  //
+  // So the operands array might have 4 elements, but the 'segments' array will
+  // be something like:
+  //
+  // {0, 0, 0, 2, 0, 1, 1, 0, 0...}
+  //
+  // Where each position belongs to a specific 'operand-kind'.  So that
+  // specifies that whichever operand-kind corresponds with index '3' has 2
+  // elements, and should take the 1st 2 operands off the list (since all
+  // preceding values are 0). operand-kinds corresponding to 5 and 6 each have
+  // 1 element.
+  //
+  // Fortunately, the `MutableOperandRange` append function actually takes care
+  // of that for us at the 'top level'.
+  //
+  // However, in cases like `num_gangs' or 'wait', where each individual
+  // 'element' might be itself array-like, there is a separate 'segments' array
+  // for them. So in the case of:
+  //
+  // device_type(nvidia, radeon) num_gangs(1, 2, 3)
+  //
+  // We have to emit that as TWO arrays into the IR (where the device_type is an
+  // attribute), so they look like:
+  //
+  // num_gangs({One : i32, Two : i32, Three : i32} [#acc.device_type<nvidia>],\
+  //           {One : i32, Two : i32, Three : i32} [#acc.device_type<radeon>])
+  //
+  // When stored in the 'operands' list, the top-level 'segement' for
+  // 'num_gangs' just shows 6 elements. In order to get the array-like
+  // apperance, the 'numGangsSegments' list is kept as well. In the above case,
+  // we've inserted 6 operands, so the 'numGangsSegments' must contain 2
+  // elements, 1 per array, and each will have a value of 3.  The verifier will
+  // ensure that the collections counts are correct.
   mlir::ArrayAttr
   handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes,
                                  mlir::ValueRange argument,
