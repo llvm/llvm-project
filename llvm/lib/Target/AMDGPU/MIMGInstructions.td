@@ -1158,6 +1158,12 @@ class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
                       #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
+multiclass MIMG_Sampler_Helper_m <mimgopc op, string asm, RegisterClass dst_rc,
+                                  RegisterClass src_rc, string dns=""> {
+  def _R1 : MIMG_Sampler_Helper<op, asm, dst_rc, src_rc, false, dns>;
+  def _R2 : MIMG_Sampler_Helper<op, asm, dst_rc, src_rc, true, "">;
+}
+
 class MIMG_Sampler_gfx90a<mimgopc op, string asm, RegisterClass dst_rc,
                           RegisterClass src_rc, string dns="">
   : MIMG_gfx90a<op.GFX10M, (outs getLdStRegisterOperand<dst_rc>.ret:$vdata), dns> {
@@ -1371,11 +1377,9 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
   foreach addr = MIMG_Sampler_AddrSizes<sample, isG16>.MachineInstrs in {
     let VAddrDwords = addr.NumWords in {
       if op.HAS_GFX10M then {
-        def _V # addr.NumWords # _R1
-          : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass, false,
+        defm _V # addr.NumWords
+          : MIMG_Sampler_Helper_m <op, asm, dst_rc, addr.RegClass,
                                  !if(!and(enableDisasm, addr.Disassemble), "GFX8", "")>;
-        def _V # addr.NumWords # _R2
-          : MIMG_Sampler_Helper <op, asm, dst_rc, addr.RegClass, true, "">;
         if !not(ExtendedImageInst) then
         def _V # addr.NumWords # _gfx90a
           : MIMG_Sampler_gfx90a <op, asm, dst_rc, addr.RegClass,
