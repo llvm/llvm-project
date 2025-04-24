@@ -1869,7 +1869,7 @@ void AsmPrinter::emitIndirectCalleeLabels(
   if (CallSiteInfo == CallSitesInfoMap.end())
     return;
 
-  for (auto *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
+  for (ConstantInt *CalleeTypeId : CallSiteInfo->second.CalleeTypeIds) {
     // Emit label.
     MCSymbol *S = MF->getContext().createTempSymbol();
     OutStreamer->emitLabel(S);
