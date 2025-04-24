@@ -618,7 +618,13 @@ class DebugCommunication(object):
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
-        return self.send_recv(command_dict)
+        response = self.send_recv(command_dict)
+
+        if response["success"]:
+            # Wait for a 'process' and 'initialized' event in any order
+            self.wait_for_event(filter=["process", "initialized"])
+            self.wait_for_event(filter=["process", "initialized"])
+        return response
 
     def request_breakpointLocations(
         self, file_path, line, end_line=None, column=None, end_column=None
