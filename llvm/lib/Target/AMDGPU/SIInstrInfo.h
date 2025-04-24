@@ -449,8 +449,6 @@ public:
   }
 
   static bool isVMEM(const MachineInstr &MI) {
-    if (isFLAT(MI))
-      assert(usesVM_CNT(MI) && "oh no");
     return isMUBUF(MI) || isMTBUF(MI) || isImage(MI) || isFLAT(MI);
   }
 

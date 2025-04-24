@@ -226,8 +226,8 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (SIInstrInfo::isMAI(*MI) && checkMAIHazards(MI) > 0)
     return HazardType;
 
-  if ((SIInstrInfo::isVMEM(*MI) ||
-       SIInstrInfo::isDS(*MI)) && checkMAILdStHazards(MI) > 0)
+  if ((SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI)) &&
+      checkMAILdStHazards(MI) > 0)
     return HazardType;
 
   if (MI->isInlineAsm() && checkInlineAsmHazards(MI) > 0)
@@ -365,8 +365,7 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
   if (SIInstrInfo::isMAI(*MI))
     return std::max(WaitStates, checkMAIHazards(MI));
 
-  if (SIInstrInfo::isVMEM(*MI) ||
-      SIInstrInfo::isDS(*MI))
+  if (SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI))
     return std::max(WaitStates, checkMAILdStHazards(MI));
 
   if (ST.hasGFX950Insts() && isPermlane(*MI))
@@ -1418,8 +1417,9 @@ static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
   bool HasVmem = false;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      HasLds |= SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI);
-      HasVmem |= SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isLDSDMA(MI);
+      HasLds |= SIInstrInfo::isDS(MI);
+      HasVmem |= (SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+                 SIInstrInfo::isSegmentSpecificFLAT(MI);
       if (HasLds && HasVmem)
         return true;
     }
@@ -1441,9 +1441,10 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
   assert(!ST.hasExtendedWaitCounts());
 
   auto IsHazardInst = [](const MachineInstr &MI) {
-    if (SIInstrInfo::isDS(MI) || SIInstrInfo::isLDSDMA(MI))
+    if (SIInstrInfo::isDS(MI))
       return 1;
-    if (SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isLDSDMA(MI))
+    if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
+        SIInstrInfo::isSegmentSpecificFLAT(MI))
       return 2;
     return 0;
   };
@@ -2617,8 +2618,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
 
   int WaitStatesNeeded = 0;
 
-  bool IsMem = SIInstrInfo::isVMEM(*MI) ||
-               SIInstrInfo::isDS(*MI);
+  bool IsMem = SIInstrInfo::isVMEM(*MI) || SIInstrInfo::isDS(*MI);
   bool IsMemOrExport = IsMem || SIInstrInfo::isEXP(*MI);
   bool IsVALU = SIInstrInfo::isVALU(*MI);
 
