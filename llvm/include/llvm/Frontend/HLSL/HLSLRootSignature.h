@@ -21,6 +21,19 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
+// Definition of the various enumerations and flags
+
+enum class ShaderVisibility {
+  All = 0,
+  Vertex = 1,
+  Hull = 2,
+  Domain = 3,
+  Geometry = 4,
+  Pixel = 5,
+  Amplification = 6,
+  Mesh = 7,
+};
+
 // Definitions of the in-memory data layout structures
 
 // Models the different registers: bReg | tReg | uReg | sReg
@@ -32,6 +45,7 @@ struct Register {
 
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
+  ShaderVisibility Visibility = ShaderVisibility::All;
   uint32_t NumClauses = 0; // The number of clauses in the table
 };
 
