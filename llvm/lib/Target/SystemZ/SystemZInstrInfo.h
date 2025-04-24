@@ -365,7 +365,7 @@ public:
 
   // Return the source register of Compare, which is the unknown value
   // being tested.
-  unsigned getCompareSourceReg(const MachineInstr &Compare) const;
+  Register getCompareSourceReg(const MachineInstr &Compare) const;
 
   // Try to find all CC users of the compare instruction (MBBI) and update
   // all of them to maintain equivalent behavior after swapping the compare

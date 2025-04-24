@@ -22,6 +22,11 @@ static cl::opt<unsigned> TinyRegionLim(
     cl::desc("Run limited pre-ra scheduling on regions of this size or "
              "smaller. Mainly for testing."));
 
+// EXPERIMENTAL
+static cl::opt<bool>
+    WITHPDIFFS("with-pdiffs", cl::init(false),
+               cl::desc("Use SU PDiff instead of checking liveness of regs"));
+
 static bool isRegDef(const MachineOperand &MO) {
   return MO.isReg() && MO.isDef();
 }
@@ -40,6 +45,8 @@ static bool isVirtRegUse(const MachineOperand &MO) {
 
 void SystemZPreRASchedStrategy::initializePrioRegClasses(
     const TargetRegisterInfo *TRI) {
+  if (WITHPDIFFS)
+    return;
   for (const TargetRegisterClass *RC : TRI->regclasses()) {
     for (MVT VT : MVT::fp_valuetypes())
       if (TRI->isTypeLegalForClass(*RC, VT)) {
@@ -57,17 +64,73 @@ void SystemZPreRASchedStrategy::initializePrioRegClasses(
   }
 }
 
-void SystemZPreRASchedStrategy::VRegSet::dump(std::string Msg) {
-  dbgs() << Msg.c_str();
-  bool First = true;
-  for (auto R : *this) {
-    if (!First)
-      dbgs() << ", ";
-    else
-      First = false;
-    dbgs() << "%" << R.virtRegIndex();
-  }
-  dbgs() << "\n";
+void SystemZPreRASchedStrategy::initializePressureSets(
+    const TargetRegisterInfo *TRI) {
+
+  // Based on the nature of the Vector/FP and GPR register classes, TableGen
+  // defines a set of PressureSets that reflects the overlap of register
+  // classes: FP regs affect both FP16Bit and VR16Bit PressureSets, while VR
+  // regs affect only VR16Bit. Similarly, GR64 affects GRX32Bit (with a
+  // weight of 2), while GR32 affects both GR32Bit and GRX32Bit.
+  //
+  // This SchedStrategy doesn't use these PressureSets quite in the way
+  // originally intended, but rather just to check if use operands are
+  // already live or not in interesting cases. The distinctions between
+  // Vector/FP registers or GR64Bit/GR32Bit are not made when a defining
+  // instruction is scheduled low only if no uses are also becoming live.
+  // Therefore only the common PressureSets are relevant. For example, this
+  // instruction will always have 'FP16Bit -1':
+  //
+  //   %14:vf128bit = VREPF %7:vr128bit, 1
+  //
+  // If %7 is already live, there would also be 'VR16Bit -1', which is the
+  // interesting case.
+  //
+  // Rather than hard coding VR16Bit and GRX32Bit PressureSets, they are
+  // inferred below as the intersections of various register class groups.
+  //
+  // TODO: Could TableGen emit these directly instead?
+  if (!WITHPDIFFS)
+    return;
+
+  auto addPSets = [&TRI](std::set<unsigned> &S, const TargetRegisterClass *RC,
+                         std::set<unsigned> *Intersect = nullptr) {
+    for (const int *PS = TRI->getRegClassPressureSets(RC); *PS != -1; ++PS)
+      if (!Intersect || Intersect->count(*PS))
+        S.insert(*PS);
+  };
+
+  std::set<unsigned> SetA, SetB;
+  addPSets(SetA, &SystemZ::VR16BitRegClass);
+  addPSets(SetA, &SystemZ::VR32BitRegClass);
+  addPSets(SetA, &SystemZ::VR64BitRegClass);
+  addPSets(SetA, &SystemZ::VR128BitRegClass);
+  assert(SetA.size() == 1 && "Expected one pressure set (VR16Bit).");
+
+  addPSets(SetB, &SystemZ::FP16BitRegClass, &SetA);
+  addPSets(SetB, &SystemZ::FP32BitRegClass, &SetA);
+  addPSets(SetB, &SystemZ::FP64BitRegClass, &SetA);
+  addPSets(SetB, &SystemZ::VF128BitRegClass, &SetA);
+  addPSets(SetB, &SystemZ::FP128BitRegClass, &SetA);
+  assert(SetB.size() == 1 && *SetA.begin() == *SetB.begin() &&
+         "Expected one pressure set (VR16Bit).");
+  PrioPressureSet = *SetB.begin();
+
+  SetA.clear();
+  SetB.clear();
+  addPSets(SetA, &SystemZ::GRX32BitRegClass);
+  addPSets(SetA, &SystemZ::GR64BitRegClass);
+  addPSets(SetA, &SystemZ::ADDR64BitRegClass);
+  addPSets(SetA, &SystemZ::GR128BitRegClass);
+  addPSets(SetA, &SystemZ::ADDR128BitRegClass);
+  assert(SetA.size() == 1 && "Expected one pressure set (GRX32Bit).");
+
+  addPSets(SetB, &SystemZ::GR32BitRegClass, &SetA);
+  addPSets(SetB, &SystemZ::GRH32BitRegClass, &SetA);
+  addPSets(SetB, &SystemZ::ADDR32BitRegClass, &SetA);
+  assert(SetB.size() == 1 && *SetA.begin() == *SetB.begin() &&
+         "Expected one pressure set (GRX32Bit).");
+  GPRPressureSet = *SetB.begin();
 }
 
 unsigned SystemZPreRASchedStrategy::getRemLat(SchedBoundary *Zone) const {
@@ -109,8 +172,8 @@ void SystemZPreRASchedStrategy::initializeStoresGroup() {
         return;
       if (IsStore)
         StoresGroup.insert(SU);
-    }
-    else if (IsStore && !StoresGroup.empty() && SU->getDepth() == CurrMaxDepth) {
+    } else if (IsStore && !StoresGroup.empty() &&
+               SU->getDepth() == CurrMaxDepth) {
       // The group members should all have the same opcode.
       if ((*StoresGroup.begin())->getInstr()->getOpcode() != MI->getOpcode()) {
         StoresGroup.clear();
@@ -142,9 +205,8 @@ static int biasPhysRegExtra(const SUnit *SU) {
   return 0;
 }
 
-int SystemZPreRASchedStrategy::
-computeSULivenessScore(SchedCandidate &C, ScheduleDAGMILive *DAG,
-                       SchedBoundary *Zone) const {
+int SystemZPreRASchedStrategy::computeSULivenessScore(
+    SchedCandidate &C, ScheduleDAGMILive *DAG, SchedBoundary *Zone) const {
   // Not all data deps are modelled around the SUnit - some data edges near
   // boundaries are missing: Look directly at the MI operands instead.
   const SUnit *SU = C.SU;
@@ -152,56 +214,91 @@ computeSULivenessScore(SchedCandidate &C, ScheduleDAGMILive *DAG,
   if (!MI->getNumOperands() || MI->isCopy())
     return 0;
 
-  // Find uses of registers that are not already live (kills).
-  bool PrioKill = false;
-  bool GPRKill = false;
-  bool AddrKill = false;
-  bool HasPrioUse = false;
-  for (unsigned I = 0; I < MI->getDesc().getNumOperands(); ++I) {
-    const MachineOperand &MO = MI->getOperand(I);
-    if (!isVirtRegUse(MO))
-      continue;
-    HasPrioUse |= isPrioVirtReg(MO.getReg(), &DAG->MRI);
-    if (LiveRegs.count(MO.getReg()))
-      continue;
-    if (isPrioVirtReg(MO.getReg(), &DAG->MRI))
-      PrioKill = true;
-    else if (MI->getDesc().operands()[I].OperandType != MCOI::OPERAND_MEMORY)
-      GPRKill = true;
-    else
-      AddrKill = true;
-  }
-
-  // Find the interesting properties.
   const MachineOperand &DefMO = MI->getOperand(0);
   assert(!isPhysRegDef(DefMO) && "Did not expect physreg def!");
   bool IsLoad =
       isRegDef(DefMO) && !DefMO.isDead() && !IsRedefining[SU->NodeNum];
   bool IsStore = (!isRegDef(DefMO) || DefMO.isDead());
-  // Prioritize FP: Ignore GPR/Addr kills with an FP def.
-  bool UsesLivePrio =
-      IsLoad && !PrioKill &&
-      (isPrioVirtReg(DefMO.getReg(), &DAG->MRI) || (!GPRKill && !AddrKill));
-  bool UsesLiveAll = !PrioKill && !GPRKill && !AddrKill;
   bool PreservesSchedLat = SU->getHeight() <= Zone->getScheduledLatency();
   const unsigned Cycles = 2;
   unsigned Margin = SchedModel->getIssueWidth() * (Cycles + SU->Latency - 1);
   bool HasDistToTop = NumLeft > Margin;
+
+  // Before pulling down a load (to close the live range), the liveness of
+  // the other operands are checked: only if no use register would become
+  // live is the load pulled down. This can be checked either by looking at
+  // the operands of MI and checking if the reg is live, or the PDiff of the
+  // SU can be used to infer the same answers. Both methods seem to give the
+  // same identical result, at least when building the benchmarks.
+  bool UsesLivePrio = false, UsesLiveAll = false, StoreKill = false;
+  if (!WITHPDIFFS) {
+    // Find uses of registers that are not already live (kills).
+    bool PrioKill = false;
+    bool GPRKill = false;
+    bool HasPrioUse = false;
+    for (unsigned I = 0; I < MI->getDesc().getNumOperands(); ++I) {
+      const MachineOperand &MO = MI->getOperand(I);
+      if (!isVirtRegUse(MO))
+        continue;
+      HasPrioUse |= isPrioVirtReg(MO.getReg(), &DAG->MRI);
+      if (DAG->getBotRPTracker().isRegLive(MO.getReg()))
+        continue;
+      if (isPrioVirtReg(MO.getReg(), &DAG->MRI))
+        PrioKill = true;
+      else
+        GPRKill = true;
+    }
+
+    // Find the interesting properties.
+    // Prioritize FP: Ignore GPR/Addr kills with an FP def.
+    UsesLivePrio = IsLoad && !PrioKill &&
+                   (isPrioVirtReg(DefMO.getReg(), &DAG->MRI) || !GPRKill);
+    UsesLiveAll = !PrioKill && !GPRKill;
+    StoreKill = (PrioKill || (!HasPrioUse && GPRKill));
+  } else {
+    int PrioPressureChange = 0;
+    int GPRPressureChange = 0;
+    const PressureDiff &PDiff = DAG->getPressureDiff(SU);
+    for (const PressureChange &PC : PDiff) {
+      if (!PC.isValid())
+        break;
+      if (PC.getPSet() == PrioPressureSet)
+        PrioPressureChange += PC.getUnitInc();
+      else if (PC.getPSet() == GPRPressureSet)
+        GPRPressureChange += PC.getUnitInc();
+    }
+    if (IsLoad) {
+      const TargetRegisterClass *RC = DAG->MRI.getRegClass(DefMO.getReg());
+      int DefWeight = -int(TRI->getRegClassWeight(RC).RegWeight);
+      bool PrioDefNoKill = PrioPressureChange == DefWeight;
+      bool GPRDefNoKill = GPRPressureChange == DefWeight;
+      UsesLivePrio =
+          (PrioDefNoKill || (PrioPressureChange == 0 && GPRDefNoKill));
+      UsesLiveAll = (PrioDefNoKill && GPRPressureChange == 0) ||
+                    (PrioPressureChange == 0 && GPRDefNoKill);
+    }
+    if (IsStore && FirstStoreInGroupScheduled && StoresGroup.count(SU)) {
+      Register SrcReg = MI->getOperand(0).getReg();
+      bool SrcKill = !DAG->getBotRPTracker().isRegLive(SrcReg);
+      StoreKill =
+          SrcKill && (PrioPressureChange > 0 ||
+                      (PrioPressureChange == 0 && GPRPressureChange > 0));
+    }
+  }
 
   // Pull down a defining SU if it preserves the scheduled latency while not
   // causing any (prioritized) register uses to become live. If however there
   // will be relatively many SUs scheduled above this one and all uses are
   // already live it should not be a problem to increase the scheduled
   // latency given the OOO execution.
-  // TODO: Try schedulling small (DFSResult) subtrees as a unit.
+  // TODO: Try scheduling small (DFSResult) subtrees as a unit.
   bool SchedLow = IsLoad && ((PreservesSchedLat && UsesLivePrio) ||
                              (HasDistToTop && UsesLiveAll));
 
   // This handles regions with many chained stores of the same depth at the
   // bottom in the input order (cactus). Push them upwards during scheduling.
   bool SchedHigh = IsStore && FirstStoreInGroupScheduled &&
-                   StoresGroup.count(SU) &&
-                   (PrioKill || (!HasPrioUse && GPRKill));
+                   StoresGroup.count(SU) && StoreKill;
 
   if (SchedLow)
     return -1;
@@ -246,22 +343,24 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
       return TryCand.Reason != NoCand;
 
     // Don't extend the scheduled latency.
-    if (ShouldReduceLatency && TryCand.SU->getHeight() != Cand.SU->getHeight() &&
+    if (ShouldReduceLatency &&
+        TryCand.SU->getHeight() != Cand.SU->getHeight() &&
         (std::max(TryCand.SU->getHeight(), Cand.SU->getHeight()) >
          Zone->getScheduledLatency())) {
-      unsigned HigherSUDepth = TryCand.SU->getHeight() < Cand.SU->getHeight() ?
-        Cand.SU->getDepth() : TryCand.SU->getDepth();
+      unsigned HigherSUDepth = TryCand.SU->getHeight() < Cand.SU->getHeight()
+                                   ? Cand.SU->getDepth()
+                                   : TryCand.SU->getDepth();
       if (HigherSUDepth != getRemLat(Zone) &&
-          tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(),
-                  TryCand, Cand, GenericSchedulerBase::BotHeightReduce)) {
+          tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
+                  GenericSchedulerBase::BotHeightReduce)) {
         return TryCand.Reason != NoCand;
       }
     }
   }
 
   // Weak edges are for clustering and other constraints.
-  if (tryLess(TryCand.SU->WeakSuccsLeft, Cand.SU->WeakSuccsLeft,
-              TryCand, Cand, Weak))
+  if (tryLess(TryCand.SU->WeakSuccsLeft, Cand.SU->WeakSuccsLeft, TryCand, Cand,
+              Weak))
     return TryCand.Reason != NoCand;
 
   // Fall through to original instruction order.
@@ -276,17 +375,23 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
 void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
-  // Keep track of live regs instead of using the generic reg pressure tracking.
-  RegionPolicy.ShouldTrackPressure = false;
+  TinyRegion = NumRegionInstrs <= TinyRegionLim;
+
+  //  RegionPolicy.ShouldTrackPressure = !TinyRegion;
+  // Some exceptions are made, see initialize().
+  RegionPolicy.ShouldTrackPressure = NumRegionInstrs > 6;
+
   // These heuristics has so far seemed to work better without adding a
   // top-down boundary.
   RegionPolicy.OnlyBottomUp = true;
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
 }
 
 void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   GenericScheduler::initialize(dag);
 
-  TinyRegion = DAG->SUnits.size() <= TinyRegionLim;
   const SystemZInstrInfo *TII = static_cast<const SystemZInstrInfo *>(DAG->TII);
   if (TinyRegion) {
     // A tiny region with long latency instructions is better handled using
@@ -361,18 +466,6 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   LLVM_DEBUG(if (ShouldReduceLatency) dbgs() << "Latency scheduling enabled.\n";
              else dbgs() << "Latency scheduling disabled.\n";);
 
-  // Find the registers that are live at the bottom, before scheduling.
-  LiveRegs.clear();
-  for (unsigned I = 0, E = DAG->MRI.getNumVirtRegs(); I != E; ++I) {
-    Register VirtReg = Register::index2VirtReg(I);
-    const LiveInterval &LI = DAG->getLIS()->getInterval(VirtReg);
-    LiveQueryResult LRQ = LI.Query(
-        DAG->getLIS()->getInstructionIndex(*DAG->SUnits.back().getInstr()));
-    if (LRQ.valueOut())
-      LiveRegs.insert(VirtReg);
-  }
-  LLVM_DEBUG(LiveRegs.dump("Live out at bottom: "););
-
   // If MI uses the register it defines, record it one time here.
   IsRedefining = std::vector<bool>(DAG->SUnits.size(), false);
   for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
@@ -395,23 +488,8 @@ void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   if (TinyRegion)
     return;
 
-  LLVM_DEBUG(LiveRegs.dump("Live regs was: "););
-
   if (!FirstStoreInGroupScheduled && StoresGroup.count(SU))
     FirstStoreInGroupScheduled = true;
-
-  // Update LiveRegs.
-  MachineInstr *MI = SU->getInstr();
-  for (auto &MO : MI->explicit_operands())
-    if (MO.isReg() && MO.getReg().isVirtual()) {
-      if (MO.isDef()) {
-        // A subreg def may not be in LiveRegs if the use of it was implicit.
-        assert(LiveRegs.count(MO.getReg()) || MO.isDead() || MO.getSubReg());
-        if (!IsRedefining[SU->NodeNum])
-          LiveRegs.erase(MO.getReg());
-      } else if (MO.readsReg())
-        LiveRegs.insert(MO.getReg());
-    }
 
   assert(NumLeft > 0);
   --NumLeft;
