@@ -1846,8 +1846,7 @@ void test1() {
 void test2() {
   std::locale lc = std::locale::classic();
   std::locale lg(lc, new my_numpunct);
-#if (defined(__APPLE__) || defined(TEST_HAS_GLIBC) || defined(__MINGW32__)) && defined(__x86_64__) &&                  \
-    __LDBL_MANT_DIG__ == 64
+#if (defined(__APPLE__) || defined(TEST_HAS_GLIBC) || defined(__MINGW32__)) && defined(TEST_LONG_DOUBLE_IS_80_BIT)
   // This test assumes that long doubles are x87 80 bit long doubles, and
   // assumes one specific way of formatting the long doubles. (There are
   // multiple valid ways of hex formatting the same float.)
