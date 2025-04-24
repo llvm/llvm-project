@@ -24,6 +24,18 @@ typedef struct {
   int * IQ f; // No address discrimination.
 } SI;
 
+typedef struct {
+  // Transitively includes an address discriminated value
+  SA nested;
+} Nested_AddrDiscrimination;
+
+typedef struct {
+  // Transitively includes a pointer to a struct containing
+  // an address discriminated value, which means that this
+  // does not actually contain an address discriminated value
+  SA *nestedPtr;
+} Nested_PtrAddrDiscrimination;
+
 SA getSA(void);
 void calleeSA(SA);
 
@@ -170,3 +182,24 @@ void test_parameter_SI(SI a) {
 void test_array(void) {
   const SA a[] = {{0, &g0}, {1, &g0}};
 }
+
+
+void test_nested_struct(Nested_AddrDiscrimination* Src) {
+  Nested_AddrDiscrimination Dst = *Src;
+}
+// CHECK-LABEL: define void @test_nested_struct
+// CHECK: [[DST:%.*]]  = alloca %struct.Nested_AddrDiscrimination
+// CHECK: [[SRC_ADDR:%.*]] = load ptr, ptr %Src.addr
+// CHECK: call void @__copy_constructor_8_8_S_t0w4_pa1_50_8(ptr [[DST]], ptr [[SRC_ADDR]])
+
+// CHECK-LABEL: define linkonce_odr hidden void @__copy_constructor_8_8_S_t0w4_pa1_50_8(
+// CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8
+
+
+void test_nested_struct_ptr(Nested_PtrAddrDiscrimination* Src) {
+  Nested_PtrAddrDiscrimination Dst = *Src;
+}
+// CHECK-LABEL: define void @test_nested_struct_ptr
+// CHECK: [[DST:%.*]]  = alloca %struct.Nested_PtrAddrDiscrimination
+// CHECK: [[SRC_ADDR:%.*]] = load ptr, ptr %Src.addr
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC_ADDR]], i64 8, i1 false)
