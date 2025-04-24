@@ -508,10 +508,16 @@ public:
     //     ldr     x1, [x1, #8]  ; x1 is overwritten with an unrelated value
     //     pacdzb  x1
     //
+    //     ; also bad:
+    //     autdza  x1
+    //     pacdzb  x1  ; possibly signing the result of failed authentication
+    //
     // Note that this function is not needed for authentication oracles, as the
     // particular value left in the register after a successful memory access
     // is not important.
     auto ClobbersBaseRegExceptWriteback = [&](unsigned BaseRegUseIndex) {
+      // FIXME: Compute the indices of address operands (base reg and written-
+      //        back result) in AArch64InstrInfo instead of this ad-hoc code.
       MCPhysReg BaseReg = Inst.getOperand(BaseRegUseIndex).getReg();
       unsigned WrittenBackDefIndex = Desc.getOperandConstraint(
           BaseRegUseIndex, MCOI::OperandConstraint::TIED_TO);
