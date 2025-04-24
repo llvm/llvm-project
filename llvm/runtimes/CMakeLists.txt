@@ -320,7 +320,7 @@ function(runtime_register_target name)
     set(install-${runtime_name}-${name} install-${runtime_name})
     set(install-${runtime_name}-${name}-stripped install-${runtime_name}-stripped)
     list(APPEND ${name}_extra_targets ${runtime_name}-${name} install-${runtime_name}-${name} install-${runtime_name}-${name}-stripped)
-    # We need the target 'libomp-mod' to run flang-rt OpenMP tests.
+    # We need the target 'libomp-mod' to run flang OpenMP tests.
     if(${runtime_name} STREQUAL "openmp")
       list(APPEND ${name}_extra_targets "libomp-mod")
     endif()
