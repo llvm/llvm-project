@@ -31,11 +31,6 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                                     const LocationContext *LCtx,
                                     unsigned BlockCount,
                                     ConstCFGElementRef Elem) {
-  if (Elem.getParent()) {
-    const Stmt *TermStmt = Elem.getParent()->getTerminatorStmt();
-    assert((isa<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(TermStmt)) &&
-           "Terminator must be a loop statement");
-  }
   // Invalidate values in the current state.
   // TODO Make this more conservative by only invalidating values that might
   //      be modified by the body of the loop.
