@@ -2545,8 +2545,7 @@ TEST(APIntTest, clearBits) {
   EXPECT_EQ(0u, i32.countl_zero());
   EXPECT_EQ(1u, i32.countl_one());
   EXPECT_EQ(27u, i32.popcount());
-  EXPECT_EQ(static_cast<uint64_t>((1 << 31) | ((~0u >> 4) & (~0u << 3)) | 1),
-            i32.getZExtValue());
+  EXPECT_EQ(APInt(32, "8FFFFFF9", 16), i32);
 
   APInt i256 = APInt::getAllOnes(256);
   i256.clearBits(10, 250);
@@ -2556,6 +2555,15 @@ TEST(APIntTest, clearBits) {
   EXPECT_EQ(0u, i256.countl_zero());
   EXPECT_EQ(6u, i256.countl_one());
   EXPECT_EQ(16u, i256.popcount());
+
+  APInt i311 = APInt::getAllOnes(311);
+  i311.clearBits(33, 99);
+  EXPECT_EQ(33u, i311.countr_one());
+  EXPECT_EQ(0u, i311.countr_zero());
+  EXPECT_EQ(311u, i311.getActiveBits());
+  EXPECT_EQ(0u, i311.countl_zero());
+  EXPECT_EQ(212u, i311.countl_one());
+  EXPECT_EQ(245u, i311.popcount());
 
   APInt i64hi32 = APInt::getAllOnes(64);
   i64hi32.clearBits(0, 32);
