@@ -626,10 +626,9 @@ public:
   //===--------------------------------------------------------------------===//
 private:
   template <typename Op>
-  mlir::LogicalResult
-  emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
-                SourceLocation dirLoc,
-                llvm::ArrayRef<const OpenACCClause *> clauses);
+  Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+                   SourceLocation dirLoc,
+                   llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
