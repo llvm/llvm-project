@@ -254,7 +254,16 @@ size_type max_size(void) {
 // OGCG: define{{.*}} i64 @max_size()
 // OGCG:   ret i64 2305843009213693951
 
-enum {
-  um = 0,
-  dois = 1,
+enum A {
+  A_one,
+  A_two
 };
+enum A a;
+
+// CHECK:   cir.store %5, %0 : !u64i, !cir.ptr<!u64i>
+// CHECK:   %6 = cir.load %0 : !cir.ptr<!u64i>, !u64i
+// CHECK:   cir.return %6 : !u64i
+// CHECK:   }
+// CHECK:   cir.global external @a = #cir.int<0> : !u32i
+// CHECK:   }
+

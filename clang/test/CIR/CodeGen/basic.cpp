@@ -142,7 +142,15 @@ void ref_local(short x) {
 // CHECK:   cir.store %[[ARG]], %[[X_ADDR]] : !s16i, !cir.ptr<!s16i>
 // CHECK:   cir.store %[[X_ADDR]], %[[Y_REF_ADDR]] : !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>
 
-enum {
-  um = 0,
-  dois = 1,
+enum A {
+  A_one,
+  A_two
 };
+A a;
+
+// CHECK:   cir.store %5, %0 : !u64i, !cir.ptr<!u64i>
+// CHECK:   %6 = cir.load %0 : !cir.ptr<!u64i>, !u64i
+// CHECK:   cir.return %6 : !u64i
+// CHECK:   }
+// CHECK:   cir.global external @a = #cir.int<0> : !u32i
+// CHECK:   }

@@ -420,6 +420,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::Enum: {
+    const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
+    if (ED->isCompleteDefinition() || ED->isFixed())
+      return convertType(ED->getIntegerType());
+    break;
+  }
+
   case Type::FunctionNoProto:
   case Type::FunctionProto:
     resultType = convertFunctionTypeInternal(type);
