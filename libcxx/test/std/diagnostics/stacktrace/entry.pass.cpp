@@ -21,28 +21,28 @@
 namespace std {
   class stacktrace_entry {
   public:
-    using native_handle_type = implementation-defined;                              // [T1] [entry.pass.cpp]
+    using native_handle_type = implementation-defined;
 
     // [stacktrace.entry.cons], constructors
-    constexpr stacktrace_entry() noexcept;                                          // [T2] [entry.cons.pass.cpp]
-    constexpr stacktrace_entry(const stacktrace_entry& other) noexcept;             // [T3]
-    constexpr stacktrace_entry& operator=(const stacktrace_entry& other) noexcept;  // [T4]
-    ~stacktrace_entry();                                                            // [T5]
-
+    constexpr stacktrace_entry() noexcept;                                          
+    constexpr stacktrace_entry(const stacktrace_entry& other) noexcept;             
+    constexpr stacktrace_entry& operator=(const stacktrace_entry& other) noexcept;  
+    ~stacktrace_entry();                                                            
+    
     // [stacktrace.entry.obs], observers
-    constexpr native_handle_type native_handle() const noexcept;                    // [T6] [entry.obs.pass.cpp]
-    constexpr explicit operator bool() const noexcept;                              // [T7]
-
+    constexpr native_handle_type native_handle() const noexcept;                    
+    constexpr explicit operator bool() const noexcept;                              
+    
     // [stacktrace.entry.query], query
-    string description() const;                                                     // [T8] [entry.query.pass.cpp]
-    string source_file() const;                                                     // [T9]
-    uint_least32_t source_line() const;                                             // [T10]
-
+    string description() const;                                                     
+    string source_file() const;                                                     
+    uint_least32_t source_line() const;                                             
+    
     // [stacktrace.entry.cmp], comparison
     friend constexpr bool operator==(const stacktrace_entry& x,
-                                     const stacktrace_entry& y) noexcept;           // [T11] [entry.cmp.pass.cpp]
+                                     const stacktrace_entry& y) noexcept;           
     friend constexpr strong_ordering operator<=>(const stacktrace_entry& x,
-                                                 const stacktrace_entry& y) noexcept;  // [T12]
+                                                 const stacktrace_entry& y) noexcept;
   };
 }
 */
@@ -54,12 +54,7 @@ int main(int, char**) {
   static_assert(std::regular<std::stacktrace_entry>);
   static_assert(std::three_way_comparable<std::stacktrace_entry, std::strong_ordering>);
 
-  // [T1]
   // using native_handle_type = implementation-defined;
-  //
-  // [Implementation note: For our purposes anything that unique identifies this stacktrace_entry
-  // would be good enough.  We'll use a pointer-sized numeric type (to represent location of the
-  // calling instruction).  Internally this is defined as `uintptr_t`.]
   static_assert(sizeof(std::stacktrace_entry::native_handle_type) >= sizeof(void*));
 
   return 0;

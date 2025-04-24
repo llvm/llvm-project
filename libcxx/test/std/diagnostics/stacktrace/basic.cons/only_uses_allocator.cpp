@@ -9,10 +9,34 @@
 // REQUIRES: std-at-least-c++23
 // ADDITIONAL_COMPILE_FLAGS: -g
 
-#include <stacktrace>
+/*
+  (19.6.4.2)
+
+  // [stacktrace.basic.cons], creation and assignment
+  static basic_stacktrace current(const allocator_type& alloc = allocator_type()) noexcept;   [1]
+  static basic_stacktrace current(size_type skip,
+                                  const allocator_type& alloc = allocator_type()) noexcept;   [2]
+  static basic_stacktrace current(size_type skip, size_type max_depth,
+                                  const allocator_type& alloc = allocator_type()) noexcept;   [3]
+
+  basic_stacktrace() noexcept(is_nothrow_default_constructible_v<allocator_type>);            [4]
+  explicit basic_stacktrace(const allocator_type& alloc) noexcept;                            [5]
+
+  basic_stacktrace(const basic_stacktrace& other);                                            [6]
+  basic_stacktrace(basic_stacktrace&& other) noexcept;                                        [7]
+  basic_stacktrace(const basic_stacktrace& other, const allocator_type& alloc);               [8]
+  basic_stacktrace(basic_stacktrace&& other, const allocator_type& alloc);                    [9]
+  basic_stacktrace& operator=(const basic_stacktrace& other);                                 [10]
+  basic_stacktrace& operator=(basic_stacktrace&& other)
+    noexcept(allocator_traits<Allocator>::propagate_on_container_move_assignment::value ||
+      allocator_traits<Allocator>::is_always_equal::value);                                   [11]
+
+  ~basic_stacktrace();                                                                        [12]
+*/
 
 #include <cassert>
 #include <iostream>
+#include <stacktrace>
 
 /**
  * This file includes tests which ensure any allocations performed by `basic_stacktrace`
