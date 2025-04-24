@@ -468,7 +468,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
 
   if (include_plugins) {
     json::Object plugin_stats;
-    for (const PluginNamespace &plugin_ns : PluginManager::GetPluginNamespaces()) {
+    for (const PluginNamespace &plugin_ns :
+         PluginManager::GetPluginNamespaces()) {
       json::Array namespace_stats;
 
       for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
