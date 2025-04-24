@@ -88,13 +88,13 @@ def packet_type_is(packet, packet_type):
 
 
 def dump_dap_log(log_file):
-    print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
+    print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
     if log_file is None:
-        print("no log file available", file=sys.stderr)
+        print("no log file available")
     else:
         with open(log_file, "r") as file:
-            print(file.read(), file=sys.stderr)
-    print("========= END =========", file=sys.stderr)
+            print(file.read())
+    print("========= END =========")
 
 
 def read_packet_thread(vs_comm, log_file):
@@ -107,43 +107,46 @@ def read_packet_thread(vs_comm, log_file):
             # termination of lldb-dap and stop waiting for new packets.
             done = not vs_comm.handle_recv_packet(packet)
     finally:
-        # Wait for the process to fully exit before dumping the log file to
-        # ensure we have the entire log contents.
-        if vs_comm.process is not None:
-            try:
-                # Do not wait forever, some logs are better than none.
-                vs_comm.process.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                pass
         dump_dap_log(log_file)
 
 
 class DebugCommunication(object):
-    def __init__(self, recv, send, init_commands, log_file=None):
+    def __init__(self, recv, send, init_commands, log_file=None, keepAlive=False):
         self.trace_file = None
         self.send = send
         self.recv = recv
         self.recv_packets = []
         self.recv_condition = threading.Condition()
+        self.sequence = 1
         self.recv_thread = threading.Thread(
             target=read_packet_thread, args=(self, log_file)
         )
+        self.recv_thread.start()
+        self.output_condition = threading.Condition()
+        self.reset(init_commands, keepAlive)
+
+    # This will be called to re-initialize DebugCommunication object during
+    # reusing lldb-dap.
+    def reset(self, init_commands, keepAlive=False):
+        self.trace_file = None
+        self.recv_packets = []
         self.process_event_body = None
         self.exit_status = None
         self.initialize_body = None
         self.thread_stop_reasons = {}
         self.breakpoint_events = []
+        self.thread_events_body = []
         self.progress_events = []
         self.reverse_requests = []
-        self.sequence = 1
+        self.startup_events = []
         self.threads = None
-        self.recv_thread.start()
-        self.output_condition = threading.Condition()
         self.output = {}
         self.configuration_done_sent = False
         self.frame_scopes = {}
         self.init_commands = init_commands
         self.disassembled_instructions = {}
+        self.initialized_event = None
+        self.keepAlive = keepAlive
 
     @classmethod
     def encode_content(cls, s):
@@ -243,6 +246,8 @@ class DebugCommunication(object):
                 self._process_stopped()
                 tid = body["threadId"]
                 self.thread_stop_reasons[tid] = body
+            elif event == "initialized":
+                self.initialized_event = packet
             elif event == "breakpoint":
                 # Breakpoint events come in when a breakpoint has locations
                 # added or removed. Keep track of them so we can look for them
@@ -250,15 +255,23 @@ class DebugCommunication(object):
                 self.breakpoint_events.append(packet)
                 # no need to add 'breakpoint' event packets to our packets list
                 return keepGoing
+            elif event == "thread":
+                self.thread_events_body.append(body)
+                # no need to add 'thread' event packets to our packets list
+                return keepGoing
             elif event.startswith("progress"):
                 # Progress events come in as 'progressStart', 'progressUpdate',
                 # and 'progressEnd' events. Keep these around in case test
                 # cases want to verify them.
                 self.progress_events.append(packet)
+                # No need to add 'progress' event packets to our packets list.
+                return keepGoing
 
         elif packet_type == "response":
             if packet["command"] == "disconnect":
-                keepGoing = False
+                # Disconnect response should exit the packet read loop unless
+                # client wants to keep adapter alive for reusing.
+                keepGoing = self.keepAlive
         self.enqueue_recv_packet(packet)
         return keepGoing
 
@@ -420,6 +433,14 @@ class DebugCommunication(object):
             self.request_threads()
         return self.threads
 
+    def get_thread_events(self, reason=None):
+        if reason == None:
+            return self.thread_events_body
+        else:
+            return [
+                body for body in self.thread_events_body if body["reason"] == reason
+            ]
+
     def get_thread_id(self, threadIndex=0):
         """Utility function to get the first thread ID in the thread list.
         If the thread list is empty, then fetch the threads.
@@ -578,6 +599,7 @@ class DebugCommunication(object):
         sourceMap=None,
         gdbRemotePort=None,
         gdbRemoteHostname=None,
+        vscode_session_id=None,
     ):
         args_dict = {}
         if pid is not None:
@@ -611,6 +633,9 @@ class DebugCommunication(object):
             args_dict["gdb-remote-port"] = gdbRemotePort
         if gdbRemoteHostname is not None:
             args_dict["gdb-remote-hostname"] = gdbRemoteHostname
+        if vscode_session_id:
+            args_dict["__sessionId"] = vscode_session_id
+
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
@@ -759,7 +784,7 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile):
+    def request_initialize(self, sourceInitFile, singleStoppedEvent=False):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -774,8 +799,8 @@ class DebugCommunication(object):
                 "supportsVariablePaging": True,
                 "supportsVariableType": True,
                 "supportsStartDebuggingRequest": True,
-                "supportsProgressReporting": True,
-                "$__lldb_sourceInitFile": sourceInitFile,
+                "sourceInitFile": sourceInitFile,
+                "singleStoppedEvent": singleStoppedEvent,
             },
         }
         response = self.send_recv(command_dict)
@@ -812,6 +837,7 @@ class DebugCommunication(object):
         commandEscapePrefix=None,
         customFrameFormat=None,
         customThreadFormat=None,
+        vscode_session_id=None,
     ):
         args_dict = {"program": program}
         if args:
@@ -855,6 +881,8 @@ class DebugCommunication(object):
             args_dict["customFrameFormat"] = customFrameFormat
         if customThreadFormat:
             args_dict["customThreadFormat"] = customThreadFormat
+        if vscode_session_id:
+            args_dict["__sessionId"] = vscode_session_id
 
         args_dict["disableASLR"] = disableASLR
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
@@ -866,8 +894,12 @@ class DebugCommunication(object):
 
         if response["success"]:
             # Wait for a 'process' and 'initialized' event in any order
-            self.wait_for_event(filter=["process", "initialized"])
-            self.wait_for_event(filter=["process", "initialized"])
+            self.startup_events.append(
+                self.wait_for_event(filter=["process", "initialized"])
+            )
+            self.startup_events.append(
+                self.wait_for_event(filter=["process", "initialized"])
+            )
         return response
 
     def request_next(self, threadId, granularity="statement"):
@@ -1199,12 +1231,17 @@ class DebugAdapterServer(DebugCommunication):
         init_commands=[],
         log_file=None,
         env=None,
+        keepAliveTimeout=None,
     ):
         self.process = None
         self.connection = None
         if executable is not None:
             process, connection = DebugAdapterServer.launch(
-                executable=executable, connection=connection, env=env, log_file=log_file
+                executable=executable,
+                connection=connection,
+                env=env,
+                log_file=log_file,
+                keepAliveTimeout=keepAliveTimeout,
             )
             self.process = process
             self.connection = connection
@@ -1226,18 +1263,39 @@ class DebugAdapterServer(DebugCommunication):
             self.connection = connection
         else:
             DebugCommunication.__init__(
-                self, self.process.stdout, self.process.stdin, init_commands, log_file
+                self,
+                self.process.stdout,
+                self.process.stdin,
+                init_commands,
+                log_file,
+                keepAlive=(keepAliveTimeout is not None),
             )
 
+    @staticmethod
+    def get_args(executable, keepAliveTimeout=None):
+        return (
+            [executable]
+            if keepAliveTimeout is None
+            else [executable, "--keep-alive", str(keepAliveTimeout)]
+        )
+
     @classmethod
-    def launch(cls, /, executable, env=None, log_file=None, connection=None):
+    def launch(
+        cls,
+        /,
+        executable,
+        env=None,
+        log_file=None,
+        connection=None,
+        keepAliveTimeout=None,
+    ):
         adapter_env = os.environ.copy()
         if env is not None:
             adapter_env.update(env)
 
         if log_file:
             adapter_env["LLDBDAP_LOG"] = log_file
-        args = [executable]
+        args = cls.get_args(executable, keepAliveTimeout)
 
         if connection is not None:
             args.append("--connection")
@@ -1260,7 +1318,7 @@ class DebugAdapterServer(DebugCommunication):
         expected_prefix = "Listening for: "
         out = process.stdout.readline().decode()
         if not out.startswith(expected_prefix):
-            process.kill()
+            self.process.kill()
             raise ValueError(
                 "lldb-dap failed to print listening address, expected '{}', got '{}'".format(
                     expected_prefix, out
@@ -1281,11 +1339,7 @@ class DebugAdapterServer(DebugCommunication):
         super(DebugAdapterServer, self).terminate()
         if self.process is not None:
             self.process.terminate()
-            try:
-                self.process.wait(timeout=20)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
+            self.process.wait()
             self.process = None
 
 
@@ -1587,6 +1641,14 @@ def main():
         ),
     )
 
+    parser.add_option(
+        "--keep-alive",
+        type="int",
+        dest="keepAliveTimeout",
+        help="The number of milliseconds to keep lldb-dap alive after client disconnection for reusing. Zero or negative value will not keep lldb-dap alive.",
+        default=None,
+    )
+
     (options, args) = parser.parse_args(sys.argv[1:])
 
     if options.vscode_path is None and options.connection is None:
@@ -1597,7 +1659,9 @@ def main():
         )
         return
     dbg = DebugAdapterServer(
-        executable=options.vscode_path, connection=options.connection
+        executable=options.vscode_path,
+        connection=options.connection,
+        keepAliveTimeout=options.keepAliveTimeout,
     )
     if options.debug:
         raw_input('Waiting for debugger to attach pid "%i"' % (dbg.get_pid()))
