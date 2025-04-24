@@ -8,7 +8,7 @@ equivalence(y,z)
 !ERROR: Cray pointee 'v' may not be initialized
 real :: v = 42.0
 pointer(p,v)
-!ERROR: Cray pointee 'u' may not be SAVE
+!ERROR: Cray pointee 'u' may not have the SAVE attribute
 save u
 pointer(p, u)
 end
