@@ -58,7 +58,7 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc64 {
   let Inst{11-10} = idxs{1-0};    // vdst_idx
   let Inst{13} = supr;
 
-  let Inst{22-15} = op;
+  let Inst{21-14} = op;
   let Inst{31-24} = 0xdc; // encoding
 
   let Inst{42-32} = src0;
@@ -89,7 +89,7 @@ class VOP3Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc96 {
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = supr;
 
-  let Inst{22-15} = op;
+  let Inst{21-14} = op;
   let Inst{31-24} = 0xdd; // encoding
 
   let Inst{42-32} = src0;
@@ -127,7 +127,7 @@ class VOP5Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = supr;
 
-  let Inst{22-15} = op;
+  let Inst{21-14} = op;
   let Inst{31-24} = 0xde; // encoding
 
   let Inst{42-32} = src0;
@@ -173,7 +173,7 @@ class VOP6Me <bits<8> op, VOPMProfile pfl> : VOPM, Enc128 {
   let Inst{12} = !if(pfl.HasClamp, clamp, ?);
   let Inst{13} = supr;
 
-  let Inst{22-15} = op;
+  let Inst{21-14} = op;
   let Inst{31-24} = 0xdf; // encoding
 
   let Inst{42-32} = src0;

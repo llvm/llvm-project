@@ -798,13 +798,28 @@ void AMDGPUMCCodeEmitter::getMachineOpValueRsrcRegOp(
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInst &MI, const MCOperand &MO, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+#if LLPC_BUILD_NPI
+  bool isLikeImm = false;
+#endif /* LLPC_BUILD_NPI */
   int64_t Val;
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
     Op = Val;
     return;
   }
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
+  if (MO.isImm()) {
+    Val = MO.getImm();
+    isLikeImm = true;
+  } else if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
+    isLikeImm = true;
+  } else if (MO.isExpr()) {
+#else /* LLPC_BUILD_NPI */
   if (MO.isExpr() && MO.getExpr()->getKind() != MCExpr::Constant) {
+#endif /* LLPC_BUILD_NPI */
     // FIXME: If this is expression is PCRel or not should not depend on what
     // the expression looks like. Given that this is just a general expression,
     // it should probably be FK_Data_4 and whatever is producing
@@ -855,8 +870,17 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
       Op = *Enc;
       return;
     }
+#if LLPC_BUILD_NPI
+
+    llvm_unreachable("Operand not supported for SISrc");
+  }
+
+  if (isLikeImm) {
+    Op = Val;
+#else /* LLPC_BUILD_NPI */
   } else if (MO.isImm()) {
     Op = MO.getImm();
+#endif /* LLPC_BUILD_NPI */
     return;
   }
 

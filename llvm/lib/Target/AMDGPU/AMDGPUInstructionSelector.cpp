@@ -4367,7 +4367,10 @@ Register AMDGPUInstructionSelector::copyToVGPRIfSrcFolded(
 #if LLPC_BUILD_NPI
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectIgnore(MachineOperand &Root) const {
-  return {{}};
+  // Don't render anything.
+  ComplexRendererFns Renderers;
+  Renderers.emplace();
+  return Renderers;
 }
 
 #endif /* LLPC_BUILD_NPI */
