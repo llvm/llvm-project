@@ -1727,7 +1727,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
           "argument"_err_en_US,
           source.ToString());
     }
-    if (symbol->has<AssocEntityDetails>()) {
+    if (symbol->GetUltimate().has<AssocEntityDetails>()) {
       context_.Say(source,
           "List item '%s' in ALLOCATE directive must not be an associate "
           "name"_err_en_US,
