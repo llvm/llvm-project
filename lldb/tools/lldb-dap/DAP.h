@@ -266,6 +266,7 @@ struct DAP {
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
+  lldb::SBThread GetLLDBThread(lldb::tid_t id);
   lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
