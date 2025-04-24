@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 class TestRV32MachOCorefile(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessDarwin
     def test_riscv32_gpr_corefile_registers(self):
         self.build()
         create_corefile = self.getBuildArtifact("create-empty-riscv-corefile")
