@@ -259,6 +259,6 @@ LangOptionsBase::getBoundsSafetyNewChecksMaskForGroup(StringRef GroupName) {
 
 LangOptionsBase::BoundsSafetyNewChecksMaskIntTy
 LangOptionsBase::getDefaultBoundsSafetyNewChecksMask() {
-  return BS_CHK_None;
+  return getBoundsSafetyNewChecksMaskForGroup("batch_0");
 }
 /* TO_UPSTREAM(BoundsSafety) OFF*/

@@ -50,36 +50,43 @@ void bar(const char * __null_terminated * __single);
 // CHECK-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// CHECK-NEXT:    [[TMP11:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null
-// CHECK-NEXT:    br i1 [[TMP11]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT2:%.*]],
+// CHECK-NEXT:    [[TMP11:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, !annotation [[META2:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP11]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT4:%.*]], !annotation [[META2]]
 // CHECK:       boundscheck.notnull:
-// CHECK-NEXT:    [[TMP12:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]]
-// CHECK-NEXT:    br i1 [[TMP12]], label [[CONT:%.*]], label [[TRAP:%.*]]
+// CHECK-NEXT:    [[TMP12:%.*]] = getelementptr ptr, ptr [[WIDE_PTR_PTR]], i64 1, !annotation [[META3:![0-9]+]]
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp ule ptr [[TMP12]], [[WIDE_PTR_UB]], !annotation [[META3]]
+// CHECK-NEXT:    br i1 [[TMP13]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF4:![0-9]+]], !annotation [[META3]]
 // CHECK:       trap:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]]
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META3]]
+// CHECK-NEXT:    unreachable, !annotation [[META3]]
 // CHECK:       cont:
-// CHECK-NEXT:    [[TMP13:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]]
-// CHECK-NEXT:    br i1 [[TMP13]], label [[CONT2]], label [[TRAP1:%.*]]
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP12]], !annotation [[META3]]
+// CHECK-NEXT:    br i1 [[TMP14]], label [[CONT2:%.*]], label [[TRAP1:%.*]], !prof [[PROF4]], !annotation [[META3]]
 // CHECK:       trap1:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]]
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
+// CHECK-NEXT:    unreachable, !annotation [[META3]]
 // CHECK:       cont2:
+// CHECK-NEXT:    [[TMP15:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], !annotation [[META5:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP15]], label [[CONT4]], label [[TRAP3:%.*]], !prof [[PROF4]], !annotation [[META5]]
+// CHECK:       trap3:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// CHECK-NEXT:    unreachable, !annotation [[META5]]
+// CHECK:       cont4:
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR]], ptr [[SPP]], align 8
-// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[SPP]], align 8
-// CHECK-NEXT:    store ptr [[TMP14]], ptr [[NTPP]], align 8
-// CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[SPP]], align 8
-// CHECK-NEXT:    store ptr [[TMP15]], ptr [[NTPP2]], align 8
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[SPP]], align 8
-// CHECK-NEXT:    call void @bar(ptr noundef [[TMP16]])
+// CHECK-NEXT:    store ptr [[TMP16]], ptr [[NTPP]], align 8
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[SPP]], align 8
-// CHECK-NEXT:    call void @bar(ptr noundef [[TMP17]])
-// CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[NTPP]], align 8
-// CHECK-NEXT:    store ptr [[TMP18]], ptr [[NTPP3]], align 8
+// CHECK-NEXT:    store ptr [[TMP17]], ptr [[NTPP2]], align 8
+// CHECK-NEXT:    [[TMP18:%.*]] = load ptr, ptr [[SPP]], align 8
+// CHECK-NEXT:    call void @bar(ptr noundef [[TMP18]])
 // CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[SPP]], align 8
-// CHECK-NEXT:    store ptr [[TMP19]], ptr [[NTPP3]], align 8
-// CHECK-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[SPP]], align 8
+// CHECK-NEXT:    call void @bar(ptr noundef [[TMP19]])
+// CHECK-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[NTPP]], align 8
 // CHECK-NEXT:    store ptr [[TMP20]], ptr [[NTPP3]], align 8
+// CHECK-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[SPP]], align 8
+// CHECK-NEXT:    store ptr [[TMP21]], ptr [[NTPP3]], align 8
+// CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[SPP]], align 8
+// CHECK-NEXT:    store ptr [[TMP22]], ptr [[NTPP3]], align 8
 // CHECK-NEXT:    ret void
 //
 void test(const char * __single sp) {

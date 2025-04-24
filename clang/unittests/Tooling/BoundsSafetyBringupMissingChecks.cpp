@@ -205,6 +205,10 @@ TEST(BoundsSafetyBringUpMissingChecks, DefaultWithBoundsSafety) {
       {NEED_CC1_ARG "-fbounds-safety"}, [](LangOptions &LO) {
         EXPECT_EQ(LO.BoundsSafetyBringUpMissingChecks,
                   LangOptions::getDefaultBoundsSafetyNewChecksMask());
+
+        // "batch_0" is the default.
+        EXPECT_EQ(LO.BoundsSafetyBringUpMissingChecks,
+                  LangOptions::getBoundsSafetyNewChecksMaskForGroup("batch_0"));
       });
   ASSERT_TRUE(Result);
 }

@@ -1,5 +1,5 @@
 // REQUIRES: system-darwin
-
+//
 // RUN: %clang_cc1 -triple x86_64-apple-macos -Wno-bounds-safety-init-list -fbounds-safety -O2 %s -emit-llvm -o %t-O2.s -opt-record-file %t-O2.opt.yaml -opt-record-format yaml
 // RUN: FileCheck --input-file %t-O2.s --check-prefixes IR %s
 // RUN: FileCheck --input-file %t-O2.opt.yaml --check-prefixes OPT-REM %s

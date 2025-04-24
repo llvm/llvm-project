@@ -20,6 +20,19 @@ int TestOK() {
 // FIXME
 // CHECK-O2-LABEL: @TestTrap(
 // CHECK-O2-NEXT:  entry:
+// CHECK-O2-NEXT:    [[P:%.*]] = alloca i8, align 1
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[P]]) #[[ATTR4:[0-9]+]]
+// CHECK-O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
+// CHECK-O2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 4, !annotation [[META2:![0-9]+]]
+// CHECK-O2-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[TMP0]], !annotation [[META2]]
+// CHECK-O2-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[P]], [[TMP1]], !annotation [[META2]]
+// CHECK-O2-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP3]], !annotation [[META2]]
+// CHECK-O2-NEXT:    br i1 [[OR_COND]], label [[CONT30:%.*]], label [[TRAP:%.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
+// CHECK-O2:       trap:
+// CHECK-O2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META4:![0-9]+]]
+// CHECK-O2-NEXT:    unreachable, !annotation [[META4]]
+// CHECK-O2:       cont30:
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[P]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    ret void
 //
 void TestTrap() {

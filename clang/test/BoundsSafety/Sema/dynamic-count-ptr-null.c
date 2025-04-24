@@ -1,11 +1,5 @@
-
-// TODO: We should get the same diagnostics with/without return_size (rdar://138982703)
-
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,rs -fbounds-safety-bringup-missing-checks=return_size %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,compound-literal -fbounds-safety-bringup-missing-checks=compound_literal_init %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,rs -fbounds-safety-bringup-missing-checks=return_size %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,rs,compound-literal %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -verify=expected,rs,compound-literal %s
 
 #include <ptrcheck.h>
 #include <stddef.h>

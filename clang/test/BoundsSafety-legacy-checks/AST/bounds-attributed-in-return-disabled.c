@@ -5,7 +5,7 @@
 
 #include <ptrcheck.h>
 
-// TODO: Remove this test when return-size checks are enabled by default.
+// TODO: Remove this test when support for disabling return-size checks is removed.
 
 // CHECK: FunctionDecl [[func_cb_in_from_bidi:0x[^ ]+]] {{.+}} cb_in_from_bidi
 // CHECK: |-ParmVarDecl [[var_count:0x[^ ]+]]

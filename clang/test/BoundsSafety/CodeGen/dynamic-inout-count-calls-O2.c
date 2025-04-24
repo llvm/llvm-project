@@ -24,8 +24,8 @@ void success() {
 
 // CHECK-LABEL: @fail(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation !{{[0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META2:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META2]]
 //
 void fail() {
   int arr[10];
@@ -36,11 +36,11 @@ void fail() {
 // CHECK-LABEL: @pass_out_len(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[OUT_LEN:%.*]], align 4, !tbaa [[TBAA3:![0-9]+]]
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[TMP0]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[CONT:%.*]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[TMP0]], 0, !annotation [[META7:![0-9]+]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !annotation [[META7]]
 // CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation !{{[0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       cont:
 // CHECK-NEXT:    ret void
 //
@@ -50,12 +50,12 @@ void pass_out_len(int *__counted_by(*out_len) arr, int *out_len) {
 
 // CHECK-LABEL: @pass_addr_of_len(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN:%.*]], 0
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[CONT77:%.*]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN:%.*]], 0, !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[CONT79:%.*]], !annotation [[META7]]
 // CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation !{{[0-9]+}}
-// CHECK-NEXT:    unreachable
-// CHECK:       cont77:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
+// CHECK-NEXT:    unreachable, !annotation [[META2]]
+// CHECK:       cont79:
 // CHECK-NEXT:    ret void
 //
 void pass_addr_of_len(int *__counted_by(len) arr, int len) {

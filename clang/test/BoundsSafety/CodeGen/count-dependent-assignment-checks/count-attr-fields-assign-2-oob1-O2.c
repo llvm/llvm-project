@@ -11,8 +11,8 @@ struct S {
     int l;
 };
 
-// CHECK-O2-LABEL: define dso_local noundef i32 @foo
-// CHECK-O2-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-O2-LABEL: define dso_local noundef i32 @foo(
+// CHECK-O2-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-O2-NEXT:  entry:
 // CHECK-O2-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META2:![0-9]+]]
 // CHECK-O2-NEXT:    unreachable, !annotation [[META2]]
@@ -27,8 +27,8 @@ int foo () {
     return s.bp2[9]; // trap : oob s.bp2[9]
 }
 
-// CHECK-O2-LABEL: define dso_local i32 @bar
-// CHECK-O2-SAME: () local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-O2-LABEL: define dso_local i32 @bar(
+// CHECK-O2-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-O2-NEXT:  entry:
 // CHECK-O2-NEXT:    ret i32 undef
 //
@@ -41,6 +41,3 @@ int bar () {
 
   return s.bp2[8]; // ok
 }
-//.
-// CHECK-O2: [[META2]] = !{!"bounds-safety-generic", !"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
-//.

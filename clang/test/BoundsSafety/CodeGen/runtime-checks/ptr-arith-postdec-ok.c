@@ -51,20 +51,27 @@
 // O0-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // O0-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // O0-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// O0-NEXT:    [[TMP13:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
-// O0-NEXT:    br i1 [[TMP13]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// O0-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR]], i64 1, {{!annotation ![0-9]+}}
+// O0-NEXT:    [[TMP14:%.*]] = icmp ule ptr [[TMP13]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
+// O0-NEXT:    br i1 [[TMP14]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
 // O0:       trap:
 // O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], {{!annotation ![0-9]+}}
-// O0-NEXT:    unreachable
+// O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // O0:       cont:
-// O0-NEXT:    [[TMP14:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// O0-NEXT:    br i1 [[TMP14]], label [[CONT2:%.*]], label [[TRAP1:%.*]], {{!annotation ![0-9]+}}
+// O0-NEXT:    [[TMP15:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP13]], {{!annotation ![0-9]+}}
+// O0-NEXT:    br i1 [[TMP15]], label [[CONT2:%.*]], label [[TRAP1:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // O0:       trap1:
 // O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
-// O0-NEXT:    unreachable
+// O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // O0:       cont2:
-// O0-NEXT:    [[TMP15:%.*]] = load i32, ptr [[WIDE_PTR_PTR]], align 4
-// O0-NEXT:    ret i32 [[TMP15]]
+// O0-NEXT:    [[TMP16:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
+// O0-NEXT:    br i1 [[TMP16]], label [[CONT4:%.*]], label [[TRAP3:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
+// O0:       trap3:
+// O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
+// O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// O0:       cont4:
+// O0-NEXT:    [[TMP17:%.*]] = load i32, ptr [[WIDE_PTR_PTR]], align 4
+// O0-NEXT:    ret i32 [[TMP17]]
 //
 int foo(int * a) {
     int *p = a;

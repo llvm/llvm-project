@@ -15,12 +15,12 @@
 // CHECK-O0-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-O0-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 // CHECK-O0-NEXT:    store i32 0, ptr [[LEN]], align 4
-// CHECK-O0-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN]], align 4
+// CHECK-O0-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN]], align 4, {{!annotation ![0-9]+}}
 // CHECK-O0-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    br i1 [[CMP]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[CMP]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-O0:       trap:
 // CHECK-O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2:[0-9]+]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    unreachable
+// CHECK-O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK-O0:       cont:
 // CHECK-O0-NEXT:    store ptr null, ptr [[DCP]], align 8
 // CHECK-O0-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[DCP]], align 8
@@ -40,20 +40,27 @@
 // CHECK-O0-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-O0-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-O0-NEXT:    [[TMP6:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    br i1 [[TMP6]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT4:%.*]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[TMP6]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT6:%.*]], {{!annotation ![0-9]+}}
 // CHECK-O0:       boundscheck.notnull:
-// CHECK-O0-NEXT:    [[TMP7:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    br i1 [[TMP7]], label [[CONT2:%.*]], label [[TRAP1:%.*]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR]], i64 1, {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    [[TMP8:%.*]] = icmp ule ptr [[TMP7]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[TMP8]], label [[CONT2:%.*]], label [[TRAP1:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK-O0:       trap1:
 // CHECK-O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    unreachable
+// CHECK-O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK-O0:       cont2:
-// CHECK-O0-NEXT:    [[TMP8:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    br i1 [[TMP8]], label [[CONT4]], label [[TRAP3:%.*]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    [[TMP9:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP7]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[TMP9]], label [[CONT4:%.*]], label [[TRAP3:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK-O0:       trap3:
 // CHECK-O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    unreachable
+// CHECK-O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK-O0:       cont4:
+// CHECK-O0-NEXT:    [[TMP10:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[TMP10]], label [[CONT6]], label [[TRAP5:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
+// CHECK-O0:       trap5:
+// CHECK-O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK-O0:       cont6:
 // CHECK-O0-NEXT:    store ptr [[WIDE_PTR_PTR]], ptr [[TP]], align 8
 // CHECK-O0-NEXT:    ret i32 0
 //

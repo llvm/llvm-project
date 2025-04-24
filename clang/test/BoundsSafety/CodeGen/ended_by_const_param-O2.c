@@ -36,7 +36,7 @@ void good(void) {
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation [[META2:![0-9]+]]
 // CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], !annotation [[META2]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP28_NOT]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -60,7 +60,7 @@ void oob_upper(void) {
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation [[META2]]
 // CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], !annotation [[META2]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP28_NOT]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -86,5 +86,4 @@ void oob_order(void) {
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
-// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048577, i32 1048575}
 //.

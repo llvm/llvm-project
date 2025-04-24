@@ -1,7 +1,4 @@
-
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,legacy %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -fbounds-safety-bringup-missing-checks=indirect_count_update -verify=expected,legacy,extra %s
-// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -fbounds-safety-bringup-missing-checks=compound_literal_init -verify=expected,legacy,cli %s
+// RUN: %clang_cc1 -fsyntax-only -fbounds-safety -verify=expected,legacy,extra,cli %s
 #include <ptrcheck.h>
 
 void consume_cb(int* __counted_by(3) p);

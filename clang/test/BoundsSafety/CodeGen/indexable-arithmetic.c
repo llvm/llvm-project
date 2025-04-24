@@ -30,20 +30,27 @@
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP9:%.*]] = icmp ne ptr [[WIDE_PTR_PTR]], null, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP9]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT2:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP9]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[CONT4:%.*]], {{!annotation ![0-9]+}}
 // CHECK:       boundscheck.notnull:
-// CHECK-NEXT:    [[TMP10:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP10]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR]], i64 1, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP11:%.*]] = icmp ule ptr [[TMP10]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP11]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF4:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[TMP11:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP11]], label [[CONT2]], label [[TRAP1:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP12:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP10]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP12]], label [[CONT2:%.*]], label [[TRAP1:%.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
 // CHECK:       trap1:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont2:
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP13]], label [[CONT4]], label [[TRAP3:%.*]], !prof [[PROF4]], {{!annotation ![0-9]+}}
+// CHECK:       trap3:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       cont4:
 // CHECK-NEXT:    ret ptr [[WIDE_PTR_PTR]]
 //
 int *foo(int *__bidi_indexable ptr) {

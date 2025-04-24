@@ -81,18 +81,25 @@ __attribute__((noinline))
 // CHECK-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// CHECK-NEXT:    [[TMP30:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP30]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR]], i64 1, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP31:%.*]] = icmp ule ptr [[TMP30]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP31]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
-// CHECK-NEXT:    [[TMP31:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP31]], label [[CONT7:%.*]], label [[TRAP6:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP32:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP30]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP32]], label [[CONT7:%.*]], label [[TRAP6:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK:       trap6:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont7:
+// CHECK-NEXT:    [[TMP33:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP33]], label [[CONT9:%.*]], label [[TRAP8:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
+// CHECK:       trap8:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       cont9:
 // CHECK-NEXT:    store i32 3, ptr [[WIDE_PTR_PTR]], align 4
 // CHECK-NEXT:    ret void
 //
@@ -121,10 +128,10 @@ void foo(int *buf __counted_by(len), int len) {
 // CHECK-NEXT:    store ptr [[UPPER]], ptr [[TMP1]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[TMP2]], align 8
-// CHECK-NEXT:    br i1 true, label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 true, label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP1]], ptr align 8 [[AGG_TEMP]], i64 24, i1 false)
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP1]], i32 0, i32 0

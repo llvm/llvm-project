@@ -17,14 +17,17 @@ struct T {
 // CHECK-NEXT:    [[ADD_PTR3:%.*]] = getelementptr inbounds i32, ptr [[BUF:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[IDX_NEG:%.*]] = sub nsw i64 0, [[IDX_EXT]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[BOUND_PTR_ARITH5:%.*]] = getelementptr i32, ptr [[BUF]], i64 [[IDX_NEG]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH5]], [[ADD_PTR3]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH5]], [[BUF]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT6:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BOUND_PTR_ARITH5]], i64 4, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH5]], [[TMP0]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH5]], [[BUF]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND8:%.*]] = and i1 [[TMP3]], [[OR_COND]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND8]], label [[CONT7:%.*]], label [[TRAP:%.*]], !prof [[PROF6:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       cont6:
+// CHECK:       cont7:
 // CHECK-NEXT:    store i32 3, ptr [[BOUND_PTR_ARITH5]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
 //
@@ -40,10 +43,13 @@ void foo(int *buf __counted_by(len), int len) {
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[A]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    [[ADD_PTR3_I:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH5_I:%.*]] = getelementptr i8, ptr [[A]], i64 -40
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH5_I]], [[ADD_PTR3_I]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH5_I]], [[A]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND_I:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND_I]], label [[FOO_EXIT:%.*]], label [[TRAP_I:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 -36, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR3_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH5_I]], [[TMP0]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND_I:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH5_I]], [[A]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND8_I:%.*]] = and i1 [[TMP3]], [[OR_COND_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND8_I]], label [[FOO_EXIT:%.*]], label [[TRAP_I:%.*]], !prof [[PROF6]], {{!annotation ![0-9]+}}
 // CHECK:       trap.i:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}

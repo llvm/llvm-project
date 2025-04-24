@@ -61,20 +61,27 @@
 // CHECK-O0-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // CHECK-O0-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-O0-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// CHECK-O0-NEXT:    [[TMP21:%.*]] = icmp ult ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    br i1 [[TMP21]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[WIDE_PTR_PTR]], i64 1, {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    [[TMP22:%.*]] = icmp ule ptr [[TMP21]], [[WIDE_PTR_UB]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[TMP22]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-O0:       trap:
 // CHECK-O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    unreachable
+// CHECK-O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK-O0:       cont:
-// CHECK-O0-NEXT:    [[TMP22:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    br i1 [[TMP22]], label [[CONT4:%.*]], label [[TRAP3:%.*]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    [[TMP23:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[TMP21]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[TMP23]], label [[CONT4:%.*]], label [[TRAP3:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK-O0:       trap3:
 // CHECK-O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
-// CHECK-O0-NEXT:    unreachable
+// CHECK-O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK-O0:       cont4:
-// CHECK-O0-NEXT:    [[TMP23:%.*]] = load i32, ptr [[WIDE_PTR_PTR]], align 4
-// CHECK-O0-NEXT:    ret i32 [[TMP23]]
+// CHECK-O0-NEXT:    [[TMP24:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    br i1 [[TMP24]], label [[CONT6:%.*]], label [[TRAP5:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
+// CHECK-O0:       trap5:
+// CHECK-O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
+// CHECK-O0-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK-O0:       cont6:
+// CHECK-O0-NEXT:    [[TMP25:%.*]] = load i32, ptr [[WIDE_PTR_PTR]], align 4
+// CHECK-O0-NEXT:    ret i32 [[TMP25]]
 //
 // CHECK-O2-LABEL: @main(
 // CHECK-O2-NEXT:  entry:
