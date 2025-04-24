@@ -894,21 +894,17 @@ CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
 }
 
 llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
-    ExecutionContext *exe_ctx, bool transparent_pointers,
-    bool omit_empty_base_classes, bool ignore_array_bounds,
-    std::string &child_name, uint32_t &child_byte_size,
-    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
-    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-    bool &child_is_deref_of_parent, ValueObject *valobj,
-    uint64_t &language_flags, bool &type_valid) const {
+    ExecutionContext *exe_ctx, std::string &child_name,
+    uint32_t &child_byte_size, int32_t &child_byte_offset,
+    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
+    bool &child_is_base_class, ValueObject *valobj, uint64_t &language_flags,
+    bool &type_valid) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetDereferencedType(
-          m_type, exe_ctx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+          m_type, exe_ctx, child_name, child_byte_size, child_byte_offset,
           child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, valobj, language_flags,
-          type_valid);
+          child_is_base_class, valobj, language_flags, type_valid);
   return CompilerType();
 }
 

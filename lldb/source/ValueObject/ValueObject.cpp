@@ -2794,16 +2794,12 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
   if (m_deref_valobj)
     return m_deref_valobj->GetSP();
 
-  bool omit_empty_base_classes = true;
-  bool ignore_array_bounds = false;
   std::string child_name_str;
   uint32_t child_byte_size = 0;
   int32_t child_byte_offset = 0;
   uint32_t child_bitfield_bit_size = 0;
   uint32_t child_bitfield_bit_offset = 0;
   bool child_is_base_class = false;
-  bool child_is_deref_of_parent = false;
-  const bool transparent_pointers = false;
   CompilerType compiler_type = GetCompilerType();
   uint64_t language_flags = 0;
   bool is_valid_dereference_type = false;
@@ -2812,17 +2808,20 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
 
   CompilerType child_compiler_type;
   auto child_compiler_type_or_err = compiler_type.GetDereferencedType(
-      &exe_ctx, transparent_pointers, omit_empty_base_classes,
-      ignore_array_bounds, child_name_str, child_byte_size, child_byte_offset,
+      &exe_ctx, child_name_str, child_byte_size, child_byte_offset,
       child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
-      child_is_deref_of_parent, this, language_flags,
-      is_valid_dereference_type);
+      this, language_flags, is_valid_dereference_type);
 
-  if (!child_compiler_type_or_err && is_valid_dereference_type)
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
-                   child_compiler_type_or_err.takeError(),
-                   "could not find child: {0}");
-  else
+  std::string deref_error;
+  if (!child_compiler_type_or_err) {
+    auto err = child_compiler_type_or_err.takeError();
+    if (err.isA<llvm::StringError>()) {
+      deref_error = llvm::toString(std::move(err));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types),
+                     llvm::createStringError(deref_error),
+                     "could not find child: {0}");
+    }
+  } else
     child_compiler_type = *child_compiler_type_or_err;
 
   if (is_valid_dereference_type) {
@@ -2834,8 +2833,7 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
       m_deref_valobj = new ValueObjectChild(
           *this, child_compiler_type, child_name, child_byte_size,
           child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, eAddressTypeInvalid,
-          language_flags);
+          child_is_base_class, true, eAddressTypeInvalid, language_flags);
     }
 
     // In case of incomplete child compiler type, use the pointee type and try
@@ -2855,8 +2853,8 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
           m_deref_valobj = new ValueObjectChild(
               *this, child_compiler_type, child_name, child_byte_size,
               child_byte_offset, child_bitfield_bit_size,
-              child_bitfield_bit_offset, child_is_base_class,
-              child_is_deref_of_parent, eAddressTypeInvalid, language_flags);
+              child_bitfield_bit_offset, child_is_base_class, true,
+              eAddressTypeInvalid, language_flags);
         }
       }
     }
@@ -2871,13 +2869,13 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     StreamString strm;
     GetExpressionPath(strm);
 
-    if (is_valid_dereference_type)
+    if (deref_error.empty())
       error = Status::FromErrorStringWithFormat(
           "dereference failed: (%s) %s",
           GetTypeName().AsCString("<invalid type>"), strm.GetData());
     else
       error = Status::FromErrorStringWithFormat(
-          "not a pointer or reference type: (%s) %s",
+          "dereference failed: %s: (%s) %s", deref_error.c_str(),
           GetTypeName().AsCString("<invalid type>"), strm.GetData());
     return ValueObjectSP();
   }

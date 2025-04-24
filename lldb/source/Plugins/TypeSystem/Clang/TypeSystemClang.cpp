@@ -6186,21 +6186,19 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
 
 llvm::Expected<CompilerType> TypeSystemClang::GetDereferencedType(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-    bool transparent_pointers, bool omit_empty_base_classes,
-    bool ignore_array_bounds, std::string &child_name,
-    uint32_t &child_byte_size, int32_t &child_byte_offset,
-    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-    bool &child_is_base_class, bool &child_is_deref_of_parent,
+    std::string &child_name, uint32_t &child_byte_size,
+    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
+    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
     ValueObject *valobj, uint64_t &language_flags, bool &type_valid) {
   type_valid = IsPointerOrReferenceType(type, nullptr) ||
                IsArrayType(type, nullptr, nullptr, nullptr);
   if (!type_valid)
-    return CompilerType();
+    return llvm::createStringError("not a pointer, reference or array type");
+  bool child_is_deref_of_parent;
   return GetChildCompilerTypeAtIndex(
-      type, exe_ctx, 0, transparent_pointers, omit_empty_base_classes,
-      ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-      child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
-      child_is_deref_of_parent, valobj, language_flags);
+      type, exe_ctx, 0, false, true, false, child_name, child_byte_size,
+      child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
+      child_is_base_class, child_is_deref_of_parent, valobj, language_flags);
 }
 
 llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
@@ -6567,8 +6565,6 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
             return size_or_err.takeError();
           child_byte_size = *size_or_err;
           child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-          if (idx == 0)
-            child_is_deref_of_parent = true;
           return element_type;
         }
       }
