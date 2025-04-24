@@ -54,9 +54,11 @@ bool skipProblematicFlag(IteratorTy &It, const IteratorTy &End) {
   // Skip include paths, these should have been handled by preprocessing the
   // source first. Sadly, these are passed also to the middle-end commands. Skip
   // debug related flags (they should be ignored) like -dumpdir (used for
-  // profiling/coverage/split-dwarf)
+  // profiling/coverage/split-dwarf).
+  // Skip flags related to opencl-c headers or device-libs builtins.
   StringRef Arg = *It;
-  static const StringSet<> FlagsWithPathArg = {"-I", "-dumpdir"};
+  static const StringSet<> FlagsWithPathArg = {"-I", "-dumpdir", "-include",
+                                               "-mlink-builtin-bitcode"};
   bool IsFlagWithPathArg = It + 1 != End && FlagsWithPathArg.contains(Arg);
   if (IsFlagWithPathArg) {
     ++It;
@@ -119,19 +121,6 @@ void ClangCommand::addOptionsIdentifier(HashAlgorithm &H) const {
       continue;
 
     StringRef Arg = *It;
-    static const StringSet<> FlagsWithFileArgEmbededInComgr = {
-        "-include-pch", "-mlink-builtin-bitcode"};
-    if (FlagsWithFileArgEmbededInComgr.contains(Arg)) {
-      // The next argument is a path to a "secondary" input-file (pre-compiled
-      // header or device-libs builtin)
-      // These two files kinds of files are embedded in comgr at compile time,
-      // and in normally their remain constant with comgr's build. The user is
-      // not able to change them.
-      ++It;
-      if (It == End)
-        break;
-      continue;
-    }
 
     // input files are considered by their content
     // output files should not be considered at all

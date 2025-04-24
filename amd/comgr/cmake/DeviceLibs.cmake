@@ -65,20 +65,17 @@ endforeach()
 list(JOIN TARGETS_INCLUDES "\n" TARGETS_INCLUDES)
 file(GENERATE OUTPUT ${GEN_LIBRARY_INC_FILE} CONTENT "${TARGETS_INCLUDES}")
 
-foreach(OPENCL_VERSION 1.2 2.0)
-  string(REPLACE . _ OPENCL_UNDERSCORE_VERSION ${OPENCL_VERSION})
-  add_custom_command(OUTPUT ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc
-    COMMAND bc2h ${CMAKE_CURRENT_BINARY_DIR}/opencl${OPENCL_VERSION}-c.pch
-                 ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc
-                 opencl${OPENCL_UNDERSCORE_VERSION}_c
-    DEPENDS bc2h ${CMAKE_CURRENT_BINARY_DIR}/opencl${OPENCL_VERSION}-c.pch
-    COMMENT "Generating opencl${OPENCL_VERSION}-c.inc"
-  )
-  set_property(DIRECTORY APPEND PROPERTY
-    ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc)
-  add_custom_target(opencl${OPENCL_VERSION}-c.inc_target DEPENDS ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc)
-  add_dependencies(amd_comgr opencl${OPENCL_VERSION}-c.inc_target)
-endforeach()
+add_custom_command(OUTPUT ${INC_DIR}/opencl-c-base.inc
+  COMMAND bc2h ${OPENCL_C_H}
+                ${INC_DIR}/opencl-c-base.inc
+                opencl_c_base
+  DEPENDS bc2h clang ${OPENCL_C_H}
+  COMMENT "Generating opencl-c-base.inc"
+)
+set_property(DIRECTORY APPEND PROPERTY
+  ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/opencl-c-base.inc)
+add_custom_target(opencl-c-base.inc_target DEPENDS ${INC_DIR}/opencl-c-base.inc)
+add_dependencies(amd_comgr opencl-c-base.inc_target)
 
 set(TARGETS_DEFS "")
 list(APPEND TARGETS_DEFS "#ifndef AMD_DEVICE_LIBS_TARGET\n#define AMD_DEVICE_LIBS_TARGET(t)\n#endif")

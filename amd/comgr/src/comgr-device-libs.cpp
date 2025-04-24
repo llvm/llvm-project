@@ -25,45 +25,18 @@ using namespace llvm;
 namespace COMGR {
 
 namespace {
-amd_comgr_status_t addObject(DataSet *DataSet, amd_comgr_data_kind_t Kind,
-                             const char *Name, const void *Data, size_t Size) {
-  DataObject *Obj = DataObject::allocate(Kind);
-  if (!Obj) {
-    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-  }
-  if (auto Status = Obj->setName(Name)) {
-    return Status;
-  }
-  if (auto Status =
-          Obj->setData(StringRef(reinterpret_cast<const char *>(Data), Size))) {
-    return Status;
-  }
-  DataSet->DataObjects.insert(Obj);
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
 #include "libraries.inc"
 #include "libraries_sha.inc"
-#include "opencl1.2-c.inc"
-#include "opencl2.0-c.inc"
+#include "opencl-c-base.inc"
 } // namespace
 
 ArrayRef<unsigned char> getDeviceLibrariesIdentifier() {
   return DEVICE_LIBS_ID;
 }
 
-amd_comgr_status_t addPrecompiledHeaders(DataAction *ActionInfo,
-                                         DataSet *ResultSet) {
-  switch (ActionInfo->Language) {
-  case AMD_COMGR_LANGUAGE_OPENCL_1_2:
-    return addObject(ResultSet, AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER,
-                     "opencl1.2-c.pch", opencl1_2_c, opencl1_2_c_size);
-  case AMD_COMGR_LANGUAGE_OPENCL_2_0:
-    return addObject(ResultSet, AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER,
-                     "opencl2.0-c.pch", opencl2_0_c, opencl2_0_c_size);
-  default:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
+StringRef getOpenCLCBaseHeaderContents() {
+  return StringRef(reinterpret_cast<const char *>(opencl_c_base),
+                   opencl_c_base_size);
 }
 
 llvm::ArrayRef<std::tuple<llvm::StringRef, llvm::StringRef>>

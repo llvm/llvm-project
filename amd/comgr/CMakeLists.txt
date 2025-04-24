@@ -229,7 +229,7 @@ endif()
 list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_COMGR_EXPORT)
 
 include(bc2h)
-include(opencl_pch)
+include(opencl_header)
 include(DeviceLibs)
 
 # Add major version to the name on windows, including Win64
