@@ -1,8 +1,7 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 
-; TODO(#136344): This test currently fails when --target-env vulkan1.3 is specified.
-; XFAIL: spirv-tools
+; FIXME(#136344): Change --target-env to vulkan1.3 and update this test accordingly once the issue is resolved.
 
 ; Make sure SPIRV operation function calls for faceforward are lowered correctly.
 
