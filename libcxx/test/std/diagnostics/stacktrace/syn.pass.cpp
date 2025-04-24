@@ -8,12 +8,6 @@
 
 // REQUIRES: std-at-least-c++23
 
-#include <cassert>
-#include <stacktrace>
-
-#include <memory>
-#include <type_traits>
-
 /*
 
 // (19.6.2) Header <stacktrace> synopsis [stacktrace.syn]
@@ -62,7 +56,13 @@ namespace std {
 }
 */
 
-// static_assert(__cpp_lib_stacktrace == 202011L);
+#include <__config>
+#include <cassert>
+#include <memory>
+#include <stacktrace>
+#include <type_traits>
+
+static_assert(__cpp_lib_stacktrace == 202011L);
 
 int main(int, char**) {
   // Very basic tests to ensure the required things are declared.
