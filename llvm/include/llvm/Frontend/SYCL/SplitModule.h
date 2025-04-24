@@ -8,8 +8,8 @@
 // Functionality to split a module by categories.
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
-#define LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
+#ifndef LLVM_FRONTEND_SYCL_SPLIT_MODULE_H
+#define LLVM_FRONTEND_SYCL_SPLIT_MODULE_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Frontend/SYCL/Utils.h"
@@ -36,4 +36,4 @@ void splitModule(std::unique_ptr<Module> M, IRSplitMode Mode,
 } // namespace sycl
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_SYCLSPLITMODULE_H
+#endif // LLVM_FRONTEND_SYCL_SPLIT_MODULE_H

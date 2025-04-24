@@ -15,6 +15,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Frontend/SYCL/SplitModule.h"
+#include "llvm/Frontend/SYCL/Utils.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -33,9 +35,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
-#include "llvm/Frontend/SYCL/Utils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
-#include "llvm/Frontend/SYCL/SplitModule.h"
 
 using namespace llvm;
 

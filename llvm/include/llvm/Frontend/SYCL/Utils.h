@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 // Utility functions for SYCL.
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_TRANSFORMS_UTILS_SYCLUTILS_H
-#define LLVM_TRANSFORMS_UTILS_SYCLUTILS_H
+#ifndef LLVM_FRONTEND_SYCL_UTILS_H
+#define LLVM_FRONTEND_SYCL_UTILS_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -64,4 +64,4 @@ void writeStringTable(const StringTable &Table, raw_ostream &OS);
 } // namespace sycl
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_SYCLUTILS_H
+#endif // LLVM_FRONTEND_SYCL_UTILS_H

@@ -22,8 +22,8 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 #include <map>
-#include <utility>
 #include <string>
+#include <utility>
 
 using namespace llvm;
 using namespace llvm::sycl;
@@ -52,7 +52,8 @@ struct EntryPointGroup {
   EntryPointGroup(EntryPointGroup &&) = default;
   EntryPointGroup &operator=(EntryPointGroup &&) = default;
 
-  EntryPointGroup(std::string GroupId, EntryPointSet Functions = EntryPointSet())
+  EntryPointGroup(std::string GroupId,
+                  EntryPointSet Functions = EntryPointSet())
       : GroupId(GroupId), Functions(std::move(Functions)) {}
 
   void clear() { Functions.clear(); }
@@ -343,7 +344,7 @@ EntryPointGroupVec selectEntryPointGroups(const Module &M, IRSplitMode Mode) {
 } // namespace
 
 void llvm::sycl::splitModule(std::unique_ptr<Module> M, IRSplitMode Mode,
-                           PostSplitCallbackType Callback) {
+                             PostSplitCallbackType Callback) {
   if (Mode == IRSplitMode::IRSM_NONE) {
     Callback(std::move(M));
     return;
