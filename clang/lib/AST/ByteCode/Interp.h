@@ -1007,6 +1007,19 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return false;
   }
 
+  // Diagnose comparisons between fields with different access specifiers.
+  if (std::optional<std::pair<Pointer, Pointer>> Split =
+          Pointer::computeSplitPoint(LHS, RHS)) {
+    const FieldDecl *LF = Split->first.getField();
+    const FieldDecl *RF = Split->second.getField();
+    if (LF && RF && !LF->getParent()->isUnion() &&
+        LF->getAccess() != RF->getAccess()) {
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_pointer_comparison_differing_access)
+          << LF << LF->getAccess() << RF << RF->getAccess() << LF->getParent();
+    }
+  }
+
   unsigned VL = LHS.getByteOffset();
   unsigned VR = RHS.getByteOffset();
   S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));

@@ -571,6 +571,48 @@ bool Pointer::pointsToLiteral() const {
   return E && !isa<MaterializeTemporaryExpr, StringLiteral>(E);
 }
 
+std::optional<std::pair<Pointer, Pointer>>
+Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
+  if (!A.isBlockPointer() || !B.isBlockPointer())
+    return std::nullopt;
+
+  if (A.asBlockPointer().Pointee != B.asBlockPointer().Pointee)
+    return std::nullopt;
+  if (A.isRoot() && B.isRoot())
+    return std::nullopt;
+
+  if (A == B)
+    return std::make_pair(A, B);
+
+  auto getBase = [](const Pointer &P) -> Pointer {
+    if (P.isArrayElement())
+      return P.expand().getArray();
+    return P.getBase();
+  };
+
+  Pointer IterA = A;
+  Pointer IterB = B;
+  Pointer CurA = IterA;
+  Pointer CurB = IterB;
+  for (;;) {
+    if (IterA.asBlockPointer().Base > IterB.asBlockPointer().Base) {
+      CurA = IterA;
+      IterA = getBase(IterA);
+    } else {
+      CurB = IterB;
+      IterB = getBase(IterB);
+    }
+
+    if (IterA == IterB)
+      return std::make_pair(CurA, CurB);
+
+    if (IterA.isRoot() && IterB.isRoot())
+      return std::nullopt;
+  }
+
+  llvm_unreachable("The loop above should've returned.");
+}
+
 std::optional<APValue> Pointer::toRValue(const Context &Ctx,
                                          QualType ResultType) const {
   const ASTContext &ASTCtx = Ctx.getASTContext();
