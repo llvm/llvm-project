@@ -178,7 +178,8 @@ bool lldb_private::formatters::BlockPointerSummaryProvider(
       synthetic_children->GetIndexOfChildWithName(s_FuncPtr_name);
 
   if (!index_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(), "{0}");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(),
+                   "{0}");
     return false;
   }
 
