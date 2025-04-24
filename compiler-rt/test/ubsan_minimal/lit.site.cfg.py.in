@@ -1,5 +1,7 @@
 @LIT_SITE_CFG_IN_HEADER@
 
+config.name_suffix = "@UBSAN_TEST_CONFIG_SUFFIX@"
+
 # Tool-specific config options.
 config.target_cflags = "@UBSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@UBSAN_TEST_TARGET_ARCH@"

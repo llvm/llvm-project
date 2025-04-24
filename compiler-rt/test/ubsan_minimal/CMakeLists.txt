@@ -10,6 +10,7 @@ set(UBSAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 list(APPEND UBSAN_TEST_DEPS ubsan-minimal)
 
 foreach(arch ${UBSAN_TEST_ARCH})
+  string(TOLOWER "-${arch}-${OS_NAME}" UBSAN_TEST_CONFIG_SUFFIX)
   get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
   set(CONFIG_NAME ${arch})
   configure_lit_site_cfg(
