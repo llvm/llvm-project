@@ -1455,20 +1455,29 @@ static bool checkAndReplaceCondition(
       return ShouldReplace;
     });
     NumCondsRemoved++;
-    if (Cmp->use_empty()) {
-      SmallVector<DbgVariableIntrinsic *> DbgUsers;
-      SmallVector<DbgVariableRecord *> DVRUsers;
-      findDbgUsers(DbgUsers, Cmp, &DVRUsers);
 
-      for (auto *DVR : DVRUsers) {
-        auto *DTN = DT.getNode(DVR->getParent());
-        if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
-          continue;
-        DVR->replaceVariableLocationOp(Cmp, ConstantC);
-      }
+    // Update the debug value records that satisfy the same condition used
+    // in replaceUsesWithIf.
+    SmallVector<DbgVariableIntrinsic *> DbgUsers;
+    SmallVector<DbgVariableRecord *> DVRUsers;
+    findDbgUsers(DbgUsers, Cmp, &DVRUsers);
 
-      ToRemove.push_back(Cmp);
+    for (auto *DVR : DVRUsers) {
+      auto *DTN = DT.getNode(DVR->getParent());
+      if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+        continue;
+
+      auto *MarkedI = DVR->getInstruction();
+      if (MarkedI->getParent() == ContextInst->getParent() &&
+          MarkedI->comesBefore(ContextInst))
+        continue;
+
+      DVR->replaceVariableLocationOp(Cmp, ConstantC);
     }
+
+    if (Cmp->use_empty())
+      ToRemove.push_back(Cmp);
+
     return Changed;
   };
 
