@@ -16,7 +16,7 @@ def get_required_attr(config, attr_name):
 
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
-config.name = "UBSan-Minimal-" + config.target_arch
+config.name = "UBSan-Minimal" + config.name_suffix
 
 
 def build_invocation(compile_flags):
