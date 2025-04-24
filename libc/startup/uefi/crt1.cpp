@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-types/EFI_STATUS.h"
 #include "config/uefi/app.h"
+#include "include/llvm-libc-types/EFI_STATUS.h"
 #include "src/__support/OSUtil/uefi/error.h"
 #include "src/__support/macros/config.h"
 
@@ -29,5 +29,4 @@ EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   // conversion.
   return LIBC_NAMESPACE::errno_to_uefi_status(main(0, nullptr, nullptr));
 }
-
 }
