@@ -1418,10 +1418,15 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto WrapGenModuleAction = getGenModuleActionWrapper();
   Instance.setGenModuleActionWrapper(WrapGenModuleAction);
 
-  // Share an output manager.
   assert(hasOutputBackend() &&
          "Expected an output manager to already be set up");
-  Instance.setOutputBackend(&getOutputBackend());
+  if (ThreadSafeConfig) {
+    // Create a clone of the existing output (pointing to the same destination).
+    Instance.setOutputBackend(getOutputBackend().clone());
+  } else {
+    // Share the existing output manager.
+    Instance.setOutputBackend(&getOutputBackend());
+  }
 
   if (ThreadSafeConfig) {
     Instance.setModuleDepCollector(ThreadSafeConfig->getModuleDepCollector());
