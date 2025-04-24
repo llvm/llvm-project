@@ -402,7 +402,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ExtVector:
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);
-    const mlir::Type elemTy = convertTypeForMem(vec->getElementType());
+    const mlir::Type elemTy = convertType(vec->getElementType());
     resultType = cir::VectorType::get(elemTy, vec->getNumElements());
     break;
   }
