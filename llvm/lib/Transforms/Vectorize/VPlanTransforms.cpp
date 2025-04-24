@@ -2508,7 +2508,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
     // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
     // a single predecessor and 1 if it has two.
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
-    if (OrigLoop->getUniqueExitBlock()) {
+    if (!VPEarlyExitBlock->getSinglePredecessor()) {
       // If VPEarlyExitBlock has two predecessors, they are already ordered such
       // that early exit is second (and latch exit is first), by construction.
       // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
