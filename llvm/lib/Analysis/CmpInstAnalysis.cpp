@@ -99,7 +99,6 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
   }
 
   DecomposedBitTest Result;
-
   switch (Pred) {
   default:
     llvm_unreachable("Unexpected predicate");
@@ -178,8 +177,9 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
     Result.X = X;
     Result.Mask = Result.Mask.zext(X->getType()->getScalarSizeInBits());
     Result.C = Result.C.zext(X->getType()->getScalarSizeInBits());
-  } else
+  } else {
     Result.X = LHS;
+  }
 
   return Result;
 }

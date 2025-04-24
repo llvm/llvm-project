@@ -877,7 +877,7 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
     // Can it be decomposed into  icmp eq (X & Mask), 0  ?
     auto Res = llvm::decomposeBitTestICmp(
         ICmp->getOperand(0), ICmp->getOperand(1), Pred,
-        /*LookThroughTrunc=*/true, /*AllowNonZeroC=*/false,
+        /*LookThroughTrunc=*/false, /*AllowNonZeroC=*/false,
         /*DecomposeAnd=*/true);
     if (Res && Res->Pred == ICmpInst::ICMP_EQ) {
       X = Res->X;
