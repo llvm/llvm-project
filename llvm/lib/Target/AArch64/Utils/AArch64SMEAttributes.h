@@ -32,8 +32,7 @@ public:
     Out = 2,       // aarch64_out_zt0
     InOut = 3,     // aarch64_inout_zt0
     Preserved = 4, // aarch64_preserves_zt0
-    New = 5,       // aarch64_new_zt0
-    Undef = 6      // aarch64_zt0_undef
+    New = 5        // aarch64_new_zt0
   };
 
   // Enum with bitmasks for each individual SME feature.
@@ -44,9 +43,10 @@ public:
     SM_Body = 1 << 2,         // aarch64_pstate_sm_body
     SME_ABI_Routine = 1 << 3, // Used for SME ABI routines to avoid lazy saves
     ZA_State_Agnostic = 1 << 4,
-    ZA_Shift = 5,
+    ZT0_Undef = 1 << 5,       // Use to mark ZT0 as undef to avoid spills
+    ZA_Shift = 6,
     ZA_Mask = 0b111 << ZA_Shift,
-    ZT0_Shift = 8,
+    ZT0_Shift = 9,
     ZT0_Mask = 0b111 << ZT0_Shift
   };
 
@@ -126,9 +126,7 @@ public:
   bool isPreservesZT0() const {
     return decodeZT0State(Bitmask) == StateValue::Preserved;
   }
-  bool isUndefZT0() const {
-    return decodeZT0State(Bitmask) == StateValue::Undef;
-  }
+  bool isUndefZT0() const { return Bitmask & ZT0_Undef; }
   bool sharesZT0() const {
     StateValue State = decodeZT0State(Bitmask);
     return State == StateValue::In || State == StateValue::Out ||

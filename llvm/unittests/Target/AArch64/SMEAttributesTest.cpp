@@ -225,14 +225,14 @@ TEST(SMEAttributes, Basics) {
   ASSERT_FALSE(ZT0_New.hasSharedZAInterface());
   ASSERT_TRUE(ZT0_New.hasPrivateZAInterface());
 
-  SA ZT0_Undef = SA(SA::encodeZT0State(SA::StateValue::Undef));
-  ASSERT_FALSE(ZT0_Undef.isNewZT0());
+  SA ZT0_Undef = SA(SA::ZT0_Undef | SA::encodeZT0State(SA::StateValue::New));
+  ASSERT_TRUE(ZT0_Undef.isNewZT0());
   ASSERT_FALSE(ZT0_Undef.isInZT0());
   ASSERT_FALSE(ZT0_Undef.isOutZT0());
   ASSERT_FALSE(ZT0_Undef.isInOutZT0());
   ASSERT_FALSE(ZT0_Undef.isPreservesZT0());
   ASSERT_FALSE(ZT0_Undef.sharesZT0());
-  ASSERT_FALSE(ZT0_Undef.hasZT0State());
+  ASSERT_TRUE(ZT0_Undef.hasZT0State());
   ASSERT_FALSE(ZT0_Undef.hasSharedZAInterface());
   ASSERT_TRUE(ZT0_Undef.hasPrivateZAInterface());
   ASSERT_TRUE(ZT0_Undef.isUndefZT0());
@@ -307,7 +307,7 @@ TEST(SMEAttributes, Transitions) {
   SA ZT0_Shared = SA(SA::encodeZT0State(SA::StateValue::In));
   SA ZA_ZT0_Shared = SA(SA::encodeZAState(SA::StateValue::In) |
                         SA::encodeZT0State(SA::StateValue::In));
-  SA Undef_ZT0 = SA((SA::encodeZT0State(SA::StateValue::Undef)));
+  SA Undef_ZT0 = SA(SA::ZT0_Undef);
 
   // Shared ZA -> Private ZA Interface
   ASSERT_FALSE(ZA_Shared.requiresDisablingZABeforeCall(Private_ZA));
