@@ -460,17 +460,15 @@ define <2 x half> @v_roundeven_v2f16(<2 x half> %x) {
 ; GFX9-LABEL: v_roundeven_v2f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_rndne_f16_e32 v1, v0
-; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_roundeven_v2f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rndne_f16_e32 v1, v0
-; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_roundeven_v2f16:
@@ -523,17 +521,15 @@ define <2 x half> @v_roundeven_v2f16(<2 x half> %x) {
 ; SDAG_GFX9-LABEL: v_roundeven_v2f16:
 ; SDAG_GFX9:       ; %bb.0:
 ; SDAG_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX9-NEXT:    v_rndne_f16_e32 v0, v0
-; SDAG_GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; SDAG_GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX10-LABEL: v_roundeven_v2f16:
 ; SDAG_GFX10:       ; %bb.0:
 ; SDAG_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX10-NEXT:    v_rndne_f16_e32 v0, v0
-; SDAG_GFX10-NEXT:    v_pack_b32_f16 v0, v0, v1
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; SDAG_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX11-TRUE16-LABEL: v_roundeven_v2f16:
@@ -602,18 +598,16 @@ define <2 x half> @v_roundeven_v2f16_fneg(<2 x half> %x) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX9-NEXT:    v_rndne_f16_e32 v1, v0
-; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_roundeven_v2f16_fneg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX10-NEXT:    v_rndne_f16_e32 v1, v0
-; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v1, v0
+; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_roundeven_v2f16_fneg:
@@ -676,17 +670,15 @@ define <2 x half> @v_roundeven_v2f16_fneg(<2 x half> %x) {
 ; SDAG_GFX9-LABEL: v_roundeven_v2f16_fneg:
 ; SDAG_GFX9:       ; %bb.0:
 ; SDAG_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v1, -v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX9-NEXT:    v_rndne_f16_e64 v0, -v0
-; SDAG_GFX9-NEXT:    v_pack_b32_f16 v0, v0, v1
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v0, -v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v0, -v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; SDAG_GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX10-LABEL: v_roundeven_v2f16_fneg:
 ; SDAG_GFX10:       ; %bb.0:
 ; SDAG_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v1, -v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX10-NEXT:    v_rndne_f16_e64 v0, -v0
-; SDAG_GFX10-NEXT:    v_pack_b32_f16 v0, v0, v1
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v0, -v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v0, -v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; SDAG_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX11-TRUE16-LABEL: v_roundeven_v2f16_fneg:
@@ -759,23 +751,19 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; GFX9-LABEL: v_roundeven_v4f16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_rndne_f16_e32 v2, v0
-; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_rndne_f16_e32 v3, v1
-; GFX9-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX9-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX9-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX9-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX9-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_roundeven_v4f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_rndne_f16_e32 v2, v0
-; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_rndne_f16_e32 v3, v1
-; GFX10-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX10-NEXT:    v_pack_b32_f16 v0, v2, v0
-; GFX10-NEXT:    v_pack_b32_f16 v1, v3, v1
+; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX10-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; GFX10-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-TRUE16-LABEL: v_roundeven_v4f16:
@@ -850,23 +838,19 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; SDAG_GFX9-LABEL: v_roundeven_v4f16:
 ; SDAG_GFX9:       ; %bb.0:
 ; SDAG_GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX9-NEXT:    v_rndne_f16_e32 v1, v1
-; SDAG_GFX9-NEXT:    v_rndne_f16_e32 v0, v0
-; SDAG_GFX9-NEXT:    v_pack_b32_f16 v0, v0, v3
-; SDAG_GFX9-NEXT:    v_pack_b32_f16 v1, v1, v2
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; SDAG_GFX9-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; SDAG_GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX10-LABEL: v_roundeven_v4f16:
 ; SDAG_GFX10:       ; %bb.0:
 ; SDAG_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v3, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; SDAG_GFX10-NEXT:    v_rndne_f16_e32 v0, v0
-; SDAG_GFX10-NEXT:    v_rndne_f16_e32 v1, v1
-; SDAG_GFX10-NEXT:    v_pack_b32_f16 v0, v0, v3
-; SDAG_GFX10-NEXT:    v_pack_b32_f16 v1, v1, v2
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v0, v0 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; SDAG_GFX10-NEXT:    v_rndne_f16_sdwa v1, v1 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; SDAG_GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG_GFX11-TRUE16-LABEL: v_roundeven_v4f16:

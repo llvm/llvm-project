@@ -188,11 +188,10 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mul_f16_e32 v3, 0.15915494, v1
-; GFX9-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX9-NEXT:    v_sin_f16_e32 v2, v3
-; GFX9-NEXT:    v_sin_f16_e32 v1, v1
-; GFX9-NEXT:    v_pack_b32_f16 v1, v2, v1
+; GFX9-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0 src1_sel:DWORD
+; GFX9-NEXT:    v_sin_f16_sdwa v1, v1 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX9-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT:    v_sin_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -204,11 +203,10 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mul_f16_e32 v3, 0.15915494, v1
-; GFX10-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10-NEXT:    v_sin_f16_e32 v2, v3
-; GFX10-NEXT:    v_sin_f16_e32 v1, v1
-; GFX10-NEXT:    v_pack_b32_f16 v1, v2, v1
+; GFX10-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0 src1_sel:DWORD
+; GFX10-NEXT:    v_sin_f16_sdwa v1, v1 dst_sel:WORD_0 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
+; GFX10-NEXT:    v_mul_f16_sdwa v1, v1, v2 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-NEXT:    v_sin_f16_sdwa v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_1
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
