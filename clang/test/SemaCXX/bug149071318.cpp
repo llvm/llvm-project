@@ -21,6 +21,6 @@ namespace std { // fake std namespace; to reproduce the bug, a CXXConversionDecl
 }
 
 void test(std::Y &y) {
-  // Here `y.x` involves an implicit cast and calls the conversion overloading, which has no identifier:
+  // Here `y.x` involves an implicit cast and calls the overloaded cast operator, which has no identifier:
   printf("%s", y.x); // expected-warning{{function 'printf' is unsafe}} expected-note{{}}
 }
