@@ -95,6 +95,8 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= encodeZT0State(StateValue::Preserved);
   if (Attrs.hasFnAttr("aarch64_new_zt0"))
     Bitmask |= encodeZT0State(StateValue::New);
+  if (Attrs.hasFnAttr("aarch64_zt0_undef"))
+    Bitmask |= encodeZT0State(StateValue::Undef);
 }
 
 bool SMEAttrs::requiresSMChange(const SMEAttrs &Callee) const {

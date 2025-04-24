@@ -32,7 +32,8 @@ public:
     Out = 2,       // aarch64_out_zt0
     InOut = 3,     // aarch64_inout_zt0
     Preserved = 4, // aarch64_preserves_zt0
-    New = 5        // aarch64_new_zt0
+    New = 5,       // aarch64_new_zt0
+    Undef = 6      // aarch64_zt0_undef
   };
 
   // Enum with bitmasks for each individual SME feature.
@@ -125,6 +126,9 @@ public:
   bool isPreservesZT0() const {
     return decodeZT0State(Bitmask) == StateValue::Preserved;
   }
+  bool isUndefZT0() const {
+    return decodeZT0State(Bitmask) == StateValue::Undef;
+  }
   bool sharesZT0() const {
     StateValue State = decodeZT0State(Bitmask);
     return State == StateValue::In || State == StateValue::Out ||
@@ -132,7 +136,7 @@ public:
   }
   bool hasZT0State() const { return isNewZT0() || sharesZT0(); }
   bool requiresPreservingZT0(const SMEAttrs &Callee) const {
-    return hasZT0State() && !Callee.sharesZT0() &&
+    return hasZT0State() && !Callee.isUndefZT0() && !Callee.sharesZT0() &&
            !Callee.hasAgnosticZAInterface();
   }
   bool requiresDisablingZABeforeCall(const SMEAttrs &Callee) const {

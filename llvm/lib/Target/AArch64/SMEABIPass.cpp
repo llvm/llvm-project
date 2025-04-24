@@ -65,10 +65,10 @@ void emitTPIDR2Save(Module *M, IRBuilder<> &Builder, bool ZT0IsUndef = false) {
   CallInst *Call = Builder.CreateCall(Callee);
 
   // If ZT0 is undefined (i.e. we're at the entry of a "new_zt0" function), mark
-  // __arm_tpidr2_save as preserving ZT0. This prevents an unnecessary spill of
+  // that on the __arm_tpidr2_save call. This prevents an unnecessary spill of
   // ZT0 that can occur before ZA is enabled.
   if (ZT0IsUndef)
-    Call->addFnAttr(Attribute::get(Ctx, "aarch64_preserves_zt0"));
+    Call->addFnAttr(Attribute::get(Ctx, "aarch64_zt0_undef"));
 
   Call->setCallingConv(
       CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
