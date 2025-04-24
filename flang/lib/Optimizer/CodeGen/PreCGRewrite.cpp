@@ -281,13 +281,14 @@ public:
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     if (!preserveDeclare) {
-      auto memrefOp = declareOp.getMemref().getDefiningOp(); 
-      if(!memrefOp){
-       rewriter.replaceOp(declareOp, declareOp.getMemref());
-       return mlir::success(); 
+      auto memrefOp = declareOp.getMemref().getDefiningOp();
+      if (!memrefOp) {
+        rewriter.replaceOp(declareOp, declareOp.getMemref());
+        return mlir::success();
       }
-      
-      // attach metadatas from the fir.declare to its memref (if it's an operation)
+
+      // attach metadatas from the fir.declare to its memref (if it's an
+      // operation)
       mlir::NamedAttrList elidedAttrs =
           mlir::NamedAttrList{memrefOp->getAttrs()};
       for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
@@ -319,8 +320,8 @@ public:
         declareOp.getUniqName());
 
     // attach metadatas from fir.declare to fircg.ext_declare
-      for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
-          xDeclOp->setAttr(attr.getName(), attr.getValue());
+    for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
+      xDeclOp->setAttr(attr.getName(), attr.getValue());
 
     LLVM_DEBUG(llvm::dbgs()
                << "rewriting " << declareOp << " to " << xDeclOp << '\n');
