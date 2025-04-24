@@ -368,8 +368,8 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
   const mlir::Type type = convertType(vd->getType());
   if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
     StringRef name = getMangledName(GlobalDecl(vd));
-    auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
-                                               name, type);
+    auto varOp =
+        builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()), name, type);
     // TODO(CIR): This code for processing initial values is a placeholder
     // until class ConstantEmitter is upstreamed and the code for processing
     // constant expressions is filled out.  Only the most basic handling of
