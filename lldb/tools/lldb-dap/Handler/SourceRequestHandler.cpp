@@ -51,7 +51,7 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
     lldb::SBInstructionList insts = symbol.GetInstructions(dap.target);
     insts.GetDescription(stream, exe_ctx);
   } else {
-    // No valid symbol, just return the disassembly
+    // No valid symbol, just return the disassembly.
     lldb::SBInstructionList insts =
         dap.target.ReadInstructions(frame.GetPCAddress(), 32);
     insts.GetDescription(stream, exe_ctx);
