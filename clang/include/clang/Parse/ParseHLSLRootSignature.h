@@ -85,8 +85,12 @@ private:
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
 
+  // Common parsing methods
   std::optional<uint32_t> parseUIntParam();
   std::optional<llvm::hlsl::rootsig::Register> parseRegister();
+
+  /// Parsing methods of various enums
+  std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer

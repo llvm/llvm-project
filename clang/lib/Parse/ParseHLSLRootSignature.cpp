@@ -52,6 +52,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
     return std::nullopt;
 
   DescriptorTable Table;
+  std::optional<ShaderVisibility> Visibility;
 
   // Iterate as many Clauses as possible
   do {
@@ -63,7 +64,26 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
       Elements.push_back(*Clause);
       Table.NumClauses++;
     }
+
+    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      if (Visibility.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      Visibility = parseShaderVisibility();
+      if (!Visibility.has_value())
+        return std::nullopt;
+    }
   } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+  // Fill in optional visibility
+  if (Visibility.has_value())
+    Table.Visibility = Visibility.value();
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -220,6 +240,32 @@ std::optional<Register> RootSignatureParser::parseRegister() {
 
   Reg.Number = *Number;
   return Reg;
+}
+
+std::optional<llvm::hlsl::rootsig::ShaderVisibility>
+RootSignatureParser::parseShaderVisibility() {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  TokenKind Expected[] = {
+#define SHADER_VISIBILITY_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  if (!tryConsumeExpectedToken(Expected))
+    return std::nullopt;
+
+  switch (CurToken.TokKind) {
+#define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
+  case TokenKind::en_##NAME:                                                   \
+    return ShaderVisibility::NAME;                                             \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  default:
+    llvm_unreachable("Switch for consumed enum token was not provided");
+  }
+
+  return std::nullopt;
 }
 
 std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
