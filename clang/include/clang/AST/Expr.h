@@ -3534,6 +3534,11 @@ class CompoundLiteralExpr : public Expr {
   /// The int part of the pair stores whether this expr is file scope.
   llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfoAndScope;
   Stmt *Init;
+
+  /// Value of constant literals with static storage duration. Used only for
+  /// constant folding as CompoundLiteralExpr is not an ICE.
+  mutable APValue *StaticValue = nullptr;
+
 public:
   CompoundLiteralExpr(SourceLocation lparenloc, TypeSourceInfo *tinfo,
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
@@ -3561,6 +3566,13 @@ public:
   }
   void setTypeSourceInfo(TypeSourceInfo *tinfo) {
     TInfoAndScope.setPointer(tinfo);
+  }
+
+  bool hasStaticStorage() const { return isFileScope() && isGLValue(); }
+  APValue *getOrCreateStaticValue(ASTContext &Ctx) const;
+  APValue &getStaticValue() const {
+    assert(StaticValue);
+    return *StaticValue;
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
