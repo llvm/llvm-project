@@ -631,7 +631,7 @@ bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
   BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
-  if (ParentFunc)
+  if (ParentFunc || (BAT && !BAT->isBATFunction(OrigFunc.getAddress())))
     NumColdSamples += Count;
 
   auto I = NamesToSamples.find(Func.getOneName());
@@ -753,11 +753,12 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     BinaryFunction *ParentFunc = getBATParentFunction(*Func);
+    if (IsFrom &&
+        (ParentFunc || (BAT && !BAT->isBATFunction(Func->getAddress()))))
+      NumColdSamples += Count;
+
     if (!ParentFunc)
       return std::pair{Func, IsRetOrCallCont};
-
-    if (IsFrom)
-      NumColdSamples += Count;
 
     return std::pair{ParentFunc, IsRetOrCallCont};
   };
@@ -1346,7 +1347,7 @@ std::error_code DataAggregator::printHeatMap() {
   outs() << "HEATMAP: building heat map...\n";
 
   if (opts::BasicAggregation) {
-    for (const auto &[PC, Hits]: BasicSamples)
+    for (const auto &[PC, Hits] : BasicSamples)
       HM.registerAddress(PC, Hits);
   } else {
     for (const auto &[Trace, Info] : FallthroughLBRs)
@@ -1376,9 +1377,8 @@ std::error_code DataAggregator::printHeatMap() {
   return std::error_code();
 }
 
-uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
-                                        bool NeedsSkylakeFix) {
-  uint64_t NumTraces{0};
+void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
+                                    bool NeedsSkylakeFix) {
   // LBRs are stored in reverse execution order. NextLBR refers to the next
   // executed branch record.
   const LBREntry *NextLBR = nullptr;
@@ -1441,10 +1441,9 @@ uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
-  return NumTraces;
 }
 
-static void printColdSamplesDiagnostic() {
+void DataAggregator::printColdSamplesDiagnostic() const {
   if (NumColdSamples > 0) {
     const float ColdSamples = NumColdSamples * 100.0f / NumTotalSamples;
     outs() << "PERF2BOLT: " << NumColdSamples
@@ -1454,11 +1453,11 @@ static void printColdSamplesDiagnostic() {
       outs()
           << "WARNING: The BOLT-processed binary where samples were collected "
              "likely used bad data or your service observed a large shift in "
-             "profile. You may want to audit this.\n";
+             "profile. You may want to audit this\n";
   }
 }
 
-static void printLongRangeTracesDiagnostic() {
+void DataAggregator::printLongRangeTracesDiagnostic() const {
   outs() << "PERF2BOLT: out of range traces involving unknown regions: "
          << NumLongRangeTraces;
   if (NumTraces > 0)
@@ -1486,33 +1485,35 @@ static float printColoredPct(uint64_t Numerator, uint64_t Denominator, float T1,
   if (outs().has_colors())
     outs().resetColor();
   outs() << ")\n";
-  return Perc;
+  return Percent;
 }
 
-static void printBranchSamplesDiagnostics() {
+void DataAggregator::printBranchSamplesDiagnostics() const {
   outs() << "PERF2BOLT: traces mismatching disassembled function contents: "
          << NumInvalidTraces;
   if (printColoredPct(NumInvalidTraces, NumTraces, 5, 10) > 10)
     outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
               "binary is probably not the same binary used during profiling "
               "collection. The generated data may be ineffective for improving "
-              "performance.\n\n";
+              "performance\n\n";
   printLongRangeTracesDiagnostic();
   printColdSamplesDiagnostic();
 }
 
-static void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) {
+void DataAggregator::printBasicSamplesDiagnostics(
+    uint64_t OutOfRangeSamples) const {
   outs() << "PERF2BOLT: out of range samples recorded in unknown regions: "
          << OutOfRangeSamples;
   if (printColoredPct(OutOfRangeSamples, NumTotalSamples, 40, 60) > 80)
     outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
               "binary is probably not the same binary used during profiling "
               "collection. The generated data may be ineffective for improving "
-              "performance.\n\n";
+              "performance\n\n";
   printColdSamplesDiagnostic();
 }
 
-static void printBranchStacksDiagnostics(uint64_t IgnoredSamples) {
+void DataAggregator::printBranchStacksDiagnostics(
+    uint64_t IgnoredSamples) const {
   outs() << "PERF2BOLT: ignored samples: " << IgnoredSamples;
   if (printColoredPct(IgnoredSamples, NumTotalSamples, 20, 50) > 50)
     errs() << "PERF2BOLT-WARNING: less than 50% of all recorded samples "
@@ -1527,7 +1528,6 @@ std::error_code DataAggregator::parseBranchEvents() {
   uint64_t NumEntries = 0;
   uint64_t NumSamples = 0;
   uint64_t NumSamplesNoLBR = 0;
-  uint64_t NumTraces = 0;
   bool NeedsSkylakeFix = false;
 
   while (hasData() && NumTotalSamples < opts::MaxSamples) {
@@ -1554,7 +1554,7 @@ std::error_code DataAggregator::parseBranchEvents() {
       NeedsSkylakeFix = true;
     }
 
-    NumTraces += parseLBRSample(Sample, NeedsSkylakeFix);
+    parseLBRSample(Sample, NeedsSkylakeFix);
   }
 
   for (const Trace &Trace : llvm::make_first_range(BranchLBRs))
@@ -1645,7 +1645,7 @@ void DataAggregator::processBasicEvents() {
 
     doSample(*Func, PC, HitCount);
   }
-  outs() << "PERF2BOLT: read " << NumSamples << " samples\n";
+  outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
 
   printBasicSamplesDiagnostics(OutOfRangeSamples);
 }
@@ -1725,13 +1725,13 @@ void DataAggregator::processPreAggregated() {
   NamedRegionTimer T("processAggregated", "Processing aggregated branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
-  uint64_t NumTraces = 0;
   for (const AggregatedLBREntry &AggrEntry : AggregatedLBRs) {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
     case AggregatedLBREntry::TRACE:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
                AggrEntry.Mispreds);
+      NumTotalSamples += AggrEntry.Count;
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
