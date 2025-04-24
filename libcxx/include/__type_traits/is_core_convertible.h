@@ -30,7 +30,6 @@ template <class _Tp, class _Up>
 struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))>
     : true_type {};
 
-
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class _Up>
