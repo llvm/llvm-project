@@ -19,12 +19,12 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ;CHECK-LABEL: Definition for 'main':
 ;CHECK-NEXT:  Flags: 0x000001
 ;CHECK-NEXT:  Version: 2
-;CHECK-NEXT:  NumParameters: 1
 ;CHECK-NEXT:  RootParametersOffset: 24
-;CHECK-NEXT:  NumStaticSamplers: 0
-;CHECK-NEXT:  StaticSamplersOffset: 0
+;CHECK-NEXT:  NumParameters: 1
 ;CHECK-NEXT:   - Parameter Type: 1
 ;CHECK-NEXT:     Shader Visibility: 0
 ;CHECK-NEXT:     Register Space: 2
 ;CHECK-NEXT:     Shader Register: 1
 ;CHECK-NEXT:     Num 32 Bit Values: 3
+;CHECK-NEXT:  NumStaticSamplers: 0
+;CHECK-NEXT:  StaticSamplersOffset: 0

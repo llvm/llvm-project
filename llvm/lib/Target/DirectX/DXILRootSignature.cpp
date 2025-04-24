@@ -164,7 +164,7 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     return reportValueError(Ctx, "RootFlags", RSD.Flags);
   }
 
-  for (const auto &P : RSD.Parameters) {
+  for (const mcdxbc::RootParameter &P : RSD.Parameters) {
     if (!dxbc::isValidShaderVisibility(P.Header.ShaderVisibility))
       return reportValueError(Ctx, "ShaderVisibility",
                               P.Header.ShaderVisibility);
@@ -242,9 +242,9 @@ analyzeModule(Module &M) {
 
     mcdxbc::RootSignatureDesc RSD;
     // Clang emits the root signature data in dxcontainer following a specific
-    // sequence. First the header, then the root parameters. The header is
-    // always 24 bytes long, this is why we have 24 here.
-    RSD.RootParameterOffset = 24U;
+    // sequence. First the header, then the root parameters. So the header
+    // offset will always equal to the header size.
+    RSD.RootParameterOffset = sizeof(dxbc::RootSignatureHeader);
 
     if (parse(Ctx, RSD, RootElementListNode) || validate(Ctx, RSD)) {
       return RSDMap;
@@ -271,7 +271,6 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
   SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> &RSDMap =
       AM.getResult<RootSignatureAnalysis>(M);
 
-  const size_t RSHSize = sizeof(dxbc::RootSignatureHeader);
   OS << "Root Signature Definitions"
      << "\n";
   uint8_t Space = 0;
@@ -286,13 +285,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     Space++;
     OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << "\n";
     OS << indent(Space) << "Version: " << RS.Version << "\n";
-    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << "\n";
     OS << indent(Space) << "RootParametersOffset: " << RS.RootParameterOffset
        << "\n";
-    OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
-    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
-       << "\n";
-
+    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << "\n";
     Space++;
     for (auto const &P : RS.Parameters) {
       OS << indent(Space) << "- Parameter Type: " << P.Header.ParameterType
@@ -311,6 +306,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       }
     }
     Space--;
+    OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
+    OS << indent(Space) << "StaticSamplersOffset: " << RS.StaticSamplersOffset
+       << "\n";
 
     Space--;
     // end root signature header
