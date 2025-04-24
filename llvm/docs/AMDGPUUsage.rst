@@ -1743,7 +1743,7 @@ The AMDGPU backend supports the following LLVM IR attributes.
      "amdgpu-dynamic-vgpr"                            Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
                                                       Waves launched in this mode may allocate or deallocate the VGPRs
                                                       using dedicated instructions, but may not send the DEALLOC_VGPRS
-                                                      message.
+                                                      message. If a shader has this attribute, then all its callees must also have it.
 
      ================================================ ==========================================================
 
