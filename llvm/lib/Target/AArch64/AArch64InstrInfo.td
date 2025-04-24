@@ -1114,12 +1114,15 @@ let RecomputePerFunction = 1 in {
 
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<AArch64Subtarget>().hardenSlsBlr() }]>;
+
+  defvar GISelLegalizedCheck = "(!MF->getProperties().hasProperty(MachineFunctionProperties::Property::FailedISel) && MF->getProperties().hasProperty(MachineFunctionProperties::Property::Legalized))";
+  def OnlyGISel : Predicate<GISelLegalizedCheck>;
   // Toggles patterns which aren't beneficial in GlobalISel when we aren't
   // optimizing. This allows us to selectively use patterns without impacting
   // SelectionDAG's behaviour.
   // FIXME: One day there will probably be a nicer way to check for this, but
   // today is not that day.
-  def OptimizedGISelOrOtherSelector : Predicate<"!MF->getFunction().hasOptNone() || MF->getProperties().hasProperty(MachineFunctionProperties::Property::FailedISel) || !MF->getProperties().hasProperty(MachineFunctionProperties::Property::Legalized)">;
+  def OptimizedGISelOrOtherSelector : Predicate<!strconcat("!MF->getFunction().hasOptNone() || !", GISelLegalizedCheck)>;
 }
 
 include "AArch64InstrFormats.td"
@@ -4036,6 +4039,11 @@ multiclass LoadInsertPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType 
                               ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
 }
 
+let Predicates = [OnlyGISel] in {
+defm : LoadInsertPatterns<load,       v16i8,  v8i8,   nxv16i8,  i8,
+                          LDRBui, LDURBi, LDRBroW, LDRBroX,
+                          ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
+}
 defm : LoadInsertPatterns<extloadi8,  v16i8,  v8i8,   nxv16i8,  i32,
                           LDRBui, LDURBi, LDRBroW, LDRBroX,
                           ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
@@ -7330,6 +7338,9 @@ defm : Neon_INS_elt_pattern<v8bf16, v4bf16, nxv8bf16, bf16, VectorIndexH, INSvi1
 defm : Neon_INS_elt_pattern<v4f32,  v2f32,  nxv4f32,  f32,  VectorIndexS, INSvi32lane, DUPi32, ssub>;
 defm : Neon_INS_elt_pattern<v2f64,  v1f64,  nxv2f64,  f64,  VectorIndexD, INSvi64lane, DUPi64, dsub>;
 
+let Predicates = [OnlyGISel] in {
+defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i8,   VectorIndexB, INSvi8lane,  DUPi8,  bsub>;
+}
 defm : Neon_INS_elt_pattern<v16i8,  v8i8,   nxv16i8,  i32,  VectorIndexB, INSvi8lane,  DUPi8,  bsub>;
 defm : Neon_INS_elt_pattern<v8i16,  v4i16,  nxv8i16,  i32,  VectorIndexH, INSvi16lane, DUPi16, hsub>;
 defm : Neon_INS_elt_pattern<v4i32,  v2i32,  nxv4i32,  i32,  VectorIndexS, INSvi32lane, DUPi32, ssub>;
@@ -8752,6 +8763,9 @@ class Ld1Lane128Pat<SDPatternOperator scalar_load, Operand VecIndex,
            (STy (scalar_load GPR64sp:$Rn)), (i64 VecIndex:$idx)),
         (LD1 VecListOne128:$Rd, VecIndex:$idx, GPR64sp:$Rn)>;
 
+let Predicates = [OnlyGISel] in {
+def : Ld1Lane128Pat<load,       VectorIndexB, v16i8, i8,  LD1i8>;
+}
 def : Ld1Lane128Pat<extloadi8,  VectorIndexB, v16i8, i32, LD1i8>;
 def : Ld1Lane128Pat<extloadi16, VectorIndexH, v8i16, i32, LD1i16>;
 def : Ld1Lane128Pat<load,       VectorIndexS, v4i32, i32, LD1i32>;
@@ -8825,6 +8839,9 @@ class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
                           VecIndex:$idx, GPR64sp:$Rn),
             dsub)>;
 
+let Predicates = [OnlyGISel] in {
+def : Ld1Lane64Pat<load,       VectorIndexB, v8i8,  i8,  LD1i8>;
+}
 def : Ld1Lane64Pat<extloadi8,  VectorIndexB, v8i8,  i32, LD1i8>;
 def : Ld1Lane64Pat<extloadi16, VectorIndexH, v4i16, i32, LD1i16>;
 def : Ld1Lane64Pat<load,       VectorIndexS, v2i32, i32, LD1i32>;

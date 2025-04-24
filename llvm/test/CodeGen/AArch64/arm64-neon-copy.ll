@@ -1785,7 +1785,7 @@ define <16 x i8> @test_concat_v16i8_v16i8_v8i8(<16 x i8> %x, <8 x i8> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v16i8_v16i8_v8i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov b2, v0.b[0]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v2.b[1], v0.b[1]
 ; CHECK-GI-NEXT:    mov v2.b[2], v0.b[2]
