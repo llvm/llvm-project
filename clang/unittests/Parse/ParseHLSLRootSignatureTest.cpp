@@ -131,6 +131,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
     DescriptorTable(
       CBV(b0),
       SRV(space = 3, t42),
+      visibility = SHADER_VISIBILITY_PIXEL,
       Sampler(s987, space = +2),
       UAV(u4294967294)
     ),
@@ -186,11 +187,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)4);
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
+            ShaderVisibility::Pixel);
 
   // Empty Descriptor Table
   Elem = Elements[5];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, 0u);
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility, ShaderVisibility::All);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
