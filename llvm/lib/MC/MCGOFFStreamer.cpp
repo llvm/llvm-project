@@ -17,7 +17,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Path.h"
 
 using namespace llvm;
 
