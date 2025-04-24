@@ -747,6 +747,7 @@ Python Binding Changes
   allows visiting the methods of a class.
 - Added ``Type.get_fully_qualified_name``, which provides fully qualified type names as
   instructed by a PrintingPolicy.
+- Add equality comparison operators for ``File`` type
 
 OpenMP Support
 --------------
