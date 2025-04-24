@@ -17,7 +17,7 @@ entry:
 !llvm.ident = !{!17}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang version 21.0.0git", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !2, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "test.c", directory: "/home/dtcxzyw/WorkSpace/Projects/compilers/LLVM/llvm-build", checksumkind: CSK_MD5, checksum: "100bdbce655d729c24c7c0e8523a58ae")
+!1 = !DIFile(filename: "test.c", directory: "/", checksumkind: CSK_MD5, checksum: "100bdbce655d729c24c7c0e8523a58ae")
 !2 = !{!3, !6, !8}
 !3 = !DIGlobalVariableExpression(var: !4, expr: !DIExpression())
 !4 = distinct !DIGlobalVariable(name: "a", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true)
