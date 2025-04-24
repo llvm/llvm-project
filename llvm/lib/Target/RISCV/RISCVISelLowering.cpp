@@ -18044,8 +18044,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
       !InVec.getValueType().getVectorElementCount().isKnownMultipleOf(4))
     return SDValue();
 
-  // reduce (sext a) <--> reduce (mul zext a. zext 1)
-  // reduce (zext a) <--> reduce (mul sext a. sext 1)
+  // reduce (zext a) <--> reduce (mul zext a. zext 1)
+  // reduce (sext a) <--> reduce (mul sext a. sext 1)
   if (InVec.getOpcode() == ISD::ZERO_EXTEND ||
       InVec.getOpcode() == ISD::SIGN_EXTEND) {
     SDValue A = InVec.getOperand(0);
