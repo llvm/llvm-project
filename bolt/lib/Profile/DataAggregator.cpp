@@ -1499,7 +1499,7 @@ void DataAggregator::printColdSamplesDiagnostic() const {
       outs()
           << "WARNING: The BOLT-processed binary where samples were collected "
              "likely used bad data or your service observed a large shift in "
-             "profile. You may want to audit this.\n";
+             "profile. You may want to audit this\n";
   }
 }
 
@@ -1541,7 +1541,7 @@ void DataAggregator::printBranchSamplesDiagnostics() const {
     outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
               "binary is probably not the same binary used during profiling "
               "collection. The generated data may be ineffective for improving "
-              "performance.\n\n";
+              "performance\n\n";
   printLongRangeTracesDiagnostic();
   printColdSamplesDiagnostic();
 }
@@ -1554,7 +1554,7 @@ void DataAggregator::printBasicSamplesDiagnostics(
     outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
               "binary is probably not the same binary used during profiling "
               "collection. The generated data may be ineffective for improving "
-              "performance.\n\n";
+              "performance\n\n";
   printColdSamplesDiagnostic();
 }
 
