@@ -158,6 +158,11 @@ enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
+enum class RootDescriptorFlag : uint32_t {
+#include "DXContainerConstants.def"
+};
+
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
@@ -422,7 +427,6 @@ struct SignatureElement {
 
 static_assert(sizeof(SignatureElement) == 4 * sizeof(uint32_t),
               "PSV Signature elements must fit in 16 bytes.");
-
 } // namespace v0
 
 namespace v1 {
@@ -463,7 +467,6 @@ struct RuntimeInfo : public v0::RuntimeInfo {
       sys::swapByteOrder(GeomData.MaxVertexCount);
   }
 };
-
 } // namespace v1
 
 namespace v2 {
@@ -580,7 +583,28 @@ struct ProgramSignatureElement {
 
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
+namespace RST0 {
+namespace v0 {
+struct RootDescriptor {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+  }
+};
+} // namespace v0
 
+namespace v1 {
+struct RootDescriptor : public v0::RootDescriptor {
+  uint32_t Flags;
+  void swapBytes() {
+    v0::RootDescriptor::swapBytes();
+    sys::swapByteOrder(Flags);
+  }
+};
+} // namespace v1
+} // namespace RST0
 // following dx12 naming
 // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
 struct RootConstants {

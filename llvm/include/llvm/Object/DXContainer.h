@@ -120,9 +120,10 @@ template <typename T> struct ViewArray {
 namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
+  uint32_t Version;
   StringRef ParamData;
-  RootParameterView(const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), ParamData(P) {}
+  RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
+      : Header(H), Version(V), ParamData(P) {}
 
   template <typename T> Expected<T> readParameter() {
     T Struct;
@@ -146,6 +147,38 @@ struct RootConstantView : RootParameterView {
 
   llvm::Expected<dxbc::RootConstants> read() {
     return readParameter<dxbc::RootConstants>();
+  }
+};
+
+struct RootDescriptorView_V1_0 : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Version == 1 &&
+            (V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::UAV)));
+  }
+
+  llvm::Expected<dxbc::RST0::v0::RootDescriptor> read() {
+    return readParameter<dxbc::RST0::v0::RootDescriptor>();
+  }
+};
+
+struct RootDescriptorView_V1_1 : RootParameterView {
+  static bool classof(const RootParameterView *V) {
+    return (V->Version == 2 &&
+            (V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+             V->Header.ParameterType ==
+                 llvm::to_underlying(dxbc::RootParameterType::UAV)));
+  }
+
+  llvm::Expected<dxbc::RST0::v1::RootDescriptor> read() {
+    return readParameter<dxbc::RST0::v1::RootDescriptor>();
   }
 };
 
@@ -192,6 +225,14 @@ public:
     case dxbc::RootParameterType::Constants32Bit:
       DataSize = sizeof(dxbc::RootConstants);
       break;
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::SRV:
+    case dxbc::RootParameterType::UAV:
+      if (Version == 1)
+        DataSize = sizeof(dxbc::RST0::v0::RootDescriptor);
+      else
+        DataSize = sizeof(dxbc::RST0::v1::RootDescriptor);
+      break;
     }
     size_t EndOfSectionByte = getNumStaticSamplers() == 0
                                   ? PartData.size()
@@ -201,7 +242,7 @@ public:
       return parseFailed("Reading structure out of file bounds");
 
     StringRef Buff = PartData.substr(Header.ParameterOffset, DataSize);
-    RootParameterView View = RootParameterView(Header, Buff);
+    RootParameterView View = RootParameterView(Version, Header, Buff);
     return View;
   }
 };

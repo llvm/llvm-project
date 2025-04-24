@@ -73,24 +73,50 @@ struct ShaderHash {
   std::vector<llvm::yaml::Hex8> Digest;
 };
 
-#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
-
 struct RootConstantsYaml {
   uint32_t ShaderRegister;
   uint32_t RegisterSpace;
   uint32_t Num32BitValues;
 };
 
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) bool Val = false;
+struct RootDescriptorYaml {
+  RootDescriptorYaml() = default;
+
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+
+  uint32_t getEncodedFlags() const;
+
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
 struct RootParameterYamlDesc {
   uint32_t Type;
   uint32_t Visibility;
   uint32_t Offset;
+  RootParameterYamlDesc(){};
+  RootParameterYamlDesc(uint32_t T) : Type(T) {
+    switch (T) {
+
+    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
+      Constants = RootConstantsYaml();
+      break;
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+      Descriptor = RootDescriptorYaml();
+      break;
+    }
+  }
 
   union {
     RootConstantsYaml Constants;
+    RootDescriptorYaml Descriptor;
   };
 };
 
+#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
 struct RootSignatureYamlDesc {
   RootSignatureYamlDesc() = default;
 
@@ -296,6 +322,10 @@ template <> struct MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc> {
 
 template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
   static void mapping(IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::RootDescriptorYaml> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::RootDescriptorYaml &D);
 };
 
 } // namespace yaml
