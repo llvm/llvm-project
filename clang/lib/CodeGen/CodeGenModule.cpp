@@ -5837,24 +5837,15 @@ void CodeGenModule::EmitExternalVarDeclaration(const VarDecl *D) {
     }
 }
 
-static GlobalDecl getBaseVariantGlobalDecl(const FunctionDecl *FD) {
-  if (auto const *CD = dyn_cast<const CXXConstructorDecl>(FD))
-    return GlobalDecl(CD, CXXCtorType::Ctor_Base);
-  else if (auto const *DD = dyn_cast<const CXXDestructorDecl>(FD))
-    return GlobalDecl(DD, CXXDtorType::Dtor_Base);
-  return GlobalDecl(FD);
-}
-
 void CodeGenModule::EmitExternalFunctionDeclaration(const FunctionDecl *FD) {
   if (CGDebugInfo *DI = getModuleDebugInfo())
     if (getCodeGenOpts().hasReducedDebugInfo()) {
-      GlobalDecl GD = getBaseVariantGlobalDecl(FD);
       auto *Ty = getTypes().ConvertType(FD->getType());
-      StringRef MangledName = getMangledName(GD);
+      StringRef MangledName = getMangledName(FD);
       auto *Fn = cast<llvm::Function>(
-          GetOrCreateLLVMFunction(MangledName, Ty, GD, /* ForVTable */ false));
+          GetOrCreateLLVMFunction(MangledName, Ty, FD, /* ForVTable */ false));
       if (!Fn->getSubprogram())
-        DI->EmitFunctionDecl(GD, FD->getLocation(), FD->getType(), Fn);
+        DI->EmitFunctionDecl(FD, FD->getLocation(), FD->getType(), Fn);
     }
 }
 
