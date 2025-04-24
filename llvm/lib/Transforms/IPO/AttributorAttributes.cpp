@@ -5746,7 +5746,7 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   assert(ImpliedAttributeKind == Attribute::Captures &&
          "Unexpected attribute kind");
   Value &V = IRP.getAssociatedValue();
-  if (!IRP.isArgumentPosition())
+  if (!isa<Constant>(V) && !IRP.isArgumentPosition())
     return V.use_empty();
 
   // You cannot "capture" null in the default address space.
