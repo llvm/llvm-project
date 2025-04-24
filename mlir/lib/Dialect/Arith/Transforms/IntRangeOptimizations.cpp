@@ -494,10 +494,9 @@ struct IntRangeOptimizationsPass final
     RewritePatternSet patterns(ctx);
     populateIntRangeOptimizationsPatterns(patterns, solver);
 
-    GreedyRewriteConfig config;
-    config.listener = &listener;
-
-    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
+    if (failed(applyPatternsGreedily(
+            op, std::move(patterns),
+            GreedyRewriteConfig().setListener(&listener))))
       signalPassFailure();
   }
 };
@@ -520,13 +519,12 @@ struct IntRangeNarrowingPass final
     RewritePatternSet patterns(ctx);
     populateIntRangeNarrowingPatterns(patterns, solver, bitwidthsSupported);
 
-    GreedyRewriteConfig config;
     // We specifically need bottom-up traversal as cmpi pattern needs range
     // data, attached to its original argument values.
-    config.useTopDownTraversal = false;
-    config.listener = &listener;
-
-    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
+    if (failed(applyPatternsGreedily(
+            op, std::move(patterns),
+            GreedyRewriteConfig().setUseTopDownTraversal(false).setListener(
+                &listener))))
       signalPassFailure();
   }
 };
