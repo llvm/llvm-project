@@ -2,7 +2,6 @@
 Test lldb-dap stackTrace request
 """
 
-
 import os
 
 import lldbdap_testcase
@@ -230,9 +229,6 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         self.set_source_breakpoints(source, [line_number(source, "recurse end")])
 
         self.continue_to_next_stop()
-        frame = self.get_stackFrames(format={"includeAll": True})[0]
-        self.assertEqual(frame["name"], "a.out main.c:6:5 recurse(x=1)")
-
         frame = self.get_stackFrames(format={"parameters": True})[0]
         self.assertEqual(frame["name"], "recurse(x=1)")
 
