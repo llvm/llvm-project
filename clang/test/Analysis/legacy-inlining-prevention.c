@@ -3,57 +3,55 @@
 
 int getNum(void); // Get an opaque number.
 
-void clang_analyzer_numTimesReached(void);
 void clang_analyzer_dump(int arg);
 
 //-----------------------------------------------------------------------------
-// Simple case: inlined function never reaches `analyzer-max-loop`.
+// Simple case: inlined function never reaches `analyzer-max-loop`, so it is
+// always inlined.
 
-int inner_simple(void) {
-  clang_analyzer_numTimesReached(); // expected-warning {{2}}
+int inner_simple(int callIdx) {
+  clang_analyzer_dump(callIdx); // expected-warning {{1 S32}}
+                                // expected-warning@-1 {{2 S32}}
   return 42;
 }
 
 int outer_simple(void) {
-  int x = inner_simple();
-  int y = inner_simple();
+  int x = inner_simple(1);
+  int y = inner_simple(2);
   return 53 / (x - y); // expected-warning {{Division by zero}}
 }
 
 //-----------------------------------------------------------------------------
-// Inlined function always reaches `analyzer-max-loop`.
+// Inlined function always reaches `analyzer-max-loop`, which stops the
+// analysis on that path and puts the function on the "do not inline" list.
 
-int inner_fixed_loop_1(void) {
+int inner_fixed_loop_1(int callIdx) {
   int i;
-  clang_analyzer_numTimesReached(); // expected-warning {{1}}
+  clang_analyzer_dump(callIdx); // expected-warning {{1 S32}}
   for (i = 0; i < 10; i++);
-  clang_analyzer_numTimesReached(); // no-warning
+  clang_analyzer_dump(callIdx); // no-warning
   return 42;
 }
 
 int outer_fixed_loop_1(void) {
-  int x = inner_fixed_loop_1();
-  int y = inner_fixed_loop_1();
+  int x = inner_fixed_loop_1(1);
+  int y = inner_fixed_loop_1(2);
   return 53 / (x - y); // no-warning
 }
 
 //-----------------------------------------------------------------------------
 // Inlined function always reaches `analyzer-max-loop`; inlining is prevented
 // even for different entry points.
-// This test uses `clang_analyzer_dump` and distinct `arg` values because
-// `clang_analyzer_numTimesReached` only counts the paths reaching that node
-// during the analysis of one particular entry point, so it cannot distinguish
-// "two entry points reached this, both with one path" (where the two reports
-// are unified as duplicates by the generic report postprocessing) and "one
-// entry point reached this with one path" (where naturally nothing shows that
-// the second entry point _tried_ to reach it).
+// NOTE: the analyzer happens to analyze the entry points in a reversed order,
+// so `outer_2_fixed_loop_2` is analyzed first and it will be the one which is
+// able to inline the inner function.
 
-int inner_fixed_loop_2(int arg) {
+int inner_fixed_loop_2(int callIdx) {
   // Identical copy of inner_fixed_loop_1
   int i;
-  clang_analyzer_dump(arg); // expected-warning {{2}}
+  clang_analyzer_dump(callIdx); // expected-warning {{2 S32}}
   for (i = 0; i < 10; i++);
-  clang_analyzer_dump(arg); // no-warning
+  clang_analyzer_dump(callIdx); // no-warning
   return 42;
 }
 
@@ -72,9 +70,10 @@ int outer_2_fixed_loop_2(void) {
 
 int inner_parametrized_loop_1(int count) {
   int i;
-  clang_analyzer_numTimesReached(); // expected-warning {{2}}
+  clang_analyzer_dump(count); // expected-warning {{2 S32}}
+                              // expected-warning@-1 {{10 S32}}
   for (i = 0; i < count; i++);
-  clang_analyzer_numTimesReached(); // expected-warning {{1}}
+  clang_analyzer_dump(count); // expected-warning {{2 S32}}
   return 42;
 }
 
@@ -90,9 +89,9 @@ int outer_parametrized_loop_1(void) {
 
 int inner_parametrized_loop_2(int count) {
   int i;
-  clang_analyzer_numTimesReached(); // expected-warning {{1}}
+  clang_analyzer_dump(count); // expected-warning {{10 S32}}
   for (i = 0; i < count; i++);
-  clang_analyzer_numTimesReached(); // no-warning
+  clang_analyzer_dump(count); // no-warning
   return 42;
 }
 
@@ -108,23 +107,28 @@ int outer_parametrized_loop_2(void) {
 // cases: the function is placed on the "don't inline" list when any execution
 // path reaches `analyzer-max-loop` (even if other execution paths reach the
 // end of the function).
+// NOTE: This is tested with two separate entry points to ensure that one
+// inlined call is fully evaluated before we try to inline the other call.
+// NOTE: the analyzer happens to analyze the entry points in a reversed order,
+// so `outer_2_conditional_loop` is analyzed first and it will be the one which
+// is able to inline the inner function.
 
-int inner_conditional_loop(void) {
+int inner_conditional_loop(int callIdx) {
   int i;
-  clang_analyzer_numTimesReached(); // expected-warning {{1}}
+  clang_analyzer_dump(callIdx); // expected-warning {{2 S32}}
   if (getNum() == 777) {
     for (i = 0; i < 10; i++);
   }
-  clang_analyzer_numTimesReached(); // expected-warning {{1}}
+  clang_analyzer_dump(callIdx); // expected-warning {{2 S32}}
   return 42;
 }
 
 int outer_1_conditional_loop(void) {
-  return inner_conditional_loop();
+  return inner_conditional_loop(1);
 }
 
 int outer_2_conditional_loop(void) {
-  return inner_conditional_loop();
+  return inner_conditional_loop(2);
 }
 
 //-----------------------------------------------------------------------------
@@ -142,57 +146,24 @@ int outer_2_conditional_loop(void) {
 // option `legacy-inlining-prevention` was introduced and enabled by default to
 // suppress the inlining in situations where the "don't assume third iteration"
 // logic activates.
-// This testcase demonstrate that the inlining is prevented with the default
-// `legacy-inlining-prevention=true` config, but is not prevented when this
-// option is disabled (set to false).
+// NOTE: This is tested with two separate entry points to ensure that one
+// inlined call is fully evaluated before we try to inline the other call.
+// NOTE: the analyzer happens to analyze the entry points in a reversed order,
+// so `outer_2_opaque_loop` is analyzed first and it will be the one which is
+// able to inline the inner function.
 
-int inner_opaque_loop_1(void) {
+int inner_opaque_loop(int callIdx) {
   int i;
-  clang_analyzer_numTimesReached(); // default-warning {{1}} disabled-warning {{2}}
+  clang_analyzer_dump(callIdx); // default-warning {{2 S32}}
+                                // disabled-warning@-1 {{1 S32}}
+                                // disabled-warning@-2 {{2 S32}}
   for (i = 0; i < getNum(); i++);
   return i;
 }
 
-int outer_opaque_loop_1(void) {
-  int iterCount = inner_opaque_loop_1();
-
-  // The first call to `inner_opaque_loop_1()` splits three execution paths that
-  // differ in the number of performed iterations (0, 1 or 2). The function
-  // `inner_opaque_loop_1` is added to the "do not inline this" list when the
-  // path that performed two iterations tries to enter the third iteration (and
-  // the "don't assume third iteration" logic prevents this) -- but the other
-  // two paths (which performed 0 and 1 iterations) would reach and inline the
-  // second `inner_opaque_loop_1()` before this would happen (because the
-  // default traversal is a complex heuristic that happens to prefer this). The
-  // following `if` will discard these "early exit" paths to highlight the
-  // difference between the default and disabled state:
-  if (iterCount < 2)
-    return 0;
-
-  return inner_opaque_loop_1();
-}
-
-//-----------------------------------------------------------------------------
-// Another less contrived testcase that demonstrates the difference between the
-// enabled (default) and disabled state of `legacy-inlining-prevention`.
-// Here the two calls to `inner_opaque_loop_2()` are in different entry points
-// so the first call is fully analyzed (and can put the function on the "do
-// not inline" list) before reaching the second call.
-// This test uses `clang_analyzer_dump` because (as explained in an earlier
-// comment block) `clang_analyzer_numTimesReached` is not suitable for counting
-// visits from separate entry points.
-
-int inner_opaque_loop_2(int arg) {
-  int i;
-  clang_analyzer_dump(arg); // default-warning {{2}}
-                            // disabled-warning@-1 {{1}} disabled-warning@-1 {{2}}
-  for (i = 0; i < getNum(); i++);
-  return i;
-}
-
-int outer_1_opaque_loop_2(void) {
-  return inner_opaque_loop_2(1);
+int outer_1_opaque_loop(void) {
+  return inner_opaque_loop(1);
 }
 int outer_2_opaque_loop(void) {
-  return inner_opaque_loop_2(2);
+  return inner_opaque_loop(2);
 }
