@@ -378,8 +378,10 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
 }
 // Generic form, which does not set CC.
 def LPDFR : UnaryRRE<"lpdfr", 0xB370, fabs, FP64,  FP64>;
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1 in {
+  def LPDFR_16 : UnaryRRE<"lpdfr", 0xB370, fabs, FP16,  FP16>;
   def LPDFR_32 : UnaryRRE<"lpdfr", 0xB370, fabs, FP32,  FP32>;
+}
 
 // Negative absolute value (Load Negative).
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
@@ -389,8 +391,10 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
 }
 // Generic form, which does not set CC.
 def LNDFR : UnaryRRE<"lndfr", 0xB371, fnabs, FP64,  FP64>;
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1 in {
+  def LNDFR_16 : UnaryRRE<"lndfr", 0xB371, fnabs, FP16,  FP16>;
   def LNDFR_32 : UnaryRRE<"lndfr", 0xB371, fnabs, FP32,  FP32>;
+}
 
 // Square root.
 let Uses = [FPC], mayRaiseFPException = 1 in {
