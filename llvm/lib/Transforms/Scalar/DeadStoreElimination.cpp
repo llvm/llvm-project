@@ -2334,6 +2334,10 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
   // Collect aliasing arguments and their initializes ranges.
   SmallMapVector<Value *, SmallVector<ArgumentInitInfo, 2>, 2> Arguments;
   for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
+    Value *CurArg = CB->getArgOperand(Idx);
+    if (!CurArg->getType()->isPointerTy())
+      continue;
+
     ConstantRangeList Inits;
     Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
     // initializes on byval arguments refers to the callee copy, not the
@@ -2341,7 +2345,6 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
     if (InitializesAttr.isValid() && !CB->isByValArgument(Idx))
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
-    Value *CurArg = CB->getArgOperand(Idx);
     // Check whether "CurArg" could alias with global variables. We require
     // either it's function local and isn't captured before or the "CB" only
     // accesses arg or inaccessible mem.

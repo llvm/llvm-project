@@ -225,7 +225,7 @@ def OMPC_HasDeviceAddr : Clause<"has_device_addr"> {
 }
 def OMPC_Hint : Clause<"hint"> {
   let clangClass = "OMPHintClause";
-  let flangClass = "ConstantExpr";
+  let flangClass = "OmpHintClause";
 }
 def OMPC_Holds : Clause<"holds"> {
   let clangClass = "OMPHoldsClause";

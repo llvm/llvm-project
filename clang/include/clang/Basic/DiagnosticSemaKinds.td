@@ -402,8 +402,14 @@ def warn_anyx86_excessive_regsave : Warning<
   InGroup<DiagGroup<"excessive-regsave">>;
 def warn_arm_interrupt_vfp_clobber : Warning<
   "interrupt service routine with vfp enabled may clobber the "
-  "interruptee's vfp state">,
+  "interruptee's vfp state; "
+  "consider using the `interrupt_save_fp` attribute to prevent this behavior">,
   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
+def warn_arm_interrupt_save_fp_without_vfp_unit : Warning<
+   "`interrupt_save_fp` only applies to targets that have a VFP unit enabled "
+   "for this compilation; this will be treated as a regular `interrupt` "
+   "attribute">,
+   InGroup<DiagGroup<"arm-interrupt-save-fp-no-vfp-unit">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
 def warn_interrupt_signal_attribute_invalid : Warning<
@@ -8681,7 +8687,17 @@ def err_typecheck_missing_return_type_incompatible : Error<
   "%diff{return type $ must match previous return type $|"
   "return type must match previous return type}0,1 when %select{block "
   "literal|lambda expression}2 has unspecified explicit return type">;
-
+def warn_compatible_implicit_pointer_conv : Warning<
+  "implicit conversion when %select{"
+  "%diff{assigning to $ from type $|assigning to type from type}0,1|"
+  "%diff{passing $ to parameter of type $|passing type to parameter of type}0,1|"
+  "%diff{returning $ from a function with result type $|returning type from a function with result type}0,1|"
+  "<CLANG BUG IF YOU SEE THIS>|" // converting
+  "%diff{initializing $ with an expression of type $|initializing type with an expression of type}0,1|"
+  "%diff{sending $ to parameter of type $|sending type to parameter of type}0,1|"
+  "<CLANG BUG IF YOU SEE THIS>" // casting
+  "}2 is not permitted in C++">,
+  InGroup<ImplicitVoidPtrCast>, DefaultIgnore;
 def note_incomplete_class_and_qualified_id : Note<
   "conformance of forward class %0 to protocol %1 cannot be confirmed">;
 def warn_incompatible_qualified_id : Warning<
