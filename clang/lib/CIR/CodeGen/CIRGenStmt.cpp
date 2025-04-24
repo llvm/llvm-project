@@ -252,6 +252,11 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
   // NullStmt doesn't need any handling, but we need to say we handled it.
   case Stmt::NullStmtClass:
     break;
+  case Stmt::CaseStmtClass:
+    // If we reached here, we must not handling a switch case in the top level.
+    return emitSwitchCase(cast<SwitchCase>(*s),
+                          /*buildingTopLevelCase=*/false);
+    break;
 
   case Stmt::BreakStmtClass:
     return emitBreakStmt(cast<BreakStmt>(*s));

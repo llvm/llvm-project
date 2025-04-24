@@ -800,8 +800,8 @@ def CaseOp : CIR_Op<"case", [
   let hasVerifier = 1;
 
   let skipDefaultBuilders = 1;
-let builders = [
-    OpBuilder<(ins "mlir::ArrayAttr":$value,
+  let builders = [
+      OpBuilder<(ins "mlir::ArrayAttr":$value,
                    "CaseOpKind":$kind,
                    "mlir::OpBuilder::InsertPoint &":$insertPoint)>
   ];

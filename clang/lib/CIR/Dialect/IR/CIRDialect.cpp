@@ -842,22 +842,22 @@ static ParseResult parseSwitchOp(OpAsmParser &parser, mlir::Region &regions,
   cir::IntType intCondType;
 
   if (parser.parseLParen())
-    return ::mlir::failure();
+    return mlir::failure();
 
   if (parser.parseOperand(cond))
-    return ::mlir::failure();
+    return mlir::failure();
   if (parser.parseColon())
-    return ::mlir::failure();
+    return mlir::failure();
   if (parser.parseCustomTypeWithFallback(intCondType))
-    return ::mlir::failure();
+    return mlir::failure();
   condType = intCondType;
 
   if (parser.parseRParen())
-    return ::mlir::failure();
+    return mlir::failure();
   if (parser.parseRegion(regions, /*arguments=*/{}, /*argTypes=*/{}))
     return failure();
 
-  return ::mlir::success();
+  return mlir::success();
 }
 
 static void printSwitchOp(OpAsmPrinter &p, cir::SwitchOp op,
@@ -910,8 +910,6 @@ void cir::SwitchOp::collectCases(llvm::SmallVector<CaseOp> &cases) {
   });
 }
 
-// Check if the switch is in a simple form. If yes, collect the cases to \param
-// cases. This is an expensive and need to be used with caution.
 bool cir::SwitchOp::isSimpleForm(llvm::SmallVector<CaseOp> &cases) {
   collectCases(cases);
 
