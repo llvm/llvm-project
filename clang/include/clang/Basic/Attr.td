@@ -3902,7 +3902,7 @@ def ReleaseCapability : InheritableAttr {
   let Documentation = [ReleaseCapabilityDocs];
 }
 
-def RequiresCapability : InheritableAttr {
+def RequiresCapability : DeclOrTypeAttr {
   let Spellings = [Clang<"requires_capability", 0>,
                    Clang<"exclusive_locks_required", 0>,
                    Clang<"requires_shared_capability", 0>,
@@ -3912,16 +3912,16 @@ def RequiresCapability : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function, ParmVar]>;
+  let Subjects = SubjectList<[Function, FunctionPointer, ParmVar]>;
   let Accessors = [Accessor<"isShared", [Clang<"requires_shared_capability", 0>,
                                          Clang<"shared_locks_required", 0>]>];
-  let Documentation = [Undocumented];
+  let Documentation = [ThreadSafetyDocs];
 }
 
 def NoThreadSafetyAnalysis : InheritableAttr {
   let Spellings = [Clang<"no_thread_safety_analysis">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [ThreadSafetyDocs];
   let SimpleHandler = 1;
 }
 
@@ -3933,7 +3933,7 @@ def GuardedBy : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Subjects = SubjectList<[Field, SharedVar]>;
-  let Documentation = [Undocumented];
+  let Documentation = [ThreadSafetyDocs];
 }
 
 def PtGuardedBy : InheritableAttr {
@@ -3944,7 +3944,7 @@ def PtGuardedBy : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Subjects = SubjectList<[Field, SharedVar]>;
-  let Documentation = [Undocumented];
+  let Documentation = [ThreadSafetyDocs];
 }
 
 def AcquiredAfter : InheritableAttr {

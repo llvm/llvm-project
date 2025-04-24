@@ -212,6 +212,19 @@ int main(void) {
   mutex_exclusive_unlock(late_parsing.a_mutex_defined_very_late);
   mutex_exclusive_unlock(late_parsing.a_mutex_defined_late);
 #endif
+  /// Function pointers
+  {
+    int __attribute__((requires_capability(&mu1))) (*function_ptr)(int) = Foo_fun1;
+
+    function_ptr(5); // expected-warning {{calling function 'function_ptr' requires holding mutex 'mu1'}}
+
+    mutex_exclusive_lock(&mu1);
+    int five = function_ptr(5);
+    mutex_exclusive_unlock(&mu1);
+
+    int (*function_ptr2)(int) = function_ptr;
+    function_ptr2(5);
+  }
 
   return 0;
 }

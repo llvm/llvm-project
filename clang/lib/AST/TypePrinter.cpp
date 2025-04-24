@@ -2098,6 +2098,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ExtVectorType:
     OS << "ext_vector_type";
     break;
+  case attr::RequiresCapability:
+    OS << "requires_capability(...)";
+    break;
   }
   OS << "))";
 }

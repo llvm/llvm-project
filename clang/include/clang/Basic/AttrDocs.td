@@ -9283,3 +9283,10 @@ Declares that a function potentially allocates heap memory, and prevents any pot
 of ``nonallocating`` by the compiler.
   }];
 }
+
+def ThreadSafetyDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Part of Thread Safety Analysis (TSA) in Clang, as documented at https://clang.llvm.org/docs/ThreadSafetyAnalysis.html.
+  }];
+}
