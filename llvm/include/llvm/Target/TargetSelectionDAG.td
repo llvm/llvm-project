@@ -1324,25 +1324,21 @@ def truncstorei8 : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i8;
-  let IsTruncStore = true;
 }
 def truncstorei16 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i16;
-  let IsTruncStore = true;
 }
 def truncstorei32 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i32;
-  let IsTruncStore = true;
 }
 def truncstorei64 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i64;
-  let IsTruncStore = true;
 }
 def truncstoref16 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
