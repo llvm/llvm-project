@@ -59,6 +59,8 @@ C++ Specific Potentially Breaking Changes
   very few users and all the type traits that could benefit from it in the
   standard library already have their own bespoke builtins.
 
+- Added ``!nonnull/!align`` metadata to load of references for better codegen.
+
 ABI Changes in This Version
 ---------------------------
 
