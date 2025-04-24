@@ -125,8 +125,7 @@ static_assert(!b5);
 constexpr auto b6 = bar(p1) == ""; // ref-error {{must be initialized by a constant expression}} \
                                    // ref-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b7 = bar(p1) + 1 == ""; // both-error {{must be initialized by a constant expression}} \
-                                       // ref-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}} \
-                                       // expected-note {{comparison against pointer '&"test1"[6] + 1' that points past the end of a complete object has unspecified value}}
+                                       // both-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}}
 
 namespace UninitializedFields {
   class A {
