@@ -1,5 +1,8 @@
 ; RUN: opt -passes=loop-distribute -enable-loop-distribute -S < %s  | FileCheck %s
 
+; Check that removeUnusedInsts() salvages `dbg_value`s which use dead
+; instructions in the distributed loops.
+
 define void @f(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d, ptr noalias %e) !dbg !5 {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]], ptr noalias [[E:%.*]])
