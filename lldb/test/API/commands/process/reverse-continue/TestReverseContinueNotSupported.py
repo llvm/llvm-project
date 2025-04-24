@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestReverseContinueNotSupported(TestBase):
+    @skipIfWindows
     def test_reverse_continue_not_supported(self):
         target = self.connect()
 
