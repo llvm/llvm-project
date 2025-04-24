@@ -25,13 +25,12 @@
 
 using namespace llvm;
 
-static bool typesAreLogicallyCompatible(const SPIRVType *Ty1,
+
+// Returns true of the types logically match, as defined in
+// https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
+static bool typesLogicallyMatch(const SPIRVType *Ty1,
                                         const SPIRVType *Ty2,
                                         SPIRVGlobalRegistry &GR) {
-  if (Ty1 == Ty2) {
-    return true;
-  }
-
   if (Ty1->getOpcode() != Ty2->getOpcode())
     return false;
 
@@ -45,7 +44,7 @@ static bool typesAreLogicallyCompatible(const SPIRVType *Ty1,
 
     SPIRVType *ElemType1 = GR.getSPIRVTypeForVReg(Ty1->getOperand(1).getReg());
     SPIRVType *ElemType2 = GR.getSPIRVTypeForVReg(Ty2->getOperand(1).getReg());
-    return typesAreLogicallyCompatible(ElemType1, ElemType2, GR);
+    return ElemType1 == ElemType2 || typesLogicallyMatch(ElemType1, ElemType2, GR);
   }
 
   if (Ty1->getOpcode() == SPIRV::OpTypeStruct) {
@@ -54,10 +53,10 @@ static bool typesAreLogicallyCompatible(const SPIRVType *Ty1,
           GR.getSPIRVTypeForVReg(Ty1->getOperand(I).getReg());
       SPIRVType *ElemType2 =
           GR.getSPIRVTypeForVReg(Ty2->getOperand(I).getReg());
-      if (!typesAreLogicallyCompatible(ElemType1, ElemType2, GR))
+      if (ElemType1 != ElemType2 && !typesLogicallyMatch(ElemType1, ElemType2, GR))
         return false;
-      return true;
     }
+    return true;
   }
   return false;
 }
@@ -584,7 +583,7 @@ bool SPIRVTargetLowering::enforcePtrTypeCompatibility(
   if (PointeeType == OpType)
     return true;
 
-  if (typesAreLogicallyCompatible(PointeeType, OpType, GR)) {
+  if (typesLogicallyMatch(PointeeType, OpType, GR)) {
     // Apply OpCopyLogical to OpIdx.
     if (I.getOperand(OpIdx).isDef() &&
         insertLogicalCopyOnResult(I, PointeeType)) {
