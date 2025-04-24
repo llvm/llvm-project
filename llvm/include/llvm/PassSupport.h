@@ -35,22 +35,8 @@ namespace llvm {
 
 class Pass;
 
-#define INITIALIZE_PASS(passName, arg, name, cfg, analysis)                    \
-  static void *initialize##passName##PassOnce(PassRegistry &Registry) {        \
-    PassInfo *PI = new PassInfo(                                               \
-        name, arg, &passName::ID,                                              \
-        PassInfo::NormalCtor_t(callDefaultCtor<passName>), cfg, analysis);     \
-    Registry.registerPass(*PI, true);                                          \
-    return PI;                                                                 \
-  }                                                                            \
-  static llvm::once_flag Initialize##passName##PassFlag;                       \
-  void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
-    llvm::call_once(Initialize##passName##PassFlag,                            \
-                    initialize##passName##PassOnce, std::ref(Registry));       \
-  }
-
 #define INITIALIZE_PASS_BEGIN(passName, arg, name, cfg, analysis)              \
-  static void *initialize##passName##PassOnce(PassRegistry &Registry) {
+  static void initialize##passName##PassOnce(PassRegistry &Registry) {
 
 #define INITIALIZE_PASS_DEPENDENCY(depName) initialize##depName##Pass(Registry);
 
@@ -59,7 +45,6 @@ class Pass;
       name, arg, &passName::ID,                                                \
       PassInfo::NormalCtor_t(callDefaultCtor<passName>), cfg, analysis);       \
   Registry.registerPass(*PI, true);                                            \
-  return PI;                                                                   \
   }                                                                            \
   static llvm::once_flag Initialize##passName##PassFlag;                       \
   void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \
@@ -67,14 +52,17 @@ class Pass;
                     initialize##passName##PassOnce, std::ref(Registry));       \
   }
 
-#define INITIALIZE_PASS_WITH_OPTIONS(PassName, Arg, Name, Cfg, Analysis)       \
-  INITIALIZE_PASS_BEGIN(PassName, Arg, Name, Cfg, Analysis)                    \
-  PassName::registerOptions();                                                 \
-  INITIALIZE_PASS_END(PassName, Arg, Name, Cfg, Analysis)
+#define INITIALIZE_PASS(passName, arg, name, cfg, analysis)                    \
+  INITIALIZE_PASS_BEGIN(passName, arg, name, cfg, analysis)                    \
+  INITIALIZE_PASS_END(passName, arg, name, cfg, analysis)
 
 #define INITIALIZE_PASS_WITH_OPTIONS_BEGIN(PassName, Arg, Name, Cfg, Analysis) \
   INITIALIZE_PASS_BEGIN(PassName, Arg, Name, Cfg, Analysis)                    \
   PassName::registerOptions();
+
+#define INITIALIZE_PASS_WITH_OPTIONS(PassName, Arg, Name, Cfg, Analysis)       \
+  INITIALIZE_PASS_WITH_OPTIONS_BEGIN(PassName, Arg, Name, Cfg, Analysis)       \
+  INITIALIZE_PASS_END(PassName, Arg, Name, Cfg, Analysis)
 
 template <
     class PassName,

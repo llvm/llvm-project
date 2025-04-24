@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++1z -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -fsyntax-only -Wall -Wc++20-compat -Wuninitialized -Wno-unused-value -Wno-unused-lambda-capture -Wno-uninitialized-const-reference -std=c++20 -verify %s
 
+void* operator new(__SIZE_TYPE__, void*);
+
 // definitions for std::move
 namespace std {
 inline namespace foo {
@@ -890,6 +892,11 @@ namespace lambdas {
       return a1.x;
     });
     A a2([&] { return a2.x; }); // ok
+    A a3([=] { return a3.x; }()); // expected-warning{{variable 'a3' is uninitialized when used within its own initialization}}
+    A a4([&] { return a4.x; }()); // expected-warning{{variable 'a4' is uninitialized when used within its own initialization}}
+    A a5([&] { return a5; }()); // expected-warning{{variable 'a5' is uninitialized when used within its own initialization}}
+    A a6([&] { return a5.x; }()); // ok
+    A a7 = [&a7] { return a7; }(); // expected-warning{{variable 'a7' is uninitialized when used within its own initialization}}
   }
 }
 
@@ -1539,6 +1546,80 @@ void aggregate() {
       D2 e4 [[clang::require_explicit_initialization]];
     };
   };
+
+  struct CopyAndMove {
+    CopyAndMove() = default;
+    CopyAndMove(const CopyAndMove &) {}
+    CopyAndMove(CopyAndMove &&) {}
+  };
+  struct Embed {
+    int embed1;  // #FIELD_EMBED1
+    int embed2 [[clang::require_explicit_initialization]];  // #FIELD_EMBED2
+    CopyAndMove force_separate_move_ctor;
+  };
+  struct EmbedDerived : Embed {};
+  struct F {
+    Embed f1;
+    // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[1]) : f1() {
+      // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1);
+      // expected-warning@+1 {{field in 'Embed' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1)();
+#if __cplusplus >= 202002L
+      // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1)(1);
+#endif
+      // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+      ::new(static_cast<void*>(&f1)) decltype(f1){1};
+    }
+#if __cplusplus >= 202002L
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[2]) : f1(1) {}
+#else
+    explicit F(const char(&)[2]) : f1{1, 2} { }
+#endif
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[3]) : f1{} {}
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[4]) : f1{1} {}
+    // expected-warning@+1 {{field 'embed2' requires explicit initialization but is not explicitly initialized}} expected-note@#FIELD_EMBED2 {{'embed2' declared here}}
+    explicit F(const char(&)[5]) : f1{.embed1 = 1} {}
+  };
+  F ctors[] = {
+      F(""),
+      F("_"),
+      F("__"),
+      F("___"),
+      F("____")
+  };
+
+  struct MoveOrCopy {
+    Embed e;
+    EmbedDerived ed;
+    F f;
+    // no-error
+    MoveOrCopy(const MoveOrCopy &c) : e(c.e), ed(c.ed), f(c.f) {}
+    // no-error
+    MoveOrCopy(MoveOrCopy &&c)
+        : e(std::move(c.e)), ed(std::move(c.ed)), f(std::move(c.f)) {}
+  };
+  F copy1(ctors[0]); // no-error
+  (void)copy1;
+  F move1(std::move(ctors[0])); // no-error
+  (void)move1;
+  F copy2{ctors[0]}; // no-error
+  (void)copy2;
+  F move2{std::move(ctors[0])}; // no-error
+  (void)move2;
+  F copy3 = ctors[0]; // no-error
+  (void)copy3;
+  F move3 = std::move(ctors[0]); // no-error
+  (void)move3;
+  F copy4 = {ctors[0]}; // no-error
+  (void)copy4;
+  F move4 = {std::move(ctors[0])}; // no-error
+  (void)move4;
 
   S::foo(S{1, 2, 3, 4});
   S::foo(S{.s1 = 100, .s4 = 100});

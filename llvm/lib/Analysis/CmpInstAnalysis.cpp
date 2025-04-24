@@ -168,6 +168,7 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
 
 std::optional<DecomposedBitTest>
 llvm::decomposeBitTest(Value *Cond, bool LookThruTrunc, bool AllowNonZeroC) {
+  using namespace PatternMatch;
   if (auto *ICmp = dyn_cast<ICmpInst>(Cond)) {
     // Don't allow pointers. Splat vectors are fine.
     if (!ICmp->getOperand(0)->getType()->isIntOrIntVectorTy())
@@ -175,6 +176,19 @@ llvm::decomposeBitTest(Value *Cond, bool LookThruTrunc, bool AllowNonZeroC) {
     return decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
                                 ICmp->getPredicate(), LookThruTrunc,
                                 AllowNonZeroC);
+  }
+  Value *X;
+  if (Cond->getType()->isIntOrIntVectorTy(1) &&
+      (match(Cond, m_Trunc(m_Value(X))) ||
+       match(Cond, m_Not(m_Trunc(m_Value(X)))))) {
+    DecomposedBitTest Result;
+    Result.X = X;
+    unsigned BitWidth = X->getType()->getScalarSizeInBits();
+    Result.Mask = APInt(BitWidth, 1);
+    Result.C = APInt::getZero(BitWidth);
+    Result.Pred = isa<TruncInst>(Cond) ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ;
+
+    return Result;
   }
 
   return std::nullopt;

@@ -388,18 +388,6 @@
 // CHECK-SOFT-ABI-FP-DAG: "-target-feature" "-aes"
 // CHECK-SOFT-ABI-FP-DAG: "-target-feature" "-fpregs"
 
-// RUN: %clang -target arm-linux-androideabi21 %s -### -c 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-ARM5-ANDROID-FP-DEFAULT %s
-// CHECK-ARM5-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+soft-float"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-DAG: "-target-feature" "+soft-float-abi"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+d32"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+vfp3"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+vfp4"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+fp-armv8"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+neon"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+sha2"
-// CHECK-ARM5-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+aes"
-
 // RUN: %clang -target armv7-linux-androideabi21 %s -### -c 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM7-ANDROID-FP-DEFAULT %s
 // CHECK-ARM7-ANDROID-FP-DEFAULT-NOT: "-target-feature" "+soft-float"

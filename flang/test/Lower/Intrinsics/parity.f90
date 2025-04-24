@@ -28,5 +28,5 @@ subroutine parity_test2(mask, d, rslt)
   ! CHECK:  fir.call @_FortranAParityDim(%[[a6:.*]], %[[a7:.*]], %[[a1:.*]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32) -> ()
   ! CHECK-DAG:  %[[a10:.*]] = fir.load %[[a0:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
   ! CHECK-DAG:  %[[a12:.*]] = fir.box_addr %[[a10:.*]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.heap<!fir.array<?x!fir.logical<4>>>
-  ! CHECK-DAG  fir.freemem %[[a12:.*]]
+  ! CHECK-DAG:  fir.freemem %[[a12:.*]]
 end subroutine parity_test2

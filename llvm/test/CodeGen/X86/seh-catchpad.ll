@@ -100,8 +100,10 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK: .Ltmp1:
 ; CHECK: .LBB1_[[epilogue:[0-9]+]]:                                # %__try.cont.12
 ; CHECK:         xorl    %eax, %eax
+; CHECK:         .seh_startepilogue
 ; CHECK:         addq    $32, %rsp
 ; CHECK:         popq    %rbp
+; CHECK:         .seh_endepilogue
 ; CHECK:         retq
 ; CHECK: .LBB1_[[except1bb:[0-9]+]]:                                # %__except
 ; CHECK: .Ltmp2:

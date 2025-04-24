@@ -2,6 +2,14 @@
 ; RUN: opt < %s -passes='function(lower-allow-check)' -S | FileCheck %s --check-prefixes=NOPROFILE
 ; RUN: opt < %s -passes='function(lower-allow-check)' -lower-allow-check-random-rate=0 -S | FileCheck %s --check-prefixes=NONE
 ; RUN: opt < %s -passes='function(lower-allow-check)' -lower-allow-check-random-rate=1 -S | FileCheck %s --check-prefixes=ALL
+;
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check<cutoffs[22]=990000>)' -S | FileCheck %s --check-prefixes=HOT99
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check<cutoffs[22]=700000>)' -S | FileCheck %s --check-prefixes=HOT70
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check<cutoffs[22]=990000>)' -lower-allow-check-random-rate=0 -S | FileCheck %s --check-prefixes=NONE99
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check<cutoffs[22]=700000>)' -lower-allow-check-random-rate=1 -S | FileCheck %s --check-prefixes=ALL70
+;
+; -lower-allow-check-percentile-cutoff is deprecated and will be removed in the future;
+; use the cutoffs parameter to the lower-allow-check pass, as shown above.
 ; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-percentile-cutoff-hot=990000 -S | FileCheck %s --check-prefixes=HOT99
 ; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-percentile-cutoff-hot=700000 -S | FileCheck %s --check-prefixes=HOT70
 ; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-random-rate=0 -lower-allow-check-percentile-cutoff-hot=990000 -S | FileCheck %s --check-prefixes=NONE99

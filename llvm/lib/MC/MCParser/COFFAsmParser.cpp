@@ -92,6 +92,10 @@ class COFFAsmParser : public MCAsmParserExtension {
         ".seh_stackalloc");
     addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveEndProlog>(
         ".seh_endprologue");
+    addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveBeginEpilog>(
+        ".seh_startepilogue");
+    addDirectiveHandler<&COFFAsmParser::ParseSEHDirectiveEndEpilog>(
+        ".seh_endepilogue");
   }
 
   bool parseSectionDirectiveText(StringRef, SMLoc) {
@@ -141,6 +145,8 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseSEHDirectiveHandlerData(StringRef, SMLoc);
   bool parseSEHDirectiveAllocStack(StringRef, SMLoc);
   bool parseSEHDirectiveEndProlog(StringRef, SMLoc);
+  bool ParseSEHDirectiveBeginEpilog(StringRef, SMLoc);
+  bool ParseSEHDirectiveEndEpilog(StringRef, SMLoc);
 
   bool parseAtUnwindOrAtExcept(bool &unwind, bool &except);
   bool parseDirectiveSymbolAttribute(StringRef Directive, SMLoc);
@@ -746,6 +752,18 @@ bool COFFAsmParser::parseSEHDirectiveAllocStack(StringRef, SMLoc Loc) {
 bool COFFAsmParser::parseSEHDirectiveEndProlog(StringRef, SMLoc Loc) {
   Lex();
   getStreamer().emitWinCFIEndProlog(Loc);
+  return false;
+}
+
+bool COFFAsmParser::ParseSEHDirectiveBeginEpilog(StringRef, SMLoc Loc) {
+  Lex();
+  getStreamer().emitWinCFIBeginEpilogue(Loc);
+  return false;
+}
+
+bool COFFAsmParser::ParseSEHDirectiveEndEpilog(StringRef, SMLoc Loc) {
+  Lex();
+  getStreamer().emitWinCFIEndEpilogue(Loc);
   return false;
 }
 

@@ -27,12 +27,18 @@ inline const bool __is_bounded_array_v<_Tp[_Np]> = true;
 #if _LIBCPP_STD_VER >= 20
 
 template <class>
-struct _LIBCPP_TEMPLATE_VIS is_bounded_array : false_type {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_bounded_array : false_type {};
+
+_LIBCPP_DIAGNOSTIC_PUSH
+#  if __has_warning("-Winvalid-specialization")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
+#  endif
 template <class _Tp, size_t _Np>
-struct _LIBCPP_TEMPLATE_VIS is_bounded_array<_Tp[_Np]> : true_type {};
+struct is_bounded_array<_Tp[_Np]> : true_type {};
+_LIBCPP_DIAGNOSTIC_POP
 
 template <class _Tp>
-inline constexpr bool is_bounded_array_v = is_bounded_array<_Tp>::value;
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_bounded_array_v = is_bounded_array<_Tp>::value;
 
 #endif
 

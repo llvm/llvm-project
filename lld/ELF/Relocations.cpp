@@ -178,7 +178,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
 static bool isAbsolute(const Symbol &sym) {
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
     return dr->section == nullptr; // Absolute symbol.
@@ -428,8 +428,10 @@ public:
     if (j == fdes.begin() || j[-1].inputOff + j[-1].size <= off) {
       while (i != cies.end() && i->inputOff <= off)
         ++i;
-      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off)
-        Fatal(ctx) << ".eh_frame: relocation is not in any piece";
+      if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
+        Err(ctx) << ".eh_frame: relocation is not in any piece";
+        return 0;
+      }
       it = i;
     }
 
@@ -845,9 +847,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
-    std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    part.relaDyn->addRelativeReloc(ctx.target->relativeRel, isec, offsetInSec,
-                                   sym, addend, type, expr);
+    part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
+                                          offsetInSec, sym, addend, type, expr);
     // With MTE globals, we always want to derive the address tag by `ldg`-ing
     // the symbol. When we have a RELATIVE relocation though, we no longer have
     // a reference to the symbol. Because of this, when we have an addend that
@@ -1003,7 +1004,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
 
   // For the target and the relocation, we want to know if they are
   // absolute or relative.
-  bool absVal = isAbsoluteValue(sym);
+  bool absVal = isAbsoluteValue(sym) && e != RE_PPC64_TOCBASE;
   bool relE = isRelExpr(e);
   if (absVal && !relE)
     return true;
@@ -1019,7 +1020,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
   // Normally such a call will be guarded with a comparison, which will load a
   // zero from the GOT.
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
 
   // We set the final symbols values for linker script defined symbols later.
@@ -1064,7 +1065,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
              type == R_HEX_GD_PLT_B22_PCREL_X ||
              type == R_HEX_GD_PLT_B32_PCREL_X)))
         expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym)) {
+    } else if (!isAbsoluteValue(sym) ||
+               (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
       // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
@@ -1292,6 +1294,27 @@ static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
   return 0;
 }
 
+static unsigned handleAArch64PAuthTlsRelocation(InputSectionBase *sec,
+                                                RelExpr expr, RelType type,
+                                                uint64_t offset, Symbol &sym,
+                                                int64_t addend) {
+  // Do not optimize signed TLSDESC to LE/IE (as described in pauthabielf64).
+  // https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#general-restrictions
+  // > PAUTHELF64 only supports the descriptor based TLS (TLSDESC).
+  if (oneof<RE_AARCH64_AUTH_TLSDESC_PAGE, RE_AARCH64_AUTH_TLSDESC>(expr)) {
+    sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH);
+    sec->addReloc({expr, type, offset, addend, &sym});
+    return 1;
+  }
+
+  // TLSDESC_CALL hint relocation should not be emitted by compiler with signed
+  // TLSDESC enabled.
+  if (expr == R_TLSDESC_CALL)
+    sym.setFlags(NEEDS_TLSDESC_NONAUTH);
+
+  return 0;
+}
+
 // Notes about General Dynamic and Local Dynamic TLS models below. They may
 // require the generation of a pair of GOT entries that have associated dynamic
 // relocations. The pair of GOT entries created are of the form GOT[e0] Module
@@ -1302,6 +1325,13 @@ static unsigned handleMipsTlsRelocation(Ctx &ctx, RelType type, Symbol &sym,
 unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
                                                 uint64_t offset, Symbol &sym,
                                                 int64_t addend) {
+  bool isAArch64 = ctx.arg.emachine == EM_AARCH64;
+
+  if (isAArch64)
+    if (unsigned processed = handleAArch64PAuthTlsRelocation(
+            sec, expr, type, offset, sym, addend))
+      return processed;
+
   if (expr == R_TPREL || expr == R_TPREL_NEG) {
     if (ctx.arg.shared) {
       auto diag = Err(ctx);
@@ -1336,12 +1366,19 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a label. Do not
     // set NEEDS_TLSDESC on the label.
     if (expr != R_TLSDESC_CALL) {
-      if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
+      if (isAArch64)
+        sym.setFlags(NEEDS_TLSDESC | NEEDS_TLSDESC_NONAUTH);
+      else if (!isRISCV || type == R_RISCV_TLSDESC_HI20)
         sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({expr, type, offset, addend, &sym});
     }
     return 1;
   }
+
+  // LoongArch supports IE to LE optimization in non-extreme code model.
+  bool execOptimizeInLoongArch =
+      ctx.arg.emachine == EM_LOONGARCH &&
+      (type == R_LARCH_TLS_IE_PC_HI20 || type == R_LARCH_TLS_IE_PC_LO12);
 
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
   // optimizations.
@@ -1350,7 +1387,8 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_LOONGARCH &&
+      ctx.arg.emachine != EM_HEXAGON &&
+      (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
 
@@ -1441,6 +1479,15 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
+    return 1;
+  }
+
+  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_GOT, in which
+  // NEEDS_TLSIE shouldn't set. So we check independently.
+  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
+      execOptimize && isLocalInExecutable) {
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
 
@@ -1847,10 +1894,21 @@ void elf::postScanRelocations(Ctx &ctx) {
     GotSection *got = ctx.in.got.get();
 
     if (flags & NEEDS_TLSDESC) {
+      if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
+        Err(ctx)
+            << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
+            << "' requested, but only one type of TLSDESC entry per symbol is "
+               "supported";
+        return;
+      }
       got->addTlsDescEntry(sym);
+      RelType tlsDescRel = ctx.target->tlsDescRel;
+      if (flags & NEEDS_TLSDESC_AUTH) {
+        got->addTlsDescAuthEntry();
+        tlsDescRel = ELF::R_AARCH64_AUTH_TLSDESC;
+      }
       ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
-          ctx.target->tlsDescRel, *got, got->getTlsDescOffset(sym), sym,
-          ctx.target->tlsDescRel);
+          tlsDescRel, *got, got->getTlsDescOffset(sym), sym, tlsDescRel);
     }
     if (flags & NEEDS_TLSGD) {
       got->addDynTlsEntry(sym);

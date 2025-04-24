@@ -202,7 +202,7 @@ class Lookup : public Command {
     }
 
     LookupRequest Request;
-    Request.IDs.insert(IDs.begin(), IDs.end());
+    Request.IDs.insert_range(IDs);
     bool FoundSymbol = false;
     Index->lookup(Request, [&](const Symbol &Sym) {
       FoundSymbol = true;
@@ -255,7 +255,7 @@ class Refs : public Command {
       }
     }
     RefsRequest RefRequest;
-    RefRequest.IDs.insert(IDs.begin(), IDs.end());
+    RefRequest.IDs.insert_range(IDs);
     llvm::Regex RegexFilter(Filter);
     Index->refs(RefRequest, [&RegexFilter](const Ref &R) {
       auto U = URI::parse(R.Location.FileURI);

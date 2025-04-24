@@ -582,6 +582,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__functional/binary_function.h>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
+#  include <__fwd/map.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/ranges_iterator_traits.h>
@@ -756,10 +757,6 @@ public:
   }
 };
 
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-class map;
-template <class _Key, class _Tp, class _Compare, class _Allocator>
-class multimap;
 template <class _TreeIterator>
 class __map_const_iterator;
 
@@ -858,7 +855,7 @@ struct __extract_key_value_types<__value_type<_Key, _Tp> > {
 };
 
 template <class _TreeIterator>
-class _LIBCPP_TEMPLATE_VIS __map_iterator {
+class __map_iterator {
   typedef typename _TreeIterator::_NodeTypes _NodeTypes;
   typedef typename _TreeIterator::__pointer_traits __pointer_traits;
 
@@ -906,15 +903,15 @@ public:
   }
 
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS map;
+  friend class map;
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS multimap;
+  friend class multimap;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __map_const_iterator;
+  friend class __map_const_iterator;
 };
 
 template <class _TreeIterator>
-class _LIBCPP_TEMPLATE_VIS __map_const_iterator {
+class __map_const_iterator {
   typedef typename _TreeIterator::_NodeTypes _NodeTypes;
   typedef typename _TreeIterator::__pointer_traits __pointer_traits;
 
@@ -964,15 +961,15 @@ public:
   }
 
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS map;
+  friend class map;
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS multimap;
+  friend class multimap;
   template <class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS __tree_const_iterator;
+  friend class __tree_const_iterator;
 };
 
-template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS map {
+template <class _Key, class _Tp, class _Compare, class _Allocator>
+class map {
 public:
   // types:
   typedef _Key key_type;
@@ -986,7 +983,7 @@ public:
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
-  class _LIBCPP_TEMPLATE_VIS value_compare : public __binary_function<value_type, value_type, bool> {
+  class value_compare : public __binary_function<value_type, value_type, bool> {
     friend class map;
 
   protected:
@@ -1028,9 +1025,9 @@ public:
 #  endif
 
   template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS map;
+  friend class map;
   template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multimap;
+  friend class multimap;
 
   _LIBCPP_HIDE_FROM_ABI map() _NOEXCEPT_(
       is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
@@ -1138,7 +1135,7 @@ public:
     insert(__m.begin(), __m.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~map() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1572,7 +1569,7 @@ _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) {
   __parent_pointer __parent;
   __node_base_pointer& __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
-    __throw_out_of_range("map::at:  key not found");
+    std::__throw_out_of_range("map::at:  key not found");
   return static_cast<__node_pointer>(__child)->__value_.__get_value().second;
 }
 
@@ -1581,7 +1578,7 @@ const _Tp& map<_Key, _Tp, _Compare, _Allocator>::at(const key_type& __k) const {
   __parent_pointer __parent;
   __node_base_pointer __child = __tree_.__find_equal(__parent, __k);
   if (__child == nullptr)
-    __throw_out_of_range("map::at:  key not found");
+    std::__throw_out_of_range("map::at:  key not found");
   return static_cast<__node_pointer>(__child)->__value_.__get_value().second;
 }
 
@@ -1656,8 +1653,8 @@ struct __container_traits<map<_Key, _Tp, _Compare, _Allocator> > {
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
 };
 
-template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS multimap {
+template <class _Key, class _Tp, class _Compare, class _Allocator>
+class multimap {
 public:
   // types:
   typedef _Key key_type;
@@ -1672,7 +1669,7 @@ public:
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,
                 "Allocator::value_type must be same type as value_type");
 
-  class _LIBCPP_TEMPLATE_VIS value_compare : public __binary_function<value_type, value_type, bool> {
+  class value_compare : public __binary_function<value_type, value_type, bool> {
     friend class multimap;
 
   protected:
@@ -1711,9 +1708,9 @@ public:
 #  endif
 
   template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS map;
+  friend class map;
   template <class _Key2, class _Value2, class _Comp2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multimap;
+  friend class multimap;
 
   _LIBCPP_HIDE_FROM_ABI multimap() _NOEXCEPT_(
       is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
@@ -1826,7 +1823,9 @@ public:
     insert(__m.begin(), __m.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~multimap() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~multimap() {
+    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
+  }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }

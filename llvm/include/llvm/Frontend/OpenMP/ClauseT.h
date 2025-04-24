@@ -846,6 +846,12 @@ struct NoOpenmpRoutinesT {
   using EmptyTrait = std::true_type;
 };
 
+// V6.0: [10.6.1] `assumption` clauses
+template <typename T, typename I, typename E> //
+struct NoOpenmpConstructsT {
+  using EmptyTrait = std::true_type;
+};
+
 // V5.2: [8.3.1] `assumption` clauses
 template <typename T, typename I, typename E> //
 struct NoParallelismT {
@@ -1136,6 +1142,11 @@ struct UnifiedSharedMemoryT {
   using EmptyTrait = std::true_type;
 };
 
+template <typename T, typename I, typename E> //
+struct SelfMapsT {
+  using EmptyTrait = std::true_type;
+};
+
 // V5.2: [5.10] `uniform` clause
 template <typename T, typename I, typename E> //
 struct UniformT {
@@ -1239,7 +1250,7 @@ using EmptyClausesT = std::variant<
     ReverseOffloadT<T, I, E>, SeqCstT<T, I, E>, SimdT<T, I, E>,
     ThreadsT<T, I, E>, UnifiedAddressT<T, I, E>, UnifiedSharedMemoryT<T, I, E>,
     UnknownT<T, I, E>, UntiedT<T, I, E>, UseT<T, I, E>, WeakT<T, I, E>,
-    WriteT<T, I, E>>;
+    WriteT<T, I, E>, NoOpenmpConstructsT<T, I, E>, SelfMapsT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =

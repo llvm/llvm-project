@@ -23,6 +23,7 @@
 #include "mlir/TableGen/GenNameParser.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/raw_ostream.h"
@@ -35,7 +36,7 @@ using namespace mlir;
 using tblgen::NamedTypeConstraint;
 
 static llvm::cl::OptionCategory dialectGenCat("Options for -gen-irdl-dialect");
-llvm::cl::opt<std::string>
+static llvm::cl::opt<std::string>
     selectedDialect("dialect", llvm::cl::desc("The dialect to gen for"),
                     llvm::cl::cat(dialectGenCat), llvm::cl::Required);
 
@@ -394,12 +395,41 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   Block &opBlock = op.getBody().emplaceBlock();
   OpBuilder consBuilder = OpBuilder::atBlockBegin(&opBlock);
 
+  SmallDenseSet<StringRef> usedNames;
+  for (auto &namedCons : tblgenOp.getOperands())
+    usedNames.insert(namedCons.name);
+  for (auto &namedCons : tblgenOp.getResults())
+    usedNames.insert(namedCons.name);
+  for (auto &namedReg : tblgenOp.getRegions())
+    usedNames.insert(namedReg.name);
+
+  size_t generateCounter = 0;
+  auto generateName = [&](StringRef prefix) -> StringAttr {
+    SmallString<16> candidate;
+    do {
+      candidate.clear();
+      raw_svector_ostream candidateStream(candidate);
+      candidateStream << prefix << generateCounter;
+      generateCounter++;
+    } while (usedNames.contains(candidate));
+    return StringAttr::get(ctx, candidate);
+  };
+  auto normalizeName = [&](StringRef name) -> StringAttr {
+    if (name == "")
+      return generateName("unnamed");
+    return StringAttr::get(ctx, name);
+  };
+
   auto getValues = [&](tblgen::Operator::const_value_range namedCons) {
     SmallVector<Value> operands;
+    SmallVector<Attribute> names;
     SmallVector<irdl::VariadicityAttr> variadicity;
+
     for (const NamedTypeConstraint &namedCons : namedCons) {
       auto operand = createTypeConstraint(consBuilder, namedCons.constraint);
       operands.push_back(operand);
+
+      names.push_back(normalizeName(namedCons.name));
 
       irdl::VariadicityAttr var;
       if (namedCons.isOptional())
@@ -414,11 +444,13 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
 
       variadicity.push_back(var);
     }
-    return std::make_tuple(operands, variadicity);
+    return std::make_tuple(operands, names, variadicity);
   };
 
-  auto [operands, operandVariadicity] = getValues(tblgenOp.getOperands());
-  auto [results, resultVariadicity] = getValues(tblgenOp.getResults());
+  auto [operands, operandNames, operandVariadicity] =
+      getValues(tblgenOp.getOperands());
+  auto [results, resultNames, resultVariadicity] =
+      getValues(tblgenOp.getResults());
 
   SmallVector<Value> attributes;
   SmallVector<Attribute> attrNames;
@@ -430,23 +462,28 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   }
 
   SmallVector<Value> regions;
+  SmallVector<Attribute> regionNames;
   for (auto namedRegion : tblgenOp.getRegions()) {
     regions.push_back(
         createRegionConstraint(consBuilder, namedRegion.constraint));
+    regionNames.push_back(normalizeName(namedRegion.name));
   }
 
   // Create the operands and results operations.
   if (!operands.empty())
     consBuilder.create<irdl::OperandsOp>(UnknownLoc::get(ctx), operands,
+                                         ArrayAttr::get(ctx, operandNames),
                                          operandVariadicity);
   if (!results.empty())
     consBuilder.create<irdl::ResultsOp>(UnknownLoc::get(ctx), results,
+                                        ArrayAttr::get(ctx, resultNames),
                                         resultVariadicity);
   if (!attributes.empty())
     consBuilder.create<irdl::AttributesOp>(UnknownLoc::get(ctx), attributes,
                                            ArrayAttr::get(ctx, attrNames));
   if (!regions.empty())
-    consBuilder.create<irdl::RegionsOp>(UnknownLoc::get(ctx), regions);
+    consBuilder.create<irdl::RegionsOp>(UnknownLoc::get(ctx), regions,
+                                        ArrayAttr::get(ctx, regionNames));
 
   return op;
 }

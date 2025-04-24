@@ -8,7 +8,12 @@ if (SPHINX_FOUND)
     # want the dynamically generated .rst files to pollute the source tree.
     add_custom_target(copy-libc-rst-docs
       COMMAND "${CMAKE_COMMAND}" -E copy_directory
-              "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
+              "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+
+      COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+              "${CMAKE_CURRENT_SOURCE_DIR}/../Maintainers.rst"
+              "${CMAKE_CURRENT_BINARY_DIR}"
+      )
 
     # For headers that are nested in directories, we need to
     # `mkdir $build_dir/libc/docs/headers/$dir` since the above copy_directory
@@ -37,15 +42,20 @@ if (SPHINX_FOUND)
       aio
       arpa/inet
       assert
+      cpio
       ctype
+      dirent
+      endian
       errno
       fenv
       float
+      glob
       inttypes
       locale
       net/if
       netinet/in
-      pthread
+      # TODO: https://github.com/llvm/llvm-project/issues/123821
+      # pthread
       setjmp
       signal
       stdbit
@@ -55,9 +65,15 @@ if (SPHINX_FOUND)
       strings
       sys/mman
       sys/resource
+      sys/stat
+      sys/statvfs
+      sys/time
+      sys/utsname
       sys/wait
+      termios
       threads
       uchar
+      unistd
       wchar
       wctype
     )

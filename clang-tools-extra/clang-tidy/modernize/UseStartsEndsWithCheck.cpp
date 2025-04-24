@@ -113,21 +113,33 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   const auto OnClassWithEndsWithFunction = ClassTypeWithMethod(
       "ends_with_fun", "ends_with", "endsWith", "endswith", "EndsWith");
 
-  // Case 1: X.find(Y) [!=]= 0 -> starts_with.
+  // Case 1: X.find(Y, [0], [LEN(Y)]) [!=]= 0 -> starts_with.
   const auto FindExpr = cxxMemberCallExpr(
-      anyOf(argumentCountIs(1), hasArgument(1, ZeroLiteral)),
       callee(
           cxxMethodDecl(hasName("find"), ofClass(OnClassWithStartsWithFunction))
               .bind("find_fun")),
-      hasArgument(0, expr().bind("needle")));
+      hasArgument(0, expr().bind("needle")),
+      anyOf(
+          // Detect the expression: X.find(Y);
+          argumentCountIs(1),
+          // Detect the expression: X.find(Y, 0);
+          allOf(argumentCountIs(2), hasArgument(1, ZeroLiteral)),
+          // Detect the expression: X.find(Y, 0, LEN(Y));
+          allOf(argumentCountIs(3), hasArgument(1, ZeroLiteral),
+                hasArgument(2, lengthExprForStringNode("needle")))));
 
-  // Case 2: X.rfind(Y, 0) [!=]= 0 -> starts_with.
+  // Case 2: X.rfind(Y, 0, [LEN(Y)]) [!=]= 0 -> starts_with.
   const auto RFindExpr = cxxMemberCallExpr(
-      hasArgument(1, ZeroLiteral),
       callee(cxxMethodDecl(hasName("rfind"),
                            ofClass(OnClassWithStartsWithFunction))
                  .bind("find_fun")),
-      hasArgument(0, expr().bind("needle")));
+      hasArgument(0, expr().bind("needle")),
+      anyOf(
+          // Detect the expression: X.rfind(Y, 0);
+          allOf(argumentCountIs(2), hasArgument(1, ZeroLiteral)),
+          // Detect the expression: X.rfind(Y, 0, LEN(Y));
+          allOf(argumentCountIs(3), hasArgument(1, ZeroLiteral),
+                hasArgument(2, lengthExprForStringNode("needle")))));
 
   // Case 3: X.compare(0, LEN(Y), Y) [!=]= 0 -> starts_with.
   const auto CompareExpr = cxxMemberCallExpr(

@@ -140,6 +140,9 @@ def incl : Joined<["/", "-", "/?", "-?"], "include:">,
 def deffile : Joined<["/", "-", "/?", "-?"], "def:">,
     HelpText<"Use module-definition file">;
 
+def defarm64native
+    : P<"defarm64native",
+        "Use a module-definition file for the native view in a hybrid image.">;
 def debug : F<"debug">, HelpText<"Embed a symbol table in the image">;
 def debug_opt : P<"debug", "Embed a symbol table in the image with option">;
 def debugtype : P<"debugtype", "Debug Info Options">;
@@ -339,6 +342,7 @@ def fastfail : F<"fastfail">;
 def kernel : F<"kernel">;
 def pdbcompress : F<"pdbcompress">;
 def emitpogophaseinfo : F<"emitpogophaseinfo">;
+def noexp : F<"noexp">;
 
 def delay : P_priv<"delay">;
 def errorreport : P_priv<"errorreport">;

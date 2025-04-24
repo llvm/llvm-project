@@ -19,6 +19,11 @@ def ConvertHLFIRtoFIR : Pass<"convert-hlfir-to-fir", "::mlir::ModuleOp"> {
 
 def BufferizeHLFIR : Pass<"bufferize-hlfir", "::mlir::ModuleOp"> {
   let summary = "Convert HLFIR operations operating on hlfir.expr into operations on memory";
+  let options = [Option<"optimizeEmptyElementals", "opt-empty-elementals",
+                        "bool", /*default=*/"false",
+                        "When converting hlfir.elemental into a loop nest, "
+                        "check if the resulting expression is an empty array, "
+                        "and make sure none of the loops is executed.">];
 }
 
 def OptimizedBufferization : Pass<"opt-bufferization"> {

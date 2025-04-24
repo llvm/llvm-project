@@ -71,14 +71,10 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
             continue;
       }
 
-      MCPhysReg Reg;
-      BC.MIB->getADRReg(Inst, Reg);
-      int64_t Addend = BC.MIB->getTargetAddend(Inst);
-      InstructionListType Addr;
-
+      InstructionListType AdrpAdd;
       {
         auto L = BC.scopeLock();
-        Addr = BC.MIB->materializeAddress(Symbol, BC.Ctx.get(), Reg, Addend);
+        AdrpAdd = BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get());
       }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
@@ -99,7 +95,7 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
         PassFailed = true;
         return;
       }
-      It = BB.replaceInstruction(It, Addr);
+      It = BB.replaceInstruction(It, AdrpAdd);
     }
   }
 }

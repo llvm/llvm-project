@@ -203,10 +203,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     BasicBlock *TheOnlyDest = DefaultDest;
 
     // If the default is unreachable, ignore it when searching for TheOnlyDest.
-    if (isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg()) &&
-        SI->getNumCases() > 0) {
+    if (SI->defaultDestUnreachable() && SI->getNumCases() > 0)
       TheOnlyDest = SI->case_begin()->getCaseSuccessor();
-    }
 
     bool Changed = false;
 
@@ -497,10 +495,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       // are lifetime intrinsics then the intrinsics are dead.
       if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
         return llvm::all_of(Arg->uses(), [](Use &Use) {
-          if (IntrinsicInst *IntrinsicUse =
-                  dyn_cast<IntrinsicInst>(Use.getUser()))
-            return IntrinsicUse->isLifetimeStartOrEnd();
-          return false;
+          return isa<LifetimeIntrinsic>(Use.getUser());
         });
       return false;
     }
@@ -1696,9 +1691,7 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
                                               const DebugLoc &NewLoc,
                                               BasicBlock::iterator Instr) {
   if (!UseNewDbgInfoFormat) {
-    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                  (Instruction *)nullptr);
-    cast<Instruction *>(DbgVal)->insertBefore(Instr);
+    Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc, Instr);
   } else {
     // RemoveDIs: if we're using the new debug-info format, allocate a
     // DbgVariableRecord directly instead of a dbg.value intrinsic.
@@ -1711,19 +1704,10 @@ static void insertDbgValueOrDbgVariableRecord(DIBuilder &Builder, Value *DV,
 
 static void insertDbgValueOrDbgVariableRecordAfter(
     DIBuilder &Builder, Value *DV, DILocalVariable *DIVar, DIExpression *DIExpr,
-    const DebugLoc &NewLoc, BasicBlock::iterator Instr) {
-  if (!UseNewDbgInfoFormat) {
-    auto DbgVal = Builder.insertDbgValueIntrinsic(DV, DIVar, DIExpr, NewLoc,
-                                                  (Instruction *)nullptr);
-    cast<Instruction *>(DbgVal)->insertAfter(&*Instr);
-  } else {
-    // RemoveDIs: if we're using the new debug-info format, allocate a
-    // DbgVariableRecord directly instead of a dbg.value intrinsic.
-    ValueAsMetadata *DVAM = ValueAsMetadata::get(DV);
-    DbgVariableRecord *DV =
-        new DbgVariableRecord(DVAM, DIVar, DIExpr, NewLoc.get());
-    Instr->getParent()->insertDbgRecordAfter(DV, &*Instr);
-  }
+    const DebugLoc &NewLoc, Instruction *Instr) {
+  BasicBlock::iterator NextIt = std::next(Instr->getIterator());
+  NextIt.setHeadBit(true);
+  insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc, NextIt);
 }
 
 /// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
@@ -1815,7 +1799,7 @@ void llvm::ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
   // preferable to keep tracking both the loaded value and the original
   // address in case the alloca can not be elided.
   insertDbgValueOrDbgVariableRecordAfter(Builder, LI, DIVar, DIExpr, NewLoc,
-                                         LI->getIterator());
+                                         LI);
 }
 
 void llvm::ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
@@ -2108,7 +2092,7 @@ insertDbgVariableRecordsForPHIs(BasicBlock *BB,
   for (auto PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting a debug-info record into an EH block.
-    if (Parent->getFirstNonPHI()->isEHPad())
+    if (Parent->getFirstNonPHIIt()->isEHPad())
       continue;
     for (auto VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
@@ -2174,7 +2158,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   for (auto *PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting an intrinsic into an EH block.
-    if (Parent->getFirstNonPHI()->isEHPad())
+    if (Parent->getFirstNonPHIIt()->isEHPad())
       continue;
     for (auto *VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
@@ -2197,7 +2181,7 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
     auto *NewDbgII = DI.second;
     auto InsertionPt = Parent->getFirstInsertionPt();
     assert(InsertionPt != Parent->end() && "Ill-formed basic block");
-    NewDbgII->insertBefore(&*InsertionPt);
+    NewDbgII->insertBefore(InsertionPt);
   }
 }
 
@@ -2975,7 +2959,7 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
 CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
   CallInst *NewCall = createCallMatchingInvoke(II);
   NewCall->takeName(II);
-  NewCall->insertBefore(II);
+  NewCall->insertBefore(II->getIterator());
   II->replaceAllUsesWith(NewCall);
 
   // Follow the call by a branch to the normal destination.
@@ -3206,7 +3190,7 @@ static bool markAliveBlocks(Function &F,
         BasicBlock *HandlerBB = *I;
         if (DTU)
           ++NumPerSuccessorCases[HandlerBB];
-        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHI());
+        auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHIIt());
         if (!HandlerSet.insert({CatchPad, Empty}).second) {
           if (DTU)
             --NumPerSuccessorCases[HandlerBB];
@@ -3369,8 +3353,13 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
         break;
+      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
+      // from being removed as unknown metadata. The actual merging is handled
+      // separately below.
+      case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
-        // Combine MMRAs
+      case LLVMContext::MD_memprof:
+      case LLVMContext::MD_callsite:
         break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
@@ -3382,14 +3371,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && DoesKMove)
           K->setMetadata(Kind,
             MDNode::getMostGenericAlignmentOrDereferenceable(JMD, KMD));
-        break;
-      case LLVMContext::MD_memprof:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMergedMemProfMetadata(KMD, JMD));
-        break;
-      case LLVMContext::MD_callsite:
-        if (!AAOnly)
-          K->setMetadata(Kind, MDNode::getMergedCallsiteMetadata(KMD, JMD));
         break;
       case LLVMContext::MD_preserve_access_index:
         // Preserve !preserve.access.index in K.
@@ -3403,10 +3384,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !nontemporal if it is present on both instructions.
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_prof:
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
         break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
@@ -3433,6 +3410,36 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (JMMRA || KMMRA) {
     K->setMetadata(LLVMContext::MD_mmra,
                    MMRAMetadata::combine(K->getContext(), JMMRA, KMMRA));
+  }
+
+  // Merge memprof metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JMemProf = J->getMetadata(LLVMContext::MD_memprof);
+  auto *KMemProf = K->getMetadata(LLVMContext::MD_memprof);
+  if (!AAOnly && (JMemProf || KMemProf)) {
+    K->setMetadata(LLVMContext::MD_memprof,
+                   MDNode::getMergedMemProfMetadata(KMemProf, JMemProf));
+  }
+
+  // Merge callsite metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JCallSite = J->getMetadata(LLVMContext::MD_callsite);
+  auto *KCallSite = K->getMetadata(LLVMContext::MD_callsite);
+  if (!AAOnly && (JCallSite || KCallSite)) {
+    K->setMetadata(LLVMContext::MD_callsite,
+                   MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
+  }
+
+  // Merge prof metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JProf = J->getMetadata(LLVMContext::MD_prof);
+  auto *KProf = K->getMetadata(LLVMContext::MD_prof);
+  if (!AAOnly && (JProf || KProf)) {
+    K->setMetadata(LLVMContext::MD_prof,
+                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 
@@ -3474,6 +3481,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
+    case LLVMContext::MD_noalias_addrspace:
       // All of these directly apply.
       Dest.setMetadata(ID, N);
       break;
@@ -4307,9 +4315,9 @@ Value *llvm::invertCondition(Value *Condition) {
   auto *Inverted =
       BinaryOperator::CreateNot(Condition, Condition->getName() + ".inv");
   if (Inst && !isa<PHINode>(Inst))
-    Inverted->insertAfter(Inst);
+    Inverted->insertAfter(Inst->getIterator());
   else
-    Inverted->insertBefore(&*Parent->getFirstInsertionPt());
+    Inverted->insertBefore(Parent->getFirstInsertionPt());
   return Inverted;
 }
 

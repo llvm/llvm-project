@@ -22,7 +22,7 @@ MODULE_ANALYSIS("callgraph", CallGraphAnalysis())
 MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
 MODULE_ANALYSIS("ctx-prof-analysis", CtxProfAnalysis())
 MODULE_ANALYSIS("dxil-metadata", DXILMetadataAnalysis())
-MODULE_ANALYSIS("dxil-resource-binding", DXILResourceBindingAnalysis())
+MODULE_ANALYSIS("dxil-resources", DXILResourceAnalysis())
 MODULE_ANALYSIS("dxil-resource-type", DXILResourceTypeAnalysis())
 MODULE_ANALYSIS("inline-advisor", InlineAdvisorAnalysis())
 MODULE_ANALYSIS("ir-similarity", IRSimilarityAnalysis())
@@ -61,7 +61,10 @@ MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("ctx-instr-gen",
             PGOInstrumentationGen(PGOInstrumentationType::CTXPROF))
-MODULE_PASS("ctx-prof-flatten", PGOCtxProfFlatteningPass())
+MODULE_PASS("ctx-prof-flatten", PGOCtxProfFlatteningPass(/*IsPreThinlink=*/false))
+MODULE_PASS("ctx-prof-flatten-prethinlink",
+            PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true))
+MODULE_PASS("noinline-nonprevailing", NoinlineNonPrevailing())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
@@ -87,7 +90,6 @@ MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
 MODULE_PASS("inliner-wrapper-no-mandatory-first",
             ModuleInlinerWrapperPass(getInlineParams(), false))
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
-MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfilingLoweringPass())
 MODULE_PASS("ctx-instr-lower", PGOCtxProfLoweringPass())
 MODULE_PASS("print<ctx-prof-analysis>", CtxProfAnalysisPrinterPass(errs()))
@@ -98,6 +100,7 @@ MODULE_PASS("lower-emutls", LowerEmuTLSPass())
 MODULE_PASS("lower-global-dtors", LowerGlobalDtorsPass())
 MODULE_PASS("lower-ifunc", LowerIFuncPass())
 MODULE_PASS("lowertypetests", LowerTypeTestsPass())
+MODULE_PASS("fatlto-cleanup", FatLtoCleanup())
 MODULE_PASS("pgo-force-function-attrs", PGOForceFunctionAttrsPass(PGOOpt ? PGOOpt->ColdOptType : PGOOptions::ColdFuncOpt::Default))
 MODULE_PASS("memprof-context-disambiguation", MemProfContextDisambiguation())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
@@ -127,8 +130,7 @@ MODULE_PASS("print-must-be-executed-contexts",
 MODULE_PASS("print-profile-summary", ProfileSummaryPrinterPass(errs()))
 MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(errs()))
 MODULE_PASS("print<dxil-metadata>", DXILMetadataAnalysisPrinterPass(errs()))
-MODULE_PASS("print<dxil-resource-binding>",
-            DXILResourceBindingPrinterPass(errs()))
+MODULE_PASS("print<dxil-resources>", DXILResourcePrinterPass(errs()))
 MODULE_PASS("print<inline-advisor>", InlineAdvisorAnalysisPrinterPass(errs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(errs()))
 MODULE_PASS("print<reg-usage>", PhysicalRegisterUsageInfoPrinterPass(errs()))
@@ -153,6 +155,7 @@ MODULE_PASS("strip-dead-prototypes", StripDeadPrototypesPass())
 MODULE_PASS("strip-debug-declare", StripDebugDeclarePass())
 MODULE_PASS("strip-nondebug", StripNonDebugSymbolsPass())
 MODULE_PASS("strip-nonlinetable-debuginfo", StripNonLineTableDebugInfoPass())
+MODULE_PASS("strip-dead-cg-profile", StripDeadCGProfilePass())
 MODULE_PASS("trigger-crash-module", TriggerCrashModulePass())
 MODULE_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MODULE_PASS("tsan-module", ModuleThreadSanitizerPass())
@@ -177,9 +180,10 @@ MODULE_PASS_WITH_PARAMS(
     "global-merge", "GlobalMergePass",
     [TM = TM](GlobalMergeOptions Opts) { return GlobalMergePass(TM, Opts); },
     parseGlobalMergeOptions,
-    "group-by-use;ignore-single-use;max-offset=N;merge-const;merge-external;"
-    "no-group-by-use;no-ignore-single-use;no-merge-const;no-merge-external;"
-    "size-only")
+    "group-by-use;ignore-single-use;max-offset=N;merge-const;"
+    "merge-const-aggressive;merge-external;no-group-by-use;"
+    "no-ignore-single-use;no-merge-const;no-merge-const-aggressive;"
+    "no-merge-external;size-only")
 MODULE_PASS_WITH_PARAMS(
     "embed-bitcode", "EmbedBitcodePass",
     [](EmbedBitcodeOptions Opts) { return EmbedBitcodePass(Opts); },
@@ -288,6 +292,7 @@ FUNCTION_ANALYSIS("debug-ata", DebugAssignmentTrackingAnalysis())
 FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
 FUNCTION_ANALYSIS("domfrontier", DominanceFrontierAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
+FUNCTION_ANALYSIS("ephemerals", EphemeralValuesAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
 FUNCTION_ANALYSIS("machine-function-info", MachineFunctionAnalysis(TM))
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
@@ -365,7 +370,7 @@ FUNCTION_PASS("dot-post-dom-only", PostDomOnlyPrinter())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("dwarf-eh-prepare", DwarfEHPreparePass(TM))
 FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM))
-FUNCTION_PASS("expand-large-fp-convert", ExpandLargeFpConvertPass(TM))
+FUNCTION_PASS("expand-fp", ExpandFpPass(TM))
 FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass(TM))
 FUNCTION_PASS("extra-vector-passes",
                   ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
@@ -391,9 +396,9 @@ FUNCTION_PASS("irce", IRCEPass())
 FUNCTION_PASS("jump-threading", JumpThreadingPass())
 FUNCTION_PASS("jump-table-to-switch", JumpTableToSwitchPass());
 FUNCTION_PASS("kcfi", KCFIPass())
+FUNCTION_PASS("kernel-info", KernelInfoPrinter(TM))
 FUNCTION_PASS("lcssa", LCSSAPass())
 FUNCTION_PASS("libcalls-shrinkwrap", LibCallsShrinkWrapPass())
-FUNCTION_PASS("lint", LintPass())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
 FUNCTION_PASS("loop-data-prefetch", LoopDataPrefetchPass())
 FUNCTION_PASS("loop-distribute", LoopDistributePass())
@@ -402,7 +407,6 @@ FUNCTION_PASS("loop-load-elim", LoopLoadEliminationPass())
 FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("loop-sink", LoopSinkPass())
 FUNCTION_PASS("loop-versioning", LoopVersioningPass())
-FUNCTION_PASS("lower-allow-check", LowerAllowCheckPass())
 FUNCTION_PASS("lower-atomic", LowerAtomicPass())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
@@ -420,7 +424,6 @@ FUNCTION_PASS("move-auto-init", MoveAutoInitPass())
 FUNCTION_PASS("nary-reassociate", NaryReassociatePass())
 FUNCTION_PASS("newgvn", NewGVNPass())
 FUNCTION_PASS("no-op-function", NoOpFunctionPass())
-FUNCTION_PASS("normalize", IRNormalizerPass())
 FUNCTION_PASS("objc-arc", ObjCARCOptPass())
 FUNCTION_PASS("objc-arc-contract", ObjCARCContractPass())
 FUNCTION_PASS("objc-arc-expand", ObjCARCExpandPass())
@@ -541,6 +544,11 @@ FUNCTION_PASS_WITH_PARAMS(
     "no-use-loop-info;use-loop-info;no-verify-fixpoint;verify-fixpoint;"
     "max-iterations=N")
 FUNCTION_PASS_WITH_PARAMS(
+    "lint", "LintPass",
+    [](bool AbortOnError) { return LintPass(AbortOnError); },
+    parseLintOptions,
+    "abort-on-error")
+FUNCTION_PASS_WITH_PARAMS(
     "loop-unroll", "LoopUnrollPass",
     [](LoopUnrollOptions Opts) { return LoopUnrollPass(Opts); },
     parseLoopUnrollOptions,
@@ -554,9 +562,18 @@ FUNCTION_PASS_WITH_PARAMS(
     "no-interleave-forced-only;interleave-forced-only;no-vectorize-forced-only;"
     "vectorize-forced-only")
 FUNCTION_PASS_WITH_PARAMS(
+    "lower-allow-check", "LowerAllowCheckPass",
+    [](LowerAllowCheckPass::Options Opts) { return LowerAllowCheckPass(Opts); },
+    parseLowerAllowCheckPassOptions, "")
+FUNCTION_PASS_WITH_PARAMS(
     "lower-matrix-intrinsics", "LowerMatrixIntrinsicsPass",
     [](bool Minimal) { return LowerMatrixIntrinsicsPass(Minimal); },
     parseLowerMatrixIntrinsicsPassOptions, "minimal")
+FUNCTION_PASS_WITH_PARAMS(
+    "normalize", "IRNormalizerPass",
+    [](IRNormalizerOptions Options) { return IRNormalizerPass(Options); },
+    parseIRNormalizerPassOptions,
+    "no-preserve-order;preserve-order;no-rename-all;rename-all;no-fold-all;fold-all;no-reorder-operands;reorder-operands")
 FUNCTION_PASS_WITH_PARAMS(
     "mldst-motion", "MergedLoadStoreMotionPass",
     [](MergedLoadStoreMotionOptions Opts) {

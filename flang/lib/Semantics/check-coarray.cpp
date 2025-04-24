@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-coarray.h"
+#include "definable.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/message.h"
@@ -62,12 +63,49 @@ private:
   parser::CharBlock criticalSourcePosition_;
 };
 
+class ChangeTeamBodyEnforce {
+public:
+  ChangeTeamBodyEnforce(
+      SemanticsContext &context, parser::CharBlock changeTeamSourcePosition)
+      : context_{context}, changeTeamSourcePosition_{changeTeamSourcePosition} {
+  }
+  std::set<parser::Label> labels() { return labels_; }
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  template <typename T> bool Pre(const parser::Statement<T> &statement) {
+    currentStatementSourcePosition_ = statement.source;
+    if (statement.label.has_value()) {
+      labels_.insert(*statement.label);
+    }
+    return true;
+  }
+
+  void Post(const parser::ReturnStmt &) {
+    context_
+        .Say(currentStatementSourcePosition_,
+            "RETURN statement is not allowed in a CHANGE TEAM construct"_err_en_US)
+        .Attach(
+            changeTeamSourcePosition_, "Enclosing CHANGE TEAM construct"_en_US);
+  }
+
+private:
+  SemanticsContext &context_;
+  std::set<parser::Label> labels_;
+  parser::CharBlock currentStatementSourcePosition_;
+  parser::CharBlock changeTeamSourcePosition_;
+};
+
 template <typename T>
-static void CheckTeamType(SemanticsContext &context, const T &x) {
+static void CheckTeamType(
+    SemanticsContext &context, const T &x, bool mustBeVariable = false) {
   if (const auto *expr{GetExpr(context, x)}) {
     if (!IsTeamType(evaluate::GetDerivedTypeSpec(expr->GetType()))) {
       context.Say(parser::FindSourceLocation(x), // C1114
           "Team value must be of type TEAM_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else if (mustBeVariable && !IsVariable(*expr)) {
+      context.Say(parser::FindSourceLocation(x),
+          "Team must be a variable in this context"_err_en_US);
     }
   }
 }
@@ -96,34 +134,37 @@ static void CheckCoindexedStatOrErrmsg(SemanticsContext &context,
   Fortran::common::visit(CoindexedCheck, statOrErrmsg.u);
 }
 
+static void CheckSyncStat(SemanticsContext &context,
+    const parser::StatOrErrmsg &statOrErrmsg, bool &gotStat, bool &gotMsg) {
+  common::visit(
+      common::visitors{
+          [&](const parser::StatVariable &stat) {
+            if (gotStat) {
+              context.Say( // C1172
+                  "The stat-variable in a sync-stat-list may not be repeated"_err_en_US);
+            }
+            gotStat = true;
+          },
+          [&](const parser::MsgVariable &var) {
+            WarnOnDeferredLengthCharacterScalar(context, GetExpr(context, var),
+                var.v.thing.thing.GetSource(), "ERRMSG=");
+            if (gotMsg) {
+              context.Say( // C1172
+                  "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
+            }
+            gotMsg = true;
+          },
+      },
+      statOrErrmsg.u);
+
+  CheckCoindexedStatOrErrmsg(context, statOrErrmsg, "sync-stat-list");
+}
+
 static void CheckSyncStatList(
     SemanticsContext &context, const std::list<parser::StatOrErrmsg> &list) {
   bool gotStat{false}, gotMsg{false};
-
   for (const parser::StatOrErrmsg &statOrErrmsg : list) {
-    common::visit(
-        common::visitors{
-            [&](const parser::StatVariable &stat) {
-              if (gotStat) {
-                context.Say( // C1172
-                    "The stat-variable in a sync-stat-list may not be repeated"_err_en_US);
-              }
-              gotStat = true;
-            },
-            [&](const parser::MsgVariable &var) {
-              WarnOnDeferredLengthCharacterScalar(context,
-                  GetExpr(context, var), var.v.thing.thing.GetSource(),
-                  "ERRMSG=");
-              if (gotMsg) {
-                context.Say( // C1172
-                    "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
-              }
-              gotMsg = true;
-            },
-        },
-        statOrErrmsg.u);
-
-    CheckCoindexedStatOrErrmsg(context, statOrErrmsg, "sync-stat-list");
+    CheckSyncStat(context, statOrErrmsg, gotStat, gotMsg);
   }
 }
 
@@ -133,9 +174,6 @@ static void CheckEventVariable(
     if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
       context.Say(parser::FindSourceLocation(eventVar),
           "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
-    } else if (!evaluate::IsCoarray(*expr)) { // C1604
-      context.Say(parser::FindSourceLocation(eventVar),
-          "The event-variable must be a coarray"_err_en_US);
     }
   }
 }
@@ -156,13 +194,32 @@ void CoarrayChecker::Leave(const parser::SyncAllStmt &x) {
 
 void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
   CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
-
   const auto &imageSet{std::get<parser::SyncImagesStmt::ImageSet>(x.t)};
   if (const auto *intExpr{std::get_if<parser::IntExpr>(&imageSet.u)}) {
     if (const auto *expr{GetExpr(context_, *intExpr)}) {
       if (expr->Rank() > 1) {
         context_.Say(parser::FindSourceLocation(imageSet), // C1174
             "An image-set that is an int-expr must be a scalar or a rank-one array"_err_en_US);
+      }
+      if (const auto *someInt{
+              std::get_if<evaluate::Expr<evaluate::SomeInteger>>(&expr->u)};
+          someInt && evaluate::IsActuallyConstant(*someInt)) {
+        auto converted{evaluate::Fold(context_.foldingContext(),
+            evaluate::ConvertToType<evaluate::SubscriptInteger>(
+                common::Clone(*someInt)))};
+        if (const auto *cst{
+                evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
+                    converted)}) {
+          for (auto elt : cst->values()) {
+            auto n{elt.ToInt64()};
+            if (n < 1) {
+              context_.Say(parser::FindSourceLocation(imageSet),
+                  "Image number %jd in the image-set is not valid"_err_en_US,
+                  std::intmax_t{n});
+              break;
+            }
+          }
+        }
       }
     }
   }
@@ -263,7 +320,51 @@ void CoarrayChecker::Leave(const parser::EventWaitStmt &x) {
       context_, std::get<std::list<parser::EventWaitSpec>>(x.t));
 }
 
+static void CheckLockVariable(
+    SemanticsContext &context, const parser::LockVariable &lockVar) {
+  if (const SomeExpr * expr{GetExpr(lockVar)}) {
+    if (auto dyType{expr->GetType()}) {
+      auto at{parser::FindSourceLocation(lockVar)};
+      if (dyType->category() != TypeCategory::Derived ||
+          dyType->IsUnlimitedPolymorphic() ||
+          !IsLockType(&dyType->GetDerivedTypeSpec())) {
+        context.Say(at,
+            "Lock variable must have type LOCK_TYPE from ISO_FORTRAN_ENV"_err_en_US);
+      } else if (auto whyNot{WhyNotDefinable(at, context.FindScope(at),
+                     {DefinabilityFlag::DoNotNoteDefinition,
+                         DefinabilityFlag::AllowEventLockOrNotifyType},
+                     *expr)}) {
+        whyNot->set_severity(parser::Severity::Because);
+        context.Say(at, "Lock variable is not definable"_err_en_US)
+            .Attach(std::move(*whyNot));
+      }
+    }
+  }
+}
+
+void CoarrayChecker::Leave(const parser::LockStmt &x) {
+  CheckLockVariable(context_, std::get<parser::LockVariable>(x.t));
+  bool gotAcquired{false}, gotStat{false}, gotMsg{false};
+  for (const parser::LockStmt::LockStat &lockStat :
+      std::get<std::list<parser::LockStmt::LockStat>>(x.t)) {
+    if (const auto *statOrErrmsg{
+            std::get_if<parser::StatOrErrmsg>(&lockStat.u)}) {
+      CheckSyncStat(context_, *statOrErrmsg, gotStat, gotMsg);
+    } else {
+      CHECK(std::holds_alternative<
+          parser::Scalar<parser::Logical<parser::Variable>>>(lockStat.u));
+      if (gotAcquired) {
+        context_.Say(parser::FindSourceLocation(lockStat),
+            "Multiple ACQUIRED_LOCK specifiers"_err_en_US);
+      } else {
+        gotAcquired = true;
+      }
+    }
+  }
+}
+
 void CoarrayChecker::Leave(const parser::UnlockStmt &x) {
+  CheckLockVariable(context_, std::get<parser::LockVariable>(x.t));
   CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
 }
 
@@ -311,20 +412,40 @@ void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {
 }
 
 void CoarrayChecker::Leave(const parser::FormTeamStmt &x) {
-  CheckTeamType(context_, std::get<parser::TeamVariable>(x.t));
+  CheckTeamType(
+      context_, std::get<parser::TeamVariable>(x.t), /*mustBeVariable=*/true);
+  for (const auto &spec :
+      std::get<std::list<parser::FormTeamStmt::FormTeamSpec>>(x.t)) {
+    if (const auto *statOrErrmsg{std::get_if<parser::StatOrErrmsg>(&spec.u)}) {
+      CheckCoindexedStatOrErrmsg(
+          context_, *statOrErrmsg, "form-team-spec-list");
+    }
+  }
 }
 
 void CoarrayChecker::Enter(const parser::CriticalConstruct &x) {
   auto &criticalStmt{std::get<parser::Statement<parser::CriticalStmt>>(x.t)};
-
   const parser::Block &block{std::get<parser::Block>(x.t)};
   CriticalBodyEnforce criticalBodyEnforce{context_, criticalStmt.source};
   parser::Walk(block, criticalBodyEnforce);
-
-  // C1119
+  parser::Walk(std::get<parser::Statement<parser::EndCriticalStmt>>(x.t),
+      criticalBodyEnforce);
   LabelEnforce criticalLabelEnforce{
       context_, criticalBodyEnforce.labels(), criticalStmt.source, "CRITICAL"};
   parser::Walk(block, criticalLabelEnforce);
+}
+
+void CoarrayChecker::Enter(const parser::ChangeTeamConstruct &x) {
+  auto &changeTeamStmt{
+      std::get<parser::Statement<parser::ChangeTeamStmt>>(x.t)};
+  const parser::Block &block{std::get<parser::Block>(x.t)};
+  ChangeTeamBodyEnforce changeTeamBodyEnforce{context_, changeTeamStmt.source};
+  parser::Walk(block, changeTeamBodyEnforce);
+  parser::Walk(std::get<parser::Statement<parser::EndChangeTeamStmt>>(x.t),
+      changeTeamBodyEnforce);
+  LabelEnforce changeTeamLabelEnforce{context_, changeTeamBodyEnforce.labels(),
+      changeTeamStmt.source, "CHANGE TEAM"};
+  parser::Walk(block, changeTeamLabelEnforce);
 }
 
 // Check that coarray names and selector names are all distinct.

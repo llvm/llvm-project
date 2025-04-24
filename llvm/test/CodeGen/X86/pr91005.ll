@@ -4,7 +4,6 @@
 define void @PR91005(ptr %0) minsize {
 ; CHECK-LABEL: PR91005:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
@@ -16,8 +15,7 @@ define void @PR91005(ptr %0) minsize {
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; CHECK-NEXT:    vmovd %xmm0, %eax
-; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; CHECK-NEXT:  .LBB0_2: # %common.ret
 ; CHECK-NEXT:    retq
   %2 = bitcast <2 x half> poison to <2 x i16>

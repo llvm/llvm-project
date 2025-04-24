@@ -1533,7 +1533,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // All of the below are only true if the loaded pointer is produced
   // by the dependent instruction.
   if (LoadPtr != lookupOperandLeader(DepInst) &&
-      !AA->isMustAlias(LoadPtr, DepInst))
+      DepInst->getType()->isPointerTy() && !AA->isMustAlias(LoadPtr, DepInst))
     return nullptr;
   // If this load really doesn't depend on anything, then we must be loading an
   // undef value.  This can happen when loading for a fresh allocation with no
@@ -2800,7 +2800,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
       Instruction *ValueOp = I->clone();
       // Emit the temporal instruction in the predecessor basic block where the
       // corresponding value is defined.
-      ValueOp->insertBefore(PredBB->getTerminator());
+      ValueOp->insertBefore(PredBB->getTerminator()->getIterator());
       if (MemAccess)
         TempToMemory.insert({ValueOp, MemAccess});
       bool SafeForPHIOfOps = true;
@@ -2840,7 +2840,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
 
         return nullptr;
       }
-      Deps.insert(CurrentDeps.begin(), CurrentDeps.end());
+      Deps.insert_range(CurrentDeps);
     } else {
       LLVM_DEBUG(dbgs() << "Skipping phi of ops operand for incoming block "
                         << getBlockName(PredBB)
@@ -3056,13 +3056,8 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
 
 void NewGVN::updateProcessedCount(const Value *V) {
 #ifndef NDEBUG
-  if (ProcessedCount.count(V) == 0) {
-    ProcessedCount.insert({V, 1});
-  } else {
-    ++ProcessedCount[V];
-    assert(ProcessedCount[V] < 100 &&
-           "Seem to have processed the same Value a lot");
-  }
+  assert(++ProcessedCount[V] < 100 &&
+         "Seem to have processed the same Value a lot");
 #endif
 }
 
@@ -3200,8 +3195,7 @@ bool NewGVN::singleReachablePHIPath(
   };
   auto FilteredPhiArgs =
       make_filter_range(MP->operands(), ReachableOperandPred);
-  SmallVector<const Value *, 32> OperandList;
-  llvm::copy(FilteredPhiArgs, std::back_inserter(OperandList));
+  SmallVector<const Value *, 32> OperandList(FilteredPhiArgs);
   bool Okay = all_equal(OperandList);
   if (Okay)
     return singleReachablePHIPath(Visited, cast<MemoryAccess>(OperandList[0]),
@@ -4012,7 +4006,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
             LLVM_DEBUG(dbgs() << "Inserting fully real phi of ops" << *Def
                               << " into block "
                               << getBlockName(getBlockForValue(Def)) << "\n");
-            PN->insertBefore(&DefBlock->front());
+            PN->insertBefore(DefBlock->begin());
             Def = PN;
             NumGVNPHIOfOpsEliminations++;
           }

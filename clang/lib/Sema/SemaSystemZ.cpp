@@ -38,6 +38,7 @@ bool SemaSystemZ::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,
   switch (BuiltinID) {
   default: return false;
   case SystemZ::BI__builtin_s390_lcbb: i = 1; l = 0; u = 15; break;
+  case SystemZ::BI__builtin_s390_veval:
   case SystemZ::BI__builtin_s390_verimb:
   case SystemZ::BI__builtin_s390_verimh:
   case SystemZ::BI__builtin_s390_verimf:

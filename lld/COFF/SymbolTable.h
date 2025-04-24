@@ -14,6 +14,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -32,6 +33,15 @@ class ImportThunkChunk;
 class LazyArchive;
 class SectionChunk;
 class Symbol;
+
+// This data structure is instantiated for each -wrap option.
+struct WrappedSymbol {
+  Symbol *sym;
+  Symbol *real;
+  Symbol *wrap;
+};
+
+struct UndefinedDiag;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -57,10 +67,7 @@ public:
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
   // symbols and warn about imported local symbols.
-  // Returns whether more files might need to be linked in to resolve lazy
-  // symbols, in which case the caller is expected to call the function again
-  // after linking those files.
-  bool resolveRemainingUndefines();
+  void resolveRemainingUndefines();
 
   // Load lazy objects that are needed for MinGW automatic import and for
   // doing stdcall fixups.
@@ -149,15 +156,45 @@ public:
   // A list of EC EXP+ symbols.
   std::vector<Symbol *> expSymbols;
 
+  // A list of DLL exports.
+  std::vector<Export> exports;
+  llvm::DenseSet<StringRef> directivesExports;
+  bool hadExplicitExports;
+
+  Chunk *edataStart = nullptr;
+  Chunk *edataEnd = nullptr;
+
+  Symbol *delayLoadHelper = nullptr;
+  Chunk *tailMergeUnwindInfoChunk = nullptr;
+
+  // A list of wrapped symbols.
+  std::vector<WrappedSymbol> wrapped;
+
+  // Used for /alternatename.
+  std::map<StringRef, StringRef> alternateNames;
+
+  // Used for /aligncomm.
+  std::map<std::string, int> alignComm;
+
+  void fixupExports();
+  void assignExportOrdinals();
+  void parseModuleDefs(StringRef path);
+  void parseAlternateName(StringRef);
+  void parseAligncomm(StringRef);
+
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
     for (auto &pair : symMap)
       callback(pair.second);
   }
 
+  std::vector<BitcodeFile *> bitcodeFileInstances;
+
   DefinedRegular *loadConfigSym = nullptr;
   uint32_t loadConfigSize = 0;
   void initializeLoadConfig();
+
+  std::string printSymbol(Symbol *sym) const;
 
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
@@ -175,6 +212,12 @@ private:
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
+
+  void
+  reportProblemSymbols(const llvm::SmallPtrSetImpl<Symbol *> &undefs,
+                       const llvm::DenseMap<Symbol *, Symbol *> *localImports,
+                       bool needBitcodeFiles);
+  void reportUndefinedSymbol(const UndefinedDiag &undefDiag);
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

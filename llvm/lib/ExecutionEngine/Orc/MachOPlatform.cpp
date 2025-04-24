@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
@@ -480,6 +481,15 @@ MachOPlatform::MachOPlatform(
   ObjLinkingLayer.addPlugin(std::make_unique<MachOPlatformPlugin>(*this));
   PlatformJD.addGenerator(std::move(OrcRuntimeGenerator));
 
+  {
+    // Check for force-eh-frame
+    std::optional<bool> ForceEHFrames;
+    if ((Err = ES.getBootstrapMapValue<bool, bool>("darwin-use-ehframes-only",
+                                                   ForceEHFrames)))
+      return;
+    this->ForceEHFrames = ForceEHFrames.has_value() ? *ForceEHFrames : false;
+  }
+
   BootstrapInfo BI;
   Bootstrap = &BI;
 
@@ -583,6 +593,12 @@ MachOPlatform::MachOPlatform(
     return;
 
   // (5) Associate runtime support functions.
+  // TODO: Consider moving this above (4) to make runtime support functions
+  //       available to the bootstrap completion graph. We'd just need to be
+  //       sure that the runtime support functions are fully usable before any
+  //       bootstrap completion actions use them (e.g. the ORC runtime
+  //       macho_platform object would have to have been created and
+  //       initialized).
   if ((Err = associateRuntimeSupportFunctions()))
     return;
 }
@@ -619,11 +635,12 @@ void MachOPlatform::pushInitializersLoop(
       Worklist.pop_back();
 
       // If we've already visited this JITDylib on this iteration then continue.
-      if (JDDepMap.count(DepJD))
+      auto [It, Inserted] = JDDepMap.try_emplace(DepJD);
+      if (!Inserted)
         continue;
 
       // Add dep info.
-      auto &DM = JDDepMap[DepJD];
+      auto &DM = It->second;
       DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
         for (auto &KV : O) {
           if (KV.first == DepJD)
@@ -788,13 +805,34 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
 
   bool InBootstrapPhase = false;
 
-  if (LLVM_UNLIKELY(&MR.getTargetJITDylib() == &MP.PlatformJD)) {
+  ExecutorAddr HeaderAddr;
+  {
     std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-    if (MP.Bootstrap) {
-      InBootstrapPhase = true;
-      ++MP.Bootstrap->ActiveGraphs;
+    if (LLVM_UNLIKELY(&MR.getTargetJITDylib() == &MP.PlatformJD)) {
+      if (MP.Bootstrap) {
+        InBootstrapPhase = true;
+        ++MP.Bootstrap->ActiveGraphs;
+      }
     }
+
+    // Get the dso-base address if available.
+    auto I = MP.JITDylibToHeaderAddr.find(&MR.getTargetJITDylib());
+    if (I != MP.JITDylibToHeaderAddr.end())
+      HeaderAddr = I->second;
   }
+
+  // If we're forcing eh-frame use then discard the compact-unwind section
+  // immediately to prevent FDEs from being stripped.
+  if (MP.ForceEHFrames)
+    if (auto *CUSec = LG.findSectionByName(MachOCompactUnwindSectionName))
+      LG.removeSection(*CUSec);
+
+  // Point the libunwind dso-base absolute symbol at the header for the
+  // JITDylib. This will prevent us from synthesizing a new header for
+  // every object.
+  if (HeaderAddr)
+    LG.addAbsoluteSymbol("__jitlink$libunwind_dso_base", HeaderAddr, 0,
+                         Linkage::Strong, Scope::Local, true);
 
   // If we're in the bootstrap phase then increment the active graphs.
   if (LLVM_UNLIKELY(InBootstrapPhase))
@@ -851,10 +889,11 @@ void MachOPlatform::MachOPlatformPlugin::modifyPassConfig(
 
   // Add a pass to register the final addresses of any special sections in the
   // object with the runtime.
-  Config.PostAllocationPasses.push_back(
-      [this, &JD = MR.getTargetJITDylib(), InBootstrapPhase](LinkGraph &G) {
-        return registerObjectPlatformSections(G, JD, InBootstrapPhase);
-      });
+  Config.PostAllocationPasses.push_back([this, &JD = MR.getTargetJITDylib(),
+                                         HeaderAddr,
+                                         InBootstrapPhase](LinkGraph &G) {
+    return registerObjectPlatformSections(G, JD, HeaderAddr, InBootstrapPhase);
+  });
 
   // If we're in the bootstrap phase then steal allocation actions and then
   // decrement the active graphs.
@@ -1048,7 +1087,7 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
       for (auto *B : Sec.blocks())
         for (auto &E : B->edges())
           if (E.getTarget().isDefined() &&
-              &E.getTarget().getBlock().getSection() == ObjCImageInfo)
+              &E.getTarget().getSection() == ObjCImageInfo)
             return make_error<StringError>(MachOObjCImageInfoSectionName +
                                                " is referenced within file " +
                                                G.getName(),
@@ -1234,7 +1273,8 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
   // ScanSection records a section range and adds any executable blocks that
   // that section points to to the CodeBlocks vector.
   SmallVector<Block *> CodeBlocks;
-  auto ScanUnwindInfoSection = [&](Section &Sec, ExecutorAddrRange &SecRange) {
+  auto ScanUnwindInfoSection = [&](Section &Sec, ExecutorAddrRange &SecRange,
+                                   auto AddCodeBlocks) {
     if (Sec.blocks().empty())
       return;
     SecRange = (*Sec.blocks().begin())->getRange();
@@ -1242,23 +1282,31 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
       auto R = B->getRange();
       SecRange.Start = std::min(SecRange.Start, R.Start);
       SecRange.End = std::max(SecRange.End, R.End);
-      for (auto &E : B->edges()) {
-        if (!E.getTarget().isDefined())
-          continue;
-        auto &TargetBlock = E.getTarget().getBlock();
-        auto &TargetSection = TargetBlock.getSection();
-        if ((TargetSection.getMemProt() & MemProt::Exec) == MemProt::Exec)
-          CodeBlocks.push_back(&TargetBlock);
-      }
+      AddCodeBlocks(*B);
     }
   };
 
-  if (Section *EHFrameSec = G.findSectionByName(MachOEHFrameSectionName))
-    ScanUnwindInfoSection(*EHFrameSec, US.DwarfSection);
+  if (Section *EHFrameSec = G.findSectionByName(MachOEHFrameSectionName)) {
+    ScanUnwindInfoSection(*EHFrameSec, US.DwarfSection, [&](Block &B) {
+      if (auto *Fn = jitlink::EHFrameCFIBlockInspector::FromEdgeScan(B)
+                         .getPCBeginEdge())
+        if (Fn->getTarget().isDefined())
+          CodeBlocks.push_back(&Fn->getTarget().getBlock());
+    });
+  }
 
-  if (Section *CUInfoSec =
-          G.findSectionByName(MachOCompactUnwindInfoSectionName))
-    ScanUnwindInfoSection(*CUInfoSec, US.CompactUnwindSection);
+  if (Section *CUInfoSec = G.findSectionByName(MachOUnwindInfoSectionName)) {
+    ScanUnwindInfoSection(
+        *CUInfoSec, US.CompactUnwindSection, [&](Block &B) {
+          for (auto &E : B.edges()) {
+            assert(E.getTarget().isDefined() &&
+                   "unwind-info record edge has external target");
+            assert(E.getKind() == Edge::KeepAlive &&
+                   "unwind-info record has unexpected edge kind");
+            CodeBlocks.push_back(&E.getTarget().getBlock());
+          }
+        });
+  }
 
   // If we didn't find any pointed-to code-blocks then there's no need to
   // register any info.
@@ -1301,7 +1349,8 @@ MachOPlatform::MachOPlatformPlugin::findUnwindSectionInfo(
 }
 
 Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
-    jitlink::LinkGraph &G, JITDylib &JD, bool InBootstrapPhase) {
+    jitlink::LinkGraph &G, JITDylib &JD, ExecutorAddr HeaderAddr,
+    bool InBootstrapPhase) {
 
   // Get a pointer to the thread data section if there is one. It will be used
   // below.
@@ -1372,21 +1421,12 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
         dbgs() << "  " << KV.first << ": " << KV.second << "\n";
     });
 
+    assert(HeaderAddr && "Null header registered for JD");
     using SPSRegisterObjectPlatformSectionsArgs = SPSArgList<
         SPSExecutorAddr,
         SPSOptional<SPSTuple<SPSSequence<SPSExecutorAddrRange>,
                              SPSExecutorAddrRange, SPSExecutorAddrRange>>,
         SPSSequence<SPSTuple<SPSString, SPSExecutorAddrRange>>>;
-
-    ExecutorAddr HeaderAddr;
-    {
-      std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
-      auto I = MP.JITDylibToHeaderAddr.find(&JD);
-      assert(I != MP.JITDylibToHeaderAddr.end() &&
-             "No header registered for JD");
-      assert(I->second && "Null header registered for JD");
-      HeaderAddr = I->second;
-    }
 
     AllocActionCallPair AllocActions = {
         cantFail(
@@ -1636,10 +1676,8 @@ Error MachOPlatform::MachOPlatformPlugin::prepareSymbolTableRegistration(
   // those names.
   {
     SmallVector<jitlink::Symbol *> SymsToProcess;
-    for (auto *Sym : G.defined_symbols())
-      SymsToProcess.push_back(Sym);
-    for (auto *Sym : G.absolute_symbols())
-      SymsToProcess.push_back(Sym);
+    llvm::append_range(SymsToProcess, G.defined_symbols());
+    llvm::append_range(SymsToProcess, G.absolute_symbols());
 
     for (auto *Sym : SymsToProcess) {
       if (!Sym->hasName())
@@ -1723,9 +1761,22 @@ jitlink::Block &createHeaderBlock(MachOPlatform &MOP,
   for (auto &BV : Opts.BuildVersions)
     B.template addLoadCommand<MachO::LC_BUILD_VERSION>(
         BV.Platform, BV.MinOS, BV.SDK, static_cast<uint32_t>(0));
-  for (auto &D : Opts.LoadDylibs)
-    B.template addLoadCommand<MachO::LC_LOAD_DYLIB>(
-        D.Name, D.Timestamp, D.CurrentVersion, D.CompatibilityVersion);
+
+  using LoadKind = MachOPlatform::HeaderOptions::LoadDylibCmd::LoadKind;
+  for (auto &LD : Opts.LoadDylibs) {
+    switch (LD.K) {
+    case LoadKind::Default:
+      B.template addLoadCommand<MachO::LC_LOAD_DYLIB>(
+          LD.D.Name, LD.D.Timestamp, LD.D.CurrentVersion,
+          LD.D.CompatibilityVersion);
+      break;
+    case LoadKind::Weak:
+      B.template addLoadCommand<MachO::LC_LOAD_WEAK_DYLIB>(
+          LD.D.Name, LD.D.Timestamp, LD.D.CurrentVersion,
+          LD.D.CompatibilityVersion);
+      break;
+    }
+  }
   for (auto &P : Opts.RPaths)
     B.template addLoadCommand<MachO::LC_RPATH>(P);
 

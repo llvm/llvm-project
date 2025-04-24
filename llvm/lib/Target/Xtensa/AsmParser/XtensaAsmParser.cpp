@@ -73,6 +73,7 @@ class XtensaAsmParser : public MCTargetAsmParser {
                                SMLoc &EndLoc) override {
     return ParseStatus::NoMatch;
   }
+
   ParseStatus parsePCRelTarget(OperandVector &Operands);
   bool parseLiteralDirective(SMLoc L);
 
@@ -89,6 +90,10 @@ public:
       : MCTargetAsmParser(Options, STI, MII) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
+
+  bool hasWindowed() const {
+    return getSTI().getFeatureBits()[Xtensa::FeatureWindowed];
+  };
 };
 
 // Return true if Expr is in the range [MinValue, MaxValue].
@@ -181,6 +186,11 @@ public:
            ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
   }
 
+  bool isentry_imm12() const {
+    return isImm(0, 32760) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() % 8) == 0);
+  }
+
   bool isUimm4() const { return isImm(0, 15); }
 
   bool isUimm5() const { return isImm(0, 31); }
@@ -197,6 +207,11 @@ public:
   bool isImm1n_15() const { return isImm(1, 15) || isImm(-1, -1); }
 
   bool isImm32n_95() const { return isImm(-32, 95); }
+
+  bool isImm64n_4n() const {
+    return isImm(-64, -4) &&
+           ((cast<MCConstantExpr>(getImm())->getValue() & 0x3) == 0);
+  }
 
   bool isB4const() const {
     if (Kind != Immediate)
@@ -257,6 +272,8 @@ public:
     }
     return false;
   }
+
+  bool isimm7_22() const { return isImm(7, 22); }
 
   /// getStartLoc - Gets location of the first token of this operand
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -376,7 +393,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Xtensa::L32R: {
     const MCSymbolRefExpr *OpExpr =
         static_cast<const MCSymbolRefExpr *>(Inst.getOperand(1).getExpr());
-    XtensaMCExpr::VariantKind Kind = XtensaMCExpr::VK_Xtensa_None;
+    XtensaMCExpr::Specifier Kind = XtensaMCExpr::VK_None;
     const MCExpr *NewOpExpr = XtensaMCExpr::create(OpExpr, Kind, getContext());
     Inst.getOperand(1).setExpr(NewOpExpr);
     break;
@@ -395,10 +412,9 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
         TmpInst.setOpcode(Xtensa::L32R);
         const MCExpr *Value = MCConstantExpr::create(ImmOp64, getContext());
         MCSymbol *Sym = getContext().createTempSymbol();
-        const MCExpr *Expr = MCSymbolRefExpr::create(
-            Sym, MCSymbolRefExpr::VK_None, getContext());
-        const MCExpr *OpExpr = XtensaMCExpr::create(
-            Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+        const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
+        const MCExpr *OpExpr =
+            XtensaMCExpr::create(Expr, XtensaMCExpr::VK_None, getContext());
         TmpInst.addOperand(Inst.getOperand(0));
         MCOperand Op1 = MCOperand::createExpr(OpExpr);
         TmpInst.addOperand(Op1);
@@ -411,10 +427,9 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       TmpInst.setOpcode(Xtensa::L32R);
       const MCExpr *Value = Inst.getOperand(1).getExpr();
       MCSymbol *Sym = getContext().createTempSymbol();
-      const MCExpr *Expr =
-          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
-      const MCExpr *OpExpr = XtensaMCExpr::create(
-          Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
+      const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
+      const MCExpr *OpExpr =
+          XtensaMCExpr::create(Expr, XtensaMCExpr::VK_None, getContext());
       TmpInst.addOperand(Inst.getOperand(0));
       MCOperand Op1 = MCOperand::createExpr(OpExpr);
       TmpInst.addOperand(Op1);
@@ -491,6 +506,12 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm32n_95:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [-32, 95]");
+  case Match_InvalidImm64n_4n:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-64, -4]");
+  case Match_InvalidImm8n_7:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [-8, 7]");
   case Match_InvalidShimm1_31:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [1, 31]");
@@ -515,6 +536,13 @@ bool XtensaAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected immediate in range [0, 60], first 2 bits "
                  "should be zero");
+  case Match_Invalidentry_imm12:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [0, 32760], first 3 bits "
+                 "should be zero");
+  case Match_Invalidimm7_22:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected immediate in range [7, 22]");
   }
 
   report_fatal_error("Unknown match type detected!");
@@ -601,6 +629,10 @@ ParseStatus XtensaAsmParser::parseRegister(OperandVector &Operands,
       getLexer().UnLex(Buf[0]);
     return ParseStatus::NoMatch;
   }
+
+  if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
+    return ParseStatus::NoMatch;
+
   if (HadParens)
     Operands.push_back(XtensaOperand::createToken("(", FirstS));
   SMLoc S = getLoc();
@@ -639,7 +671,7 @@ ParseStatus XtensaAsmParser::parseImmediate(OperandVector &Operands) {
       return ParseStatus::Failure;
 
     MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
     break;
   }
   case AsmToken::Percent:
@@ -702,7 +734,7 @@ bool XtensaAsmParser::ParseInstructionWithSR(ParseInstructionInfo &Info,
     if (RegNo == 0)
       RegNo = MatchRegisterAltName(RegName);
 
-    if (RegNo == 0)
+    if (!Xtensa::checkRegister(RegNo, getSTI().getFeatureBits()))
       return Error(NameLoc, "invalid register name");
 
     // Parse operand

@@ -66,11 +66,7 @@ void test_late() {
   // expected-note@p2.cpp:18 {{'exported' declared here}}
 #endif
 
-  internal = 1;
-#ifndef IMPLEMENTATION
-  // expected-error@-2 {{declaration of 'internal' must be imported from module 'A' before it is required}}
-  // expected-note@p2.cpp:20 {{declaration here is not visible}}
-#endif
+  internal = 1; // expected-error {{use of undeclared identifier 'internal'}}
 
   not_exported_private = 1;
 #ifndef IMPLEMENTATION
@@ -78,11 +74,7 @@ void test_late() {
   // expected-error@-3 {{undeclared identifier}}
 #endif
 
-  internal_private = 1;
-#ifndef IMPLEMENTATION
-  // FIXME: should not be visible here
-  // expected-error@-3 {{undeclared identifier}}
-#endif
+  internal_private = 1; // expected-error {{use of undeclared identifier 'internal_private'}}
 }
 
 #endif

@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestDiagnoseDereferenceFunctionReturn(TestBase):
-    @skipUnlessDarwin
+    @expectedFailureAll(oslist=["windows"])
     @skipIf(
         archs=no_match(["x86_64"])
     )  # <rdar://problem/33842388> frame diagnose doesn't work for armv7 or arm64
@@ -19,9 +19,6 @@ class TestDiagnoseDereferenceFunctionReturn(TestBase):
         TestBase.setUp(self)
         self.build()
         exe = self.getBuildArtifact("a.out")
-        # FIXME: This default changed in lldbtest.py and this test
-        # seems to rely on having it turned off.
-        self.runCmd("settings set target.disable-aslr true")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("thread list", "Thread should be stopped", substrs=["stopped"])

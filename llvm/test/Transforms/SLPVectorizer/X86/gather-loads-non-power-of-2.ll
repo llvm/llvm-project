@@ -5,12 +5,7 @@ define <6 x double> @test(ptr %a) {
 ; CHECK-LABEL: define <6 x double> @test(
 ; CHECK-SAME: ptr [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[A]], i16 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP0]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <6 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x double> [[TMP3]], <6 x double> [[TMP4]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = load <6 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    ret <6 x double> [[TMP5]]
 ;
 entry:

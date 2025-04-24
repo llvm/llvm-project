@@ -25,39 +25,50 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
+  GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
+  from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
+  ensuring compatibility with GNU ld linker.
 
-* ``-z nosectionheader`` has been implemented to omit the section header table.
-  The operation is similar to ``llvm-objcopy --strip-sections``.
-  (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
-* Section ``CLASS`` linker script syntax binds input sections to named classes,
-  which are referenced later one or more times. This provides access to the
-  automatic spilling mechanism of `--enable-non-contiguous-regions` without
-  globally changing the semantics of section matching. It also independently
-  increases the expressive power of linker scripts.
-  (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
-* Supported relocation types for x86-64 target:
-  * ``R_X86_64_CODE_4_GOTPCRELX`` (`#109783 <https://github.com/llvm/llvm-project/pull/109783>`_) (`#116737 <https://github.com/llvm/llvm-project/pull/116737>`_)
-  * ``R_X86_64_CODE_4_GOTTPOFF`` (`#116634 <https://github.com/llvm/llvm-project/pull/116634>`_)
-  * ``R_X86_64_CODE_4_GOTPC32_TLSDESC`` (`#116909 <https://github.com/llvm/llvm-project/pull/116909>`_)
-  * ``R_X86_64_CODE_6_GOTTPOFF``  (`#117675 <https://github.com/llvm/llvm-project/pull/117675>`_)
+* The default Hexagon architecture version in ELF object files produced by
+  lld is changed to v68. This change is only effective when the version is
+  not provided in the command line by the user and cannot be inferred from
+  inputs.
+
+* ``--why-live=<glob>`` prints for each symbol matching ``<glob>`` a chain of
+  items that kept it live during garbage collection. This is inspired by the
+  Mach-O LLD feature of the same name.
+
+* Linker script ``OVERLAY`` descriptions now support virtual memory regions
+  (e.g. ``>region``) and ``NOCROSSREFS``.
+
+* Added ``--xosegment`` and ``--no-xosegment`` flags to control whether to place
+  executable-only and readable-executable sections in the same segment. The
+  default value is ``--no-xosegment``.
+  (`#132412 <https://github.com/llvm/llvm-project/pull/132412>`_)
+
+* For AArch64, added support for the ``SHF_AARCH64_PURECODE`` section flag,
+  which indicates that the section only contains program code and no data.
+  An output section will only have this flag set if all input sections also
+  have it set. (`#125689 <https://github.com/llvm/llvm-project/pull/125689>`_,
+  `#134798 <https://github.com/llvm/llvm-project/pull/134798>`_)
+
+* For AArch64 and ARM, added ``-zexecute-only-report``, which checks for
+  missing ``SHF_AARCH64_PURECODE`` and ``SHF_ARM_PURECODE`` section flags
+  on executable sections.
+  (`#128883 <https://github.com/llvm/llvm-project/pull/128883>`_)
 
 Breaking changes
 ----------------
-
-* Removed support for the (deprecated) `R_RISCV_RVC_LUI` relocation. This
-  was a binutils-internal relocation used during relaxation, and was not
-  emitted by compilers/assemblers.
+* Executable-only and readable-executable sections are now allowed to be placed
+  in the same segment by default. Pass ``--xosegment`` to lld in order to get
+  the old behavior back.
 
 COFF Improvements
 -----------------
-* ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
-* ``/lldsavetemps`` allows saving select intermediate LTO compilation results (e.g. resolution, preopt, promote, internalize, import, opt, precodegen, prelink, combinedindex).
-* ``/machine:arm64ec`` support completed, enabling the linking of ARM64EC images.
-* COFF weak anti-dependency alias symbols are now supported.
 
 MinGW Improvements
 ------------------
-* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
 
 MachO Improvements
 ------------------

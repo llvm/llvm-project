@@ -12,11 +12,12 @@
 #ifndef FORTRAN_EVALUATE_TARGET_H_
 #define FORTRAN_EVALUATE_TARGET_H_
 
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/target-rounding.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
+#include "flang/Support/Fortran.h"
 #include <cstdint>
 
 namespace Fortran::evaluate {
@@ -53,6 +54,13 @@ public:
   // Check if any or all real kinds have flushing control.
   bool hasSubnormalFlushingControl(bool any = false) const;
   void set_hasSubnormalFlushingControl(int kind, bool yes = true);
+
+  // Check if a given real kind has support for raising a nonstandard
+  // ieee_denorm exception.
+  bool hasSubnormalExceptionSupport(int kind) const;
+  // Check if all real kinds have support for the ieee_denorm exception.
+  bool hasSubnormalExceptionSupport() const;
+  void set_hasSubnormalExceptionSupport(int kind, bool yes = true);
 
   Rounding roundingMode() const { return roundingMode_; }
   void set_roundingMode(Rounding);
@@ -124,7 +132,7 @@ public:
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
 private:
-  static constexpr int maxKind{16};
+  static constexpr int maxKind{common::maxKind};
   std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind + 1]{};
   std::uint8_t align_[common::TypeCategory_enumSize][maxKind + 1]{};
   bool isBigEndian_{false};
@@ -134,6 +142,7 @@ private:
   bool haltingSupportIsUnknownAtCompileTime_{false};
   bool areSubnormalsFlushedToZero_{false};
   bool hasSubnormalFlushingControl_[maxKind + 1]{};
+  bool hasSubnormalExceptionSupport_[maxKind + 1]{};
   Rounding roundingMode_{defaultRounding};
   std::size_t procedurePointerByteSize_{8};
   std::size_t procedurePointerAlignment_{8};
@@ -143,9 +152,10 @@ private:
   std::string compilerOptionsString_;
   std::string compilerVersionString_;
   IeeeFeatures ieeeFeatures_{IeeeFeature::Denormal, IeeeFeature::Divide,
-      IeeeFeature::Flags, IeeeFeature::Inf, IeeeFeature::Io, IeeeFeature::NaN,
-      IeeeFeature::Rounding, IeeeFeature::Sqrt, IeeeFeature::Standard,
-      IeeeFeature::Subnormal, IeeeFeature::UnderflowControl};
+      IeeeFeature::Flags, IeeeFeature::Halting, IeeeFeature::Inf,
+      IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
+      IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
+      IeeeFeature::UnderflowControl};
 };
 
 } // namespace Fortran::evaluate

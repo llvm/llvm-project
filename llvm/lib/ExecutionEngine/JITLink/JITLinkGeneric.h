@@ -162,7 +162,7 @@ private:
           // If B is a block in a Standard or Finalize section then make sure
           // that no edges point to symbols in NoAlloc sections.
           assert((NoAllocSection || !E.getTarget().isDefined() ||
-                  E.getTarget().getBlock().getSection().getMemLifetime() !=
+                  E.getTarget().getSection().getMemLifetime() !=
                       orc::MemLifetime::NoAlloc) &&
                  "Block in allocated section has edge pointing to no-alloc "
                  "section");

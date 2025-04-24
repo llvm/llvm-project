@@ -55,7 +55,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
 
   // Skip the batch dimension if present.
   // Offset all dimensions accordingly.
-  SmallVector<int64_t, 3> offsetDims{dims};
+  SmallVector<int64_t, 3> offsetDims(dims);
   for (size_t i = 0; i < offsetDims.size(); i++)
     offsetDims[i] += batchDimsOffset;
 
@@ -88,7 +88,7 @@ static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
 /// Return failure or packed matmul with one of its operands transposed.
 static FailureOr<PackTransposeResult>
 transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
-                      tensor::PackOp packOp, AffineMap operandMap,
+                      linalg::PackOp packOp, AffineMap operandMap,
                       ArrayRef<unsigned> blocksStartDimPos,
                       bool transposeOuterBlocks, bool transposeInnerBlocks) {
   assert(operandMap.getNumDims() >= 4 &&
@@ -111,10 +111,10 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
 
   // Transpose only the dimensions that need that to conform to the provided
   // transpotion settings.
-  SmallVector<int64_t> innerPerm{0, 1};
+  SmallVector<int64_t> innerPerm = {0, 1};
   if (isInnerTransposed != transposeInnerBlocks)
     innerPerm = {1, 0};
-  SmallVector<int64_t> outerPerm{0, 1};
+  SmallVector<int64_t> outerPerm = {0, 1};
   if (isOuterTransposed != transposeOuterBlocks)
     outerPerm = {1, 0};
 
@@ -138,6 +138,16 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
 FailureOr<PackResult>
 linalg::blockPackMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                         const ControlBlockPackMatmulFn &controlPackMatmul) {
+  // Check to not let go the batch_matmul with extended semantic, through this
+  // transform.
+  if (auto *batchMatmulOp = dyn_cast<linalg::BatchMatmulOp>(&linalgOp)) {
+    if (batchMatmulOp->hasUserDefinedMaps()) {
+      return rewriter.notifyMatchFailure(
+          *batchMatmulOp,
+          "only batch_matmul ops with non-extended semantics are supported");
+    }
+  }
+
   if (linalgOp.hasPureBufferSemantics())
     return rewriter.notifyMatchFailure(linalgOp, "require tensor semantics");
 

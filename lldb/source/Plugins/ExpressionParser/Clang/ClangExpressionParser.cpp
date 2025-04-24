@@ -13,6 +13,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
@@ -135,8 +136,9 @@ public:
 
     SourceModule module;
 
-    for (const std::pair<IdentifierInfo *, SourceLocation> &component : path)
-      module.path.push_back(ConstString(component.first->getName()));
+    for (const IdentifierLoc &component : path)
+      module.path.push_back(
+          ConstString(component.getIdentifierInfo()->getName()));
 
     StreamString error_stream;
 
@@ -1538,6 +1540,10 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       llvm_module_up, // handed off here
       function_name, exe_ctx.GetTargetSP(), sc,
       m_compiler->getTargetOpts().Features);
+
+  if (auto *options = m_expr.GetOptions())
+    execution_unit_sp->AppendPreferredSymbolContexts(
+        options->GetPreferredSymbolContexts());
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());

@@ -864,7 +864,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const hash_multimap<_Key, _Tp, _Has
 } // namespace __gnu_cxx
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <__cxx03/concepts>
 #  include <__cxx03/iterator>
 #  include <__cxx03/type_traits>
 #endif

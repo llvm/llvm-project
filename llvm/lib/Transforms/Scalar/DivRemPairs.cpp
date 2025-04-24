@@ -209,7 +209,7 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // Note that we place it right next to the original expanded instruction,
       // and letting further handling to move it if needed.
       RealRem->setName(RemInst->getName() + ".recomposed");
-      RealRem->insertAfter(RemInst);
+      RealRem->insertAfter(RemInst->getIterator());
       Instruction *OrigRemInst = RemInst;
       // Update AssertingVH<> with new instruction so it doesn't assert.
       RemInst = RealRem;
@@ -296,10 +296,10 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
           all_of(predecessors(DivBB),
                  [&](BasicBlock *BB) { return BB == RemBB || BB == PredBB; })) {
         DivDominates = true;
-        DivInst->moveBefore(PredBB->getTerminator());
+        DivInst->moveBefore(PredBB->getTerminator()->getIterator());
         Changed = true;
         if (HasDivRemOp) {
-          RemInst->moveBefore(PredBB->getTerminator());
+          RemInst->moveBefore(PredBB->getTerminator()->getIterator());
           continue;
         }
       } else
@@ -365,10 +365,10 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // but any code movement would be within the same block.
 
       if (!DivDominates)
-        DivInst->moveBefore(RemInst);
-      Mul->insertAfter(RemInst);
+        DivInst->moveBefore(RemInst->getIterator());
+      Mul->insertAfter(RemInst->getIterator());
       Mul->setDebugLoc(RemInst->getDebugLoc());
-      Sub->insertAfter(Mul);
+      Sub->insertAfter(Mul->getIterator());
       Sub->setDebugLoc(RemInst->getDebugLoc());
 
       // If DivInst has the exact flag, remove it. Otherwise this optimization

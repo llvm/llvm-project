@@ -75,5 +75,5 @@ end subroutine omp_in_reduction_parallel
 !PARSE-TREE-NEXT: OmpLoopDirective -> llvm::omp::Directive = taskloop simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> InReduction -> OmpInReductionClause
 !PARSE-TREE-NEXT: OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PASRE-TREE-NEXT: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'z'
+!PARSE-TREE-NEXT: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'z'
 

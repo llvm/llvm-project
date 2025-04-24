@@ -38,7 +38,10 @@ define amdgpu_kernel void @private_volatile_load_0(
 ;
 ; GFX7-LABEL: private_volatile_load_0:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
@@ -53,7 +56,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ;
 ; GFX10-WGP-LABEL: private_volatile_load_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
@@ -67,7 +70,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ;
 ; GFX10-CU-LABEL: private_volatile_load_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
@@ -190,7 +193,10 @@ define amdgpu_kernel void @private_volatile_load_1(
 ;
 ; GFX7-LABEL: private_volatile_load_1:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
@@ -207,7 +213,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ;
 ; GFX10-WGP-LABEL: private_volatile_load_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-WGP-NEXT:    s_load_dword s7, s[8:9], 0x0
@@ -223,7 +229,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ;
 ; GFX10-CU-LABEL: private_volatile_load_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-CU-NEXT:    s_load_dword s7, s[8:9], 0x0
@@ -304,7 +310,6 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    s_mov_b32 s3, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v1, v1, s3
 ; GFX12-WGP-NEXT:    s_mov_b32 s3, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
@@ -324,7 +329,6 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    s_mov_b32 s3, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_and_b32_e64 v1, v1, s3
 ; GFX12-CU-NEXT:    s_mov_b32 s3, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe
@@ -367,7 +371,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ;
 ; GFX7-LABEL: private_volatile_store_0:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dword s4, s[8:9], 0x2
@@ -382,7 +386,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ;
 ; GFX10-WGP-LABEL: private_volatile_store_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s4, s[8:9], 0x8
@@ -397,7 +401,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ;
 ; GFX10-CU-LABEL: private_volatile_store_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s4, s[8:9], 0x8
@@ -517,7 +521,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ;
 ; GFX7-LABEL: private_volatile_store_1:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_add_u32 s0, s0, s15
+; GFX7-NEXT:    s_add_u32 s0, s0, s17
 ; GFX7-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dword s5, s[8:9], 0x2
@@ -534,7 +538,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ;
 ; GFX10-WGP-LABEL: private_volatile_store_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
-; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-WGP-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-WGP-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dword s6, s[8:9], 0x8
@@ -550,7 +554,7 @@ define amdgpu_kernel void @private_volatile_store_1(
 ;
 ; GFX10-CU-LABEL: private_volatile_store_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_add_u32 s0, s0, s15
+; GFX10-CU-NEXT:    s_add_u32 s0, s0, s17
 ; GFX10-CU-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dword s6, s[8:9], 0x8
@@ -624,7 +628,6 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, 2
 ; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
@@ -647,7 +650,6 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX12-CU-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-CU-NEXT:    s_mov_b32 s2, 2
 ; GFX12-CU-NEXT:    s_wait_alu 0xfffe

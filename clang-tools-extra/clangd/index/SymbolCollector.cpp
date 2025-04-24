@@ -713,7 +713,8 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
   // Add macro references.
   for (const auto &IDToRefs : MacroRefsToIndex.MacroRefs) {
     for (const auto &MacroRef : IDToRefs.second) {
-      const auto &Range = MacroRef.toRange(SM);
+      const auto &SR = MacroRef.toSourceRange(SM);
+      auto Range = halfOpenToRange(SM, SR);
       bool IsDefinition = MacroRef.IsDefinition;
       Ref R;
       R.Location.Start.setLine(Range.start.line);
@@ -726,9 +727,7 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
       if (IsDefinition) {
         Symbol S;
         S.ID = IDToRefs.first;
-        auto StartLoc = cantFail(sourceLocationInMainFile(SM, Range.start));
-        auto EndLoc = cantFail(sourceLocationInMainFile(SM, Range.end));
-        S.Name = toSourceCode(SM, SourceRange(StartLoc, EndLoc));
+        S.Name = toSourceCode(SM, SR.getAsRange());
         S.SymInfo.Kind = index::SymbolKind::Macro;
         S.SymInfo.SubKind = index::SymbolSubKind::None;
         S.SymInfo.Properties = index::SymbolPropertySet();
@@ -888,7 +887,7 @@ void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation DefLoc,
   // might run while parsing, rather than at the end of a translation unit.
   // Hence we see more and more redecls over time.
   SymbolProviders[S.ID] =
-      include_cleaner::headersForSymbol(Sym, SM, Opts.PragmaIncludes);
+      include_cleaner::headersForSymbol(Sym, *PP, Opts.PragmaIncludes);
 }
 
 llvm::StringRef getStdHeader(const Symbol *S, const LangOptions &LangOpts) {
