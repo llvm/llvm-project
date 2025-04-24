@@ -6496,13 +6496,13 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
   return false;
 }
 
-static const FieldDecl *GetConstField(const RecordDecl *RD) {
+static const FieldDecl *getConstField(const RecordDecl *RD) {
   for (const FieldDecl *FD : RD->fields()) {
     QualType QT = FD->getType();
     if (QT.isConstQualified())
       return FD;
     if (const auto *RD = QT->getAsRecordDecl())
-      return GetConstField(RD);
+      return getConstField(RD);
   }
   return nullptr;
 }
@@ -6587,7 +6587,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // then we want to diagnose those as being uninitialized if there is no
       // initializer present.
       if (!Initializer) {
-        if (const FieldDecl *FD = GetConstField(Rec)) {
+        if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_unsafe;
           if (Var->getStorageDuration() == SD_Static ||
               Var->getStorageDuration() == SD_Thread)
