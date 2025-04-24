@@ -1479,8 +1479,7 @@ bool StdLibraryFunctionsChecker::evalCall(const CallEvent &Call,
     ProgramStateRef State = C.getState();
     const LocationContext *LC = C.getLocationContext();
     const auto *CE = cast<CallExpr>(Call.getOriginExpr());
-    SVal V = C.getSValBuilder().conjureSymbolVal(
-        Call, CE->getType().getCanonicalType(), C.blockCount());
+    SVal V = C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
     State = State->BindExpr(CE, LC, V);
 
     C.addTransition(State);
