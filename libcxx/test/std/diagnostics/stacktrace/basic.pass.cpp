@@ -8,12 +8,6 @@
 
 // REQUIRES: std-at-least-c++23
 
-#include <stacktrace>
-#include <iterator>
-
-#include <cassert>
-#include <type_traits>
-
 /*
   (19.6.4) Class template basic_stacktrace [stacktrace.basic]
   (19.6.4.1) Overview                      [stacktrace.basic.overview]
@@ -114,18 +108,12 @@ namespace std {
 
 */
 
-int main(int, char**) {
-  // using value_type = stacktrace_entry;
-  // using const_reference = const value_type&;
-  // using reference = value_type&;
-  // using const_iterator = implementation-defined;  // see [stacktrace.basic.obs]
-  // using iterator = const_iterator;
-  // using reverse_iterator = std::reverse_iterator<iterator>;
-  // using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-  // using difference_type = implementation-defined;
-  // using size_type = implementation-defined;
-  // using allocator_type = Allocator;
+#include <cassert>
+#include <iterator>
+#include <stacktrace>
+#include <type_traits>
 
+int main(int, char**) {
   // This test will only verify these member types exist and are
   // defined as expected; their actual behavior is tested in another .cpp.
 

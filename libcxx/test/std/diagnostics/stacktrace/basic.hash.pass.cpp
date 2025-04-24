@@ -8,10 +8,6 @@
 
 // REQUIRES: std-at-least-c++23
 
-#include <stacktrace>
-
-#include <cassert>
-
 /*
   (19.6.6) Hash Support
 
@@ -21,24 +17,20 @@
   The specializations are enabled ([unord.hash]).
 */
 
-int main(int, char**) {
-  /*
-  [1]
-  template<> struct hash<stacktrace_entry>;
-  */
-  std::stacktrace_entry empty_entry;
-  assert(std::hash<std::stacktrace_entry>()(empty_entry) == 0);
+#include <cassert>
+#include <stacktrace>
 
-  /*
-  [2]
-  template<class Allocator> struct hash<basic_stacktrace<Allocator>>;
-  */
+int main(int, char**) {
   std::stacktrace trace; // initially empty
   auto hash_val_empty    = std::hash<std::stacktrace>()(trace);
   trace                  = /* reassign */ std::stacktrace::current();
   auto hash_val_nonempty = std::hash<std::stacktrace>()(trace);
-
   assert(hash_val_empty != hash_val_nonempty);
+
+  std::stacktrace_entry empty_entry;
+  assert(std::hash<std::stacktrace_entry>()(empty_entry) == 0);
+  auto nonempty_entry = trace[0];
+  assert(std::hash<std::stacktrace_entry>()(nonempty_entry) != 0);
 
   return 0;
 }
