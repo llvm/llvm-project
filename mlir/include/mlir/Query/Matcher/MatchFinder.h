@@ -21,32 +21,35 @@
 
 namespace mlir::query::matcher {
 
-/// A class that provides utilities to find operations in a DAG
+/// A class that provides utilities to find operations in the IR.
 class MatchFinder {
 
 public:
-  /// A subclass which preserves the matching information
+  /// A subclass which preserves the matching information. Each instance
+  /// contains the `rootOp` along with the matching environment.
   struct MatchResult {
     MatchResult() = default;
     MatchResult(Operation *rootOp, std::vector<Operation *> matchedOps);
 
-    /// Contains the root operation of the matching environment
     Operation *rootOp = nullptr;
-    /// Contains the matching enviroment. This allows the user to easily
-    /// extract the matched operations
+    /// Contains the matching environment.
     std::vector<Operation *> matchedOps;
   };
-  /// Traverses the DAG and collects the "rootOp" + "matching enviroment" for
-  /// a given Matcher
+
+  /// Traverses the IR and returns a vector of `MatchResult` for each match of
+  /// the `matcher`.
   std::vector<MatchResult> collectMatches(Operation *root,
                                           DynMatcher matcher) const;
-  /// Prints the matched operation
+
+  /// Prints the matched operation.
   void printMatch(llvm::raw_ostream &os, QuerySession &qs, Operation *op) const;
-  /// Labels the matched operation with the given binding (e.g., "root") and
-  /// prints it
+
+  /// Labels the matched operation with the given binding (e.g., `"root"`) and
+  /// prints it.
   void printMatch(llvm::raw_ostream &os, QuerySession &qs, Operation *op,
                   const std::string &binding) const;
-  /// Flattens a vector of MatchResults into a vector of operations
+
+  /// Flattens a vector of `MatchResult` into a vector of operations.
   std::vector<Operation *>
   flattenMatchedOps(std::vector<MatchResult> &matches) const;
 };
