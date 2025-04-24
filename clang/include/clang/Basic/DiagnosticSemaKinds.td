@@ -496,6 +496,9 @@ def warn_unused_lambda_capture: Warning<"lambda capture %0 is not "
   "%select{used|required to be captured for this use}1">,
   InGroup<UnusedLambdaCapture>, DefaultIgnore;
 
+def warn_identifier_is_cpp_keyword : Warning<
+  "identifier %0 conflicts with a C++ keyword">,
+  InGroup<CppKeywordInC>, DefaultIgnore;
 def warn_reserved_extern_symbol: Warning<
   "identifier %0 is reserved because %select{"
   "<ERROR>|" // ReservedIdentifierStatus::NotReserved

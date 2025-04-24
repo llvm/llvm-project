@@ -143,6 +143,9 @@ C Language Changes
 - Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)
+- Added ``-Widentifier-is-c++-keyword``, grouped under ``-Wc++-compat``, which
+  diagnoses when a C++ keyword is used as an identifier in C. Partially
+  addresses #GH21898.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^

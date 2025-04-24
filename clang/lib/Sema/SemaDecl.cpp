@@ -61,6 +61,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -6107,6 +6108,23 @@ static bool isFromSystemHeader(SourceManager &SM, const Decl *D) {
          SM.isInSystemMacro(D->getLocation());
 }
 
+static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo* II) {
+  if (!II)
+    return false;
+
+  // Clear all the C language options, set all the C++ language options, but
+  // otherwise leave all the defaults alone. This isn't ideal because some
+  // feature flags are language-specific, but this is a reasonable
+  // approximation.
+  LangOptions LO = S.getLangOpts();
+  LO.CPlusPlus = LO.CPlusPlus11 = LO.CPlusPlus14 = LO.CPlusPlus17 =
+      LO.CPlusPlus20 = LO.CPlusPlus23 = LO.CPlusPlus26 = 1;
+  LO.C99 = LO.C11 = LO.C17 = LO.C23 = LO.C2y = 0;
+  LO.Char8 = 1; // Presume this is always a keyword in C++.
+  LO.WChar = 1; // Presume this is always a keyword in C++.
+  return II->isNameKeyword(LO);
+}
+
 void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
   // Avoid warning twice on the same identifier, and don't warn on redeclaration
   // of system decl.
@@ -6118,6 +6136,10 @@ void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
     Diag(D->getLocation(), diag::warn_reserved_extern_symbol)
         << D << static_cast<int>(Status);
   }
+  // Diagnose use of C++ keywords in C as being incompatible with C++.
+  if (!getLangOpts().CPlusPlus &&
+      isKeywordInCPlusPlus(*this, D->getIdentifier()))
+    Diag(D->getLocation(), diag::warn_identifier_is_cpp_keyword) << D;
 }
 
 Decl *Sema::ActOnDeclarator(Scope *S, Declarator &D) {
@@ -15311,6 +15333,7 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   if (D.isInvalidType())
     New->setInvalidDecl();
 
+  warnOnReservedIdentifier(New);
   CheckExplicitObjectParameter(*this, New, ExplicitThisLoc);
 
   assert(S->isFunctionPrototypeScope());
