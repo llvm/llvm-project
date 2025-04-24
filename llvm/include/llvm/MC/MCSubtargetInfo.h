@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -93,6 +94,10 @@ class MCSubtargetInfo {
   FeatureBitset FeatureBits;           // Feature bits for current CPU + FS
   std::string FeatureString;           // Feature string
 
+  // General purpose name table, currently only used to store MCSchedClassDesc
+  // names when assertions are enabled.
+  StringTable NameTable;
+
 public:
   MCSubtargetInfo(const MCSubtargetInfo &) = default;
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
@@ -101,7 +106,7 @@ public:
                   ArrayRef<SubtargetSubTypeKV> PD,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
-                  const unsigned *OC, const unsigned *FP);
+                  const unsigned *OC, const unsigned *FP, StringTable NT);
   MCSubtargetInfo() = delete;
   MCSubtargetInfo &operator=(const MCSubtargetInfo &) = delete;
   MCSubtargetInfo &operator=(MCSubtargetInfo &&) = delete;
@@ -225,6 +230,12 @@ public:
                                             unsigned CPUID) const {
     return 0;
   }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  StringRef getSchedClassName(const MCSchedClassDesc *SCDesc) const {
+    return NameTable[SCDesc->NameOffset];
+  }
+#endif
 
   /// Check whether the CPU string is valid.
   virtual bool isCPUStringValid(StringRef CPU) const {

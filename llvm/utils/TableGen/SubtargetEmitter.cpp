@@ -1472,8 +1472,15 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
          << MCDesc.NumReadAdvanceEntries << "}, // #" << SCIdx << '\n';
     }
     OS << "}; // " << Proc.ModelName << "SchedClasses\n";
-    NameTable.EmitStringTableDef(OS, Proc.ModelName + "SchedClassNames");
   }
+
+  OS << "\n#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)\n";
+  NameTable.EmitStringTableDef(OS, Target + "NameTable", /*Indent=*/"",
+                               "extern");
+  OS << "\n#else\n";
+  OS << "\nextern constexpr llvm::StringTable " << Target
+     << "NameTable = \"\";\n";
+  OS << "\n#endif\n";
 }
 
 void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
@@ -1522,11 +1529,10 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
     if (PM.hasInstrSchedModel())
       OS << "  " << PM.ModelName << "ProcResources" << ",\n"
          << "  " << PM.ModelName << "SchedClasses" << ",\n"
-         << "  DBGFIELD(" << PM.ModelName << "SchedClassNames" << ")\n"
          << "  " << PM.ProcResourceDefs.size() + 1 << ",\n"
          << "  " << SchedModels.schedClasses().size() << ",\n";
     else
-      OS << "  nullptr, nullptr, DBGFIELD(\"\") 0, 0,"
+      OS << "  nullptr, nullptr, 0, 0,"
          << " // No instruction-level machine model.\n";
     if (PM.hasItineraries())
       OS << "  " << PM.ItinsDef->getName() << ",\n";
@@ -1568,10 +1574,10 @@ void SubtargetEmitter::emitSchedModel(raw_ostream &OS) {
   }
   emitSchedClassTables(SchedTables, OS);
 
+  OS << "\n#undef DBGFIELD\n";
+
   // Emit the processor machine model
   emitProcessorModels(OS);
-
-  OS << "\n#undef DBGFIELD\n";
 }
 
 static void emitPredicateProlog(const RecordKeeper &Records, raw_ostream &OS) {
@@ -1959,9 +1965,9 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
-     << "    const unsigned *OC, const unsigned *FP) :\n"
+     << "    const unsigned *OC, const unsigned *FP, StringTable NT) :\n"
      << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD,\n"
-     << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
+     << "                      WPR, WL, RA, IS, OC, FP, NT) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
      << "      unsigned CPUID) const override {\n"
@@ -2066,7 +2072,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
        << "ForwardingPaths";
   } else
     OS << "nullptr, nullptr, nullptr";
-  OS << ");\n}\n\n";
+  OS << ", " << Target << "NameTable);\n}\n\n";
 
   OS << "} // end namespace llvm\n\n";
 
@@ -2166,6 +2172,8 @@ void SubtargetEmitter::run(raw_ostream &OS) {
     OS << "extern const unsigned " << Target << "ForwardingPaths[];\n";
   }
 
+  OS << "extern const llvm::StringTable " << Target << "NameTable;\n";
+
   OS << ClassName << "::" << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS)\n";
 
@@ -2197,7 +2205,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
        << "ForwardingPaths";
   } else
     OS << "nullptr, nullptr, nullptr";
-  OS << ") {}\n\n";
+  OS << ", " << Target << "NameTable) {}\n\n";
 
   emitSchedModelHelpers(ClassName, OS);
   emitHwModeCheck(ClassName, OS);

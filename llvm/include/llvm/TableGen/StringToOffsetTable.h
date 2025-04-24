@@ -57,7 +57,8 @@ public:
   // `static` and `constexpr`. Both `Name` and (`Name` + "Storage") must be
   // valid identifiers to declare.
   void EmitStringTableDef(raw_ostream &OS, const Twine &Name,
-                          const Twine &Indent = "") const;
+                          const Twine &Indent = "",
+                          StringRef Linkage = "static") const;
 
   // Emit the string as one single string.
   void EmitString(raw_ostream &O) const;

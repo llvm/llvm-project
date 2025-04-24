@@ -245,16 +245,19 @@ void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
   FeatureString = std::string(FS);
 }
 
-MCSubtargetInfo::MCSubtargetInfo(
-    const Triple &TT, StringRef C, StringRef TC, StringRef FS,
-    ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
-    ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
-    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
-    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
+MCSubtargetInfo::MCSubtargetInfo(const Triple &TT, StringRef C, StringRef TC,
+                                 StringRef FS, ArrayRef<StringRef> PN,
+                                 ArrayRef<SubtargetFeatureKV> PF,
+                                 ArrayRef<SubtargetSubTypeKV> PD,
+                                 const MCWriteProcResEntry *WPR,
+                                 const MCWriteLatencyEntry *WL,
+                                 const MCReadAdvanceEntry *RA,
+                                 const InstrStage *IS, const unsigned *OC,
+                                 const unsigned *FP, StringTable NT)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
       ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
       WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
-      OperandCycles(OC), ForwardingPaths(FP) {
+      OperandCycles(OC), ForwardingPaths(FP), NameTable(NT) {
   InitMCProcessorInfo(CPU, TuneCPU, FS);
 }
 

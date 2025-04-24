@@ -27,7 +27,8 @@ unsigned StringToOffsetTable::GetOrAddStringOffset(StringRef Str,
 }
 
 void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS, const Twine &Name,
-                                             const Twine &Indent) const {
+                                             const Twine &Indent,
+                                             StringRef Linkage) const {
   OS << formatv(R"(
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -78,10 +79,10 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS, const Twine &Name,
 #pragma GCC diagnostic pop
 #endif
 
-{0}static constexpr llvm::StringTable {1} =
+{0}{2} constexpr llvm::StringTable {1} =
 {0}    {1}Storage;
 )",
-                Indent, Name);
+                Indent, Name, Linkage);
 }
 
 void StringToOffsetTable::EmitString(raw_ostream &O) const {

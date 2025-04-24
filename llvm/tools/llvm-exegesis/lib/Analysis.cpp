@@ -137,9 +137,10 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   std::tie(SchedClassId, std::ignore) = ResolvedSchedClass::resolveSchedClassId(
       State_.getSubtargetInfo(), State_.getInstrInfo(), MCI);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const MCSchedModel &SM = State_.getSubtargetInfo().getSchedModel();
-  const MCSchedClassDesc *const SCDesc = SM.getSchedClassDesc(SchedClassId);
-  writeEscaped<kEscapeCsv>(OS, SM.getSchedClassName(SCDesc));
+  const auto &SI = State_.getSubtargetInfo();
+  const MCSchedClassDesc *const SCDesc =
+      SI.getSchedModel().getSchedClassDesc(SchedClassId);
+  writeEscaped<kEscapeCsv>(OS, SI.getSchedClassName(SCDesc));
 #else
   OS << SchedClassId;
 #endif
@@ -563,9 +564,8 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
     OS << "<div class=\"inconsistency\"><p>Sched Class <span "
           "class=\"sched-class-name\">";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    const auto &SM = SI.getSchedModel();
     writeEscaped<kEscapeHtml>(OS,
-                              SM.getSchedClassName(RSCAndPoints.RSC.SCDesc));
+                              SI.getSchedClassName(RSCAndPoints.RSC.SCDesc));
 #else
     OS << RSCAndPoints.RSC.SchedClassId;
 #endif
