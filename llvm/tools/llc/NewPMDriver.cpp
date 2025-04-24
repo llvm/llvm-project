@@ -57,6 +57,9 @@ static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
             cl::desc("Print pass management debugging information"));
 
+static cl::opt<bool> VerifyTarget("verify-tgt-new-pm",
+		                  cl::desc("Verify the target"));
+
 bool LLCDiagnosticHandler::handleDiagnostics(const DiagnosticInfo &DI) {
   DiagnosticHandler::handleDiagnostics(DI);
   if (DI.getKind() == llvm::DK_SrcMgr) {
@@ -127,7 +130,8 @@ int llvm::compileModuleWithNewPM(
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
   PB.registerMachineFunctionAnalyses(MFAM);
-  PB.registerVerifierPasses(MPM, FPM);
+  if (VerifyTarget)
+    PB.registerVerifierPasses(MPM, FPM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
   SI.registerCallbacks(PIC, &MAM, &FAM);
 

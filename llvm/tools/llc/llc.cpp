@@ -209,6 +209,8 @@ static cl::opt<std::string> PassPipeline(
 static cl::alias PassPipeline2("p", cl::aliasopt(PassPipeline),
                                cl::desc("Alias for -passes"));
 
+static cl::opt<bool> VerifyTarget("verify-tgt", cl::desc("Verify the target"));
+
 namespace {
 
 std::vector<std::string> &getRunPassNames() {
@@ -658,6 +660,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
   // Build up all of the passes that we want to do to the module.
   legacy::PassManager PM;
+  if (VerifyTarget)
+    PM.add(createTargetVerifierLegacyPass());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   {
