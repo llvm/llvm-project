@@ -1,4 +1,4 @@
-;; Test ppc-vsx-fma-mutate pass with -schedule-ppc-vsx-fma-mutation-early do not hosit some xxspltiw instruction.
+;; Tests that the ppc-vsx-fma-mutate pass with the schedule-ppc-vsx-fma-mutation-early pass does not hoist xxspltiw out of loops.
 ; RUN: llc -verify-machineinstrs -mcpu=pwr10 -disable-ppc-vsx-fma-mutation=false \
 ; RUN:   -ppc-asm-full-reg-names -schedule-ppc-vsx-fma-mutation-early \
 ; RUN:    -mtriple powerpc64-ibm-aix < %s | FileCheck --check-prefixes=CHECK64,AIX64 %s
