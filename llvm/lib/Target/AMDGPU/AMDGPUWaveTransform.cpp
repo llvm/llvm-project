@@ -1650,7 +1650,7 @@ void ControlFlowRewriter::prepareWaveCfg() {
       unsigned Opcode = Terminator.getOpcode();
 
       assert(!Info.OrigSuccFinal);
-      if (Opcode == AMDGPU::SI_BRCOND) {
+      if (Opcode == AMDGPU::SI_BRCOND || Opcode == AMDGPU::SI_BRCOND_UNIFORM) {
         assert(!Info.OrigCondition);
         Info.OrigCondition = Terminator.getOperand(0).getReg();
         Info.OrigSuccCond =

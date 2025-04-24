@@ -82,7 +82,7 @@ body:             |
     %8:sgpr_32 = COPY $sgpr0
     %15:sreg_32 = S_MOV_B32 0
     %16:sreg_32 = V_CMP_EQ_U32_e64 %8, killed %15, implicit $exec
-    SI_BRCOND killed %16, %bb.2
+    SI_BRCOND_UNIFORM killed %16, %bb.2
     S_BRANCH %bb.1
 
   bb.1:
@@ -209,7 +209,7 @@ body:             |
     %10:vgpr_32 = COPY $vgpr2
     %15:sreg_32 = S_MOV_B32 0
     %16:sreg_32 = V_CMP_EQ_U32_e64 killed %8, %15, implicit $exec
-    SI_BRCOND killed %16, %bb.2
+    SI_BRCOND_UNIFORM killed %16, %bb.2
     S_BRANCH %bb.1
 
   bb.1:
@@ -289,14 +289,14 @@ body:             |
     successors: %bb.3, %bb.4
 
     %17:sreg_32 = V_CMP_EQ_U32_e64 killed %9, %15, implicit $exec
-    SI_BRCOND killed %17, %bb.3
+    SI_BRCOND_UNIFORM killed %17, %bb.3
     S_BRANCH %bb.4
 
   bb.2:
     successors: %bb.5, %bb.6
 
     %18:sreg_32 = V_CMP_EQ_U32_e64 killed %10, %15, implicit $exec
-    SI_BRCOND killed %18, %bb.6
+    SI_BRCOND_UNIFORM killed %18, %bb.6
     S_BRANCH %bb.5
 
   bb.3:

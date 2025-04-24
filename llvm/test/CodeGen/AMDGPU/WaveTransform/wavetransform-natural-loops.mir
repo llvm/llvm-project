@@ -100,7 +100,7 @@ body:             |
     %10:sreg_32 = PHI %9, %bb.0, %11, %bb.1, %11, %bb.2
     %11:sreg_32 = S_ADD_U32 %10, 1, implicit-def $scc
     %12:sreg_32 = V_CMP_NE_U32_e64 %11, %0, implicit $exec
-    SI_BRCOND killed %12, %bb.1
+    SI_BRCOND_UNIFORM killed %12, %bb.1
     S_BRANCH %bb.2
 
   bb.2:
@@ -147,7 +147,7 @@ body:             |
     successors: %bb.1, %bb.3
 
     %20:sreg_32 = V_CMP_NE_U32_e64 %11, %1, implicit $exec
-    SI_BRCOND killed %20, %bb.1
+    SI_BRCOND_UNIFORM killed %20, %bb.1
     S_BRANCH %bb.3
 
   bb.3:
@@ -192,7 +192,7 @@ body:             |
 
     %10:sreg_32 = PHI %9, %bb.0, %20, %bb.3
     %11:sreg_32 = V_CMP_NE_U32_e64 %10, %0, implicit $exec
-    SI_BRCOND killed %11, %bb.2
+    SI_BRCOND_UNIFORM killed %11, %bb.2
     S_BRANCH %bb.4
 
   bb.2:
@@ -200,12 +200,12 @@ body:             |
 
     %20:sreg_32 = S_ADD_U32 %10, 1, implicit-def $scc
     %21:sreg_32 = V_CMP_NE_U32_e64 %20, %1, implicit $exec
-    SI_BRCOND killed %21, %bb.3
+    SI_BRCOND_UNIFORM killed %21, %bb.3
     S_BRANCH %bb.4
 
   bb.3:
     %30:sreg_32 = V_CMP_NE_U32_e64 %20, %2, implicit $exec
-    SI_BRCOND killed %30, %bb.1
+    SI_BRCOND_UNIFORM killed %30, %bb.1
     S_BRANCH %bb.2
 
   bb.4:
@@ -316,13 +316,13 @@ body:             |
     %20:sreg_32 = PHI %19, %bb.1, %21, %bb.2
     %21:sreg_32 = S_ADD_U32 %20, 1, implicit-def $scc
     %22:sreg_32 = V_CMP_NE_U32_e64 %21, %1, implicit $exec
-    SI_BRCOND killed %22, %bb.2
+    SI_BRCOND_UNIFORM killed %22, %bb.2
     S_BRANCH %bb.3
 
   bb.3:
     %30:sreg_32 = S_ADD_U32 %10, 1, implicit-def $scc
     %31:sreg_32 = V_CMP_NE_U32_e64 %30, %0, implicit $exec
-    SI_BRCOND killed %31, %bb.1
+    SI_BRCOND_UNIFORM killed %31, %bb.1
     S_BRANCH %bb.4
 
   bb.4:
@@ -506,7 +506,7 @@ body:             |
     %10:sreg_32 = PHI %9, %bb.0, %11, %bb.2, %11, %bb.3
     %11:sreg_32 = S_ADD_U32 %10, 1, implicit-def $scc
     %12:sreg_32 = V_CMP_NE_U32_e64 %11, %0, implicit $exec
-    SI_BRCOND killed %12, %bb.2
+    SI_BRCOND_UNIFORM killed %12, %bb.2
     S_BRANCH %bb.3
 
   bb.2:
@@ -589,14 +589,14 @@ body:             |
     successors: %bb.1, %bb.4
 
     %20:sreg_32 = V_CMP_NE_U32_e64 %11, %1, implicit $exec
-    SI_BRCOND killed %20, %bb.1
+    SI_BRCOND_UNIFORM killed %20, %bb.1
     S_BRANCH %bb.4
 
   bb.3:
     successors: %bb.1, %bb.5
 
     %30:sreg_32 = V_CMP_NE_U32_e64 %11, %2, implicit $exec
-    SI_BRCOND killed %30, %bb.1
+    SI_BRCOND_UNIFORM killed %30, %bb.1
     S_BRANCH %bb.5
 
   bb.4:
@@ -654,21 +654,21 @@ body:             |
     %10:sreg_32 = PHI %9, %bb.0, %11, %bb.2, %11, %bb.3
     %11:sreg_32 = S_ADD_U32 %10, 1, implicit-def $scc
     %12:sreg_32 = V_CMP_NE_U32_e64 %11, %0, implicit $exec
-    SI_BRCOND killed %12, %bb.2
+    SI_BRCOND_UNIFORM killed %12, %bb.2
     S_BRANCH %bb.3
 
   bb.2:
     successors: %bb.1, %bb.4
 
     %20:sreg_32 = V_CMP_NE_U32_e64 %11, %1, implicit $exec
-    SI_BRCOND killed %20, %bb.1
+    SI_BRCOND_UNIFORM killed %20, %bb.1
     S_BRANCH %bb.4
 
   bb.3:
     successors: %bb.1, %bb.5
 
     %30:sreg_32 = V_CMP_NE_U32_e64 %11, %2, implicit $exec
-    SI_BRCOND killed %30, %bb.1
+    SI_BRCOND_UNIFORM killed %30, %bb.1
     S_BRANCH %bb.5
 
   bb.4:
