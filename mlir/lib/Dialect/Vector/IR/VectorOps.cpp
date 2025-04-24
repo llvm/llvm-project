@@ -5554,18 +5554,10 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
   }
 
   // Y = shape_cast(broadcast(X))
-  //      -> X, if X and Y have same type, else
-  //      -> shape_cast(X) if X is a vector and the broadcast preserves
-  //         number of elements.
+  //      -> X, if X and Y have same type
   if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
     if (bcastOp.getSourceType() == resultType)
       return bcastOp.getSource();
-    if (auto bcastSrcType = dyn_cast<VectorType>(bcastOp.getSourceType())) {
-      if (bcastSrcType.getNumElements() == resultType.getNumElements()) {
-        setOperand(bcastOp.getSource());
-        return getResult();
-      }
-    }
   }
 
   // shape_cast(constant) -> constant
