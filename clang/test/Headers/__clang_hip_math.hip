@@ -2776,30 +2776,30 @@ extern "C" __device__ double test_j1(double x) {
 // NCRDIV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // NCRDIV-NEXT:    ]
 // NCRDIV:       if.then.i:
-// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef float @__ocml_j0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_j0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL3JNFIF_EXIT:%.*]]
 // NCRDIV:       if.then2.i:
-// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL3JNFIF_EXIT]]
 // NCRDIV:       if.end4.i:
-// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_j0_f32(float noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// NCRDIV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL3JNFIF_EXIT]]
+// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef float @__ocml_j0_f32(float noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef float @__ocml_j1_f32(float noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// NCRDIV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL3JNFIF_EXIT]]
 // NCRDIV:       for.body.i:
-// NCRDIV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// NCRDIV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X1_025_I:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X0_024_I:%.*]] = phi float [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to float
 // NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]], !fpmath [[META12]]
-// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
-// NCRDIV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
-// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL3JNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
+// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_025_I]], [[DIV_I]]
+// NCRDIV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_024_I]]
+// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// NCRDIV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL3JNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP15:![0-9]+]]
 // NCRDIV:       _ZL3jnfif.exit:
-// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret float [[RETVAL_0_I]]
 //
 // AMDGCNSPIRV-LABEL: @test_jnf(
@@ -2945,30 +2945,30 @@ extern "C" __device__ float test_jnf(int x, float y) {
 // NCRDIV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // NCRDIV-NEXT:    ]
 // NCRDIV:       if.then.i:
-// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef double @__ocml_j0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef double @__ocml_j0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL2JNID_EXIT:%.*]]
 // NCRDIV:       if.then2.i:
-// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL2JNID_EXIT]]
 // NCRDIV:       if.end4.i:
-// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef double @__ocml_j0_f64(double noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// NCRDIV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL2JNID_EXIT]]
+// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef double @__ocml_j0_f64(double noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef double @__ocml_j1_f64(double noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// NCRDIV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL2JNID_EXIT]]
 // NCRDIV:       for.body.i:
-// NCRDIV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// NCRDIV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X1_025_I:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X0_024_I:%.*]] = phi double [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to double
 // NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
-// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
-// NCRDIV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
-// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL2JNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP16:![0-9]+]]
+// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_025_I]], [[DIV_I]]
+// NCRDIV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_024_I]]
+// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// NCRDIV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL2JNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP16:![0-9]+]]
 // NCRDIV:       _ZL2jnid.exit:
-// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret double [[RETVAL_0_I]]
 //
 // AMDGCNSPIRV-LABEL: @test_jn(
@@ -3965,26 +3965,26 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV-NEXT:  entry:
 // NCRDIV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG:%.*]], align 1, !tbaa [[TBAA4]]
 // NCRDIV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
-// NCRDIV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I14_I_I:%.*]]
+// NCRDIV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I30_I_I:%.*]]
 // NCRDIV:       if.then.i.i:
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
 // NCRDIV-NEXT:    [[TMP1:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I_I_I:%.*]] [
-// NCRDIV-NEXT:      i8 120, label [[WHILE_COND_I30_I_I_PREHEADER:%.*]]
-// NCRDIV-NEXT:      i8 88, label [[WHILE_COND_I30_I_I_PREHEADER]]
+// NCRDIV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I14_I_I:%.*]] [
+// NCRDIV-NEXT:      i8 120, label [[WHILE_COND_I_I_I_PREHEADER:%.*]]
+// NCRDIV-NEXT:      i8 88, label [[WHILE_COND_I_I_I_PREHEADER]]
 // NCRDIV-NEXT:    ]
-// NCRDIV:       while.cond.i30.i.i.preheader:
-// NCRDIV-NEXT:    br label [[WHILE_COND_I30_I_I:%.*]]
-// NCRDIV:       while.cond.i30.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I31_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I37_I_I:%.*]], [[CLEANUP_I36_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I30_I_I_PREHEADER]] ]
-// NCRDIV-NEXT:    [[__R_0_I32_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I36_I_I]] ], [ 0, [[WHILE_COND_I30_I_I_PREHEADER]] ]
-// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I31_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    [[CMP_NOT_I33_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I33_I_I]], label [[_ZL4NANFPKC_EXIT:%.*]], label [[WHILE_BODY_I34_I_I:%.*]]
-// NCRDIV:       while.body.i34.i.i:
+// NCRDIV:       while.cond.i.i.i.preheader:
+// NCRDIV-NEXT:    br label [[WHILE_COND_I_I_I:%.*]]
+// NCRDIV:       while.cond.i.i.i:
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I_I_I_PREHEADER]] ]
+// NCRDIV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[WHILE_COND_I_I_I_PREHEADER]] ]
+// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA4]]
+// NCRDIV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL4NANFPKC_EXIT:%.*]], label [[WHILE_BODY_I_I_I:%.*]]
+// NCRDIV:       while.body.i.i.i:
 // NCRDIV-NEXT:    [[TMP3:%.*]] = add i8 [[TMP2]], -48
-// NCRDIV-NEXT:    [[OR_COND_I35_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
-// NCRDIV-NEXT:    br i1 [[OR_COND_I35_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
+// NCRDIV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
+// NCRDIV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
 // NCRDIV:       if.else.i.i.i:
 // NCRDIV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP2]], -97
 // NCRDIV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP4]], 6
@@ -3992,54 +3992,33 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV:       if.else17.i.i.i:
 // NCRDIV-NEXT:    [[TMP5:%.*]] = add i8 [[TMP2]], -65
 // NCRDIV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
-// NCRDIV-NEXT:    br i1 [[OR_COND34_I_I_I]], label [[IF_END31_I_I_I]], label [[CLEANUP_I36_I_I]]
+// NCRDIV-NEXT:    br i1 [[OR_COND34_I_I_I]], label [[IF_END31_I_I_I]], label [[CLEANUP_I_I_I]]
 // NCRDIV:       if.end31.i.i.i:
-// NCRDIV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I32_I_I]], 4
+// NCRDIV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 4
 // NCRDIV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // NCRDIV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // NCRDIV-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
-// NCRDIV-NEXT:    [[INCDEC_PTR_I40_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
-// NCRDIV-NEXT:    br label [[CLEANUP_I36_I_I]]
-// NCRDIV:       cleanup.i36.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I37_I_I]] = phi ptr [ [[INCDEC_PTR_I40_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I31_I_I]], [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I32_I_I]], [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    [[COND_I_I_I:%.*]] = phi i1 [ true, [[IF_END31_I_I_I]] ], [ false, [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I30_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP11]]
-// NCRDIV:       while.cond.i.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
-// NCRDIV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
-// NCRDIV-NEXT:    [[TMP6:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL4NANFPKC_EXIT]], label [[WHILE_BODY_I_I_I:%.*]]
-// NCRDIV:       while.body.i.i.i:
-// NCRDIV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
-// NCRDIV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
-// NCRDIV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[CLEANUP_I_I_I]]
-// NCRDIV:       if.then.i.i.i:
-// NCRDIV-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// NCRDIV-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
-// NCRDIV-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
-// NCRDIV-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I]], i64 1
 // NCRDIV-NEXT:    br label [[CLEANUP_I_I_I]]
 // NCRDIV:       cleanup.i.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = phi ptr [ [[INCDEC_PTR_I_I_I]], [[IF_THEN_I_I_I]] ], [ [[__TAGP_ADDR_0_I_I_I]], [[WHILE_BODY_I_I_I]] ]
-// NCRDIV-NEXT:    [[__R_1_I_I_I]] = phi i64 [ [[SUB_I_I_I]], [[IF_THEN_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_BODY_I_I_I]] ]
-// NCRDIV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP7]]
+// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = phi ptr [ [[INCDEC_PTR_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[COND_I_I_I:%.*]] = phi i1 [ true, [[IF_END31_I_I_I]] ], [ false, [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP11]]
 // NCRDIV:       while.cond.i14.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I21_I_I:%.*]], [[CLEANUP_I20_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
-// NCRDIV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I22_I_I:%.*]], [[CLEANUP_I20_I_I]] ], [ 0, [[ENTRY]] ]
-// NCRDIV-NEXT:    [[TMP8:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I21_I_I:%.*]], [[CLEANUP_I20_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
+// NCRDIV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I22_I_I:%.*]], [[CLEANUP_I20_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
+// NCRDIV-NEXT:    [[TMP6:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA4]]
+// NCRDIV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label [[_ZL4NANFPKC_EXIT]], label [[WHILE_BODY_I18_I_I:%.*]]
 // NCRDIV:       while.body.i18.i.i:
-// NCRDIV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
-// NCRDIV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
+// NCRDIV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
+// NCRDIV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
 // NCRDIV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[IF_THEN_I24_I_I:%.*]], label [[CLEANUP_I20_I_I]]
 // NCRDIV:       if.then.i24.i.i:
-// NCRDIV-NEXT:    [[MUL_I25_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// NCRDIV-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// NCRDIV-NEXT:    [[MUL_I25_I_I:%.*]] = shl i64 [[__R_0_I16_I_I]], 3
+// NCRDIV-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // NCRDIV-NEXT:    [[ADD_I27_I_I:%.*]] = add i64 [[MUL_I25_I_I]], -48
 // NCRDIV-NEXT:    [[SUB_I28_I_I:%.*]] = add i64 [[ADD_I27_I_I]], [[CONV5_I26_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I29_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I]], i64 1
@@ -4047,9 +4026,30 @@ extern "C" __device__ double test_modf(double x, double* y) {
 // NCRDIV:       cleanup.i20.i.i:
 // NCRDIV-NEXT:    [[__TAGP_ADDR_1_I21_I_I]] = phi ptr [ [[INCDEC_PTR_I29_I_I]], [[IF_THEN_I24_I_I]] ], [ [[__TAGP_ADDR_0_I15_I_I]], [[WHILE_BODY_I18_I_I]] ]
 // NCRDIV-NEXT:    [[__R_1_I22_I_I]] = phi i64 [ [[SUB_I28_I_I]], [[IF_THEN_I24_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_BODY_I18_I_I]] ]
-// NCRDIV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP10]]
+// NCRDIV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP7]]
+// NCRDIV:       while.cond.i30.i.i:
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I31_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I37_I_I:%.*]], [[CLEANUP_I36_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
+// NCRDIV-NEXT:    [[__R_0_I32_I_I:%.*]] = phi i64 [ [[__R_1_I38_I_I:%.*]], [[CLEANUP_I36_I_I]] ], [ 0, [[ENTRY]] ]
+// NCRDIV-NEXT:    [[TMP8:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I31_I_I]], align 1, !tbaa [[TBAA4]]
+// NCRDIV-NEXT:    [[CMP_NOT_I33_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I33_I_I]], label [[_ZL4NANFPKC_EXIT]], label [[WHILE_BODY_I34_I_I:%.*]]
+// NCRDIV:       while.body.i34.i.i:
+// NCRDIV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
+// NCRDIV-NEXT:    [[OR_COND_I35_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
+// NCRDIV-NEXT:    br i1 [[OR_COND_I35_I_I]], label [[IF_THEN_I40_I_I:%.*]], label [[CLEANUP_I36_I_I]]
+// NCRDIV:       if.then.i40.i.i:
+// NCRDIV-NEXT:    [[MUL_I41_I_I:%.*]] = mul i64 [[__R_0_I32_I_I]], 10
+// NCRDIV-NEXT:    [[CONV5_I42_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// NCRDIV-NEXT:    [[ADD_I43_I_I:%.*]] = add i64 [[MUL_I41_I_I]], -48
+// NCRDIV-NEXT:    [[SUB_I44_I_I:%.*]] = add i64 [[ADD_I43_I_I]], [[CONV5_I42_I_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I45_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
+// NCRDIV-NEXT:    br label [[CLEANUP_I36_I_I]]
+// NCRDIV:       cleanup.i36.i.i:
+// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I37_I_I]] = phi ptr [ [[INCDEC_PTR_I45_I_I]], [[IF_THEN_I40_I_I]] ], [ [[__TAGP_ADDR_0_I31_I_I]], [[WHILE_BODY_I34_I_I]] ]
+// NCRDIV-NEXT:    [[__R_1_I38_I_I]] = phi i64 [ [[SUB_I44_I_I]], [[IF_THEN_I40_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_BODY_I34_I_I]] ]
+// NCRDIV-NEXT:    br i1 [[OR_COND_I35_I_I]], label [[WHILE_COND_I30_I_I]], label [[_ZL4NANFPKC_EXIT]], !llvm.loop [[LOOP10]]
 // NCRDIV:       _ZL4nanfPKc.exit:
-// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ], [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ], [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ]
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = trunc i64 [[RETVAL_0_I_I]] to i32
 // NCRDIV-NEXT:    [[BF_VALUE_I:%.*]] = and i32 [[CONV_I]], 4194303
 // NCRDIV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i32 [[BF_VALUE_I]], 2143289344
@@ -4343,26 +4343,26 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV-NEXT:  entry:
 // NCRDIV-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TAG:%.*]], align 1, !tbaa [[TBAA4]]
 // NCRDIV-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 48
-// NCRDIV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I14_I_I:%.*]]
+// NCRDIV-NEXT:    br i1 [[CMP_I_I]], label [[IF_THEN_I_I:%.*]], label [[WHILE_COND_I30_I_I:%.*]]
 // NCRDIV:       if.then.i.i:
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[TAG]], i64 1
 // NCRDIV-NEXT:    [[TMP1:%.*]] = load i8, ptr [[INCDEC_PTR_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I_I_I:%.*]] [
-// NCRDIV-NEXT:      i8 120, label [[WHILE_COND_I30_I_I_PREHEADER:%.*]]
-// NCRDIV-NEXT:      i8 88, label [[WHILE_COND_I30_I_I_PREHEADER]]
+// NCRDIV-NEXT:    switch i8 [[TMP1]], label [[WHILE_COND_I14_I_I:%.*]] [
+// NCRDIV-NEXT:      i8 120, label [[WHILE_COND_I_I_I_PREHEADER:%.*]]
+// NCRDIV-NEXT:      i8 88, label [[WHILE_COND_I_I_I_PREHEADER]]
 // NCRDIV-NEXT:    ]
-// NCRDIV:       while.cond.i30.i.i.preheader:
-// NCRDIV-NEXT:    br label [[WHILE_COND_I30_I_I:%.*]]
-// NCRDIV:       while.cond.i30.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I31_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I37_I_I:%.*]], [[CLEANUP_I36_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I30_I_I_PREHEADER]] ]
-// NCRDIV-NEXT:    [[__R_0_I32_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I36_I_I]] ], [ 0, [[WHILE_COND_I30_I_I_PREHEADER]] ]
-// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I31_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    [[CMP_NOT_I33_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I33_I_I]], label [[_ZL3NANPKC_EXIT:%.*]], label [[WHILE_BODY_I34_I_I:%.*]]
-// NCRDIV:       while.body.i34.i.i:
+// NCRDIV:       while.cond.i.i.i.preheader:
+// NCRDIV-NEXT:    br label [[WHILE_COND_I_I_I:%.*]]
+// NCRDIV:       while.cond.i.i.i:
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[WHILE_COND_I_I_I_PREHEADER]] ]
+// NCRDIV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_2_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[WHILE_COND_I_I_I_PREHEADER]] ]
+// NCRDIV-NEXT:    [[TMP2:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA4]]
+// NCRDIV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP2]], 0
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL3NANPKC_EXIT:%.*]], label [[WHILE_BODY_I_I_I:%.*]]
+// NCRDIV:       while.body.i.i.i:
 // NCRDIV-NEXT:    [[TMP3:%.*]] = add i8 [[TMP2]], -48
-// NCRDIV-NEXT:    [[OR_COND_I35_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
-// NCRDIV-NEXT:    br i1 [[OR_COND_I35_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
+// NCRDIV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp ult i8 [[TMP3]], 10
+// NCRDIV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_END31_I_I_I:%.*]], label [[IF_ELSE_I_I_I:%.*]]
 // NCRDIV:       if.else.i.i.i:
 // NCRDIV-NEXT:    [[TMP4:%.*]] = add i8 [[TMP2]], -97
 // NCRDIV-NEXT:    [[OR_COND33_I_I_I:%.*]] = icmp ult i8 [[TMP4]], 6
@@ -4370,54 +4370,33 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV:       if.else17.i.i.i:
 // NCRDIV-NEXT:    [[TMP5:%.*]] = add i8 [[TMP2]], -65
 // NCRDIV-NEXT:    [[OR_COND34_I_I_I:%.*]] = icmp ult i8 [[TMP5]], 6
-// NCRDIV-NEXT:    br i1 [[OR_COND34_I_I_I]], label [[IF_END31_I_I_I]], label [[CLEANUP_I36_I_I]]
+// NCRDIV-NEXT:    br i1 [[OR_COND34_I_I_I]], label [[IF_END31_I_I_I]], label [[CLEANUP_I_I_I]]
 // NCRDIV:       if.end31.i.i.i:
-// NCRDIV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I34_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I32_I_I]], 4
+// NCRDIV-NEXT:    [[DOTSINK:%.*]] = phi i64 [ -48, [[WHILE_BODY_I_I_I]] ], [ -87, [[IF_ELSE_I_I_I]] ], [ -55, [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[MUL24_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 4
 // NCRDIV-NEXT:    [[CONV25_I_I_I:%.*]] = zext nneg i8 [[TMP2]] to i64
 // NCRDIV-NEXT:    [[ADD26_I_I_I:%.*]] = add i64 [[MUL24_I_I_I]], [[DOTSINK]]
 // NCRDIV-NEXT:    [[ADD28_I_I_I:%.*]] = add i64 [[ADD26_I_I_I]], [[CONV25_I_I_I]]
-// NCRDIV-NEXT:    [[INCDEC_PTR_I40_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
-// NCRDIV-NEXT:    br label [[CLEANUP_I36_I_I]]
-// NCRDIV:       cleanup.i36.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I37_I_I]] = phi ptr [ [[INCDEC_PTR_I40_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I31_I_I]], [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I32_I_I]], [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    [[COND_I_I_I:%.*]] = phi i1 [ true, [[IF_END31_I_I_I]] ], [ false, [[IF_ELSE17_I_I_I]] ]
-// NCRDIV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I30_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP11]]
-// NCRDIV:       while.cond.i.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I_I_I:%.*]], [[CLEANUP_I_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
-// NCRDIV-NEXT:    [[__R_0_I_I_I:%.*]] = phi i64 [ [[__R_1_I_I_I:%.*]], [[CLEANUP_I_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
-// NCRDIV-NEXT:    [[TMP6:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    [[CMP_NOT_I_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
-// NCRDIV-NEXT:    br i1 [[CMP_NOT_I_I_I]], label [[_ZL3NANPKC_EXIT]], label [[WHILE_BODY_I_I_I:%.*]]
-// NCRDIV:       while.body.i.i.i:
-// NCRDIV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
-// NCRDIV-NEXT:    [[OR_COND_I_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
-// NCRDIV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[CLEANUP_I_I_I]]
-// NCRDIV:       if.then.i.i.i:
-// NCRDIV-NEXT:    [[MUL_I_I_I:%.*]] = shl i64 [[__R_0_I_I_I]], 3
-// NCRDIV-NEXT:    [[CONV5_I_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
-// NCRDIV-NEXT:    [[ADD_I_I_I:%.*]] = add i64 [[MUL_I_I_I]], -48
-// NCRDIV-NEXT:    [[SUB_I_I_I:%.*]] = add i64 [[ADD_I_I_I]], [[CONV5_I_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I_I_I]], i64 1
 // NCRDIV-NEXT:    br label [[CLEANUP_I_I_I]]
 // NCRDIV:       cleanup.i.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = phi ptr [ [[INCDEC_PTR_I_I_I]], [[IF_THEN_I_I_I]] ], [ [[__TAGP_ADDR_0_I_I_I]], [[WHILE_BODY_I_I_I]] ]
-// NCRDIV-NEXT:    [[__R_1_I_I_I]] = phi i64 [ [[SUB_I_I_I]], [[IF_THEN_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_BODY_I_I_I]] ]
-// NCRDIV-NEXT:    br i1 [[OR_COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP7]]
+// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I_I_I]] = phi ptr [ [[INCDEC_PTR_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__TAGP_ADDR_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[__R_2_I_I_I]] = phi i64 [ [[ADD28_I_I_I]], [[IF_END31_I_I_I]] ], [ [[__R_0_I_I_I]], [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    [[COND_I_I_I:%.*]] = phi i1 [ true, [[IF_END31_I_I_I]] ], [ false, [[IF_ELSE17_I_I_I]] ]
+// NCRDIV-NEXT:    br i1 [[COND_I_I_I]], label [[WHILE_COND_I_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP11]]
 // NCRDIV:       while.cond.i14.i.i:
-// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I21_I_I:%.*]], [[CLEANUP_I20_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
-// NCRDIV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I22_I_I:%.*]], [[CLEANUP_I20_I_I]] ], [ 0, [[ENTRY]] ]
-// NCRDIV-NEXT:    [[TMP8:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA4]]
-// NCRDIV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I15_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I21_I_I:%.*]], [[CLEANUP_I20_I_I:%.*]] ], [ [[INCDEC_PTR_I_I]], [[IF_THEN_I_I]] ]
+// NCRDIV-NEXT:    [[__R_0_I16_I_I:%.*]] = phi i64 [ [[__R_1_I22_I_I:%.*]], [[CLEANUP_I20_I_I]] ], [ 0, [[IF_THEN_I_I]] ]
+// NCRDIV-NEXT:    [[TMP6:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I15_I_I]], align 1, !tbaa [[TBAA4]]
+// NCRDIV-NEXT:    [[CMP_NOT_I17_I_I:%.*]] = icmp eq i8 [[TMP6]], 0
 // NCRDIV-NEXT:    br i1 [[CMP_NOT_I17_I_I]], label [[_ZL3NANPKC_EXIT]], label [[WHILE_BODY_I18_I_I:%.*]]
 // NCRDIV:       while.body.i18.i.i:
-// NCRDIV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
-// NCRDIV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
+// NCRDIV-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], -8
+// NCRDIV-NEXT:    [[OR_COND_I19_I_I:%.*]] = icmp eq i8 [[TMP7]], 48
 // NCRDIV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[IF_THEN_I24_I_I:%.*]], label [[CLEANUP_I20_I_I]]
 // NCRDIV:       if.then.i24.i.i:
-// NCRDIV-NEXT:    [[MUL_I25_I_I:%.*]] = mul i64 [[__R_0_I16_I_I]], 10
-// NCRDIV-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// NCRDIV-NEXT:    [[MUL_I25_I_I:%.*]] = shl i64 [[__R_0_I16_I_I]], 3
+// NCRDIV-NEXT:    [[CONV5_I26_I_I:%.*]] = zext nneg i8 [[TMP6]] to i64
 // NCRDIV-NEXT:    [[ADD_I27_I_I:%.*]] = add i64 [[MUL_I25_I_I]], -48
 // NCRDIV-NEXT:    [[SUB_I28_I_I:%.*]] = add i64 [[ADD_I27_I_I]], [[CONV5_I26_I_I]]
 // NCRDIV-NEXT:    [[INCDEC_PTR_I29_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I15_I_I]], i64 1
@@ -4425,9 +4404,30 @@ extern "C" __device__ float test_nanf(const char *tag) {
 // NCRDIV:       cleanup.i20.i.i:
 // NCRDIV-NEXT:    [[__TAGP_ADDR_1_I21_I_I]] = phi ptr [ [[INCDEC_PTR_I29_I_I]], [[IF_THEN_I24_I_I]] ], [ [[__TAGP_ADDR_0_I15_I_I]], [[WHILE_BODY_I18_I_I]] ]
 // NCRDIV-NEXT:    [[__R_1_I22_I_I]] = phi i64 [ [[SUB_I28_I_I]], [[IF_THEN_I24_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_BODY_I18_I_I]] ]
-// NCRDIV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP10]]
+// NCRDIV-NEXT:    br i1 [[OR_COND_I19_I_I]], label [[WHILE_COND_I14_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP7]]
+// NCRDIV:       while.cond.i30.i.i:
+// NCRDIV-NEXT:    [[__TAGP_ADDR_0_I31_I_I:%.*]] = phi ptr [ [[__TAGP_ADDR_1_I37_I_I:%.*]], [[CLEANUP_I36_I_I:%.*]] ], [ [[TAG]], [[ENTRY:%.*]] ]
+// NCRDIV-NEXT:    [[__R_0_I32_I_I:%.*]] = phi i64 [ [[__R_1_I38_I_I:%.*]], [[CLEANUP_I36_I_I]] ], [ 0, [[ENTRY]] ]
+// NCRDIV-NEXT:    [[TMP8:%.*]] = load i8, ptr [[__TAGP_ADDR_0_I31_I_I]], align 1, !tbaa [[TBAA4]]
+// NCRDIV-NEXT:    [[CMP_NOT_I33_I_I:%.*]] = icmp eq i8 [[TMP8]], 0
+// NCRDIV-NEXT:    br i1 [[CMP_NOT_I33_I_I]], label [[_ZL3NANPKC_EXIT]], label [[WHILE_BODY_I34_I_I:%.*]]
+// NCRDIV:       while.body.i34.i.i:
+// NCRDIV-NEXT:    [[TMP9:%.*]] = add i8 [[TMP8]], -48
+// NCRDIV-NEXT:    [[OR_COND_I35_I_I:%.*]] = icmp ult i8 [[TMP9]], 10
+// NCRDIV-NEXT:    br i1 [[OR_COND_I35_I_I]], label [[IF_THEN_I40_I_I:%.*]], label [[CLEANUP_I36_I_I]]
+// NCRDIV:       if.then.i40.i.i:
+// NCRDIV-NEXT:    [[MUL_I41_I_I:%.*]] = mul i64 [[__R_0_I32_I_I]], 10
+// NCRDIV-NEXT:    [[CONV5_I42_I_I:%.*]] = zext nneg i8 [[TMP8]] to i64
+// NCRDIV-NEXT:    [[ADD_I43_I_I:%.*]] = add i64 [[MUL_I41_I_I]], -48
+// NCRDIV-NEXT:    [[SUB_I44_I_I:%.*]] = add i64 [[ADD_I43_I_I]], [[CONV5_I42_I_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I45_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[__TAGP_ADDR_0_I31_I_I]], i64 1
+// NCRDIV-NEXT:    br label [[CLEANUP_I36_I_I]]
+// NCRDIV:       cleanup.i36.i.i:
+// NCRDIV-NEXT:    [[__TAGP_ADDR_1_I37_I_I]] = phi ptr [ [[INCDEC_PTR_I45_I_I]], [[IF_THEN_I40_I_I]] ], [ [[__TAGP_ADDR_0_I31_I_I]], [[WHILE_BODY_I34_I_I]] ]
+// NCRDIV-NEXT:    [[__R_1_I38_I_I]] = phi i64 [ [[SUB_I44_I_I]], [[IF_THEN_I40_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_BODY_I34_I_I]] ]
+// NCRDIV-NEXT:    br i1 [[OR_COND_I35_I_I]], label [[WHILE_COND_I30_I_I]], label [[_ZL3NANPKC_EXIT]], !llvm.loop [[LOOP10]]
 // NCRDIV:       _ZL3nanPKc.exit:
-// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ], [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I_I:%.*]] = phi i64 [ 0, [[CLEANUP_I20_I_I]] ], [ [[__R_0_I16_I_I]], [[WHILE_COND_I14_I_I]] ], [ 0, [[CLEANUP_I_I_I]] ], [ [[__R_0_I_I_I]], [[WHILE_COND_I_I_I]] ], [ 0, [[CLEANUP_I36_I_I]] ], [ [[__R_0_I32_I_I]], [[WHILE_COND_I30_I_I]] ]
 // NCRDIV-NEXT:    [[BF_VALUE_I:%.*]] = and i64 [[RETVAL_0_I_I]], 2251799813685247
 // NCRDIV-NEXT:    [[BF_SET9_I:%.*]] = or disjoint i64 [[BF_VALUE_I]], 9221120237041090560
 // NCRDIV-NEXT:    [[TMP10:%.*]] = bitcast i64 [[BF_SET9_I]] to double
@@ -5029,22 +5029,22 @@ extern "C" __device__ double test_normcdfinv(double x) {
 //
 // NCRDIV-LABEL: @test_normf(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL5NORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// NCRDIV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL5NORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // NCRDIV:       while.body.i:
-// NCRDIV-NEXT:    [[__R_0_I4:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA17]]
+// NCRDIV-NEXT:    [[__R_08_I:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// NCRDIV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_07_I]], align 4, !tbaa [[TBAA17]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
-// NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
+// NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_08_I]], [[MUL_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_07_I]], i64 4
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5NORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP21:![0-9]+]]
 // NCRDIV:       _ZL5normfiPKf.exit:
-// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[__R_0_I_LCSSA]]), !fpmath [[META22:![0-9]+]]
+// NCRDIV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract noundef float @llvm.sqrt.f32(float [[__R_0_LCSSA_I]]), !fpmath [[META22:![0-9]+]]
 // NCRDIV-NEXT:    ret float [[TMP1]]
 //
 // AMDGCNSPIRV-LABEL: @test_normf(
@@ -5133,22 +5133,22 @@ extern "C" __device__ float test_normf(int x, const float *y) {
 //
 // NCRDIV-LABEL: @test_norm(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL4NORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// NCRDIV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL4NORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // NCRDIV:       while.body.i:
-// NCRDIV-NEXT:    [[__R_0_I4:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA19]]
+// NCRDIV-NEXT:    [[__R_08_I:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// NCRDIV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_07_I]], align 8, !tbaa [[TBAA19]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
-// NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
+// NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_08_I]], [[MUL_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_07_I]], i64 8
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL4NORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP23:![0-9]+]]
 // NCRDIV:       _ZL4normiPKd.exit:
-// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract noundef double @llvm.sqrt.f64(double [[__R_0_I_LCSSA]])
+// NCRDIV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// NCRDIV-NEXT:    [[TMP1:%.*]] = tail call contract noundef double @llvm.sqrt.f64(double [[__R_0_LCSSA_I]])
 // NCRDIV-NEXT:    ret double [[TMP1]]
 //
 // AMDGCNSPIRV-LABEL: @test_norm(
@@ -5695,22 +5695,22 @@ extern "C" __device__ double test_rint(double x) {
 //
 // NCRDIV-LABEL: @test_rnormf(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL6RNORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// NCRDIV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL6RNORMFIPKF_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // NCRDIV:       while.body.i:
-// NCRDIV-NEXT:    [[__R_0_I4:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_0_I3]], align 4, !tbaa [[TBAA17]]
+// NCRDIV-NEXT:    [[__R_08_I:%.*]] = phi float [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// NCRDIV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load float, ptr [[__A_ADDR_07_I]], align 4, !tbaa [[TBAA17]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[TMP0]], [[TMP0]]
-// NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_0_I4]], [[MUL_I]]
-// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 4
+// NCRDIV-NEXT:    [[ADD_I]] = fadd contract float [[__R_08_I]], [[MUL_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_07_I]], i64 4
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL6RNORMFIPKF_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP24:![0-9]+]]
 // NCRDIV:       _ZL6rnormfiPKf.exit:
-// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_rsqrt_f32(float noundef [[__R_0_I_LCSSA]]) #[[ATTR13]]
+// NCRDIV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef float @__ocml_rsqrt_f32(float noundef [[__R_0_LCSSA_I]]) #[[ATTR13]]
 // NCRDIV-NEXT:    ret float [[CALL_I]]
 //
 // AMDGCNSPIRV-LABEL: @test_rnormf(
@@ -5799,22 +5799,22 @@ extern "C" __device__ float test_rnormf(int x, const float* y) {
 //
 // NCRDIV-LABEL: @test_rnorm(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TOBOOL_NOT_I1:%.*]] = icmp eq i32 [[X:%.*]], 0
-// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I1]], label [[_ZL5RNORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
+// NCRDIV-NEXT:    [[TOBOOL_NOT5_I:%.*]] = icmp eq i32 [[X:%.*]], 0
+// NCRDIV-NEXT:    br i1 [[TOBOOL_NOT5_I]], label [[_ZL5RNORMIPKD_EXIT:%.*]], label [[WHILE_BODY_I:%.*]]
 // NCRDIV:       while.body.i:
-// NCRDIV-NEXT:    [[__R_0_I4:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
-// NCRDIV-NEXT:    [[__A_ADDR_0_I3:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[__DIM_ADDR_0_I2:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
-// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_0_I2]], -1
-// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_0_I3]], align 8, !tbaa [[TBAA19]]
+// NCRDIV-NEXT:    [[__R_08_I:%.*]] = phi double [ [[ADD_I:%.*]], [[WHILE_BODY_I]] ], [ 0.000000e+00, [[ENTRY:%.*]] ]
+// NCRDIV-NEXT:    [[__A_ADDR_07_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ [[Y:%.*]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[__DIM_ADDR_06_I:%.*]] = phi i32 [ [[DEC_I:%.*]], [[WHILE_BODY_I]] ], [ [[X]], [[ENTRY]] ]
+// NCRDIV-NEXT:    [[DEC_I]] = add nsw i32 [[__DIM_ADDR_06_I]], -1
+// NCRDIV-NEXT:    [[TMP0:%.*]] = load double, ptr [[__A_ADDR_07_I]], align 8, !tbaa [[TBAA19]]
 // NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract double [[TMP0]], [[TMP0]]
-// NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_0_I4]], [[MUL_I]]
-// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_0_I3]], i64 8
+// NCRDIV-NEXT:    [[ADD_I]] = fadd contract double [[__R_08_I]], [[MUL_I]]
+// NCRDIV-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds nuw i8, ptr [[__A_ADDR_07_I]], i64 8
 // NCRDIV-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq i32 [[DEC_I]], 0
 // NCRDIV-NEXT:    br i1 [[TOBOOL_NOT_I]], label [[_ZL5RNORMIPKD_EXIT]], label [[WHILE_BODY_I]], !llvm.loop [[LOOP25:![0-9]+]]
 // NCRDIV:       _ZL5rnormiPKd.exit:
-// NCRDIV-NEXT:    [[__R_0_I_LCSSA:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
-// NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_rsqrt_f64(double noundef [[__R_0_I_LCSSA]]) #[[ATTR13]]
+// NCRDIV-NEXT:    [[__R_0_LCSSA_I:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[ADD_I]], [[WHILE_BODY_I]] ]
+// NCRDIV-NEXT:    [[CALL_I:%.*]] = tail call contract noundef double @__ocml_rsqrt_f64(double noundef [[__R_0_LCSSA_I]]) #[[ATTR13]]
 // NCRDIV-NEXT:    ret double [[CALL_I]]
 //
 // AMDGCNSPIRV-LABEL: @test_rnorm(
@@ -7111,30 +7111,30 @@ extern "C" __device__ double test_y1(double x) {
 // NCRDIV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // NCRDIV-NEXT:    ]
 // NCRDIV:       if.then.i:
-// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef float @__ocml_y0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_y0_f32(float noundef [[Y:%.*]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL3YNFIF_EXIT:%.*]]
 // NCRDIV:       if.then2.i:
-// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL3YNFIF_EXIT]]
 // NCRDIV:       if.end4.i:
-// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_y0_f32(float noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// NCRDIV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL3YNFIF_EXIT]]
+// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef float @__ocml_y0_f32(float noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef float @__ocml_y1_f32(float noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// NCRDIV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL3YNFIF_EXIT]]
 // NCRDIV:       for.body.i:
-// NCRDIV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X1_0_I3:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X0_0_I2:%.*]] = phi float [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// NCRDIV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X1_025_I:%.*]] = phi float [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X0_024_I:%.*]] = phi float [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to float
 // NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract float [[CONV_I]], [[Y]], !fpmath [[META12]]
-// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_0_I3]], [[DIV_I]]
-// NCRDIV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_0_I2]]
-// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL3YNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP26:![0-9]+]]
+// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract float [[__X1_025_I]], [[DIV_I]]
+// NCRDIV-NEXT:    [[SUB_I]] = fsub contract float [[MUL8_I]], [[__X0_024_I]]
+// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// NCRDIV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL3YNFIF_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP26:![0-9]+]]
 // NCRDIV:       _ZL3ynfif.exit:
-// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi float [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret float [[RETVAL_0_I]]
 //
 // AMDGCNSPIRV-LABEL: @test_ynf(
@@ -7280,30 +7280,30 @@ extern "C" __device__ float test_ynf(int x, float y) {
 // NCRDIV-NEXT:      i32 1, label [[IF_THEN2_I:%.*]]
 // NCRDIV-NEXT:    ]
 // NCRDIV:       if.then.i:
-// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef double @__ocml_y0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef double @__ocml_y0_f64(double noundef [[Y:%.*]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL2YNID_EXIT:%.*]]
 // NCRDIV:       if.then2.i:
-// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I20_I:%.*]] = tail call contract noundef double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
 // NCRDIV-NEXT:    br label [[_ZL2YNID_EXIT]]
 // NCRDIV:       if.end4.i:
-// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef double @__ocml_y0_f64(double noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CMP7_I1:%.*]] = icmp sgt i32 [[X]], 1
-// NCRDIV-NEXT:    br i1 [[CMP7_I1]], label [[FOR_BODY_I:%.*]], label [[_ZL2YNID_EXIT]]
+// NCRDIV-NEXT:    [[CALL_I21_I:%.*]] = tail call contract noundef double @__ocml_y0_f64(double noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I22_I:%.*]] = tail call contract noundef double @__ocml_y1_f64(double noundef [[Y]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CMP723_I:%.*]] = icmp sgt i32 [[X]], 1
+// NCRDIV-NEXT:    br i1 [[CMP723_I]], label [[FOR_BODY_I:%.*]], label [[_ZL2YNID_EXIT]]
 // NCRDIV:       for.body.i:
-// NCRDIV-NEXT:    [[__I_0_I4:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X1_0_I3:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[__X0_0_I2:%.*]] = phi double [ [[__X1_0_I3]], [[FOR_BODY_I]] ], [ [[CALL_I_I]], [[IF_END4_I]] ]
-// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_0_I4]], 1
+// NCRDIV-NEXT:    [[__I_026_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[FOR_BODY_I]] ], [ 1, [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X1_025_I:%.*]] = phi double [ [[SUB_I:%.*]], [[FOR_BODY_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[__X0_024_I:%.*]] = phi double [ [[__X1_025_I]], [[FOR_BODY_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ]
+// NCRDIV-NEXT:    [[MUL_I:%.*]] = shl nuw nsw i32 [[__I_026_I]], 1
 // NCRDIV-NEXT:    [[CONV_I:%.*]] = uitofp nneg i32 [[MUL_I]] to double
 // NCRDIV-NEXT:    [[DIV_I:%.*]] = fdiv contract double [[CONV_I]], [[Y]]
-// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_0_I3]], [[DIV_I]]
-// NCRDIV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_0_I2]]
-// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_0_I4]], 1
-// NCRDIV-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_I]], [[X]]
-// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT]], label [[_ZL2YNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP27:![0-9]+]]
+// NCRDIV-NEXT:    [[MUL8_I:%.*]] = fmul contract double [[__X1_025_I]], [[DIV_I]]
+// NCRDIV-NEXT:    [[SUB_I]] = fsub contract double [[MUL8_I]], [[__X0_024_I]]
+// NCRDIV-NEXT:    [[INC_I]] = add nuw nsw i32 [[__I_026_I]], 1
+// NCRDIV-NEXT:    [[EXITCOND_NOT_I:%.*]] = icmp eq i32 [[INC_I]], [[X]]
+// NCRDIV-NEXT:    br i1 [[EXITCOND_NOT_I]], label [[_ZL2YNID_EXIT]], label [[FOR_BODY_I]], !llvm.loop [[LOOP27:![0-9]+]]
 // NCRDIV:       _ZL2ynid.exit:
-// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I20_I]], [[IF_THEN_I]] ], [ [[CALL_I22_I]], [[IF_THEN2_I]] ], [ [[CALL_I21_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
+// NCRDIV-NEXT:    [[RETVAL_0_I:%.*]] = phi double [ [[CALL_I_I]], [[IF_THEN_I]] ], [ [[CALL_I20_I]], [[IF_THEN2_I]] ], [ [[CALL_I22_I]], [[IF_END4_I]] ], [ [[SUB_I]], [[FOR_BODY_I]] ]
 // NCRDIV-NEXT:    ret double [[RETVAL_0_I]]
 //
 // AMDGCNSPIRV-LABEL: @test_yn(
@@ -7931,10 +7931,10 @@ extern "C" __device__ float test___sinf(float x) {
 //
 // NCRDIV-LABEL: @test___tanf(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[CALL_I3_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X:%.*]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR14]]
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.amdgcn.rcp.f32(float [[CALL_I_I]])
-// NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I3_I]], [[TMP0]]
+// NCRDIV-NEXT:    [[CALL_I_I:%.*]] = tail call contract noundef float @__ocml_native_sin_f32(float noundef [[X:%.*]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[CALL_I3_I:%.*]] = tail call contract noundef float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR14]]
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.amdgcn.rcp.f32(float [[CALL_I3_I]])
+// NCRDIV-NEXT:    [[MUL_I:%.*]] = fmul contract float [[CALL_I_I]], [[TMP0]]
 // NCRDIV-NEXT:    ret float [[MUL_I]]
 //
 // AMDGCNSPIRV-LABEL: @test___tanf(
