@@ -25,12 +25,10 @@
 
 using namespace llvm;
 
-
 // Returns true of the types logically match, as defined in
 // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
-static bool typesLogicallyMatch(const SPIRVType *Ty1,
-                                        const SPIRVType *Ty2,
-                                        SPIRVGlobalRegistry &GR) {
+static bool typesLogicallyMatch(const SPIRVType *Ty1, const SPIRVType *Ty2,
+                                SPIRVGlobalRegistry &GR) {
   if (Ty1->getOpcode() != Ty2->getOpcode())
     return false;
 
@@ -44,7 +42,8 @@ static bool typesLogicallyMatch(const SPIRVType *Ty1,
 
     SPIRVType *ElemType1 = GR.getSPIRVTypeForVReg(Ty1->getOperand(1).getReg());
     SPIRVType *ElemType2 = GR.getSPIRVTypeForVReg(Ty2->getOperand(1).getReg());
-    return ElemType1 == ElemType2 || typesLogicallyMatch(ElemType1, ElemType2, GR);
+    return ElemType1 == ElemType2 ||
+           typesLogicallyMatch(ElemType1, ElemType2, GR);
   }
 
   if (Ty1->getOpcode() == SPIRV::OpTypeStruct) {
@@ -53,7 +52,8 @@ static bool typesLogicallyMatch(const SPIRVType *Ty1,
           GR.getSPIRVTypeForVReg(Ty1->getOperand(I).getReg());
       SPIRVType *ElemType2 =
           GR.getSPIRVTypeForVReg(Ty2->getOperand(I).getReg());
-      if (ElemType1 != ElemType2 && !typesLogicallyMatch(ElemType1, ElemType2, GR))
+      if (ElemType1 != ElemType2 &&
+          !typesLogicallyMatch(ElemType1, ElemType2, GR))
         return false;
     }
     return true;

@@ -373,6 +373,10 @@ public:
   // opcode (e.g. OpTypeBool, or OpTypeVector %x 4, where %x is OpTypeBool).
   bool isScalarOrVectorOfType(Register VReg, unsigned TypeOpcode) const;
 
+  // Returns true if `Type` is a resource type. This could be an image type
+  // or a struct for a buffer decorated with the block decoration.
+  bool isResourceType(SPIRVType *Type) const;
+
   // Return number of elements in a vector if the argument is associated with
   // a vector type. Return 1 for a scalar type, and 0 for a missing type.
   unsigned getScalarOrVectorComponentCount(Register VReg) const;
@@ -494,6 +498,7 @@ private:
                                   MachineIRBuilder &MIRBuilder);
   void addArrayStrideDecorations(Register Reg, Type *ElementType,
                                  MachineIRBuilder &MIRBuilder);
+  bool hasBlockDecoration(SPIRVType *Type) const;
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,

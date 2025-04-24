@@ -54,7 +54,6 @@ static unsigned typeToAddressSpace(const Type *Ty) {
   report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 }
 
-#ifndef NDEBUG
 static bool
 storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
@@ -86,7 +85,6 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   }
   llvm_unreachable("Unknown SPIRV::StorageClass enum");
 }
-#endif
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
@@ -929,7 +927,7 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
     });
   }
 
-  if (ExplicitLayoutRequired) {
+  if (ExplicitLayoutRequired && !isResourceType(ElemType)) {
     Type *ET = const_cast<Type *>(getTypeForSPIRVType(ElemType));
     addArrayStrideDecorations(ArrayType->defs().begin()->getReg(), ET,
                               MIRBuilder);
@@ -1297,6 +1295,21 @@ bool SPIRVGlobalRegistry::isScalarOrVectorOfType(Register VReg,
   return false;
 }
 
+bool SPIRVGlobalRegistry::isResourceType(SPIRVType *Type) const {
+  llvm::dbgs() << "isResourceType: Type=";
+  Type->dump();
+  switch (Type->getOpcode()) {
+  case SPIRV::OpTypeImage:
+  case SPIRV::OpTypeSampler:
+  case SPIRV::OpTypeSampledImage:
+    return true;
+  case SPIRV::OpTypeStruct:
+    return hasBlockDecoration(Type);
+  default:
+    return false;
+  }
+  return false;
+}
 unsigned
 SPIRVGlobalRegistry::getScalarOrVectorComponentCount(Register VReg) const {
   return getScalarOrVectorComponentCount(getSPIRVTypeForVReg(VReg));
@@ -2062,4 +2075,22 @@ void SPIRVGlobalRegistry::addArrayStrideDecorations(
   uint32_t SizeInBytes = DataLayout().getTypeSizeInBits(ElementType) / 8;
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
+}
+
+bool SPIRVGlobalRegistry::hasBlockDecoration(SPIRVType *Type) const {
+  Register Def = getSPIRVTypeID(Type);
+  for (const MachineInstr &Use :
+       Type->getMF()->getRegInfo().use_instructions(Def)) {
+    if (Use.getOpcode() != SPIRV::OpDecorate)
+      continue;
+
+    llvm::dbgs() << "Found decoration: ";
+    Use.dump();
+
+    if (Use.getOperand(1).getImm() == SPIRV::Decoration::Block)
+      return true;
+
+    llvm::dbgs() << "Not a block decoration.\n";
+  }
+  return false;
 }
