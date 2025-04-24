@@ -156,7 +156,7 @@ class OpenACCClauseCIREmitter final
   // num_gangs({One : i32, Two : i32, Three : i32} [#acc.device_type<nvidia>],\
   //           {One : i32, Two : i32, Three : i32} [#acc.device_type<radeon>])
   //
-  // When stored in the 'operands' list, the top-level 'segement' for
+  // When stored in the 'operands' list, the top-level 'segment' for
   // 'num_gangs' just shows 6 elements. In order to get the array-like
   // apperance, the 'numGangsSegments' list is kept as well. In the above case,
   // we've inserted 6 operands, so the 'numGangsSegments' must contain 2
