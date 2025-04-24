@@ -7,7 +7,7 @@
 define float @test_fabsf(float %f) {
 ; CHECK-LABEL: test_fabsf(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [test_fabsf_param_0];
@@ -21,7 +21,7 @@ define float @test_fabsf(float %f) {
 define double @test_fabs(double %d) {
 ; CHECK-LABEL: test_fabs(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f64 %fd<3>;
+; CHECK-NEXT:    .reg .b64 %fd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [test_fabs_param_0];
@@ -35,7 +35,7 @@ define double @test_fabs(double %d) {
 define float @test_nvvm_sqrt(float %a) {
 ; CHECK-LABEL: test_nvvm_sqrt(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [test_nvvm_sqrt_param_0];
@@ -49,7 +49,7 @@ define float @test_nvvm_sqrt(float %a) {
 define float @test_llvm_sqrt(float %a) {
 ; CHECK-LABEL: test_llvm_sqrt(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [test_llvm_sqrt_param_0];
