@@ -4369,15 +4369,13 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv8f64(<vscale x 8 x 
   ret <vscale x 16 x double> %res
 }
 
-define <vscale x 6 x half> @vector_interleave_nxv6f16_nxv2f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2) {
+define <vscale x 6 x half> @vector_interleave_nxv6f16_nxv2f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv6f16_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -4396,19 +4394,15 @@ define <vscale x 6 x half> @vector_interleave_nxv6f16_nxv2f16(<vscale x 2 x half
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv6f16_nxv2f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -4427,24 +4421,20 @@ define <vscale x 6 x half> @vector_interleave_nxv6f16_nxv2f16(<vscale x 2 x half
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 6 x half> @llvm.vector.interleave3.nxv6f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2)
   ret <vscale x 6 x half> %res
 }
 
-define <vscale x 12 x half> @vector_interleave_nxv12f16_nxv4f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2) {
+define <vscale x 12 x half> @vector_interleave_nxv12f16_nxv4f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv12f16_nxv4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
@@ -4458,20 +4448,16 @@ define <vscale x 12 x half> @vector_interleave_nxv12f16_nxv4f16(<vscale x 4 x ha
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv12f16_nxv4f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
@@ -4485,24 +4471,20 @@ define <vscale x 12 x half> @vector_interleave_nxv12f16_nxv4f16(<vscale x 4 x ha
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 12 x half> @llvm.vector.interleave3.nxv12f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2)
   ret <vscale x 12 x half> %res
 }
 
-define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2) {
+define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv24f16_nxv8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
@@ -4517,20 +4499,16 @@ define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv8f16(<vscale x 8 x ha
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv24f16_nxv8f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    slli a1, a1, 1
@@ -4545,23 +4523,19 @@ define <vscale x 24 x half> @vector_interleave_nxv24f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 24 x half> @llvm.vector.interleave3.nxv24f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2)
   ret <vscale x 24 x half> %res
 }
 
-define <vscale x 6 x bfloat> @vector_interleave_nxv6bf16_nxv2bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2) {
+define <vscale x 6 x bfloat> @vector_interleave_nxv6bf16_nxv2bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv6bf16_nxv2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -4580,19 +4554,15 @@ define <vscale x 6 x bfloat> @vector_interleave_nxv6bf16_nxv2bf16(<vscale x 2 x 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv6bf16_nxv2bf16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -4611,24 +4581,20 @@ define <vscale x 6 x bfloat> @vector_interleave_nxv6bf16_nxv2bf16(<vscale x 2 x 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 6 x bfloat> @llvm.vector.interleave3.nxv6bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2)
   ret <vscale x 6 x bfloat> %res
 }
 
-define <vscale x 12 x bfloat> @vector_interleave_nxv12bf16_nxv4bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2) {
+define <vscale x 12 x bfloat> @vector_interleave_nxv12bf16_nxv4bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv12bf16_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
@@ -4642,20 +4608,16 @@ define <vscale x 12 x bfloat> @vector_interleave_nxv12bf16_nxv4bf16(<vscale x 4 
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv12bf16_nxv4bf16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
@@ -4669,24 +4631,20 @@ define <vscale x 12 x bfloat> @vector_interleave_nxv12bf16_nxv4bf16(<vscale x 4 
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 12 x bfloat> @llvm.vector.interleave3.nxv12bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2)
   ret <vscale x 12 x bfloat> %res
 }
 
-define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2) {
+define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv24bf16_nxv8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
@@ -4701,20 +4659,16 @@ define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv8bf16(<vscale x 8 
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv24bf16_nxv8bf16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    slli a1, a1, 1
@@ -4729,23 +4683,19 @@ define <vscale x 24 x bfloat> @vector_interleave_nxv24bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 24 x bfloat> @llvm.vector.interleave3.nxv24bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2)
   ret <vscale x 24 x bfloat> %res
 }
 
-define <vscale x 3 x float> @vector_interleave_nxv3f32_nxv1f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2) {
+define <vscale x 3 x float> @vector_interleave_nxv3f32_nxv1f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv3f32_nxv1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -4764,19 +4714,15 @@ define <vscale x 3 x float> @vector_interleave_nxv3f32_nxv1f32(<vscale x 1 x flo
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv3f32_nxv1f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -4795,24 +4741,20 @@ define <vscale x 3 x float> @vector_interleave_nxv3f32_nxv1f32(<vscale x 1 x flo
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 3 x float> @llvm.vector.interleave3.nxv3f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2)
   ret <vscale x 3 x float> %res
 }
 
-define <vscale x 6 x float> @vector_interleave_nxv6f32_nxv2f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2) {
+define <vscale x 6 x float> @vector_interleave_nxv6f32_nxv2f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv6f32_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
@@ -4826,20 +4768,16 @@ define <vscale x 6 x float> @vector_interleave_nxv6f32_nxv2f32(<vscale x 2 x flo
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv6f32_nxv2f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
@@ -4853,24 +4791,20 @@ define <vscale x 6 x float> @vector_interleave_nxv6f32_nxv2f32(<vscale x 2 x flo
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 6 x float> @llvm.vector.interleave3.nxv6f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2)
   ret <vscale x 6 x float> %res
 }
 
-define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2) {
+define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv12f32_nxv4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
@@ -4885,20 +4819,16 @@ define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv4f32(<vscale x 4 x f
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv12f32_nxv4f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    slli a1, a1, 1
@@ -4913,24 +4843,20 @@ define <vscale x 12 x float> @vector_interleave_nxv12f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 12 x float> @llvm.vector.interleave3.nxv12f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2)
   ret <vscale x 12 x float> %res
 }
 
-define <vscale x 3 x double> @vector_interleave_nxv3f64_nxv1f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2) {
+define <vscale x 3 x double> @vector_interleave_nxv3f64_nxv1f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv3f64_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
@@ -4944,20 +4870,16 @@ define <vscale x 3 x double> @vector_interleave_nxv3f64_nxv1f64(<vscale x 1 x do
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv3f64_nxv1f64:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
@@ -4971,24 +4893,20 @@ define <vscale x 3 x double> @vector_interleave_nxv3f64_nxv1f64(<vscale x 1 x do
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 3 x double> @llvm.vector.interleave3.nxv3f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2)
   ret <vscale x 3 x double> %res
 }
 
-define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv2f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2) {
+define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv2f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv6f64_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
@@ -5003,20 +4921,16 @@ define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv2f64(<vscale x 2 x do
 ; CHECK-NEXT:    li a1, 6
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv6f64_nxv2f64:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x06, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 6 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    slli a1, a1, 1
@@ -5031,24 +4945,20 @@ define <vscale x 6 x double> @vector_interleave_nxv6f64_nxv2f64(<vscale x 2 x do
 ; ZVBB-NEXT:    li a1, 6
 ; ZVBB-NEXT:    mul a0, a0, a1
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 6 x double> @llvm.vector.interleave3.nxv6f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2)
   ret <vscale x 6 x double> %res
 }
 
-define <vscale x 10 x half> @vector_interleave_nxv10f16_nxv2f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2, <vscale x 2 x half> %v3, <vscale x 2 x half> %v4) {
+define <vscale x 10 x half> @vector_interleave_nxv10f16_nxv2f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2, <vscale x 2 x half> %v3, <vscale x 2 x half> %v4) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv10f16_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -5075,20 +4985,16 @@ define <vscale x 10 x half> @vector_interleave_nxv10f16_nxv2f16(<vscale x 2 x ha
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv10f16_nxv2f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -5115,24 +5021,20 @@ define <vscale x 10 x half> @vector_interleave_nxv10f16_nxv2f16(<vscale x 2 x ha
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 10 x half> @llvm.vector.interleave5.nxv10f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2, <vscale x 2 x half> %v3, <vscale x 2 x half> %v4)
   ret <vscale x 10 x half> %res
 }
 
-define <vscale x 20 x half> @vector_interleave_nxv20f16_nxv4f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2, <vscale x 4 x half> %v3, <vscale x 4 x half> %v4) {
+define <vscale x 20 x half> @vector_interleave_nxv20f16_nxv4f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2, <vscale x 4 x half> %v3, <vscale x 4 x half> %v4) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv20f16_nxv4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -5150,20 +5052,16 @@ define <vscale x 20 x half> @vector_interleave_nxv20f16_nxv4f16(<vscale x 4 x ha
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv20f16_nxv4f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -5181,25 +5079,19 @@ define <vscale x 20 x half> @vector_interleave_nxv20f16_nxv4f16(<vscale x 4 x ha
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 20 x half> @llvm.vector.interleave5.nxv20f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2, <vscale x 4 x half> %v3, <vscale x 4 x half> %v4)
   ret <vscale x 20 x half> %res
 }
 
-define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4) {
+define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4) nounwind {
 ; RV32-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
 ; RV32-NEXT:    mul a0, a0, a1
@@ -5255,25 +5147,17 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
 ; RV64-NEXT:    mul a0, a0, a1
@@ -5329,25 +5213,17 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
 ; ZVBB-RV32-NEXT:    mul a0, a0, a1
@@ -5403,25 +5279,17 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
 ; ZVBB-RV64-NEXT:    mul a0, a0, a1
@@ -5477,25 +5345,17 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv40f16_nxv8f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
 ; ZIP-NEXT:    mul a0, a0, a1
@@ -5551,28 +5411,22 @@ define <vscale x 40 x half> @vector_interleave_nxv40f16_nxv8f16(<vscale x 8 x ha
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 40 x half> @llvm.vector.interleave5.nxv40f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4)
   ret <vscale x 40 x half> %res
 }
 
-define <vscale x 10 x bfloat> @vector_interleave_nxv10bf16_nxv2bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2, <vscale x 2 x bfloat> %v3, <vscale x 2 x bfloat> %v4) {
+define <vscale x 10 x bfloat> @vector_interleave_nxv10bf16_nxv2bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2, <vscale x 2 x bfloat> %v3, <vscale x 2 x bfloat> %v4) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv10bf16_nxv2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -5599,20 +5453,16 @@ define <vscale x 10 x bfloat> @vector_interleave_nxv10bf16_nxv2bf16(<vscale x 2 
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv10bf16_nxv2bf16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -5639,24 +5489,20 @@ define <vscale x 10 x bfloat> @vector_interleave_nxv10bf16_nxv2bf16(<vscale x 2 
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 10 x bfloat> @llvm.vector.interleave5.nxv10bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2, <vscale x 2 x bfloat> %v3, <vscale x 2 x bfloat> %v4)
   ret <vscale x 10 x bfloat> %res
 }
 
-define <vscale x 20 x bfloat> @vector_interleave_nxv20bf16_nxv4bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2, <vscale x 4 x bfloat> %v3, <vscale x 4 x bfloat> %v4) {
+define <vscale x 20 x bfloat> @vector_interleave_nxv20bf16_nxv4bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2, <vscale x 4 x bfloat> %v3, <vscale x 4 x bfloat> %v4) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv20bf16_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -5674,20 +5520,16 @@ define <vscale x 20 x bfloat> @vector_interleave_nxv20bf16_nxv4bf16(<vscale x 4 
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv20bf16_nxv4bf16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -5705,25 +5547,19 @@ define <vscale x 20 x bfloat> @vector_interleave_nxv20bf16_nxv4bf16(<vscale x 4 
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 20 x bfloat> @llvm.vector.interleave5.nxv20bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2, <vscale x 4 x bfloat> %v3, <vscale x 4 x bfloat> %v4)
   ret <vscale x 20 x bfloat> %res
 }
 
-define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4) {
+define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4) nounwind {
 ; RV32-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
 ; RV32-NEXT:    mul a0, a0, a1
@@ -5779,25 +5615,17 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
 ; RV64-NEXT:    mul a0, a0, a1
@@ -5853,25 +5681,17 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
 ; ZVBB-RV32-NEXT:    mul a0, a0, a1
@@ -5927,25 +5747,17 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
 ; ZVBB-RV64-NEXT:    mul a0, a0, a1
@@ -6001,25 +5813,17 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv40bf16_nxv8bf16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
 ; ZIP-NEXT:    mul a0, a0, a1
@@ -6075,28 +5879,22 @@ define <vscale x 40 x bfloat> @vector_interleave_nxv40bf16_nxv8bf16(<vscale x 8 
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 40 x bfloat> @llvm.vector.interleave5.nxv40bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4)
   ret <vscale x 40 x bfloat> %res
 }
 
-define <vscale x 5 x float> @vector_interleave_nxv5f32_nxv1f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2, <vscale x 1 x float> %v3, <vscale x 1 x float> %v4) {
+define <vscale x 5 x float> @vector_interleave_nxv5f32_nxv1f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2, <vscale x 1 x float> %v3, <vscale x 1 x float> %v4) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv5f32_nxv1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -6123,20 +5921,16 @@ define <vscale x 5 x float> @vector_interleave_nxv5f32_nxv1f32(<vscale x 1 x flo
 ; CHECK-NEXT:    slli a1, a0, 1
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv5f32_nxv1f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x03, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 3 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -6163,24 +5957,20 @@ define <vscale x 5 x float> @vector_interleave_nxv5f32_nxv1f32(<vscale x 1 x flo
 ; ZVBB-NEXT:    slli a1, a0, 1
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 5 x float> @llvm.vector.interleave5.nxv5f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2, <vscale x 1 x float> %v3, <vscale x 1 x float> %v4)
   ret <vscale x 5 x float> %res
 }
 
-define <vscale x 10 x float> @vector_interleave_nxv10f32_nxv2f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2, <vscale x 2 x float> %v3, <vscale x 2 x float> %v4) {
+define <vscale x 10 x float> @vector_interleave_nxv10f32_nxv2f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2, <vscale x 2 x float> %v3, <vscale x 2 x float> %v4) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv10f32_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -6198,20 +5988,16 @@ define <vscale x 10 x float> @vector_interleave_nxv10f32_nxv2f32(<vscale x 2 x f
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv10f32_nxv2f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -6229,25 +6015,19 @@ define <vscale x 10 x float> @vector_interleave_nxv10f32_nxv2f32(<vscale x 2 x f
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 10 x float> @llvm.vector.interleave5.nxv10f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2, <vscale x 2 x float> %v3, <vscale x 2 x float> %v4)
   ret <vscale x 10 x float> %res
 }
 
-define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4) {
+define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4) nounwind {
 ; RV32-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
 ; RV32-NEXT:    mul a0, a0, a1
@@ -6303,25 +6083,17 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
 ; RV64-NEXT:    mul a0, a0, a1
@@ -6377,25 +6149,17 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
 ; ZVBB-RV32-NEXT:    mul a0, a0, a1
@@ -6451,25 +6215,17 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
 ; ZVBB-RV64-NEXT:    mul a0, a0, a1
@@ -6525,25 +6281,17 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv20f32_nxv4f32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
 ; ZIP-NEXT:    mul a0, a0, a1
@@ -6599,28 +6347,22 @@ define <vscale x 20 x float> @vector_interleave_nxv20f32_nxv4f32(<vscale x 4 x f
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 20 x float> @llvm.vector.interleave5.nxv20f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4)
   ret <vscale x 20 x float> %res
 }
 
-define <vscale x 5 x double> @vector_interleave_nxv5f64_nxv1f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2, <vscale x 1 x double> %v3, <vscale x 1 x double> %v4) {
+define <vscale x 5 x double> @vector_interleave_nxv5f64_nxv1f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2, <vscale x 1 x double> %v3, <vscale x 1 x double> %v4) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv5f64_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -6638,20 +6380,16 @@ define <vscale x 5 x double> @vector_interleave_nxv5f64_nxv1f64(<vscale x 1 x do
 ; CHECK-NEXT:    slli a1, a0, 2
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv5f64_nxv1f64:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x05, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 5 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -6669,25 +6407,19 @@ define <vscale x 5 x double> @vector_interleave_nxv5f64_nxv1f64(<vscale x 1 x do
 ; ZVBB-NEXT:    slli a1, a0, 2
 ; ZVBB-NEXT:    add a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 5 x double> @llvm.vector.interleave5.nxv5f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2, <vscale x 1 x double> %v3, <vscale x 1 x double> %v4)
   ret <vscale x 5 x double> %res
 }
 
-define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4) {
+define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4) nounwind {
 ; RV32-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    li a1, 28
 ; RV32-NEXT:    mul a0, a0, a1
@@ -6743,25 +6475,17 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    li a1, 28
 ; RV64-NEXT:    mul a0, a0, a1
@@ -6817,25 +6541,17 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    li a1, 28
 ; ZVBB-RV32-NEXT:    mul a0, a0, a1
@@ -6891,25 +6607,17 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    li a1, 28
 ; ZVBB-RV64-NEXT:    mul a0, a0, a1
@@ -6965,25 +6673,17 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv10f64_nxv2f64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    li a1, 28
 ; ZIP-NEXT:    mul a0, a0, a1
@@ -7039,27 +6739,21 @@ define <vscale x 10 x double> @vector_interleave_nxv10f64_nxv2f64(<vscale x 2 x 
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 10 x double> @llvm.vector.interleave5.nxv10f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4)
   ret <vscale x 10 x double> %res
 }
 
-define <vscale x 14 x half> @vector_interleave_nxv14f16_nxv2f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2, <vscale x 2 x half> %v3, <vscale x 2 x half> %v4, <vscale x 2 x half> %v5, <vscale x 2 x half> %v6) {
+define <vscale x 14 x half> @vector_interleave_nxv14f16_nxv2f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2, <vscale x 2 x half> %v3, <vscale x 2 x half> %v4, <vscale x 2 x half> %v5, <vscale x 2 x half> %v6) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv14f16_nxv2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -7091,19 +6785,15 @@ define <vscale x 14 x half> @vector_interleave_nxv14f16_nxv2f16(<vscale x 2 x ha
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv14f16_nxv2f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 2
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -7135,24 +6825,20 @@ define <vscale x 14 x half> @vector_interleave_nxv14f16_nxv2f16(<vscale x 2 x ha
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 2
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 14 x half> @llvm.vector.interleave7.nxv14f16(<vscale x 2 x half> %v0, <vscale x 2 x half> %v1, <vscale x 2 x half> %v2, <vscale x 2 x half> %v3, <vscale x 2 x half> %v4, <vscale x 2 x half> %v5, <vscale x 2 x half> %v6)
   ret <vscale x 14 x half> %res
 }
 
-define <vscale x 28 x half> @vector_interleave_nxv28f16_nxv4f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2, <vscale x 4 x half> %v3, <vscale x 4 x half> %v4, <vscale x 4 x half> %v5, <vscale x 4 x half> %v6) {
+define <vscale x 28 x half> @vector_interleave_nxv28f16_nxv4f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2, <vscale x 4 x half> %v3, <vscale x 4 x half> %v4, <vscale x 4 x half> %v5, <vscale x 4 x half> %v6) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv28f16_nxv4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -7174,20 +6860,16 @@ define <vscale x 28 x half> @vector_interleave_nxv28f16_nxv4f16(<vscale x 4 x ha
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv28f16_nxv4f16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -7209,25 +6891,19 @@ define <vscale x 28 x half> @vector_interleave_nxv28f16_nxv4f16(<vscale x 4 x ha
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 28 x half> @llvm.vector.interleave7.nxv28f16(<vscale x 4 x half> %v0, <vscale x 4 x half> %v1, <vscale x 4 x half> %v2, <vscale x 4 x half> %v3, <vscale x 4 x half> %v4, <vscale x 4 x half> %v5, <vscale x 4 x half> %v6)
   ret <vscale x 28 x half> %res
 }
 
-define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4, <vscale x 8 x half> %v5, <vscale x 8 x half> %v6) {
+define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4, <vscale x 8 x half> %v5, <vscale x 8 x half> %v6) nounwind {
 ; RV32-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
 ; RV32-NEXT:    sub sp, sp, a0
@@ -7299,25 +6975,17 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
 ; RV64-NEXT:    sub sp, sp, a0
@@ -7389,25 +7057,17 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
 ; ZVBB-RV32-NEXT:    sub sp, sp, a0
@@ -7479,25 +7139,17 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
 ; ZVBB-RV64-NEXT:    sub sp, sp, a0
@@ -7569,25 +7221,17 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv56f16_nxv8f16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
 ; ZIP-NEXT:    sub sp, sp, a0
@@ -7659,27 +7303,21 @@ define <vscale x 56 x half> @vector_interleave_nxv56f16_nxv8f16(<vscale x 8 x ha
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 56 x half> @llvm.vector.interleave7.nxv56f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale x 8 x half> %v2, <vscale x 8 x half> %v3, <vscale x 8 x half> %v4, <vscale x 8 x half> %v5, <vscale x 8 x half> %v6)
   ret <vscale x 56 x half> %res
 }
 
-define <vscale x 14 x bfloat> @vector_interleave_nxv14bf16_nxv2bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2, <vscale x 2 x bfloat> %v3, <vscale x 2 x bfloat> %v4, <vscale x 2 x bfloat> %v5, <vscale x 2 x bfloat> %v6) {
+define <vscale x 14 x bfloat> @vector_interleave_nxv14bf16_nxv2bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2, <vscale x 2 x bfloat> %v3, <vscale x 2 x bfloat> %v4, <vscale x 2 x bfloat> %v5, <vscale x 2 x bfloat> %v6) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv14bf16_nxv2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -7711,19 +7349,15 @@ define <vscale x 14 x bfloat> @vector_interleave_nxv14bf16_nxv2bf16(<vscale x 2 
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv14bf16_nxv2bf16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 2
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -7755,24 +7389,20 @@ define <vscale x 14 x bfloat> @vector_interleave_nxv14bf16_nxv2bf16(<vscale x 2 
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 2
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 14 x bfloat> @llvm.vector.interleave7.nxv14bf16(<vscale x 2 x bfloat> %v0, <vscale x 2 x bfloat> %v1, <vscale x 2 x bfloat> %v2, <vscale x 2 x bfloat> %v3, <vscale x 2 x bfloat> %v4, <vscale x 2 x bfloat> %v5, <vscale x 2 x bfloat> %v6)
   ret <vscale x 14 x bfloat> %res
 }
 
-define <vscale x 28 x bfloat> @vector_interleave_nxv28bf16_nxv4bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2, <vscale x 4 x bfloat> %v3, <vscale x 4 x bfloat> %v4, <vscale x 4 x bfloat> %v5, <vscale x 4 x bfloat> %v6) {
+define <vscale x 28 x bfloat> @vector_interleave_nxv28bf16_nxv4bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2, <vscale x 4 x bfloat> %v3, <vscale x 4 x bfloat> %v4, <vscale x 4 x bfloat> %v5, <vscale x 4 x bfloat> %v6) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv28bf16_nxv4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -7794,20 +7424,16 @@ define <vscale x 28 x bfloat> @vector_interleave_nxv28bf16_nxv4bf16(<vscale x 4 
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv28bf16_nxv4bf16:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -7829,25 +7455,19 @@ define <vscale x 28 x bfloat> @vector_interleave_nxv28bf16_nxv4bf16(<vscale x 4 
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 28 x bfloat> @llvm.vector.interleave7.nxv28bf16(<vscale x 4 x bfloat> %v0, <vscale x 4 x bfloat> %v1, <vscale x 4 x bfloat> %v2, <vscale x 4 x bfloat> %v3, <vscale x 4 x bfloat> %v4, <vscale x 4 x bfloat> %v5, <vscale x 4 x bfloat> %v6)
   ret <vscale x 28 x bfloat> %res
 }
 
-define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4, <vscale x 8 x bfloat> %v5, <vscale x 8 x bfloat> %v6) {
+define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4, <vscale x 8 x bfloat> %v5, <vscale x 8 x bfloat> %v6) nounwind {
 ; RV32-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
 ; RV32-NEXT:    sub sp, sp, a0
@@ -7919,25 +7539,17 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; RV32-NEXT:    vl8re16.v v16, (a2)
 ; RV32-NEXT:    vl8re16.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
 ; RV64-NEXT:    sub sp, sp, a0
@@ -8009,25 +7621,17 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; RV64-NEXT:    vl8re16.v v16, (a2)
 ; RV64-NEXT:    vl8re16.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
 ; ZVBB-RV32-NEXT:    sub sp, sp, a0
@@ -8099,25 +7703,17 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV32-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
 ; ZVBB-RV64-NEXT:    sub sp, sp, a0
@@ -8189,25 +7785,17 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; ZVBB-RV64-NEXT:    vl8re16.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re16.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv56bf16_nxv8bf16:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
 ; ZIP-NEXT:    sub sp, sp, a0
@@ -8279,27 +7867,21 @@ define <vscale x 56 x bfloat> @vector_interleave_nxv56bf16_nxv8bf16(<vscale x 8 
 ; ZIP-NEXT:    vl8re16.v v16, (a2)
 ; ZIP-NEXT:    vl8re16.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 56 x bfloat> @llvm.vector.interleave7.nxv56bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vscale x 8 x bfloat> %v2, <vscale x 8 x bfloat> %v3, <vscale x 8 x bfloat> %v4, <vscale x 8 x bfloat> %v5, <vscale x 8 x bfloat> %v6)
   ret <vscale x 56 x bfloat> %res
 }
 
-define <vscale x 7 x float> @vector_interleave_nxv7f32_nxv1f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2, <vscale x 1 x float> %v3, <vscale x 1 x float> %v4, <vscale x 1 x float> %v5, <vscale x 1 x float> %v6) {
+define <vscale x 7 x float> @vector_interleave_nxv7f32_nxv1f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2, <vscale x 1 x float> %v3, <vscale x 1 x float> %v4, <vscale x 1 x float> %v5, <vscale x 1 x float> %v6) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv7f32_nxv1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 1
@@ -8331,19 +7913,15 @@ define <vscale x 7 x float> @vector_interleave_nxv7f32_nxv1f32(<vscale x 1 x flo
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv7f32_nxv1f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 2
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    srli a2, a1, 1
@@ -8375,24 +7953,20 @@ define <vscale x 7 x float> @vector_interleave_nxv7f32_nxv1f32(<vscale x 1 x flo
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a0, a0, 2
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 7 x float> @llvm.vector.interleave7.nxv7f32(<vscale x 1 x float> %v0, <vscale x 1 x float> %v1, <vscale x 1 x float> %v2, <vscale x 1 x float> %v3, <vscale x 1 x float> %v4, <vscale x 1 x float> %v5, <vscale x 1 x float> %v6)
   ret <vscale x 7 x float> %res
 }
 
-define <vscale x 14 x float> @vector_interleave_nxv14f32_nxv2f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2, <vscale x 2 x float> %v3, <vscale x 2 x float> %v4, <vscale x 2 x float> %v5, <vscale x 2 x float> %v6) {
+define <vscale x 14 x float> @vector_interleave_nxv14f32_nxv2f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2, <vscale x 2 x float> %v3, <vscale x 2 x float> %v4, <vscale x 2 x float> %v5, <vscale x 2 x float> %v6) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv14f32_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -8414,20 +7988,16 @@ define <vscale x 14 x float> @vector_interleave_nxv14f32_nxv2f32(<vscale x 2 x f
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv14f32_nxv2f32:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -8449,25 +8019,19 @@ define <vscale x 14 x float> @vector_interleave_nxv14f32_nxv2f32(<vscale x 2 x f
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 14 x float> @llvm.vector.interleave7.nxv14f32(<vscale x 2 x float> %v0, <vscale x 2 x float> %v1, <vscale x 2 x float> %v2, <vscale x 2 x float> %v3, <vscale x 2 x float> %v4, <vscale x 2 x float> %v5, <vscale x 2 x float> %v6)
   ret <vscale x 14 x float> %res
 }
 
-define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4, <vscale x 4 x float> %v5, <vscale x 4 x float> %v6) {
+define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4, <vscale x 4 x float> %v5, <vscale x 4 x float> %v6) nounwind {
 ; RV32-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
 ; RV32-NEXT:    sub sp, sp, a0
@@ -8539,25 +8103,17 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; RV32-NEXT:    vl8re32.v v16, (a2)
 ; RV32-NEXT:    vl8re32.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
 ; RV64-NEXT:    sub sp, sp, a0
@@ -8629,25 +8185,17 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; RV64-NEXT:    vl8re32.v v16, (a2)
 ; RV64-NEXT:    vl8re32.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
 ; ZVBB-RV32-NEXT:    sub sp, sp, a0
@@ -8719,25 +8267,17 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV32-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
 ; ZVBB-RV64-NEXT:    sub sp, sp, a0
@@ -8809,25 +8349,17 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; ZVBB-RV64-NEXT:    vl8re32.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re32.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv28f32_nxv4f32:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
 ; ZIP-NEXT:    sub sp, sp, a0
@@ -8899,28 +8431,22 @@ define <vscale x 28 x float> @vector_interleave_nxv28f32_nxv4f32(<vscale x 4 x f
 ; ZIP-NEXT:    vl8re32.v v16, (a2)
 ; ZIP-NEXT:    vl8re32.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 28 x float> @llvm.vector.interleave7.nxv28f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscale x 4 x float> %v2, <vscale x 4 x float> %v3, <vscale x 4 x float> %v4, <vscale x 4 x float> %v5, <vscale x 4 x float> %v6)
   ret <vscale x 28 x float> %res
 }
 
-define <vscale x 7 x double> @vector_interleave_nxv7f64_nxv1f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2, <vscale x 1 x double> %v3, <vscale x 1 x double> %v4, <vscale x 1 x double> %v5, <vscale x 1 x double> %v6) {
+define <vscale x 7 x double> @vector_interleave_nxv7f64_nxv1f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2, <vscale x 1 x double> %v3, <vscale x 1 x double> %v4, <vscale x 1 x double> %v5, <vscale x 1 x double> %v6) nounwind {
 ; CHECK-LABEL: vector_interleave_nxv7f64_nxv1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    add a2, a0, a1
@@ -8942,20 +8468,16 @@ define <vscale x 7 x double> @vector_interleave_nxv7f64_nxv1f64(<vscale x 1 x do
 ; CHECK-NEXT:    slli a1, a0, 3
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
 ;
 ; ZVBB-LABEL: vector_interleave_nxv7f64_nxv1f64:
 ; ZVBB:       # %bb.0:
 ; ZVBB-NEXT:    addi sp, sp, -16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 16
 ; ZVBB-NEXT:    csrr a0, vlenb
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    sub sp, sp, a0
-; ZVBB-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x07, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 7 * vlenb
 ; ZVBB-NEXT:    addi a0, sp, 16
 ; ZVBB-NEXT:    csrr a1, vlenb
 ; ZVBB-NEXT:    add a2, a0, a1
@@ -8977,25 +8499,19 @@ define <vscale x 7 x double> @vector_interleave_nxv7f64_nxv1f64(<vscale x 1 x do
 ; ZVBB-NEXT:    slli a1, a0, 3
 ; ZVBB-NEXT:    sub a0, a1, a0
 ; ZVBB-NEXT:    add sp, sp, a0
-; ZVBB-NEXT:    .cfi_def_cfa sp, 16
 ; ZVBB-NEXT:    addi sp, sp, 16
-; ZVBB-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-NEXT:    ret
   %res = call <vscale x 7 x double> @llvm.vector.interleave7.nxv7f64(<vscale x 1 x double> %v0, <vscale x 1 x double> %v1, <vscale x 1 x double> %v2, <vscale x 1 x double> %v3, <vscale x 1 x double> %v4, <vscale x 1 x double> %v5, <vscale x 1 x double> %v6)
   ret <vscale x 7 x double> %res
 }
 
-define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4, <vscale x 2 x double> %v5, <vscale x 2 x double> %v6) {
+define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4, <vscale x 2 x double> %v5, <vscale x 2 x double> %v6) nounwind {
 ; RV32-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
-; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    .cfi_offset s0, -8
 ; RV32-NEXT:    addi s0, sp, 80
-; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 5
 ; RV32-NEXT:    sub sp, sp, a0
@@ -9067,25 +8583,17 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; RV32-NEXT:    vl8re64.v v16, (a2)
 ; RV32-NEXT:    vl8re64.v v8, (a0)
 ; RV32-NEXT:    addi sp, s0, -80
-; RV32-NEXT:    .cfi_def_cfa sp, 80
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore ra
-; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    addi sp, sp, 80
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    addi s0, sp, 80
-; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 5
 ; RV64-NEXT:    sub sp, sp, a0
@@ -9157,25 +8665,17 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; RV64-NEXT:    vl8re64.v v16, (a2)
 ; RV64-NEXT:    vl8re64.v v8, (a0)
 ; RV64-NEXT:    addi sp, s0, -80
-; RV64-NEXT:    .cfi_def_cfa sp, 80
 ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore ra
-; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
 ; ZVBB-RV32-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; ZVBB-RV32:       # %bb.0:
 ; ZVBB-RV32-NEXT:    addi sp, sp, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
 ; ZVBB-RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
-; ZVBB-RV32-NEXT:    .cfi_offset ra, -4
-; ZVBB-RV32-NEXT:    .cfi_offset s0, -8
 ; ZVBB-RV32-NEXT:    addi s0, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV32-NEXT:    csrr a0, vlenb
 ; ZVBB-RV32-NEXT:    slli a0, a0, 5
 ; ZVBB-RV32-NEXT:    sub sp, sp, a0
@@ -9247,25 +8747,17 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV32-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV32-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV32-NEXT:    addi sp, s0, -80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; ZVBB-RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
-; ZVBB-RV32-NEXT:    .cfi_restore ra
-; ZVBB-RV32-NEXT:    .cfi_restore s0
 ; ZVBB-RV32-NEXT:    addi sp, sp, 80
-; ZVBB-RV32-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV32-NEXT:    ret
 ;
 ; ZVBB-RV64-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; ZVBB-RV64:       # %bb.0:
 ; ZVBB-RV64-NEXT:    addi sp, sp, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 80
 ; ZVBB-RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZVBB-RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZVBB-RV64-NEXT:    .cfi_offset ra, -8
-; ZVBB-RV64-NEXT:    .cfi_offset s0, -16
 ; ZVBB-RV64-NEXT:    addi s0, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa s0, 0
 ; ZVBB-RV64-NEXT:    csrr a0, vlenb
 ; ZVBB-RV64-NEXT:    slli a0, a0, 5
 ; ZVBB-RV64-NEXT:    sub sp, sp, a0
@@ -9337,25 +8829,17 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; ZVBB-RV64-NEXT:    vl8re64.v v16, (a2)
 ; ZVBB-RV64-NEXT:    vl8re64.v v8, (a0)
 ; ZVBB-RV64-NEXT:    addi sp, s0, -80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa sp, 80
 ; ZVBB-RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZVBB-RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZVBB-RV64-NEXT:    .cfi_restore ra
-; ZVBB-RV64-NEXT:    .cfi_restore s0
 ; ZVBB-RV64-NEXT:    addi sp, sp, 80
-; ZVBB-RV64-NEXT:    .cfi_def_cfa_offset 0
 ; ZVBB-RV64-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_interleave_nxv14f64_nxv2f64:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    addi sp, sp, -80
-; ZIP-NEXT:    .cfi_def_cfa_offset 80
 ; ZIP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
 ; ZIP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; ZIP-NEXT:    .cfi_offset ra, -8
-; ZIP-NEXT:    .cfi_offset s0, -16
 ; ZIP-NEXT:    addi s0, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa s0, 0
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
 ; ZIP-NEXT:    sub sp, sp, a0
@@ -9427,13 +8911,9 @@ define <vscale x 14 x double> @vector_interleave_nxv14f64_nxv2f64(<vscale x 2 x 
 ; ZIP-NEXT:    vl8re64.v v16, (a2)
 ; ZIP-NEXT:    vl8re64.v v8, (a0)
 ; ZIP-NEXT:    addi sp, s0, -80
-; ZIP-NEXT:    .cfi_def_cfa sp, 80
 ; ZIP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
 ; ZIP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; ZIP-NEXT:    .cfi_restore ra
-; ZIP-NEXT:    .cfi_restore s0
 ; ZIP-NEXT:    addi sp, sp, 80
-; ZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZIP-NEXT:    ret
   %res = call <vscale x 14 x double> @llvm.vector.interleave7.nxv14f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4, <vscale x 2 x double> %v5, <vscale x 2 x double> %v6)
   ret <vscale x 14 x double> %res

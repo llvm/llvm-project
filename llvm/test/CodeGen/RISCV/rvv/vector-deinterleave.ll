@@ -1315,15 +1315,13 @@ define {<vscale x 8 x double>, <vscale x 8 x double>} @vector_deinterleave_nxv8f
 ret {<vscale x 8 x double>, <vscale x 8 x double>} %retval
 }
 
-define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_nxv2f16_nxv6f16(<vscale x 6 x half> %arg) {
+define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_nxv2f16_nxv6f16(<vscale x 6 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f16_nxv6f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1336,23 +1334,19 @@ define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @vector_d
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @llvm.vector.deinterleave3.nxv6f16(<vscale x 6 x half> %arg)
   ret {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} %res
 }
 
-define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_nxv4f16_nxv12f16(<vscale x 12 x half> %arg) {
+define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_nxv4f16_nxv12f16(<vscale x 12 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4f16_nxv12f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1360,23 +1354,19 @@ define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @vector_d
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @llvm.vector.deinterleave3.nxv12f16(<vscale x 12 x half> %arg)
   ret {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} %res
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_nxv8f16_nxv24f16(<vscale x 24 x half> %arg) {
+define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_nxv8f16_nxv24f16(<vscale x 24 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv8f16_nxv24f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
@@ -1384,23 +1374,19 @@ define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @vector_d
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.vector.deinterleave3.nxv24f16(<vscale x 24 x half> %arg)
   ret {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} %res
 }
 
-define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_nxv2bf16_nxv6bf16(<vscale x 6 x bfloat> %arg) {
+define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_nxv2bf16_nxv6bf16(<vscale x 6 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2bf16_nxv6bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1413,23 +1399,19 @@ define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @ve
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @llvm.vector.deinterleave3.nxv6bf16(<vscale x 6 x bfloat> %arg)
   ret {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} %res
 }
 
-define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4bf16_nxv12bf16(<vscale x 12 x bfloat> %arg) {
+define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4bf16_nxv12bf16(<vscale x 12 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4bf16_nxv12bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1437,23 +1419,19 @@ define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @ve
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @llvm.vector.deinterleave3.nxv12bf16(<vscale x 12 x bfloat> %arg)
   ret {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8bf16_nxv24bf16(<vscale x 24 x bfloat> %arg) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8bf16_nxv24bf16(<vscale x 24 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv8bf16_nxv24bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
@@ -1461,23 +1439,19 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @ve
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.vector.deinterleave3.nxv24bf16(<vscale x 24 x bfloat> %arg)
   ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res
 }
 
-define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @vector_deinterleave_nxv1f32_nxv3f32(<vscale x 3 x float> %arg) {
+define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @vector_deinterleave_nxv1f32_nxv3f32(<vscale x 3 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv1f32_nxv3f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x02, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 2 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1490,23 +1464,19 @@ define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @vecto
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @llvm.vector.deinterleave3.nxv3f32(<vscale x 3 x float> %arg)
   ret {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} %res
 }
 
-define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32_nxv6f32(<vscale x 6 x float> %arg) {
+define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32_nxv6f32(<vscale x 6 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f32_nxv6f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1514,23 +1484,19 @@ define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @vecto
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @llvm.vector.deinterleave3.nxv6f32(<vscale x 6 x float> %arg)
   ret {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} %res
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32_nxv12f32(<vscale x 12 x float> %arg) {
+define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32_nxv12f32(<vscale x 12 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4f32_nxv12f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
@@ -1538,23 +1504,19 @@ define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @vecto
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.vector.deinterleave3.nxv12f32(<vscale x 12 x float> %arg)
   ret {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} %res
 }
 
-define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @vector_deinterleave_nxv1f64_nxv3f64(<vscale x 3 x double> %arg) {
+define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @vector_deinterleave_nxv1f64_nxv3f64(<vscale x 3 x double> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv1f64_nxv3f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
@@ -1562,23 +1524,19 @@ define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @ve
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @llvm.vector.deinterleave3.nxv3f64(<vscale x 3 x double> %arg)
   ret {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} %res
 }
 
-define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f64_nxv6f64(<vscale x 6 x double> %arg) {
+define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f64_nxv6f64(<vscale x 6 x double> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f64_nxv6f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
@@ -1586,23 +1544,19 @@ define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @ve
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave3.nxv6f64(<vscale x 6 x double> %arg)
   ret {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %res
 }
 
-define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_nxv2f16_nxv10f16(<vscale x 10 x half> %arg) {
+define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_nxv2f16_nxv10f16(<vscale x 10 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f16_nxv10f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1617,23 +1571,19 @@ define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @llvm.vector.deinterleave5.nxv10f16(<vscale x 10 x half> %arg)
   ret {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} %res
 }
 
-define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_nxv4f16_nxv20f16(<vscale x 20 x half> %arg) {
+define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_nxv4f16_nxv20f16(<vscale x 20 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4f16_nxv20f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1641,23 +1591,19 @@ define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @llvm.vector.deinterleave5.nxv20f16(<vscale x 20 x half> %arg)
   ret {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} %res
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_nxv8f16_nxv40f16(<vscale x 40 x half> %arg) {
+define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_nxv8f16_nxv40f16(<vscale x 40 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv8f16_nxv40f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v26, v15
 ; CHECK-NEXT:    vmv1r.v v27, v16
@@ -1685,23 +1631,19 @@ define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.vector.deinterleave5.nxv40f16(<vscale x 40 x half> %arg)
   ret {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} %res
 }
 
-define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_nxv2bf16_nxv10bf16(<vscale x 10 x bfloat> %arg) {
+define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_nxv2bf16_nxv10bf16(<vscale x 10 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2bf16_nxv10bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1716,23 +1658,19 @@ define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @llvm.vector.deinterleave5.nxv10bf16(<vscale x 10 x bfloat> %arg)
   ret {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} %res
 }
 
-define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4bf16_nxv20bf16(<vscale x 20 x bfloat> %arg) {
+define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4bf16_nxv20bf16(<vscale x 20 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4bf16_nxv20bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1740,23 +1678,19 @@ define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @llvm.vector.deinterleave5.nxv20bf16(<vscale x 20 x bfloat> %arg)
   ret {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8bf16_nxv40bf16(<vscale x 40 x bfloat> %arg) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8bf16_nxv40bf16(<vscale x 40 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv8bf16_nxv40bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v26, v15
 ; CHECK-NEXT:    vmv1r.v v27, v16
@@ -1784,23 +1718,19 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.vector.deinterleave5.nxv40bf16(<vscale x 40 x bfloat> %arg)
   ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res
 }
 
-define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @vector_deinterleave_nxv1f32_nxv5f32(<vscale x 5 x float> %arg) {
+define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @vector_deinterleave_nxv1f32_nxv5f32(<vscale x 5 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv1f32_nxv5f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1815,23 +1745,19 @@ define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscal
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @llvm.vector.deinterleave5.nxv5f32(<vscale x 5 x float> %arg)
   ret {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} %res
 }
 
-define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32_nxv10f32(<vscale x 10 x float> %arg) {
+define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32_nxv10f32(<vscale x 10 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f32_nxv10f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -1839,23 +1765,19 @@ define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscal
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @llvm.vector.deinterleave5.nxv10f32(<vscale x 10 x float> %arg)
   ret {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} %res
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32_nxv20f32(<vscale x 20 x float> %arg) {
+define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32_nxv20f32(<vscale x 20 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4f32_nxv20f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v26, v15
 ; CHECK-NEXT:    vmv1r.v v27, v16
@@ -1883,23 +1805,19 @@ define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscal
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.vector.deinterleave5.nxv20f32(<vscale x 20 x float> %arg)
   ret {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} %res
 }
 
-define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @vector_deinterleave_nxv1f64_nxv5f64(<vscale x 5 x double> %arg) {
+define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @vector_deinterleave_nxv1f64_nxv5f64(<vscale x 5 x double> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv1f64_nxv5f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
@@ -1907,23 +1825,19 @@ define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @llvm.vector.deinterleave5.nxv5f64(<vscale x 5 x double> %arg)
   ret {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} %res
 }
 
-define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f64_nxv10f64(<vscale x 10 x double> %arg) {
+define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f64_nxv10f64(<vscale x 10 x double> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f64_nxv10f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v26, v15
 ; CHECK-NEXT:    vmv1r.v v27, v16
@@ -1951,23 +1865,19 @@ define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave5.nxv10f64(<vscale x 10 x double> %arg)
   ret {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %res
 }
 
-define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_nxv2f16_nxv14f16(<vscale x 14 x half> %arg) {
+define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_nxv2f16_nxv14f16(<vscale x 14 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f16_nxv14f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -1984,23 +1894,19 @@ define {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} @llvm.vector.deinterleave7.nxv14f16(<vscale x 14 x half> %arg)
   ret {<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>} %res
 }
 
-define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_nxv4f16_nxv28f16(<vscale x 28 x half> %arg) {
+define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_nxv4f16_nxv28f16(<vscale x 28 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4f16_nxv28f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -2008,23 +1914,19 @@ define {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} @llvm.vector.deinterleave7.nxv28f16(<vscale x 28 x half> %arg)
   ret {<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>} %res
 }
 
-define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_nxv8f16_nxv56f16(<vscale x 56 x half> %arg) {
+define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_nxv8f16_nxv56f16(<vscale x 56 x half> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv8f16_nxv56f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v30, v21
 ; CHECK-NEXT:    vmv1r.v v28, v19
@@ -2058,23 +1960,19 @@ define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.vector.deinterleave7.nxv56f16(<vscale x 56 x half> %arg)
   ret {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} %res
 }
 
-define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_nxv2bf16_nxv14bf16(<vscale x 14 x bfloat> %arg) {
+define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_nxv2bf16_nxv14bf16(<vscale x 14 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2bf16_nxv14bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -2091,23 +1989,19 @@ define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @llvm.vector.deinterleave7.nxv14bf16(<vscale x 14 x bfloat> %arg)
   ret {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>, <vscale x 2 x bfloat>} %res
 }
 
-define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4bf16_nxv28bf16(<vscale x 28 x bfloat> %arg) {
+define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4bf16_nxv28bf16(<vscale x 28 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4bf16_nxv28bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
@@ -2115,23 +2009,19 @@ define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @llvm.vector.deinterleave7.nxv28bf16(<vscale x 28 x bfloat> %arg)
   ret {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>} %res
 }
 
-define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8bf16_nxv56bf16(<vscale x 56 x bfloat> %arg) {
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8bf16_nxv56bf16(<vscale x 56 x bfloat> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv8bf16_nxv56bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v30, v21
 ; CHECK-NEXT:    vmv1r.v v28, v19
@@ -2165,23 +2055,19 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.vector.deinterleave7.nxv56bf16(<vscale x 56 x bfloat> %arg)
   ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res
 }
 
-define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @vector_deinterleave_nxv1f32_nxv7f32(<vscale x 7 x float> %arg) {
+define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @vector_deinterleave_nxv1f32_nxv7f32(<vscale x 7 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv1f32_nxv7f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 4 * vlenb
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -2198,23 +2084,19 @@ define {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscal
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} @llvm.vector.deinterleave7.nxv7f32(<vscale x 7 x float> %arg)
   ret {<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>} %res
 }
 
-define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32_nxv14f32(<vscale x 14 x float> %arg) {
+define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32_nxv14f32(<vscale x 14 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f32_nxv14f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
@@ -2222,23 +2104,19 @@ define {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscal
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} @llvm.vector.deinterleave7.nxv14f32(<vscale x 14 x float> %arg)
   ret {<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>} %res
 }
 
-define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32_nxv28f32(<vscale x 28 x float> %arg) {
+define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32_nxv28f32(<vscale x 28 x float> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv4f32_nxv28f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v30, v21
 ; CHECK-NEXT:    vmv1r.v v28, v19
@@ -2272,23 +2150,19 @@ define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscal
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.vector.deinterleave7.nxv28f32(<vscale x 28 x float> %arg)
   ret {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} %res
 }
 
-define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @vector_deinterleave_nxv1f64_nxv7f64(<vscale x 7 x double> %arg) {
+define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @vector_deinterleave_nxv1f64_nxv7f64(<vscale x 7 x double> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv1f64_nxv7f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
@@ -2296,23 +2170,19 @@ define {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} @llvm.vector.deinterleave7.nxv7f64(<vscale x 7 x double> %arg)
   ret {<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>} %res
 }
 
-define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f64_nxv14f64(<vscale x 14 x double> %arg) {
+define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f64_nxv14f64(<vscale x 14 x double> %arg) nounwind {
 ; CHECK-LABEL: vector_deinterleave_nxv2f64_nxv14f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v30, v21
 ; CHECK-NEXT:    vmv1r.v v28, v19
@@ -2346,9 +2216,7 @@ define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vs
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
-; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %res = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave7.nxv14f64(<vscale x 14 x double> %arg)
   ret {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %res
