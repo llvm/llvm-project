@@ -28,7 +28,7 @@ struct UefiStatusErrnoEntry {
   int errno_value;
 };
 
-static const cpp::array<UefiStatusErrnoEntry, 43> UEFI_STATUS_ERRNO_MAP = {{
+static constexpr cpp::array<UefiStatusErrnoEntry, 43> UEFI_STATUS_ERRNO_MAP = {{
     {EFI_SUCCESS, 0},
     {EFI_ENCODE_ERROR(EFI_LOAD_ERROR), EINVAL},
     {EFI_ENCODE_ERROR(EFI_INVALID_PARAMETER), EINVAL},
