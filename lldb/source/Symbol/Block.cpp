@@ -15,6 +15,8 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <memory>
 
@@ -333,38 +335,20 @@ void Block::FinalizeRanges() {
 void Block::AddRange(const Range &range) {
   Block *parent_block = GetParent();
   if (parent_block && !parent_block->Contains(range)) {
-    Log *log = GetLog(LLDBLog::Symbols);
-    if (log) {
-      ModuleSP module_sp(m_parent_scope.CalculateSymbolContextModule());
-      Function *function = m_parent_scope.CalculateSymbolContextFunction();
-      const addr_t function_file_addr = function->GetAddress().GetFileAddress();
-      const addr_t block_start_addr = function_file_addr + range.GetRangeBase();
-      const addr_t block_end_addr = function_file_addr + range.GetRangeEnd();
-      Type *func_type = function->GetType();
+    addr_t base_addr =
+        CalculateSymbolContextFunction()->GetAddress().GetFileAddress();
 
-      const Declaration &func_decl = func_type->GetDeclaration();
-      if (func_decl.GetLine()) {
-        LLDB_LOGF(log,
-                  "warning: %s:%u block {0x%8.8" PRIx64
-                  "} has range[%u] [0x%" PRIx64 " - 0x%" PRIx64
-                  ") which is not contained in parent block {0x%8.8" PRIx64
-                  "} in function {0x%8.8" PRIx64 "} from %s",
-                  func_decl.GetFile().GetPath().c_str(), func_decl.GetLine(),
-                  GetID(), (uint32_t)m_ranges.GetSize(), block_start_addr,
-                  block_end_addr, parent_block->GetID(), function->GetID(),
-                  module_sp->GetFileSpec().GetPath().c_str());
-      } else {
-        LLDB_LOGF(log,
-                  "warning: block {0x%8.8" PRIx64 "} has range[%u] [0x%" PRIx64
-                  " - 0x%" PRIx64
-                  ") which is not contained in parent block {0x%8.8" PRIx64
-                  "} in function {0x%8.8" PRIx64 "} from %s",
-                  GetID(), (uint32_t)m_ranges.GetSize(), block_start_addr,
-                  block_end_addr, parent_block->GetID(), function->GetID(),
-                  module_sp->GetFileSpec().GetPath().c_str());
-      }
-    }
-    parent_block->AddRange(range);
+    StreamString warning;
+    warning.AsRawOstream() << llvm::formatv("block {0:x} has a range ",
+                                            GetID());
+    DumpAddressRange(warning.AsRawOstream(), base_addr + range.GetRangeBase(),
+                     base_addr + range.GetRangeEnd(), 4);
+    warning.AsRawOstream() << llvm::formatv(
+        " which is not contained in the parent block {0:x} whose ranges are ",
+        parent_block->GetID());
+    parent_block->DumpAddressRanges(&warning, base_addr);
+    m_parent_scope.CalculateSymbolContextModule()->ReportWarning(
+        warning.GetData());
   }
   m_ranges.Append(range);
 }
