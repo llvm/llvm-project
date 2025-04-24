@@ -14759,23 +14759,24 @@ define inreg <32 x i8> @s_bitcast_v16i16_to_v32i8_inreg(<16 x i16> inreg %a, i32
 ; SI-NEXT:    s_lshl_b32 s5, s19, 16
 ; SI-NEXT:    v_or_b32_e32 v0, v5, v0
 ; SI-NEXT:    s_or_b32 s4, s5, s4
+; SI-NEXT:    v_mov_b32_e32 v4, s6
 ; SI-NEXT:    v_add_i32_e32 v28, vcc, 0x30000, v0
+; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    s_add_i32 s12, s4, 0x30000
-; SI-NEXT:    v_mov_b32_e32 v0, s11
-; SI-NEXT:    v_alignbit_b32 v3, s12, v0, 24
-; SI-NEXT:    v_alignbit_b32 v2, s12, v0, 16
-; SI-NEXT:    v_alignbit_b32 v1, s12, v0, 8
-; SI-NEXT:    v_mov_b32_e32 v0, s6
-; SI-NEXT:    v_alignbit_b32 v11, s9, v0, 24
-; SI-NEXT:    v_alignbit_b32 v10, s9, v0, 16
-; SI-NEXT:    v_alignbit_b32 v9, s9, v0, 8
-; SI-NEXT:    v_mov_b32_e32 v0, s7
-; SI-NEXT:    v_alignbit_b32 v19, s10, v0, 24
-; SI-NEXT:    v_alignbit_b32 v18, s10, v0, 16
-; SI-NEXT:    v_alignbit_b32 v17, s10, v0, 8
-; SI-NEXT:    v_alignbit_b32 v27, v28, s8, 24
-; SI-NEXT:    v_alignbit_b32 v26, v28, s8, 16
-; SI-NEXT:    v_alignbit_b32 v25, v28, s8, 8
+; SI-NEXT:    v_mov_b32_e32 v1, s11
+; SI-NEXT:    v_alignbit_b32 v11, s9, v4, 24
+; SI-NEXT:    v_alignbit_b32 v10, s9, v4, 16
+; SI-NEXT:    v_alignbit_b32 v9, s9, v4, 8
+; SI-NEXT:    v_mov_b32_e32 v4, s7
+; SI-NEXT:    v_alignbit_b32 v3, s12, v1, 24
+; SI-NEXT:    v_alignbit_b32 v2, s12, v1, 16
+; SI-NEXT:    v_alignbit_b32 v1, s12, v1, 8
+; SI-NEXT:    v_alignbit_b32 v19, s10, v4, 24
+; SI-NEXT:    v_alignbit_b32 v18, s10, v4, 16
+; SI-NEXT:    v_alignbit_b32 v17, s10, v4, 8
+; SI-NEXT:    v_alignbit_b32 v27, v28, v0, 24
+; SI-NEXT:    v_alignbit_b32 v26, v28, v0, 16
+; SI-NEXT:    v_alignbit_b32 v25, v28, v0, 8
 ; SI-NEXT:    s_lshr_b32 s13, s12, 24
 ; SI-NEXT:    s_lshr_b32 s45, s12, 16
 ; SI-NEXT:    s_lshr_b32 s44, s12, 8

@@ -93,20 +93,18 @@ define inreg i16 @s_bitcast_f16_to_i16_inreg(half inreg %a, i32 inreg %b) {
 ; SI-LABEL: s_bitcast_f16_to_i16_inreg:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, s16
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, s16
 ; SI-NEXT:    s_cmp_lg_u32 s17, 0
 ; SI-NEXT:    s_cbranch_scc0 .LBB1_4
 ; SI-NEXT:  ; %bb.1: ; %cmp.false
-; SI-NEXT:    v_mov_b32_e32 v0, v1
 ; SI-NEXT:    s_cbranch_execnz .LBB1_3
 ; SI-NEXT:  .LBB1_2: ; %cmp.true
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:  .LBB1_3: ; %end
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB1_4:
-; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_branch .LBB1_2
 ;
 ; VI-LABEL: s_bitcast_f16_to_i16_inreg:
@@ -279,7 +277,7 @@ define inreg i16 @s_bitcast_bf16_to_i16_inreg(bfloat inreg %a, i32 inreg %b) {
 ; SI-NEXT:  .LBB3_3: ; %end
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ; SI-NEXT:  .LBB3_4:
-; SI-NEXT:    v_mov_b32_e32 v0, 0
+; SI-NEXT:    ; implicit-def: $vgpr0
 ; SI-NEXT:    s_branch .LBB3_2
 ;
 ; VI-LABEL: s_bitcast_bf16_to_i16_inreg:

@@ -7832,6 +7832,7 @@ define inreg <40 x i8> @s_bitcast_v20i16_to_v40i8_inreg(<20 x i16> inreg %a, i32
 ; SI-NEXT:    v_alignbit_b32 v17, s12, v2, 8
 ; SI-NEXT:    v_mov_b32_e32 v2, s9
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, 0x30000, v1
+; SI-NEXT:    v_mov_b32_e32 v3, s6
 ; SI-NEXT:    v_alignbit_b32 v6, s10, v2, 24
 ; SI-NEXT:    v_alignbit_b32 v11, s10, v2, 16
 ; SI-NEXT:    v_alignbit_b32 v15, s10, v2, 8
@@ -7839,9 +7840,9 @@ define inreg <40 x i8> @s_bitcast_v20i16_to_v40i8_inreg(<20 x i16> inreg %a, i32
 ; SI-NEXT:    v_alignbit_b32 v5, s8, v2, 24
 ; SI-NEXT:    v_alignbit_b32 v9, s8, v2, 16
 ; SI-NEXT:    v_alignbit_b32 v14, s8, v2, 8
-; SI-NEXT:    v_alignbit_b32 v2, s6, v1, 24
-; SI-NEXT:    v_alignbit_b32 v4, s6, v1, 16
-; SI-NEXT:    v_alignbit_b32 v10, s6, v1, 8
+; SI-NEXT:    v_alignbit_b32 v2, v3, v1, 24
+; SI-NEXT:    v_alignbit_b32 v4, v3, v1, 16
+; SI-NEXT:    v_alignbit_b32 v10, v3, v1, 8
 ; SI-NEXT:    s_lshr_b32 s61, s14, 24
 ; SI-NEXT:    s_lshr_b32 s60, s14, 16
 ; SI-NEXT:    s_lshr_b32 s59, s14, 8
