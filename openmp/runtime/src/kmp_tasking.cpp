@@ -5452,7 +5452,6 @@ bool __kmpc_omp_has_task_team(kmp_int32 gtid) {
 
 #if OMPX_TASKGRAPH
 // __kmp_find_tdg: identify a TDG through its ID
-// gtid:   Global Thread ID
 // tdg_id: ID of the TDG
 // returns: If a TDG corresponding to this ID is found and not
 // its initial state, return the pointer to it, otherwise nullptr
@@ -5505,7 +5504,7 @@ void __kmp_print_tdg_dot(kmp_tdg_info_t *tdg, kmp_int32 gtid) {
   KA_TRACE(10, ("__kmp_print_tdg_dot(exit): T#%d tdg_id=%d \n", gtid, tdg_id));
 }
 
-// __kmp_start_record: launch the execution of a previous
+// __kmp_exec_tdg: launch the execution of a previous
 // recorded TDG
 // gtid:   Global Thread ID
 // tdg:    ID of the TDG
