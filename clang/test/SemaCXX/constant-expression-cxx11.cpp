@@ -2203,6 +2203,8 @@ namespace BuiltinStrlen {
   static_assert(__builtin_strlen("foo") == 3, "");
   static_assert(__builtin_strlen("foo\0quux") == 3, "");
   static_assert(__builtin_strlen("foo\0quux" + 4) == 4, "");
+  static_assert(__builtin_strlen("foo") + 1 + "foo" == "foo", ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  // expected-note@-1 {{comparison against pointer '&"foo"[4]' that points past the end of a complete object has unspecified value}}
 
   constexpr bool check(const char *p) {
     return __builtin_strlen(p) == 3 &&

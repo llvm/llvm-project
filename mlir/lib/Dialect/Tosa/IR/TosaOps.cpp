@@ -1322,6 +1322,25 @@ LogicalResult tosa::ConcatOp::verify() {
                  << " on operands 0 and " << operandNum;
       }
     }
+
+    // ERROR_IF(axis_sum != shape[axis]);
+    int64_t axisSum = 0;
+    for (const auto &input : inputList) {
+      const ShapeAdaptor inputShape(input.getType());
+      if (inputShape.isDynamicDim(axis)) {
+        // make axisSum negative to indicate invalid value
+        axisSum = -1;
+        break;
+      }
+      axisSum += inputShape.getDimSize(axis);
+    }
+    const ShapeAdaptor outputShape(outType);
+    if (axisSum >= 0 && outputShape.hasRank() &&
+        !outputShape.isDynamicDim(axis) &&
+        axisSum != outputShape.getDimSize(axis))
+      return emitOpError("requires sum of axis dimensions of input1 "
+                         "equal to output axis dimension, got ")
+             << axisSum << " and " << outputShape.getDimSize(axis);
   }
 
   return success();
@@ -2028,7 +2047,8 @@ static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
       return op.emitOpError()
              << "expect " << tensorName << "_zp of 0, got " << zp;
     }
-    if (zpElemType.isInteger(16) && tensorUnsigned && zp != 32768) {
+    if (zpElemType.isInteger(16) && tensorUnsigned &&
+        zp != static_cast<int16_t>(32768)) {
       return op.emitOpError() << "expect " << tensorName
                               << "_zp of 0 or 32768 for unsigned int16 "
                               << tensorName << ", got " << zp;

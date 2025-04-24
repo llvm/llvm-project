@@ -147,6 +147,9 @@ C Language Changes
   object is left uninitialized, it will be diagnosed unsed the new warning
   ``-Wdefault-const-init-unsafe`` (which is grouped under
   ``-Wdefault-const-init``). #GH19297
+- Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
+  diagnoses implicit conversion from ``void *`` to another pointer type as
+  being incompatible with C++. (#GH17792)
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -690,6 +693,8 @@ clang-format
 
 libclang
 --------
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+  in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
 - Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as
@@ -752,6 +757,7 @@ Python Binding Changes
   allows visiting the methods of a class.
 - Added ``Type.get_fully_qualified_name``, which provides fully qualified type names as
   instructed by a PrintingPolicy.
+- Add equality comparison operators for ``File`` type
 
 OpenMP Support
 --------------
