@@ -13,13 +13,12 @@ struct OffloadArchToStringMap {
 };
 } // namespace
 
-#define SM2(sm, ca) {OffloadArch::SM_##sm, "sm_" #sm, ca}
-#define SM(sm) SM2(sm, "compute_" #sm)
+#define SM(sm) {OffloadArch::SM_##sm, "sm_" #sm, "compute_" #sm}
 #define GFX(gpu) {OffloadArch::GFX##gpu, "gfx" #gpu, "compute_amdgcn"}
 static const OffloadArchToStringMap ArchNames[] = {
     // clang-format off
     {OffloadArch::UNUSED, "", ""},
-    SM2(20, "compute_20"), SM2(21, "compute_20"), // Fermi
+    SM(20), {OffloadArch::SM_21, "sm_21", "compute_20"}, // Fermi
     SM(30), {OffloadArch::SM_32_, "sm_32", "compute_32"}, SM(35), SM(37),  // Kepler
     SM(50), SM(52), SM(53),          // Maxwell
     SM(60), SM(61), SM(62),          // Pascal
@@ -92,7 +91,6 @@ static const OffloadArchToStringMap ArchNames[] = {
     // clang-format on
 };
 #undef SM
-#undef SM2
 #undef GFX
 
 const char *OffloadArchToString(OffloadArch A) {
