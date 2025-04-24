@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """A script to generate FileCheck statements for mlir unit tests.
+
 This script is a utility to add FileCheck patterns to an mlir file.
 
 NOTE: The input .mlir is expected to be the output from the parser, not a
@@ -81,7 +82,11 @@ class VariableNamer:
         # Compute variable name
         variable_name = self.variable_names.pop(0) if len(self.variable_names) > 0 else ''
         if variable_name == '':
-            if use_ssa_name:
+            # If `use_ssa_name` is set, use the MLIR SSA value name to generate
+            # a FileCHeck substation string. As FileCheck requires these
+            # strings to start with a character, skip MLIR variables starting
+            # with a digit (e.g. `%0`).
+            if use_ssa_name and source_variable_name[0].isalpha():
                 variable_name = source_variable_name.upper()
             else:
                 variable_name = "VAL_" + str(self.name_counter)
