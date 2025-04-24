@@ -174,11 +174,11 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   NewModule->Index = Chain.size();
   NewModule->FileName = FileName.str();
   NewModule->ImportLoc = ImportLoc;
-  NewModule->InputFilesValidationTimestamp = 0;
+  NewModule->InputFilesValidated = false;
 
   if (NewModule->Kind == MK_ImplicitModule)
-    NewModule->InputFilesValidationTimestamp =
-        ModCache->getModuleTimestamp(NewModule->FileName);
+    NewModule->InputFilesValidated =
+        ModCache->isMarkedUpToDate(NewModule->FileName);
 
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {

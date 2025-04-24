@@ -270,11 +270,9 @@ public:
   // system input files reside at [NumUserInputFiles, InputFilesLoaded.size()).
   unsigned NumUserInputFiles = 0;
 
-  /// If non-zero, specifies the time when we last validated input
-  /// files.  Zero means we never validated them.
-  ///
-  /// The time is specified in seconds since the start of the Epoch.
-  uint64_t InputFilesValidationTimestamp = 0;
+  /// Specifies whether the input files have been validated (i.e. checked
+  /// whether they are up-to-date).
+  bool InputFilesValidated = false;
 
   // === Source Locations ===
 
