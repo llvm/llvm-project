@@ -61,34 +61,34 @@ let Predicates = [HasRCPC] in {
 }
 
 // 8-bit loads
-def : Pat<(seq_cst_load<atomic_load_az_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
-def : Pat<(acquiring_load<atomic_load_az_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
-def : Pat<(relaxed_load<atomic_load_az_8> (ro_Windexed8 GPR64sp:$Rn, GPR32:$Rm,
-                                                     ro_Wextend8:$offset)),
+def : Pat<(seq_cst_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
+def : Pat<(acquiring_load<atomic_load_azext_8>  GPR64sp:$ptr), (LDARB GPR64sp:$ptr)>;
+def : Pat<(relaxed_load<atomic_load_azext_8> (ro_Windexed8 GPR64sp:$Rn, GPR32:$Rm,
+                                                        ro_Wextend8:$offset)),
           (LDRBBroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend8:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_8> (ro_Xindexed8 GPR64sp:$Rn, GPR64:$Rm,
-                                                        ro_Xextend8:$offset)),
+def : Pat<(relaxed_load<atomic_load_azext_8> (ro_Xindexed8 GPR64sp:$Rn, GPR64:$Rm,
+                                                           ro_Xextend8:$offset)),
           (LDRBBroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend8:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_8> (am_indexed8 GPR64sp:$Rn,
-                                           uimm12s1:$offset)),
+def : Pat<(relaxed_load<atomic_load_azext_8> (am_indexed8 GPR64sp:$Rn,
+                                              uimm12s1:$offset)),
           (LDRBBui GPR64sp:$Rn, uimm12s1:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_8>
+def : Pat<(relaxed_load<atomic_load_azext_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
           (LDURBBi GPR64sp:$Rn, simm9:$offset)>;
 
 // 16-bit loads
-def : Pat<(seq_cst_load<atomic_load_az_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
-def : Pat<(acquiring_load<atomic_load_az_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
-def : Pat<(relaxed_load<atomic_load_az_16> (ro_Windexed16 GPR64sp:$Rn, GPR32:$Rm,
-                                                       ro_Wextend16:$extend)),
+def : Pat<(seq_cst_load<atomic_load_azext_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
+def : Pat<(acquiring_load<atomic_load_azext_16> GPR64sp:$ptr), (LDARH GPR64sp:$ptr)>;
+def : Pat<(relaxed_load<atomic_load_azext_16> (ro_Windexed16 GPR64sp:$Rn, GPR32:$Rm,
+                                                          ro_Wextend16:$extend)),
           (LDRHHroW GPR64sp:$Rn, GPR32:$Rm, ro_Wextend16:$extend)>;
-def : Pat<(relaxed_load<atomic_load_az_16> (ro_Xindexed16 GPR64sp:$Rn, GPR64:$Rm,
-                                                          ro_Xextend16:$extend)),
+def : Pat<(relaxed_load<atomic_load_azext_16> (ro_Xindexed16 GPR64sp:$Rn, GPR64:$Rm,
+                                                             ro_Xextend16:$extend)),
           (LDRHHroX GPR64sp:$Rn, GPR64:$Rm, ro_Xextend16:$extend)>;
-def : Pat<(relaxed_load<atomic_load_az_16> (am_indexed16 GPR64sp:$Rn,
-                                                         uimm12s2:$offset)),
+def : Pat<(relaxed_load<atomic_load_azext_16> (am_indexed16 GPR64sp:$Rn,
+                                                            uimm12s2:$offset)),
           (LDRHHui GPR64sp:$Rn, uimm12s2:$offset)>;
-def : Pat<(relaxed_load<atomic_load_az_16>
+def : Pat<(relaxed_load<atomic_load_azext_16>
                (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
           (LDURHHi GPR64sp:$Rn, simm9:$offset)>;
 
@@ -591,10 +591,10 @@ let Predicates = [HasRCPC3, HasNEON] in {
 // v8.4a FEAT_LRCPC2 patterns
 let Predicates = [HasRCPC_IMMO, UseLDAPUR] in {
   // Load-Acquire RCpc Register unscaled loads
-  def : Pat<(acquiring_load<atomic_load_az_8>
+  def : Pat<(acquiring_load<atomic_load_azext_8>
                (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURBi GPR64sp:$Rn, simm9:$offset)>;
-  def : Pat<(acquiring_load<atomic_load_az_16>
+  def : Pat<(acquiring_load<atomic_load_azext_16>
                (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
           (LDAPURHi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(acquiring_load<atomic_load_32>

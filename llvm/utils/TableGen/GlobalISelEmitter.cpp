@@ -627,7 +627,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
         0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
     return InsnMatcher;
   }
-  if (Predicate.isLoad() && Predicate.isAnyExtLoad()) {
+  if ((Predicate.isLoad() || Predicate.isAtomic()) &&
+      Predicate.isAnyExtLoad()) {
     InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
         0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
     return InsnMatcher;
