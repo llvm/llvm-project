@@ -57,15 +57,29 @@ void SystemZPreRASchedStrategy::initializePrioRegClasses(
   }
 }
 
-void SystemZPreRASchedStrategy::VRegSet::dump(std::string Msg) {
-  dbgs() << Msg.c_str();
+void SystemZPreRASchedStrategy::VRegSet::insert(Register Reg) {
+  assert(Reg.isVirtual());
+  Regs.insert(Reg);
+}
+
+void SystemZPreRASchedStrategy::VRegSet::erase(Register Reg) {
+  assert(Reg.isVirtual());
+  Regs.erase(Reg);
+}
+
+bool SystemZPreRASchedStrategy::VRegSet::count(Register Reg) const {
+  assert(Reg.isVirtual());
+  return Regs.count(Reg);
+}
+
+void SystemZPreRASchedStrategy::VRegSet::dump() const {
   bool First = true;
-  for (auto R : *this) {
+  for (auto R : Regs) {
     if (!First)
       dbgs() << ", ";
     else
       First = false;
-    dbgs() << "%" << R.virtRegIndex();
+    dbgs() << printReg(R);
   }
   dbgs() << "\n";
 }
@@ -109,8 +123,8 @@ void SystemZPreRASchedStrategy::initializeStoresGroup() {
         return;
       if (IsStore)
         StoresGroup.insert(SU);
-    }
-    else if (IsStore && !StoresGroup.empty() && SU->getDepth() == CurrMaxDepth) {
+    } else if (IsStore && !StoresGroup.empty() &&
+               SU->getDepth() == CurrMaxDepth) {
       // The group members should all have the same opcode.
       if ((*StoresGroup.begin())->getInstr()->getOpcode() != MI->getOpcode()) {
         StoresGroup.clear();
@@ -142,9 +156,8 @@ static int biasPhysRegExtra(const SUnit *SU) {
   return 0;
 }
 
-int SystemZPreRASchedStrategy::
-computeSULivenessScore(SchedCandidate &C, ScheduleDAGMILive *DAG,
-                       SchedBoundary *Zone) const {
+int SystemZPreRASchedStrategy::computeSULivenessScore(
+    SchedCandidate &C, ScheduleDAGMILive *DAG, SchedBoundary *Zone) const {
   // Not all data deps are modelled around the SUnit - some data edges near
   // boundaries are missing: Look directly at the MI operands instead.
   const SUnit *SU = C.SU;
@@ -246,22 +259,24 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
       return TryCand.Reason != NoCand;
 
     // Don't extend the scheduled latency.
-    if (ShouldReduceLatency && TryCand.SU->getHeight() != Cand.SU->getHeight() &&
+    if (ShouldReduceLatency &&
+        TryCand.SU->getHeight() != Cand.SU->getHeight() &&
         (std::max(TryCand.SU->getHeight(), Cand.SU->getHeight()) >
          Zone->getScheduledLatency())) {
-      unsigned HigherSUDepth = TryCand.SU->getHeight() < Cand.SU->getHeight() ?
-        Cand.SU->getDepth() : TryCand.SU->getDepth();
+      unsigned HigherSUDepth = TryCand.SU->getHeight() < Cand.SU->getHeight()
+                                   ? Cand.SU->getDepth()
+                                   : TryCand.SU->getDepth();
       if (HigherSUDepth != getRemLat(Zone) &&
-          tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(),
-                  TryCand, Cand, GenericSchedulerBase::BotHeightReduce)) {
+          tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
+                  GenericSchedulerBase::BotHeightReduce)) {
         return TryCand.Reason != NoCand;
       }
     }
   }
 
   // Weak edges are for clustering and other constraints.
-  if (tryLess(TryCand.SU->WeakSuccsLeft, Cand.SU->WeakSuccsLeft,
-              TryCand, Cand, Weak))
+  if (tryLess(TryCand.SU->WeakSuccsLeft, Cand.SU->WeakSuccsLeft, TryCand, Cand,
+              Weak))
     return TryCand.Reason != NoCand;
 
   // Fall through to original instruction order.
@@ -361,17 +376,22 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   LLVM_DEBUG(if (ShouldReduceLatency) dbgs() << "Latency scheduling enabled.\n";
              else dbgs() << "Latency scheduling disabled.\n";);
 
-  // Find the registers that are live at the bottom, before scheduling.
+  // Find the registers used in the region that are live out.
   LiveRegs.clear();
-  for (unsigned I = 0, E = DAG->MRI.getNumVirtRegs(); I != E; ++I) {
-    Register VirtReg = Register::index2VirtReg(I);
-    const LiveInterval &LI = DAG->getLIS()->getInterval(VirtReg);
-    LiveQueryResult LRQ = LI.Query(
-        DAG->getLIS()->getInstructionIndex(*DAG->SUnits.back().getInstr()));
-    if (LRQ.valueOut())
-      LiveRegs.insert(VirtReg);
+  std::set<Register> Visited;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
+    const MachineInstr *MI = DAG->SUnits[Idx].getInstr();
+    for (auto &MO : MI->explicit_operands())
+      if (MO.isReg() && MO.getReg().isVirtual() &&
+          Visited.insert(MO.getReg()).second) {
+        const LiveInterval &LI = DAG->getLIS()->getInterval(MO.getReg());
+        LiveQueryResult LRQ = LI.Query(
+            DAG->getLIS()->getInstructionIndex(*DAG->SUnits.back().getInstr()));
+        if (LRQ.valueOut())
+          LiveRegs.insert(MO.getReg());
+      }
   }
-  LLVM_DEBUG(LiveRegs.dump("Live out at bottom: "););
+  LLVM_DEBUG(dbgs() << "Live out at bottom: "; LiveRegs.dump(););
 
   // If MI uses the register it defines, record it one time here.
   IsRedefining = std::vector<bool>(DAG->SUnits.size(), false);
@@ -395,7 +415,7 @@ void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   if (TinyRegion)
     return;
 
-  LLVM_DEBUG(LiveRegs.dump("Live regs was: "););
+  LLVM_DEBUG(dbgs() << "Live regs was: "; LiveRegs.dump(););
 
   if (!FirstStoreInGroupScheduled && StoresGroup.count(SU))
     FirstStoreInGroupScheduled = true;
