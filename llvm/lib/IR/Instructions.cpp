@@ -984,10 +984,10 @@ static StringRef getBundledDenormPrefix(const fltSemantics *FPSem, bool Input) {
 }
 
 std::optional<DenormalMode::DenormalModeKind>
-llvm::getDenormModeBundle(const OperandBundleUse &Control, bool Unput,
+llvm::getDenormModeBundle(const OperandBundleUse &Control, bool Input,
                           const fltSemantics *FPSem) {
   assert(Control.getTagID() == LLVMContext::OB_fp_control);
-  StringRef Prefix = getBundledDenormPrefix(FPSem, true);
+  StringRef Prefix = getBundledDenormPrefix(FPSem, Input);
   if (Prefix.empty())
     return std::nullopt;
   auto DenormOperand = getBundleOperandByPrefix(Control, Prefix);

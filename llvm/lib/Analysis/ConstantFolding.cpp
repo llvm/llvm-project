@@ -1354,9 +1354,9 @@ static ConstantFP *flushDenormalConstantFP(ConstantFP *CFP,
   if (!APF.isDenormal())
     return CFP;
 
-  if (auto *CB = dyn_cast<CallBase>(Inst)) {
+  if (auto *CB = dyn_cast_or_null<CallBase>(Inst)) {
     auto Mode = IsOutput ? CB->getOutputDenormMode() : CB->getInputDenormMode();
-    return flushDenormalConstant(CFP->getType(), APF, Mode);
+    return flushDenormalConstant(CFP->getType(), APF, *Mode);
   }
 
   DenormalMode Mode = getInstrDenormalMode(Inst, CFP->getType());
