@@ -11,7 +11,6 @@ from lldbsuite.test.lldbplatformutil import *
 
 
 class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
-
     def build_and_run(self, displayExtendedBacktrace=True):
         backtrace_recording_lib = findBacktraceRecordingDylib()
         if not backtrace_recording_lib:
