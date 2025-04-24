@@ -1,8 +1,7 @@
 #include "clang/Basic/OffloadArch.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-
-#include <algorithm>
 
 namespace clang {
 
@@ -97,27 +96,30 @@ static const OffloadArchToStringMap ArchNames[] = {
 #undef GFX
 
 const char *OffloadArchToString(OffloadArch A) {
-  auto Result = std::find_if(
-      std::begin(ArchNames), std::end(ArchNames),
-      [A](const OffloadArchToStringMap &Map) { return A == Map.Arch; });
+  auto Result =
+      llvm::find_if(ArchNames, [A](const OffloadArchToStringMap &Map) {
+        return A == Map.Arch;
+      });
   if (Result == std::end(ArchNames))
     return "unknown";
   return Result->ArchName;
 }
 
 const char *OffloadArchToVirtualArchString(OffloadArch A) {
-  auto Result = std::find_if(
-      std::begin(ArchNames), std::end(ArchNames),
-      [A](const OffloadArchToStringMap &Map) { return A == Map.Arch; });
+  auto Result =
+      llvm::find_if(ArchNames, [A](const OffloadArchToStringMap &Map) {
+        return A == Map.Arch;
+      });
   if (Result == std::end(ArchNames))
     return "unknown";
   return Result->VirtualArchName;
 }
 
 OffloadArch StringToOffloadArch(llvm::StringRef S) {
-  auto Result = std::find_if(
-      std::begin(ArchNames), std::end(ArchNames),
-      [S](const OffloadArchToStringMap &Map) { return S == Map.ArchName; });
+  auto Result =
+      llvm::find_if(ArchNames, [S](const OffloadArchToStringMap &Map) {
+        return S == Map.ArchName;
+      });
   if (Result == std::end(ArchNames))
     return OffloadArch::UNKNOWN;
   return Result->Arch;
