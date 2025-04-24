@@ -424,6 +424,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const EnumDecl *ED = cast<EnumType>(ty)->getDecl();
     if (ED->isCompleteDefinition() || ED->isFixed())
       return convertType(ED->getIntegerType());
+    resultType = cgm.UInt32Ty;
     break;
   }
 
