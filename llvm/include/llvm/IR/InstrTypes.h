@@ -1104,12 +1104,15 @@ void addFPRoundingBundle(LLVMContext &Ctx,
 void addFPExceptionBundle(LLVMContext &Ctx,
                           SmallVectorImpl<OperandBundleDef> &Bundles,
                           fp::ExceptionBehavior Except);
-void addFPInputDenormBundle(LLVMContext &Ctx,
-                            SmallVectorImpl<OperandBundleDef> &Bundles,
-                            DenormalMode::DenormalModeKind Mode);
-void addFPOutputDenormBundle(LLVMContext &Ctx,
-                             SmallVectorImpl<OperandBundleDef> &Bundles,
-                             DenormalMode::DenormalModeKind Mode);
+std::optional<DenormalMode::DenormalModeKind>
+getDenormModeBundle(const OperandBundleUse &Control, bool Unput,
+                    const fltSemantics *FPSem);
+void addInputDenormBundle(LLVMContext &Ctx,
+                          SmallVectorImpl<OperandBundleDef> &Bundles,
+                          DenormalMode::DenormalModeKind Mode);
+void addOutputDenormBundle(LLVMContext &Ctx,
+                           SmallVectorImpl<OperandBundleDef> &Bundles,
+                           DenormalMode::DenormalModeKind Mode);
 
 //===----------------------------------------------------------------------===//
 //                               CallBase Class
@@ -2184,13 +2187,20 @@ public:
   fp::ExceptionBehavior getExceptionBehavior() const;
 
   /// Return input denormal mode specified by operand bundles.
-  DenormalMode::DenormalModeKind getInputDenormMode() const;
+  std::optional<DenormalMode::DenormalModeKind>
+  getInputDenormMode(const fltSemantics *FPSem = nullptr) const;
 
   /// Return output denormal mode specified by operand bundles.
-  DenormalMode::DenormalModeKind getOutputDenormMode() const;
+  std::optional<DenormalMode::DenormalModeKind>
+  getOutputDenormMode(const fltSemantics *FPSem = nullptr) const;
 
-  /// Return input and output denormal modes specified by operand bundles.
-  DenormalMode getDenormMode() const;
+  /// Return input denormal mode specified by operand bundles.
+  std::optional<DenormalMode::DenormalModeKind>
+  getInputDenormModeFromBundle(const fltSemantics *FPSem = nullptr) const;
+
+  /// Return output denormal mode specified by operand bundles.
+  std::optional<DenormalMode::DenormalModeKind>
+  getOutputDenormModeFromBundle(const fltSemantics *FPSem = nullptr) const;
 
   /// Used to keep track of an operand bundle.  See the main comment on
   /// OperandBundleUser above.

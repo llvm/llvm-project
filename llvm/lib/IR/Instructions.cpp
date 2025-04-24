@@ -682,69 +682,96 @@ fp::ExceptionBehavior CallBase::getExceptionBehavior() const {
   return fp::ebIgnore;
 }
 
-DenormalMode::DenormalModeKind CallBase::getInputDenormMode() const {
-  if (auto InDenormBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
-    auto DenormOperand =
-        getBundleOperandByPrefix(*InDenormBundle, "denorm.in=");
-    if (DenormOperand) {
-      if (auto Mode = parseDenormalKindFromOperandBundle(*DenormOperand))
-        return *Mode;
-    } else {
-      return DenormalMode::IEEE;
-    }
+/// Returns the input denormal behavior specified by operand bundles.
+///
+/// Searches for the bundle operand that specifies denormal behavior for the
+/// given type, or for any type if the argument is \a nullptr.
+///
+/// \param FPSem - pointer to the FP semantics of a call argument type. If
+///                \a nullptr, searches for a common denormal mode
+///                specification, specified by the operand with prefix
+///                "denorm.in=".
+std::optional<DenormalMode::DenormalModeKind>
+CallBase::getInputDenormModeFromBundle(const fltSemantics *FPSem) const {
+  if (auto ControlBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
+    if (FPSem)
+      if (auto Result = getDenormModeBundle(*ControlBundle, true, FPSem))
+        return Result;
+    if (auto Result = getDenormModeBundle(*ControlBundle, true, nullptr))
+      return Result;
   }
-
-  if (!getParent())
-    return DenormalMode::IEEE;
-  const Function *F = getFunction();
-  if (!F)
-    return DenormalMode::IEEE;
-
-  Type *Ty = nullptr;
-  for (auto &A : args())
-    if (auto *T = A.get()->getType(); T->isFPOrFPVectorTy()) {
-      Ty = T;
-      break;
-    }
-  assert(Ty && "Some input argument must be of floating-point type");
-
-  Ty = Ty->getScalarType();
-  return F->getDenormalMode(Ty->getFltSemantics()).Input;
+  return std::nullopt;
 }
 
-DenormalMode::DenormalModeKind CallBase::getOutputDenormMode() const {
-  if (auto InDenormBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
-    auto DenormOperand =
-        getBundleOperandByPrefix(*InDenormBundle, "denorm.out=");
-    if (DenormOperand) {
-      if (auto Mode = parseDenormalKindFromOperandBundle(*DenormOperand))
-        return *Mode;
-    } else {
-      return DenormalMode::IEEE;
-    }
+/// Returns the output denormal behavior specified by operand bundles.
+///
+/// Searches for the bundle operand that specifies denormal behavior for the
+/// given type, or for any type if the argument is \a nullptr.
+///
+/// \param FPSem - pointer to the FP semantics of the call result type. If
+///                \a nullptr, searches for a common denormal mode
+///                specification, specified by the operand with prefix
+///                "denorm.out=".
+std::optional<DenormalMode::DenormalModeKind>
+CallBase::getOutputDenormModeFromBundle(const fltSemantics *FPSem) const {
+  if (auto ControlBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
+    if (FPSem)
+      if (auto Result = getDenormModeBundle(*ControlBundle, false, FPSem))
+        return Result;
+    if (auto Result = getDenormModeBundle(*ControlBundle, false, nullptr))
+      return Result;
   }
-
-  if (!getParent())
-    return DenormalMode::IEEE;
-  const Function *F = getFunction();
-  if (!F)
-    return DenormalMode::IEEE;
-
-  Type *Ty = getType();
-  assert(Ty->isFPOrFPVectorTy() && "Unexpected output type");
-
-  Ty = Ty->getScalarType();
-  return F->getDenormalMode(Ty->getFltSemantics()).Output;
+  return std::nullopt;
 }
 
-DenormalMode CallBase::getDenormMode() const {
-  auto InputMode = getInputDenormMode();
-  auto OutputMode = getOutputDenormMode();
-  if (!InputMode)
-    InputMode = DenormalMode::IEEE;
-  if (!OutputMode)
-    OutputMode = DenormalMode::IEEE;
-  return DenormalMode(OutputMode, InputMode);
+/// Returns the input denormal behavior to be used for the call evaluation.
+///
+/// Searches operand bundles first for matching denormal behavior
+/// specifications. If not found in bundles, falls back to checking function
+/// attributes.
+///
+/// \param FPSem - pointer to the FP semantics of the call argument type. If
+///                \a nullptr, searches for a common denormal mode
+///                specification, using the operand with prefix "denorm.in=".
+std::optional<DenormalMode::DenormalModeKind>
+CallBase::getInputDenormMode(const fltSemantics *FPSem) const {
+  if (auto Result = getInputDenormModeFromBundle(FPSem))
+    return Result;
+
+  if (!getParent())
+    return std::nullopt;
+  const Function *F = getFunction();
+  if (!F)
+    return std::nullopt;
+
+  if (FPSem)
+    return F->getDenormalMode(*FPSem).Input;
+  return F->getDenormalModeRaw().Input;
+}
+
+/// Returns the output denormal behavior to be used for the call evaluation.
+///
+/// Searches operand bundles first for matching denormal behavior
+/// specifications. If not found in bundles, falls back to checking function
+/// attributes.
+///
+/// \param FPSem - pointer to the FP semantics of the call result type. If
+///                \a nullptr, searches for a common denormal mode
+///                specification, using the operand with prefix "denorm.out=".
+std::optional<DenormalMode::DenormalModeKind>
+CallBase::getOutputDenormMode(const fltSemantics *FPSem) const {
+  if (auto Result = getOutputDenormModeFromBundle(FPSem))
+    return Result;
+
+  if (!getParent())
+    return std::nullopt;
+  const Function *F = getFunction();
+  if (!F)
+    return std::nullopt;
+
+  if (FPSem)
+    return F->getDenormalMode(*FPSem).Output;
+  return F->getDenormalModeRaw().Output;
 }
 
 MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
@@ -946,9 +973,32 @@ void llvm::addFPExceptionBundle(LLVMContext &Ctx,
   Bundles.emplace_back("fp.except", EB);
 }
 
-void llvm::addFPInputDenormBundle(LLVMContext &Ctx,
-                                  SmallVectorImpl<OperandBundleDef> &Bundles,
-                                  DenormalMode::DenormalModeKind Mode) {
+static StringRef getBundledDenormPrefix(const fltSemantics *FPSem, bool Input) {
+  // Only f32 is supported now.
+  unsigned TypeIndex = FPSem == &APFloat::IEEEsingle();
+  if (FPSem && !TypeIndex)
+    return StringRef();
+  static const StringRef Prefix[2][2] = {{"denorm.out=", "denorm.in="},
+                                         {"denorm.f32.out=", "denorm.f32.in="}};
+  return Prefix[TypeIndex][Input];
+}
+
+std::optional<DenormalMode::DenormalModeKind>
+llvm::getDenormModeBundle(const OperandBundleUse &Control, bool Unput,
+                          const fltSemantics *FPSem) {
+  assert(Control.getTagID() == LLVMContext::OB_fp_control);
+  StringRef Prefix = getBundledDenormPrefix(FPSem, true);
+  if (Prefix.empty())
+    return std::nullopt;
+  auto DenormOperand = getBundleOperandByPrefix(Control, Prefix);
+  if (DenormOperand)
+    return parseDenormalKindFromOperandBundle(*DenormOperand);
+  return std::nullopt;
+}
+
+void llvm::addInputDenormBundle(LLVMContext &Ctx,
+                                SmallVectorImpl<OperandBundleDef> &Bundles,
+                                DenormalMode::DenormalModeKind Mode) {
   std::optional<StringRef> DenormValue = printDenormalForOperandBundle(Mode);
   if (!DenormValue)
     return;
@@ -958,9 +1008,9 @@ void llvm::addFPInputDenormBundle(LLVMContext &Ctx,
   addOperandToBundleTag(Ctx, Bundles, "fp.control", Prefix.size(), DenormItem);
 }
 
-void llvm::addFPOutputDenormBundle(LLVMContext &Ctx,
-                                   SmallVectorImpl<OperandBundleDef> &Bundles,
-                                   DenormalMode::DenormalModeKind Mode) {
+void llvm::addOutputDenormBundle(LLVMContext &Ctx,
+                                 SmallVectorImpl<OperandBundleDef> &Bundles,
+                                 DenormalMode::DenormalModeKind Mode) {
   std::optional<StringRef> DenormValue = printDenormalForOperandBundle(Mode);
   if (!DenormValue)
     return;

@@ -3025,8 +3025,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         }
         if (mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(ConstrIntr),
                                St)) {
-          auto DenormOut = Call->getOutputDenormMode();
-          DenormalMode::DenormalModeKind Mode = DenormOut;
+          DenormalMode::DenormalModeKind Mode = *Call->getOutputDenormMode();
           return flushDenormalConstant(Op2->getType(), Res, Mode);
         }
         return nullptr;

@@ -3114,10 +3114,25 @@ be one of the values:
 
 ::
 
-    ``"ieee"`` - preserve denormals,
-    ``"zero"`` - flush to +0.0 or -0.0 depending on value sign,
-    ``"pzero"`` - flush to +0.0,
-    ``"dyn"`` - concrete mode is read from some register.
+    "ieee"  - preserve denormals,
+    "zero"  - flush to +0.0 or -0.0 depending on value sign,
+    "pzero" - flush to +0.0,
+    "dyn"   - concrete mode is read from some register.
+
+Such bundle operand specifies denormal behavior for all floating-point types.
+It is possible to override denormal behavior for specific type, if the target
+supports that. Now only type "f32" allows such overriding, if a bundle operand
+has prefix "denorm.f32.in=" or "denormal.f32.out=", its specifies denormal mode
+for ``float`` values in the affected instruction. For example:
+
+.. code-block:: llvm
+
+    ; denormal arguments are flushed to zero preserving sign.
+    call float @llvm.trunc.f32(float %x) [ "fp.control"(metadata !"denorm.in=ieee", metadata !"denorm.f32.in=zero") ]
+
+    ; denormal arguments are flushed to +0.0.
+    call float @llvm.trunc.f32(float %x) [ "fp.control"(metadata !"denorm.in=pzero") ]
+
 
 An operand bundle tagged with "fp.except" may be associated with operations
 that can read or write floating-point exception flags. It contains a single
