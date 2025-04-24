@@ -936,7 +936,8 @@ def PatchableFunctionEntry
            "riscv64", "x86", "x86_64", "ppc", "ppc64"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
-  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>];
+  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
+              StringArgument<"Section", /* optional */ 1>];
   let Documentation = [PatchableFunctionEntryDocs];
 }
 
@@ -996,6 +997,22 @@ def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
   let ParseKind = "Interrupt";
   let HasCustomParsing = 1;
   let Documentation = [ARMInterruptDocs];
+}
+
+def ARMInterruptSaveFP : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [GNU<"interrupt_save_fp">];
+  let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
+                           ["IRQ", "FIQ", "SWI", "ABORT", "UNDEF", ""],
+                           ["IRQ", "FIQ", "SWI", "ABORT", "UNDEF", "Generic"],
+                           1>];
+  let HasCustomParsing = 0;
+  let Documentation = [ARMInterruptSaveFPDocs];
+}
+
+def ARMSaveFP : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
 }
 
 def AVRInterrupt : InheritableAttr, TargetSpecificAttr<TargetAVR> {
@@ -1708,6 +1725,13 @@ def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
 def AllocSize : InheritableAttr {
   let Spellings = [GCC<"alloc_size">];
   let Subjects = SubjectList<[HasFunctionProto]>;
+  // The parameter names here are a bit misleading.
+  // When used with a single argument, the first argument is obviously the
+  // allocation size; but when used with two arguments, the first argument is
+  // usually the number of elements, while the second argument is usually the
+  // element size - the reverse of how they are named here.
+  // The documentation of both GCC and clang does not describe any semantic
+  // difference between the first and second argument.
   let Args = [ParamIdxArgument<"ElemSizeParam">,
               ParamIdxArgument<"NumElemsParam", /*opt*/ 1>];
   let TemplateDependent = 1;
@@ -3540,6 +3564,14 @@ def ObjCRequiresPropertyDefs : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def PointerAuth : TypeAttr {
+  let Spellings = [CustomKeyword<"__ptrauth">];
+  let Args = [IntArgument<"Key">,
+              BoolArgument<"AddressDiscriminated", 1>,
+              IntArgument<"ExtraDiscriminator", 1>];
+  let Documentation = [PtrAuthDocs];
+}
+
 def Unused : InheritableAttr {
   let Spellings = [CXX11<"", "maybe_unused", 201603>, GCC<"unused">,
                    C23<"", "maybe_unused", 202106>];
@@ -3802,7 +3834,9 @@ def Capability : InheritableAttr {
 
 def AssertCapability : InheritableAttr {
   let Spellings = [Clang<"assert_capability", 0>,
-                   Clang<"assert_shared_capability", 0>];
+                   Clang<"assert_shared_capability", 0>,
+                   GNU<"assert_exclusive_lock">,
+                   GNU<"assert_shared_lock">];
   let Subjects = SubjectList<[Function]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
@@ -3810,7 +3844,8 @@ def AssertCapability : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
   let Accessors = [Accessor<"isShared",
-                    [Clang<"assert_shared_capability", 0>]>];
+                    [Clang<"assert_shared_capability", 0>,
+                     GNU<"assert_shared_lock">]>];
   let Documentation = [AssertCapabilityDocs];
 }
 
@@ -3833,16 +3868,18 @@ def AcquireCapability : InheritableAttr {
 
 def TryAcquireCapability : InheritableAttr {
   let Spellings = [Clang<"try_acquire_capability", 0>,
-                   Clang<"try_acquire_shared_capability", 0>];
-  let Subjects = SubjectList<[Function],
-                             ErrorDiag>;
+                   Clang<"try_acquire_shared_capability", 0>,
+                   GNU<"exclusive_trylock_function">,
+                   GNU<"shared_trylock_function">];
+  let Subjects = SubjectList<[Function]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
   let Accessors = [Accessor<"isShared",
-                    [Clang<"try_acquire_shared_capability", 0>]>];
+                    [Clang<"try_acquire_shared_capability", 0>,
+                     GNU<"shared_trylock_function">]>];
   let Documentation = [TryAcquireCapabilityDocs];
 }
 
@@ -3929,54 +3966,6 @@ def AcquiredBefore : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Subjects = SubjectList<[Field, SharedVar]>;
-  let Documentation = [Undocumented];
-}
-
-def AssertExclusiveLock : InheritableAttr {
-  let Spellings = [GNU<"assert_exclusive_lock">];
-  let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
-def AssertSharedLock : InheritableAttr {
-  let Spellings = [GNU<"assert_shared_lock">];
-  let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
-// The first argument is an integer or boolean value specifying the return value
-// of a successful lock acquisition.
-def ExclusiveTrylockFunction : InheritableAttr {
-  let Spellings = [GNU<"exclusive_trylock_function">];
-  let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
-// The first argument is an integer or boolean value specifying the return value
-// of a successful lock acquisition.
-def SharedTrylockFunction : InheritableAttr {
-  let Spellings = [GNU<"shared_trylock_function">];
-  let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
 }
 

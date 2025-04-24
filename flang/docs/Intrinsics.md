@@ -1040,6 +1040,41 @@ PROGRAM example_hostnm
 END PROGRAM
 ```
 
+### Non-Standard Intrinsics: PUTENV
+
+#### Description
+`PUTENV(STR [, STATUS])` sets or deletes environment variable.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `STR`    | `IN`   | `CHARACTER` | default | String in the form "name=value" (see below) |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL PUTENV(STR [, STATUS])`, `STATUS = PUTENV(STR)`
+
+The passed string can be in the form "name=value" to set environment variable "name" to value "value". It can also be of the form "name=" to delete environment variable "name".
+
+The environment variables set by PUTENV can be read by GET_ENVIRONMENT_VARIABLE.
+
+#### Example
+```Fortran
+  integer :: status
+
+  ! Set variable my_var to value my_value
+  putenv("my_var=my_value", status)
+
+  ! Delete variable my_var
+  putenv("my_var=")
+  end
+```
+
 
 ### Non-standard Intrinsics: RENAME
 `RENAME(OLD, NEW[, STATUS])` renames/moves a file on the filesystem.
@@ -1091,6 +1126,69 @@ end program rename_proc
 This intrinsic is an alias for `CPU_TIME`: supporting both a subroutine and a
 function form.
 
+### Non-Standard Intrinsics: TIME
+
+#### Description
+`TIME()` returns the current time of the system as a INTEGER(8).
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** function
+- **Syntax:** `RESULT = TIME()`
+
+#### Example
+```Fortran
+PROGRAM example_time
+  print *, TIME()
+  print *, TIME()
+  call SLEEP(10)
+  print *, TIME()
+END PROGRAM
+```
+
+### Non-Standard Intrinsics: UNLINK
+
+#### Description
+`UNLINK(PATH [, STATUS])` deletes a link to a file.
+
+This intrinsic is provided in both subroutine and function forms; however, only
+one form can be used in any given program unit.
+
+| ARGUMENT | INTENT | TYPE        |  KIND   | Description                     |
+|----------|--------|-------------|---------|---------------------------------|
+| `PATH`   | `IN`   | `CHARACTER` | default | The path of the file to unlink. |
+| `STATUS` | `OUT`  | `INTEGER`   | default | Optional. Returns 0 on success, C's `errno` on failure. |
+
+#### Usage and Info
+
+- **Standard:** GNU extension
+- **Class:** Subroutine, function
+- **Syntax:** `CALL UNLINK(PATH [, STATUS])`, `STATUS = UNLINK(PATH)`
+
+#### Example
+The following example just prints "hello.txt doesn't exist".
+```Fortran
+SUBROUTINE try_unlink_hello_again()
+  INTEGER :: status
+  CALL UNLINK("hello.txt", status)
+  IF (status .NE. 0) PRINT *, "hello.txt doesn't exist"
+END SUBROUTINE
+
+PROGRAM example_unlink
+  INTEGER :: hello
+  ! Create ./hello.txt
+  OPEN(newunit=hello, file="hello.txt")
+  WRITE (hello, *), "Hello!"
+  CLOSE(hello)
+
+  ! Delete ./hello.txt
+  IF (UNLINK("hello.txt") .NE. 0) PRINT *, "didn't create a file"
+
+  CALL try_unlink_hello_again()
+END PROGRAM
+```
+
 ### Non-standard Intrinsics: LNBLNK
 This intrinsic is an alias for `LEN_TRIM`, without the optional KIND argument.
 
@@ -1134,6 +1232,44 @@ program chdir_func
 end program chdir_func
 ```
 
+### Non-Standard Intrinsics: FSEEK and FTELL
+
+#### Description
+`FSEEK(UNIT, OFFSET, WHENCE)` Sets position in file opened as `UNIT`, returns status.
+
+`CALL FSEEK(UNIT, OFFSET, WHENCE[, STATUS])` Sets position, returns any error in `STATUS` if present.
+
+`FTELL(UNIT)` Returns current absolute byte offset.
+
+`CALL FTELL(UNIT, OFFSET)` Set `OFFSET` to current byte offset in file.
+
+These intrinsic procedures are available as both functions and subroutines,
+but both forms cannot be used in the same scope.
+
+These arguments must all be integers.
+The value returned from the function form of `FTELL` is `INTEGER(8)`.
+
+|            |                                                 |
+|------------|-------------------------------------------------|
+| `UNIT`     | An open unit number                             |
+| `OFFSET`   | A byte offset; set to -1 by `FTELL` on error    |
+| `WHENCE`   | 0: `OFFSET` is an absolute position             |
+|            | 1: `OFFSET` is relative to the current position |
+|            | 2: `OFFSET` is relative to the end of the file  |
+| `STATUS`   | Set to a nonzero value if an error occurs       |
+|------------|-------------------------------------------------|
+
+The aliases `FSEEK64`, `FSEEKO64`, `FSEEKI8`, `FTELL64`, `FTELLO64`, and
+`FTELLI8` are also accepted for further compatibility.
+
+Avoid using these intrinsics in new code when the standard `ACCESS="STREAM"`
+feature meets your needs.
+
+#### Usage and Info
+
+- **Standard:** Extensions to GNU, Intel, and SUN (at least)
+- **Class:** Subroutine, function
+
 ### Non-Standard Intrinsics: IERRNO
 
 #### Description
@@ -1168,7 +1304,7 @@ by `ISIZE`.
 `COMPAR` function takes the addresses of element `A` and `B` and must return:
 - a negative value if `A` < `B`
 - zero if `A` == `B`
-- a positive value otherwise. 
+- a positive value otherwise.
 
 #### Usage and Info
 

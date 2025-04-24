@@ -414,6 +414,8 @@ llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
 
+llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format);
+
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
@@ -565,10 +567,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     The original launch_request object whose fields are used to construct
 ///     the reverse request object.
 ///
-/// \param[in] debug_adapter_path
-///     Path to the current debug adapter. It will be used to delegate the
-///     launch of the target.
-///
 /// \param[in] comm_file
 ///     The fifo file used to communicate the with the target launcher.
 ///
@@ -582,7 +580,6 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit);
 ///     Microsoft.
 llvm::json::Object
 CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef debug_adapter_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid);
 

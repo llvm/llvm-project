@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVConvergenceRegionAnalysis.h"
+#include "SPIRV.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -25,10 +26,6 @@
 
 using namespace llvm;
 using namespace SPIRV;
-
-namespace llvm {
-void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
-} // namespace llvm
 
 INITIALIZE_PASS_BEGIN(SPIRVConvergenceRegionAnalysisWrapperPass,
                       "convergence-region",

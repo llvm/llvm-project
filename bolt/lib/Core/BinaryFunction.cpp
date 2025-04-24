@@ -1795,6 +1795,8 @@ bool BinaryFunction::scanExternalRefs() {
     // Create relocation for every fixup.
     for (const MCFixup &Fixup : Fixups) {
       std::optional<Relocation> Rel = BC.MIB->createRelocation(Fixup, *BC.MAB);
+      // Can be skipped in case of overlow during relocation value encoding.
+      Rel->setOptional();
       if (!Rel) {
         Success = false;
         continue;
@@ -1893,6 +1895,15 @@ void BinaryFunction::postProcessEntryPoints() {
     // end of the function, e.g. jump tables.
     if (BC.isAArch64() && Offset == getSize())
       continue;
+
+    // If we have grabbed a wrong code label which actually points to some
+    // constant island inside the function, ignore this label and remove it
+    // from the secondary entry point map.
+    if (isStartOfConstantIsland(Offset)) {
+      BC.SymbolToFunctionMap.erase(Label);
+      removeSymbolFromSecondaryEntryPointMap(Label);
+      continue;
+    }
 
     BC.errs() << "BOLT-WARNING: reference in the middle of instruction "
                  "detected in function "
@@ -2365,7 +2376,7 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
   // Without doing jump table value profiling we don't have a use for extra
   // (duplicate) branches.
   llvm::sort(TakenBranches);
-  auto NewEnd = std::unique(TakenBranches.begin(), TakenBranches.end());
+  auto NewEnd = llvm::unique(TakenBranches);
   TakenBranches.erase(NewEnd, TakenBranches.end());
 
   for (std::pair<uint32_t, uint32_t> &Branch : TakenBranches) {

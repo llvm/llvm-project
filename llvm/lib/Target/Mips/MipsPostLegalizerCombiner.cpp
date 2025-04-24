@@ -117,8 +117,6 @@ void MipsPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 MipsPostLegalizerCombiner::MipsPostLegalizerCombiner(bool IsOptNone)
     : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
-  initializeMipsPostLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -157,8 +155,6 @@ INITIALIZE_PASS_END(MipsPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine Mips machine instrs after legalization", false,
                     false)
 
-namespace llvm {
-FunctionPass *createMipsPostLegalizeCombiner(bool IsOptNone) {
+FunctionPass *llvm::createMipsPostLegalizeCombiner(bool IsOptNone) {
   return new MipsPostLegalizerCombiner(IsOptNone);
 }
-} // end namespace llvm

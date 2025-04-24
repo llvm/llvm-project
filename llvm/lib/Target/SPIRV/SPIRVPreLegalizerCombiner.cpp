@@ -99,9 +99,8 @@ void applySPIRVDistance(MachineInstr &MI, MachineRegisterInfo &MRI,
   SPIRVGlobalRegistry *GR =
       MI.getMF()->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
   auto RemoveAllUses = [&](Register Reg) {
-    SmallVector<MachineInstr *, 4> UsesToErase;
-    for (auto &UseMI : MRI.use_instructions(Reg))
-      UsesToErase.push_back(&UseMI);
+    SmallVector<MachineInstr *, 4> UsesToErase(
+        llvm::make_pointer_range(MRI.use_instructions(Reg)));
 
     // calling eraseFromParent to early invalidates the iterator.
     for (auto *MIToErase : UsesToErase) {
@@ -197,8 +196,6 @@ void SPIRVPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 SPIRVPreLegalizerCombiner::SPIRVPreLegalizerCombiner()
     : MachineFunctionPass(ID) {
-  initializeSPIRVPreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }

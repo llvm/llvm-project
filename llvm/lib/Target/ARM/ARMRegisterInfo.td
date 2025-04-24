@@ -417,6 +417,13 @@ def cl_FPSCR_NZCV : RegisterClass<"ARM", [i32], 32, (add FPSCR_NZCV)> {
   let CopyCost = -1;
 }
 
+// This RegisterClass is required to add FPSCR and FPEXC into a calling
+// convention.
+def FP_STATUS_REGS : RegisterClass<"ARM", [i32], 32, (add FPSCR, FPEXC)> {
+  let CopyCost = -1;  // Don't allow copying of status registers.
+  let isAllocatable = 0;
+}
+
 // Scalar single precision floating point register class..
 // FIXME: Allocation order changed to s0, s2, ... or s0, s4, ... as a quick hack
 // to avoid partial-write dependencies on D or Q (depending on platform)

@@ -86,3 +86,17 @@ subroutine s5
   use m5, only: foo, fun
   print *, fun() ! ok
 end
+
+module m6
+  !WARNING: 'foo' is PRIVATE in 'm5'
+  use m5, only: name$with$dollar => foo
+  !ERROR: 'foo' is PRIVATE in 'm5'
+  use m5, only: normal_name => foo
+end
+
+subroutine s6
+  !The special dispensation for USE association of private names to local
+  !aliases with '$' in them only applies to modules.
+  !ERROR: 'foo' is PRIVATE in 'm5'
+  use m5, only: name$with$dollar => foo
+end

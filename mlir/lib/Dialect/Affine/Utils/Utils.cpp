@@ -1741,7 +1741,7 @@ static AffineExpr createDimSizeExprForTiledLayout(AffineExpr oldMapOutput,
 template <typename AllocLikeOp>
 static void createNewDynamicSizes(MemRefType oldMemRefType,
                                   MemRefType newMemRefType, AffineMap map,
-                                  AllocLikeOp *allocOp, OpBuilder b,
+                                  AllocLikeOp allocOp, OpBuilder b,
                                   SmallVectorImpl<Value> &newDynamicSizes) {
   // Create new input for AffineApplyOp.
   SmallVector<Value, 4> inAffineApply;
@@ -1750,13 +1750,13 @@ static void createNewDynamicSizes(MemRefType oldMemRefType,
   for (unsigned d = 0; d < oldMemRefType.getRank(); ++d) {
     if (oldMemRefShape[d] < 0) {
       // Use dynamicSizes of allocOp for dynamic dimension.
-      inAffineApply.emplace_back(allocOp->getDynamicSizes()[dynIdx]);
+      inAffineApply.emplace_back(allocOp.getDynamicSizes()[dynIdx]);
       dynIdx++;
     } else {
       // Create ConstantOp for static dimension.
       auto constantAttr = b.getIntegerAttr(b.getIndexType(), oldMemRefShape[d]);
       inAffineApply.emplace_back(
-          b.create<arith::ConstantOp>(allocOp->getLoc(), constantAttr));
+          b.create<arith::ConstantOp>(allocOp.getLoc(), constantAttr));
     }
   }
 
@@ -1780,18 +1780,17 @@ static void createNewDynamicSizes(MemRefType oldMemRefType,
       AffineMap newMap =
           AffineMap::get(map.getNumInputs(), map.getNumSymbols(), newMapOutput);
       Value affineApp =
-          b.create<AffineApplyOp>(allocOp->getLoc(), newMap, inAffineApply);
+          b.create<AffineApplyOp>(allocOp.getLoc(), newMap, inAffineApply);
       newDynamicSizes.emplace_back(affineApp);
     }
     newDimIdx++;
   }
 }
 
-// TODO: Currently works for static memrefs with a single layout map.
 template <typename AllocLikeOp>
-LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
-  MemRefType memrefType = allocOp->getType();
-  OpBuilder b(*allocOp);
+LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp allocOp) {
+  MemRefType memrefType = allocOp.getType();
+  OpBuilder b(allocOp);
 
   // Fetch a new memref type after normalizing the old memref to have an
   // identity map layout.
@@ -1801,9 +1800,9 @@ LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
     // transformed to an identity map.
     return failure();
 
-  Value oldMemRef = allocOp->getResult();
+  Value oldMemRef = allocOp.getResult();
 
-  SmallVector<Value, 4> symbolOperands(allocOp->getSymbolOperands());
+  SmallVector<Value, 4> symbolOperands(allocOp.getSymbolOperands());
   AffineMap layoutMap = memrefType.getLayout().getAffineMap();
   AllocLikeOp newAlloc;
   // Check if `layoutMap` is a tiled layout. Only single layout map is
@@ -1811,17 +1810,17 @@ LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
   SmallVector<std::tuple<AffineExpr, unsigned, unsigned>> tileSizePos;
   (void)getTileSizePos(layoutMap, tileSizePos);
   if (newMemRefType.getNumDynamicDims() > 0 && !tileSizePos.empty()) {
-    MemRefType oldMemRefType = cast<MemRefType>(oldMemRef.getType());
+    auto oldMemRefType = cast<MemRefType>(oldMemRef.getType());
     SmallVector<Value, 4> newDynamicSizes;
     createNewDynamicSizes(oldMemRefType, newMemRefType, layoutMap, allocOp, b,
                           newDynamicSizes);
     // Add the new dynamic sizes in new AllocOp.
     newAlloc =
-        b.create<AllocLikeOp>(allocOp->getLoc(), newMemRefType, newDynamicSizes,
-                              allocOp->getAlignmentAttr());
+        b.create<AllocLikeOp>(allocOp.getLoc(), newMemRefType, newDynamicSizes,
+                              allocOp.getAlignmentAttr());
   } else {
-    newAlloc = b.create<AllocLikeOp>(allocOp->getLoc(), newMemRefType,
-                                     allocOp->getAlignmentAttr());
+    newAlloc = b.create<AllocLikeOp>(allocOp.getLoc(), newMemRefType,
+                                     allocOp.getAlignmentAttr());
   }
   // Replace all uses of the old memref.
   if (failed(replaceAllMemRefUsesWith(oldMemRef, /*newMemRef=*/newAlloc,
@@ -1842,14 +1841,14 @@ LogicalResult mlir::affine::normalizeMemRef(AllocLikeOp *allocOp) {
     return hasSingleEffect<MemoryEffects::Free>(op, oldMemRef);
   }));
   oldMemRef.replaceAllUsesWith(newAlloc);
-  allocOp->erase();
+  allocOp.erase();
   return success();
 }
 
 template LogicalResult
-mlir::affine::normalizeMemRef<memref::AllocaOp>(memref::AllocaOp *op);
+mlir::affine::normalizeMemRef<memref::AllocaOp>(memref::AllocaOp op);
 template LogicalResult
-mlir::affine::normalizeMemRef<memref::AllocOp>(memref::AllocOp *op);
+mlir::affine::normalizeMemRef<memref::AllocOp>(memref::AllocOp op);
 
 MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
   unsigned rank = memrefType.getRank();

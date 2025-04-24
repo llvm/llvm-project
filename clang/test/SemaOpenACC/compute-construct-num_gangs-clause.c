@@ -22,6 +22,21 @@ void Test() {
 #pragma acc parallel num_gangs(1) num_gangs(2)
   while(1);
 
+  // expected-error@+3{{OpenACC 'num_gangs' clause cannot appear more than once in a 'device_type' region on a 'kernels' directive}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc kernels num_gangs(1) device_type(*) num_gangs(1) num_gangs(2)
+  while(1);
+
+  // expected-error@+3{{OpenACC 'num_gangs' clause cannot appear more than once in a 'device_type' region on a 'parallel' directive}}
+  // expected-note@+2{{previous clause is here}}
+  // expected-note@+1{{previous clause is here}}
+#pragma acc parallel device_type(*) num_gangs(1) num_gangs(2)
+  while(1);
+
+#pragma acc parallel num_gangs(1) device_type(*) num_gangs(2)
+  while(1);
+
   // expected-error@+1{{too many integer expression arguments provided to OpenACC 'num_gangs' clause: 'kernels' directive expects maximum of 1, 2 were provided}}
 #pragma acc kernels num_gangs(1, getS())
   while(1);

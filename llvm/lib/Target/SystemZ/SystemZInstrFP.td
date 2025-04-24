@@ -36,6 +36,8 @@ defm CondStoreF64 : CondStores<FP64, simple_store,
 
 // Load zero.
 let isAsCheapAsAMove = 1, isMoveImm = 1 in {
+  let isCodeGenOnly = 1 in
+    def LZER_16 : InherentRRE<"lzer", 0xB374, FP16,  fpimm0>;
   def LZER : InherentRRE<"lzer", 0xB374, FP32,  fpimm0>;
   def LZDR : InherentRRE<"lzdr", 0xB375, FP64,  fpimm0>;
   def LZXR : InherentRRE<"lzxr", 0xB376, FP128, fpimm0>;
@@ -47,8 +49,11 @@ let isMoveReg = 1 in  {
   def LDR : UnaryRR <"ldr", 0x28,   null_frag, FP64,  FP64>;
   def LXR : UnaryRRE<"lxr", 0xB365, null_frag, FP128, FP128>;
   // For z13 we prefer LDR over LER to avoid partial register dependencies.
-  let isCodeGenOnly = 1 in
+  let isCodeGenOnly = 1 in {
+    def LER16 : UnaryRR<"ler", 0x38, null_frag, FP16, FP16>;
+    def LDR16 : UnaryRR<"ldr", 0x28, null_frag, FP16, FP16>;
     def LDR32 : UnaryRR<"ldr", 0x28, null_frag, FP32, FP32>;
+  }
 }
 
 
@@ -79,8 +84,25 @@ let Predicates = [FeatureNoVectorEnhancements1] in
 def LGDR : UnaryRRE<"lgdr", 0xB3CD, bitconvert, GR64, FP64>;
 def LDGR : UnaryRRE<"ldgr", 0xB3C1, bitconvert, FP64, GR64>;
 
+// fcopysign with an FP16 result.
+let isCodeGenOnly = 1 in {
+  def CPSDRhh : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP16, FP16, FP16>;
+  def CPSDRhs : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP16, FP16, FP32>;
+  def CPSDRhd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP16, FP16, FP64>;
+}
+
+// The sign of an FP128 is in the high register.
+let Predicates = [FeatureNoVectorEnhancements1] in
+  def : Pat<(fcopysign FP16:$src1, (f128 FP128:$src2)),
+            (CPSDRhd FP16:$src1, (EXTRACT_SUBREG FP128:$src2, subreg_h64))>;
+let Predicates = [FeatureVectorEnhancements1] in
+  def : Pat<(fcopysign FP16:$src1, (f128 VR128:$src2)),
+            (CPSDRhd FP16:$src1, (EXTRACT_SUBREG VR128:$src2, subreg_h64))>;
+
+
 // fcopysign with an FP32 result.
 let isCodeGenOnly = 1 in {
+  def CPSDRsh : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP16>;
   def CPSDRss : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP32>;
   def CPSDRsd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP32, FP32, FP64>;
 }
@@ -94,8 +116,10 @@ let Predicates = [FeatureVectorEnhancements1] in
             (CPSDRsd FP32:$src1, (EXTRACT_SUBREG VR128:$src2, subreg_h64))>;
 
 // fcopysign with an FP64 result.
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1 in {
+  def CPSDRdh : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP16>;
   def CPSDRds : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP32>;
+}
 def CPSDRdd : BinaryRRFb<"cpsdr", 0xB372, fcopysign, FP64, FP64, FP64>;
 
 // The sign of an FP128 is in the high register.
@@ -113,6 +137,8 @@ class CopySign128<RegisterOperand cls, dag upper>
         (INSERT_SUBREG FP128:$src1, upper, subreg_h64)>;
 
 let Predicates = [FeatureNoVectorEnhancements1] in {
+  def : CopySign128<FP16,  (CPSDRdh (EXTRACT_SUBREG FP128:$src1, subreg_h64),
+                                    FP16:$src2)>;
   def : CopySign128<FP32,  (CPSDRds (EXTRACT_SUBREG FP128:$src1, subreg_h64),
                                     FP32:$src2)>;
   def : CopySign128<FP64,  (CPSDRdd (EXTRACT_SUBREG FP128:$src1, subreg_h64),
@@ -131,6 +157,9 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCImm, 15>;
 //===----------------------------------------------------------------------===//
 
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
+  let isCodeGenOnly = 1 in
+    // Reload f16 from 4-byte spill slot.
+    defm LE16 : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP16, 4>;
   defm LE : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP32, 4>;
   defm LD : UnaryRXPair<"ld", 0x68, 0xED65, z_load, FP64, 8>;
 
@@ -151,6 +180,9 @@ let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
 //===----------------------------------------------------------------------===//
 
 let SimpleBDXStore = 1, mayStore = 1 in {
+  let isCodeGenOnly = 1 in
+    // Spill f16 to 4-byte spill slot.
+    defm STE16 : StoreRXPair<"ste", 0x70, 0xED66, store, FP16, 4>;
   defm STE : StoreRXPair<"ste", 0x70, 0xED66, store, FP32, 4>;
   defm STD : StoreRXPair<"std", 0x60, 0xED67, store, FP64, 8>;
 
@@ -236,7 +268,7 @@ let Uses = [FPC], mayRaiseFPException = 1, Predicates = [FeatureFPExtension] in 
   def CXGBRA : TernaryRRFe<"cxgbra", 0xB3A6, FP128, GR64>;
 }
 
-// Convert am unsigned integer register value to a floating-point one.
+// Convert an unsigned integer register value to a floating-point one.
 let Predicates = [FeatureFPExtension] in {
   let Uses = [FPC], mayRaiseFPException = 1 in {
     def CELFBR : TernaryRRFe<"celfbr", 0xB390, FP32,  GR32>;
@@ -333,8 +365,10 @@ let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
 }
 // Generic form, which does not set CC.
 def LCDFR : UnaryRRE<"lcdfr", 0xB373, fneg, FP64,  FP64>;
-let isCodeGenOnly = 1 in
+let isCodeGenOnly = 1 in {
+  def LCDFR_16 : UnaryRRE<"lcdfr", 0xB373, fneg, FP16,  FP16>;
   def LCDFR_32 : UnaryRRE<"lcdfr", 0xB373, fneg, FP32,  FP32>;
+}
 
 // Absolute value (Load Positive).
 let Defs = [CC], CCValues = 0xF, CompareZeroCCMask = 0xF in {
@@ -600,6 +634,7 @@ let hasSideEffects = 1 in {
 // Peepholes
 //===----------------------------------------------------------------------===//
 
+def : Pat<(f16  fpimmneg0), (LCDFR_16 (LZER_16))>;
 def : Pat<(f32  fpimmneg0), (LCDFR_32 (LZER))>;
 def : Pat<(f64  fpimmneg0), (LCDFR (LZDR))>;
 def : Pat<(f128 fpimmneg0), (LCXBR (LZXR))>;

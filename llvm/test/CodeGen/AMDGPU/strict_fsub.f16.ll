@@ -790,14 +790,10 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX11-SDAG-TRUE16-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX11-SDAG-TRUE16:       ; %bb.0:
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, s3
-; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s0, s2, 16
-; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s1, s3, 16
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, s0
-; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, s1
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v0.h
-; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v1.h
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e64 v0.l, s2, s3
+; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s0, s3, 16
+; GFX11-SDAG-TRUE16-NEXT:    s_lshr_b32 s1, s2, 16
+; GFX11-SDAG-TRUE16-NEXT:    v_sub_f16_e64 v1.l, s1, s0
 ; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX11-SDAG-TRUE16-NEXT:    ; return to shader part epilog

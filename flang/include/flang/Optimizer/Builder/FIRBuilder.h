@@ -150,7 +150,7 @@ public:
   mlir::Block *getAllocaBlock();
 
   /// Safely create a reference type to the type `eleTy`.
-  mlir::Type getRefType(mlir::Type eleTy);
+  mlir::Type getRefType(mlir::Type eleTy, bool isVolatile = false);
 
   /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
   mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
@@ -396,6 +396,15 @@ public:
   /// Lazy creation of fir.convert op.
   mlir::Value createConvert(mlir::Location loc, mlir::Type toTy,
                             mlir::Value val);
+
+  /// Create a fir.convert op with a volatile cast if the source value's type
+  /// does not match the target type's volatility.
+  mlir::Value createConvertWithVolatileCast(mlir::Location loc, mlir::Type toTy,
+                                            mlir::Value val);
+
+  /// Cast \p value to have \p isVolatile volatility.
+  mlir::Value createVolatileCast(mlir::Location loc, bool isVolatile,
+                                 mlir::Value value);
 
   /// Create a fir.store of \p val into \p addr. A lazy conversion
   /// of \p val to the element type of \p addr is created if needed.

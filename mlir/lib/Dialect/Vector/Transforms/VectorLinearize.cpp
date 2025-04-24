@@ -439,7 +439,7 @@ struct LinearizeVectorInsert final
       return rewriter.notifyMatchFailure(insertOp,
                                          "scalable vectors are not supported.");
 
-    if (!isLessThanOrEqualTargetBitWidth(insertOp.getSourceType(),
+    if (!isLessThanOrEqualTargetBitWidth(insertOp.getValueToStoreType(),
                                          targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           insertOp, "Can't flatten since targetBitWidth < OpSize");
@@ -448,7 +448,7 @@ struct LinearizeVectorInsert final
     if (insertOp.hasDynamicPosition())
       return rewriter.notifyMatchFailure(insertOp,
                                          "dynamic position is not supported.");
-    auto srcTy = insertOp.getSourceType();
+    auto srcTy = insertOp.getValueToStoreType();
     auto srcAsVec = dyn_cast<VectorType>(srcTy);
     uint64_t srcSize = 0;
     if (srcAsVec) {
@@ -484,7 +484,7 @@ struct LinearizeVectorInsert final
                                            // [offset+srcNumElements, end)
 
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(), indices);
+        insertOp, dstTy, adaptor.getDest(), adaptor.getValueToStore(), indices);
 
     return success();
   }

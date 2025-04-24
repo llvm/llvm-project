@@ -9,15 +9,18 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Telemetry/Telemetry.h"
 #include <chrono>
 #include <cstdlib>
+#include <ctime>
 #include <memory>
 #include <string>
 #include <utility>
@@ -37,18 +40,9 @@ static uint64_t ToNanosec(const SteadyTimePoint Point) {
 // This reduces the chances of getting the same UUID, even when the same
 // user runs the two copies of binary at the same time.
 static std::string MakeUUID() {
-  uint8_t random_bytes[16];
-  std::string randomString = "_";
-  if (auto ec = llvm::getRandomBytes(random_bytes, 16)) {
-    LLDB_LOG(GetLog(LLDBLog::Object),
-             "Failed to generate random bytes for UUID: {0}", ec.message());
-  } else {
-    randomString = UUID(random_bytes).GetAsString();
-  }
-
-  return llvm::formatv(
-      "{0}_{1}", randomString,
-      std::chrono::steady_clock::now().time_since_epoch().count());
+  auto timestmap = std::chrono::steady_clock::now().time_since_epoch().count();
+  UUID uuid = UUID::Generate();
+  return llvm::formatv("{0}_{1}", uuid.GetAsString(), timestmap);
 }
 
 void LLDBBaseTelemetryInfo::serialize(Serializer &serializer) const {

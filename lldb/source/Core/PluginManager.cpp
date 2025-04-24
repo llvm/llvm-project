@@ -188,11 +188,13 @@ template <typename Callback> struct PluginInstance {
   PluginInstance(llvm::StringRef name, llvm::StringRef description,
                  Callback create_callback,
                  DebuggerInitializeCallback debugger_init_callback = nullptr)
-      : name(name), description(description), create_callback(create_callback),
+      : name(name), description(description), enabled(true),
+        create_callback(create_callback),
         debugger_init_callback(debugger_init_callback) {}
 
   llvm::StringRef name;
   llvm::StringRef description;
+  bool enabled;
   Callback create_callback;
   DebuggerInitializeCallback debugger_init_callback;
 };
@@ -250,7 +252,9 @@ public:
   }
 
   void PerformDebuggerCallback(Debugger &debugger) {
-    for (auto &instance : m_instances) {
+    for (const auto &instance : m_instances) {
+      if (!instance.enabled)
+        continue;
       if (instance.debugger_init_callback)
         instance.debugger_init_callback(debugger);
     }
@@ -260,7 +264,14 @@ public:
   // Note that this is a copy of the internal state so modifications
   // to the returned instances will not be reflected back to instances
   // stored by the PluginInstances object.
-  std::vector<Instance> GetSnapshot() { return m_instances; }
+  std::vector<Instance> GetSnapshot() {
+    std::vector<Instance> enabled_instances;
+    for (const auto &instance : m_instances) {
+      if (instance.enabled)
+        enabled_instances.push_back(instance);
+    }
+    return enabled_instances;
+  }
 
   const Instance *GetInstanceAtIndex(uint32_t idx) {
     uint32_t count = 0;
@@ -280,10 +291,39 @@ public:
   const Instance *
   FindEnabledInstance(std::function<bool(const Instance &)> predicate) const {
     for (const auto &instance : m_instances) {
+      if (!instance.enabled)
+        continue;
       if (predicate(instance))
         return &instance;
     }
     return nullptr;
+  }
+
+  // Return a list of all the registered plugin instances. This includes both
+  // enabled and disabled instances. The instances are listed in the order they
+  // were registered which is the order they would be queried if they were all
+  // enabled.
+  std::vector<RegisteredPluginInfo> GetPluginInfoForAllInstances() {
+    // Lookup the plugin info for each instance in the sorted order.
+    std::vector<RegisteredPluginInfo> plugin_infos;
+    plugin_infos.reserve(m_instances.size());
+    for (const Instance &instance : m_instances)
+      plugin_infos.push_back(
+          {instance.name, instance.description, instance.enabled});
+
+    return plugin_infos;
+  }
+
+  bool SetInstanceEnabled(llvm::StringRef name, bool enable) {
+    auto it = std::find_if(
+        m_instances.begin(), m_instances.end(),
+        [&](const Instance &instance) { return instance.name == name; });
+
+    if (it == m_instances.end())
+      return false;
+
+    it->enabled = enable;
+    return true;
   }
 
 private:
@@ -625,6 +665,15 @@ bool PluginManager::UnregisterPlugin(
 SystemRuntimeCreateInstance
 PluginManager::GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx) {
   return GetSystemRuntimeInstances().GetCallbackAtIndex(idx);
+}
+
+std::vector<RegisteredPluginInfo> PluginManager::GetSystemRuntimePluginInfo() {
+  return GetSystemRuntimeInstances().GetPluginInfoForAllInstances();
+}
+
+bool PluginManager::SetSystemRuntimePluginEnabled(llvm::StringRef name,
+                                                  bool enable) {
+  return GetSystemRuntimeInstances().SetInstanceEnabled(name, enable);
 }
 
 #pragma mark ObjectFile

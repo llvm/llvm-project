@@ -71,6 +71,7 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("debugInfoHadIncompleteTypes",
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
+  module.try_emplace("symbolsLoaded", num_symbols_loaded);
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
 
@@ -293,7 +294,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
   uint32_t symtabs_loaded = 0;
-  uint32_t symtabs_saved = 0;
+  uint32_t symtabs_loaded_from_cache = 0;
+  uint32_t symtabs_saved_to_cache = 0;
   uint32_t debug_index_loaded = 0;
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
@@ -309,6 +311,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_variable_errors = 0;
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
+  uint32_t num_symbols_loaded = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -318,12 +321,15 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
     Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
+      module_stat.num_symbols_loaded = symtab->GetNumSymbols();
+      num_symbols_loaded += module_stat.num_symbols_loaded;
+      ++symtabs_loaded;
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
       if (module_stat.symtab_loaded_from_cache)
-        ++symtabs_loaded;
+        ++symtabs_loaded_from_cache;
       module_stat.symtab_saved_to_cache = symtab->GetWasSavedToCache();
       if (module_stat.symtab_saved_to_cache)
-        ++symtabs_saved;
+        ++symtabs_saved_to_cache;
     }
     SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
@@ -393,8 +399,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   json::Object global_stats{
       {"totalSymbolTableParseTime", symtab_parse_time},
       {"totalSymbolTableIndexTime", symtab_index_time},
-      {"totalSymbolTablesLoadedFromCache", symtabs_loaded},
-      {"totalSymbolTablesSavedToCache", symtabs_saved},
+      {"totalSymbolTablesLoaded", symtabs_loaded},
+      {"totalSymbolTablesLoadedFromCache", symtabs_loaded_from_cache},
+      {"totalSymbolTablesSavedToCache", symtabs_saved_to_cache},
       {"totalDebugInfoParseTime", debug_parse_time},
       {"totalDebugInfoIndexTime", debug_index_time},
       {"totalDebugInfoIndexLoadedFromCache", debug_index_loaded},
@@ -407,6 +414,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
        num_modules_with_incomplete_types},
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
+      {"totalSymbolsLoaded", num_symbols_loaded},
   };
 
   if (include_targets) {

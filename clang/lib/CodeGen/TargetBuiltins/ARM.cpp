@@ -12,6 +12,7 @@
 
 #include "ABIInfo.h"
 #include "CGBuiltin.h"
+#include "CGDebugInfo.h"
 #include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/InlineAsm.h"

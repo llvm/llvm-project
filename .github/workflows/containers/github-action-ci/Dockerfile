@@ -32,7 +32,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
   -DCMAKE_INSTALL_PREFIX="$LLVM_SYSROOT" \
   -DLLVM_ENABLE_PROJECTS="bolt;clang;lld;clang-tools-extra" \
-  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build" \
+  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build;llvm-symbolizer" \
   -DCLANG_DEFAULT_LINKER="lld"
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
@@ -95,7 +95,7 @@ WORKDIR /home/gha
 
 FROM ci-container as ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.322.0
+ENV GITHUB_RUNNER_VERSION=2.323.0
 
 RUN mkdir actions-runner && \
     cd actions-runner && \
