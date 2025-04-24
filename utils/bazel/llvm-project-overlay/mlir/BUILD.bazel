@@ -2316,6 +2316,7 @@ cc_library(
         ":BytecodeOpInterface",
         ":IR",
         ":InferTypeOpInterface",
+        ":LLVMCommonConversion",
         ":LLVMDialect",
         ":SideEffectInterfaces",
         ":X86VectorIncGen",
@@ -5206,6 +5207,8 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/GPU/Transforms/*.h"]),
     includes = ["include"],
     deps = [
+        ":AMDGPUDialect",
+        ":AMDGPUUtils",
         ":AffineDialect",
         ":AffineUtils",
         ":ArithDialect",
@@ -6271,6 +6274,7 @@ td_library(
         ":BuiltinDialectTdFiles",
         ":DataLayoutInterfacesTdFiles",
         ":OpBaseTdFiles",
+        ":ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -6364,6 +6368,8 @@ cc_library(
         ":PtrMemorySpaceInterfacesIncGen",
         ":PtrOpsEnumsGen",
         ":PtrOpsIncGen",
+        ":SideEffectInterfaces",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )

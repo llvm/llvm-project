@@ -168,6 +168,8 @@ public:
     return emitLoadOfLValue(e);
   }
 
+  mlir::Value VisitMemberExpr(MemberExpr *e);
+
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
   }
@@ -1303,8 +1305,7 @@ mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
            mlir::isa<cir::IntType>(ops.lhs.getType()))
     cgf.cgm.errorNYI("sanitizers");
 
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftLeft(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
@@ -1328,8 +1329,7 @@ mlir::Value ScalarExprEmitter::emitShr(const BinOpInfo &ops) {
 
   // Note that we don't need to distinguish unsigned treatment at this
   // point since it will be handled later by LLVM lowering.
-  cgf.cgm.errorNYI("shift ops");
-  return {};
+  return builder.createShiftRight(cgf.getLoc(ops.loc), ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAnd(const BinOpInfo &ops) {
@@ -1520,6 +1520,19 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
   auto v = cgf.emitCallExpr(e).getScalarVal();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
   return v;
+}
+
+mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *e) {
+  // TODO(cir): The classic codegen calls tryEmitAsConstant() here. Folding
+  // constants sound like work for MLIR optimizers, but we'll keep an assertion
+  // for now.
+  assert(!cir::MissingFeatures::tryEmitAsConstant());
+  Expr::EvalResult result;
+  if (e->EvaluateAsInt(result, cgf.getContext(), Expr::SE_AllowSideEffects)) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "Constant interger member expr");
+    // Fall through to emit this as a non-constant access.
+  }
+  return emitLoadOfLValue(e);
 }
 
 mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,

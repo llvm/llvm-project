@@ -1332,18 +1332,21 @@ def ModuleFlagAttr
     Represents a single entry of llvm.module.flags metadata
     (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
     flag described by `ModFlagBehaviorAttr`, the second is a string ID
-    and third is the value of the flag (currently only integer constants
-    are supported).
+    and third is the value of the flag. Current supported types of values:
+      - Integer constants
+      - Strings
 
     Example:
     ```mlir
       #llvm.mlir.module_flag<error, "wchar_size", 4>
+      #llvm.mlir.module_flag<error, "probe-stack", "inline-asm">
     ```
   }];
   let parameters = (ins "ModFlagBehavior":$behavior,
                         "StringAttr":$key,
-                        "uint32_t":$value);
+                        "Attribute":$value);
   let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1257,7 +1257,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(Op1);
     Args.push_back(Op2);
     Args.push_back(CalledFn);
-    VPWidenCallRecipe Recipe(Call, TheFn, Args, {});
+    VPWidenCallRecipe Recipe(Call, TheFn, Args);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());

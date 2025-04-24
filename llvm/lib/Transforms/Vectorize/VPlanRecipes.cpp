@@ -1137,19 +1137,19 @@ InstructionCost VPIRInstruction::computeCost(ElementCount VF,
   return 0;
 }
 
-void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
+void VPIRInstruction::extractLastLaneOfFirstOperand(VPBuilder &Builder) {
   assert(isa<PHINode>(getInstruction()) &&
-         "can only add exiting operands to phi nodes");
-  assert(getNumOperands() == 1 && "must have a single operand");
+         "can only update exiting operands to phi nodes");
+  assert(getNumOperands() > 0 && "must have at least one operand");
   VPValue *Exiting = getOperand(0);
-  if (!Exiting->isLiveIn()) {
-    LLVMContext &Ctx = getInstruction().getContext();
-    auto &Plan = *getParent()->getPlan();
-    Exiting = Builder.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {Exiting,
-         Plan.getOrAddLiveIn(ConstantInt::get(IntegerType::get(Ctx, 32), 1))});
-  }
+  if (Exiting->isLiveIn())
+    return;
+
+  LLVMContext &Ctx = getInstruction().getContext();
+  auto &Plan = *getParent()->getPlan();
+  Exiting = Builder.createNaryOp(VPInstruction::ExtractFromEnd,
+                                 {Exiting, Plan.getOrAddLiveIn(ConstantInt::get(
+                                               IntegerType::get(Ctx, 32), 1))});
   setOperand(0, Exiting);
 }
 
@@ -2732,7 +2732,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
@@ -2750,7 +2749,7 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
 
   Value *Addr = State.get(getAddr(), /*IsScalar*/ !CreateGather);
-  Instruction *NewLI;
+  Value *NewLI;
   if (CreateGather) {
     NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
                                        "wide.masked.gather");
@@ -2761,11 +2760,13 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   } else {
     NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
   }
-  // Add metadata to the load, but setVectorValue to the reverse shuffle.
-  State.addNewMetadata(NewLI, LI);
-  applyMetadata(*NewLI);
-  State.set(this,
-            Reverse ? Builder.CreateVectorReverse(NewLI, "reverse") : NewLI);
+  // Add metadata to the load, but set the result to the reverse shuffle, if
+  // needed.
+  State.addNewMetadata(cast<Instruction>(NewLI), &Ingredient);
+  applyMetadata(*cast<Instruction>(NewLI));
+  if (Reverse)
+    NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
+  State.set(this, NewLI);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2790,7 +2791,6 @@ static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
 }
 
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
@@ -2822,7 +2822,7 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-  State.addNewMetadata(NewLI, LI);
+  State.addNewMetadata(NewLI, &Ingredient);
   applyMetadata(*NewLI);
   Instruction *Res = NewLI;
   if (isReverse())
@@ -2866,8 +2866,6 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
-
   VPValue *StoredVPValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
@@ -2899,7 +2897,7 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
     NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
   else
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
-  State.addNewMetadata(NewSI, SI);
+  State.addNewMetadata(NewSI, &Ingredient);
   applyMetadata(*NewSI);
 }
 
@@ -2912,7 +2910,6 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
 
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
@@ -2947,7 +2944,7 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
-  State.addNewMetadata(NewSI, SI);
+  State.addNewMetadata(NewSI, &Ingredient);
   applyMetadata(*NewSI);
 }
 

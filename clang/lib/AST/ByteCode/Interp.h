@@ -1113,6 +1113,12 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
             << P.toDiagnosticString(S.getASTContext());
         return false;
       }
+    } else if (BothNonNull && P.isIntegralPointer()) {
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.FFDiag(Loc, diag::note_constexpr_pointer_constant_comparison)
+          << LHS.toDiagnosticString(S.getASTContext())
+          << RHS.toDiagnosticString(S.getASTContext());
+      return false;
     }
   }
 
@@ -2389,7 +2395,18 @@ static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
     bool HasValidResult = !Ptr.isZero();
 
     if (HasValidResult) {
-      // FIXME: note_constexpr_invalid_void_star_cast
+      if (S.getStdAllocatorCaller("allocate"))
+        return true;
+
+      const auto &E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      if (S.getLangOpts().CPlusPlus26 &&
+          S.getASTContext().hasSimilarType(Ptr.getType(),
+                                           E->getType()->getPointeeType()))
+        return true;
+
+      S.CCEDiag(E, diag::note_constexpr_invalid_void_star_cast)
+          << E->getSubExpr()->getType() << S.getLangOpts().CPlusPlus26
+          << Ptr.getType().getCanonicalType() << E->getType()->getPointeeType();
     } else if (!S.getLangOpts().CPlusPlus26) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.CCEDiag(E, diag::note_constexpr_invalid_cast)
@@ -2781,10 +2798,9 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   const T &IntVal = S.Stk.pop<T>();
 
-  if (Desc)
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-        << S.getLangOpts().CPlusPlus;
+  S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus;
 
   S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
   return true;
@@ -2869,12 +2885,22 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
                         bool Fatal) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
 
-  // FIXME: Support diagnosing other invalid cast kinds.
   if (Kind == CastKind::Reinterpret) {
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
     return !Fatal;
+  } else if (Kind == CastKind::Volatile) {
+    // FIXME: Technically not a cast.
+    const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+    if (S.getLangOpts().CPlusPlus)
+      S.FFDiag(E, diag::note_constexpr_access_volatile_type)
+          << AK_Read << E->getSubExpr()->getType();
+    else
+      S.FFDiag(E);
+
+    return false;
   }
+
   return false;
 }
 

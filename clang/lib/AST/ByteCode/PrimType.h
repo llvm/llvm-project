@@ -55,16 +55,17 @@ inline constexpr bool isPtrType(PrimType T) {
 
 enum class CastKind : uint8_t {
   Reinterpret,
-  Atomic,
+  Volatile,
 };
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                      interp::CastKind CK) {
   switch (CK) {
   case interp::CastKind::Reinterpret:
     OS << "reinterpret_cast";
     break;
-  case interp::CastKind::Atomic:
-    OS << "atomic";
+  case interp::CastKind::Volatile:
+    OS << "volatile";
     break;
   }
   return OS;
