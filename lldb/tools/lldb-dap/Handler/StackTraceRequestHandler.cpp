@@ -49,6 +49,7 @@ static constexpr int StackPageSize = 20;
 //
 // s=3,l=3 = [th0->s3, label1, th1->s0]
 static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
+                            lldb::SBFormat &frame_format,
                             llvm::json::Array &stack_frames, int64_t &offset,
                             const int64_t start_frame, const int64_t levels) {
   bool reached_end_of_stack = false;
@@ -56,7 +57,7 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
        static_cast<int64_t>(stack_frames.size()) < levels; i++) {
     if (i == -1) {
       stack_frames.emplace_back(
-          CreateExtendedStackFrameLabel(thread, dap.frame_format));
+          CreateExtendedStackFrameLabel(thread, frame_format));
       continue;
     }
 
@@ -67,7 +68,7 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
       break;
     }
 
-    stack_frames.emplace_back(CreateStackFrame(frame, dap.frame_format));
+    stack_frames.emplace_back(CreateStackFrame(frame, frame_format));
   }
 
   if (dap.configuration.displayExtendedBacktrace && reached_end_of_stack) {
@@ -80,7 +81,7 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
         continue;
 
       reached_end_of_stack = FillStackFrames(
-          dap, backtrace, stack_frames, offset,
+          dap, backtrace, frame_format, stack_frames, offset,
           (start_frame - offset) > 0 ? start_frame - offset : -1, levels);
       if (static_cast<int64_t>(stack_frames.size()) >= levels)
         break;
@@ -178,14 +179,45 @@ void StackTraceRequestHandler::operator()(
   llvm::json::Array stack_frames;
   llvm::json::Object body;
 
+  lldb::SBFormat frame_format = dap.frame_format;
+
+  if (const auto *format = arguments->getObject("format")) {
+    const bool parameters = GetBoolean(format, "parameters").value_or(false);
+    const bool parameter_names =
+        GetBoolean(format, "parameterNames").value_or(false);
+    const bool parameter_values =
+        GetBoolean(format, "parameterValues").value_or(false);
+    const bool line = GetBoolean(format, "line").value_or(false);
+    const bool module = GetBoolean(format, "module").value_or(false);
+    const bool include_all = GetBoolean(format, "includeAll").value_or(false);
+
+    std::string format_str;
+    llvm::raw_string_ostream os(format_str);
+
+    if (include_all || module)
+      os << "{${module.file.basename} }";
+
+    if (include_all || line)
+      os << "{${line.file.basename}:${line.number}:${line.column} }";
+
+    if (include_all || parameters || parameter_names || parameter_values)
+      os << "{${function.name-with-args}}";
+    else
+      os << "{${function.name-without-args}}";
+
+    lldb::SBError error;
+    frame_format = lldb::SBFormat(format_str.c_str(), error);
+    assert(error.Success());
+  }
+
   if (thread.IsValid()) {
     const auto start_frame =
         GetInteger<uint64_t>(arguments, "startFrame").value_or(0);
     const auto levels = GetInteger<uint64_t>(arguments, "levels").value_or(0);
     int64_t offset = 0;
     bool reached_end_of_stack =
-        FillStackFrames(dap, thread, stack_frames, offset, start_frame,
-                        levels == 0 ? INT64_MAX : levels);
+        FillStackFrames(dap, thread, frame_format, stack_frames, offset,
+                        start_frame, levels == 0 ? INT64_MAX : levels);
     body.try_emplace("totalFrames",
                      start_frame + stack_frames.size() +
                          (reached_end_of_stack ? 0 : StackPageSize));
