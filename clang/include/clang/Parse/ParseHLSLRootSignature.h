@@ -71,8 +71,9 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
-  bool parseDescriptorTable();
-  bool parseDescriptorTableClause();
+  std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
+  std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
+  parseDescriptorTableClause();
 
   /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
   /// order and only exactly once. `ParsedClauseParams` denotes the current
