@@ -336,6 +336,33 @@ void APInt::setBitsSlowCase(unsigned loBit, unsigned hiBit) {
     U.pVal[word] = WORDTYPE_MAX;
 }
 
+void APInt::clearBitsSlowCase(unsigned loBit, unsigned hiBit) {
+  unsigned loWord = whichWord(loBit);
+  unsigned hiWord = whichWord(hiBit);
+
+  // Create an initial mask for the low word with ones below loBit.
+  uint64_t loMask = ~(WORDTYPE_MAX << whichBit(loBit));
+
+  // If hiBit is not aligned, we need a high mask.
+  unsigned hiShiftAmt = whichBit(hiBit);
+  if (hiShiftAmt != 0) {
+    // Create a high mask with ones above hiBit.
+    uint64_t hiMask = ~(WORDTYPE_MAX >> (APINT_BITS_PER_WORD - hiShiftAmt));
+    // If loWord and hiWord are equal, then we combine the masks. Otherwise,
+    // set the bits in hiWord.
+    if (hiWord == loWord)
+      loMask &= hiMask;
+    else
+      U.pVal[hiWord] &= hiMask;
+  }
+  // Apply the mask to the low word.
+  U.pVal[loWord] &= loMask;
+
+  // Fill any words between loWord and hiWord with all zeros.
+  for (unsigned word = loWord + 1; word < hiWord; ++word)
+    U.pVal[word] = 0;
+}
+
 // Complement a bignum in-place.
 static void tcComplement(APInt::WordType *dst, unsigned parts) {
   for (unsigned i = 0; i < parts; i++)
