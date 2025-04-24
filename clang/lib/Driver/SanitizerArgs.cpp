@@ -1108,8 +1108,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     }
   }
 
-  if (AllAddedKinds &
-      (SanitizerKind::Address | SanitizerKind::KernelAddress)) {
+  if (AllAddedKinds & (SanitizerKind::Address | SanitizerKind::KernelAddress)) {
     AsanUseAfterScope = Args.hasFlag(
         options::OPT_fsanitize_address_use_after_scope,
         options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
