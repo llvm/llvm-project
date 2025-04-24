@@ -20,3 +20,10 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE remquo(__CLC_GENTYPE x, __CLC_GENTYPE y,
                                             local __CLC_INTN *q) {
   return __clc_remquo(x, y, q);
 }
+
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+_CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE remquo(__CLC_GENTYPE x, __CLC_GENTYPE y,
+                                            generic __CLC_INTN *q) {
+  return __clc_remquo(x, y, q);
+}
+#endif

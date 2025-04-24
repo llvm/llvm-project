@@ -23,4 +23,8 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_modf(__CLC_GENTYPE x,
 CLC_MODF_DEF(local);
 CLC_MODF_DEF(global);
 
+#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+CLC_MODF_DEF(generic);
+#endif
+
 #undef CLC_MODF_DEF

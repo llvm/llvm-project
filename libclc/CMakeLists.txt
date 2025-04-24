@@ -420,10 +420,35 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -D${CLC_TARGET_DEFINE}
       # All libclc builtin libraries see CLC headers
       -I${CMAKE_CURRENT_SOURCE_DIR}/clc/include
+      # Error on undefined macros
+      -Werror=undef
     )
 
     if( NOT "${cpu}" STREQUAL "" )
       list( APPEND build_flags -mcpu=${cpu} )
+    endif()
+
+    # Generic address space support.
+    # Note: when declaring builtins, we must consider that even if a target
+    # formally/nominally supports the generic address space, in practice that
+    # target may map it to the same target address space as another address
+    # space (often the private one). In such cases we must be careful not to
+    # multiply-define a builtin in a single target address space, as it would
+    # result in a mangling clash.
+    # For this reason we must consider the target support of the generic
+    # address space separately from the *implementation* decision about whether
+    # to declare certain builtins in that address space.
+    # FIXME: Shouldn't clang automatically enable this extension based on the
+    # target?
+    list( APPEND build_flags "-Xclang" "-cl-ext=+__opencl_c_generic_address_space" )
+    # Note: we assume that if there is no distinct generic address space, it
+    # maps to the private address space.
+    set ( has_distinct_generic_addrspace TRUE )
+    if( ARCH STREQUAL nvptx OR ARCH STREQUAL nvptx64 )
+      set ( has_distinct_generic_addrspace FALSE )
+    endif()
+    if( has_distinct_generic_addrspace )
+      list( APPEND build_flags -D__CLC_DISTINCT_GENERIC_ADDRSPACE__ )
     endif()
 
     set( clc_build_flags ${build_flags} -DCLC_INTERNAL )
