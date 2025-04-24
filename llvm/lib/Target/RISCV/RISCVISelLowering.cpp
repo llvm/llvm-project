@@ -15299,11 +15299,7 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
   EVT LoadedVT = ALoad->getMemoryVT();
   EVT ResultVT = N->getValueType(0);
 
-  SDValue MaskVal = N->getOperand(1);
-  ConstantSDNode *MaskConst = dyn_cast<ConstantSDNode>(MaskVal);
-  if (!MaskConst)
-    return SDValue();
-  uint64_t Mask = MaskConst->getZExtValue();
+  uint64_t Mask = maskTrailingOnes<uint64_t>(LoadedVT.getSizeInBits());
   uint64_t ExpectedMask = LoadedVT.getSizeInBits() == 8    ? 0xFF
                           : LoadedVT.getSizeInBits() == 16 ? 0xFFFF
                           : LoadedVT.getSizeInBits() == 32 ? 0xFFFFFFFF
