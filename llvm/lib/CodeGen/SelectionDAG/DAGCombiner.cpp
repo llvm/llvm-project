@@ -24994,7 +24994,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   if (SDValue V = combineConcatVectorOfScalars(N, DAG))
     return V;
 
-  if (Level < AfterLegalizeVectorOps && TLI.isTypeLegal(VT)) {
+  if (Level <= AfterLegalizeVectorOps && TLI.isTypeLegal(VT)) {
     // Fold CONCAT_VECTORS of CONCAT_VECTORS (or undef) to VECTOR_SHUFFLE.
     if (SDValue V = combineConcatVectorOfConcatVectors(N, DAG))
       return V;
