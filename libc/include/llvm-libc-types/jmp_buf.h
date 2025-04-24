@@ -9,7 +9,13 @@
 #ifndef LLVM_LIBC_TYPES_JMP_BUF_H
 #define LLVM_LIBC_TYPES_JMP_BUF_H
 
-#if defined(__i386__) || defined(__x86_64__)
+// TODO: implement sigjmp_buf related functions for other architectures
+// Issue: https://github.com/llvm/llvm-project/issues/136358
+#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
+#define __LIBC_HAS_SIGJMP_BUF
+#endif
+
+#if defined(__LIBC_HAS_SIGJMP_BUF)
 #include "sigset_t.h"
 #endif
 
@@ -54,9 +60,7 @@ typedef struct {
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif
-  // TODO: implement sigjmp_buf related functions for other architectures
-  // Issue: https://github.com/llvm/llvm-project/issues/136358
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__LIBC_HAS_SIGJMP_BUF)
   // return address
   void *sig_retaddr;
   // extra register buffer to avoid indefinite stack growth in sigsetjmp
@@ -68,7 +72,10 @@ typedef struct {
 
 typedef __jmp_buf jmp_buf[1];
 
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__LIBC_HAS_SIGJMP_BUF)
 typedef __jmp_buf sigjmp_buf[1];
 #endif
+
+#undef __LIBC_HAS_SIGJMP_BUF
+
 #endif // LLVM_LIBC_TYPES_JMP_BUF_H
