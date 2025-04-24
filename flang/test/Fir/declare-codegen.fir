@@ -23,7 +23,7 @@ func.func private @bar(%arg0: !fir.ref<!fir.array<12x23xi32>>)
 
 // DECL-LABEL: func.func @test(
 // DECL-SAME: %[[arg0:.*]]: !fir.ref<!fir.array<12x23xi32>>) {
-// DECL: fircg.ext_declare
+// DECL: fircg.ext_declare{{.*}}{uniq_name = "_QFarray_numeric_lboundsEx"}
 
 
 func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.array<3x3xf32>>) {
@@ -37,7 +37,7 @@ func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.arra
 // NODECL-NEXT: return
 
 // DECL-LABEL: func.func @useless_shape_with_duplicate_extent_operand(
-// DECL: fircg.ext_declare
+// DECL: fircg.ext_declare{{.*}}{uniq_name = "u"}
 
 // Test DCE does not crash because of unreachable code.
 func.func @unreachable_code(%arg0: !fir.ref<!fir.char<1,10>>) {
@@ -51,4 +51,20 @@ func.func @unreachable_code(%arg0: !fir.ref<!fir.char<1,10>>) {
 // NODECL-LABEL:   func.func @unreachable_code(
 // NODECL-NOT:       uniq_name = "live_code"
 // DECL-LABEL:    func.func @unreachable_code(
-// DECL:             uniq_name = "live_code"
+// DECL:             fircg.ext_declare{{.*}}{uniq_name = "live_code"}
+// DECL:             fir.declare{{.*}}{uniq_name = "dead_code"}
+
+
+// Test that attributes get attached to the memref operation when fir.declare is not preserved
+func.func @test_local_memref() {
+  %0 = fir.alloca !fir.array<10xi32> {uniq_name = "local_array"}
+  %1 = fir.declare %0 {uniq_name = "local_array_declare", acc.declare = #acc.declare<dataClause = acc_create>} : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
+  return
+}
+// NODECL-LABEL: func.func @test_local_memref() {
+  
+// Note: the uniq_name is not attached of fir.declare is not preserved because it conflicts with the uniq_name of the memref
+// NODECL: fir.alloca{{.*}}{acc.declare = #acc.declare<dataClause = acc_create>, uniq_name = "local_array"}
+
+// DECL-LABEL: func.func @test_local_memref() {
+// DECL: fircg.ext_declare{{.*}}{acc.declare = #acc.declare<dataClause = acc_create>, uniq_name = "local_array_declare"}
