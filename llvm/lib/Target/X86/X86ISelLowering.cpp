@@ -3258,9 +3258,9 @@ bool X86TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return false;
 }
 
-bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
-                                              ISD::LoadExtType ExtTy,
-                                              EVT NewVT) const {
+bool X86TargetLowering::shouldReduceLoadWidth(
+    SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+    std::optional<unsigned> ByteOffset) const {
   assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
 
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF

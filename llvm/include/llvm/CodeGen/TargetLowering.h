@@ -1825,9 +1825,13 @@ public:
   virtual bool ShouldShrinkFPConstant(EVT) const { return true; }
 
   /// Return true if it is profitable to reduce a load to a smaller type.
+  /// \p ByteOffset is only set if we know the pointer offset at compile time
+  /// otherwise we should assume that additional pointer math is required.
   /// Example: (i16 (trunc (i32 (load x))) -> i16 load x
-  virtual bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                                     EVT NewVT) const {
+  /// Example: (i16 (trunc (srl (i32 (load x)), 16)) -> i16 load x+2
+  virtual bool shouldReduceLoadWidth(
+      SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+      std::optional<unsigned> ByteOffset = std::nullopt) const {
     // By default, assume that it is cheaper to extract a subvector from a wide
     // vector load rather than creating multiple narrow vector loads.
     if (NewVT.isVector() && !SDValue(Load, 0).hasOneUse())
