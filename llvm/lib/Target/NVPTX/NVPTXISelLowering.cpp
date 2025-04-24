@@ -3373,18 +3373,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   //     individually present in Ins.
   // So a different index should be used for indexing into Ins.
   // See similar issue in LowerCall.
-  const auto *In = Ins.begin();
-  auto ConsumeArgIns = [&](const Argument &Arg) {
-    const auto *ArgInsBegin = In;
-    const auto *ArgInsEnd = In;
-    while (ArgInsEnd != Ins.end() && ArgInsEnd->OrigArgIndex == Arg.getArgNo())
-      ++ArgInsEnd;
-    In = ArgInsEnd;
-    return llvm::ArrayRef(ArgInsBegin, ArgInsEnd);
-  };
 
+  auto AllIns = ArrayRef(Ins);
   for (const auto &Arg : F->args()) {
-    const auto ArgIns = ConsumeArgIns(Arg);
+    const auto ArgIns = AllIns.take_while(
+        [&](auto I) { return I.OrigArgIndex == Arg.getArgNo(); });
+    AllIns = AllIns.drop_front(ArgIns.size());
 
     Type *Ty = Arg.getType();
 
