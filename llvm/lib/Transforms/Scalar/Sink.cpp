@@ -15,6 +15,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
@@ -27,23 +29,6 @@ using namespace llvm;
 
 STATISTIC(NumSunk, "Number of instructions sunk");
 STATISTIC(NumSinkIter, "Number of sinking iterations");
-
-static bool hasStoreConflict(Instruction *Inst, AliasAnalysis &AA,
-                             SmallPtrSetImpl<Instruction *> &Stores) {
-  BatchAAResults BatchAA(AA);
-
-  if (LoadInst *L = dyn_cast<LoadInst>(Inst)) {
-    MemoryLocation Loc = MemoryLocation::get(L);
-    for (Instruction *S : Stores)
-      if (isModSet(BatchAA.getModRefInfo(S, Loc)))
-        return true;
-  } else if (auto *Call = dyn_cast<CallBase>(Inst)) {
-    for (Instruction *S : Stores)
-      if (isModSet(BatchAA.getModRefInfo(S, Call)))
-        return true;
-  }
-  return false;
-}
 
 static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
                          SmallPtrSetImpl<Instruction *> &Stores) {
@@ -78,56 +63,62 @@ static bool isSafeToMove(Instruction *Inst, AliasAnalysis &AA,
   return true;
 }
 
-static cl::opt<unsigned>
-    SinkLoadBlockLimit("sink-load-block-limit", cl::Hidden, cl::init(15),
-                       cl::desc("Maximum number of descendant blocks that will "
-                                "be analyzed when attempting to sink a load."));
-
 static cl::opt<unsigned> SinkLoadStoreLimit(
-    "sink-load-store-limit", cl::Hidden, cl::init(3),
+    "sink-load-store-limit", cl::Hidden, cl::init(4),
     cl::desc("Maximum number of stores in descendant blocks that will be "
              "analyzed when attempting to sink a load."));
 
 using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
-// Return false if finding stores is too complex.  True otherwise.
-static bool findStores(SmallPtrSetImpl<Instruction *> &Stores,
-                       BasicBlock *LoadBB, BasicBlock *BB,
-                       BlocksSet &VisitedBlocksSet) {
+static bool hasStoreConflict(BasicBlock *LoadBB, BasicBlock *BB,
+                             BlocksSet &VisitedBlocksSet,
+                             MemorySSAUpdater &MSSAU, BatchAAResults &BAA,
+                             Instruction *ReadMemInst, unsigned &StoreCnt) {
   if (BB == LoadBB || !VisitedBlocksSet.insert(BB).second)
-    return true;
-
-  if (VisitedBlocksSet.size() > SinkLoadBlockLimit)
     return false;
-  for (Instruction &Inst : *BB)
-    if (Inst.mayWriteToMemory()) {
-      Stores.insert(&Inst);
-      if (Stores.size() > SinkLoadStoreLimit)
-        return false;
-    }
+  if (auto *Accesses = MSSAU.getMemorySSA()->getBlockDefs(BB)) {
+    StoreCnt += Accesses->size();
+    if (StoreCnt > SinkLoadStoreLimit)
+      return true;
+    for (auto &MA : *Accesses)
+      if (auto *MD = dyn_cast<MemoryDef>(&MA)) {
+        Instruction *S = MD->getMemoryInst();
+        if (LoadInst *L = dyn_cast<LoadInst>(ReadMemInst)) {
+          MemoryLocation Loc = MemoryLocation::get(L);
+          if (isModSet(BAA.getModRefInfo(S, Loc)))
+            return true;
+        } else if (auto *Call = dyn_cast<CallBase>(ReadMemInst)) {
+          if (isModSet(BAA.getModRefInfo(S, Call)))
+            return true;
+        }
+      }
+  }
   for (BasicBlock *Pred : predecessors(BB))
-    if (!findStores(Stores, LoadBB, Pred, VisitedBlocksSet))
-      return false;
-  return true;
+    if (hasStoreConflict(LoadBB, Pred, VisitedBlocksSet, MSSAU, BAA,
+                         ReadMemInst, StoreCnt))
+      return true;
+  return false;
 }
 
-static bool hasConflictingStoreBeforeSuccToSinkTo(AliasAnalysis &AA,
-                                                  Instruction *ReadMemInst,
-                                                  BasicBlock *SuccToSinkTo) {
+static bool hasConflictingStoreBeforeSuccToSinkTo(Instruction *ReadMemInst,
+                                                  BasicBlock *SuccToSinkTo,
+                                                  MemorySSAUpdater &MSSAU,
+                                                  BatchAAResults &BAA) {
   BlocksSet VisitedBlocksSet;
-  SmallPtrSet<Instruction *, 8> Stores;
   BasicBlock *LoadBB = ReadMemInst->getParent();
+  unsigned StoreCnt{0};
+
   for (BasicBlock *Pred : predecessors(SuccToSinkTo))
-    // If finding stores is too complex, assume there is a conflict.
-    if (!findStores(Stores, LoadBB, Pred, VisitedBlocksSet))
+    if (hasStoreConflict(LoadBB, Pred, VisitedBlocksSet, MSSAU, BAA,
+                         ReadMemInst, StoreCnt))
       return true;
-  return hasStoreConflict(ReadMemInst, AA, Stores);
+  return false;
 }
 
 /// IsAcceptableTarget - Return true if it is possible to sink the instruction
 /// in the specified basic block.
-static bool IsAcceptableTarget(AliasAnalysis &AA, Instruction *Inst,
-                               BasicBlock *SuccToSinkTo, DominatorTree &DT,
-                               LoopInfo &LI) {
+static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
+                               DominatorTree &DT, LoopInfo &LI,
+                               MemorySSAUpdater &MSSAU, BatchAAResults &BAA) {
   assert(Inst && "Instruction to be sunk is null");
   assert(SuccToSinkTo && "Candidate sink target is null");
 
@@ -143,7 +134,7 @@ static bool IsAcceptableTarget(AliasAnalysis &AA, Instruction *Inst,
     // Ensure that there is no conflicting store on any path to SuccToSinkTo.
     if (Inst->mayReadFromMemory() &&
         !Inst->hasMetadata(LLVMContext::MD_invariant_load) &&
-        hasConflictingStoreBeforeSuccToSinkTo(AA, Inst, SuccToSinkTo))
+        hasConflictingStoreBeforeSuccToSinkTo(Inst, SuccToSinkTo, MSSAU, BAA))
       return false;
 
     // We don't want to sink across a critical edge if we don't dominate the
@@ -165,7 +156,8 @@ static bool IsAcceptableTarget(AliasAnalysis &AA, Instruction *Inst,
 /// instruction out of its current block into a successor.
 static bool SinkInstruction(Instruction *Inst,
                             SmallPtrSetImpl<Instruction *> &Stores,
-                            DominatorTree &DT, LoopInfo &LI, AAResults &AA) {
+                            DominatorTree &DT, LoopInfo &LI, AAResults &AA,
+                            MemorySSAUpdater &MSSAU) {
 
   // Don't sink static alloca instructions.  CodeGen assumes allocas outside the
   // entry block are dynamically sized stack objects.
@@ -216,8 +208,9 @@ static bool SinkInstruction(Instruction *Inst,
   if (SuccToSinkTo) {
     // The nearest common dominator may be in a parent loop of BB, which may not
     // be beneficial. Find an ancestor.
+    BatchAAResults BAA(AA);
     while (SuccToSinkTo != BB &&
-           !IsAcceptableTarget(AA, Inst, SuccToSinkTo, DT, LI))
+           !IsAcceptableTarget(Inst, SuccToSinkTo, DT, LI, MSSAU, BAA))
       SuccToSinkTo = DT.getNode(SuccToSinkTo)->getIDom()->getBlock();
     if (SuccToSinkTo == BB)
       SuccToSinkTo = nullptr;
@@ -233,11 +226,15 @@ static bool SinkInstruction(Instruction *Inst,
 
   // Move the instruction.
   Inst->moveBefore(SuccToSinkTo->getFirstInsertionPt());
+  if (MemoryUseOrDef *OldMemAcc = cast_or_null<MemoryUseOrDef>(
+          MSSAU.getMemorySSA()->getMemoryAccess(Inst)))
+    MSSAU.moveToPlace(OldMemAcc, SuccToSinkTo, MemorySSA::Beginning);
+
   return true;
 }
 
 static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
-                         AAResults &AA) {
+                         AAResults &AA, MemorySSAUpdater &MSSAU) {
   // Don't bother sinking code out of unreachable blocks. In addition to being
   // unprofitable, it can also lead to infinite looping, because in an
   // unreachable loop there may be nowhere to stop.
@@ -262,7 +259,7 @@ static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
     if (Inst->isDebugOrPseudoInst())
       continue;
 
-    if (SinkInstruction(Inst, Stores, DT, LI, AA)) {
+    if (SinkInstruction(Inst, Stores, DT, LI, AA, MSSAU)) {
       ++NumSunk;
       MadeChange = true;
     }
@@ -274,7 +271,8 @@ static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
 }
 
 static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
-                                        LoopInfo &LI, AAResults &AA) {
+                                        LoopInfo &LI, AAResults &AA,
+                                        MemorySSAUpdater &MSSAU) {
   bool MadeChange, EverMadeChange = false;
 
   do {
@@ -282,7 +280,7 @@ static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
     LLVM_DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
     // Process all basic blocks.
     for (BasicBlock &I : F)
-      MadeChange |= ProcessBlock(I, DT, LI, AA);
+      MadeChange |= ProcessBlock(I, DT, LI, AA, MSSAU);
     EverMadeChange |= MadeChange;
     NumSinkIter++;
   } while (MadeChange);
@@ -294,8 +292,10 @@ PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
+  MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  MemorySSAUpdater MSSAU(&MSSA);
 
-  if (!iterativelySinkInstructions(F, DT, LI, AA))
+  if (!iterativelySinkInstructions(F, DT, LI, AA, MSSAU))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -315,8 +315,9 @@ namespace {
       auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
       auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
       auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
-
-      return iterativelySinkInstructions(F, DT, LI, AA);
+      MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+      MemorySSAUpdater MSSAU(MSSA);
+      return iterativelySinkInstructions(F, DT, LI, AA, MSSAU);
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
