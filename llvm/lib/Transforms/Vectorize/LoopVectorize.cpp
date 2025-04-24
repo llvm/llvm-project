@@ -9287,10 +9287,6 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
 static SetVector<VPIRInstruction *> collectUsersInLatchExitBlock(VPlan &Plan) {
   SetVector<VPIRInstruction *> ExitUsersToFix;
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
-    // Nothing to do for unreachable exit blocks.
-    if (ExitVPBB->getNumPredecessors() == 0)
-      continue;
-
     for (VPRecipeBase &R : ExitVPBB->phis()) {
       auto *ExitIRI = cast<VPIRPhi>(&R);
       if (ExitVPBB->getSinglePredecessor() != Plan.getMiddleBlock()) {
