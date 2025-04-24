@@ -37,9 +37,14 @@ class TestCase(TestBase):
 
         # Ensure `demangle` doesn't resolve from the objc frame.
         self.expect("help demangle", error=True)
+
         # Run a `language objc` command.
         self.expect(
-            "tagged-pointer info 0",
-            error=True,
-            startstr="error: could not convert '0' to a valid address",
+            "tagged-pointer",
+            substrs=[
+                "Commands for operating on Objective-C tagged pointers.",
+                "Syntax: tagged-pointer <subcommand> [<subcommand-options>]",
+                "The following subcommands are supported:",
+                "info -- Dump information on a tagged pointer.",
+            ],
         )
