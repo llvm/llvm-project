@@ -3374,18 +3374,28 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   // So a different index should be used for indexing into Ins.
   // See similar issue in LowerCall.
   const auto *In = Ins.begin();
+  auto ConsumeArgIns = [&](const Argument &Arg) {
+    const auto *ArgInsBegin = In;
+    const auto *ArgInsEnd = In;
+    while (ArgInsEnd != Ins.end() && ArgInsEnd->OrigArgIndex == Arg.getArgNo())
+      ++ArgInsEnd;
+    In = ArgInsEnd;
+    return llvm::ArrayRef(ArgInsBegin, ArgInsEnd);
+  };
 
   for (const auto &Arg : F->args()) {
+    const auto ArgIns = ConsumeArgIns(Arg);
+
     Type *Ty = Arg.getType();
 
-    if (In == Ins.end() || In->OrigArgIndex != Arg.getArgNo())
+    if (ArgIns.empty())
       report_fatal_error("Empty parameter types are not supported");
 
     if (Arg.use_empty()) {
       // argument is dead
-      for (; In != Ins.end() && In->OrigArgIndex == Arg.getArgNo(); ++In) {
-        assert(!In->Used && "Arg.use_empty() is true but Arg is used?");
-        InVals.push_back(DAG.getUNDEF(In->VT));
+      for (const auto &In : ArgIns) {
+        assert(!In.Used && "Arg.use_empty() is true but Arg is used?");
+        InVals.push_back(DAG.getUNDEF(In.VT));
       }
       continue;
     }
@@ -3404,23 +3414,23 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       // machine instruction fails because TargetExternalSymbol
       // (not lowered) is target dependent, and CopyToReg assumes
       // the source is lowered.
-      assert(getValueType(DL, Ty) == In->VT &&
+      assert(ArgIns.size() == 1 && "ByVal argument must be a pointer");
+      const auto &ByvalIn = ArgIns[0];
+      assert(getValueType(DL, Ty) == ByvalIn.VT &&
              "Ins type did not match function type");
-      assert(In->VT == PtrVT && "ByVal argument must be a pointer");
+      assert(ByvalIn.VT == PtrVT && "ByVal argument must be a pointer");
 
       SDValue P;
       if (isKernelFunction(*F)) {
-        P = DAG.getNode(NVPTXISD::Wrapper, dl, In->VT, ArgSymbol);
+        P = DAG.getNode(NVPTXISD::Wrapper, dl, ByvalIn.VT, ArgSymbol);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
-        P = DAG.getNode(NVPTXISD::MoveParam, dl, In->VT, ArgSymbol);
+        P = DAG.getNode(NVPTXISD::MoveParam, dl, ByvalIn.VT, ArgSymbol);
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
-        P = DAG.getAddrSpaceCast(dl, In->VT, P, ADDRESS_SPACE_LOCAL,
+        P = DAG.getAddrSpaceCast(dl, ByvalIn.VT, P, ADDRESS_SPACE_LOCAL,
                                  ADDRESS_SPACE_GENERIC);
       }
-      In++;
       InVals.push_back(P);
-
     } else {
       bool aggregateIsPacked = false;
       if (StructType *STy = dyn_cast<StructType>(Ty))
@@ -3429,12 +3439,13 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       SmallVector<EVT, 16> VTs;
       SmallVector<uint64_t, 16> Offsets;
       ComputePTXValueVTs(*this, DL, Ty, VTs, &Offsets, 0);
-      if (VTs.empty())
-        report_fatal_error("Empty parameter types are not supported");
+      assert(VTs.size() == ArgIns.size() && "Size mismatch");
+      assert(VTs.size() == Offsets.size() && "Size mismatch");
 
       Align ArgAlign = getFunctionArgumentAlignment(
           F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
       auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
+      assert(VectorInfo.size() == VTs.size() && "Size mismatch");
 
       int VecIdx = -1; // Index of the first element of the current vector.
       for (const unsigned PartI : llvm::seq(VTs.size())) {
@@ -3495,11 +3506,12 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
             // Extend the element if necessary (e.g. an i8 is loaded
             // into an i16 register)
-            if (In->VT.isInteger() &&
-                In->VT.getFixedSizeInBits() > LoadVT.getFixedSizeInBits()) {
-              unsigned Extend =
-                  In->Flags.isSExt() ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-              Elt = DAG.getNode(Extend, dl, In->VT, Elt);
+            if (ArgIns[PartI].VT.getFixedSizeInBits() !=
+                LoadVT.getFixedSizeInBits()) {
+              assert(ArgIns[PartI].VT.isInteger() && LoadVT.isInteger() &&
+                     "Non-integer argument type size mismatch");
+              Elt = DAG.getExtOrTrunc(ArgIns[PartI].Flags.isSExt(), Elt, dl,
+                                      ArgIns[PartI].VT);
             }
             InVals.push_back(Elt);
           }
@@ -3507,7 +3519,6 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
           // Reset vector tracking state.
           VecIdx = -1;
         }
-        ++In;
       }
     }
   }
