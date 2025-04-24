@@ -8,9 +8,9 @@ module {
                      #llvm.mlir.module_flag<max, "frame-pointer", 1 : i32>,
                      #llvm.mlir.module_flag<override, "probe-stack", "inline-asm">,
                      #llvm.mlir.module_flag<append, "CG Profile", [
-                      #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
-                      #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
-                      #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
+                       #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+                       #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+                       #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
                     ]>]
 }
 

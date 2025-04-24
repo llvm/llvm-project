@@ -279,7 +279,7 @@ convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
   llvm::MDBuilder mdb(context);
   SmallVector<llvm::Metadata *> nodes;
 
-  if (key == "CG Profile") {
+  if (key == LLVM::LLVMDialect::getModuleFlagKeyCGProfileName()) {
     for (auto entry : arrayAttr.getAsRange<ModuleFlagCGProfileEntryAttr>()) {
       llvm::Function *fromFn =
           moduleTranslation.lookupFunction(entry.getFrom().getValue());

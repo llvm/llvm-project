@@ -531,7 +531,7 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
   SmallVector<Attribute> cgProfile;
   for (unsigned i = 0; i < mdTuple->getNumOperands(); i++) {
     const llvm::MDOperand &mdo = mdTuple->getOperand(i);
-    auto *cgEntry = dyn_cast_or_null<llvm::MDNode>(mdo);
+    auto *cgEntry = cast<llvm::MDNode>(mdo);
     llvm::Constant *llvmConstant =
         cast<llvm::ConstantAsMetadata>(cgEntry->getOperand(2))->getValue();
     uint64_t count = cast<llvm::ConstantInt>(llvmConstant)->getZExtValue();
@@ -542,12 +542,12 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
   return ArrayAttr::get(mlirModule->getContext(), cgProfile);
 }
 
-// Invoke specific handlers for each known module flag value, returns nullptr if
-// the key is unknown or unimplemented.
+/// Invoke specific handlers for each known module flag value, returns nullptr
+/// if the key is unknown or unimplemented.
 static Attribute convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
                                                    StringRef key,
                                                    llvm::MDTuple *mdTuple) {
-  if (key == "CG Profile")
+  if (key == LLVM::LLVMDialect::getModuleFlagKeyCGProfileName())
     return convertCGProfileModuleFlagValue(mlirModule, mdTuple);
   return nullptr;
 }

@@ -380,10 +380,10 @@ LogicalResult
 ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        LLVM::ModFlagBehavior flagBehavior, StringAttr key,
                        Attribute value) {
-  if (key == "CG Profile") {
+  if (key == LLVM::LLVMDialect::getModuleFlagKeyCGProfileName()) {
     auto arrayAttr = dyn_cast<ArrayAttr>(value);
-    if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute v) {
-          return isa<ModuleFlagCGProfileEntryAttr>(v);
+    if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute attr) {
+          return isa<ModuleFlagCGProfileEntryAttr>(attr);
         })))
       return emitError()
              << "'CG Profile' key expects an array of '#llvm.cgprofile_entry'";
