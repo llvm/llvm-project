@@ -1463,8 +1463,21 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
                                        MachineInstr *Def1MI,
                                        Register SrcRootReg,
                                        const SIInstrInfo *TII) {
-  // As if could, the Def1MI would have been sdwa-ed
-  if (!TII->isSDWA(Def1MI->getOpcode()))
+  // As if could, the Def1MI would have been sdwa-ed in order to access
+  // upper half, and Def0MI should not be as it accessing lower half.
+  if (!TII->isSDWA(Def1MI->getOpcode()) || TII->isSDWA(Def0MI->getOpcode()))
+    return false;
+
+  // Def1 should be writing into entire DWORD of dst, with unused part set
+  // to zero-pad.
+  MachineOperand *Def1DstSel =
+      TII->getNamedOperand(*Def1MI, AMDGPU::OpName::dst_sel);
+  if (!Def1DstSel || Def1DstSel->getImm() != AMDGPU::SDWA::SdwaSel::DWORD)
+    return false;
+  MachineOperand *Def1DstUnused =
+      TII->getNamedOperand(*Def1MI, AMDGPU::OpName::dst_unused);
+  if (!Def1DstUnused ||
+      Def1DstUnused->getImm() != AMDGPU::SDWA::DstUnused::UNUSED_PAD)
     return false;
 
   MachineOperand *Def1Src0 =
@@ -1476,13 +1489,7 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
   MachineOperand *Def0Src1 =
       TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src1);
 
-  if (Def1Src0 && Def1Src0->isReg() && (Def1Src0->getReg() == SrcRootReg)) {
-    MachineOperand *Def1Src0Sel =
-        TII->getNamedOperand(*Def1MI, AMDGPU::OpName::src0_sel);
-    if (!Def1Src0Sel ||
-        (Def1Src0Sel->getImm() != AMDGPU::SDWA::SdwaSel::WORD_1))
-      return false;
-
+  auto chkForDef0MIAccess = [&]() -> bool {
     if (Def0Src0 && Def0Src0->isReg() && (Def0Src0->getReg() == SrcRootReg)) {
       MachineOperand *Def0Src0Sel =
           TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src0_sel);
@@ -1500,6 +1507,19 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
       if (Def0Src1Sel && Def0Src1Sel->getImm() == AMDGPU::SDWA::SdwaSel::WORD_0)
         return true;
     }
+
+    return false;
+  };
+
+  if (Def1Src0 && Def1Src0->isReg() && (Def1Src0->getReg() == SrcRootReg)) {
+    MachineOperand *Def1Src0Sel =
+        TII->getNamedOperand(*Def1MI, AMDGPU::OpName::src0_sel);
+    if (!Def1Src0Sel ||
+        (Def1Src0Sel->getImm() != AMDGPU::SDWA::SdwaSel::WORD_1))
+      return false;
+
+    if (chkForDef0MIAccess())
+      return true;
   }
 
   if (Def1Src1 && Def1Src1->isReg() && (Def1Src1->getReg() == SrcRootReg)) {
@@ -1509,23 +1529,8 @@ static bool checkForRightSrcRootAccess(MachineInstr *Def0MI,
         (Def1Src1Sel->getImm() != AMDGPU::SDWA::SdwaSel::WORD_1))
       return false;
 
-    if (Def0Src0 && Def0Src0->isReg() && (Def0Src0->getReg() == SrcRootReg)) {
-      MachineOperand *Def0Src0Sel =
-          TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src0_sel);
-      if (!Def0Src0Sel)
-        return true;
-      if (Def0Src0Sel && Def0Src0Sel->getImm() == AMDGPU::SDWA::SdwaSel::WORD_0)
-        return true;
-    }
-
-    if (Def0Src1 && Def0Src1->isReg() && (Def0Src1->getReg() == SrcRootReg)) {
-      MachineOperand *Def0Src1Sel =
-          TII->getNamedOperand(*Def0MI, AMDGPU::OpName::src1_sel);
-      if (!Def0Src1Sel)
-        return true;
-      if (Def0Src1Sel && Def0Src1Sel->getImm() == AMDGPU::SDWA::SdwaSel::WORD_0)
-        return true;
-    }
+    if (chkForDef0MIAccess())
+      return true;
   }
 
   return false;
