@@ -423,8 +423,8 @@ static void instantiateOMPDeclareVariantAttr(
   auto *FD = cast<FunctionDecl>(New);
   auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(FD->getDeclContext());
 
-  auto &&SubstExpr = [FD, ThisContext, &S, &TemplateArgs, New](Expr *E) {
-    if (auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+  auto &&SubstExpr = [FD, ThisContext, &S, &TemplateArgs](Expr *E) {
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts()))
       if (auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
         Sema::ContextRAII SavedContext(S, FD);
         LocalInstantiationScope Local(S);
@@ -433,7 +433,6 @@ static void instantiateOMPDeclareVariantAttr(
               PVD, FD->getParamDecl(PVD->getFunctionScopeIndex()));
         return S.SubstExpr(E, TemplateArgs);
       }
-    }
     Sema::CXXThisScopeRAII ThisScope(S, ThisContext, Qualifiers(),
                                      FD->isCXXInstanceMember());
     return S.SubstExpr(E, TemplateArgs);
