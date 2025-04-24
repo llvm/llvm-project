@@ -288,7 +288,7 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
             })
             .Default([](auto) { return nullptr; });
 
-    assert(metadata && "expected valid metadata");
+    assert(valueMetadata && "expected valid metadata");
     llvmModule->addModuleFlag(
         convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
         flagAttr.getKey().getValue(), valueMetadata);
