@@ -1096,7 +1096,7 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
     float AlignmentProb = ((float)Alignment.value()) / DesiredAlignment.value();
     float MisalignmentProb = 1.0 - AlignmentProb;
     return (MisalignmentProb * P9PipelineFlushEstimate) +
-           (AlignmentProb * *Cost.getValue());
+           (AlignmentProb * Cost.getValue());
   }
 
   // Usually we should not get to this point, but the following is an attempt to

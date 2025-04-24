@@ -1174,6 +1174,79 @@ def BinOp : CIR_Op<"binop", [Pure,
 }
 
 //===----------------------------------------------------------------------===//
+// ShiftOp
+//===----------------------------------------------------------------------===//
+
+def ShiftOp : CIR_Op<"shift", [Pure]> {
+  let summary = "Shift";
+  let description = [{
+    The `cir.shift` operation performs a bitwise shift, either to the left or to
+    the right, based on the first operand. The second operand specifies the
+    value to be shifted, and the third operand determines the number of
+    positions by which the shift is applied. Both the second and third operands
+    are required to be integers.
+
+    ```mlir
+    %7 = cir.shift(left, %1 : !u64i, %4 : !s32i) -> !u64i
+    ```
+  }];
+
+  // TODO(cir): Support vectors. CIR_IntType -> CIR_AnyIntOrVecOfInt. Also
+  // update the description above.
+  let results = (outs CIR_IntType:$result);
+  let arguments = (ins CIR_IntType:$value, CIR_IntType:$amount,
+                       UnitAttr:$isShiftleft);
+
+  let assemblyFormat = [{
+    `(`
+      (`left` $isShiftleft^) : (```right`)?
+      `,` $value `:` type($value)
+      `,` $amount `:` type($amount)
+    `)` `->` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+def SelectOp : CIR_Op<"select", [Pure,
+    AllTypesMatch<["true_value", "false_value", "result"]>]> {
+  let summary = "Yield one of two values based on a boolean value";
+  let description = [{
+    The `cir.select` operation takes three operands. The first operand
+    `condition` is a boolean value of type `!cir.bool`. The second and the third
+    operand can be of any CIR types, but their types must be the same. If the
+    first operand is `true`, the operation yields its second operand. Otherwise,
+    the operation yields its third operand.
+
+    Example:
+
+    ```mlir
+    %0 = cir.const #cir.bool<true> : !cir.bool
+    %1 = cir.const #cir.int<42> : !s32i
+    %2 = cir.const #cir.int<72> : !s32i
+    %3 = cir.select if %0 then %1 else %2 : (!cir.bool, !s32i, !s32i) -> !s32i
+    ```
+  }];
+
+  let arguments = (ins CIR_BoolType:$condition, CIR_AnyType:$true_value,
+                       CIR_AnyType:$false_value);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    `if` $condition `then` $true_value `else` $false_value
+    `:` `(`
+      qualified(type($condition)) `,`
+      qualified(type($true_value)) `,`
+      qualified(type($false_value))
+    `)` `->` qualified(type($result)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -1308,6 +1381,70 @@ def GetGlobalOp : CIR_Op<"get_global",
 }
 
 //===----------------------------------------------------------------------===//
+// GetMemberOp
+//===----------------------------------------------------------------------===//
+
+def GetMemberOp : CIR_Op<"get_member"> {
+  let summary = "Get the address of a member of a record";
+  let description = [{
+    The `cir.get_member` operation gets the address of a particular named
+    member from the input record.
+
+    It expects a pointer to the base record as well as the name of the member
+    and its field index.
+
+    Example:
+    ```mlir
+    // Suppose we have a record with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 8>
+    !ty_B = !cir.record<"struct.B" {!s32i, !s8i}>
+
+    // Get the address of the member at index 1.
+    %1 = cir.get_member %0[1] {name = "i"} : (!cir.ptr<!ty_B>) -> !cir.ptr<!s8i>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    StrAttr:$name,
+    IndexAttr:$index_attr);
+
+  let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let assemblyFormat = [{
+    $addr `[` $index_attr `]` attr-dict
+    `:` qualified(type($addr)) `->` qualified(type($result))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type,
+                   "mlir::Value":$value,
+                   "llvm::StringRef":$name,
+                   "unsigned":$index),
+    [{
+      mlir::APInt fieldIdx(64, index);
+      build($_builder, $_state, type, value, name, fieldIdx);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the index of the record member being accessed.
+    uint64_t getIndex() { return getIndexAttr().getZExtValue(); }
+
+    /// Return the record type pointed by the base pointer.
+    cir::PointerType getAddrTy() { return getAddr().getType(); }
+
+    /// Return the result type.
+    cir::PointerType getResultTy() {
+      return mlir::cast<cir::PointerType>(getResult().getType());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -1414,6 +1551,50 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
     }]>];
+}
+
+//===----------------------------------------------------------------------===//
+// StackSaveOp & StackRestoreOp
+//===----------------------------------------------------------------------===//
+
+def StackSaveOp : CIR_Op<"stacksave"> {
+  let summary = "remembers the current state of the function stack";
+  let description = [{
+    Saves current state of the function stack. Returns a pointer to an opaque object
+    that later can be passed into cir.stackrestore.
+    This is used during the lowering of variable length array allocas.
+
+    This operation corresponds to LLVM intrinsic `stacksave`.
+
+    ```mlir
+    %0 = cir.stacksave : <!u8i>
+    ```
+  }];
+
+  let results = (outs CIR_PointerType:$result);
+  let assemblyFormat = "attr-dict `:` qualified(type($result))";
+}
+
+def StackRestoreOp : CIR_Op<"stackrestore"> {
+  let summary = "restores the state of the function stack";
+  let description = [{
+    Restore the state of the function stack to the state it was
+    in when the corresponding cir.stacksave executed.
+    This is used during the lowering of variable length array allocas.
+
+    This operation corresponds to LLVM intrinsic `stackrestore`.
+
+    ```mlir
+    %0 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
+    %1 = cir.stacksave : <!u8i>
+    cir.store %1, %0 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.stackrestore %2 : !cir.ptr<!u8i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
 //===----------------------------------------------------------------------===//

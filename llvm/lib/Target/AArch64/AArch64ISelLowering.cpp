@@ -1850,6 +1850,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
   }
 
+  // Handle partial reduction operations
+  if (EnablePartialReduceNodes && Subtarget->isSVEorStreamingSVEAvailable()) {
+    // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
+    // Other pairs will default to 'Expand'.
+    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
+    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+  }
+
   // Handle operations that are only available in non-streaming SVE mode.
   if (Subtarget->isSVEAvailable()) {
     for (auto VT : {MVT::nxv16i8,  MVT::nxv8i16, MVT::nxv4i32,  MVT::nxv2i64,
@@ -1888,7 +1896,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
     }
   }
-
 
   if (Subtarget->hasMOPS() && Subtarget->hasMTE()) {
     // Only required for llvm.aarch64.mops.memset.tag
@@ -8595,6 +8602,10 @@ static bool callConvSupportsVarArgs(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::C:
   case CallingConv::PreserveNone:
+  // SVE vector call is only partially supported, but it should
+  // support named arguments being passed. Any arguments being passed
+  // as varargs, are still unsupported.
+  case CallingConv::AArch64_SVE_VectorCall:
     return true;
   default:
     return false;
@@ -13872,25 +13883,27 @@ static SDValue tryToConvertShuffleOfTbl2ToTbl4(SDValue Op,
       DAG.getTargetConstant(Intrinsic::aarch64_neon_tbl2, dl, MVT::i64);
 
   EVT VT = Op.getValueType();
-  if (Tbl1->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
-      Tbl1->getOperand(0) != Tbl2ID ||
-      Tbl2->getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
-      Tbl2->getOperand(0) != Tbl2ID)
+  if (Tbl1.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      Tbl1.getOperand(0) != Tbl2ID ||
+      Tbl2.getOpcode() != ISD::INTRINSIC_WO_CHAIN ||
+      Tbl2.getOperand(0) != Tbl2ID)
     return SDValue();
 
-  if (Tbl1->getValueType(0) != MVT::v16i8 ||
-      Tbl2->getValueType(0) != MVT::v16i8)
+  if (Tbl1.getValueType() != MVT::v16i8 || Tbl2.getValueType() != MVT::v16i8)
     return SDValue();
 
-  SDValue Mask1 = Tbl1->getOperand(3);
-  SDValue Mask2 = Tbl2->getOperand(3);
+  SDValue Mask1 = Tbl1.getOperand(3);
+  SDValue Mask2 = Tbl2.getOperand(3);
+  if (Mask1.getOpcode() != ISD::BUILD_VECTOR ||
+      Mask2.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
   SmallVector<SDValue, 16> TBLMaskParts(16, SDValue());
   for (unsigned I = 0; I < 16; I++) {
     if (ShuffleMask[I] < 16)
-      TBLMaskParts[I] = Mask1->getOperand(ShuffleMask[I]);
+      TBLMaskParts[I] = Mask1.getOperand(ShuffleMask[I]);
     else {
-      auto *C =
-          dyn_cast<ConstantSDNode>(Mask2->getOperand(ShuffleMask[I] - 16));
+      auto *C = dyn_cast<ConstantSDNode>(Mask2.getOperand(ShuffleMask[I] - 16));
       if (!C)
         return SDValue();
       TBLMaskParts[I] = DAG.getConstant(C->getSExtValue() + 32, dl, MVT::i32);
@@ -16519,11 +16532,12 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   return false;
 }
 
-bool AArch64TargetLowering::shouldReduceLoadWidth(SDNode *Load,
-                                                  ISD::LoadExtType ExtTy,
-                                                  EVT NewVT) const {
+bool AArch64TargetLowering::shouldReduceLoadWidth(
+    SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+    std::optional<unsigned> ByteOffset) const {
   // TODO: This may be worth removing. Check regression tests for diffs.
-  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT))
+  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT,
+                                                 ByteOffset))
     return false;
 
   // If we're reducing the load width in order to avoid having to use an extra
@@ -28530,7 +28544,7 @@ bool AArch64TargetLowering::shouldLocalize(
         Imm, CI->getType(), TargetTransformInfo::TCK_CodeSize);
     assert(Cost.isValid() && "Expected a valid imm cost");
 
-    unsigned RematCost = *Cost.getValue();
+    unsigned RematCost = Cost.getValue();
     RematCost += AdditionalCost;
     Register Reg = MI.getOperand(0).getReg();
     unsigned MaxUses = maxUses(RematCost);

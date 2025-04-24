@@ -164,7 +164,7 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
   }];
 }
 
-def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array", 
+def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
     [BlobAttrInterface]> {
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
@@ -494,7 +494,7 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     /// when building the attribute. The provided `blobName` is used as a hint
     /// for the key of the new handle for the `blob` resource, but may be
     /// changed if necessary to ensure uniqueness during insertion.
-    /// This base class builder does no element type specific size or alignment 
+    /// This base class builder does no element type specific size or alignment
     /// checking. Use the typed subclasses for more safety unless if performing
     /// generic operations.
     AttrBuilderWithInferredContext<(ins
@@ -989,7 +989,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
     /// Flatten, and return, all of the sparse indices in this attribute in
     /// row-major order.
-    std::vector<ptrdiff_t> getFlattenedSparseIndices() const;
+    SmallVector<ptrdiff_t> getFlattenedSparseIndices() const;
 
   public:
   }];
