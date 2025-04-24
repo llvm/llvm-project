@@ -1025,16 +1025,13 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
-multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
-                          bit UsesTmp = 0, bit HasMask = 0> {
+multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
   let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
-      !con(
-        (ins vgpr_class:$vdata, i32imm:$vaddr,
-             SReg_32:$soffset, i32imm:$offset),
-        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
+      (ins vgpr_class:$vdata, i32imm:$vaddr,
+           SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -1045,10 +1042,8 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
 
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
-      !con(
-        (ins i32imm:$vaddr,
-             SReg_32:$soffset, i32imm:$offset),
-        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
+      (ins i32imm:$vaddr,
+           SReg_32:$soffset, i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -1075,12 +1070,6 @@ defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352>;
 defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
-
-let Defs = [M0] in {
-  // Spills a block of 32 VGPRs. M0 will contain a mask describing which
-  // registers in the block need to be transferred.
-  defm SI_BLOCK_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024, 0, 1>;
-}
 
 defm SI_SPILL_A32  : SI_SPILL_VGPR <AGPR_32, 1>;
 defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64, 1>;

@@ -64,6 +64,7 @@ static_library("DWARF") {
     "DebugNamesDWARFIndex.cpp",
     "LogChannelDWARF.cpp",
     "ManualDWARFIndex.cpp",
+    "ManualDWARFIndexSet.cpp",
     "NameToDIE.cpp",
     "SymbolFileDWARF.cpp",
     "SymbolFileDWARFDebugMap.cpp",
