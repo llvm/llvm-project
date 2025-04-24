@@ -71,8 +71,9 @@ private:
   // expected, or, there is a lexing error
 
   /// Root Element parse methods:
-  bool parseDescriptorTable();
-  bool parseDescriptorTableClause();
+  std::optional<llvm::hlsl::rootsig::DescriptorTable> parseDescriptorTable();
+  std::optional<llvm::hlsl::rootsig::DescriptorTableClause>
+  parseDescriptorTableClause();
 
   /// Parameter arguments (eg. `bReg`, `space`, ...) can be specified in any
   /// order and only exactly once. `ParsedClauseParams` denotes the current
@@ -84,8 +85,12 @@ private:
   std::optional<ParsedClauseParams>
   parseDescriptorTableClauseParams(RootSignatureToken::Kind RegType);
 
+  // Common parsing methods
   std::optional<uint32_t> parseUIntParam();
   std::optional<llvm::hlsl::rootsig::Register> parseRegister();
+
+  /// Parsing methods of various enums
+  std::optional<llvm::hlsl::rootsig::ShaderVisibility> parseShaderVisibility();
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer

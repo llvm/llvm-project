@@ -5150,9 +5150,10 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
 
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
+  const MDNode *Ranges = getRangeMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), nullptr, SSID, Order);
+      I.getAlign(), AAMDNodes(), Ranges, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
