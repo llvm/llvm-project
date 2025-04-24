@@ -33,7 +33,7 @@ struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(st
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp, class _Up>
-concept __core_convertible_to = __is_core_convertible_v<_Tp, _Up>;
+concept __core_convertible_to = __is_core_convertible<_Tp, _Up>::value;
 
 #endif // _LIBCPP_STD_VER >= 20
 
