@@ -4399,12 +4399,17 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         Known = KnownScalarMemory.sext(BitWidth);
         break;
       case ISD::EXTLOAD:
-        if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
+        switch (TLI->getExtendForAtomicOps()) {
+        case ISD::ZERO_EXTEND:
           Known = KnownScalarMemory.zext(BitWidth);
-        else if (TLI->getExtendForAtomicOps() == ISD::SIGN_EXTEND)
+          break;
+        case ISD::SIGN_EXTEND:
           Known = KnownScalarMemory.sext(BitWidth);
-        else
+          break;
+        default:
           Known = KnownScalarMemory.anyext(BitWidth);
+          break;
+        }
         break;
       case ISD::NON_EXTLOAD:
         Known = KnownScalarMemory;
