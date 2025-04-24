@@ -278,8 +278,8 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
   if (!m_count || !m_base_data_address)
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxVectorBoolSyntheticFrontEnd' cannot "
-        "find index of child '%s'. (m_count='" PRIu32
-        "', m_base_data_address='" PRIu32 "')",
+        "find index of child '%s'. (m_count='" PRIu64
+        "', m_base_data_address='" PRIu64 "')",
         name.AsCString(), m_count, m_base_data_address);
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
