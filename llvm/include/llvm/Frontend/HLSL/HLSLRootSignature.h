@@ -71,8 +71,6 @@ struct DescriptorTableClause {
   void setDefaultFlags() {
     switch (Type) {
     case ClauseType::CBuffer:
-      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
-      break;
     case ClauseType::SRV:
       Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
       break;
