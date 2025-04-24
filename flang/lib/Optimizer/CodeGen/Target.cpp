@@ -819,14 +819,15 @@ struct TargetAArch64 : public GenericTarget<TargetAArch64> {
         // Zero extend for 'i1'.
         intExt = AT::IntegerExtension::Zero;
       } else {
-        if (triple.isOSDarwin())
+        if (triple.isOSDarwin()) {
           // On Darwin, sign extend. The apple developer guide specifies this as
           // a divergence from the AArch64PCS:
           // https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms#Pass-arguments-to-functions-correctly
           intExt = AT::IntegerExtension::Sign;
-        else
+        } else {
           // On linux, pass directly and do not extend.
           intExt = AT::IntegerExtension::None;
+        }
       }
       CodeGenSpecifics::Marshalling marshal;
       marshal.emplace_back(argTy, AT{/*alignment=*/0, /*byval=*/false,
