@@ -25,3 +25,22 @@
 !12 = !{ i32 2, !"qux", i32 42 }
 !13 = !{ i32 3, !"qux", !{ !"foo", i32 1 }}
 !llvm.module.flags = !{ !10, !11, !12, !13 }
+
+; // -----
+
+declare void @from(i32)
+declare void @to()
+
+!llvm.module.flags = !{!20}
+
+!20 = !{i32 5, !"CG Profile", !21}
+!21 = distinct !{!22, !23, !24}
+!22 = !{ptr @from, ptr @to, i64 222}
+!23 = !{ptr @from, ptr @from, i64 222}
+!24 = !{ptr @to, ptr @from, i64 222}
+
+; CHECK: llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+; CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+; CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+; CHECK-SAME: #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
+; CHECK-SAME: ]>]
