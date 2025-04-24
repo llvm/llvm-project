@@ -3102,6 +3102,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // files.
 
         unsigned N = ValidateSystemInputs ? NumInputs : NumUserInputs;
+        // FIXME: F.InputFilesValidationTimestamp comes from std::chrono, but
+        // HSOpts.BuildSessionTimestamp comes from the FS. They may not be
+        // comparable.
         if (HSOpts.ModulesValidateOncePerBuildSession &&
             F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
             F.Kind == MK_ImplicitModule)
@@ -4950,9 +4953,13 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName, ModuleKind Type,
     // timestamp files are up-to-date in this build session.
     for (unsigned I = 0, N = Loaded.size(); I != N; ++I) {
       ImportedModule &M = Loaded[I];
+      // FIXME: F.InputFilesValidationTimestamp comes from std::chrono, but
+      // HSOpts.BuildSessionTimestamp comes from the FS. They may not be
+      // comparable.
       if (M.Mod->Kind == MK_ImplicitModule &&
           M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
-        updateModuleTimestamp(M.Mod->FileName);
+        getModuleManager().getModuleCache().updateModuleTimestamp(
+            M.Mod->FileName);
     }
   }
 
