@@ -8,19 +8,20 @@
 
 // REQUIRES: std-at-least-c++23
 
-#include <stacktrace>
-
-#include <cassert>
-
 /*
   (19.6.4.5) Modifiers [stacktrace.basic.mod]
 
+  template<class Allocator>
   void swap(basic_stacktrace& other)
       noexcept(allocator_traits<Allocator>::propagate_on_container_swap::value ||
       allocator_traits<Allocator>::is_always_equal::value);
 
   Effects: Exchanges the contents of *this and other.
 */
+
+#include <cassert>
+#include <stacktrace>
+
 int main(int, char**) {
   std::stacktrace empty;
   auto current = std::stacktrace::current();
