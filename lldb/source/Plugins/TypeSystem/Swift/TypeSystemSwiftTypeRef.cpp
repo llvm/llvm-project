@@ -3420,7 +3420,11 @@ TypeSystemSwiftTypeRef::GetCanonicalType(opaque_compiler_type_t type) {
       // then we don't have debug info to resolve it from.
       CompilerType ast_type =
         ReconstructType({weak_from_this(), type}, nullptr).GetCanonicalType();
-      return GetTypeFromMangledTypename(ast_type.GetMangledTypeName());
+      CompilerType result =
+          GetTypeFromMangledTypename(ast_type.GetMangledTypeName());
+      if (result && !llvm::isa<TypeSystemSwiftTypeRefForExpressions>(this))
+        DiagnoseSwiftASTContextFallback(__FUNCTION__, type);
+      return result;
     }
     auto flavor = SwiftLanguageRuntime::GetManglingFlavor(AsMangledName(type));
     auto mangling = mangleNode(canonical, flavor);
