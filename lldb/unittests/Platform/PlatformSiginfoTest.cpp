@@ -62,7 +62,7 @@ public:
       uint64_t bit_offset;
       std::string name;
       auto index_or_err = field_type.GetIndexOfChildWithName(field_name, false);
-      ASSERT_TRUE(index_or_err);
+      ASSERT_FALSE(!index_or_err);
       field_type = field_type.GetFieldAtIndex(*index_or_err, name, &bit_offset,
                                               nullptr, nullptr);
       ASSERT_TRUE(field_type);
