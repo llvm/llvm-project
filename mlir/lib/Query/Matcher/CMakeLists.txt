@@ -1,6 +1,5 @@
 add_mlir_library(MLIRQueryMatcher
   MatchFinder.cpp
-  ExtraMatchers.cpp
   Parser.cpp
   RegistryManager.cpp
   VariantValue.cpp
