@@ -1135,6 +1135,7 @@ def Extra : DiagGroup<"extra", [
     StringConcatation,
     FUseLdPath,
     CastFunctionTypeMismatch,
+    ImplicitFallthrough,
   ]>;
 
 def Most : DiagGroup<"most", [
