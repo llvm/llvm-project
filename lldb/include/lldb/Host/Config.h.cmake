@@ -23,7 +23,9 @@
 
 #cmakedefine01 HAVE_NR_PROCESS_VM_READV
 
-#cmakedefine01 HAVE_LIBCOMPRESSION
+#ifndef HAVE_LIBCOMPRESSION
+#cmakedefine HAVE_LIBCOMPRESSION
+#endif
 
 #cmakedefine01 LLDB_ENABLE_POSIX
 

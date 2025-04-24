@@ -64,6 +64,9 @@ INITIALIZE_PASS(StaticDataProfileInfoWrapperPass, "static-data-profile-info",
                 "Static Data Profile Info", false, true)
 
 StaticDataProfileInfoWrapperPass::StaticDataProfileInfoWrapperPass()
-    : ImmutablePass(ID) {}
+    : ImmutablePass(ID) {
+  initializeStaticDataProfileInfoWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
 
 char StaticDataProfileInfoWrapperPass::ID = 0;

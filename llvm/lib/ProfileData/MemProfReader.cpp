@@ -600,12 +600,9 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if (auto It = CallstackProfileData.find(Id);
-        It != CallstackProfileData.end()) {
-      if (It->second.AccessHistogramSize > 0)
-        free((void *)It->second.AccessHistogram);
-      CallstackProfileData.erase(It);
-    }
+    if (CallstackProfileData[Id].AccessHistogramSize > 0)
+      free((void *)CallstackProfileData[Id].AccessHistogram);
+    CallstackProfileData.erase(Id);
   }
 
   if (StackMap.empty())

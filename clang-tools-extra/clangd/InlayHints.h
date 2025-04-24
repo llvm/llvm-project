@@ -22,17 +22,10 @@ namespace clang {
 namespace clangd {
 class ParsedAST;
 
-struct InlayHintOptions {
-  // Minimum height of a code block in lines for a BlockEnd hint to be shown
-  // Includes the lines containing the braces
-  int HintMinLineLimit = 10;
-};
-
 /// Compute and return inlay hints for a file.
 /// If RestrictRange is set, return only hints whose location is in that range.
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  std::optional<Range> RestrictRange,
-                                  InlayHintOptions HintOptions = {});
+                                  std::optional<Range> RestrictRange);
 
 } // namespace clangd
 } // namespace clang

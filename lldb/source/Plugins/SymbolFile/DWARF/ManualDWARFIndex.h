@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/ManualDWARFIndexSet.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -58,6 +57,29 @@ public:
                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
 
   void Dump(Stream &s) override;
+
+  // Make IndexSet public so we can unit test the encoding and decoding logic.
+  struct IndexSet {
+    NameToDIE function_basenames;
+    NameToDIE function_fullnames;
+    NameToDIE function_methods;
+    NameToDIE function_selectors;
+    NameToDIE objc_class_selectors;
+    NameToDIE globals;
+    NameToDIE types;
+    NameToDIE namespaces;
+    bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr);
+    void Encode(DataEncoder &encoder) const;
+    bool operator==(const IndexSet &rhs) const {
+      return function_basenames == rhs.function_basenames &&
+             function_fullnames == rhs.function_fullnames &&
+             function_methods == rhs.function_methods &&
+             function_selectors == rhs.function_selectors &&
+             objc_class_selectors == rhs.objc_class_selectors &&
+             globals == rhs.globals && types == rhs.types &&
+             namespaces == rhs.namespaces;
+    }
+  };
 
 private:
   void Index();
@@ -140,12 +162,11 @@ private:
   ///   false if the symbol table wasn't cached or was out of date.
   bool LoadFromCache();
 
-  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
-                 IndexSet<NameToDIE> &set);
+  void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
 
   static void IndexUnitImpl(DWARFUnit &unit,
                             const lldb::LanguageType cu_language,
-                            IndexSet<NameToDIE> &set);
+                            IndexSet &set);
 
   /// Return true if this manual DWARF index is covering only part of the DWARF.
   ///
@@ -163,7 +184,7 @@ private:
   llvm::DenseSet<dw_offset_t> m_units_to_avoid;
   llvm::DenseSet<uint64_t> m_type_sigs_to_avoid;
 
-  IndexSet<NameToDIE> m_set;
+  IndexSet m_set;
   bool m_indexed = false;
 };
 } // namespace dwarf

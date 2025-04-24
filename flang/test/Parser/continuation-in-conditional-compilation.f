@@ -5,12 +5,6 @@
       k01=1+
 !$   &  1
 
-! CHECK: !$    k02=23
-! CHECK: !$   &4
-!$    k02=2
-     +3
-!$   +4
-
 ! CHECK: !$omp parallel private(k01)
 !$omp parallel
 !$omp+ private(k01)

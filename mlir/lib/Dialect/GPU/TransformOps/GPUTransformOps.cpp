@@ -40,7 +40,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/InterleavedRange.h"
 #include <type_traits>
 
 using namespace mlir;
@@ -451,14 +450,20 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     // Otherwise, we have a new insertion without a size -> use size 1.
     tmpMappingSizes.push_back(1);
   }
-  LDBG("----tmpMappingSizes extracted from scf.forall op: "
-       << llvm::interleaved(tmpMappingSizes));
+  LLVM_DEBUG(
+      llvm::interleaveComma(
+          tmpMappingSizes,
+          DBGS() << "----tmpMappingSizes extracted from scf.forall op: ");
+      llvm::dbgs() << "\n");
 
   // Step 2. sort the values by the corresponding DeviceMappingAttrInterface.
   SmallVector<int64_t> forallMappingSizes = getValuesSortedByKey(
       forallMappingAttrs.getArrayRef(), tmpMappingSizes, comparator);
-  LDBG("----forallMappingSizes: " << llvm::interleaved(forallMappingSizes));
-  LDBG("----forallMappingAttrs: " << llvm::interleaved(forallMappingAttrs));
+  LLVM_DEBUG(llvm::interleaveComma(forallMappingSizes,
+                                   DBGS() << "----forallMappingSizes: ");
+             llvm::dbgs() << "\n"; llvm::interleaveComma(
+                 forallMappingAttrs, DBGS() << "----forallMappingAttrs: ");
+             llvm::dbgs() << "\n");
 
   // Step 3. Generate the mappingIdOps using the provided generator.
   Location loc = forallOp.getLoc();
@@ -496,10 +501,17 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     SmallVector<int64_t> availableMappingSizes =
         builderResult.availableMappingSizes;
     SmallVector<Value> activeIdOps = builderResult.activeIdOps;
-    LDBG("----activeMappingSizes: " << llvm::interleaved(activeMappingSizes));
-    LDBG("----availableMappingSizes: "
-         << llvm::interleaved(availableMappingSizes));
-    LDBG("----activeIdOps: " << llvm::interleaved(activeIdOps));
+    // clang-format off
+    LLVM_DEBUG(
+        llvm::interleaveComma(
+          activeMappingSizes, DBGS() << "----activeMappingSizes: ");
+        llvm::dbgs() << "\n";
+        llvm::interleaveComma(
+          availableMappingSizes, DBGS() << "----availableMappingSizes: ");
+        llvm::dbgs() << "\n";
+        llvm::interleaveComma(activeIdOps, DBGS() << "----activeIdOps: ");
+        llvm::dbgs() << "\n");
+    // clang-format on
     for (auto [activeId, activeMappingSize, availableMappingSize] :
          llvm::zip_equal(activeIdOps, activeMappingSizes,
                          availableMappingSizes)) {
@@ -554,9 +566,11 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // Step 8. Erase old op.
   rewriter.eraseOp(forallOp);
 
-  LDBG("----result forallMappingSizes: "
-       << llvm::interleaved(forallMappingSizes));
-  LDBG("----result mappingIdOps: " << llvm::interleaved(mappingIdOps));
+  LLVM_DEBUG(llvm::interleaveComma(forallMappingSizes,
+                                   DBGS() << "----result forallMappingSizes: ");
+             llvm::dbgs() << "\n"; llvm::interleaveComma(
+                 mappingIdOps, DBGS() << "----result mappingIdOps: ");
+             llvm::dbgs() << "\n");
 
   result = ForallRewriteResult{forallMappingSizes, mappingIdOps};
   return DiagnosedSilenceableFailure::success();
@@ -726,7 +740,7 @@ static DiagnosedSilenceableFailure checkMappingSpec(
     auto diag = definiteFailureHelper(
         transformOp, forallOp,
         Twine("3-D mapping: size of threadIdx.x must be a multiple of ") +
-            Twine(factor));
+            std::to_string(factor));
     return diag;
   }
   if (computeProduct(numParallelIterations) * factor >
@@ -735,9 +749,9 @@ static DiagnosedSilenceableFailure checkMappingSpec(
         transformOp, forallOp,
         Twine("the number of required parallel resources (blocks or "
               "threads) ") +
-            Twine(computeProduct(numParallelIterations) * factor) +
-            " overflows the number of available resources " +
-            Twine(computeProduct(blockOrGridSizes)));
+            std::to_string(computeProduct(numParallelIterations) * factor) +
+            std::string(" overflows the number of available resources ") +
+            std::to_string(computeProduct(blockOrGridSizes)));
     return diag;
   }
   return DiagnosedSilenceableFailure::success();

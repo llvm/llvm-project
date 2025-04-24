@@ -86,7 +86,7 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
                                           A64E->getSpecifierName() +
                                           " unsupported on COFF targets");
     } else {
-      MCFixupKindInfo Info = MAB.getFixupKindInfo(Fixup.getKind());
+      const MCFixupKindInfo &Info = MAB.getFixupKindInfo(Fixup.getKind());
       Ctx.reportError(Fixup.getLoc(), Twine("relocation type ") + Info.Name +
                                           " unsupported on COFF targets");
     }

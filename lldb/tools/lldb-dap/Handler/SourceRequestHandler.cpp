@@ -11,7 +11,6 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
-#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBProcess.h"
@@ -44,8 +43,7 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
 
   lldb::SBInstructionList insts = frame.GetSymbol().GetInstructions(dap.target);
   lldb::SBStream stream;
-  lldb::SBExecutionContext exe_ctx(frame);
-  insts.GetDescription(stream, exe_ctx);
+  insts.GetDescription(stream);
 
   return protocol::SourceResponseBody{/*content=*/stream.GetData(),
                                       /*mimeType=*/"text/x-lldb.disassembly"};

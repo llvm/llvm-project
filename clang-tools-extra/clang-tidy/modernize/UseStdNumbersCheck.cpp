@@ -415,7 +415,9 @@ void UseStdNumbersCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  llvm::sort(MatchedLiterals, llvm::less_second());
+  llvm::sort(MatchedLiterals, [](const auto &LHS, const auto &RHS) {
+    return std::get<1>(LHS) < std::get<1>(RHS);
+  });
 
   const auto &[Constant, Diff, Node] = MatchedLiterals.front();
 

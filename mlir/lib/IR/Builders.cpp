@@ -465,9 +465,8 @@ Operation *OpBuilder::create(Location loc, StringAttr opName,
   return create(state);
 }
 
-LogicalResult
-OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
-                   SmallVectorImpl<Operation *> *materializedConstants) {
+LogicalResult OpBuilder::tryFold(Operation *op,
+                                 SmallVectorImpl<Value> &results) {
   assert(results.empty() && "expected empty results");
   ResultRange opResults = op->getResults();
 
@@ -528,10 +527,6 @@ OpBuilder::tryFold(Operation *op, SmallVectorImpl<Value> &results,
   // If we were successful, insert any generated constants.
   for (Operation *cst : generatedConstants)
     insert(cst);
-
-  // Return materialized constant operations.
-  if (materializedConstants)
-    *materializedConstants = std::move(generatedConstants);
 
   return success();
 }

@@ -1231,7 +1231,8 @@ void SVEEmitter::createIntrinsic(
 
   // Remove duplicate type specs.
   sort(TypeSpecs);
-  TypeSpecs.erase(llvm::unique(TypeSpecs), TypeSpecs.end());
+  TypeSpecs.erase(std::unique(TypeSpecs.begin(), TypeSpecs.end()),
+                  TypeSpecs.end());
 
   // Create an Intrinsic for each type spec.
   for (auto TS : TypeSpecs) {

@@ -265,7 +265,7 @@ public:
   bool isUnknownSizeArray() const { return Size == UnknownSizeMark; }
 
   /// Checks if the descriptor is of a primitive.
-  bool isPrimitive() const { return !IsArray && !ElemRecord && PrimT; }
+  bool isPrimitive() const { return !IsArray && !ElemRecord && !IsDummy; }
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }

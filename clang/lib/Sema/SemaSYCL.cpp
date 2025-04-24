@@ -135,7 +135,7 @@ void SemaSYCL::deepTypeCheckForDevice(SourceLocation UsedAt,
       // When nullptr is discovered, this means we've gone back up a level, so
       // the history should be cleaned.
       StackForRecursion.push_back(nullptr);
-      llvm::append_range(StackForRecursion, RecDecl->fields());
+      llvm::copy(RecDecl->fields(), std::back_inserter(StackForRecursion));
     }
   } while (!StackForRecursion.empty());
 }

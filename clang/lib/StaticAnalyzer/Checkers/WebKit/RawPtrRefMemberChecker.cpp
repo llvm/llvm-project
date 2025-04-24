@@ -41,6 +41,7 @@ public:
   virtual std::optional<bool>
   isPtrCompatible(const clang::QualType,
                   const clang::CXXRecordDecl *R) const = 0;
+  virtual bool isPtrCls(const clang::CXXRecordDecl *) const = 0;
   virtual const char *typeName() const = 0;
   virtual const char *invariant() const = 0;
 
@@ -204,8 +205,8 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto CXXRD = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (CXXRD && isSmartPtr(CXXRD))
-      return true;
+    if (CXXRD)
+      return isPtrCls(CXXRD);
 
     return false;
   }
@@ -269,6 +270,10 @@ public:
     return R ? isRefCountable(R) : std::nullopt;
   }
 
+  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
+    return isRefCounted(R);
+  }
+
   const char *typeName() const final { return "ref-countable type"; }
 
   const char *invariant() const final {
@@ -286,6 +291,10 @@ public:
   isPtrCompatible(const clang::QualType,
                   const clang::CXXRecordDecl *R) const final {
     return R ? isCheckedPtrCapable(R) : std::nullopt;
+  }
+
+  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
+    return isCheckedPtr(R);
   }
 
   const char *typeName() const final { return "CheckedPtr capable type"; }
@@ -308,6 +317,10 @@ public:
   isPtrCompatible(const clang::QualType QT,
                   const clang::CXXRecordDecl *) const final {
     return RTC->isUnretained(QT);
+  }
+
+  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
+    return isRetainPtr(R);
   }
 
   const char *typeName() const final { return "retainable type"; }

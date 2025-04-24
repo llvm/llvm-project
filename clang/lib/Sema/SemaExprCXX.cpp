@@ -2532,7 +2532,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                               : &OpaqueAllocationSize);
     if (isAlignedAllocation(IAP.PassAlignment))
       CallArgs.emplace_back(&DesiredAlignment);
-    llvm::append_range(CallArgs, PlacementArgs);
+    CallArgs.insert(CallArgs.end(), PlacementArgs.begin(), PlacementArgs.end());
 
     DiagnoseSentinelCalls(OperatorNew, PlacementLParen, CallArgs);
 
@@ -2969,7 +2969,7 @@ bool Sema::FindAllocationFunctions(
   if (IncludeAlignParam)
     AllocArgs.push_back(&Align);
 
-  llvm::append_range(AllocArgs, PlaceArgs);
+  AllocArgs.insert(AllocArgs.end(), PlaceArgs.begin(), PlaceArgs.end());
 
   // Find the allocation function.
   {
@@ -4745,13 +4745,19 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_HLSL_Array_RValue:
     if (ToType->isArrayParameterType()) {
       FromType = Context.getArrayParameterType(FromType);
-    } else if (FromType->isArrayParameterType()) {
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
+    } else { // FromType must be ArrayParameterType
+      assert(FromType->isArrayParameterType() &&
+             "FromType must be ArrayParameterType in ICK_HLSL_Array_RValue \
+              if it is not ToType");
       const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
       FromType = APT->getConstantArrayType(Context);
+      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
     }
-    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                             /*BasePath=*/nullptr, CCK)
-               .get();
     break;
 
   case ICK_Function_To_Pointer:
@@ -6147,8 +6153,9 @@ static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
       S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
       return APValue();
     }
-    return APValue(
-        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType()));
+    llvm::APSInt V =
+        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
+    return APValue{V};
     break;
   }
   default:

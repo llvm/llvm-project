@@ -1,5 +1,4 @@
 # RUN: llc -mtriple=hexagon -run-pass unreachable-mbb-elimination %s -o - | FileCheck %s
-# RUN: llc -mtriple=hexagon -passes unreachable-mbb-elimination %s -o - | FileCheck %s
 
 ---
 name: fred

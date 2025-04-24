@@ -2895,8 +2895,7 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   }
 
   if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
+    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail);
     return;
   }
 

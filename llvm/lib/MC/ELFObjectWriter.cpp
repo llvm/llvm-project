@@ -1385,7 +1385,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
   auto EMachine = TargetObjectWriter->getEMachine();
   unsigned Type;
-  if (mc::isRelocRelocation(Fixup.getKind()))
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
     Type = Fixup.getKind() - FirstLiteralRelocationKind;
   else
     Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
@@ -1396,7 +1396,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     UseSectionSym = useSectionSymbol(Asm, Target, SymA, C, Type);
 
     // Disable STT_SECTION adjustment for .reloc directives.
-    UseSectionSym &= !mc::isRelocRelocation(Fixup.getKind());
+    UseSectionSym &= Fixup.getKind() < FirstLiteralRelocationKind;
   }
 
   uint64_t Addend = UseSectionSym ? C + Asm.getSymbolOffset(*SymA) : C;

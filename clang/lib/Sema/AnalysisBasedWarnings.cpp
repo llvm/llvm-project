@@ -313,7 +313,8 @@ static bool throwEscapes(Sema &S, const CXXThrowExpr *E, CFGBlock &ThrowBlock,
   Queued[ThrowBlock.getBlockID()] = true;
 
   while (!Stack.empty()) {
-    CFGBlock &UnwindBlock = *Stack.pop_back_val();
+    CFGBlock &UnwindBlock = *Stack.back();
+    Stack.pop_back();
 
     for (auto &Succ : UnwindBlock.succs()) {
       if (!Succ.isReachable() || Queued[Succ->getBlockID()])
@@ -2492,10 +2493,8 @@ public:
   CalledOnceInterProceduralData CalledOnceData;
 };
 
-template <typename... Ts>
-static bool areAnyEnabled(DiagnosticsEngine &D, SourceLocation Loc,
-                          Ts... Diags) {
-  return (!D.isIgnored(Diags, Loc) || ...);
+static unsigned isEnabled(DiagnosticsEngine &D, unsigned diag) {
+  return (unsigned)!D.isIgnored(diag, SourceLocation());
 }
 
 sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
@@ -2505,37 +2504,23 @@ sema::AnalysisBasedWarnings::AnalysisBasedWarnings(Sema &s)
       NumUninitAnalysisVariables(0), MaxUninitAnalysisVariablesPerFunction(0),
       NumUninitAnalysisBlockVisits(0),
       MaxUninitAnalysisBlockVisitsPerFunction(0) {
+
+  using namespace diag;
+  DiagnosticsEngine &D = S.getDiagnostics();
+
+  DefaultPolicy.enableCheckUnreachable =
+      isEnabled(D, warn_unreachable) || isEnabled(D, warn_unreachable_break) ||
+      isEnabled(D, warn_unreachable_return) ||
+      isEnabled(D, warn_unreachable_loop_increment);
+
+  DefaultPolicy.enableThreadSafetyAnalysis = isEnabled(D, warn_double_lock);
+
+  DefaultPolicy.enableConsumedAnalysis =
+      isEnabled(D, warn_use_in_invalid_state);
 }
 
 // We need this here for unique_ptr with forward declared class.
 sema::AnalysisBasedWarnings::~AnalysisBasedWarnings() = default;
-
-sema::AnalysisBasedWarnings::Policy
-sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
-  using namespace diag;
-  DiagnosticsEngine &D = S.getDiagnostics();
-  Policy P;
-
-  // Note: The enabled checks should be kept in sync with the switch in
-  // SemaPPCallbacks::PragmaDiagnostic().
-  P.enableCheckUnreachable =
-      PolicyOverrides.enableCheckUnreachable ||
-      areAnyEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
-                    warn_unreachable_return, warn_unreachable_loop_increment);
-
-  P.enableThreadSafetyAnalysis = PolicyOverrides.enableThreadSafetyAnalysis ||
-                                 areAnyEnabled(D, Loc, warn_double_lock);
-
-  P.enableConsumedAnalysis = PolicyOverrides.enableConsumedAnalysis ||
-                             areAnyEnabled(D, Loc, warn_use_in_invalid_state);
-  return P;
-}
-
-void sema::AnalysisBasedWarnings::clearOverrides() {
-  PolicyOverrides.enableCheckUnreachable = false;
-  PolicyOverrides.enableConsumedAnalysis = false;
-  PolicyOverrides.enableThreadSafetyAnalysis = false;
-}
 
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
   for (const auto &D : fscope->PossiblyUnreachableDiags)
@@ -2885,9 +2870,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {
     AC.getCFG();
   }
-
-  // Clear any of our policy overrides.
-  clearOverrides();
 
   // Collect statistics about the CFG if it was built.
   if (S.CollectStats && AC.isCFGBuilt()) {

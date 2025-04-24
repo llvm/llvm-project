@@ -114,7 +114,9 @@ Type *AMDGPURewriteOutArguments::getStoredType(Value &Arg) const {
   const int MaxUses = 10;
   int UseCount = 0;
 
-  SmallVector<Use *> Worklist(llvm::make_pointer_range(Arg.uses()));
+  SmallVector<Use *> Worklist;
+  for (Use &U : Arg.uses())
+    Worklist.push_back(&U);
 
   Type *StoredType = nullptr;
   while (!Worklist.empty()) {

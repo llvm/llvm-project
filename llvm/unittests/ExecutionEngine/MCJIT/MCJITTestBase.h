@@ -63,7 +63,10 @@ protected:
   Function *insertSimpleCallFunction(Module *M, Function *Callee) {
     Function *Result = startFunction(M, Callee->getFunctionType(), "caller");
 
-    SmallVector<Value *, 1> CallArgs(llvm::make_pointer_range(Result->args()));
+    SmallVector<Value*, 1> CallArgs;
+
+    for (Argument &A : Result->args())
+      CallArgs.push_back(&A);
 
     Value *ReturnCode = Builder.CreateCall(Callee, CallArgs);
     Builder.CreateRet(ReturnCode);

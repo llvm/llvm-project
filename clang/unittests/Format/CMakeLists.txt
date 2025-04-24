@@ -35,7 +35,6 @@ add_clang_unittest(FormatTests
   CLANG_LIBS
   clangBasic
   clangFormat
-  clangLex
   clangRewrite
   clangToolingCore
   LLVM_COMPONENTS

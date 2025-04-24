@@ -49,7 +49,6 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0,  // hlsl_groupshared
     2,  // hlsl_constant
     10, // hlsl_private
-    11, // hlsl_device
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -58,9 +57,8 @@ static const unsigned SPIRDefIsPrivMap[] = {
 // Used by both the SPIR and SPIR-V targets.
 static const unsigned SPIRDefIsGenMap[] = {
     4, // Default
-    // Some OpenCL address space values for this map are dummy and they can't be
-    // used
-    1, // opencl_global
+    // OpenCL address space values for this map are dummy and they can't be used
+    0, // opencl_global
     0, // opencl_local
     0, // opencl_constant
     0, // opencl_private
@@ -86,7 +84,6 @@ static const unsigned SPIRDefIsGenMap[] = {
     0,  // hlsl_groupshared
     0,  // hlsl_constant
     10, // hlsl_private
-    11, // hlsl_device
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref

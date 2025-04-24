@@ -54,7 +54,8 @@ void *AttributeFactory::allocate(size_t size) {
   // Check for a previously reclaimed attribute.
   size_t index = getFreeListIndexForSize(size);
   if (index < FreeLists.size() && !FreeLists[index].empty()) {
-    ParsedAttr *attr = FreeLists[index].pop_back_val();
+    ParsedAttr *attr = FreeLists[index].back();
+    FreeLists[index].pop_back();
     return attr;
   }
 
@@ -85,14 +86,14 @@ void AttributeFactory::reclaimPool(AttributePool &cur) {
 }
 
 void AttributePool::takePool(AttributePool &pool) {
-  llvm::append_range(Attrs, pool.Attrs);
+  Attrs.insert(Attrs.end(), pool.Attrs.begin(), pool.Attrs.end());
   pool.Attrs.clear();
 }
 
 void AttributePool::takeFrom(ParsedAttributesView &List, AttributePool &Pool) {
   assert(&Pool != this && "AttributePool can't take attributes from itself");
   llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
-  llvm::append_range(Attrs, List.AttrList);
+  Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
 }
 
 namespace {

@@ -239,7 +239,8 @@ template <> struct DenseMapInfo<DriverArgs> {
         Val.Stdlib,
     });
 
-    unsigned SpecsHash = llvm::hash_combine_range(Val.Specs);
+    unsigned SpecsHash =
+        llvm::hash_combine_range(Val.Specs.begin(), Val.Specs.end());
 
     return llvm::hash_combine(FixedFieldsHash, SpecsHash);
   }

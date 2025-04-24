@@ -191,3 +191,5 @@ declare float @llvm.amdgcn.wqm.f32(float) #1
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

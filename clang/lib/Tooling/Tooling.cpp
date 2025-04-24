@@ -198,7 +198,7 @@ getSyntaxOnlyToolArgs(const Twine &ToolName,
   std::vector<std::string> Args;
   Args.push_back(ToolName.str());
   Args.push_back("-fsyntax-only");
-  llvm::append_range(Args, ExtraArgs);
+  Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
   Args.push_back(FileName.str());
   return Args;
 }

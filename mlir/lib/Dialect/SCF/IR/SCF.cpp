@@ -758,7 +758,7 @@ LoopNest mlir::scf::buildLoopNest(
 
   // Return the loops.
   ValueVector nestResults;
-  llvm::append_range(nestResults, loops.front().getResults());
+  llvm::copy(loops.front().getResults(), std::back_inserter(nestResults));
   return LoopNest{std::move(loops), std::move(nestResults)};
 }
 
@@ -4281,7 +4281,7 @@ void IndexSwitchOp::getSuccessorRegions(
     return;
   }
 
-  llvm::append_range(successors, getRegions());
+  llvm::copy(getRegions(), std::back_inserter(successors));
 }
 
 void IndexSwitchOp::getEntrySuccessorRegions(
@@ -4292,7 +4292,7 @@ void IndexSwitchOp::getEntrySuccessorRegions(
   // If a constant was not provided, all regions are possible successors.
   auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
   if (!arg) {
-    llvm::append_range(successors, getRegions());
+    llvm::copy(getRegions(), std::back_inserter(successors));
     return;
   }
 

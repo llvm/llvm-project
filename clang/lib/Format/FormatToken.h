@@ -706,9 +706,8 @@ public:
   [[nodiscard]] bool isTypeOrIdentifier(const LangOptions &LangOpts) const;
 
   bool isObjCAccessSpecifier() const {
-    return is(tok::at) && Next &&
-           Next->isOneOf(tok::objc_public, tok::objc_protected,
-                         tok::objc_package, tok::objc_private);
+    return Next && Next->isOneOf(tok::objc_public, tok::objc_protected,
+                                 tok::objc_package, tok::objc_private);
   }
 
   /// Returns whether \p Tok is ([{ or an opening < of a template or in

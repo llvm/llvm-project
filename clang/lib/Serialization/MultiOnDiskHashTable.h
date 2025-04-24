@@ -209,7 +209,8 @@ public:
     OverriddenFiles.reserve(NumFiles);
     for (/**/; NumFiles != 0; --NumFiles)
       OverriddenFiles.push_back(InfoObj.ReadFileRef(Ptr));
-    llvm::append_range(PendingOverrides, OverriddenFiles);
+    PendingOverrides.insert(PendingOverrides.end(), OverriddenFiles.begin(),
+                            OverriddenFiles.end());
 
     // Read the OnDiskChainedHashTable header.
     storage_type Buckets = Data + BucketOffset;

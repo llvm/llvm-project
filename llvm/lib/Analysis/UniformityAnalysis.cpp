@@ -143,7 +143,9 @@ PreservedAnalyses UniformityInfoPrinterPass::run(Function &F,
 
 char UniformityInfoWrapperPass::ID = 0;
 
-UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {}
+UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {
+  initializeUniformityInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 INITIALIZE_PASS_BEGIN(UniformityInfoWrapperPass, "uniformity",
                       "Uniformity Analysis", true, true)

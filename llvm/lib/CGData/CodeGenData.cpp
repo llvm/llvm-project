@@ -233,9 +233,6 @@ void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
 
   WriteBitcodeToFile(TheModule, *Stream->OS,
                      /*ShouldPreserveUseListOrder=*/true);
-
-  if (Error Err = Stream->commit())
-    report_fatal_error(std::move(Err));
 }
 
 std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,

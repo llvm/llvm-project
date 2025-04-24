@@ -363,6 +363,17 @@ void VPTransformState::addNewMetadata(Instruction *To,
     LVer->annotateInstWithNoAlias(To, Orig);
 }
 
+void VPTransformState::addMetadata(Value *To, Instruction *From) {
+  // No source instruction to transfer metadata from?
+  if (!From)
+    return;
+
+  if (Instruction *ToI = dyn_cast<Instruction>(To)) {
+    propagateMetadata(ToI, From);
+    addNewMetadata(ToI, From);
+  }
+}
+
 void VPTransformState::setDebugLocFrom(DebugLoc DL) {
   const DILocation *DIL = DL;
   // When a FSDiscriminator is enabled, we don't need to add the multiply
@@ -847,7 +858,7 @@ VPlan::VPlan(Loop *L) {
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
 
   SmallVector<BasicBlock *> IRExitBlocks;
-  L->getUniqueExitBlocks(IRExitBlocks);
+  L->getExitBlocks(IRExitBlocks);
   for (BasicBlock *EB : IRExitBlocks)
     ExitBlocks.push_back(createVPIRBasicBlock(EB));
 }

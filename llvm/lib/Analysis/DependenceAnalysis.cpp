@@ -145,7 +145,9 @@ INITIALIZE_PASS_END(DependenceAnalysisWrapperPass, "da", "Dependence Analysis",
 char DependenceAnalysisWrapperPass::ID = 0;
 
 DependenceAnalysisWrapperPass::DependenceAnalysisWrapperPass()
-    : FunctionPass(ID) {}
+    : FunctionPass(ID) {
+  initializeDependenceAnalysisWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 FunctionPass *llvm::createDependenceAnalysisWrapperPass() {
   return new DependenceAnalysisWrapperPass();

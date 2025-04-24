@@ -14,7 +14,7 @@
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
-#include <cstdio>
+#include <stdio.h>
 
 #include "cuda.h"
 #include "cuda_bf16.h"
@@ -56,10 +56,14 @@
 
 thread_local static int32_t defaultDevice = 0;
 
+const char *kDebugEnvironmentVariable = "MLIR_CUDA_DEBUG";
+
 /// Helper method that checks environment value for debugging.
 bool isDebugEnabled() {
-  const char *kDebugEnvironmentVariable = "MLIR_CUDA_DEBUG";
-  static bool isEnabled = getenv(kDebugEnvironmentVariable) != nullptr;
+  static bool isInitialized = false;
+  static bool isEnabled = false;
+  if (!isInitialized)
+    isEnabled = getenv(kDebugEnvironmentVariable) != nullptr;
   return isEnabled;
 }
 

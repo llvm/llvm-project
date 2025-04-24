@@ -278,3 +278,5 @@ define amdgpu_kernel void @kernel_no_calls_no_stack() {
 
 attributes #0 = { nounwind }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

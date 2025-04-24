@@ -28,7 +28,6 @@ class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
-struct VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
 
@@ -52,10 +51,6 @@ struct VPlanTransforms {
     if (VerifyEachVPlan)
       verifyVPlanIsValid(Plan);
   }
-
-  static std::unique_ptr<VPlan>
-  buildPlainCFG(Loop *TheLoop, LoopInfo &LI,
-                DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turing \p Plan's
   /// flat CFG into a hierarchical CFG. It also creates a VPValue expression for
@@ -175,10 +170,10 @@ struct VPlanTransforms {
   ///    exit conditions
   ///  * splitting the original middle block to branch to the early exit block
   ///    if taken.
-  static void handleUncountableEarlyExit(VPlan &Plan, Loop *OrigLoop,
+  static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
+                                         Loop *OrigLoop,
                                          BasicBlock *UncountableExitingBlock,
-                                         VPRecipeBuilder &RecipeBuilder,
-                                         VFRange &Range);
+                                         VPRecipeBuilder &RecipeBuilder);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.

@@ -899,9 +899,6 @@ def FeatureStdExtSsaia
     : RISCVExtension<1, 0,
                      "Advanced Interrupt Architecture Supervisor Level">;
 
-def FeatureStdExtSmcntrpmf
-    : RISCVExtension<1, 0, "Cycle and Instret Privilege Mode Filtering">;
-
 def FeatureStdExtSmcsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Machine Level">;
 def FeatureStdExtSscsrind

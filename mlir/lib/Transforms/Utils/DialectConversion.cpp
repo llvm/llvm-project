@@ -106,7 +106,7 @@ struct ValueVectorMapInfo {
   static ValueVector getEmptyKey() { return ValueVector{Value()}; }
   static ValueVector getTombstoneKey() { return ValueVector{Value(), Value()}; }
   static ::llvm::hash_code getHashValue(const ValueVector &val) {
-    return ::llvm::hash_combine_range(val);
+    return ::llvm::hash_combine_range(val.begin(), val.end());
   }
   static bool isEqual(const ValueVector &LHS, const ValueVector &RHS) {
     return LHS == RHS;
@@ -861,10 +861,8 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// conversion process succeeds.
   void applyRewrites();
 
-  /// Reset the state of the rewriter to a previously saved point. Optionally,
-  /// the name of the pattern that triggered the rollback can specified for
-  /// debugging purposes.
-  void resetState(RewriterState state, StringRef patternName = "");
+  /// Reset the state of the rewriter to a previously saved point.
+  void resetState(RewriterState state);
 
   /// Append a rewrite. Rewrites are committed upon success and rolled back upon
   /// failure.
@@ -875,9 +873,8 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   }
 
   /// Undo the rewrites (motions, splits) one by one in reverse order until
-  /// "numRewritesToKeep" rewrites remains. Optionally, the name of the pattern
-  /// that triggered the rollback can specified for debugging purposes.
-  void undoRewrites(unsigned numRewritesToKeep = 0, StringRef patternName = "");
+  /// "numRewritesToKeep" rewrites remains.
+  void undoRewrites(unsigned numRewritesToKeep = 0);
 
   /// Remap the given values to those with potentially different types. Returns
   /// success if the values could be remapped, failure otherwise. `valueDiagTag`
@@ -1207,10 +1204,9 @@ RewriterState ConversionPatternRewriterImpl::getCurrentState() {
   return RewriterState(rewrites.size(), ignoredOps.size(), replacedOps.size());
 }
 
-void ConversionPatternRewriterImpl::resetState(RewriterState state,
-                                               StringRef patternName) {
+void ConversionPatternRewriterImpl::resetState(RewriterState state) {
   // Undo any rewrites.
-  undoRewrites(state.numRewrites, patternName);
+  undoRewrites(state.numRewrites);
 
   // Pop all of the recorded ignored operations that are no longer valid.
   while (ignoredOps.size() != state.numIgnoredOperations)
@@ -1220,18 +1216,10 @@ void ConversionPatternRewriterImpl::resetState(RewriterState state,
     replacedOps.pop_back();
 }
 
-void ConversionPatternRewriterImpl::undoRewrites(unsigned numRewritesToKeep,
-                                                 StringRef patternName) {
+void ConversionPatternRewriterImpl::undoRewrites(unsigned numRewritesToKeep) {
   for (auto &rewrite :
-       llvm::reverse(llvm::drop_begin(rewrites, numRewritesToKeep))) {
-    if (!config.allowPatternRollback &&
-        !isa<UnresolvedMaterializationRewrite>(rewrite)) {
-      // Unresolved materializations can always be rolled back (erased).
-      llvm::report_fatal_error("pattern '" + patternName +
-                               "' rollback of IR modifications requested");
-    }
+       llvm::reverse(llvm::drop_begin(rewrites, numRewritesToKeep)))
     rewrite->rollback();
-  }
   rewrites.resize(numRewritesToKeep);
 }
 
@@ -2102,35 +2090,37 @@ LogicalResult
 OperationLegalizer::legalizeWithFold(Operation *op,
                                      ConversionPatternRewriter &rewriter) {
   auto &rewriterImpl = rewriter.getImpl();
+  RewriterState curState = rewriterImpl.getCurrentState();
+
   LLVM_DEBUG({
     rewriterImpl.logger.startLine() << "* Fold {\n";
     rewriterImpl.logger.indent();
   });
-  (void)rewriterImpl;
 
   // Try to fold the operation.
   SmallVector<Value, 2> replacementValues;
-  SmallVector<Operation *, 2> newOps;
   rewriter.setInsertionPoint(op);
-  if (failed(rewriter.tryFold(op, replacementValues, &newOps))) {
+  if (failed(rewriter.tryFold(op, replacementValues))) {
     LLVM_DEBUG(logFailure(rewriterImpl.logger, "unable to fold"));
     return failure();
   }
-
   // An empty list of replacement values indicates that the fold was in-place.
   // As the operation changed, a new legalization needs to be attempted.
   if (replacementValues.empty())
     return legalize(op, rewriter);
 
   // Recursively legalize any new constant operations.
-  for (Operation *newOp : newOps) {
-    if (failed(legalize(newOp, rewriter))) {
+  for (unsigned i = curState.numRewrites, e = rewriterImpl.rewrites.size();
+       i != e; ++i) {
+    auto *createOp =
+        dyn_cast<CreateOperationRewrite>(rewriterImpl.rewrites[i].get());
+    if (!createOp)
+      continue;
+    if (failed(legalize(createOp->getOperation(), rewriter))) {
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "failed to legalize generated constant '{0}'",
-                            newOp->getName()));
-      // Legalization failed: erase all materialized constants.
-      for (Operation *op : newOps)
-        rewriter.eraseOp(op);
+                            createOp->getOperation()->getName()));
+      rewriterImpl.resetState(curState);
       return failure();
     }
   }
@@ -2171,7 +2161,7 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     });
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, failure());
-    rewriterImpl.resetState(curState, pattern.getDebugName());
+    rewriterImpl.resetState(curState);
     appliedPatterns.erase(&pattern);
   };
 
@@ -2181,13 +2171,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
     auto result = legalizePatternResult(op, pattern, rewriter, curState);
     appliedPatterns.erase(&pattern);
-    if (failed(result)) {
-      if (!rewriterImpl.config.allowPatternRollback)
-        op->emitError("pattern '")
-            << pattern.getDebugName()
-            << "' produced IR that could not be legalized";
-      rewriterImpl.resetState(curState, pattern.getDebugName());
-    }
+    if (failed(result))
+      rewriterImpl.resetState(curState);
     if (config.listener)
       config.listener->notifyPatternEnd(pattern, result);
     return result;
@@ -2692,20 +2677,9 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   ConversionPatternRewriter rewriter(ops.front()->getContext(), config);
   ConversionPatternRewriterImpl &rewriterImpl = rewriter.getImpl();
 
-  for (auto *op : toConvert) {
-    if (failed(convert(rewriter, op))) {
-      // Dialect conversion failed.
-      if (rewriterImpl.config.allowPatternRollback) {
-        // Rollback is allowed: restore the original IR.
-        rewriterImpl.undoRewrites();
-      } else {
-        // Rollback is not allowed: apply all modifications that have been
-        // performed so far.
-        rewriterImpl.applyRewrites();
-      }
-      return failure();
-    }
-  }
+  for (auto *op : toConvert)
+    if (failed(convert(rewriter, op)))
+      return rewriterImpl.undoRewrites(), failure();
 
   // After a successful conversion, apply rewrites.
   rewriterImpl.applyRewrites();

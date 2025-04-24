@@ -34,12 +34,11 @@
 
 #  if SANITIZER_NETBSD
 #    // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
-#    define _RTLD_SOURCE
-#    include <machine/mcontext.h>
-#    undef _RTLD_SOURCE
 #    include <sys/param.h>
-#    if __NetBSD_Version__ >= 1099001200
+#    if defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 1099001200)
 #      include <machine/lwp_private.h>
+#    else
+#      define _RTLD_SOURCE
 #    endif
 #  endif
 

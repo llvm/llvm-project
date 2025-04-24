@@ -9,8 +9,6 @@
 #ifndef LLVM_MC_MCFIXUPKINDINFO_H
 #define LLVM_MC_MCFIXUPKINDINFO_H
 
-#include <cstdint>
-
 namespace llvm {
 
 /// Target independent information on a fixup kind.
@@ -37,11 +35,11 @@ struct MCFixupKindInfo {
   const char *Name;
 
   /// The bit offset to write the relocation into.
-  uint8_t TargetOffset;
+  unsigned TargetOffset;
 
   /// The number of bits written by this fixup. The bits are assumed to be
   /// contiguous.
-  uint8_t TargetSize;
+  unsigned TargetSize;
 
   /// Flags describing additional information on this fixup kind.
   unsigned Flags;

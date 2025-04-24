@@ -1151,7 +1151,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
     SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
-      auto [V, IsPositive] = Worklist.pop_back_val();
+      auto [V, IsPositive] = Worklist.back();
+      Worklist.pop_back();
       if (!Visited.insert(V).second)
         continue;
 
@@ -1167,7 +1168,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       // the latter case, we will attempt to separately identify the complex
       // operation from here in order to create a shared
       // ComplexDeinterleavingCompositeNode.
-      if (I != Insn && I->hasNUsesOrMore(2)) {
+      if (I != Insn && I->getNumUses() > 1) {
         LLVM_DEBUG(dbgs() << "Found potential sub-expression: " << *I << "\n");
         Addends.emplace_back(I, IsPositive);
         continue;
@@ -1792,7 +1793,8 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // Extract all instructions that are used by all XCMLA/XCADD/ADD/SUB/NEG
   // chains
   while (!Worklist.empty()) {
-    auto *I = Worklist.pop_back_val();
+    auto *I = Worklist.back();
+    Worklist.pop_back();
 
     if (!AllInstructions.insert(I).second)
       continue;
@@ -1826,7 +1828,8 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // that somehow connect to those instructions.
   SmallPtrSet<Instruction *, 16> Visited;
   while (!Worklist.empty()) {
-    auto *I = Worklist.pop_back_val();
+    auto *I = Worklist.back();
+    Worklist.pop_back();
     if (!Visited.insert(I).second)
       continue;
 

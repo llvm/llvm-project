@@ -67,6 +67,10 @@ void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
+
+  // TODO: As we now have a dedicated transform for
+  // `populateSinkVectorOpsPatterns` we can remove it from here.
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 void transform::ApplyLowerCreateMaskPatternsOp::populatePatterns(
@@ -206,11 +210,6 @@ void transform::ApplyTransferToScfPatternsOp::populatePatterns(
 void transform::ApplySinkVectorPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateSinkVectorOpsPatterns(patterns);
-}
-
-void transform::ApplySinkVectorMemPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  vector::populateSinkVectorMemOpsPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

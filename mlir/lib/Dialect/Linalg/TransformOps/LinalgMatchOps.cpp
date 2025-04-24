@@ -18,7 +18,6 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -220,11 +219,14 @@ LogicalResult transform::MatchStructuredBodyOp::verify() {
                        getElementwise() + getContraction().has_value();
 
   if (numOptions > 1) {
-    StringAttr attributeNames[] = {
-        getReductionPositionAttrName(), getPassthroughAttrName(),
-        getElementwiseAttrName(), getContractionAttrName()};
-    return emitOpError() << "only one of {" << llvm::interleaved(attributeNames)
-                         << "} is allowed";
+    std::string attributeNames;
+    llvm::raw_string_ostream os(attributeNames);
+    llvm::interleaveComma(ArrayRef<StringAttr>{getReductionPositionAttrName(),
+                                               getPassthroughAttrName(),
+                                               getElementwiseAttrName(),
+                                               getContractionAttrName()},
+                          os);
+    return emitOpError() << "only one of {" << attributeNames << "} is allowed";
   }
 
   if (std::optional<ArrayAttr> contractionAttr = getContraction()) {

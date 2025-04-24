@@ -203,7 +203,7 @@ IncrementalCompilerBuilder::CreateCpp() {
   Argv.push_back("wasm32-unknown-emscripten");
   Argv.push_back("-fvisibility=default");
 #endif
-  llvm::append_range(Argv, UserArgs);
+  Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
@@ -232,7 +232,7 @@ IncrementalCompilerBuilder::createCuda(bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
-  llvm::append_range(Argv, UserArgs);
+  Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);

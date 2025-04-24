@@ -1942,7 +1942,8 @@ private:
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
                            bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false);
+                           bool EarlyTypoCorrection = false,
+                           bool *HasTrailingComma = nullptr);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -3738,7 +3739,7 @@ private:
     SmallVector<Expr *> getAllExprs() {
       SmallVector<Expr *> Out;
       Out.push_back(DevNumExpr);
-      llvm::append_range(Out, QueueIdExprs);
+      Out.insert(Out.end(), QueueIdExprs.begin(), QueueIdExprs.end());
       return Out;
     }
   };

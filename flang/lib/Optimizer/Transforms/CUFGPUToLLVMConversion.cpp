@@ -82,11 +82,6 @@ struct GPULaunchKernelConversion
   mlir::LogicalResult
   matchAndRewrite(mlir::gpu::LaunchFuncOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    // Only convert gpu.launch_func for CUDA Fortran.
-    if (!op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-            cuf::getProcAttrName()))
-      return mlir::failure();
-
     mlir::Location loc = op.getLoc();
     auto *ctx = rewriter.getContext();
     mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
@@ -126,7 +121,7 @@ struct GPULaunchKernelConversion
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
            llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
-           llvmIntPtrType, llvmIntPtrType, ptrTy, i32Ty, ptrTy, ptrTy},
+           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, i32Ty, ptrTy, ptrTy},
           /*isVarArg=*/false);
       auto cufLaunchClusterKernel = mlir::SymbolRefAttr::get(
           mod.getContext(), RTNAME_STRING(CUFLaunchClusterKernel));
@@ -138,24 +133,18 @@ struct GPULaunchKernelConversion
         launchKernelFuncOp.setVisibility(
             mlir::SymbolTable::Visibility::Private);
       }
-
-      mlir::Value stream = nullPtr;
-      if (!adaptor.getAsyncDependencies().empty()) {
-        if (adaptor.getAsyncDependencies().size() != 1)
-          return rewriter.notifyMatchFailure(
-              op, "Can only convert with exactly one stream dependency.");
-        stream = adaptor.getAsyncDependencies().front();
-      }
-
-      rewriter.create<mlir::LLVM::CallOp>(
-          loc, funcTy, cufLaunchClusterKernel,
+      mlir::Value stream = adaptor.getAsyncObject();
+      if (!stream)
+        stream = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmIntPtrType, rewriter.getIntegerAttr(llvmIntPtrType, -1));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+          op, funcTy, cufLaunchClusterKernel,
           mlir::ValueRange{kernelPtr, adaptor.getClusterSizeX(),
                            adaptor.getClusterSizeY(), adaptor.getClusterSizeZ(),
                            adaptor.getGridSizeX(), adaptor.getGridSizeY(),
                            adaptor.getGridSizeZ(), adaptor.getBlockSizeX(),
                            adaptor.getBlockSizeY(), adaptor.getBlockSizeZ(),
                            stream, dynamicMemorySize, kernelArgs, nullPtr});
-      rewriter.eraseOp(op);
     } else {
       auto procAttr =
           op->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
@@ -168,8 +157,8 @@ struct GPULaunchKernelConversion
       auto funcTy = mlir::LLVM::LLVMFunctionType::get(
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
-           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, ptrTy, i32Ty, ptrTy,
-           ptrTy},
+           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
+           i32Ty, ptrTy, ptrTy},
           /*isVarArg=*/false);
       auto cufLaunchKernel =
           mlir::SymbolRefAttr::get(mod.getContext(), fctName);
@@ -182,22 +171,18 @@ struct GPULaunchKernelConversion
             mlir::SymbolTable::Visibility::Private);
       }
 
-      mlir::Value stream = nullPtr;
-      if (!adaptor.getAsyncDependencies().empty()) {
-        if (adaptor.getAsyncDependencies().size() != 1)
-          return rewriter.notifyMatchFailure(
-              op, "Can only convert with exactly one stream dependency.");
-        stream = adaptor.getAsyncDependencies().front();
-      }
+      mlir::Value stream = adaptor.getAsyncObject();
+      if (!stream)
+        stream = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmIntPtrType, rewriter.getIntegerAttr(llvmIntPtrType, -1));
 
-      rewriter.create<mlir::LLVM::CallOp>(
-          loc, funcTy, cufLaunchKernel,
+      rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+          op, funcTy, cufLaunchKernel,
           mlir::ValueRange{kernelPtr, adaptor.getGridSizeX(),
                            adaptor.getGridSizeY(), adaptor.getGridSizeZ(),
                            adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
                            adaptor.getBlockSizeZ(), stream, dynamicMemorySize,
                            kernelArgs, nullPtr});
-      rewriter.eraseOp(op);
     }
 
     return mlir::success();
@@ -266,22 +251,6 @@ struct CUFSharedMemoryOpConversion
   }
 };
 
-struct CUFStreamCastConversion
-    : public mlir::ConvertOpToLLVMPattern<cuf::StreamCastOp> {
-  explicit CUFStreamCastConversion(const fir::LLVMTypeConverter &typeConverter,
-                                   mlir::PatternBenefit benefit)
-      : mlir::ConvertOpToLLVMPattern<cuf::StreamCastOp>(typeConverter,
-                                                        benefit) {}
-  using OpAdaptor = typename cuf::StreamCastOp::Adaptor;
-
-  mlir::LogicalResult
-  matchAndRewrite(cuf::StreamCastOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOp(op, adaptor.getStream());
-    return mlir::success();
-  }
-};
-
 class CUFGPUToLLVMConversion
     : public fir::impl::CUFGPUToLLVMConversionBase<CUFGPUToLLVMConversion> {
 public:
@@ -300,15 +269,7 @@ public:
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
     cuf::populateCUFGPUToLLVMConversionPatterns(typeConverter, patterns);
-
-    target.addDynamicallyLegalOp<mlir::gpu::LaunchFuncOp>(
-        [&](mlir::gpu::LaunchFuncOp op) {
-          if (op.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-                  cuf::getProcAttrName()))
-            return false;
-          return true;
-        });
-
+    target.addIllegalOp<mlir::gpu::LaunchFuncOp>();
     target.addIllegalOp<cuf::SharedMemoryOp>();
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
@@ -322,11 +283,8 @@ public:
 } // namespace
 
 void cuf::populateCUFGPUToLLVMConversionPatterns(
-    fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
+    const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
     mlir::PatternBenefit benefit) {
-  converter.addConversion([&converter](mlir::gpu::AsyncTokenType) -> Type {
-    return mlir::LLVM::LLVMPointerType::get(&converter.getContext());
-  });
-  patterns.add<CUFSharedMemoryOpConversion, GPULaunchKernelConversion,
-               CUFStreamCastConversion>(converter, benefit);
+  patterns.add<CUFSharedMemoryOpConversion, GPULaunchKernelConversion>(
+      converter, benefit);
 }

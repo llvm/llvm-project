@@ -100,7 +100,8 @@ public:
   VEAsmBackend(const Target &T)
       : MCAsmBackend(llvm::endianness::little), TheTarget(T) {}
 
-  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[VE::NumTargetFixupKinds] = {
         // name, offset, bits, flags
         {"fixup_ve_reflong", 0, 32, 0},

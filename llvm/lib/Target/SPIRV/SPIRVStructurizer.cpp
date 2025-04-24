@@ -509,8 +509,9 @@ class SPIRVStructurizer : public FunctionPass {
       }
 
       SwitchInst *Sw = ExitBuilder.CreateSwitch(Load, Dsts[0], Dsts.size() - 1);
-      for (BasicBlock *BB : drop_begin(Dsts))
-        Sw->addCase(DstToIndex[BB], BB);
+      for (auto It = Dsts.begin() + 1; It != Dsts.end(); ++It) {
+        Sw->addCase(DstToIndex[*It], *It);
+      }
       return NewExit;
     }
   };

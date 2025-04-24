@@ -1981,7 +1981,7 @@ void DeclContext::localUncachedLookup(DeclarationName Name,
   // the results.
   if (!hasExternalVisibleStorage() && !hasExternalLexicalStorage() && Name) {
     lookup_result LookupResults = lookup(Name);
-    llvm::append_range(Results, LookupResults);
+    Results.insert(Results.end(), LookupResults.begin(), LookupResults.end());
     if (!Results.empty())
       return;
   }

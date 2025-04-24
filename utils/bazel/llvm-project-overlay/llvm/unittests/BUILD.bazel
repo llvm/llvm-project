@@ -174,6 +174,7 @@ cc_test(
         "//llvm:Target",
         "//llvm:TestingSupport",
         "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -202,6 +203,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:Target",
         "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 
@@ -499,6 +501,7 @@ cc_test(
         "//llvm:Support",
         "//llvm:Target",
         "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
     ],
 )
 

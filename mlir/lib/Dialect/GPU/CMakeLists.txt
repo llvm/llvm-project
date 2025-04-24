@@ -53,7 +53,6 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineUtils
-  MLIRAMDGPUDialect
   MLIRArithDialect
   MLIRAsyncDialect
   MLIRBufferizationDialect
@@ -71,7 +70,6 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRSideEffectInterfaces
   MLIRSPIRVTarget
   MLIRSupport
-  MLIRROCDLDialect
   MLIRROCDLTarget
   MLIRTransformUtils
   MLIRVectorDialect

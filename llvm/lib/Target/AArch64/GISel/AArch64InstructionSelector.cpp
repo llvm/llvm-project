@@ -5743,13 +5743,9 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
     }
   }
 
-  if (Constant *SplatValue = CV->getSplatValue()) {
-    APInt SplatValueAsInt =
-        isa<ConstantFP>(SplatValue)
-            ? cast<ConstantFP>(SplatValue)->getValueAPF().bitcastToAPInt()
-            : SplatValue->getUniqueInteger();
+  if (CV->getSplatValue()) {
     APInt DefBits = APInt::getSplat(
-        DstSize, SplatValueAsInt.trunc(DstTy.getScalarSizeInBits()));
+        DstSize, CV->getUniqueInteger().trunc(DstTy.getScalarSizeInBits()));
     auto TryMOVIWithBits = [&](APInt DefBits) -> MachineInstr * {
       MachineInstr *NewOp;
       bool Inv = false;

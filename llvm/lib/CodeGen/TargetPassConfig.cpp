@@ -584,18 +584,17 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
     : ImmutablePass(ID), PM(&PM), TM(&TM) {
   Impl = new PassConfigImpl();
 
-  PassRegistry &PR = *PassRegistry::getPassRegistry();
   // Register all target independent codegen passes to activate their PassIDs,
   // including this pass itself.
-  initializeCodeGen(PR);
+  initializeCodeGen(*PassRegistry::getPassRegistry());
 
   // Also register alias analysis passes required by codegen passes.
-  initializeBasicAAWrapperPassPass(PR);
-  initializeAAResultsWrapperPassPass(PR);
+  initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
 
-  if (EnableIPRA.getNumOccurrences()) {
+  if (EnableIPRA.getNumOccurrences())
     TM.Options.EnableIPRA = EnableIPRA;
-  } else {
+  else {
     // If not explicitly specified, use target default.
     TM.Options.EnableIPRA |= TM.useIPRA();
   }

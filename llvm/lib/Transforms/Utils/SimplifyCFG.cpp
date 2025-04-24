@@ -3094,8 +3094,7 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
     if (ThenV == OrigV)
       continue;
 
-    Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(),
-                                   CmpInst::makeCmpResultType(PN.getType()),
+    Cost += TTI.getCmpSelInstrCost(Instruction::Select, PN.getType(), nullptr,
                                    CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
     // Don't convert to selects if we could remove undefined behavior instead.
@@ -7470,7 +7469,8 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     for (PHINode &Phi : BB->phis())
       PhiValsForBB.emplace_back((*SSW->PhiPredIVs)[&Phi][BB]);
 
-    return hash_combine(BB, hash_combine_range(PhiValsForBB));
+    return hash_combine(
+        BB, hash_combine_range(PhiValsForBB.begin(), PhiValsForBB.end()));
   }
   static bool isEqual(const SwitchSuccWrapper *LHS,
                       const SwitchSuccWrapper *RHS) {

@@ -334,7 +334,8 @@ void Module::markUnavailable(bool Unimportable) {
   SmallVector<Module *, 2> Stack;
   Stack.push_back(this);
   while (!Stack.empty()) {
-    Module *Current = Stack.pop_back_val();
+    Module *Current = Stack.back();
+    Stack.pop_back();
 
     if (!needUpdate(Current))
       continue;

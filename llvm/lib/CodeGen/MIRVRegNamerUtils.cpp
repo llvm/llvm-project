@@ -131,7 +131,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     MIOperands.push_back((unsigned)Op->getFailureOrdering());
   }
 
-  auto HashMI = hash_combine_range(MIOperands);
+  auto HashMI = hash_combine_range(MIOperands.begin(), MIOperands.end());
   OS << format_hex_no_prefix(HashMI, 16, true);
   return OS.str();
 }

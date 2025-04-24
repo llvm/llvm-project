@@ -91,7 +91,10 @@ void OptimizationRemarkEmitter::emit(
 }
 
 OptimizationRemarkEmitterWrapperPass::OptimizationRemarkEmitterWrapperPass()
-    : FunctionPass(ID) {}
+    : FunctionPass(ID) {
+  initializeOptimizationRemarkEmitterWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
 
 bool OptimizationRemarkEmitterWrapperPass::runOnFunction(Function &Fn) {
   BlockFrequencyInfo *BFI;

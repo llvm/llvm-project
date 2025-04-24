@@ -673,7 +673,7 @@ unsigned Parser::ParseAttributeArgsCommon(
         }
       }
 
-      llvm::append_range(ArgExprs, ParsedExprs);
+      ArgExprs.insert(ArgExprs.end(), ParsedExprs.begin(), ParsedExprs.end());
     }
   }
 

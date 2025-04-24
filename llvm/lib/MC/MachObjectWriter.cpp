@@ -82,7 +82,8 @@ MachSymbolData::operator<(const MachSymbolData &RHS) const {
 }
 
 bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
-  MCFixupKindInfo FKI = Asm.getBackend().getFixupKindInfo((MCFixupKind)Kind);
+  const MCFixupKindInfo &FKI = Asm.getBackend().getFixupKindInfo(
+    (MCFixupKind) Kind);
 
   return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }

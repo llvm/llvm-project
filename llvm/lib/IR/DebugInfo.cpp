@@ -976,9 +976,9 @@ void Instruction::mergeDIAssignID(
     return; // No DIAssignID tags to process.
 
   DIAssignID *MergeID = IDs[0];
-  for (DIAssignID *AssignID : drop_begin(IDs)) {
-    if (AssignID != MergeID)
-      at::RAUW(AssignID, MergeID);
+  for (auto It = std::next(IDs.begin()), End = IDs.end(); It != End; ++It) {
+    if (*It != MergeID)
+      at::RAUW(*It, MergeID);
   }
   setMetadata(LLVMContext::MD_DIAssignID, MergeID);
 }
@@ -987,10 +987,8 @@ void Instruction::updateLocationAfterHoist() { dropLocation(); }
 
 void Instruction::dropLocation() {
   const DebugLoc &DL = getDebugLoc();
-  if (!DL) {
-    setDebugLoc(DebugLoc::getDropped());
+  if (!DL)
     return;
-  }
 
   // If this isn't a call, drop the location to allow a location from a
   // preceding instruction to propagate.
@@ -1002,7 +1000,7 @@ void Instruction::dropLocation() {
   }
 
   if (!MayLowerToCall) {
-    setDebugLoc(DebugLoc::getDropped());
+    setDebugLoc(DebugLoc());
     return;
   }
 
@@ -1021,7 +1019,7 @@ void Instruction::dropLocation() {
     //
     // One alternative is to set a line 0 location with the existing scope and
     // inlinedAt info. The location might be sensitive to when inlining occurs.
-    setDebugLoc(DebugLoc::getDropped());
+    setDebugLoc(DebugLoc());
 }
 
 //===----------------------------------------------------------------------===//

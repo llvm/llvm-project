@@ -1155,7 +1155,7 @@ TEST(LazyCallGraphTest, InlineAndDeleteFunction) {
   ASSERT_EQ(&D2F, D1Call->getCalledFunction());
   C1Call->setCalledFunction(&D3.getFunction());
   D1Call->setCalledFunction(&D3.getFunction());
-  ASSERT_TRUE(D2F.use_empty());
+  ASSERT_EQ(0u, D2F.getNumUses());
 
   // Insert new edges first.
   CRC.insertTrivialCallEdge(C1, D3);

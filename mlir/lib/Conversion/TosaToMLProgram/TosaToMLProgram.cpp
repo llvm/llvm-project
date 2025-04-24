@@ -45,7 +45,7 @@ public:
     auto globalSymbolRef =
         SymbolRefAttr::get(rewriter.getContext(), op.getName());
     auto newVariableWrite = rewriter.create<ml_program::GlobalStoreOp>(
-        op.getLoc(), globalSymbolRef, op.getInput1());
+        op.getLoc(), globalSymbolRef, op.getValue());
     rewriter.replaceOp(op, newVariableWrite);
     return success();
   }

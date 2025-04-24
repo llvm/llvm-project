@@ -1,5 +1,17 @@
 ; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 -o /dev/null | FileCheck %s
 
+; CHECK:      <unknown>
+; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
+define i32 @unhandled_instruction(ptr %dst) {
+  indirectbr ptr %dst, [label %bb1, label %bb2]
+bb1:
+  ret i32 0
+bb2:
+  ret i32 1
+}
+
+; // -----
+
 ; Check that debug intrinsics with an unsupported argument are dropped.
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)

@@ -79,8 +79,9 @@ static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
         return attr.getName() != SymbolTable::getSymbolAttrName();
       });
 
-  return llvm::hash_combine(symbolOp->getName(),
-                            llvm::hash_combine_range(range));
+  return llvm::hash_combine(
+      symbolOp->getName(),
+      llvm::hash_combine_range(range.begin(), range.end()));
 }
 
 namespace mlir {

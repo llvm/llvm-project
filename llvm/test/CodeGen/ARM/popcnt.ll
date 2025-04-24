@@ -352,7 +352,7 @@ define i32 @ctpop32(i32 %x) nounwind readnone {
   ret i32 %count
 }
 
-define i64 @ctpop64(i64 %x) nounwind readnone {
+define i32 @ctpop64(i64 %x) nounwind readnone {
 ; CHECK-LABEL: ctpop64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
@@ -379,7 +379,6 @@ define i64 @ctpop64(i64 %x) nounwind readnone {
 ; CHECK-NEXT:    mul r1, r0, r12
 ; CHECK-NEXT:    lsr r0, r2, #24
 ; CHECK-NEXT:    add r0, r0, r1, lsr #24
-; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    pop {r4, lr}
 ; CHECK-NEXT:    mov pc, lr
 ; CHECK-NEXT:    .p2align 2
@@ -393,7 +392,8 @@ define i64 @ctpop64(i64 %x) nounwind readnone {
 ; CHECK-NEXT:  .LCPI23_3:
 ; CHECK-NEXT:    .long 858993459 @ 0x33333333
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
-  ret i64 %count
+  %conv = trunc i64 %count to i32
+  ret i32 %conv
 }
 
 define i32 @ctpop_eq_one(i64 %x) nounwind readnone {

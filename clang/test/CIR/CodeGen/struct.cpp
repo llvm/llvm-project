@@ -8,7 +8,7 @@
 struct IncompleteS;
 IncompleteS *p;
 
-// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!rec_IncompleteS>
+// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.record<struct "IncompleteS" incomplete>>
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
 
@@ -16,11 +16,12 @@ void f(void) {
   IncompleteS *p;
 }
 
-// CIR:      cir.func @_Z1fv()
-// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"]
+// CIR:      cir.func @f()
+// CIR-NEXT:   cir.alloca !cir.ptr<!cir.record<struct "IncompleteS" incomplete>>,
+// CIR-SAME:       !cir.ptr<!cir.ptr<!cir.record<struct "IncompleteS" incomplete>>>, ["p"]
 // CIR-NEXT:   cir.return
 
-// LLVM:      define void @_Z1fv()
+// LLVM:      define void @f()
 // LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   ret void
 

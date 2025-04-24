@@ -18,7 +18,7 @@ using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 /// Disconnect request; value of command field is 'disconnect'.
-Error DisconnectRequestHandler::Run(
+Expected<DisconnectResponse> DisconnectRequestHandler::Run(
     const std::optional<DisconnectArguments> &arguments) const {
   bool terminateDebuggee = dap.is_attach ? false : true;
 
@@ -28,6 +28,6 @@ Error DisconnectRequestHandler::Run(
   if (Error error = dap.Disconnect(terminateDebuggee))
     return error;
 
-  return Error::success();
+  return DisconnectResponse();
 }
 } // namespace lldb_dap

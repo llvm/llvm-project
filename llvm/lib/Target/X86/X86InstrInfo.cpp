@@ -1035,11 +1035,12 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
   return ShAmt < 4 && ShAmt > 0;
 }
 
-static bool
-findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
-                       const MachineRegisterInfo *MRI, MachineInstr **AndInstr,
-                       const TargetRegisterInfo *TRI, const X86Subtarget &ST,
-                       bool &NoSignFlag, bool &ClearsOverflowFlag) {
+static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
+                                   MachineInstr &CmpValDefInstr,
+                                   const MachineRegisterInfo *MRI,
+                                   MachineInstr **AndInstr,
+                                   const TargetRegisterInfo *TRI,
+                                   bool &NoSignFlag, bool &ClearsOverflowFlag) {
   if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
         CmpInstr.getOpcode() == X86::TEST64rr) &&
       !(CmpValDefInstr.getOpcode() == X86::COPY &&
@@ -1102,8 +1103,7 @@ findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
   if (VregDefInstr->getParent() != CmpValDefInstr.getParent())
     return false;
 
-  if (X86::isAND(VregDefInstr->getOpcode()) &&
-      (!ST.hasNF() || VregDefInstr->modifiesRegister(X86::EFLAGS, TRI))) {
+  if (X86::isAND(VregDefInstr->getOpcode())) {
     // Get a sequence of instructions like
     //   %reg = and* ...                    // Set EFLAGS
     //   ...                                // EFLAGS not changed
@@ -4748,8 +4748,8 @@ bool X86InstrInfo::getMemOperandsWithOffsetWidth(
   // FIXME: Relying on memoperands() may not be right thing to do here. Check
   // with X86 maintainers, and fix it accordingly. For now, it is ok, since
   // there is no use of `Width` for X86 back-end at the moment.
-  Width = !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize()
-                                     : LocationSize::precise(0);
+  Width =
+      !MemOp.memoperands_empty() ? MemOp.memoperands().front()->getSize() : 0;
   BaseOps.push_back(BaseOp);
   return true;
 }
@@ -5433,7 +5433,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         MachineInstr *AndInstr = nullptr;
         if (IsCmpZero &&
             findRedundantFlagInstr(CmpInstr, Inst, MRI, &AndInstr, TRI,
-                                   Subtarget, NoSignFlag, ClearsOverflowFlag)) {
+                                   NoSignFlag, ClearsOverflowFlag)) {
           assert(AndInstr != nullptr && X86::isAND(AndInstr->getOpcode()));
           MI = AndInstr;
           break;

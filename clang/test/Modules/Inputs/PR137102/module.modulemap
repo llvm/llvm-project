@@ -1,1 +1,0 @@
-module type_aware_destroying_new_delete { header "type_aware_destroying_new_delete.h" export * }

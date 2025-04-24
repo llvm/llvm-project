@@ -49,7 +49,7 @@ static std::unique_ptr<Interpreter>
 createInterpreter(const Args &ExtraArgs = {},
                   DiagnosticConsumer *Client = nullptr) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
-  llvm::append_range(ClangArgs, ExtraArgs);
+  ClangArgs.insert(ClangArgs.end(), ExtraArgs.begin(), ExtraArgs.end());
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetCompilerArgs(ClangArgs);
   auto CI = cantFail(CB.CreateCpp());

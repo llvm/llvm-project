@@ -75,7 +75,9 @@ subroutine sub1()
   end do
 end
 
-! CHECK: cuf.kernel<<<*, *, stream = %[[STREAM]]#0 : !fir.ref<i64>>>>
+! CHECK: %[[STREAM_LOAD:.*]] = fir.load %[[STREAM]]#0 : !fir.ref<i64>
+! CHECK: %[[STREAM_I32:.*]] = fir.convert %[[STREAM_LOAD]] : (i64) -> i32
+! CHECK: cuf.kernel<<<*, *, stream = %[[STREAM_I32]]>>>
 
 
 ! Test lowering with unstructured construct inside.

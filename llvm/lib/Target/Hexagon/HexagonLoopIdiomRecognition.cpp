@@ -1079,7 +1079,9 @@ bool PolynomialMultiplyRecognize::promoteTypes(BasicBlock *LoopB,
       return false;
 
   // Perform the promotion.
-  SmallVector<Instruction *> LoopIns(llvm::make_pointer_range(*LoopB));
+  std::vector<Instruction*> LoopIns;
+  std::transform(LoopB->begin(), LoopB->end(), std::back_inserter(LoopIns),
+                 [](Instruction &In) { return &In; });
   for (Instruction *In : LoopIns)
     if (!In->isTerminator())
       promoteTo(In, DestTy, LoopB);

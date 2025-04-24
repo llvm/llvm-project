@@ -45,7 +45,6 @@ using ::testing::UnorderedElementsAre;
 // Helpers for matching call hierarchy data structures.
 MATCHER_P(withName, N, "") { return arg.name == N; }
 MATCHER_P(withDetail, N, "") { return arg.detail == N; }
-MATCHER_P(withFile, N, "") { return arg.uri.file() == N; }
 MATCHER_P(withSelectionRange, R, "") { return arg.selectionRange == R; }
 
 template <class ItemMatcher>
@@ -384,28 +383,18 @@ TEST(CallHierarchy, MultiFileCpp) {
     EXPECT_THAT(IncomingLevel4, IsEmpty());
   };
 
-  auto CheckOutgoingCalls = [&](ParsedAST &AST, Position Pos, PathRef TUPath,
-                                bool IsDeclaration) {
+  auto CheckOutgoingCalls = [&](ParsedAST &AST, Position Pos, PathRef TUPath) {
     std::vector<CallHierarchyItem> Items =
         prepareCallHierarchy(AST, Pos, TUPath);
-    ASSERT_THAT(
-        Items,
-        ElementsAre(AllOf(
-            withName("caller3"),
-            withFile(testPath(IsDeclaration ? "caller3.hh" : "caller3.cc")))));
+    ASSERT_THAT(Items, ElementsAre(withName("caller3")));
     auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get());
     ASSERT_THAT(
         OutgoingLevel1,
-        // fromRanges are interpreted in the context of Items[0]'s file.
-        // If that's the header, we can't get ranges from the implementation
-        // file!
         ElementsAre(
             AllOf(to(AllOf(withName("caller1"), withDetail("nsa::caller1"))),
-                  IsDeclaration ? oFromRanges()
-                                : oFromRanges(Caller3C.range("Caller1"))),
+                  oFromRanges(Caller3C.range("Caller1"))),
             AllOf(to(AllOf(withName("caller2"), withDetail("nsb::caller2"))),
-                  IsDeclaration ? oFromRanges()
-                                : oFromRanges(Caller3C.range("Caller2")))));
+                  oFromRanges(Caller3C.range("Caller2")))));
 
     auto OutgoingLevel2 = outgoingCalls(OutgoingLevel1[1].to, Index.get());
     ASSERT_THAT(OutgoingLevel2,
@@ -434,7 +423,7 @@ TEST(CallHierarchy, MultiFileCpp) {
   CheckIncomingCalls(*AST, CalleeH.point(), testPath("callee.hh"));
   AST = Workspace.openFile("caller3.hh");
   ASSERT_TRUE(bool(AST));
-  CheckOutgoingCalls(*AST, Caller3H.point(), testPath("caller3.hh"), true);
+  CheckOutgoingCalls(*AST, Caller3H.point(), testPath("caller3.hh"));
 
   // Check that invoking from the definition site works.
   AST = Workspace.openFile("callee.cc");
@@ -442,7 +431,7 @@ TEST(CallHierarchy, MultiFileCpp) {
   CheckIncomingCalls(*AST, CalleeC.point(), testPath("callee.cc"));
   AST = Workspace.openFile("caller3.cc");
   ASSERT_TRUE(bool(AST));
-  CheckOutgoingCalls(*AST, Caller3C.point(), testPath("caller3.cc"), false);
+  CheckOutgoingCalls(*AST, Caller3C.point(), testPath("caller3.cc"));
 }
 
 TEST(CallHierarchy, IncomingMultiFileObjC) {

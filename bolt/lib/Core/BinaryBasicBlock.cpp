@@ -372,7 +372,8 @@ void BinaryBasicBlock::updateJumpTableSuccessors() {
              [](const BinaryBasicBlock *BB1, const BinaryBasicBlock *BB2) {
                return BB1->getInputOffset() < BB2->getInputOffset();
              });
-  SuccessorBBs.erase(llvm::unique(SuccessorBBs), SuccessorBBs.end());
+  SuccessorBBs.erase(std::unique(SuccessorBBs.begin(), SuccessorBBs.end()),
+                     SuccessorBBs.end());
 
   for (BinaryBasicBlock *BB : SuccessorBBs)
     addSuccessor(BB);

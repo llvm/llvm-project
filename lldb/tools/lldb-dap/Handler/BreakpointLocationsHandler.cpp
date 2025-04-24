@@ -189,7 +189,8 @@ void BreakpointLocationsRequestHandler::operator()(
   // The line entries are sorted by addresses, but we must return the list
   // ordered by line / column position.
   std::sort(locations.begin(), locations.end());
-  locations.erase(llvm::unique(locations), locations.end());
+  locations.erase(std::unique(locations.begin(), locations.end()),
+                  locations.end());
 
   llvm::json::Array locations_json;
   for (auto &l : locations) {

@@ -11,16 +11,18 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ExpandOpsPass : Pass<"memref-expand"> {
+def ExpandOps : Pass<"memref-expand"> {
   let summary = "Legalize memref operations to be convertible to LLVM.";
+  let constructor = "mlir::memref::createExpandOpsPass()";
 }
 
-def FoldMemRefAliasOpsPass : Pass<"fold-memref-alias-ops"> {
+def FoldMemRefAliasOps : Pass<"fold-memref-alias-ops"> {
   let summary = "Fold memref alias ops into consumer load/store ops";
   let description = [{
     The pass folds loading/storing from/to memref aliasing ops to loading/storing
     from/to the original memref.
   }];
+  let constructor = "mlir::memref::createFoldMemRefAliasOpsPass()";
   let dependentDialects = [
       "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
   ];
@@ -42,9 +44,9 @@ def MemRefEmulateWideInt : Pass<"memref-emulate-wide-int"> {
   let dependentDialects = ["vector::VectorDialect"];
 }
 
-def NormalizeMemRefsPass : Pass<"normalize-memrefs", "ModuleOp"> {
+def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   let summary = "Normalize memrefs";
-  let description = [{
+   let description = [{
     This pass transforms memref types with a non-trivial
     [layout map](https://mlir.llvm.org/docs/Dialects/Builtin/#affine-map-layout)
     into memref types with an identity layout map, e.g. (i, j) -> (i, j). This
@@ -153,23 +155,26 @@ def NormalizeMemRefsPass : Pass<"normalize-memrefs", "ModuleOp"> {
   }
   ```
   }];
+  let constructor = "mlir::memref::createNormalizeMemRefsPass()";
   let dependentDialects = ["affine::AffineDialect"];
 }
 
-def ResolveRankedShapeTypeResultDimsPass
-    : Pass<"resolve-ranked-shaped-type-result-dims"> {
+def ResolveRankedShapeTypeResultDims :
+    Pass<"resolve-ranked-shaped-type-result-dims"> {
   let summary = "Resolve memref.dim of result values of ranked shape type";
   let description = [{
     The pass resolves memref.dim of result of operations that
     implement the `ReifyRankedShapedTypeOpInterface` in terms of
     shapes of its operands.
   }];
+  let constructor =
+      "mlir::memref::createResolveRankedShapeTypeResultDimsPass()";
   let dependentDialects = [
     "memref::MemRefDialect", "tensor::TensorDialect"
   ];
 }
 
-def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
+def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   let summary = "Resolve memref.dim of result values";
   let description = [{
     The pass resolves memref.dim of result of operations that
@@ -177,12 +182,13 @@ def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
     `ReifyRankedShapedTypeOpInterface` in terms of shapes of its
     operands.
   }];
+  let constructor = "mlir::memref::createResolveShapedTypeResultDimsPass()";
   let dependentDialects = [
     "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
   ];
 }
 
-def ExpandStridedMetadataPass : Pass<"expand-strided-metadata"> {
+def ExpandStridedMetadata : Pass<"expand-strided-metadata"> {
   let summary = "Expand memref operations into easier to analyze constructs";
   let description = [{
     The pass expands memref operations that modify the metadata of a memref
@@ -199,12 +205,13 @@ def ExpandStridedMetadataPass : Pass<"expand-strided-metadata"> {
     - `memref.extract_strided_metadata`
     - `memref.subview`
   }];
+  let constructor = "mlir::memref::createExpandStridedMetadataPass()";
   let dependentDialects = [
       "affine::AffineDialect", "memref::MemRefDialect"
   ];
 }
 
-def ExpandReallocPass : Pass<"expand-realloc"> {
+def ExpandRealloc : Pass<"expand-realloc"> {
   let summary = "Expand memref.realloc operations into its components";
   let description = [{
     The `memref.realloc` operation performs a conditional allocation and copy to
@@ -236,10 +243,11 @@ def ExpandReallocPass : Pass<"expand-realloc"> {
     }
     ```
   }];
-  let options = [Option<"emitDeallocs", "emit-deallocs", "bool",
-                        /*default=*/"true",
-                        "Emit deallocation operations for the original MemRef">,
+  let options = [
+    Option<"emitDeallocs", "emit-deallocs", "bool", /*default=*/"true",
+           "Emit deallocation operations for the original MemRef">,
   ];
+  let constructor = "mlir::memref::createExpandReallocPass()";
   let dependentDialects = [
       "arith::ArithDialect", "scf::SCFDialect", "memref::MemRefDialect"
   ];

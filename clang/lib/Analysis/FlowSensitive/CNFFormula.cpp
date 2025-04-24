@@ -110,7 +110,7 @@ void CNFFormula::addClause(ArrayRef<Literal> lits) {
 
   const size_t S = Clauses.size();
   ClauseStarts.push_back(S);
-  llvm::append_range(Clauses, lits);
+  Clauses.insert(Clauses.end(), lits.begin(), lits.end());
 }
 
 CNFFormula buildCNF(const llvm::ArrayRef<const Formula *> &Formulas,

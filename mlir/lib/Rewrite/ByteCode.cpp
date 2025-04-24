@@ -1198,7 +1198,8 @@ private:
   /// Pops a code iterator from the stack, returning true on success.
   void popCodeIt() {
     assert(!resumeCodeIt.empty() && "attempt to pop code off empty stack");
-    curCodeIt = resumeCodeIt.pop_back_val();
+    curCodeIt = resumeCodeIt.back();
+    resumeCodeIt.pop_back();
   }
 
   /// Return the bytecode iterator at the start of the current op code.

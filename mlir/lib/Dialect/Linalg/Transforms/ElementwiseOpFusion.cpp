@@ -2327,9 +2327,10 @@ struct LinalgElementwiseOpFusionPass
     // Add constant folding patterns.
     populateConstantFoldLinalgOperations(patterns, defaultControlFn);
 
-    // Use TopDownTraversal for compile time reasons.
-    (void)applyPatternsGreedily(op, std::move(patterns),
-                                GreedyRewriteConfig().setUseTopDownTraversal());
+    // Use TopDownTraversal for compile time reasons
+    GreedyRewriteConfig grc;
+    grc.useTopDownTraversal = true;
+    (void)applyPatternsGreedily(op, std::move(patterns), grc);
   }
 };
 

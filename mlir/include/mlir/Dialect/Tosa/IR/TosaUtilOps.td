@@ -109,9 +109,9 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: variable_write
+// Operator: variable.write
 //===----------------------------------------------------------------------===//
-def Tosa_VariableWriteOp : Tosa_Op<"variable_write", []> {
+def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
   let summary = "write_buffer operator";
 
   let description = [{
@@ -120,7 +120,7 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable_write", []> {
 
   let arguments = (ins
     SymbolNameAttr:$name,
-    Tosa_Tensor:$input1
+    AnyType:$value
   );
 
   list<Availability> availability = [
@@ -129,14 +129,14 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable_write", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `,` $input1 `:` type($input1)
+    $name attr-dict `,` $value `:` type($value)
   }];
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: variable_read
+// Operator: variable.read
 //===----------------------------------------------------------------------===//
-def Tosa_VariableReadOp : Tosa_Op<"variable_read", []> {
+def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   let summary = "read_buffer operator";
 
   let description = [{
@@ -148,7 +148,7 @@ def Tosa_VariableReadOp : Tosa_Op<"variable_read", []> {
   );
 
   let results = (outs
-    Tosa_Tensor:$output1
+    AnyType:$value
   );
 
   list<Availability> availability = [
@@ -157,7 +157,7 @@ def Tosa_VariableReadOp : Tosa_Op<"variable_read", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `:` type($output1)
+    $name attr-dict `:` type($value)
   }];
 }
 

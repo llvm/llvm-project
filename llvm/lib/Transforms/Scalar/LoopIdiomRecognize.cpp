@@ -2761,11 +2761,14 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
                              m_LoopInvariant(m_Shl(m_One(), m_Value(BitPos)),
                                              CurLoop))));
   };
-
+  auto MatchConstantBitMask = [&]() {
+    return ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero()) &&
+           match(CmpLHS, m_And(m_Value(CurrX),
+                               m_CombineAnd(m_Value(BitMask), m_Power2()))) &&
+           (BitPos = ConstantExpr::getExactLogBase2(cast<Constant>(BitMask)));
+  };
   auto MatchDecomposableConstantBitMask = [&]() {
-    auto Res = llvm::decomposeBitTestICmp(
-        CmpLHS, CmpRHS, Pred, /*LookThroughTrunc=*/true,
-        /*AllowNonZeroC=*/false, /*DecomposeAnd=*/true);
+    auto Res = llvm::decomposeBitTestICmp(CmpLHS, CmpRHS, Pred);
     if (Res && Res->Mask.isPowerOf2()) {
       assert(ICmpInst::isEquality(Res->Pred));
       Pred = Res->Pred;
@@ -2777,7 +2780,8 @@ static bool detectShiftUntilBitTestIdiom(Loop *CurLoop, Value *&BaseX,
     return false;
   };
 
-  if (!MatchVariableBitMask() && !MatchDecomposableConstantBitMask()) {
+  if (!MatchVariableBitMask() && !MatchConstantBitMask() &&
+      !MatchDecomposableConstantBitMask()) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Bad backedge comparison.\n");
     return false;
   }

@@ -12,7 +12,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 using namespace mlir::spirv;
@@ -622,14 +621,17 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
 //===----------------------------------------------------------------------===//
 
 static void print(spirv::VerCapExtAttr triple, DialectAsmPrinter &printer) {
+  auto &os = printer.getStream();
   printer << spirv::VerCapExtAttr::getKindName() << "<"
-          << spirv::stringifyVersion(triple.getVersion()) << ", "
-          << llvm::interleaved_array(llvm::map_range(
-                 triple.getCapabilities(), spirv::stringifyCapability))
-          << ", "
-          << llvm::interleaved_array(
-                 triple.getExtensionsAttr().getAsValueRange<StringAttr>())
-          << ">";
+          << spirv::stringifyVersion(triple.getVersion()) << ", [";
+  llvm::interleaveComma(
+      triple.getCapabilities(), os,
+      [&](spirv::Capability cap) { os << spirv::stringifyCapability(cap); });
+  printer << "], [";
+  llvm::interleaveComma(triple.getExtensionsAttr(), os, [&](Attribute attr) {
+    os << llvm::cast<StringAttr>(attr).getValue();
+  });
+  printer << "]>";
 }
 
 static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {

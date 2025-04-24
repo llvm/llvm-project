@@ -14,7 +14,6 @@
 #include "MSP430InstrInfo.h"
 #include "MSP430MachineFunctionInfo.h"
 #include "MSP430Subtarget.h"
-#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -407,8 +406,9 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
               .addReg(MSP430::SP)
               .addImm(CalleeAmt);
       if (!hasFP(MF)) {
-        CFIInstBuilder(MBB, I, MachineInstr::NoFlags)
-            .buildAdjustCFAOffset(CalleeAmt);
+        DebugLoc DL = I->getDebugLoc();
+        BuildCFI(MBB, I, DL,
+                 MCCFIInstruction::createAdjustCfaOffset(nullptr, CalleeAmt));
       }
       // The SRW implicit def is dead.
       New->getOperand(3).setIsDead();

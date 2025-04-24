@@ -992,8 +992,7 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     vp<[[STEPS_SUNK:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
-; CHECK-NEXT:     REPLICATE ir<%gep>.1 = getelementptr ir<%addr>, vp<[[STEPS_SUNK]]>
+; CHECK-NEXT:     REPLICATE ir<%gep>.1 = getelementptr ir<%addr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<1.000000e+01>, ir<%gep>.1
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:

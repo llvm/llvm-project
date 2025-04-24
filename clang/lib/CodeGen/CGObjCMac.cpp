@@ -7120,7 +7120,7 @@ RValue CGObjCNonFragileABIMac::EmitVTableMessageSend(
   // the actual argument value blank for now.
   args.add(RValue::get(nullptr), ObjCTypes.MessageRefCPtrTy);
 
-  llvm::append_range(args, formalArgs);
+  args.insert(args.end(), formalArgs.begin(), formalArgs.end());
 
   MessageSendInfo MSI = getMessageSendInfo(method, resultType, args);
 

@@ -525,20 +525,18 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
 
   SmallVector<Attribute> moduleFlags;
   for (const auto [behavior, key, val] : llvmModuleFlags) {
-    Attribute valAttr = nullptr;
-    if (auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val)) {
-      valAttr = builder.getI32IntegerAttr(constInt->getZExtValue());
-    } else if (auto *mdString = dyn_cast<llvm::MDString>(val)) {
-      valAttr = builder.getStringAttr(mdString->getString());
-    } else {
+    // Currently only supports most common: int constant values.
+    auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
+    if (!constInt) {
       emitWarning(mlirModule.getLoc())
-          << "unsupported module flag value: " << diagMD(val, llvmModule.get());
+          << "unsupported module flag value: " << diagMD(val, llvmModule.get())
+          << ", only constant integer currently supported";
       continue;
     }
 
     moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
         convertModFlagBehaviorFromLLVM(behavior),
-        builder.getStringAttr(key->getString()), valAttr));
+        builder.getStringAttr(key->getString()), constInt->getZExtValue()));
   }
 
   if (!moduleFlags.empty())
@@ -1990,33 +1988,6 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     return success();
   }
 
-  if (inst->getOpcode() == llvm::Instruction::IndirectBr) {
-    auto *indBrInst = cast<llvm::IndirectBrInst>(inst);
-
-    FailureOr<Value> basePtr = convertValue(indBrInst->getAddress());
-    if (failed(basePtr))
-      return failure();
-
-    SmallVector<Block *> succBlocks;
-    SmallVector<SmallVector<Value>> succBlockArgs;
-    for (auto i : llvm::seq<unsigned>(0, indBrInst->getNumSuccessors())) {
-      llvm::BasicBlock *succ = indBrInst->getSuccessor(i);
-      SmallVector<Value> blockArgs;
-      if (failed(convertBranchArgs(indBrInst, succ, blockArgs)))
-        return failure();
-      succBlocks.push_back(lookupBlock(succ));
-      succBlockArgs.push_back(blockArgs);
-    }
-    SmallVector<ValueRange> succBlockArgsRange =
-        llvm::to_vector_of<ValueRange>(succBlockArgs);
-    Location loc = translateLoc(inst->getDebugLoc());
-    auto indBrOp = builder.create<LLVM::IndirectBrOp>(
-        loc, *basePtr, succBlockArgsRange, succBlocks);
-
-    mapNoResultOp(inst, indBrOp);
-    return success();
-  }
-
   // Convert all instructions that have an mlirBuilder.
   if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
@@ -2027,8 +1998,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData.
   // FIXME: Add support for call / operand attributes.
-  // FIXME: Add support for the cleanupret, catchret, catchswitch, callbr,
-  // vaarg, catchpad, cleanuppad instructions.
+  // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
+  // callbr, vaarg, catchpad, cleanuppad instructions.
 
   // Convert LLVM intrinsics calls to MLIR intrinsics.
   if (auto *intrinsic = dyn_cast<llvm::IntrinsicInst>(inst))

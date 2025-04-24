@@ -1161,15 +1161,9 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (Call->isSpirvOp()) {
-    if (GroupBuiltin->NoGroupOperation) {
-      SmallVector<uint32_t, 1> ImmArgs;
-      if (GroupBuiltin->Opcode ==
-              SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL &&
-          Call->Arguments.size() > 4)
-        ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[4], MRI));
+    if (GroupBuiltin->NoGroupOperation)
       return buildOpFromWrapper(MIRBuilder, GroupBuiltin->Opcode, Call,
-                                GR->getSPIRVTypeID(Call->ReturnType), ImmArgs);
-    }
+                                GR->getSPIRVTypeID(Call->ReturnType));
 
     // Group Operation is a literal
     Register GroupOpReg = Call->Arguments[1];

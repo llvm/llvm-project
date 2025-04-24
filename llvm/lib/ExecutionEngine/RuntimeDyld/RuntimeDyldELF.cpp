@@ -662,18 +662,7 @@ bool RuntimeDyldELF::resolveLoongArch64ShortBranch(
   }
   uint64_t Offset = RelI->getOffset();
   uint64_t SourceAddress = Sections[SectionID].getLoadAddressWithOffset(Offset);
-  uint64_t Delta = Address + Value.Addend - SourceAddress;
-  // Normal call
-  if (RelI->getType() == ELF::R_LARCH_B26) {
-    if (!isInt<28>(Delta))
-      return false;
-    resolveRelocation(Sections[SectionID], Offset, Address, RelI->getType(),
-                      Value.Addend);
-    return true;
-  }
-  // Medium call: R_LARCH_CALL36
-  // Range: [-128G - 0x20000, +128G - 0x20000)
-  if (((int64_t)Delta + 0x20000) != llvm::SignExtend64(Delta + 0x20000, 38))
+  if (!isInt<28>(Address + Value.Addend - SourceAddress))
     return false;
   resolveRelocation(Sections[SectionID], Offset, Address, RelI->getType(),
                     Value.Addend);
@@ -1754,8 +1743,7 @@ RuntimeDyldELF::processRelocationRef(
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
   } else if (Arch == Triple::loongarch64) {
-    if ((RelType == ELF::R_LARCH_B26 || RelType == ELF::R_LARCH_CALL36) &&
-        MemMgr.allowStubAllocation()) {
+    if (RelType == ELF::R_LARCH_B26 && MemMgr.allowStubAllocation()) {
       resolveLoongArch64Branch(SectionID, Value, RelI, Stubs);
     } else if (RelType == ELF::R_LARCH_GOT_PC_HI20 ||
                RelType == ELF::R_LARCH_GOT_PC_LO12) {

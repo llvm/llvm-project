@@ -75,13 +75,11 @@ Constant *llvm::getPredForFCmpCode(unsigned Code, Type *OpTy,
 
 std::optional<DecomposedBitTest>
 llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
-                           bool LookThruTrunc, bool AllowNonZeroC,
-                           bool DecomposeAnd) {
+                           bool LookThruTrunc, bool AllowNonZeroC) {
   using namespace PatternMatch;
 
   const APInt *OrigC;
-  if ((ICmpInst::isEquality(Pred) && !DecomposeAnd) ||
-      !match(RHS, m_APIntAllowPoison(OrigC)))
+  if (!ICmpInst::isRelational(Pred) || !match(RHS, m_APIntAllowPoison(OrigC)))
     return std::nullopt;
 
   bool Inverted = false;
@@ -130,7 +128,7 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
 
     return std::nullopt;
   }
-  case ICmpInst::ICMP_ULT: {
+  case ICmpInst::ICMP_ULT:
     // X <u 2^n is equivalent to (X & ~(2^n-1)) == 0.
     if (C.isPowerOf2()) {
       Result.Mask = -C;
@@ -148,22 +146,6 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
     }
 
     return std::nullopt;
-  }
-  case ICmpInst::ICMP_EQ:
-  case ICmpInst::ICMP_NE: {
-    assert(DecomposeAnd);
-    const APInt *AndC;
-    Value *AndVal;
-    if (match(LHS, m_And(m_Value(AndVal), m_APIntAllowPoison(AndC)))) {
-      LHS = AndVal;
-      Result.Mask = *AndC;
-      Result.C = C;
-      Result.Pred = Pred;
-      break;
-    }
-
-    return std::nullopt;
-  }
   }
 
   if (!AllowNonZeroC && !Result.C.isZero())
@@ -184,10 +166,8 @@ llvm::decomposeBitTestICmp(Value *LHS, Value *RHS, CmpInst::Predicate Pred,
   return Result;
 }
 
-std::optional<DecomposedBitTest> llvm::decomposeBitTest(Value *Cond,
-                                                        bool LookThruTrunc,
-                                                        bool AllowNonZeroC,
-                                                        bool DecomposeAnd) {
+std::optional<DecomposedBitTest>
+llvm::decomposeBitTest(Value *Cond, bool LookThruTrunc, bool AllowNonZeroC) {
   using namespace PatternMatch;
   if (auto *ICmp = dyn_cast<ICmpInst>(Cond)) {
     // Don't allow pointers. Splat vectors are fine.
@@ -195,7 +175,7 @@ std::optional<DecomposedBitTest> llvm::decomposeBitTest(Value *Cond,
       return std::nullopt;
     return decomposeBitTestICmp(ICmp->getOperand(0), ICmp->getOperand(1),
                                 ICmp->getPredicate(), LookThruTrunc,
-                                AllowNonZeroC, DecomposeAnd);
+                                AllowNonZeroC);
   }
   Value *X;
   if (Cond->getType()->isIntOrIntVectorTy(1) &&

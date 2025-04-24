@@ -110,9 +110,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Look for the file entry. This only fails if the expected size or
   // modification time differ.
   OptionalFileEntryRef Entry;
-  const bool IgnoreModTime =
-      (Type == MK_ExplicitModule || Type == MK_PrebuiltModule);
-  if (IgnoreModTime) {
+  if (Type == MK_ExplicitModule || Type == MK_PrebuiltModule) {
     // If we're not expecting to pull this file out of the module cache, it
     // might have a different mtime due to being moved across filesystems in
     // a distributed build. The size must still match, though. (As must the
@@ -122,9 +120,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
   // when using an ASTFileSignature.
   if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = IgnoreModTime
-                   ? "module file has a different size than expected"
-                   : "module file has a different size or mtime than expected";
+    ErrorStr = "module file has a different size or mtime than expected";
     return OutOfDate;
   }
 

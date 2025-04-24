@@ -298,7 +298,8 @@ namespace {
       assert(V.isLValue() && "Non-LValue used to make an LValue designator?");
       if (!Invalid) {
         IsOnePastTheEnd = V.isLValueOnePastTheEnd();
-        llvm::append_range(Entries, V.getLValuePath());
+        ArrayRef<PathEntry> VEntries = V.getLValuePath();
+        Entries.insert(Entries.end(), VEntries.begin(), VEntries.end());
         if (V.getLValueBase()) {
           bool IsArray = false;
           bool FirstIsUnsizedArray = false;
@@ -1831,7 +1832,8 @@ namespace {
       DeclAndIsDerivedMember.setPointer(V.getMemberPointerDecl());
       DeclAndIsDerivedMember.setInt(V.isMemberPointerToDerivedMember());
       Path.clear();
-      llvm::append_range(Path, V.getMemberPointerPath());
+      ArrayRef<const CXXRecordDecl*> P = V.getMemberPointerPath();
+      Path.insert(Path.end(), P.begin(), P.end());
     }
 
     /// DeclAndIsDerivedMember - The member declaration, and a flag indicating
@@ -2232,15 +2234,10 @@ static bool ArePotentiallyOverlappingStringLiterals(const EvalInfo &Info,
   // within RHS. We don't need to look at the characters of one string that
   // would appear before the start of the other string if they were merged.
   CharUnits Offset = RHS.Offset - LHS.Offset;
-  if (Offset.isNegative()) {
-    if (LHSString.Bytes.size() < (size_t)-Offset.getQuantity())
-      return false;
+  if (Offset.isNegative())
     LHSString.Bytes = LHSString.Bytes.drop_front(-Offset.getQuantity());
-  } else {
-    if (RHSString.Bytes.size() < (size_t)Offset.getQuantity())
-      return false;
+  else
     RHSString.Bytes = RHSString.Bytes.drop_front(Offset.getQuantity());
-  }
 
   bool LHSIsLonger = LHSString.Bytes.size() > RHSString.Bytes.size();
   StringRef Longer = LHSIsLonger ? LHSString.Bytes : RHSString.Bytes;
@@ -9202,10 +9199,7 @@ bool LValueExprEvaluator::VisitExtVectorElementExpr(
 
   if (Success) {
     Result.setFrom(Info.Ctx, Val);
-    QualType BaseType = E->getBase()->getType();
-    if (E->isArrow())
-      BaseType = BaseType->getPointeeType();
-    const auto *VT = BaseType->castAs<VectorType>();
+    const auto *VT = E->getBase()->getType()->castAs<VectorType>();
     HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
                               VT->getNumElements(), Indices[0]);
   }

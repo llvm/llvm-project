@@ -70,9 +70,9 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
 
   resultShape.clear();
   if (shape1.size() > shape2.size()) {
-    llvm::append_range(resultShape, shape1);
+    std::copy(shape1.begin(), shape1.end(), std::back_inserter(resultShape));
   } else {
-    llvm::append_range(resultShape, shape2);
+    std::copy(shape2.begin(), shape2.end(), std::back_inserter(resultShape));
   }
 
   auto i1 = shape1.rbegin(), e1 = shape1.rend();

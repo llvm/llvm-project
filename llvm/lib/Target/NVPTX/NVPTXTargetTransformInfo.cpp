@@ -74,7 +74,7 @@ static bool isNVVMAtomic(const IntrinsicInst *II) {
   }
 }
 
-bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
+bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) {
   // Without inter-procedural analysis, we conservatively assume that arguments
   // to __device__ functions are divergent.
   if (const Argument *Arg = dyn_cast<Argument>(V))
@@ -424,13 +424,12 @@ static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   case Intrinsic::nvvm_isspacep_local:
     return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
   case Intrinsic::nvvm_isspacep_shared:
-    // If shared cluster this can't be evaluated at compile time.
-    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER)
-      return std::nullopt;
     return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
   case Intrinsic::nvvm_isspacep_shared_cluster:
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER ||
-           AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    // We can't tell shared from shared_cluster at compile time from AS alone,
+    // but it can't be either is AS is not shared.
+    return AS == NVPTXAS::ADDRESS_SPACE_SHARED ? std::nullopt
+                                               : std::optional{false};
   case Intrinsic::nvvm_isspacep_const:
     return AS == NVPTXAS::ADDRESS_SPACE_CONST;
   default:
@@ -484,7 +483,7 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 InstructionCost
 NVPTXTTIImpl::getInstructionCost(const User *U,
                                  ArrayRef<const Value *> Operands,
-                                 TTI::TargetCostKind CostKind) const {
+                                 TTI::TargetCostKind CostKind) {
   if (const auto *CI = dyn_cast<CallInst>(U))
     if (const auto *IA = dyn_cast<InlineAsm>(CI->getCalledOperand())) {
       // Without this implementation getCallCost() would return the number
@@ -513,7 +512,8 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args,
+    const Instruction *CxtI) {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -539,9 +539,9 @@ InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
   }
 }
 
-void NVPTXTTIImpl::getUnrollingPreferences(
-    Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
-    OptimizationRemarkEmitter *ORE) const {
+void NVPTXTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                                           TTI::UnrollingPreferences &UP,
+                                           OptimizationRemarkEmitter *ORE) {
   BaseT::getUnrollingPreferences(L, SE, UP, ORE);
 
   // Enable partial unrolling and runtime unrolling, but reduce the
@@ -553,7 +553,7 @@ void NVPTXTTIImpl::getUnrollingPreferences(
 }
 
 void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                                         TTI::PeelingPreferences &PP) const {
+                                         TTI::PeelingPreferences &PP) {
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 

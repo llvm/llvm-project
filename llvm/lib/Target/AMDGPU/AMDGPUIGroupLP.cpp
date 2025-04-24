@@ -588,8 +588,12 @@ void PipelineSolver::populateReadyList(
       ReadyList.push_back(std::pair(*I, -1));
   }
 
-  if (UseCostHeur)
-    std::sort(ReadyList.begin(), ReadyList.end(), llvm::less_second());
+  if (UseCostHeur) {
+    std::sort(ReadyList.begin(), ReadyList.end(),
+              [](std::pair<int, int> A, std::pair<int, int> B) {
+                return A.second < B.second;
+              });
+  }
 
   assert(ReadyList.size() == CurrSU.second.size());
 }
@@ -1885,6 +1889,7 @@ private:
         }
       }
 
+      assert(Cache->size());
       auto *DAG = SyncPipe[0].DAG;
       for (auto &Elt : *Cache) {
         if (DAG->IsReachable(Elt, const_cast<SUnit *>(SU)))
@@ -1920,6 +1925,8 @@ private:
         }
         return FitsInGroup;
       }
+
+      assert(Cache->size());
 
       // Does the VALU have a DS_WRITE successor that is the same as other
       // VALU already in the group. The V_PERMs will all share 1 DS_W succ

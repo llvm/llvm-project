@@ -1337,7 +1337,7 @@ Block &emitc::SwitchOp::getCaseBlock(unsigned idx) {
 
 void SwitchOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
-  llvm::append_range(successors, getRegions());
+  llvm::copy(getRegions(), std::back_inserter(successors));
 }
 
 void SwitchOp::getEntrySuccessorRegions(
@@ -1348,7 +1348,7 @@ void SwitchOp::getEntrySuccessorRegions(
   // If a constant was not provided, all regions are possible successors.
   auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());
   if (!arg) {
-    llvm::append_range(successors, getRegions());
+    llvm::copy(getRegions(), std::back_inserter(successors));
     return;
   }
 

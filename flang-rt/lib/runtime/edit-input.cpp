@@ -188,11 +188,7 @@ static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
 
 RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     void *n, int kind, bool isSigned) {
-  auto &handler{io.GetIoErrorHandler()};
-  RUNTIME_CHECK(handler, kind >= 1 && !(kind & (kind - 1)));
-  if (!n) {
-    handler.Crash("Null address for integer input item");
-  }
+  RUNTIME_CHECK(io.GetIoErrorHandler(), kind >= 1 && !(kind & (kind - 1)));
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
     if (IsNamelistNameOrSlash(io)) {
@@ -211,7 +207,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
   case 'A': // legacy extension
     return EditCharacterInput(io, edit, reinterpret_cast<char *>(n), kind);
   default:
-    handler.SignalError(IostatErrorInFormat,
+    io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
         edit.descriptor);
     return false;
@@ -221,7 +217,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
   auto fastField{io.GetUpcomingFastAsciiField()};
   char sign{ScanNumericPrefix(io, edit, next, remaining, &fastField)};
   if (sign == '-' && !isSigned) {
-    handler.SignalError("Negative sign in UNSIGNED input field");
+    io.GetIoErrorHandler().SignalError("Negative sign in UNSIGNED input field");
     return false;
   }
   common::uint128_t value{0};
@@ -258,7 +254,8 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
           break;
         }
       }
-      handler.SignalError("Bad character '%lc' in INTEGER input field", ch);
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in INTEGER input field", ch);
       return false;
     }
     static constexpr auto maxu128OverTen{maxu128 / 10};
@@ -271,7 +268,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     any = true;
   }
   if (!any && !remaining) {
-    handler.SignalError(
+    io.GetIoErrorHandler().SignalError(
         "Integer value absent from NAMELIST or list-directed input");
     return false;
   }
@@ -283,14 +280,14 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     overflow |= value >= maxForKind;
   }
   if (overflow) {
-    handler.SignalError(IostatIntegerInputOverflow,
+    io.GetIoErrorHandler().SignalError(IostatIntegerInputOverflow,
         "Decimal input overflows INTEGER(%d) variable", kind);
     return false;
   }
   if (sign == '-') {
     value = -value;
   }
-  if (any || !handler.InError()) {
+  if (any || !io.GetIoErrorHandler().InError()) {
     // The value is stored in the lower order bits on big endian platform.
     // For memcpy, shift the value to the highest order bits.
 #if USING_NATIVE_INT128_T

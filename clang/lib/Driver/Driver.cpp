@@ -733,16 +733,11 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         Target.setEnvironment(llvm::Triple::GNUX32);
     } else if (A->getOption().matches(options::OPT_m32) ||
                A->getOption().matches(options::OPT_maix32)) {
-      if (D.IsFlangMode() && !Target.isOSAIX()) {
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << Target.str();
-      } else {
-        AT = Target.get32BitArchVariant().getArch();
-        if (Target.getEnvironment() == llvm::Triple::GNUX32)
-          Target.setEnvironment(llvm::Triple::GNU);
-        else if (Target.getEnvironment() == llvm::Triple::MuslX32)
-          Target.setEnvironment(llvm::Triple::Musl);
-      }
+      AT = Target.get32BitArchVariant().getArch();
+      if (Target.getEnvironment() == llvm::Triple::GNUX32)
+        Target.setEnvironment(llvm::Triple::GNU);
+      else if (Target.getEnvironment() == llvm::Triple::MuslX32)
+        Target.setEnvironment(llvm::Triple::Musl);
     } else if (A->getOption().matches(options::OPT_m16) &&
                Target.get32BitArchVariant().getArch() == llvm::Triple::x86) {
       AT = llvm::Triple::x86;
@@ -2817,7 +2812,8 @@ void Driver::BuildUniversalActions(Compilation &C, const ToolChain &TC,
 
       // Verify the debug info output.
       if (Args.hasArg(options::OPT_verify_debug_info)) {
-        Action *LastAction = Actions.pop_back_val();
+        Action* LastAction = Actions.back();
+        Actions.pop_back();
         Actions.push_back(C.MakeAction<VerifyDebugInfoJobAction>(
             LastAction, types::TY_Nothing));
       }

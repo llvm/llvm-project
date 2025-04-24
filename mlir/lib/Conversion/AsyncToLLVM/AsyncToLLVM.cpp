@@ -395,7 +395,7 @@ public:
 
     // Allocate memory for the coroutine frame.
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
-        rewriter, op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
+        op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
     if (failed(allocFuncOp))
       return failure();
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
@@ -432,7 +432,7 @@ public:
 
     // Free the memory.
     auto freeFuncOp =
-        LLVM::lookupOrCreateFreeFn(rewriter, op->getParentOfType<ModuleOp>());
+        LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
     if (failed(freeFuncOp))
       return failure();
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFuncOp.value(),

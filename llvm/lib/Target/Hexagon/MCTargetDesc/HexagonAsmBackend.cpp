@@ -83,7 +83,8 @@ public:
     return Result;
   }
 
-  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // HexagonFixupKinds.h.

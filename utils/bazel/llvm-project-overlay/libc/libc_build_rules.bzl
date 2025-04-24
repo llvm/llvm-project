@@ -123,15 +123,12 @@ _get_libc_info_aspect = aspect(
 )
 
 def _libc_srcs_filegroup_impl(ctx):
-    srcs = depset(transitive = [
-        fn[LibcLibraryInfo].srcs
-        for fn in ctx.attr.libs
-    ])
-    if ctx.attr.enforce_headers_only:
-        paths = [f.short_path for f in srcs.to_list() if f.extension != "h"]
-        if paths:
-            fail("Unexpected non-header files: {}".format(paths))
-    return DefaultInfo(files = srcs)
+    return DefaultInfo(
+        files = depset(transitive = [
+            fn[LibcLibraryInfo].srcs
+            for fn in ctx.attr.libs
+        ]),
+    )
 
 _libc_srcs_filegroup = rule(
     doc = "Returns all sources for building the specified libraries.",
@@ -141,7 +138,6 @@ _libc_srcs_filegroup = rule(
             mandatory = True,
             aspects = [_get_libc_info_aspect],
         ),
-        "enforce_headers_only": attr.bool(default = False),
     },
 )
 
@@ -222,7 +218,6 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
     _libc_srcs_filegroup(
         name = name + "_hdr_deps",
         libs = deps,
-        enforce_headers_only = True,
     )
 
     _libc_textual_hdrs_filegroup(
@@ -236,10 +231,13 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
 
     native.cc_library(
         name = name,
-        hdrs = hdrs,
-        # We put _hdr_deps in srcs, as they are not a part of this cc_library
-        # interface, but instead are used to implement shared headers.
-        srcs = [":" + name + "_hdr_deps"],
+        # Technically speaking, we should put _hdr_deps in srcs, as they are
+        # not a part of this cc_library interface. However, we keep it here to
+        # workaround the presence of .cpp files in _hdr_deps - we need to
+        # fix that and enforce their absence, since libc_header_library
+        # should be header-only and not produce any object files.
+        # See PR #133126 which tracks it.
+        hdrs = hdrs + [":" + name + "_hdr_deps"],
         deps = [":" + name + "_textual_hdr_library"],
         # copts don't really matter, since it's a header-only library, but we
         # need proper -I flags for header validation, which are specified in

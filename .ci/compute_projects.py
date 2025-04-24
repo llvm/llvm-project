@@ -52,9 +52,6 @@ DEPENDENTS_TO_TEST = {
     "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests"},
     "clang-tools-extra": {"libc"},
     "mlir": {"flang"},
-    # Test everything if ci scripts are changed.
-    # FIXME: Figure out what is missing and add here.
-    ".ci": {"llvm", "clang", "lld", "lldb"},
 }
 
 DEPENDENT_RUNTIMES_TO_TEST = {"clang": {"libcxx", "libcxxabi", "libunwind"}}
@@ -133,11 +130,12 @@ def _add_dependencies(projects: Set[str]) -> Set[str]:
 def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set[str]:
     projects_to_test = set()
     for modified_project in modified_projects:
+        # Skip all projects where we cannot run tests.
+        if modified_project not in PROJECT_CHECK_TARGETS:
+            continue
         if modified_project in RUNTIMES:
             continue
-        # Skip all projects where we cannot run tests.
-        if modified_project in PROJECT_CHECK_TARGETS:
-            projects_to_test.add(modified_project)
+        projects_to_test.add(modified_project)
         if modified_project not in DEPENDENTS_TO_TEST:
             continue
         for dependent_project in DEPENDENTS_TO_TEST[modified_project]:

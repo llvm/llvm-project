@@ -1049,10 +1049,9 @@ InstructionCost TargetTransformInfo::getCastInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getExtractWithExtendCost(
-    unsigned Opcode, Type *Dst, VectorType *VecTy, unsigned Index,
-    TTI::TargetCostKind CostKind) const {
+    unsigned Opcode, Type *Dst, VectorType *VecTy, unsigned Index) const {
   InstructionCost Cost =
-      TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
+      TTIImpl->getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1500,11 +1499,17 @@ char TargetTransformInfoWrapperPass::ID = 0;
 void TargetTransformInfoWrapperPass::anchor() {}
 
 TargetTransformInfoWrapperPass::TargetTransformInfoWrapperPass()
-    : ImmutablePass(ID) {}
+    : ImmutablePass(ID) {
+  initializeTargetTransformInfoWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
 
 TargetTransformInfoWrapperPass::TargetTransformInfoWrapperPass(
     TargetIRAnalysis TIRA)
-    : ImmutablePass(ID), TIRA(std::move(TIRA)) {}
+    : ImmutablePass(ID), TIRA(std::move(TIRA)) {
+  initializeTargetTransformInfoWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
 
 TargetTransformInfo &TargetTransformInfoWrapperPass::getTTI(const Function &F) {
   FunctionAnalysisManager DummyFAM;

@@ -102,7 +102,7 @@ def main():
     filename = None
     lines_by_file = {}
     for line in sys.stdin:
-        match = re.search(r"^\+\+\+\ (.*?/){%s}(.+)" % args.p, line.rstrip())
+        match = re.search(r"^\+\+\+\ (.*?/){%s}(\S*)" % args.p, line)
         if match:
             filename = match.group(2)
         if filename is None:

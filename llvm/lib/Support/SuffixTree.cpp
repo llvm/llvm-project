@@ -95,7 +95,8 @@ void SuffixTree::setSuffixIndices() {
   unsigned CurrNodeLen = 0;
   ToVisit.push_back({CurrNode, CurrNodeLen});
   while (!ToVisit.empty()) {
-    std::tie(CurrNode, CurrNodeLen) = ToVisit.pop_back_val();
+    std::tie(CurrNode, CurrNodeLen) = ToVisit.back();
+    ToVisit.pop_back();
     // Length of the current node from the root down to here.
     CurrNode->setConcatLen(CurrNodeLen);
     if (auto *InternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode))
@@ -305,7 +306,8 @@ void SuffixTree::RepeatedSubstringIterator::advance() {
   // Continue visiting nodes until we find one which repeats more than once.
   while (!InternalNodesToVisit.empty()) {
     RepeatedSubstringStarts.clear();
-    auto *Curr = InternalNodesToVisit.pop_back_val();
+    auto *Curr = InternalNodesToVisit.back();
+    InternalNodesToVisit.pop_back();
 
     // Keep track of the length of the string associated with the node. If
     // it's too short, we'll quit.

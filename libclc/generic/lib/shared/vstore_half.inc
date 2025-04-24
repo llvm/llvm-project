@@ -8,37 +8,22 @@
 
 // This does not exist for fp16
 #if __CLC_FPSIZE > 16
-
-#if __CLC_FPSIZE == 32
-#define STORE_HALF_BUILTIN __builtin_store_halff
-#elif __CLC_FPSIZE == 64
-#define STORE_HALF_BUILTIN __builtin_store_half
-#else
-#error "Invalid FP size"
-#endif
-
 #ifndef __CLC_SCALAR
 
 #if __CLC_VECSIZE == 3
-#define __CLC_OFFSET 4
+#  define __CLC_OFFSET 4
 #else
-#define __CLC_OFFSET __CLC_VECSIZE
+#  define __CLC_OFFSET __CLC_VECSIZE
 #endif
 
-FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_OFFSET, __CLC_GENTYPE, __private,
-     STORE_HALF_BUILTIN);
-FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_OFFSET, __CLC_GENTYPE, __local,
-     STORE_HALF_BUILTIN);
-FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_OFFSET, __CLC_GENTYPE, __global,
-     STORE_HALF_BUILTIN);
+  FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_OFFSET, __CLC_GENTYPE, __CLC_SCALAR_GENTYPE, __private);
+  FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_OFFSET, __CLC_GENTYPE, __CLC_SCALAR_GENTYPE, __local);
+  FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_OFFSET, __CLC_GENTYPE, __CLC_SCALAR_GENTYPE, __global);
 
 #undef __CLC_OFFSET
 #else
-FUNC(, 1, 1, __CLC_GENTYPE, __private, STORE_HALF_BUILTIN);
-FUNC(, 1, 1, __CLC_GENTYPE, __local, STORE_HALF_BUILTIN);
-FUNC(, 1, 1, __CLC_GENTYPE, __global, STORE_HALF_BUILTIN);
+  FUNC(, 1, 1, __CLC_GENTYPE, __CLC_SCALAR_GENTYPE, __private);
+  FUNC(, 1, 1, __CLC_GENTYPE, __CLC_SCALAR_GENTYPE, __local);
+  FUNC(, 1, 1, __CLC_GENTYPE, __CLC_SCALAR_GENTYPE, __global);
 #endif
-
-#undef STORE_HALF_BUILTIN
-
 #endif

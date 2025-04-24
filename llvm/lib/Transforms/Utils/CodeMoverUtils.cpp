@@ -464,7 +464,8 @@ bool llvm::nonStrictlyPostDominate(const BasicBlock *ThisBlock,
   SmallPtrSet<const BasicBlock *, 8> Visited;
   WorkList.push_back(ThisBlock);
   while (!WorkList.empty()) {
-    const BasicBlock *CurBlock = WorkList.pop_back_val();
+    const BasicBlock *CurBlock = WorkList.back();
+    WorkList.pop_back();
     Visited.insert(CurBlock);
     if (PDT->dominates(CurBlock, OtherBlock))
       return true;

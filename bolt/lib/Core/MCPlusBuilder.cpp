@@ -442,10 +442,10 @@ void MCPlusBuilder::getUsedRegs(const MCInst &Inst, BitVector &Regs) const {
   for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
     Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
-  for (const MCOperand &Operand : useOperands(Inst)) {
-    if (!Operand.isReg())
+  for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
+    if (!Inst.getOperand(I).isReg())
       continue;
-    Regs |= getAliases(Operand.getReg(), /*OnlySmaller=*/true);
+    Regs |= getAliases(Inst.getOperand(I).getReg(), /*OnlySmaller=*/true);
   }
 }
 

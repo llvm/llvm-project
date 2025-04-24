@@ -1968,7 +1968,9 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
   return BasicAAResult(F.getDataLayout(), F, TLI, AC, DT);
 }
 
-BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {}
+BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
+  initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 char BasicAAWrapperPass::ID = 0;
 

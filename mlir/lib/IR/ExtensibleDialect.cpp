@@ -11,7 +11,6 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/StorageUniquerSupport.h"
-#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -48,7 +47,9 @@ static void typeOrAttrPrinter(AsmPrinter &printer, ArrayRef<Attribute> params) {
   if (params.empty())
     return;
 
-  printer << "<" << llvm::interleaved(params) << ">";
+  printer << "<";
+  interleaveComma(params, printer.getStream());
+  printer << ">";
 }
 
 //===----------------------------------------------------------------------===//

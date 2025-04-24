@@ -207,7 +207,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   DebugLoc DL;
 
   SmallVector<const MachineOperand *> BaseOps;
-  LocationSize Width = LocationSize::precise(0);
+  LocationSize Width = 0;
   int64_t Offset;
   bool OffsetIsScalable;
 

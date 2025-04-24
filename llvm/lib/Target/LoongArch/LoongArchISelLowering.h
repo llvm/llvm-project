@@ -155,10 +155,7 @@ enum NodeType : unsigned {
 
   // Vector byte logicial left / right shift
   VBSLL,
-  VBSRL,
-
-  // Scalar load broadcast to vector
-  VLDREPL
+  VBSRL
 
   // Intrinsic operations end =============================================
 };

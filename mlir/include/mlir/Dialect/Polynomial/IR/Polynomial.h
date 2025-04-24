@@ -260,7 +260,7 @@ public:
 // Make Polynomials hashable.
 template <class D, typename T>
 inline ::llvm::hash_code hash_value(const PolynomialBase<D, T> &arg) {
-  return ::llvm::hash_combine_range(arg.terms);
+  return ::llvm::hash_combine_range(arg.terms.begin(), arg.terms.end());
 }
 
 template <class D, typename T>

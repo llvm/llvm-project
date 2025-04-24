@@ -10,7 +10,7 @@
 #include "Protocol/ProtocolRequests.h"
 #include "llvm/Support/Error.h"
 
-using namespace llvm;
+using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
@@ -45,11 +45,12 @@ namespace lldb_dap {
 ///
 /// A client cannot assume that progress just got cancelled after sending
 /// the `cancel` request.
-Error CancelRequestHandler::Run(const CancelArguments &arguments) const {
+llvm::Expected<CancelResponseBody>
+CancelRequestHandler::Run(const CancelArguments &arguments) const {
   // Cancel support is built into the DAP::Loop handler for detecting
   // cancellations of pending or inflight requests.
   dap.ClearCancelRequest(arguments);
-  return Error::success();
+  return CancelResponseBody();
 }
 
 } // namespace lldb_dap

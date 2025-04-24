@@ -376,17 +376,9 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  Attribute CallAttr = Attrs.getRetAttr(Attribute::Range);
-  Attribute FnAttr;
-  if (const Function *F = getCalledFunction())
-    FnAttr = F->getRetAttribute(Attribute::Range);
-
-  if (CallAttr.isValid() && FnAttr.isValid())
-    return CallAttr.getRange().intersectWith(FnAttr.getRange());
-  if (CallAttr.isValid())
-    return CallAttr.getRange();
-  if (FnAttr.isValid())
-    return FnAttr.getRange();
+  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
+  if (RangeAttr.isValid())
+    return RangeAttr.getRange();
   return std::nullopt;
 }
 

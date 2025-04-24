@@ -36,7 +36,8 @@ public:
       : MCAsmBackend(llvm::endianness::little), Is64Bit(Is64Bit),
         IsEmscripten(IsEmscripten) {}
 
-  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -50,7 +51,7 @@ public:
                     const MCSubtargetInfo *STI) const override;
 };
 
-MCFixupKindInfo
+const MCFixupKindInfo &
 WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[WebAssembly::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
@@ -86,7 +87,7 @@ void WebAssemblyAsmBackend::applyFixup(const MCAssembler &Asm,
                                        MutableArrayRef<char> Data,
                                        uint64_t Value, bool IsPCRel,
                                        const MCSubtargetInfo *STI) const {
-  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
+  const MCFixupKindInfo &Info = getFixupKindInfo(Fixup.getKind());
   assert(Info.Flags == 0 && "WebAssembly does not use MCFixupKindInfo flags");
 
   unsigned NumBytes = alignTo(Info.TargetSize, 8) / 8;

@@ -11,10 +11,10 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-struct olGetDeviceInfoTest : OffloadDeviceTest,
+struct olGetDeviceInfoTest : offloadDeviceTest,
                              ::testing::WithParamInterface<ol_device_info_t> {
 
-  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp()); }
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(offloadDeviceTest::SetUp()); }
 };
 
 INSTANTIATE_TEST_SUITE_P(
@@ -37,7 +37,7 @@ TEST_P(olGetDeviceInfoTest, Success) {
   if (InfoType == OL_DEVICE_INFO_PLATFORM) {
     auto *ReturnedPlatform =
         reinterpret_cast<ol_platform_handle_t *>(InfoData.data());
-    ASSERT_NE(nullptr, *ReturnedPlatform);
+    ASSERT_EQ(Platform, *ReturnedPlatform);
   }
 }
 

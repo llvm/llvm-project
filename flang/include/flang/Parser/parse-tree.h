@@ -4071,7 +4071,7 @@ struct OmpAtClause {
 //    SEQ_CST | ACQ_REL | RELAXED |                 // since 5.0
 //    ACQUIRE | RELEASE                             // since 5.2
 struct OmpAtomicDefaultMemOrderClause {
-  using MemoryOrder = common::OmpMemoryOrderType;
+  using MemoryOrder = common::OmpAtomicDefaultMemOrderType;
   WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, MemoryOrder);
 };
 
@@ -4242,8 +4242,9 @@ struct OmpDeviceTypeClause {
 // OMP 5.2 15.8.3 extended-atomic, fail-clause ->
 //    FAIL(memory-order)
 struct OmpFailClause {
-  using MemoryOrder = common::OmpMemoryOrderType;
-  WRAPPER_CLASS_BOILERPLATE(OmpFailClause, MemoryOrder);
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpFailClause, common::Indirection<OmpMemoryOrderClause>);
+  CharBlock source;
 };
 
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
@@ -4269,11 +4270,6 @@ struct OmpGrainsizeClause {
   TUPLE_CLASS_BOILERPLATE(OmpGrainsizeClause);
   MODIFIER_BOILERPLATE(OmpPrescriptiveness);
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
-};
-
-// Ref: [5.0:234-242], [5.1:266-275], [5.2:299], [6.0:472-473]
-struct OmpHintClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpHintClause, ScalarIntConstantExpr);
 };
 
 // Ref: [5.2: 214]
@@ -4821,10 +4817,10 @@ struct OpenMPAllocatorsConstruct {
 
 // 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
 //        memory-order-clause -> acq_rel
-//                               acquire
 //                               release
-//                               relaxed
+//                               acquire
 //                               seq_cst
+//                               relaxed
 struct OmpMemoryOrderClause {
   WRAPPER_CLASS_BOILERPLATE(OmpMemoryOrderClause, OmpClause);
   CharBlock source;
@@ -4836,7 +4832,7 @@ struct OmpMemoryOrderClause {
 struct OmpAtomicClause {
   UNION_CLASS_BOILERPLATE(OmpAtomicClause);
   CharBlock source;
-  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpHintClause> u;
+  std::variant<OmpMemoryOrderClause, OmpFailClause, OmpClause> u;
 };
 
 // atomic-clause-list -> [atomic-clause, [atomic-clause], ...]

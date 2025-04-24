@@ -174,7 +174,6 @@ llvm_config_target_defines = [
 cc_library(
     name = "config",
     hdrs = [
-        "include/llvm/Config/Targets.h",
         "include/llvm/Config/abi-breaking.h",
         "include/llvm/Config/llvm-config.h",
     ],
@@ -2149,7 +2148,7 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/AArch64/AArch64GenSubtargetInfo.inc",
             ),
             (
-                ["-gen-disassembler", "--large-decoder-table"],
+                ["-gen-disassembler"],
                 "lib/Target/AArch64/AArch64GenDisassemblerTables.inc",
             ),
             (

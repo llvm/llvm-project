@@ -18,15 +18,14 @@ namespace doc {
 using Record = llvm::SmallVector<uint64_t, 1024>;
 
 // This implements decode for SmallString.
-static llvm::Error decodeRecord(const Record &R,
-                                llvm::SmallVectorImpl<char> &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, llvm::SmallVectorImpl<char> &Field,
+                         llvm::StringRef Blob) {
   Field.assign(Blob.begin(), Blob.end());
   return llvm::Error::success();
 }
 
-static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, SymbolID &Field,
+                         llvm::StringRef Blob) {
   if (R[0] != BitCodeConstants::USRHashSize)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "incorrect USR size");
@@ -38,14 +37,21 @@ static llvm::Error decodeRecord(const Record &R, SymbolID &Field,
   return llvm::Error::success();
 }
 
-static llvm::Error decodeRecord(const Record &R, bool &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, bool &Field, llvm::StringRef Blob) {
   Field = R[0] != 0;
   return llvm::Error::success();
 }
 
-static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, int &Field, llvm::StringRef Blob) {
+  if (R[0] > INT_MAX)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "integer too large to parse");
+  Field = (int)R[0];
+  return llvm::Error::success();
+}
+
+llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
+                         llvm::StringRef Blob) {
   switch (R[0]) {
   case AS_public:
   case AS_private:
@@ -59,8 +65,8 @@ static llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
   }
 }
 
-static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
+                         llvm::StringRef Blob) {
   switch (static_cast<TagTypeKind>(R[0])) {
   case TagTypeKind::Struct:
   case TagTypeKind::Interface:
@@ -74,17 +80,17 @@ static llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
                                  "invalid value for TagTypeKind");
 }
 
-static llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
+                         llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace(static_cast<int>(R[0]), Blob, static_cast<bool>(R[1]));
+  Field.emplace((int)R[0], Blob, (bool)R[1]);
   return llvm::Error::success();
 }
 
-static llvm::Error decodeRecord(const Record &R, InfoType &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, InfoType &Field,
+                         llvm::StringRef Blob) {
   switch (auto IT = static_cast<InfoType>(R[0])) {
   case InfoType::IT_namespace:
   case InfoType::IT_record:
@@ -99,8 +105,8 @@ static llvm::Error decodeRecord(const Record &R, InfoType &Field,
                                  "invalid value for InfoType");
 }
 
-static llvm::Error decodeRecord(const Record &R, FieldId &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R, FieldId &Field,
+                         llvm::StringRef Blob) {
   switch (auto F = static_cast<FieldId>(R[0])) {
   case FieldId::F_namespace:
   case FieldId::F_parent:
@@ -116,34 +122,33 @@ static llvm::Error decodeRecord(const Record &R, FieldId &Field,
                                  "invalid value for FieldId");
 }
 
-static llvm::Error
-decodeRecord(const Record &R,
-             llvm::SmallVectorImpl<llvm::SmallString<16>> &Field,
-             llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R,
+                         llvm::SmallVectorImpl<llvm::SmallString<16>> &Field,
+                         llvm::StringRef Blob) {
   Field.push_back(Blob);
   return llvm::Error::success();
 }
 
-static llvm::Error decodeRecord(const Record &R,
-                                llvm::SmallVectorImpl<Location> &Field,
-                                llvm::StringRef Blob) {
+llvm::Error decodeRecord(const Record &R,
+                         llvm::SmallVectorImpl<Location> &Field,
+                         llvm::StringRef Blob) {
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace_back(static_cast<int>(R[0]), Blob, static_cast<bool>(R[1]));
+  Field.emplace_back((int)R[0], Blob, (bool)R[1]);
   return llvm::Error::success();
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, const unsigned VersionNo) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        const unsigned VersionNo) {
   if (ID == VERSION && R[0] == VersionNo)
     return llvm::Error::success();
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "mismatched bitcode version number");
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, NamespaceInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        NamespaceInfo *I) {
   switch (ID) {
   case NAMESPACE_USR:
     return decodeRecord(R, I->USR, Blob);
@@ -157,8 +162,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, RecordInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        RecordInfo *I) {
   switch (ID) {
   case RECORD_USR:
     return decodeRecord(R, I->USR, Blob);
@@ -180,8 +185,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, BaseRecordInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        BaseRecordInfo *I) {
   switch (ID) {
   case BASE_RECORD_USR:
     return decodeRecord(R, I->USR, Blob);
@@ -203,8 +208,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, EnumInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        EnumInfo *I) {
   switch (ID) {
   case ENUM_USR:
     return decodeRecord(R, I->USR, Blob);
@@ -222,8 +227,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, TypedefInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TypedefInfo *I) {
   switch (ID) {
   case TYPEDEF_USR:
     return decodeRecord(R, I->USR, Blob);
@@ -239,8 +244,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, EnumValueInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        EnumValueInfo *I) {
   switch (ID) {
   case ENUM_VALUE_NAME:
     return decodeRecord(R, I->Name, Blob);
@@ -254,8 +259,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, FunctionInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        FunctionInfo *I) {
   switch (ID) {
   case FUNCTION_USR:
     return decodeRecord(R, I->USR, Blob);
@@ -269,21 +274,19 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Access, Blob);
   case FUNCTION_IS_METHOD:
     return decodeRecord(R, I->IsMethod, Blob);
-  case FUNCTION_IS_STATIC:
-    return decodeRecord(R, I->IsStatic, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for FunctionInfo");
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, TypeInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TypeInfo *I) {
   return llvm::Error::success();
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, FieldTypeInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        FieldTypeInfo *I) {
   switch (ID) {
   case FIELD_TYPE_NAME:
     return decodeRecord(R, I->Name, Blob);
@@ -295,23 +298,21 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, MemberTypeInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        MemberTypeInfo *I) {
   switch (ID) {
   case MEMBER_TYPE_NAME:
     return decodeRecord(R, I->Name, Blob);
   case MEMBER_TYPE_ACCESS:
     return decodeRecord(R, I->Access, Blob);
-  case MEMBER_TYPE_IS_STATIC:
-    return decodeRecord(R, I->IsStatic, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for MemberTypeInfo");
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, CommentInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        CommentInfo *I) {
   switch (ID) {
   case COMMENT_KIND:
     return decodeRecord(R, I->Kind, Blob);
@@ -341,8 +342,8 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, Reference *I, FieldId &F) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        Reference *I, FieldId &F) {
   switch (ID) {
   case REFERENCE_USR:
     return decodeRecord(R, I->USR, Blob);
@@ -362,31 +363,30 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
   }
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, TemplateInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateInfo *I) {
   // Currently there are no child records of TemplateInfo (only child blocks).
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid field for TemplateParamInfo");
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob,
-                               TemplateSpecializationInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateSpecializationInfo *I) {
   if (ID == TEMPLATE_SPECIALIZATION_OF)
     return decodeRecord(R, I->SpecializationOf, Blob);
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid field for TemplateParamInfo");
 }
 
-static llvm::Error parseRecord(const Record &R, unsigned ID,
-                               llvm::StringRef Blob, TemplateParamInfo *I) {
+llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
+                        TemplateParamInfo *I) {
   if (ID == TEMPLATE_PARAM_CONTENTS)
     return decodeRecord(R, I->Contents, Blob);
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid field for TemplateParamInfo");
 }
 
-template <typename T> static llvm::Expected<CommentInfo *> getCommentInfo(T I) {
+template <typename T> llvm::Expected<CommentInfo *> getCommentInfo(T I) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain CommentInfo");
 }
@@ -424,11 +424,16 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {
   return I->Children.back().get();
 }
 
+template <>
+llvm::Expected<CommentInfo *> getCommentInfo(std::unique_ptr<CommentInfo> &I) {
+  return getCommentInfo(I.get());
+}
+
 // When readSubBlock encounters a TypeInfo sub-block, it calls addTypeInfo on
 // the parent block to set it. The template specializations define what to do
 // for each supported parent block.
 template <typename T, typename TTypeInfo>
-static llvm::Error addTypeInfo(T I, TTypeInfo &&TI) {
+llvm::Error addTypeInfo(T I, TTypeInfo &&TI) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain TypeInfo");
 }
@@ -463,8 +468,7 @@ template <> llvm::Error addTypeInfo(TypedefInfo *I, TypeInfo &&T) {
   return llvm::Error::success();
 }
 
-template <typename T>
-static llvm::Error addReference(T I, Reference &&R, FieldId F) {
+template <typename T> llvm::Error addReference(T I, Reference &&R, FieldId F) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "invalid type cannot contain Reference");
 }
@@ -580,7 +584,7 @@ template <> llvm::Error addReference(RecordInfo *I, Reference &&R, FieldId F) {
 }
 
 template <typename T, typename ChildInfoType>
-static void addChild(T I, ChildInfoType &&R) {
+void addChild(T I, ChildInfoType &&R) {
   llvm::errs() << "invalid child type for info";
   exit(1);
 }
@@ -621,7 +625,7 @@ template <> void addChild(BaseRecordInfo *I, FunctionInfo &&R) {
 // TemplateParam children. These go into either a TemplateInfo (for template
 // parameters) or TemplateSpecializationInfo (for the specialization's
 // parameters).
-template <typename T> static void addTemplateParam(T I, TemplateParamInfo &&P) {
+template <typename T> void addTemplateParam(T I, TemplateParamInfo &&P) {
   llvm::errs() << "invalid container for template parameter";
   exit(1);
 }
@@ -634,7 +638,7 @@ void addTemplateParam(TemplateSpecializationInfo *I, TemplateParamInfo &&P) {
 }
 
 // Template info. These apply to either records or functions.
-template <typename T> static void addTemplate(T I, TemplateInfo &&P) {
+template <typename T> void addTemplate(T I, TemplateInfo &&P) {
   llvm::errs() << "invalid container for template info";
   exit(1);
 }
@@ -647,7 +651,7 @@ template <> void addTemplate(FunctionInfo *I, TemplateInfo &&P) {
 
 // Template specializations go only into template records.
 template <typename T>
-static void addTemplateSpecialization(T I, TemplateSpecializationInfo &&TSI) {
+void addTemplateSpecialization(T I, TemplateSpecializationInfo &&TSI) {
   llvm::errs() << "invalid container for template specialization info";
   exit(1);
 }
@@ -870,7 +874,7 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
     Expected<llvm::SimpleBitstreamCursor::word_t> MaybeRead = Stream.Read(8);
     if (!MaybeRead)
       return MaybeRead.takeError();
-    if (MaybeRead.get() != BitCodeConstants::Signature[Idx])
+    else if (MaybeRead.get() != BitCodeConstants::Signature[Idx])
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "invalid bitcode signature");
   }
@@ -882,7 +886,8 @@ llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
       Stream.ReadBlockInfoBlock();
   if (!MaybeBlockInfo)
     return MaybeBlockInfo.takeError();
-  BlockInfo = MaybeBlockInfo.get();
+  else
+    BlockInfo = MaybeBlockInfo.get();
   if (!BlockInfo)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unable to parse BlockInfoBlock");

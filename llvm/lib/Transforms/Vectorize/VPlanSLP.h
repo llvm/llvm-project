@@ -85,7 +85,7 @@ class VPlanSlp {
     }
 
     static unsigned getHashValue(const SmallVector<VPValue *, 4> &V) {
-      return static_cast<unsigned>(hash_combine_range(V));
+      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
     }
 
     static bool isEqual(const SmallVector<VPValue *, 4> &LHS,

@@ -2964,11 +2964,7 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  auto *BI = BranchInst::Create(NormalDestBB, II->getIterator());
-  // Although it takes place after the call itself, the new branch is still
-  // performing part of the control-flow functionality of the invoke, so we use
-  // II's DebugLoc.
-  BI->setDebugLoc(II->getDebugLoc());
+  BranchInst::Create(NormalDestBB, II->getIterator());
 
   // Update PHI nodes in the unwind destination
   BasicBlock *BB = II->getParent();

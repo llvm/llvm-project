@@ -216,7 +216,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -603,23 +602,33 @@ void AArch64FrameLowering::emitCalleeSavedGPRLocations(
   if (CSI.empty())
     return;
 
-  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
+  const TargetSubtargetInfo &STI = MF.getSubtarget();
+  const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB.findDebugLoc(MBBI);
+
   for (const auto &Info : CSI) {
     unsigned FrameIdx = Info.getFrameIdx();
     if (MFI.getStackID(FrameIdx) == TargetStackID::ScalableVector)
       continue;
 
     assert(!Info.isSpilledToReg() && "Spilling to registers not implemented");
+    int64_t DwarfReg = TRI.getDwarfRegNum(Info.getReg(), true);
     int64_t Offset = MFI.getObjectOffset(FrameIdx) - getOffsetOfLocalArea();
 
     // The location of VG will be emitted before each streaming-mode change in
     // the function. Only locally-streaming functions require emitting the
     // non-streaming VG location here.
     if ((LocallyStreaming && FrameIdx == AFI->getStreamingVGIdx()) ||
-        (!LocallyStreaming && Info.getReg() == AArch64::VG))
+        (!LocallyStreaming &&
+         DwarfReg == TRI.getDwarfRegNum(AArch64::VG, true)))
       continue;
 
-    CFIBuilder.buildOffset(Info.getReg(), Offset);
+    unsigned CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createOffset(nullptr, DwarfReg, Offset));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameSetup);
   }
 }
 
@@ -635,8 +644,9 @@ void AArch64FrameLowering::emitCalleeSavedSVELocations(
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB.findDebugLoc(MBBI);
   AArch64FunctionInfo &AFI = *MF.getInfo<AArch64FunctionInfo>();
-  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
 
   for (const auto &Info : CSI) {
     if (!(MFI.getStackID(Info.getFrameIdx()) == TargetStackID::ScalableVector))
@@ -653,8 +663,20 @@ void AArch64FrameLowering::emitCalleeSavedSVELocations(
         StackOffset::getScalable(MFI.getObjectOffset(Info.getFrameIdx())) -
         StackOffset::getFixed(AFI.getCalleeSavedStackSize(MFI));
 
-    CFIBuilder.insertCFIInst(createCFAOffset(TRI, Reg, Offset));
+    unsigned CFIIndex = MF.addFrameInst(createCFAOffset(TRI, Reg, Offset));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameSetup);
   }
+}
+
+static void insertCFISameValue(const MCInstrDesc &Desc, MachineFunction &MF,
+                               MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator InsertPt,
+                               unsigned DwarfReg) {
+  unsigned CFIIndex =
+      MF.addFrameInst(MCCFIInstruction::createSameValue(nullptr, DwarfReg));
+  BuildMI(MBB, InsertPt, DebugLoc(), Desc).addCFIIndex(CFIIndex);
 }
 
 void AArch64FrameLowering::resetCFIToInitialState(
@@ -662,23 +684,33 @@ void AArch64FrameLowering::resetCFIToInitialState(
 
   MachineFunction &MF = *MBB.getParent();
   const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   const auto &TRI =
       static_cast<const AArch64RegisterInfo &>(*Subtarget.getRegisterInfo());
   const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
 
-  CFIInstBuilder CFIBuilder(MBB, MBB.begin(), MachineInstr::NoFlags);
+  const MCInstrDesc &CFIDesc = TII.get(TargetOpcode::CFI_INSTRUCTION);
+  DebugLoc DL;
 
   // Reset the CFA to `SP + 0`.
-  CFIBuilder.buildDefCFA(AArch64::SP, 0);
+  MachineBasicBlock::iterator InsertPt = MBB.begin();
+  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+      nullptr, TRI.getDwarfRegNum(AArch64::SP, true), 0));
+  BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
 
   // Flip the RA sign state.
-  if (MFI.shouldSignReturnAddress(MF))
-    MFI.branchProtectionPAuthLR() ? CFIBuilder.buildNegateRAStateWithPC()
-                                  : CFIBuilder.buildNegateRAState();
+  if (MFI.shouldSignReturnAddress(MF)) {
+    auto CFIInst = MFI.branchProtectionPAuthLR()
+                       ? MCCFIInstruction::createNegateRAStateWithPC(nullptr)
+                       : MCCFIInstruction::createNegateRAState(nullptr);
+    CFIIndex = MF.addFrameInst(CFIInst);
+    BuildMI(MBB, InsertPt, DL, CFIDesc).addCFIIndex(CFIIndex);
+  }
 
   // Shadow call stack uses X18, reset it.
   if (MFI.needsShadowCallStackPrologueEpilogue(MF))
-    CFIBuilder.buildSameValue(AArch64::X18);
+    insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
+                       TRI.getDwarfRegNum(AArch64::X18, true));
 
   // Emit .cfi_same_value for callee-saved registers.
   const std::vector<CalleeSavedInfo> &CSI =
@@ -687,7 +719,8 @@ void AArch64FrameLowering::resetCFIToInitialState(
     MCRegister Reg = Info.getReg();
     if (!TRI.regNeedsCFI(Reg, Reg))
       continue;
-    CFIBuilder.buildSameValue(Reg);
+    insertCFISameValue(CFIDesc, MF, MBB, InsertPt,
+                       TRI.getDwarfRegNum(Reg, true));
   }
 }
 
@@ -703,7 +736,8 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   const TargetRegisterInfo &TRI = *STI.getRegisterInfo();
-  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameDestroy);
+  const TargetInstrInfo &TII = *STI.getInstrInfo();
+  DebugLoc DL = MBB.findDebugLoc(MBBI);
 
   for (const auto &Info : CSI) {
     if (SVE !=
@@ -718,7 +752,11 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
     if (!Info.isRestored())
       continue;
 
-    CFIBuilder.buildRestore(Info.getReg());
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createRestore(
+        nullptr, TRI.getDwarfRegNum(Info.getReg(), true)));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
   }
 }
 
@@ -867,8 +905,13 @@ void AArch64FrameLowering::allocateStackSpace(
       .addReg(TargetReg);
   if (EmitCFI) {
     // Set the CFA register back to SP.
-    CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
-        .buildDefCFARegister(AArch64::SP);
+    unsigned Reg =
+        Subtarget.getRegisterInfo()->getDwarfRegNum(AArch64::SP, true);
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, Reg));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameSetup);
   }
   if (RealignmentPadding)
     AFI.setStackRealigned(true);
@@ -1509,9 +1552,13 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     InsertSEH(*MIB, *TII, FrameFlag);
   }
 
-  if (EmitCFI)
-    CFIInstBuilder(MBB, MBBI, FrameFlag)
-        .buildDefCFAOffset(CFAOffset - CSStackSizeInc);
+  if (EmitCFI) {
+    unsigned CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::cfiDefCfaOffset(nullptr, CFAOffset - CSStackSizeInc));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(FrameFlag);
+  }
 
   return std::prev(MBB.erase(MBBI));
 }
@@ -1626,8 +1673,11 @@ static void emitShadowCallStackPrologue(const TargetInstrInfo &TII,
         static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
         static_cast<char>(-8) & 0x7f, // addend (sleb128)
     };
-    CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
-        .buildEscape(StringRef(CFIInst, sizeof(CFIInst)));
+    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createEscape(
+        nullptr, StringRef(CFIInst, sizeof(CFIInst))));
+    BuildMI(MBB, MBBI, DL, TII.get(AArch64::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 }
 
@@ -1644,25 +1694,34 @@ static void emitShadowCallStackEpilogue(const TargetInstrInfo &TII,
       .addImm(-8)
       .setMIFlag(MachineInstr::FrameDestroy);
 
-  if (MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF))
-    CFIInstBuilder(MBB, MBBI, MachineInstr::FrameDestroy)
-        .buildRestore(AArch64::X18);
+  if (MF.getInfo<AArch64FunctionInfo>()->needsAsyncDwarfUnwindInfo(MF)) {
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, 18));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
+  }
 }
 
 // Define the current CFA rule to use the provided FP.
 static void emitDefineCFAWithFP(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI,
-                                unsigned FixedObject) {
+                                const DebugLoc &DL, unsigned FixedObject) {
   const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *TRI = STI.getRegisterInfo();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
 
   const int OffsetToFirstCalleeSaveFromFP =
       AFI->getCalleeSaveBaseToFrameRecordOffset() -
       AFI->getCalleeSavedStackSize();
   Register FramePtr = TRI->getFrameRegister(MF);
-  CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
-      .buildDefCFA(FramePtr, FixedObject - OffsetToFirstCalleeSaveFromFP);
+  unsigned Reg = TRI->getDwarfRegNum(FramePtr, true);
+  unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
+      nullptr, Reg, FixedObject - OffsetToFirstCalleeSaveFromFP));
+  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(CFIIndex)
+      .setMIFlags(MachineInstr::FrameSetup);
 }
 
 #ifndef NDEBUG
@@ -1857,8 +1916,11 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
         // Label used to tie together the PROLOG_LABEL and the MachineMoves.
         MCSymbol *FrameLabel = MF.getContext().createTempSymbol();
         // Encode the stack size of the leaf function.
-        CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
-            .buildDefCFAOffset(NumBytes, FrameLabel);
+        unsigned CFIIndex = MF.addFrameInst(
+            MCCFIInstruction::cfiDefCfaOffset(FrameLabel, NumBytes));
+        BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex)
+            .setMIFlags(MachineInstr::FrameSetup);
       }
     }
 
@@ -1964,7 +2026,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
     if (EmitAsyncCFI)
-      emitDefineCFAWithFP(MF, MBB, MBBI, FixedObject);
+      emitDefineCFAWithFP(MF, MBB, MBBI, DL, FixedObject);
   }
 
   // Now emit the moves for whatever callee saved regs we have (including FP,
@@ -2191,14 +2253,16 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   if (EmitCFI && !EmitAsyncCFI) {
     if (HasFP) {
-      emitDefineCFAWithFP(MF, MBB, MBBI, FixedObject);
+      emitDefineCFAWithFP(MF, MBB, MBBI, DL, FixedObject);
     } else {
       StackOffset TotalSize =
           SVEStackSize + StackOffset::getFixed((int64_t)MFI.getStackSize());
-      CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
-      CFIBuilder.insertCFIInst(
-          createDefCFA(*RegInfo, /*FrameReg=*/AArch64::SP, /*Reg=*/AArch64::SP,
-                       TotalSize, /*LastAdjustmentWasScalable=*/false));
+      unsigned CFIIndex = MF.addFrameInst(createDefCFA(
+          *RegInfo, /*FrameReg=*/AArch64::SP, /*Reg=*/AArch64::SP, TotalSize,
+          /*LastAdjustmentWasScalable=*/false));
+      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameSetup);
     }
     emitCalleeSavedGPRLocations(MBB, MBBI);
     emitCalleeSavedSVELocations(MBB, MBBI);
@@ -2396,9 +2460,15 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     assert(!SVEStackSize && "Cannot combine SP bump with SVE");
 
     // When we are about to restore the CSRs, the CFA register is SP again.
-    if (EmitCFI && hasFP(MF))
-      CFIInstBuilder(MBB, LastPopI, MachineInstr::FrameDestroy)
-          .buildDefCFA(AArch64::SP, NumBytes);
+    if (EmitCFI && hasFP(MF)) {
+      const AArch64RegisterInfo &RegInfo = *Subtarget.getRegisterInfo();
+      unsigned Reg = RegInfo.getDwarfRegNum(AArch64::SP, true);
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::cfiDefCfa(nullptr, Reg, NumBytes));
+      BuildMI(MBB, LastPopI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameDestroy);
+    }
 
     emitFrameOffset(MBB, MBB.getFirstTerminator(), DL, AArch64::SP, AArch64::SP,
                     StackOffset::getFixed(NumBytes + (int64_t)AfterCSRPopSize),
@@ -2517,9 +2587,15 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     MachineInstr::FrameDestroy, false, NeedsWinCFI, &HasWinCFI);
 
   // When we are about to restore the CSRs, the CFA register is SP again.
-  if (EmitCFI && hasFP(MF))
-    CFIInstBuilder(MBB, LastPopI, MachineInstr::FrameDestroy)
-        .buildDefCFA(AArch64::SP, PrologueSaveSize);
+  if (EmitCFI && hasFP(MF)) {
+    const AArch64RegisterInfo &RegInfo = *Subtarget.getRegisterInfo();
+    unsigned Reg = RegInfo.getDwarfRegNum(AArch64::SP, true);
+    unsigned CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::cfiDefCfa(nullptr, Reg, PrologueSaveSize));
+    BuildMI(MBB, LastPopI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlags(MachineInstr::FrameDestroy);
+  }
 
   // This must be placed after the callee-save restore code because that code
   // assumes the SP is at the same location as it was after the callee-save save
@@ -4890,37 +4966,46 @@ MachineBasicBlock::iterator tryMergeAdjacentSTG(MachineBasicBlock::iterator II,
 }
 } // namespace
 
-static void emitVGSaveRestore(MachineBasicBlock::iterator II,
-                              const AArch64FrameLowering *TFI) {
+MachineBasicBlock::iterator emitVGSaveRestore(MachineBasicBlock::iterator II,
+                                              const AArch64FrameLowering *TFI) {
   MachineInstr &MI = *II;
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
 
   if (MI.getOpcode() != AArch64::VGSavePseudo &&
       MI.getOpcode() != AArch64::VGRestorePseudo)
-    return;
+    return II;
 
   SMEAttrs FuncAttrs(MF->getFunction());
   bool LocallyStreaming =
       FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface();
   const AArch64FunctionInfo *AFI = MF->getInfo<AArch64FunctionInfo>();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  const AArch64InstrInfo *TII =
+      MF->getSubtarget<AArch64Subtarget>().getInstrInfo();
 
   int64_t VGFrameIdx =
       LocallyStreaming ? AFI->getStreamingVGIdx() : AFI->getVGIdx();
   assert(VGFrameIdx != std::numeric_limits<int>::max() &&
          "Expected FrameIdx for VG");
 
-  CFIInstBuilder CFIBuilder(*MBB, II, MachineInstr::NoFlags);
+  unsigned CFIIndex;
   if (MI.getOpcode() == AArch64::VGSavePseudo) {
     const MachineFrameInfo &MFI = MF->getFrameInfo();
     int64_t Offset =
         MFI.getObjectOffset(VGFrameIdx) - TFI->getOffsetOfLocalArea();
-    CFIBuilder.buildOffset(AArch64::VG, Offset);
-  } else {
-    CFIBuilder.buildRestore(AArch64::VG);
-  }
+    CFIIndex = MF->addFrameInst(MCCFIInstruction::createOffset(
+        nullptr, TRI->getDwarfRegNum(AArch64::VG, true), Offset));
+  } else
+    CFIIndex = MF->addFrameInst(MCCFIInstruction::createRestore(
+        nullptr, TRI->getDwarfRegNum(AArch64::VG, true)));
+
+  MachineInstr *UnwindInst = BuildMI(*MBB, II, II->getDebugLoc(),
+                                     TII->get(TargetOpcode::CFI_INSTRUCTION))
+                                 .addCFIIndex(CFIIndex);
 
   MI.eraseFromParent();
+  return UnwindInst->getIterator();
 }
 
 void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
@@ -4928,8 +5013,8 @@ void AArch64FrameLowering::processFunctionBeforeFrameIndicesReplaced(
   for (auto &BB : MF)
     for (MachineBasicBlock::iterator II = BB.begin(); II != BB.end();) {
       if (requiresSaveVG(MF))
-        emitVGSaveRestore(II++, this);
-      else if (StackTaggingMergeSetTag)
+        II = emitVGSaveRestore(II, this);
+      if (StackTaggingMergeSetTag)
         II = tryMergeAdjacentSTG(II, this, RS);
     }
 }
@@ -5276,8 +5361,14 @@ void AArch64FrameLowering::inlineStackProbeFixed(
     MBB = MBBI->getParent();
     if (EmitAsyncCFI && !HasFP) {
       // Set the CFA register back to SP.
-      CFIInstBuilder(*MBB, MBBI, MachineInstr::FrameSetup)
-          .buildDefCFARegister(AArch64::SP);
+      const AArch64RegisterInfo &RegInfo =
+          *MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
+      unsigned Reg = RegInfo.getDwarfRegNum(AArch64::SP, true);
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(nullptr, Reg));
+      BuildMI(*MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameSetup);
     }
   }
 

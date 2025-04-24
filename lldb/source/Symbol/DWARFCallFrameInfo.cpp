@@ -190,12 +190,8 @@ bool DWARFCallFrameInfo::GetUnwindPlan(const AddressRange &range,
   unwind_plan.SetUnwindPlanForSignalTrap(fde->for_signal_trap ? eLazyBoolYes
                                                               : eLazyBoolNo);
   unwind_plan.SetReturnAddressRegister(fde->return_addr_reg_num);
-  int64_t slide =
-      fde->range.GetBaseAddress().GetFileAddress() - addr.GetFileAddress();
-  for (UnwindPlan::Row &row : fde->rows) {
-    row.SlideOffset(slide);
+  for (UnwindPlan::Row &row : fde->rows)
     unwind_plan.AppendRow(std::move(row));
-  }
 
   return true;
 }

@@ -127,7 +127,9 @@ public:
     return LK.first != TargetLoweringBase::TypeLegal;
   }
 
-  bool isOpLegal(Instruction *I) { return isa<StoreInst, IntrinsicInst>(I); }
+  bool isOpLegal(Instruction *I) {
+    return isa<StoreInst>(I) || isa<IntrinsicInst>(I);
+  }
 
   bool isCoercionProfitable(Instruction *II) {
     SmallPtrSet<Instruction *, 4> CVisited;
@@ -142,8 +144,9 @@ public:
     auto IsLookThru = [](Instruction *II) {
       if (const auto *Intr = dyn_cast<IntrinsicInst>(II))
         return Intr->getIntrinsicID() == Intrinsic::amdgcn_perm;
-      return isa<PHINode, ShuffleVectorInst, InsertElementInst,
-                 ExtractElementInst, CastInst>(II);
+      return isa<PHINode>(II) || isa<ShuffleVectorInst>(II) ||
+             isa<InsertElementInst>(II) || isa<ExtractElementInst>(II) ||
+             isa<CastInst>(II);
     };
 
     while (!UserList.empty()) {

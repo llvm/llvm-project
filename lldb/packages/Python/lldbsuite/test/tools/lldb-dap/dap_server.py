@@ -343,21 +343,25 @@ class DebugCommunication(object):
                     self.send_packet(
                         {
                             "type": "response",
+                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "runInTerminal",
                             "body": {},
                         },
+                        set_sequence=False,
                     )
                 elif response_or_request["command"] == "startDebugging":
                     self.send_packet(
                         {
                             "type": "response",
+                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "startDebugging",
                             "body": {},
                         },
+                        set_sequence=False,
                     )
                 else:
                     desc = 'unknown reverse request "%s"' % (

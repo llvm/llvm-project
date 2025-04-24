@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PerfTest.h"
+#include "SingleInputSingleOutputPerf.h"
+
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/math/sqrtf128.h"
 
@@ -15,8 +16,5 @@ float128 sqrtf128_placeholder(float128 x) {
   return LIBC_NAMESPACE::fputil::sqrt<float128>(x);
 }
 
-int main() {
-  SINGLE_INPUT_SINGLE_OUTPUT_PERF(float128, LIBC_NAMESPACE::sqrtf128,
-                                  ::sqrtf128_placeholder, "sqrtf128_perf.log")
-  return 0;
-}
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float128, LIBC_NAMESPACE::sqrtf128,
+                                ::sqrtf128_placeholder, "sqrtf128_perf.log")

@@ -2341,8 +2341,8 @@ static void checkCollectionLiteralElement(Sema &S, QualType TargetElementType,
   QualType ElementType = Element->getType();
   ExprResult ElementResult(Element);
   if (ElementType->getAs<ObjCObjectPointerType>() &&
-      !S.IsAssignConvertCompatible(S.CheckSingleAssignmentConstraints(
-          TargetElementType, ElementResult, false, false))) {
+      S.CheckSingleAssignmentConstraints(TargetElementType, ElementResult,
+                                         false, false) != Sema::Compatible) {
     S.Diag(Element->getBeginLoc(), diag::warn_objc_collection_literal_element)
         << ElementType << ElementKind << TargetElementType
         << Element->getSourceRange();

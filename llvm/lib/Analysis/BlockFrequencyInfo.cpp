@@ -302,7 +302,9 @@ INITIALIZE_PASS_END(BlockFrequencyInfoWrapperPass, "block-freq",
 char BlockFrequencyInfoWrapperPass::ID = 0;
 
 BlockFrequencyInfoWrapperPass::BlockFrequencyInfoWrapperPass()
-    : FunctionPass(ID) {}
+    : FunctionPass(ID) {
+  initializeBlockFrequencyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 BlockFrequencyInfoWrapperPass::~BlockFrequencyInfoWrapperPass() = default;
 

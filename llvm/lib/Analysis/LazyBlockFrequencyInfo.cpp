@@ -32,7 +32,9 @@ INITIALIZE_PASS_END(LazyBlockFrequencyInfoPass, DEBUG_TYPE,
 
 char LazyBlockFrequencyInfoPass::ID = 0;
 
-LazyBlockFrequencyInfoPass::LazyBlockFrequencyInfoPass() : FunctionPass(ID) {}
+LazyBlockFrequencyInfoPass::LazyBlockFrequencyInfoPass() : FunctionPass(ID) {
+  initializeLazyBlockFrequencyInfoPassPass(*PassRegistry::getPassRegistry());
+}
 
 void LazyBlockFrequencyInfoPass::print(raw_ostream &OS, const Module *) const {
   LBFI.getCalculated().print(OS);

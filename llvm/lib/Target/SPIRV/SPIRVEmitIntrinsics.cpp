@@ -1829,7 +1829,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, Init);
   }
-  if (!Init && GV.use_empty())
+  if (!Init && GV.getNumUses() == 0)
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -2399,8 +2399,9 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   preprocessUndefs(B);
   preprocessCompositeConstants(B);
-  SmallVector<Instruction *> Worklist(
-      llvm::make_pointer_range(instructions(Func)));
+  SmallVector<Instruction *> Worklist;
+  for (auto &I : instructions(Func))
+    Worklist.push_back(&I);
 
   applyDemangledPtrArgTypes(B);
 

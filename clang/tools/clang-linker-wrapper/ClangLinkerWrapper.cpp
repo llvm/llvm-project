@@ -541,7 +541,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
       else
         Arg->render(Args, LinkerArgs);
     }
-    llvm::append_range(CmdArgs, LinkerArgs);
+    llvm::copy(LinkerArgs, std::back_inserter(CmdArgs));
   }
 
   // Pass on -mllvm options to the linker invocation.

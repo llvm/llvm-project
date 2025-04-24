@@ -639,7 +639,8 @@ bool Sema::CheckConstraintSatisfaction(
   // here.
   llvm::SmallVector<TemplateArgument, 4> FlattenedArgs;
   for (auto List : TemplateArgsLists)
-    llvm::append_range(FlattenedArgs, List.Args);
+    FlattenedArgs.insert(FlattenedArgs.end(), List.Args.begin(),
+                         List.Args.end());
 
   llvm::FoldingSetNodeID ID;
   ConstraintSatisfaction::Profile(ID, Context, Template, FlattenedArgs);
@@ -2011,8 +2012,8 @@ FormulaType SubsumptionChecker::Normalize(const NormalizedConstraint &NC) {
     for (const auto &RTransform : Right) {
       Clause Combined;
       Combined.reserve(LTransform.size() + RTransform.size());
-      llvm::append_range(Combined, LTransform);
-      llvm::append_range(Combined, RTransform);
+      llvm::copy(LTransform, std::back_inserter(Combined));
+      llvm::copy(RTransform, std::back_inserter(Combined));
       Add(std::move(Combined));
     }
   }

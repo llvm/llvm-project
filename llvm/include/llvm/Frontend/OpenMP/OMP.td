@@ -106,7 +106,6 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_None
   ];
   let flangClass = "OmpCancellationConstructTypeClause";
-  let skipFlangUnparser = true;
 }
 def OMPC_Contains : Clause<"contains"> {
   let clangClass = "OMPContainsClause";
@@ -225,7 +224,7 @@ def OMPC_HasDeviceAddr : Clause<"has_device_addr"> {
 }
 def OMPC_Hint : Clause<"hint"> {
   let clangClass = "OMPHintClause";
-  let flangClass = "OmpHintClause";
+  let flangClass = "ConstantExpr";
 }
 def OMPC_Holds : Clause<"holds"> {
   let clangClass = "OMPHoldsClause";

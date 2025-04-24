@@ -42,7 +42,7 @@ public:
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
     auto NewDeps = getDependencies();
-    llvm::append_range(Deps, NewDeps);
+    Deps.insert(Deps.end(), NewDeps.begin(), NewDeps.end());
   }
 
 private:

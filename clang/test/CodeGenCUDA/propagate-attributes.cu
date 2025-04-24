@@ -25,10 +25,6 @@
 // RUN:   -fcuda-is-device -funsafe-math-optimizations -triple nvptx-unknown-unknown \
 // RUN: | FileCheck %s --check-prefix=CHECK --check-prefix=FAST
 
-#ifndef LIB
-#include "Inputs/cuda.h"
-#endif
-
 // Wrap everything in extern "C" so we don't have to worry about name mangling
 // in the IR.
 extern "C" {
@@ -40,6 +36,7 @@ void lib_fn() {}
 
 #else
 
+#include "Inputs/cuda.h"
 __device__ void lib_fn();
 __global__ void kernel() { lib_fn(); }
 

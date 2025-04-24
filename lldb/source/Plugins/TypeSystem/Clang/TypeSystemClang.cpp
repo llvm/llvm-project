@@ -9164,36 +9164,33 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
 }
 
 ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
-  clang::NamedDecl *nd = llvm::dyn_cast_or_null<clang::NamedDecl>(
-      static_cast<clang::Decl *>(opaque_decl));
-
-  if (!nd || llvm::isa<clang::ObjCMethodDecl>(nd))
-    return {};
-
-  clang::MangleContext *mc = getMangleContext();
-  if (!mc || !mc->shouldMangleCXXName(nd))
-    return {};
-
-  llvm::SmallVector<char, 1024> buf;
-  llvm::raw_svector_ostream llvm_ostrm(buf);
-  if (llvm::isa<clang::CXXConstructorDecl>(nd)) {
-    mc->mangleName(
-        clang::GlobalDecl(llvm::dyn_cast<clang::CXXConstructorDecl>(nd),
-                          Ctor_Complete),
-        llvm_ostrm);
-  } else if (llvm::isa<clang::CXXDestructorDecl>(nd)) {
-    mc->mangleName(
-        clang::GlobalDecl(llvm::dyn_cast<clang::CXXDestructorDecl>(nd),
-                          Dtor_Complete),
-        llvm_ostrm);
-  } else {
-    mc->mangleName(nd, llvm_ostrm);
+  if (opaque_decl) {
+    clang::NamedDecl *nd =
+        llvm::dyn_cast<clang::NamedDecl>((clang::Decl *)opaque_decl);
+    if (nd != nullptr && !llvm::isa<clang::ObjCMethodDecl>(nd)) {
+      clang::MangleContext *mc = getMangleContext();
+      if (mc && mc->shouldMangleCXXName(nd)) {
+        llvm::SmallVector<char, 1024> buf;
+        llvm::raw_svector_ostream llvm_ostrm(buf);
+        if (llvm::isa<clang::CXXConstructorDecl>(nd)) {
+          mc->mangleName(
+              clang::GlobalDecl(llvm::dyn_cast<clang::CXXConstructorDecl>(nd),
+                                Ctor_Complete),
+              llvm_ostrm);
+        } else if (llvm::isa<clang::CXXDestructorDecl>(nd)) {
+          mc->mangleName(
+              clang::GlobalDecl(llvm::dyn_cast<clang::CXXDestructorDecl>(nd),
+                                Dtor_Complete),
+              llvm_ostrm);
+        } else {
+          mc->mangleName(nd, llvm_ostrm);
+        }
+        if (buf.size() > 0)
+          return ConstString(buf.data(), buf.size());
+      }
+    }
   }
-
-  if (buf.size() > 0)
-    return ConstString(buf.data(), buf.size());
-
-  return {};
+  return ConstString();
 }
 
 CompilerDeclContext TypeSystemClang::DeclGetDeclContext(void *opaque_decl) {

@@ -20,16 +20,11 @@ def local_ptr_ty : LLVMQualPointerType<3>;
 // some preloaded register from a function that is known to not need it is a violation
 // of the calling convention and also program-level UB. Outside of such IR-level UB,
 // these preloaded registers are always set to a well-defined value and are thus `noundef`.
-class AMDGPUReadPreloadRegisterIntrinsic<
-    list<IntrinsicProperty> ExtraAttrs = []>
-    : DefaultAttrsIntrinsic<[llvm_i32_ty], [],
-                            !listconcat([NoUndef<RetIndex>, IntrNoMem,
-                                         IntrSpeculatable],
-                                        ExtraAttrs)>;
+class AMDGPUReadPreloadRegisterIntrinsic
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
 
-class AMDGPUReadPreloadRegisterIntrinsicNamed<
-    string name, list<IntrinsicProperty> ExtraAttrs = []>
-    : AMDGPUReadPreloadRegisterIntrinsic<ExtraAttrs>, ClangBuiltin<name>;
+class AMDGPUReadPreloadRegisterIntrinsicNamed<string name>
+  : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>, ClangBuiltin<name>;
 
 // Used to tag image and resource intrinsics with information used to generate
 // mem operands.
@@ -40,22 +35,17 @@ class AMDGPURsrcIntrinsic<int rsrcarg, bit isimage = false> {
 
 let TargetPrefix = "r600" in {
 
-  multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz<
-      list<IntrinsicProperty> ExtraAttrs = []> {
-    def _x : AMDGPUReadPreloadRegisterIntrinsic<ExtraAttrs>;
-    def _y : AMDGPUReadPreloadRegisterIntrinsic<ExtraAttrs>;
-    def _z : AMDGPUReadPreloadRegisterIntrinsic<ExtraAttrs>;
-  }
+multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz {
+  def _x : AMDGPUReadPreloadRegisterIntrinsic;
+  def _y : AMDGPUReadPreloadRegisterIntrinsic;
+  def _z : AMDGPUReadPreloadRegisterIntrinsic;
+}
 
-  multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz_named<
-      string prefix, list<IntrinsicProperty> ExtraAttrs = []> {
-    def _x : AMDGPUReadPreloadRegisterIntrinsicNamed<!strconcat(prefix, "_x"),
-                                                     ExtraAttrs>;
-    def _y : AMDGPUReadPreloadRegisterIntrinsicNamed<!strconcat(prefix, "_y"),
-                                                     ExtraAttrs>;
-    def _z : AMDGPUReadPreloadRegisterIntrinsicNamed<!strconcat(prefix, "_z"),
-                                                     ExtraAttrs>;
-  }
+multiclass AMDGPUReadPreloadRegisterIntrinsic_xyz_named<string prefix> {
+  def _x : AMDGPUReadPreloadRegisterIntrinsicNamed<!strconcat(prefix, "_x")>;
+  def _y : AMDGPUReadPreloadRegisterIntrinsicNamed<!strconcat(prefix, "_y")>;
+  def _z : AMDGPUReadPreloadRegisterIntrinsicNamed<!strconcat(prefix, "_z")>;
+}
 
 defm int_r600_read_global_size : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                  <"__builtin_r600_read_global_size">;
@@ -65,9 +55,7 @@ defm int_r600_read_tgid : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                           <"__builtin_r600_read_tgid">;
 
 defm int_r600_read_local_size : AMDGPUReadPreloadRegisterIntrinsic_xyz;
-defm int_r600_read_tidig
-    : AMDGPUReadPreloadRegisterIntrinsic_xyz_named<
-          "__builtin_r600_read_tidig", [Range<RetIndex, 0, 1024>]>;
+defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 
 def int_r600_group_barrier : ClangBuiltin<"__builtin_r600_group_barrier">,
   Intrinsic<[], [], [IntrConvergent, IntrWillReturn]>;
@@ -158,10 +146,7 @@ let TargetPrefix = "amdgcn" in {
 // ABI Special Intrinsics
 //===----------------------------------------------------------------------===//
 
-defm int_amdgcn_workitem_id
-    : AMDGPUReadPreloadRegisterIntrinsic_xyz_named<
-          "__builtin_amdgcn_workitem_id", [Range<RetIndex, 0, 1024>]>;
-
+defm int_amdgcn_workitem_id : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 defm int_amdgcn_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                <"__builtin_amdgcn_workgroup_id">;
 

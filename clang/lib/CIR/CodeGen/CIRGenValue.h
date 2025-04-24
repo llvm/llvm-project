@@ -140,10 +140,6 @@ public:
   // TODO: Add support for volatile
   bool isVolatile() const { return false; }
 
-  unsigned getVRQualifiers() const {
-    return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
-  }
-
   clang::QualType getType() const { return type; }
 
   mlir::Value getPointer() const { return v; }
@@ -158,9 +154,6 @@ public:
   }
 
   const clang::Qualifiers &getQuals() const { return quals; }
-  clang::Qualifiers &getQuals() { return quals; }
-
-  LValueBaseInfo getBaseInfo() const { return baseInfo; }
 
   static LValue makeAddr(Address address, clang::QualType t,
                          LValueBaseInfo baseInfo) {

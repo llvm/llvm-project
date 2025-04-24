@@ -18,7 +18,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -59,7 +58,9 @@ struct Layout {
 };
 
 void Layout::print(llvm::raw_ostream &os) const {
-  os << llvm::interleaved_array(layout);
+  os << "[";
+  llvm::interleaveComma(layout, os);
+  os << "]";
 }
 
 int64_t Layout::operator[](size_t idx) const {

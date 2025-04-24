@@ -307,8 +307,7 @@ def simm8_lsl # I : Operand<GRLenVT> {
 }
 }
 
-def simm9_lsl3 : Operand<GRLenVT>,
-                 ImmLeaf<GRLenVT, [{return isShiftedInt<9,3>(Imm);}]> {
+def simm9_lsl3 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<9, "lsl3">;
   let EncoderMethod = "getImmOpValueAsr<3>";
   let DecoderMethod = "decodeSImmOperand<9, 3>";
@@ -318,15 +317,13 @@ def simm10 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<10>;
 }
 
-def simm10_lsl2 : Operand<GRLenVT>,
-                  ImmLeaf<GRLenVT, [{return isShiftedInt<10,2>(Imm);}]> {
+def simm10_lsl2 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<10, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<10, 2>";
 }
 
-def simm11_lsl1 : Operand<GRLenVT>,
-                  ImmLeaf<GRLenVT, [{return isShiftedInt<11,1>(Imm);}]> {
+def simm11_lsl1 : Operand<GRLenVT> {
   let ParserMatchClass = SImmAsmOperand<11, "lsl1">;
   let EncoderMethod = "getImmOpValueAsr<1>";
   let DecoderMethod = "decodeSImmOperand<11, 1>";

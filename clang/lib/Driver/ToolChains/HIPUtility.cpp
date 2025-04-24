@@ -190,7 +190,8 @@ private:
 
         processInput(BufferOrErr.get()->getMemBufferRef());
       } else
-        llvm::append_range(WorkList, CurrentAction->getInputs());
+        WorkList.insert(WorkList.end(), CurrentAction->getInputs().begin(),
+                        CurrentAction->getInputs().end());
     }
   }
 

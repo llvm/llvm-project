@@ -589,7 +589,7 @@ Fortran::lower::genCallOpAndResult(
 
     mlir::Value stream; // stream is optional.
     if (caller.getCallDescription().chevrons().size() > 3)
-      stream = fir::getBase(converter.genExprAddr(
+      stream = fir::getBase(converter.genExprValue(
           caller.getCallDescription().chevrons()[3], stmtCtx));
 
     builder.create<cuf::KernelLaunchOp>(

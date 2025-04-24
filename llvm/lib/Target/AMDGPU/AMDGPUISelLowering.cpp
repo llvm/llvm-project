@@ -819,11 +819,11 @@ bool AMDGPUTargetLowering::ShouldShrinkFPConstant(EVT VT) const {
   return (ScalarVT != MVT::f32 && ScalarVT != MVT::f64);
 }
 
-bool AMDGPUTargetLowering::shouldReduceLoadWidth(
-    SDNode *N, ISD::LoadExtType ExtTy, EVT NewVT,
-    std::optional<unsigned> ByteOffset) const {
+bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
+                                                 ISD::LoadExtType ExtTy,
+                                                 EVT NewVT) const {
   // TODO: This may be worth removing. Check regression tests for diffs.
-  if (!TargetLoweringBase::shouldReduceLoadWidth(N, ExtTy, NewVT, ByteOffset))
+  if (!TargetLoweringBase::shouldReduceLoadWidth(N, ExtTy, NewVT))
     return false;
 
   unsigned NewSize = NewVT.getStoreSizeInBits();
@@ -5971,9 +5971,10 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
   }
 }
 
-bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(
-    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG, bool SNaN,
-    unsigned Depth) const {
+bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(SDValue Op,
+                                                        const SelectionDAG &DAG,
+                                                        bool SNaN,
+                                                        unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::FMIN_LEGACY:

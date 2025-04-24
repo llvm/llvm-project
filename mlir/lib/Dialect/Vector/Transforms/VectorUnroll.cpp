@@ -13,11 +13,12 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/InterleavedRange.h"
+#include <numeric>
 #include <optional>
 
 #define DEBUG_TYPE "vector-unroll"
@@ -27,7 +28,7 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// Compute the indices of the slice `index` for a transfer op.
+/// Compute the indices of the slice `index` for a tranfer op.
 static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
                                                ArrayRef<Value> indices,
                                                AffineMap permutationMap,
@@ -87,14 +88,17 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
     LDBG("--could not get shape of op " << *op << " -> BAIL");
     return std::nullopt;
   }
-  LDBG("--vector op shape: " << llvm::interleaved(*maybeUnrollShape));
+  LLVM_DEBUG(
+      llvm::interleaveComma(*maybeUnrollShape, DBGS() << "--vector op shape: ");
+      llvm::dbgs() << "\n";);
 
   std::optional<SmallVector<int64_t>> targetShape = options.nativeShape(op);
   if (!targetShape) {
     LDBG("--no unrolling target shape defined " << *op << "-> SKIP");
     return std::nullopt;
   }
-  LDBG("--target shape: " << llvm::interleaved(*targetShape));
+  LLVM_DEBUG(llvm::interleaveComma(*targetShape, DBGS() << "--target shape: ");
+             llvm::dbgs() << "\n";);
 
   auto maybeShapeRatio = computeShapeRatio(*maybeUnrollShape, *targetShape);
   if (!maybeShapeRatio) {
@@ -238,7 +242,7 @@ struct OffsetMapInfo {
   static SmallVector<int64_t> getTombstoneKey() { return {int64_t(-2)}; }
 
   static unsigned getHashValue(const SmallVector<int64_t> &v) {
-    return static_cast<unsigned>(llvm::hash_combine_range(v));
+    return static_cast<unsigned>(llvm::hash_combine_range(v.begin(), v.end()));
   }
 
   static bool isEqual(const SmallVector<int64_t> &lhs,
