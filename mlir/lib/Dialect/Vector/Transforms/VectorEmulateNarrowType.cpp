@@ -597,10 +597,9 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // corresponding index must be 0.
     // FIXME: There's no way to tell for dynamic shapes, so we should bail out.
     // However, that makes some tests fail, so we need to audit first.
+    auto trailingDim = op.getBase().getType().getShape().back();
     bool trailingDimsMatch =
-        ShapedType::isDynamic(op.getBase().getType().getShape().back())
-            ? true
-            : op.getBase().getType().getShape().back() == origElements;
+        ShapedType::isDynamic(trailingDim) || trailingDim == origElements;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
