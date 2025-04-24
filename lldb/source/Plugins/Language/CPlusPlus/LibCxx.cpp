@@ -316,10 +316,9 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     return 0;
   if (name == "$$dereference$$")
     return 1;
-  return llvm::createStringError(
-      "'SyntheticChildrenFrontend::LibcxxSharedPtrSyntheticFrontEnd' cannot "
-      "find index of child '%s'",
-      name.AsCString());
+  return llvm::createStringError("'LibcxxSharedPtrSyntheticFrontEnd' cannot "
+                                 "find index of child '%s'",
+                                 name.AsCString());
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::

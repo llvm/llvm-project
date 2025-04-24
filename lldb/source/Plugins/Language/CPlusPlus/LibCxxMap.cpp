@@ -397,10 +397,9 @@ llvm::Expected<size_t> lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontend::LibcxxStdMapSyntheticFrontEnd' cannot "
-        "find index of child '%s'",
-        name.AsCString());
+    return llvm::createStringError("'LibcxxStdMapSyntheticFrontEnd' cannot "
+                                   "find index of child '%s'",
+                                   name.AsCString());
   }
   return idx;
 }
@@ -500,7 +499,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_pair_sp)
     return llvm::createStringError(
-        "'SyntheticChildrenFrontend::LibCxxMapIteratorSyntheticFrontEnd' "
+        "'LibCxxMapIteratorSyntheticFrontEnd' "
         "cannot find index of child '%s': Invalid underlying pair.",
         name.AsCString());
 

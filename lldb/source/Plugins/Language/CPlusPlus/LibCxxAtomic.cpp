@@ -135,10 +135,9 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringError(
-      "'SyntheticChildrenFrontend::LibcxxStdAtomicSyntheticFrontEnd' cannot "
-      "find index of child '%s'",
-      name.AsCString());
+  return llvm::createStringError("'LibcxxStdAtomicSyntheticFrontEnd' cannot "
+                                 "find index of child '%s'",
+                                 name.AsCString());
 }
 
 SyntheticChildrenFrontEnd *

@@ -149,15 +149,14 @@ lldb_private::formatters::LibcxxStdSliceArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_start)
     return llvm::createStringError(
-        "'SyntheticChildrenFrontend::LibcxxStdSliceArraySyntheticFrontEnd' "
+        "'LibcxxStdSliceArraySyntheticFrontEnd' "
         "cannot find index of child '%s': Invalid start pointer.",
         name.AsCString());
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontend::LibcxxStdSliceArraySyntheticFrontEnd' "
-        "cannot find index of child '%s'",
-        name.AsCString());
+    return llvm::createStringError("'LibcxxStdSliceArraySyntheticFrontEnd' "
+                                   "cannot find index of child '%s'",
+                                   name.AsCString());
   }
   return idx;
 }

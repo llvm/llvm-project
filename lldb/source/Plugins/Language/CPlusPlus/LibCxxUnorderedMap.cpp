@@ -296,10 +296,9 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontend::LibcxxStdUnorderedMapSyntheticFrontEnd' "
-        "cannot find index of child '%s'",
-        name.AsCString());
+    return llvm::createStringError("'LibcxxStdUnorderedMapSyntheticFrontEnd' "
+                                   "cannot find index of child '%s'",
+                                   name.AsCString());
   }
   return idx;
 }

@@ -355,13 +355,13 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
         "'SyntheticChildrenFrontEnd::ValueObjectSynthetic' cannot find index "
         "of child '%s'. m_synth_filter_up is null.",
         name.AsCString());
-  } else if (found_index) {
+  } else if (found_index)
     return *found_index;
-  } else /*if (iter != m_name_toindex.end())*/
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontEnd::ValueObjectSynthetic' cannot find index "
-        "of child '%s'",
-        name.AsCString());
+
+  return llvm::createStringError(
+      "'SyntheticChildrenFrontEnd::ValueObjectSynthetic' cannot find index "
+      "of child '%s'",
+      name.AsCString());
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }

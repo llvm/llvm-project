@@ -24,7 +24,7 @@ public:
     if (m_container_sp)
       return m_container_sp->GetIndexOfChildWithName(name);
     return llvm::createStringError(
-        "'SyntheticChildrenFrontend::QueueFrontEnd' "
+        "'QueueFrontEnd' "
         "cannot find index of child '%s': Invalid underlying container.",
         name.AsCString());
   }

@@ -31,10 +31,9 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     size_t idx = formatters::ExtractIndexFromString(name.GetCString());
     if (idx == UINT32_MAX) {
-      return llvm::createStringError(
-          "'SyntheticChildrenFrontend::GenericBitsetFrontEnd' cannot find "
-          "index of child '%s'",
-          name.AsCString());
+      return llvm::createStringError("'GenericBitsetFrontEnd' cannot find "
+                                     "index of child '%s'",
+                                     name.AsCString());
     }
     return idx;
   }

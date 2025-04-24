@@ -178,15 +178,14 @@ lldb_private::formatters::LibcxxStdProxyArraySyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_base)
     return llvm::createStringError(
-        "'SyntheticChildrenFrontend::LibcxxStdProxyArraySyntheticFrontEnd' "
+        "'LibcxxStdProxyArraySyntheticFrontEnd' "
         "cannot find index of child '%s': Invalid base pointer.",
         name.AsCString());
   size_t idx = ExtractIndexFromString(name.GetCString());
   if (idx == UINT32_MAX) {
-    return llvm::createStringError(
-        "'SyntheticChildrenFrontend::LibcxxStdProxyArraySyntheticFrontEnd' "
-        "cannot find index of child '%s'",
-        name.AsCString());
+    return llvm::createStringError("'LibcxxStdProxyArraySyntheticFrontEnd' "
+                                   "cannot find index of child '%s'",
+                                   name.AsCString());
   }
   return idx;
 }

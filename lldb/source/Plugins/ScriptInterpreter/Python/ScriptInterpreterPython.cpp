@@ -2041,8 +2041,8 @@ llvm::Expected<int> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
     return llvm::createStringError(
-        "'SyntheticChildrenFrontEnd::ScriptInterpreterPythonImpl' cannot find "
-        "index of child '%s'. Invalid implementor (implementor_sp='%p').",
+        "'ScriptInterpreterPythonImpl' cannot find index of child '%s'. "
+        "Invalid implementor (implementor_sp='%p').",
         child_name, implementor_sp.get());
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
