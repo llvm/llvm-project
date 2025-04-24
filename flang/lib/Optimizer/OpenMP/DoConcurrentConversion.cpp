@@ -584,12 +584,16 @@ public:
                            isTargetDevice ? nullptr : &targetClauseOps);
 
       LiveInShapeInfoMap liveInShapeInfoMap;
-      // The outermost loop will contain all the live-in values in all nested
-      // loops since live-in values are collected recursively for all nested
-      // ops.
-      for (mlir::Value liveIn : loopNestLiveIns)
-        targetClauseOps.mapVars.push_back(genMapInfoOpForLiveIn(
-            rewriter, liveIn, liveInShapeInfoMap[liveIn]));
+      fir::FirOpBuilder builder(
+          rewriter,
+          fir::getKindMapping(doLoop->getParentOfType<mlir::ModuleOp>()));
+
+      for (mlir::Value liveIn : loopNestLiveIns) {
+        targetClauseOps.mapVars.push_back(
+            genMapInfoOpForLiveIn(builder, liveIn));
+        liveInShapeInfoMap.insert(
+            {liveIn, TargetDeclareShapeCreationInfo(liveIn)});
+      }
 
       targetOp =
           genTargetOp(doLoop.getLoc(), rewriter, mapper, loopNestLiveIns,
@@ -638,6 +642,37 @@ private:
     // `std::vector`.
     std::vector<mlir::Value> startIndices{};
     std::vector<mlir::Value> extents{};
+
+    TargetDeclareShapeCreationInfo(mlir::Value liveIn) {
+      mlir::Value shape = nullptr;
+      mlir::Operation *liveInDefiningOp = liveIn.getDefiningOp();
+      auto declareOp =
+          mlir::dyn_cast_if_present<hlfir::DeclareOp>(liveInDefiningOp);
+
+      if (declareOp != nullptr)
+        shape = declareOp.getShape();
+
+      if (shape == nullptr)
+        return;
+
+      auto shapeOp =
+          mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp());
+      auto shapeShiftOp =
+          mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shape.getDefiningOp());
+
+      if (shapeOp == nullptr && shapeShiftOp == nullptr)
+        TODO(liveIn.getLoc(),
+             "Shapes not defined by `fir.shape` or `fir.shape_shift` op's are "
+             "not supported yet.");
+
+      if (shapeShiftOp != nullptr)
+        startIndices = shapeShiftOp.getOrigins();
+
+      extents = shapeOp != nullptr
+                    ? std::vector<mlir::Value>(shapeOp.getExtents().begin(),
+                                               shapeOp.getExtents().end())
+                    : shapeShiftOp.getExtents();
+    }
 
     bool isShapedValue() const { return !extents.empty(); }
     bool isShapeShiftedValue() const { return !startIndices.empty(); }
@@ -744,66 +779,26 @@ private:
     return loopNestOp;
   }
 
-  void
-  genBoundsOps(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
-               mlir::Value shape, llvm::SmallVectorImpl<mlir::Value> &boundsOps,
-               TargetDeclareShapeCreationInfo &targetShapeCreationInfo) const {
-    if (shape == nullptr) {
-      return;
-    }
-
-    auto shapeOp =
-        mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp());
-    auto shapeShiftOp =
-        mlir::dyn_cast_if_present<fir::ShapeShiftOp>(shape.getDefiningOp());
-
-    if (shapeOp == nullptr && shapeShiftOp == nullptr)
-      TODO(loc,
-           "Shapes not defined by `fir.shape` or `fir.shape_shift` op's are "
-           "not supported yet.");
-
-    auto extents = shapeOp != nullptr
-                       ? std::vector<mlir::Value>(shapeOp.getExtents().begin(),
-                                                  shapeOp.getExtents().end())
-                       : shapeShiftOp.getExtents();
-
-    mlir::Type idxType = extents.front().getType();
-
-    auto one = rewriter.create<mlir::arith::ConstantOp>(
-        loc, idxType, rewriter.getIntegerAttr(idxType, 1));
-    // For non-shifted values, that starting index is the default Fortran
-    // value: 1.
-    std::vector<mlir::Value> startIndices =
-        shapeOp != nullptr ? std::vector<mlir::Value>(extents.size(), one)
-                           : shapeShiftOp.getOrigins();
-
-    auto genBoundsOp = [&](mlir::Value startIndex, mlir::Value extent) {
-      // We map the entire range of data by default, therefore, we always map
-      // from the start.
-      auto normalizedLB = rewriter.create<mlir::arith::ConstantOp>(
-          loc, idxType, rewriter.getIntegerAttr(idxType, 0));
-
-      mlir::Value ub = rewriter.create<mlir::arith::SubIOp>(loc, extent, one);
-
-      return rewriter.create<mlir::omp::MapBoundsOp>(
-          loc, rewriter.getType<mlir::omp::MapBoundsType>(), normalizedLB, ub,
-          extent,
-          /*stride=*/mlir::Value{}, /*stride_in_bytes=*/false, startIndex);
-    };
-
-    for (auto [startIndex, extent] : llvm::zip_equal(startIndices, extents))
-      boundsOps.push_back(genBoundsOp(startIndex, extent));
-
-    if (shapeShiftOp != nullptr)
-      targetShapeCreationInfo.startIndices = std::move(startIndices);
-    targetShapeCreationInfo.extents = std::move(extents);
+  void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value liveIn,
+                    mlir::Value rawAddr,
+                    llvm::SmallVectorImpl<mlir::Value> &boundsOps) const {
+    fir::ExtendedValue extVal =
+        hlfir::translateToExtendedValue(rawAddr.getLoc(), builder,
+                                        hlfir::Entity{liveIn},
+                                        /*contiguousHint=*/
+                                        true)
+            .first;
+    fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(
+        builder, rawAddr, /*isOptional=*/false, rawAddr.getLoc());
+    boundsOps = fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                                   mlir::omp::MapBoundsType>(
+        builder, info, extVal,
+        /*dataExvIsAssumedSize=*/false, rawAddr.getLoc());
   }
 
-  mlir::omp::MapInfoOp genMapInfoOpForLiveIn(
-      mlir::ConversionPatternRewriter &rewriter, mlir::Value liveIn,
-      TargetDeclareShapeCreationInfo &targetShapeCreationInfo) const {
+  mlir::omp::MapInfoOp genMapInfoOpForLiveIn(fir::FirOpBuilder &builder,
+                                             mlir::Value liveIn) const {
     mlir::Value rawAddr = liveIn;
-    mlir::Value shape = nullptr;
     llvm::StringRef name;
 
     mlir::Operation *liveInDefiningOp = liveIn.getDefiningOp();
@@ -815,14 +810,10 @@ private:
       // possible. Put differently, if we have access to the direct value memory
       // reference/address, we use it.
       rawAddr = declareOp.getOriginalBase();
-      shape = declareOp.getShape();
       name = declareOp.getUniqName();
     }
 
     if (!llvm::isa<mlir::omp::PointerLikeType>(rawAddr.getType())) {
-      fir::FirOpBuilder builder(
-          rewriter, fir::getKindMapping(
-                        liveInDefiningOp->getParentOfType<mlir::ModuleOp>()));
       builder.setInsertionPointAfter(liveInDefiningOp);
       auto copyVal = builder.createTemporary(liveIn.getLoc(), liveIn.getType());
       builder.createStoreWithConvert(copyVal.getLoc(), liveIn, copyVal);
@@ -847,11 +838,10 @@ private:
     }
 
     llvm::SmallVector<mlir::Value> boundsOps;
-    genBoundsOps(rewriter, liveIn.getLoc(), shape, boundsOps,
-                 targetShapeCreationInfo);
+    genBoundsOps(builder, liveIn, rawAddr, boundsOps);
 
     return Fortran::lower::omp::internal::createMapInfoOp(
-        rewriter, liveIn.getLoc(), rawAddr,
+        builder, liveIn.getLoc(), rawAddr,
         /*varPtrPtr=*/{}, name.str(), boundsOps,
         /*members=*/{},
         /*membersIndex=*/mlir::ArrayAttr{},
