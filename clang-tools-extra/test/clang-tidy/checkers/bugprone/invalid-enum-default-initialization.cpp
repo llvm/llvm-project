@@ -114,3 +114,20 @@ S4 VarS4{};
 // CHECK-NOTES: :8:12: note: enum is defined here
 // CHECK-NOTES: :[[@LINE-3]]:10: warning: enum value of type 'Enum2' initialized with invalid value of 0
 // CHECK-NOTES: :13:6: note: enum is defined here
+
+enum class EnumFwd;
+
+EnumFwd Fwd{};
+
+enum class EnumEmpty {};
+
+EnumEmpty Empty{};
+
+template<typename T>
+struct Templ {
+  T Mem1{};
+  // CHECK-NOTES: :[[@LINE-1]]:9: warning: enum value of type 'Enum1' initialized with invalid value of 0
+  // CHECK-NOTES: :8:12: note: enum is defined here
+};
+
+Templ<Enum1> TemplVar;

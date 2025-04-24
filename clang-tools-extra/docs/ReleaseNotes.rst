@@ -125,6 +125,12 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+
+  Detect default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

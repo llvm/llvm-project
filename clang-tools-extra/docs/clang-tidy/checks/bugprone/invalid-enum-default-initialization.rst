@@ -3,7 +3,7 @@
 bugprone-invalid-enum-default-initialization
 ============================================
 
-Detect default initialization (to 0) of variables with `enum` type where
+Detect default initialization (to 0) of variables with ``enum`` type where
 the enum has no enumerator with value of 0.
 
 In C++ a default initialization is performed if a variable is initialized with

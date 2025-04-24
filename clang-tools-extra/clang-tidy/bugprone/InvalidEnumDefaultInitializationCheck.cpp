@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InvalidEnumDefaultInitializationCheck.h"
-// #include "../utils/Matchers.h"
-// #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
@@ -21,7 +19,7 @@ namespace {
 
 AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
   const EnumDecl *Definition = Node.getDefinition();
-  return Definition && Node.isComplete() &&
+  return Definition && Node.isComplete() && !Node.enumerators().empty() &&
          std::none_of(Definition->enumerator_begin(),
                       Definition->enumerator_end(),
                       [](const EnumConstantDecl *Value) {
