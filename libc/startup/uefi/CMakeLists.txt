@@ -34,6 +34,7 @@ add_startup_object(
   SRCS
     crt1.cpp
   DEPENDS
+    libc.config.app_h
     libc.src.__support.OSUtil.uefi.uefi_util
 )
 
