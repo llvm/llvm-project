@@ -453,7 +453,7 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   endif()
 
   # GCC requires this flag in order for precompiled headers to work with ccache
-  if (CMAKE_CXX_COMPILER_ID MATCHES GCC AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpch-preprocess")
   endif()
 endif()
@@ -467,7 +467,7 @@ if (APPLE)
 endif()
 
 # Clang requires this flag in order for precompiled headers to work with ccache
-if (CMAKE_CXX_COMPILER_ID MATCHES Clang AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fno-pch-timestamp")
 endif()
 
