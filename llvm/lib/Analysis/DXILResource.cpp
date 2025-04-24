@@ -8,7 +8,9 @@
 
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -19,6 +21,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <climits>
+#include <cstdint>
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -879,12 +883,133 @@ SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
 
 //===----------------------------------------------------------------------===//
 
+void DXILResourceBindingsInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
+  struct Binding {
+    ResourceClass ResClass;
+    uint32_t Space;
+    uint32_t LowerBound;
+    uint32_t UpperBound;
+    Binding(ResourceClass RC, uint32_t Sp, uint32_t LB, uint32_t UB)
+        : ResClass(RC), Space(Sp), LowerBound(LB), UpperBound(UB) {}
+  };
+  SmallVector<Binding> Bindings;
+
+  // collect all of the llvm.dx.resource.handlefrombinding calls;
+  // make a note if there is llvm.dx.resource.handlefromimplicitbinding
+  for (Function &F : M.functions()) {
+    if (!F.isDeclaration())
+      continue;
+
+    switch (F.getIntrinsicID()) {
+    default:
+      continue;
+    case Intrinsic::dx_resource_handlefrombinding: {
+      auto *HandleTy = cast<TargetExtType>(F.getReturnType());
+      ResourceTypeInfo &RTI = DRTM[HandleTy];
+
+      for (User *U : F.users())
+        if (CallInst *CI = dyn_cast<CallInst>(U)) {
+          uint32_t Space =
+              cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
+          uint32_t LowerBound =
+              cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+          int32_t Size =
+              cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+
+          // negative size means unbounded resource array;
+          // upper bound register overflow should be detected in Sema
+          assert((Size < 0 || (unsigned)LowerBound + Size - 1 <= UINT32_MAX) &&
+                 "upper bound register overflow");
+          uint32_t UpperBound = Size < 0 ? UINT32_MAX : LowerBound + Size - 1;
+          Bindings.emplace_back(RTI.getResourceClass(), Space, LowerBound,
+                                UpperBound);
+        }
+      break;
+    }
+    case Intrinsic::dx_resource_handlefromimplicitbinding: {
+      if (!F.user_empty())
+        ImplicitBinding = true;
+      break;
+    }
+    }
+  }
+
+  // sort all the collected bindings
+  llvm::stable_sort(Bindings, [](auto &LHS, auto &RHS) {
+    return std::tie(LHS.ResClass, LHS.Space, LHS.LowerBound) <
+           std::tie(RHS.ResClass, RHS.Space, RHS.LowerBound);
+  });
+
+  // remove duplicates
+  llvm::unique(Bindings, [](auto &LHS, auto &RHS) {
+    return std::tie(LHS.ResClass, LHS.Space, LHS.LowerBound, LHS.UpperBound) ==
+           std::tie(RHS.ResClass, RHS.Space, RHS.LowerBound, RHS.UpperBound);
+  });
+
+  // Go over the sorted bindings and build up lists of free register ranges
+  // for each binding type and used spaces. Bindings are sorted by resource
+  // class, space, and lower bound register slot.
+  BindingSpaces *BS = &SRVSpaces;
+  for (unsigned I = 0, E = Bindings.size(); I != E; ++I) {
+    Binding &B = Bindings[I];
+
+    if (BS->ResClass != B.ResClass)
+      // move to the next resource class spaces
+      BS = &getBindingSpaces(B.ResClass);
+
+    RegisterSpace *S = &BS->Spaces.back();
+    assert(S->Space <= B.Space && "bindings not sorted correctly?");
+    if (B.Space != S->Space)
+      // add new space
+      S = &BS->Spaces.emplace_back(B.Space);
+
+    // the space is full - set flag to report overlapping binding later
+    if (S->FreeRanges.empty()) {
+      OverlappingBinding = true;
+      continue;
+    }
+
+    // adjust the last free range lower bound, split it in two, or remove it
+    BindingRange &LastFreeRange = S->FreeRanges.back();
+    assert(LastFreeRange.UpperBound == UINT32_MAX);
+    if (LastFreeRange.LowerBound == B.LowerBound) {
+      if (B.UpperBound < UINT32_MAX)
+        LastFreeRange.LowerBound = B.UpperBound + 1;
+      else
+        S->FreeRanges.pop_back();
+
+    } else if (LastFreeRange.LowerBound < B.LowerBound) {
+      LastFreeRange.UpperBound = B.LowerBound - 1;
+      if (B.UpperBound < UINT32_MAX)
+        S->FreeRanges.emplace_back(B.UpperBound + 1, UINT32_MAX);
+    } else {
+      OverlappingBinding = true;
+      if (B.UpperBound < UINT32_MAX)
+        LastFreeRange.LowerBound =
+            std::max(LastFreeRange.LowerBound, B.UpperBound + 1);
+      else
+        S->FreeRanges.pop_back();
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
+
 AnalysisKey DXILResourceTypeAnalysis::Key;
 AnalysisKey DXILResourceAnalysis::Key;
+AnalysisKey DXILResourceBindingAnalysis::Key;
 
 DXILResourceMap DXILResourceAnalysis::run(Module &M,
                                           ModuleAnalysisManager &AM) {
   DXILResourceMap Data;
+  DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
+  Data.populate(M, DRTM);
+  return Data;
+}
+
+DXILResourceBindingsInfo
+DXILResourceBindingAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+  DXILResourceBindingsInfo Data;
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   Data.populate(M, DRTM);
   return Data;
