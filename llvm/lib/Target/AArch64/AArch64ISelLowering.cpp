@@ -1876,14 +1876,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // Other pairs will default to 'Expand'.
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
-
-    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i64, Custom);
-    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i32, Custom);
-
-    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i64, Custom);
-    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i32, Custom);
-    setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i16, Custom);
-    setPartialReduceMLAAction(MVT::nxv16i8, MVT::nxv32i8, Custom);
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
