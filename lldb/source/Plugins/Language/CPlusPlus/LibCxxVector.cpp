@@ -169,8 +169,7 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
   if (!m_start || !m_finish)
     return llvm::createStringError(
         "'SyntheticChildrenFrontEnd::LibcxxStdVectorSyntheticFrontEnd' cannot "
-        "find index of child '%s'. (m_start='" PRIu32 "', m_finish='" PRIu32
-        "')",
+        "find index of child '%s'. (m_start='%p', m_finish='%p')",
         name.AsCString(), m_start, m_finish);
   size_t index = formatters::ExtractIndexFromString(name.GetCString());
   if (index == UINT32_MAX) {
