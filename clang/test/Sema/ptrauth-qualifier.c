@@ -125,7 +125,6 @@ union U2 { // expected-note 2 {{union U2' has subobjects that are non-trivial to
   intp __ptrauth(1, 0, 50) f1;
 };
 
-// Test for r353556.
 struct S2 { // expected-note 2 {{struct S2' has subobjects that are non-trivial to copy}}
   intp __ptrauth(1, 1, 50) f0[4]; // expected-note 2 {{f0 has type '__ptrauth(1,1,50) intp' (aka 'int *__ptrauth(1,1,50)') that is non-trivial to copy}}
 };
