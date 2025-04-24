@@ -26,8 +26,7 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   dap.stop_at_entry = arguments.stopOnEntry;
 
   if (!arguments.launchCommands.empty() && arguments.runInTerminal) {
-    return make_error<DAPError>("launchCommands and runInTerminal cannot "
-                                "both be set, use one or the other.");
+    return make_error<DAPError>("launchCommands and runInTerminal are mutually exclusive");
   }
 
   PrintWelcomeMessage();
