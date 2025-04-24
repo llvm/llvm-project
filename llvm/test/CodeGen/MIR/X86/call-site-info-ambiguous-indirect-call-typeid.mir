@@ -49,8 +49,7 @@
 name:            main
 callSites:
   - { bb: 0, offset: 0, fwdArgRegs: [] }
-  - { bb: 0, offset: 2, fwdArgRegs: [], calleeTypeIds: 
-    [ 1234567890 ] }
+  - { bb: 0, offset: 2, fwdArgRegs: [], calleeTypeIds: [ 1234567890 ] }
 body:             |
   bb.0.entry:
     CALL64pcrel32 @_Z13get_operationb, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax    
