@@ -128,6 +128,14 @@ public:
   /// course of IR transformations
   static bool mayLowerToFunctionCall(Intrinsic::ID IID);
 
+  /// Check if \p ID represents a function that may access FP environment and
+  /// may have FP operand bundles.
+  ///
+  /// Access to FP environment means that in the strict FP environment the
+  /// function has read/write memory effect, which is used to maintain proper
+  /// instructions ordering.
+  static bool isFloatingPointOperation(Intrinsic::ID IID);
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const CallInst *I) {
     if (const Function *CF = I->getCalledFunction())
