@@ -219,6 +219,9 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
     if (Predicate.isLoad() && Predicate.getMemoryVT())
       continue;
 
+    if (Predicate.isStore() && Predicate.getMemoryVT())
+      continue;
+
     if (Predicate.isLoad() || Predicate.isStore()) {
       if (Predicate.isUnindexed())
         continue;

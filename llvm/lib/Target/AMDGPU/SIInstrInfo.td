@@ -544,14 +544,12 @@ def truncstorei8_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i8;
-  let IsTruncStore = 1;
 }
 
 def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i16;
-  let IsTruncStore = 1;
 }
 
 let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {
