@@ -700,13 +700,11 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
     if (fd &&
         fd->getType()->castAs<FunctionType>()->getCallConv() == CC_X86RegCall) {
       cgm.errorNYI(nd->getSourceRange(), "getMangledName: X86RegCall");
-      out << ii->getName();
     } else if (fd && fd->hasAttr<CUDAGlobalAttr>() &&
                gd.getKernelReferenceKind() == KernelReferenceKind::Stub) {
-      out << "__device_stub__" << ii->getName();
-    } else {
-      out << ii->getName();
+      cgm.errorNYI(nd->getSourceRange(), "getMangledName: CUDA device stub");
     }
+    out << ii->getName();
   }
 
   // Check if the module name hash should be appended for internal linkage
