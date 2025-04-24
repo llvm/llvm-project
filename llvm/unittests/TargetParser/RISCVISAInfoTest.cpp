@@ -1086,6 +1086,7 @@ R"(All available -march extensions for RISC-V
     shvstvecd            1.0
     smaia                1.0
     smcdeleg             1.0
+    smcntrpmf            1.0
     smcsrind             1.0
     smdbltrp             1.0
     smepmp               1.0
