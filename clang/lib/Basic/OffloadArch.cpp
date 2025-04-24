@@ -89,19 +89,12 @@ static const OffloadArchToStringMap arch_names[] = {
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
-    // Note: this is an initial list of Intel GPU and GPU offloading architectures.
-    // The list will be expanded later as support for more architectures is added.
-    // Intel CPUs
-    {OffloadArch::GRANITERAPIDS, "graniterapids", ""},
-    // Intel GPUS
-    {OffloadArch::BMG_G21, "bmg_g21", ""},
     {OffloadArch::Generic, "generic", ""},
     // clang-format on
 };
 #undef SM
 #undef SM2
 #undef GFX
-#undef INTEL
 
 const char *OffloadArchToString(OffloadArch A) {
   auto result = std::find_if(

@@ -5,7 +5,6 @@ add_clang_unittest(BasicTests
   FileEntryTest.cpp
   FileManagerTest.cpp
   LineOffsetMappingTest.cpp
-  OffloadArchTest.cpp
   SanitizersTest.cpp
   SarifTest.cpp
   SourceManagerTest.cpp

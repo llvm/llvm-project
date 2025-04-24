@@ -101,10 +101,6 @@ enum class OffloadArch {
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
-  // Intel CPUs
-  GRANITERAPIDS,
-  // Intel GPUs
-  BMG_G21,
   LAST,
 
   CudaDefault = OffloadArch::SM_52,
@@ -120,22 +116,11 @@ static inline bool IsAMDOffloadArch(OffloadArch A) {
   return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
 }
 
-static inline bool IsIntelCPUArch(OffloadArch Arch) {
-  return Arch >= OffloadArch::GRANITERAPIDS && Arch < OffloadArch::BMG_G21;
-}
-
-static inline bool IsIntelGPUArch(OffloadArch Arch) {
-  return Arch >= OffloadArch::BMG_G21 && Arch < OffloadArch::LAST;
-}
-
-static inline bool IsIntelOffloadArch(OffloadArch Arch) {
-  return IsIntelCPUArch(Arch) || IsIntelGPUArch(Arch);
-}
-
 const char *OffloadArchToString(OffloadArch A);
 const char *OffloadArchToVirtualArchString(OffloadArch A);
 
-// The input should have the form "sm_20".
+// Convert a string to an OffloadArch enum value. Returns
+// OffloadArch::UNKNOWN if the string is not recognized.
 OffloadArch StringToOffloadArch(llvm::StringRef S);
 
 } // namespace clang
