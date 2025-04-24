@@ -3258,9 +3258,9 @@ bool X86TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return false;
 }
 
-bool X86TargetLowering::shouldReduceLoadWidth(SDNode *Load,
-                                              ISD::LoadExtType ExtTy,
-                                              EVT NewVT) const {
+bool X86TargetLowering::shouldReduceLoadWidth(
+    SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+    std::optional<unsigned> ByteOffset) const {
   assert(cast<LoadSDNode>(Load)->isSimple() && "illegal to narrow");
 
   // "ELF Handling for Thread-Local Storage" specifies that R_X86_64_GOTTPOFF
@@ -52795,8 +52795,8 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
               getTargetConstantBitsFromNode(SDValue(User, 0), NumBits,
                                             UserUndefs, UserBits)) {
             if (MatchingBits(Undefs, UserUndefs, Bits, UserBits)) {
-              SDValue Extract = extractSubVector(
-                  SDValue(User, 0), 0, DAG, SDLoc(N), RegVT.getSizeInBits());
+              SDValue Extract = extractSubVector(SDValue(User, 0), 0, DAG, dl,
+                                                 RegVT.getSizeInBits());
               Extract = DAG.getBitcast(RegVT, Extract);
               return DCI.CombineTo(N, Extract, SDValue(User, 1));
             }
@@ -57809,10 +57809,6 @@ static SDValue combineSubSetcc(SDNode *N, SelectionDAG &DAG) {
 }
 
 static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
-  // res, flags2 = sub 0, (setcc cc, flag)
-  // cload/cstore ..., cond_ne, flag2
-  // ->
-  // cload/cstore cc, flag
   if (N->getConstantOperandVal(3) != X86::COND_NE)
     return SDValue();
 
@@ -57820,16 +57816,34 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
   if (Sub.getOpcode() != X86ISD::SUB)
     return SDValue();
 
-  SDValue SetCC = Sub.getOperand(1);
+  SDValue Op1 = Sub.getOperand(1);
 
-  if (!X86::isZeroNode(Sub.getOperand(0)) || SetCC.getOpcode() != X86ISD::SETCC)
+  if (!X86::isZeroNode(Sub.getOperand(0)))
     return SDValue();
 
+  SDLoc DL(N);
   SmallVector<SDValue, 5> Ops(N->op_values());
-  Ops[3] = SetCC.getOperand(0);
-  Ops[4] = SetCC.getOperand(1);
+  if (Op1.getOpcode() == X86ISD::SETCC) {
+    // res, flags2 = sub 0, (setcc cc, flag)
+    // cload/cstore ..., cond_ne, flag2
+    // ->
+    // cload/cstore cc, flag
+    Ops[3] = Op1.getOperand(0);
+    Ops[4] = Op1.getOperand(1);
+  } else if (Op1.getOpcode() == ISD::AND && Sub.getValue(0).use_empty()) {
+    // res, flags2 = sub 0, (and X, Y)
+    // cload/cstore ..., cond_ne, flag2
+    // ->
+    // res, flags2 = and X, Y
+    // cload/cstore ..., cond_ne, flag2
+    Ops[4] = DAG.getNode(X86ISD::AND, DL, Sub->getVTList(), Op1.getOperand(0),
+                         Op1.getOperand(1))
+                 .getValue(1);
+  } else {
+    return SDValue();
+  }
 
-  return DAG.getMemIntrinsicNode(N->getOpcode(), SDLoc(N), N->getVTList(), Ops,
+  return DAG.getMemIntrinsicNode(N->getOpcode(), DL, N->getVTList(), Ops,
                                  cast<MemSDNode>(N)->getMemoryVT(),
                                  cast<MemSDNode>(N)->getMemOperand());
 }

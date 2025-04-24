@@ -334,7 +334,7 @@ class SemaOpenACCClauseVisitor {
   }
 
   // For 'tile' and 'collapse', only allow 1 per 'device_type'.
-  // Also applies to num_worker, num_gangs, and vector_length.
+  // Also applies to num_worker, num_gangs, vector_length, and async.
   template <typename TheClauseTy>
   bool DisallowSinceLastDeviceType(SemaOpenACC::OpenACCParsedClause &Clause) {
     auto LastDeviceTypeItr =
@@ -639,6 +639,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitVectorLengthClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAsyncClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (DisallowSinceLastDeviceType<OpenACCAsyncClause>(Clause))
+    return nullptr;
+
   assert(Clause.getNumIntExprs() < 2 &&
          "Invalid number of expressions for Async");
   return OpenACCAsyncClause::Create(

@@ -46,6 +46,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
@@ -938,6 +939,47 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
+static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
+                                                              StringRef Name) {
+  if (Name.consume_front("mapa.shared.cluster"))
+    if (F->getReturnType()->getPointerAddressSpace() ==
+        NVPTXAS::ADDRESS_SPACE_SHARED)
+      return Intrinsic::nvvm_mapa_shared_cluster;
+
+  if (Name.consume_front("cp.async.bulk.")) {
+    Intrinsic::ID ID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("global.to.shared.cluster",
+                  Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster)
+            .Case("shared.cta.to.cluster",
+                  Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster)
+            .Case("tensor.g2s.im2col.3d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d)
+            .Case("tensor.g2s.im2col.4d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d)
+            .Case("tensor.g2s.im2col.5d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d)
+            .Case("tensor.g2s.tile.1d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d)
+            .Case("tensor.g2s.tile.2d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d)
+            .Case("tensor.g2s.tile.3d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d)
+            .Case("tensor.g2s.tile.4d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d)
+            .Case("tensor.g2s.tile.5d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d)
+            .Default(Intrinsic::not_intrinsic);
+
+    if (ID != Intrinsic::not_intrinsic)
+      if (F->getArg(0)->getType()->getPointerAddressSpace() ==
+          NVPTXAS::ADDRESS_SPACE_SHARED)
+        return ID;
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   if (Name.consume_front("fma.rn."))
     return StringSwitch<Intrinsic::ID>(Name)
@@ -1276,6 +1318,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           NewFn = nullptr;
           return true;
         }
+      }
+
+      // Upgrade Distributed Shared Memory Intrinsics
+      Intrinsic::ID IID = shouldUpgradeNVPTXSharedClusterIntrinsic(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -4715,6 +4765,39 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Res = Builder.CreateIntCast(NewCall, CI->getType(), /*isSigned*/ true);
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::nvvm_mapa_shared_cluster: {
+    // Create a new call with the correct address space.
+    NewCall =
+        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1)});
+    Value *Res = NewCall;
+    Res = Builder.CreateAddrSpaceCast(
+        Res, Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED));
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster:
+  case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
+  case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d: {
+    // Create a new call with the correct address space.
+    SmallVector<Value *, 4> Args(CI->args());
+    Args[0] = Builder.CreateAddrSpaceCast(
+        Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
     CI->eraseFromParent();
     return;
   }
