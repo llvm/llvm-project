@@ -369,7 +369,7 @@ Operation *LivenessBlockInfo::getStartOperation(Value value) const {
   Operation *definingOp = value.getDefiningOp();
   // The given value is either live-in or is defined
   // in the scope of this block.
-  if (isLiveIn(value) || !definingOp)
+  if (!definingOp || definingOp->getBlock() != block)
     return &block->front();
   return definingOp;
 }
