@@ -317,10 +317,18 @@ public:
             operation.getAsyncOperandsDeviceTypeAttr(),
             createIntExpr(clause.getIntExpr()), range));
       }
+    } else if constexpr (isOneOfTypes<OpTy, WaitOp>) {
+      // Wait doesn't have a device_type, so its handling here is slightly
+      // different.
+      if (!clause.hasIntExpr())
+        operation.setAsync(true);
+      else
+        operation.getAsyncOperandMutable().append(
+            createIntExpr(clause.getIntExpr()));
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. Combined constructs remain. Data, enter data, exit data,
-      // update, wait, combined constructs remain.
+      // update, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -345,7 +353,7 @@ public:
 
   void VisitIfClause(const OpenACCIfClause &clause) {
     if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, InitOp,
-                               ShutdownOp, SetOp, DataOp>) {
+                               ShutdownOp, SetOp, DataOp, WaitOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else {
@@ -353,7 +361,7 @@ public:
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, host_data, update, wait, combined
+      // unreachable. Enter data, exit data, host_data, update, combined 
       // constructs remain.
       return clauseNotImplemented(clause);
     }
@@ -444,11 +452,9 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
 }
 
 template <typename Op>
-mlir::LogicalResult CIRGenFunction::emitOpenACCOp(
+Op CIRGenFunction::emitOpenACCOp(
     mlir::Location start, OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
     llvm::ArrayRef<const OpenACCClause *> clauses) {
-  mlir::LogicalResult res = mlir::success();
-
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
   auto op = builder.create<Op>(start, retTy, operands);
@@ -461,7 +467,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOp(
     makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
         .VisitClauseList(clauses);
   }
-  return res;
+  return op;
 }
 
 mlir::LogicalResult
@@ -500,22 +506,61 @@ CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  return emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+  emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                                s.clauses());
+  return mlir::success();
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCSetConstruct(const OpenACCSetConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  return emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+  emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                               s.clauses());
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  return emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
+  emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
                                    s.getDirectiveLoc(), s.clauses());
+  return mlir::success();
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  auto waitOp = emitOpenACCOp<WaitOp>(start, s.getDirectiveKind(),
+                                   s.getDirectiveLoc(), s.clauses());
+
+  auto createIntExpr = [this](const Expr *intExpr) {
+    mlir::Value expr = emitScalarExpr(intExpr);
+    mlir::Location exprLoc = cgm.getLoc(intExpr->getBeginLoc());
+
+    mlir::IntegerType targetType = mlir::IntegerType::get(
+        &getMLIRContext(), getContext().getIntWidth(intExpr->getType()),
+        intExpr->getType()->isSignedIntegerOrEnumerationType()
+            ? mlir::IntegerType::SignednessSemantics::Signed
+            : mlir::IntegerType::SignednessSemantics::Unsigned);
+
+    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+        exprLoc, targetType, expr);
+    return conversionOp.getResult(0);
+  };
+
+  // Emit the correct 'wait' clauses.
+  {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(waitOp);
+
+    if (s.hasDevNumExpr())
+      waitOp.getWaitDevnumMutable().append(createIntExpr(s.getDevNumExpr()));
+
+    for (Expr *QueueExpr  : s.getQueueIdExprs())
+      waitOp.getWaitOperandsMutable().append(createIntExpr(QueueExpr));
+  }
+
+  return mlir::success();
 }
 
 mlir::LogicalResult
@@ -541,11 +586,6 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
 mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult
-CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC Wait Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
