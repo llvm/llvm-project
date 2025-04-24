@@ -16,6 +16,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -73,6 +74,89 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                      builder.getStringAttr(getTriple().str()));
 }
 
+CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
+                                                LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::opTBAA());
+
+  // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown, but
+  // that doesn't return the information we need to compute baseInfo.
+
+  // Honor alignment typedef attributes even on incomplete types.
+  // We also honor them straight for C++ class types, even as pointees;
+  // there's an expressivity gap here.
+  if (const auto *tt = t->getAs<TypedefType>()) {
+    if (unsigned align = tt->getDecl()->getMaxAlignment()) {
+      if (baseInfo)
+        *baseInfo = LValueBaseInfo(AlignmentSource::AttributedType);
+      return astContext.toCharUnitsFromBits(align);
+    }
+  }
+
+  // Analyze the base element type, so we don't get confused by incomplete
+  // array types.
+  t = astContext.getBaseElementType(t);
+
+  if (t->isIncompleteType()) {
+    // We could try to replicate the logic from
+    // ASTContext::getTypeAlignIfKnown, but nothing uses the alignment if the
+    // type is incomplete, so it's impossible to test. We could try to reuse
+    // getTypeAlignIfKnown, but that doesn't return the information we need
+    // to set baseInfo.  So just ignore the possibility that the alignment is
+    // greater than one.
+    if (baseInfo)
+      *baseInfo = LValueBaseInfo(AlignmentSource::Type);
+    return CharUnits::One();
+  }
+
+  if (baseInfo)
+    *baseInfo = LValueBaseInfo(AlignmentSource::Type);
+
+  CharUnits alignment;
+  if (t.getQualifiers().hasUnaligned()) {
+    alignment = CharUnits::One();
+  } else {
+    assert(!cir::MissingFeatures::alignCXXRecordDecl());
+    alignment = astContext.getTypeAlignInChars(t);
+  }
+
+  // Cap to the global maximum type alignment unless the alignment
+  // was somehow explicit on the type.
+  if (unsigned maxAlign = astContext.getLangOpts().MaxTypeAlign) {
+    if (alignment.getQuantity() > maxAlign &&
+        !astContext.isAlignmentRequired(t))
+      alignment = CharUnits::fromQuantity(maxAlign);
+  }
+  return alignment;
+}
+
+const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
+  if (theTargetCIRGenInfo)
+    return *theTargetCIRGenInfo;
+
+  const llvm::Triple &triple = getTarget().getTriple();
+  switch (triple.getArch()) {
+  default:
+    assert(!cir::MissingFeatures::targetCIRGenInfoArch());
+
+    // Currently we just fall through to x86_64.
+    [[fallthrough]];
+
+  case llvm::Triple::x86_64: {
+    switch (triple.getOS()) {
+    default:
+      assert(!cir::MissingFeatures::targetCIRGenInfoOS());
+
+      // Currently we just fall through to x86_64.
+      [[fallthrough]];
+
+    case llvm::Triple::Linux:
+      theTargetCIRGenInfo = createX8664TargetCIRGenInfo(genTypes);
+      return *theTargetCIRGenInfo;
+    }
+  }
+  }
+}
+
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
   const SourceManager &sm = astContext.getSourceManager();
@@ -91,6 +175,11 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
 }
 
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
+  if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
+    emitGlobalOpenACCDecl(cd);
+    return;
+  }
+
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -133,10 +222,109 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   }
 
   CIRGenFunction cgf(*this, builder);
+  curCGF = &cgf;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     cgf.generateCode(gd, funcOp, funcType);
   }
+  curCGF = nullptr;
+}
+
+mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
+  return mlir::SymbolTable::lookupSymbolIn(theModule, name);
+}
+
+/// If the specified mangled name is not in the module,
+/// create and return an mlir GlobalOp with the specified type (TODO(cir):
+/// address space).
+///
+/// TODO(cir):
+/// 1. If there is something in the module with the specified name, return
+/// it potentially bitcasted to the right type.
+///
+/// 2. If \p d is non-null, it specifies a decl that correspond to this.  This
+/// is used to set the attributes on the global when it is first created.
+///
+/// 3. If \p isForDefinition is true, it is guaranteed that an actual global
+/// with type \p ty will be returned, not conversion of a variable with the same
+/// mangled name but some other type.
+cir::GlobalOp
+CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
+                                   LangAS langAS, const VarDecl *d,
+                                   ForDefinition_t isForDefinition) {
+  // Lookup the entry, lazily creating it if necessary.
+  cir::GlobalOp entry;
+  if (mlir::Operation *v = getGlobalValue(mangledName)) {
+    if (!isa<cir::GlobalOp>(v))
+      errorNYI(d->getSourceRange(), "global with non-GlobalOp type");
+    entry = cast<cir::GlobalOp>(v);
+  }
+
+  if (entry) {
+    assert(!cir::MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::opGlobalWeakRef());
+
+    assert(!cir::MissingFeatures::setDLLStorageClass());
+    assert(!cir::MissingFeatures::openMP());
+
+    if (entry.getSymType() == ty)
+      return entry;
+
+    // If there are two attempts to define the same mangled name, issue an
+    // error.
+    //
+    // TODO(cir): look at mlir::GlobalValue::isDeclaration for all aspects of
+    // recognizing the global as a declaration, for now only check if
+    // initializer is present.
+    if (isForDefinition && !entry.isDeclaration()) {
+      errorNYI(d->getSourceRange(), "global with conflicting type");
+    }
+
+    // Address space check removed because it is unnecessary because CIR records
+    // address space info in types.
+
+    // (If global is requested for a definition, we always need to create a new
+    // global, not just return a bitcast.)
+    if (!isForDefinition)
+      return entry;
+  }
+
+  errorNYI(d->getSourceRange(), "reference of undeclared global");
+  return {};
+}
+
+cir::GlobalOp
+CIRGenModule::getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
+                                   ForDefinition_t isForDefinition) {
+  assert(d->hasGlobalStorage() && "Not a global variable");
+  QualType astTy = d->getType();
+  if (!ty)
+    ty = getTypes().convertTypeForMem(astTy);
+
+  assert(!cir::MissingFeatures::mangledNames());
+  return getOrCreateCIRGlobal(d->getIdentifier()->getName(), ty,
+                              astTy.getAddressSpace(), d, isForDefinition);
+}
+
+/// Return the mlir::Value for the address of the given global variable. If
+/// \p ty is non-null and if the global doesn't exist, then it will be created
+/// with the specified type instead of whatever the normal requested type would
+/// be. If \p isForDefinition is true, it is guaranteed that an actual global
+/// with type \p ty will be returned, not conversion of a variable with the same
+/// mangled name but some other type.
+mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
+                                             ForDefinition_t isForDefinition) {
+  assert(d->hasGlobalStorage() && "Not a global variable");
+  QualType astTy = d->getType();
+  if (!ty)
+    ty = getTypes().convertTypeForMem(astTy);
+
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
+  cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
+  mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
+  return builder.create<cir::GetGlobalOp>(getLoc(d->getSourceRange()), ptrTy,
+                                          g.getSymName());
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
@@ -423,6 +611,19 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobal(vd);
     break;
   }
+  case Decl::OpenACCRoutine:
+    emitGlobalOpenACCDecl(cast<OpenACCRoutineDecl>(decl));
+    break;
+  case Decl::OpenACCDeclare:
+    emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    break;
+
+  case Decl::Typedef:
+  case Decl::TypeAlias: // using foo = bar; [C++11]
+  case Decl::Record:
+  case Decl::CXXRecord:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
   }
 }
 
@@ -438,6 +639,7 @@ cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
     funcType = convertType(fd->getType());
   }
 
+  assert(!cir::MissingFeatures::mangledNames());
   cir::FuncOp func = getOrCreateCIRFunction(
       cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName(), funcType, gd,
       forVTable, dontDefer, /*isThunk=*/false, isForDefinition);
@@ -466,8 +668,18 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
+    // Some global emissions are triggered while emitting a function, e.g.
+    // void s() { x.method() }
+    //
+    // Be sure to insert a new function before a current one.
+    CIRGenFunction *cgf = this->curCGF;
+    if (cgf)
+      builder.setInsertionPoint(cgf->curFn);
+
     func = builder.create<cir::FuncOp>(loc, name, funcType);
-    theModule.push_back(func);
+
+    if (!cgf)
+      theModule.push_back(func);
   }
   return func;
 }

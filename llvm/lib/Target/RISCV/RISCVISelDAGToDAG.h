@@ -81,6 +81,8 @@ public:
 
   bool tryShrinkShlLogicImm(SDNode *Node);
   bool trySignedBitfieldExtract(SDNode *Node);
+  bool tryUnsignedBitfieldExtract(SDNode *Node, SDLoc DL, MVT VT, SDValue X,
+                                  unsigned Msb, unsigned Lsb);
   bool tryIndexedLoad(SDNode *Node);
 
   bool selectShiftMask(SDValue N, unsigned ShiftWidth, SDValue &ShAmt);

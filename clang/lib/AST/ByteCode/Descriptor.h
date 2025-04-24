@@ -168,6 +168,7 @@ public:
   const bool IsArray = false;
   /// Flag indicating if this is a dummy descriptor.
   bool IsDummy = false;
+  bool IsConstexprUnknown = false;
 
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
@@ -264,7 +265,7 @@ public:
   bool isUnknownSizeArray() const { return Size == UnknownSizeMark; }
 
   /// Checks if the descriptor is of a primitive.
-  bool isPrimitive() const { return !IsArray && !ElemRecord && !IsDummy; }
+  bool isPrimitive() const { return !IsArray && !ElemRecord && PrimT; }
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }

@@ -7,7 +7,7 @@ define void @test_typedbuffer() {
   %srv0 = call target("dx.RawBuffer", void, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0t(
           i32 1, i32 8, i32 1, i32 0, i1 false)
-  ; CHECK: Binding [[SRV0:[0-9]+]]:
+  ; CHECK: Resource [[SRV0:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 0
   ; CHECK:     Space: 1
@@ -21,7 +21,7 @@ define void @test_typedbuffer() {
   %srv1 = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0t(
           i32 4, i32 2, i32 1, i32 0, i1 false)
-  ; CHECK: Binding [[SRV1:[0-9]+]]:
+  ; CHECK: Resource [[SRV1:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 1
   ; CHECK:     Space: 4
@@ -36,7 +36,7 @@ define void @test_typedbuffer() {
   %srv2 = call target("dx.TypedBuffer", <4 x i32>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_0_0t(
           i32 5, i32 3, i32 24, i32 0, i1 false)
-  ; CHECK: Binding [[SRV2:[0-9]+]]:
+  ; CHECK: Resource [[SRV2:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 2
   ; CHECK:     Space: 5
@@ -51,16 +51,16 @@ define void @test_typedbuffer() {
   %uav0 = call target("dx.TypedBuffer", i32, 1, 0, 1)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0t(
           i32 2, i32 7, i32 1, i32 0, i1 false)
-  ; CHECK: Binding [[UAV0:[0-9]+]]:
+  ; CHECK: Resource [[UAV0:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 0
   ; CHECK:     Space: 2
   ; CHECK:     Lower Bound: 7
   ; CHECK:     Size: 1
+  ; CHECK:   Globally Coherent: 0
+  ; CHECK:   Counter Direction: Unknown
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
-  ; CHECK:   Globally Coherent: 0
-  ; CHECK:   HasCounter: 0
   ; CHECK:   IsROV: 0
   ; CHECK:   Element Type: i32
   ; CHECK:   Element Count: 1
@@ -69,16 +69,16 @@ define void @test_typedbuffer() {
   %uav1 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 3, i32 5, i32 1, i32 0, i1 false)
-  ; CHECK: Binding [[UAV1:[0-9]+]]:
+  ; CHECK: Resource [[UAV1:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 1
   ; CHECK:     Space: 3
   ; CHECK:     Lower Bound: 5
   ; CHECK:     Size: 1
+  ; CHECK:   Globally Coherent: 0
+  ; CHECK:   Counter Direction: Unknown
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
-  ; CHECK:   Globally Coherent: 0
-  ; CHECK:   HasCounter: 0
   ; CHECK:   IsROV: 0
   ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4
@@ -92,23 +92,23 @@ define void @test_typedbuffer() {
   %uav2_2 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 4, i32 0, i32 10, i32 5, i1 false)
-  ; CHECK: Binding [[UAV2:[0-9]+]]:
+  ; CHECK: Resource [[UAV2:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 2
   ; CHECK:     Space: 4
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 10
+  ; CHECK:   Globally Coherent: 0
+  ; CHECK:   Counter Direction: Unknown
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
-  ; CHECK:   Globally Coherent: 0
-  ; CHECK:   HasCounter: 0
   ; CHECK:   IsROV: 0
   ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4
 
   %cb0 = call target("dx.CBuffer", {float})
       @llvm.dx.resource.handlefrombinding(i32 1, i32 0, i32 1, i32 0, i1 false)
-  ; CHECK: Binding [[CB0:[0-9]+]]:
+  ; CHECK: Resource [[CB0:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 0
   ; CHECK:     Space: 1
@@ -120,7 +120,7 @@ define void @test_typedbuffer() {
 
   %cb1 = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
       @llvm.dx.resource.handlefrombinding(i32 1, i32 8, i32 1, i32 0, i1 false)
-  ; CHECK: Binding [[CB1:[0-9]+]]:
+  ; CHECK: Resource [[CB1:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 1
   ; CHECK:     Space: 1
@@ -130,7 +130,7 @@ define void @test_typedbuffer() {
   ; CHECK:   Kind: CBuffer
   ; CHECK:   CBuffer size: 4
 
-  ; CHECK-NOT: Binding {{[0-9]+}}:
+  ; CHECK-NOT: Resource {{[0-9]+}}:
 
   ret void
 }
