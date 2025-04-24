@@ -421,11 +421,11 @@ ANALYZER_OPTION(
     "perform 'analyzer-max-loop' (= 4 by default) iterations in a loop. "
     "Note that functions that _definitely_ reach the loop limit on some "
     "execution path are currently marked as \"do not inline\" even if this "
-    "option is disabled (but this may change in future versions). This option "
-    "is a dumb and arbitrary restriction on inlining, but disabling it would "
-    "significantly increase the analysis workload (and the time taken) "
-    "compared to older clang versions because more top-level functions can "
-    "use up their 'max-nodes' limit if inlining is not restricted.",
+    "option is disabled. This option is an arbitrary restriction on inlining, "
+    "but disabling this significantly increases the analysis workload (and "
+    "the time taken) compared to older clang versions because more top-level "
+    "functions can use up their 'max-nodes' budget if inlining is not "
+    "restricted.",
     true)
 
 //===----------------------------------------------------------------------===//

@@ -2586,12 +2586,12 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 
     if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
       // FIXME: This will unconditionally prevent inlining this function (even
-      // from other entrypoints), which is not a reasonable heuristic: even if
+      // from other entry points), which is not a reasonable heuristic: even if
       // we reached max block count on this particular execution path, there
       // may be other execution paths (especially with other parametrizations)
       // where the analyzer can reach the end of the function (so there is no
       // natural reason to avoid inlining it). However, disabling this would
-      // significantly increase the analysis time (because more entrypoints
+      // significantly increase the analysis time (because more entry points
       // would exhaust their allocated budget), so it must be compensated by a
       // different (more reasonable) reduction of analysis scope.
       Engine.FunctionSummaries->markShouldNotInline(
@@ -2876,14 +2876,14 @@ void ExprEngine::processBranch(
       if (!SkipTrueBranch || AMgr.options.ShouldWidenLoops) {
         Builder.generateNode(StTrue, true, PredN);
       } else if (AMgr.options.LegacyInliningPrevention) {
-        // FIXME: There is an ancient and very arbitrary heuristic in
+        // FIXME: There is an ancient and arbitrary heuristic in
         // `ExprEngine::processCFGBlockEntrance` which prevents all further
         // inlining of a function if it finds an execution path within that
         // function which reaches the `MaxBlockVisitOnPath` limit (a/k/a
         // `analyzer-max-loop`, by default four iterations in a loop). Adding
         // this "don't assume third iteration" logic significantly increased
         // the analysis runtime on some inputs because less functions were
-        // arbitrarily excluded from being inlined, so more entrypoints used
+        // arbitrarily excluded from being inlined, so more entry points used
         // up their full allocated budget. As a hacky compensation for this,
         // here we apply the "should not inline" mark in cases when the loop
         // could potentially reach the `MaxBlockVisitOnPath` limit without the
