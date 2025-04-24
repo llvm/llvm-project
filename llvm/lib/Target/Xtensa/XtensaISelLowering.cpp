@@ -58,6 +58,10 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Xtensa::ARRegClass);
 
+  if (Subtarget.hasSingleFloat()) {
+    addRegisterClass(MVT::f32, &Xtensa::FPRRegClass);
+  }
+
   if (Subtarget.hasBoolean()) {
     addRegisterClass(MVT::v1i1, &Xtensa::BRRegClass);
   }
@@ -71,6 +75,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::Constant, MVT::i32, Custom);
   setOperationAction(ISD::Constant, MVT::i64, Expand);
+  setOperationAction(ISD::ConstantFP, MVT::f32, Custom);
+  setOperationAction(ISD::ConstantFP, MVT::f64, Expand);
 
   setBooleanContents(ZeroOrOneBooleanContent);
 
@@ -108,7 +114,10 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
+
   setOperationAction(ISD::SETCC, MVT::i32, Expand);
+  setOperationAction(ISD::SETCC, MVT::f32, Expand);
 
   setCondCodeAction(ISD::SETGT, MVT::i32, Expand);
   setCondCodeAction(ISD::SETLE, MVT::i32, Expand);
@@ -175,6 +184,103 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY, MVT::Other, Custom);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
+  // Handle floating-point types.
+  for (unsigned I = MVT::FIRST_FP_VALUETYPE; I <= MVT::LAST_FP_VALUETYPE; ++I) {
+    MVT VT = MVT::SimpleValueType(I);
+    if (isTypeLegal(VT)) {
+      // We can use FI for FRINT.
+      // setOperationAction(ISD::FRINT, VT, Legal);
+      if (VT.getSizeInBits() == 32 && Subtarget.hasSingleFloat()) {
+        setOperationAction(ISD::FABS, VT, Legal);
+        setOperationAction(ISD::FADD, VT, Legal);
+        setOperationAction(ISD::FSUB, VT, Legal);
+        setOperationAction(ISD::FMA, VT, Legal);
+        setOperationAction(ISD::FMUL, VT, Legal);
+        setOperationAction(ISD::FNEG, VT, Legal);
+      } else {
+        setOperationAction(ISD::FABS, VT, Expand);
+        setOperationAction(ISD::FADD, VT, Expand);
+        setOperationAction(ISD::FSUB, VT, Expand);
+        setOperationAction(ISD::FMA, VT, Expand);
+        setOperationAction(ISD::FMUL, VT, Expand);
+        setOperationAction(ISD::FNEG, VT, Expand);
+      }
+
+      // TODO: once implemented in InstrInfo uncomment
+      setOperationAction(ISD::FSQRT, VT, Expand);
+
+      // No special instructions for these.
+      setOperationAction(ISD::FCBRT, VT, Expand);
+      setOperationAction(ISD::FCEIL, VT, Expand);
+      setOperationAction(ISD::FSIN, VT, Expand);
+      setOperationAction(ISD::FCOS, VT, Expand);
+      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FDIV, VT, Expand);
+      setOperationAction(ISD::FEXP, VT, Expand);
+      setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FFLOOR, VT, Expand);
+      setOperationAction(ISD::FLOG, VT, Expand);
+      setOperationAction(ISD::FLOG2, VT, Expand);
+      setOperationAction(ISD::FLOG10, VT, Expand);
+      setOperationAction(ISD::FMAXIMUM, VT, Expand);
+      setOperationAction(ISD::FMINIMUM, VT, Expand);
+      setOperationAction(ISD::FMAXNUM, VT, Expand);
+      setOperationAction(ISD::FMINNUM, VT, Expand);
+      setOperationAction(ISD::FNEARBYINT, VT, Expand);
+      setOperationAction(ISD::FPOW, VT, Expand);
+      setOperationAction(ISD::FPOWI, VT, Expand);
+      setOperationAction(ISD::FRINT, VT, Expand);
+      setOperationAction(ISD::FROUND, VT, Expand);
+      setOperationAction(ISD::FSINCOS, VT, Expand);
+      setOperationAction(ISD::FSQRT, VT, Expand);
+      setOperationAction(ISD::FTRUNC, VT, Expand);
+      setOperationAction(ISD::LLRINT, VT, Expand);
+      setOperationAction(ISD::LLROUND, VT, Expand);
+      setOperationAction(ISD::LRINT, VT, Expand);
+      setOperationAction(ISD::LROUND, VT, Expand);
+    }
+  }
+
+  // Handle floating-point types.
+  if (Subtarget.hasSingleFloat()) {
+    setOperationAction(ISD::BITCAST, MVT::i32, Legal);
+    setOperationAction(ISD::BITCAST, MVT::f32, Legal);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i32, Legal);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Legal);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Legal);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Legal);
+
+    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
+  } else {
+    setOperationAction(ISD::BITCAST, MVT::i32, Expand);
+    setOperationAction(ISD::BITCAST, MVT::f32, Expand);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i32, Expand);
+    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Expand);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Expand);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Expand);
+  }
+  setOperationAction(ISD::FMA, MVT::f64, Expand);
+  setOperationAction(ISD::SETCC, MVT::f64, Expand);
+  setOperationAction(ISD::BITCAST, MVT::i64, Expand);
+  setOperationAction(ISD::BITCAST, MVT::f64, Expand);
+  setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
+  setOperationAction(ISD::SINT_TO_FP, MVT::i64, Expand);
+  setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
+  setOperationAction(ISD::FP_TO_SINT, MVT::i64, Expand);
+
+  // Needed so that we don't try to implement f128 constant loads using
+  // a load-and-extend of a f80 constant (in cases where the constant
+  // would fit in an f80).
+  for (MVT VT : MVT::fp_valuetypes())
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f80, Expand);
+
+  // Floating-point truncation and stores need to be done separately.
+  setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
 }
@@ -182,6 +288,11 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 bool XtensaTargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
   // The Xtensa target isn't yet aware of offsets.
+  return false;
+}
+
+bool XtensaTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                        bool ForCodeSize) const {
   return false;
 }
 
@@ -333,6 +444,16 @@ static bool CC_Xtensa_Custom(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   return false;
+}
+
+/// Return the register type for a given MVT
+MVT XtensaTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                        CallingConv::ID CC,
+                                                        EVT VT) const {
+  if (VT.isFloatingPoint())
+    return MVT::i32;
+
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
 CCAssignFn *XtensaTargetLowering::CCAssignFnForCall(CallingConv::ID CC,
@@ -815,6 +936,21 @@ SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
   return Op;
 }
 
+SDValue XtensaTargetLowering::LowerImmediateFP(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  const ConstantFPSDNode *CN = cast<ConstantFPSDNode>(Op);
+  SDLoc DL(CN);
+  APFloat apval = CN->getValueAPF();
+  int64_t value = llvm::bit_cast<uint32_t>(CN->getValueAPF().convertToFloat());
+  if (Op.getValueType() == MVT::f32) {
+    Type *Ty = Type::getInt32Ty(*DAG.getContext());
+    Constant *CV = ConstantInt::get(Ty, value);
+    SDValue CP = DAG.getConstantPool(CV, MVT::i32);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f32, CP);
+  }
+  return Op;
+}
+
 SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
                                                  SelectionDAG &DAG) const {
   const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
@@ -1248,6 +1384,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerBR_JT(Op, DAG);
   case ISD::Constant:
     return LowerImmediate(Op, DAG);
+  case ISD::ConstantFP:
+    return LowerImmediateFP(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
   case ISD::GlobalAddress:
@@ -1311,6 +1449,26 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::SRCL";
   case XtensaISD::SRCR:
     return "XtensaISD::SRCR";
+  case XtensaISD::CMPUO:
+    return "XtensaISD::CMPUO";
+  case XtensaISD::CMPUEQ:
+    return "XtensaISD::CMPUEQ";
+  case XtensaISD::CMPULE:
+    return "XtensaISD::CMPULE";
+  case XtensaISD::CMPULT:
+    return "XtensaISD::CMPULT";
+  case XtensaISD::CMPOEQ:
+    return "XtensaISD::CMPOEQ";
+  case XtensaISD::CMPOLE:
+    return "XtensaISD::CMPOLE";
+  case XtensaISD::CMPOLT:
+    return "XtensaISD::CMPOLT";
+  case XtensaISD::MADD:
+    return "XtensaISD::MADD";
+  case XtensaISD::MSUB:
+    return "XtensaISD::MSUB";
+  case XtensaISD::MOVS:
+    return "XtensaISD::MOVS";
   }
   return nullptr;
 }
@@ -1395,11 +1553,19 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
   case Xtensa::S16I:
   case Xtensa::S32I:
   case Xtensa::S32I_N:
+  case Xtensa::SSI:
+  case Xtensa::SSIP:
+  case Xtensa::SSX:
+  case Xtensa::SSXP:
   case Xtensa::L8UI:
   case Xtensa::L16SI:
   case Xtensa::L16UI:
   case Xtensa::L32I:
-  case Xtensa::L32I_N: {
+  case Xtensa::L32I_N:
+  case Xtensa::LSI:
+  case Xtensa::LSIP:
+  case Xtensa::LSX:
+  case Xtensa::LSXP: {
     // Insert memory wait instruction "memw" before volatile load/store as it is
     // implemented in gcc. If memoperands is empty then assume that it aslo
     // maybe volatile load/store and insert "memw".

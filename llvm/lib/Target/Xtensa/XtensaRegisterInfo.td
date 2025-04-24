@@ -227,6 +227,50 @@ def SR :  RegisterClass<"Xtensa", [i32], 32, (add
   CCOMPARE1, CCOMPARE2, MISC0, MISC1, MISC2, MISC3)>;
 
 //===----------------------------------------------------------------------===//
+// USER registers
+//===----------------------------------------------------------------------===//
+class URReg<bits<8> num, string n, list<string> alt = []> : XtensaReg<n> {
+  let HWEncoding{7-0} = num;
+  let AltNames = alt;
+}
+
+def FCR : URReg<232, "fcr", ["FCR"]>;
+def FSR : URReg<233, "fsr", ["FSR"]>;
+
+def UR :  RegisterClass<"Xtensa", [i32], 32, (add FCR, FSR)>;
+
+//===----------------------------------------------------------------------===//
+// Floating-Point registers
+//===----------------------------------------------------------------------===//
+
+// Xtensa Floating-Point regs
+class FPReg<bits<4> num, string n> : XtensaReg<n> {
+  let HWEncoding{3-0} = num;
+}
+
+def F0 : FPReg<0, "f0">, DwarfRegNum<[19]>;
+def F1 : FPReg<1, "f1">, DwarfRegNum<[20]>;
+def F2 : FPReg<2, "f2">, DwarfRegNum<[21]>;
+def F3 : FPReg<3, "f3">, DwarfRegNum<[22]>;
+def F4 : FPReg<4, "f4">, DwarfRegNum<[23]>;
+def F5 : FPReg<5, "f5">, DwarfRegNum<[24]>;
+def F6 : FPReg<6, "f6">, DwarfRegNum<[25]>;
+def F7 : FPReg<7, "f7">, DwarfRegNum<[26]>;
+def F8 : FPReg<8, "f8">, DwarfRegNum<[27]>;
+def F9 : FPReg<9, "f9">, DwarfRegNum<[28]>;
+def F10 : FPReg<10, "f10">, DwarfRegNum<[29]>;
+def F11 : FPReg<11, "f11">, DwarfRegNum<[30]>;
+def F12 : FPReg<12, "f12">, DwarfRegNum<[31]>;
+def F13 : FPReg<13, "f13">, DwarfRegNum<[32]>;
+def F14 : FPReg<14, "f14">, DwarfRegNum<[33]>;
+def F15 : FPReg<15, "f15">, DwarfRegNum<[34]>;
+
+// Floating-Point register class with allocation order
+def FPR : RegisterClass<"Xtensa", [f32], 32, (add
+  F8, F9, F10, F11, F12, F13, F14, F15,
+  F7, F6, F5, F4, F3, F2, F1, F0)>;
+
+//===----------------------------------------------------------------------===//
 // Boolean registers
 //===----------------------------------------------------------------------===//
 class BReg<bits<4> num, string n> : XtensaReg<n> {

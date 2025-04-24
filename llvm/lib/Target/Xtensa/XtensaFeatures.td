@@ -8,6 +8,11 @@ def FeatureDensity : SubtargetFeature<"density", "HasDensity", "true",
 def HasDensity : Predicate<"Subtarget->hasDensity()">,
                  AssemblerPredicate<(all_of FeatureDensity)>;
 
+def FeatureSingleFloat : SubtargetFeature<"fp", "HasSingleFloat", "true",
+                                          "Enable Xtensa Single FP instructions">;
+def HasSingleFloat : Predicate<"Subtarget->hasSingleFloat()">,
+                     AssemblerPredicate<(all_of FeatureSingleFloat)>;
+
 def FeatureWindowed : SubtargetFeature<"windowed", "HasWindowed", "true",
                                        "Enable Xtensa Windowed Register option">;
 def HasWindowed : Predicate<"Subtarget->hasWindowed()">,
