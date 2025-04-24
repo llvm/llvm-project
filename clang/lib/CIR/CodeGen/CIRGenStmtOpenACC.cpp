@@ -192,7 +192,8 @@ public:
         break;
       }
     } else {
-      // Combined Constructs left.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -232,7 +233,8 @@ public:
       // they just modify the other clauses IR.  So setting of `lastDeviceType`
       // (done above) is all we need.
     } else {
-      // update, data, loop, routine, combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. update, data, loop, routine, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -246,7 +248,8 @@ public:
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("num_workers not valid on serial");
     } else {
-      // Combined Remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -260,7 +263,8 @@ public:
     } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
       llvm_unreachable("vector_length not valid on serial");
     } else {
-      // Combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -277,7 +281,9 @@ public:
             createIntExpr(clause.getIntExpr()), range));
       }
     } else {
-      // Data, enter data, exit data, update, wait, combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain. Data, enter data, exit data,
+      // update, wait, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -294,7 +300,8 @@ public:
         llvm_unreachable("var-list version of self shouldn't get here");
       }
     } else {
-      // update and combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. If, combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -308,7 +315,9 @@ public:
       // 'if' applies to most of the constructs, but hold off on lowering them
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
-      // Enter data, exit data, host_data, update, wait, combined remain.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Enter data, exit data, host_data, update, wait, combined
+      // constructs remain.
       return clauseNotImplemented(clause);
     }
   }
@@ -340,7 +349,8 @@ public:
           operation.getNumGangsDeviceTypeAttr(), values, range, segments));
       operation.setNumGangsSegments(llvm::ArrayRef<int32_t>{segments});
     } else {
-      // combined remains.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
