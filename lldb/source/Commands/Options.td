@@ -1467,5 +1467,9 @@ let Command = "statistics dump" in {
     "scripts executed during a debug session. "
     "Defaults to true, unless the '--summary' mode is enabled, in which case "
     "this is turned off unless specified.">;
+  def statistics_dump_plugins: Option<"plugins", "p">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"Dump statistics for known plugins including name, order, and enabled "
+    "state. Defaults to true for both summary and default mode.">;
 
 }

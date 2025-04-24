@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -285,6 +286,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   const bool include_targets = options.GetIncludeTargets();
   const bool include_modules = options.GetIncludeModules();
   const bool include_transcript = options.GetIncludeTranscript();
+  const bool include_plugins = options.GetIncludePlugins();
 
   json::Array json_targets;
   json::Array json_modules;
@@ -462,6 +464,23 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
     }
+  }
+
+  if (include_plugins) {
+    json::Object plugin_stats;
+    for (const PluginNamespace &plugin_ns : PluginManager::GetPluginNamespaces()) {
+      json::Array namespace_stats;
+
+      for (const RegisteredPluginInfo &plugin : plugin_ns.get_info()) {
+        json::Object plugin_json;
+        plugin_json.try_emplace("name", plugin.name);
+        plugin_json.try_emplace("enabled", plugin.enabled);
+
+        namespace_stats.emplace_back(std::move(plugin_json));
+      }
+      plugin_stats.try_emplace(plugin_ns.name, std::move(namespace_stats));
+    }
+    global_stats.try_emplace("plugins", std::move(plugin_stats));
   }
 
   return std::move(global_stats);
