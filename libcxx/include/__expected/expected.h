@@ -10,7 +10,6 @@
 #define _LIBCPP___EXPECTED_EXPECTED_H
 
 #include <__assert>
-#include <__concepts/core_convertible_to.h>
 #include <__config>
 #include <__expected/bad_expected_access.h>
 #include <__expected/unexpect.h>
@@ -26,6 +25,7 @@
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_core_convertible.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
