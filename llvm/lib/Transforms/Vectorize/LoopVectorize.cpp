@@ -6675,24 +6675,23 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     RetTy = IntegerType::get(RetTy->getContext(), MinBWs[I]);
   auto *SE = PSE.getSE();
 
-  auto HasSingleCopyAfterVectorization = [this](Instruction *I,
-                                                ElementCount VF) -> bool {
-    if (VF.isScalar())
-      return true;
-
-    auto Scalarized = InstsToScalarize.find(VF);
-    assert(Scalarized != InstsToScalarize.end() &&
-           "VF not yet analyzed for scalarization profitability");
-    return !Scalarized->second.count(I) &&
-           llvm::all_of(I->users(), [&](User *U) {
-             auto *UI = cast<Instruction>(U);
-             return !Scalarized->second.count(UI);
-           });
-  };
-  (void)HasSingleCopyAfterVectorization;
-
   Type *VectorTy;
   if (isScalarAfterVectorization(I, VF)) {
+    [[maybe_unused]] auto HasSingleCopyAfterVectorization =
+        [this](Instruction *I, ElementCount VF) -> bool {
+      if (VF.isScalar())
+        return true;
+
+      auto Scalarized = InstsToScalarize.find(VF);
+      assert(Scalarized != InstsToScalarize.end() &&
+             "VF not yet analyzed for scalarization profitability");
+      return !Scalarized->second.count(I) &&
+             llvm::all_of(I->users(), [&](User *U) {
+               auto *UI = cast<Instruction>(U);
+               return !Scalarized->second.count(UI);
+             });
+    };
+
     // With the exception of GEPs and PHIs, after scalarization there should
     // only be one copy of the instruction generated in the loop. This is
     // because the VF is either 1, or any instructions that need scalarizing
@@ -6956,8 +6955,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     Type *ValTy = I->getOperand(0)->getType();
 
     if (canTruncateToMinimalBitwidth(I, VF)) {
-      Instruction *Op0AsInstruction = dyn_cast<Instruction>(I->getOperand(0));
-      (void)Op0AsInstruction;
+      [[maybe_unused]] Instruction *Op0AsInstruction =
+          dyn_cast<Instruction>(I->getOperand(0));
       assert((!canTruncateToMinimalBitwidth(Op0AsInstruction, VF) ||
               MinBWs[I] == MinBWs[Op0AsInstruction]) &&
              "if both the operand and the compare are marked for "
@@ -7895,7 +7894,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
                  RdxDesc.getRecurrenceKind())) {
     using namespace llvm::PatternMatch;
     Value *Cmp, *OrigResumeV, *CmpOp;
-    bool IsExpectedPattern =
+    [[maybe_unused]] bool IsExpectedPattern =
         match(MainResumeValue, m_Select(m_OneUse(m_Value(Cmp)),
                                         m_Specific(RdxDesc.getSentinelValue()),
                                         m_Value(OrigResumeV))) &&
@@ -7906,7 +7905,6 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
           (CmpOp == RdxDesc.getRecurrenceStartValue() &&
            isGuaranteedNotToBeUndefOrPoison(CmpOp))));
     assert(IsExpectedPattern && "Unexpected reduction resume pattern");
-    (void)IsExpectedPattern;
     MainResumeValue = OrigResumeV;
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
