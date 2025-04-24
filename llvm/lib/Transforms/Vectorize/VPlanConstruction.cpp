@@ -430,7 +430,6 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   auto *R = Plan.createVPRegionBlock(HeaderVPB, LatchVPBB, "",
                                      false /*isReplicator*/);
-  R->setParent(HeaderVPB->getParent());
   // All VPBB's reachable shallowly from HeaderVPB belong to top level loop,
   // because VPlan is expected to end at top level latch disconnected above.
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
