@@ -15283,6 +15283,8 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
   SDValue N0 = N->getOperand(0);
   if (N0.getOpcode() != ISD::ATOMIC_LOAD)
     return SDValue();
+  if (!N0.hasOneUse())
+    return SDValue();
 
   AtomicSDNode *ALoad = cast<AtomicSDNode>(N0.getNode());
   if (isStrongerThanMonotonic(ALoad->getSuccessOrdering()))
@@ -15310,7 +15312,7 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
   SDValue ZextLoad = DAG.getExtLoad(ISD::ZEXTLOAD, DL, ResultVT, Chain, Ptr,
                                     MemOp->getPointerInfo(), LoadedVT,
                                     MemOp->getAlign(), MemOp->getFlags());
-  DAG.ReplaceAllUsesOfValueWith(SDValue(N, 0), ZextLoad);
+  DCI.CombineTo(N, ZextLoad);
   DAG.ReplaceAllUsesOfValueWith(SDValue(N0.getNode(), 1), ZextLoad.getValue(1));
   DCI.recursivelyDeleteUnusedNodes(N0.getNode());
   return SDValue(N, 0);
