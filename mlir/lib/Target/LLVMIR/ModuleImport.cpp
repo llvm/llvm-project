@@ -547,7 +547,7 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
 static Attribute convertModuleFlagValueFromMDTuple(ModuleOp mlirModule,
                                                    StringRef key,
                                                    llvm::MDTuple *mdTuple) {
-  if (key == LLVM::LLVMDialect::getModuleFlagKeyCGProfileName())
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName())
     return convertCGProfileModuleFlagValue(mlirModule, mdTuple);
   return nullptr;
 }
