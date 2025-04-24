@@ -2,9 +2,6 @@
 ; RUN: llc --mtriple=mipsisa32r6-linux-gnu < %s | FileCheck %s --check-prefix=MIPS32R6
 ; RUN: llc --mtriple=mipsisa64r6-linux-gnu < %s | FileCheck %s --check-prefix=MIPS64R6
 
-%struct.f2 = type { float, float }
-
-
 define float @f(float nofpclass(nan) %a, float nofpclass(nan) %b) {
 ; MIPS32R6-LABEL: f:
 ; MIPS32R6:       # %bb.0: # %entry
@@ -20,22 +17,7 @@ entry:
   ret float %cond
 }
 
-define { float, float } @struct({ float, float} nofpclass(nan) %a) {
-; MIPS32R6-LABEL: struct:
-; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    mov.s $f2, $f14
-; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    mov.s $f0, $f12
-;
-; MIPS64R6-LABEL: struct:
-; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    mov.s $f2, $f13
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    mov.s $f0, $f12
-   ret {float, float} %a
-}
-
-define %struct.f2 @m([2 x float] nofpclass(nan) %a0, [2 x float] nofpclass(nan) %a1) {
+define {float, float} @m({float, float} nofpclass(nan) %a0, {float, float} nofpclass(nan) %a1) {
 ; MIPS32R6-LABEL: m:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    mtc1 $6, $f0
@@ -50,15 +32,41 @@ define %struct.f2 @m([2 x float] nofpclass(nan) %a0, [2 x float] nofpclass(nan) 
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    max.s $f2, $f13, $f15
 entry:
+  %a0f0 = extractvalue {float, float} %a0, 0
+  %a0f1 = extractvalue {float, float} %a0, 1
+  %a1f0 = extractvalue {float, float} %a1, 0
+  %a1f1 = extractvalue {float, float} %a1, 1
+  %max0 = tail call float @llvm.maximumnum.f32(float %a0f0, float %a1f0)
+  %max1 = tail call float @llvm.maximumnum.f32(float %a0f1, float %a1f1)
+  %ret0 = insertvalue {float, float} poison, float %max0, 0
+  %ret1 = insertvalue {float, float} %ret0, float %max1, 1
+  ret {float, float} %ret1
+}
+
+define [2 x float] @mA([2 x float] nofpclass(nan) %a0, [2 x float] nofpclass(nan) %a1) {
+; MIPS32R6-LABEL: mA:
+; MIPS32R6:       # %bb.0: # %entry
+; MIPS32R6-NEXT:    mtc1 $6, $f0
+; MIPS32R6-NEXT:    max.s $f0, $f12, $f0
+; MIPS32R6-NEXT:    mtc1 $7, $f1
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.s $f2, $f14, $f1
+;
+; MIPS64R6-LABEL: mA:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    max.s $f0, $f12, $f14
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    max.s $f2, $f13, $f15
+entry:
   %a0f0 = extractvalue [2 x float] %a0, 0
   %a0f1 = extractvalue [2 x float] %a0, 1
   %a1f0 = extractvalue [2 x float] %a1, 0
   %a1f1 = extractvalue [2 x float] %a1, 1
   %max0 = tail call float @llvm.maximumnum.f32(float %a0f0, float %a1f0)
   %max1 = tail call float @llvm.maximumnum.f32(float %a0f1, float %a1f1)
-  %ret0 = insertvalue %struct.f2 poison, float %max0, 0
-  %ret1 = insertvalue %struct.f2 %ret0, float %max1, 1
-  ret %struct.f2 %ret1
+  %ret0 = insertvalue [2 x float] poison, float %max0, 0
+  %ret1 = insertvalue [2 x float] %ret0, float %max1, 1
+  ret [2 x float] %ret1
 }
 
 define float @fS(float nofpclass(snan) %a, float nofpclass(snan) %b) {
@@ -76,22 +84,7 @@ entry:
   ret float %cond
 }
 
-define { float, float } @structS({ float, float} nofpclass(snan) %a) {
-; MIPS32R6-LABEL: structS:
-; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    mov.s $f2, $f14
-; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    mov.s $f0, $f12
-;
-; MIPS64R6-LABEL: structS:
-; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    mov.s $f2, $f13
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    mov.s $f0, $f12
-   ret {float, float} %a
-}
-
-define %struct.f2 @mS([2 x float] nofpclass(snan) %a0, [2 x float] nofpclass(snan) %a1) {
+define {float, float} @mS({float, float} nofpclass(snan) %a0, {float, float} nofpclass(snan) %a1) {
 ; MIPS32R6-LABEL: mS:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    mtc1 $6, $f0
@@ -106,15 +99,41 @@ define %struct.f2 @mS([2 x float] nofpclass(snan) %a0, [2 x float] nofpclass(sna
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    max.s $f2, $f13, $f15
 entry:
+  %a0f0 = extractvalue {float, float} %a0, 0
+  %a0f1 = extractvalue {float, float} %a0, 1
+  %a1f0 = extractvalue {float, float} %a1, 0
+  %a1f1 = extractvalue {float, float} %a1, 1
+  %max0 = tail call float @llvm.maximumnum.f32(float %a0f0, float %a1f0)
+  %max1 = tail call float @llvm.maximumnum.f32(float %a0f1, float %a1f1)
+  %ret0 = insertvalue {float, float} poison, float %max0, 0
+  %ret1 = insertvalue {float, float} %ret0, float %max1, 1
+  ret {float, float} %ret1
+}
+
+define [2 x float] @mAS([2 x float] nofpclass(snan) %a0, [2 x float] nofpclass(snan) %a1) {
+; MIPS32R6-LABEL: mAS:
+; MIPS32R6:       # %bb.0: # %entry
+; MIPS32R6-NEXT:    mtc1 $6, $f0
+; MIPS32R6-NEXT:    max.s $f0, $f12, $f0
+; MIPS32R6-NEXT:    mtc1 $7, $f1
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.s $f2, $f14, $f1
+;
+; MIPS64R6-LABEL: mAS:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    max.s $f0, $f12, $f14
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    max.s $f2, $f13, $f15
+entry:
   %a0f0 = extractvalue [2 x float] %a0, 0
   %a0f1 = extractvalue [2 x float] %a0, 1
   %a1f0 = extractvalue [2 x float] %a1, 0
   %a1f1 = extractvalue [2 x float] %a1, 1
   %max0 = tail call float @llvm.maximumnum.f32(float %a0f0, float %a1f0)
   %max1 = tail call float @llvm.maximumnum.f32(float %a0f1, float %a1f1)
-  %ret0 = insertvalue %struct.f2 poison, float %max0, 0
-  %ret1 = insertvalue %struct.f2 %ret0, float %max1, 1
-  ret %struct.f2 %ret1
+  %ret0 = insertvalue [2 x float] poison, float %max0, 0
+  %ret1 = insertvalue [2 x float] %ret0, float %max1, 1
+  ret [2 x float] %ret1
 }
 
 define float @fQ(float nofpclass(qnan) %a, float nofpclass(qnan) %b) {
@@ -136,22 +155,7 @@ entry:
   ret float %cond
 }
 
-define { float, float } @structQ({ float, float} nofpclass(qnan) %a) {
-; MIPS32R6-LABEL: structQ:
-; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    mov.s $f2, $f14
-; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    mov.s $f0, $f12
-;
-; MIPS64R6-LABEL: structQ:
-; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    mov.s $f2, $f13
-; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    mov.s $f0, $f12
-   ret {float, float} %a
-}
-
-define %struct.f2 @mQ([2 x float] nofpclass(qnan) %a0, [2 x float] nofpclass(qnan) %a1) {
+define {float, float} @mQ({float, float} nofpclass(qnan) %a0, {float, float} nofpclass(qnan) %a1) {
 ; MIPS32R6-LABEL: mQ:
 ; MIPS32R6:       # %bb.0: # %entry
 ; MIPS32R6-NEXT:    min.s $f0, $f12, $f12
@@ -174,13 +178,47 @@ define %struct.f2 @mQ([2 x float] nofpclass(qnan) %a0, [2 x float] nofpclass(qna
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    max.s $f2, $f2, $f1
 entry:
+  %a0f0 = extractvalue {float, float} %a0, 0
+  %a0f1 = extractvalue {float, float} %a0, 1
+  %a1f0 = extractvalue {float, float} %a1, 0
+  %a1f1 = extractvalue {float, float} %a1, 1
+  %max0 = tail call float @llvm.maximumnum.f32(float %a0f0, float %a1f0)
+  %max1 = tail call float @llvm.maximumnum.f32(float %a0f1, float %a1f1)
+  %ret0 = insertvalue {float, float} poison, float %max0, 0
+  %ret1 = insertvalue {float, float} %ret0, float %max1, 1
+  ret {float, float} %ret1
+}
+
+define [2 x float] @mAQ([2 x float] nofpclass(qnan) %a0, [2 x float] nofpclass(qnan) %a1) {
+; MIPS32R6-LABEL: mAQ:
+; MIPS32R6:       # %bb.0: # %entry
+; MIPS32R6-NEXT:    min.s $f0, $f12, $f12
+; MIPS32R6-NEXT:    mtc1 $6, $f1
+; MIPS32R6-NEXT:    min.s $f1, $f1, $f1
+; MIPS32R6-NEXT:    max.s $f0, $f0, $f1
+; MIPS32R6-NEXT:    min.s $f1, $f14, $f14
+; MIPS32R6-NEXT:    mtc1 $7, $f2
+; MIPS32R6-NEXT:    min.s $f2, $f2, $f2
+; MIPS32R6-NEXT:    jr $ra
+; MIPS32R6-NEXT:    max.s $f2, $f1, $f2
+;
+; MIPS64R6-LABEL: mAQ:
+; MIPS64R6:       # %bb.0: # %entry
+; MIPS64R6-NEXT:    min.s $f0, $f14, $f14
+; MIPS64R6-NEXT:    min.s $f1, $f12, $f12
+; MIPS64R6-NEXT:    max.s $f0, $f1, $f0
+; MIPS64R6-NEXT:    min.s $f1, $f15, $f15
+; MIPS64R6-NEXT:    min.s $f2, $f13, $f13
+; MIPS64R6-NEXT:    jr $ra
+; MIPS64R6-NEXT:    max.s $f2, $f2, $f1
+entry:
   %a0f0 = extractvalue [2 x float] %a0, 0
   %a0f1 = extractvalue [2 x float] %a0, 1
   %a1f0 = extractvalue [2 x float] %a1, 0
   %a1f1 = extractvalue [2 x float] %a1, 1
   %max0 = tail call float @llvm.maximumnum.f32(float %a0f0, float %a1f0)
   %max1 = tail call float @llvm.maximumnum.f32(float %a0f1, float %a1f1)
-  %ret0 = insertvalue %struct.f2 poison, float %max0, 0
-  %ret1 = insertvalue %struct.f2 %ret0, float %max1, 1
-  ret %struct.f2 %ret1
+  %ret0 = insertvalue [2 x float] poison, float %max0, 0
+  %ret1 = insertvalue [2 x float] %ret0, float %max1, 1
+  ret [2 x float] %ret1
 }
