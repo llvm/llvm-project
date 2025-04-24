@@ -1240,11 +1240,15 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   Instance.createSourceManager(Instance.getFileManager());
   SourceManager &SourceMgr = Instance.getSourceManager();
 
-  // Note that this module is part of the module build stack, so that we
-  // can detect cycles in the module graph.
-  SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
-  SourceMgr.pushModuleBuildStack(ModuleName,
-                                 FullSourceLoc(ImportLoc, getSourceManager()));
+  if (ThreadSafeConfig) {
+    // Detecting cycles in the module graph is responsibility of the client.
+  } else {
+    // Note that this module is part of the module build stack, so that we
+    // can detect cycles in the module graph.
+    SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
+    SourceMgr.pushModuleBuildStack(
+        ModuleName, FullSourceLoc(ImportLoc, getSourceManager()));
+  }
 
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
