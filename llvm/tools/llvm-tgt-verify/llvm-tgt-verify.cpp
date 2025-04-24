@@ -141,6 +141,7 @@ int main(int argc, char **argv) {
   ModuleAnalysisManager MAM;
   PassBuilder PB(TM.get(), PipelineTuningOptions(), std::nullopt, &PIC);
   PB.registerModuleAnalyses(MAM);
+  //PB.registerVerifierPasses(MPM, FPM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);

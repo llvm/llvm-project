@@ -57,6 +57,8 @@ static cl::opt<bool> VerifyAnalysisInvalidation("verify-analysis-invalidation",
 #endif
 );
 
+static cl::opt<bool> VerifyTargetEach("verify-tgt-each");
+
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
 // of this option.  Note that this option has no effect without -print-changed.
@@ -1471,7 +1473,7 @@ void VerifyInstrumentation::registerCallbacks(PassInstrumentationCallbacks &PIC,
                                        "\"{0}\", compilation aborted!",
                                        P));
 
-          if (FAM) {
+          if (VerifyTargetEach && FAM) {
             TargetVerify TV(const_cast<Module*>(F->getParent()));
             TV.run(*const_cast<Function*>(F), *FAM);
 	    if (!TV.IsValid)

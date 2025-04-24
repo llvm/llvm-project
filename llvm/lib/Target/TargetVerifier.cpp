@@ -20,6 +20,7 @@
 #include "llvm/Target/TargetVerifier.h"
 #include "llvm/Target/TargetVerify/AMDGPUTargetVerifier.h"
 
+#include "llvm/InitializePasses.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Support/Debug.h"
@@ -32,7 +33,22 @@
 
 namespace llvm {
 
-void TargetVerify::run(Function &F, FunctionAnalysisManager &AM) {
+bool TargetVerify::run(Function &F) {
+  if (TT.isAMDGPU()) {
+    AMDGPUTargetVerify TV(Mod);
+    TV.run(F);
+
+    dbgs() << TV.MessagesStr.str();
+    if (!TV.MessagesStr.str().empty()) {
+      TV.IsValid = false;
+      return false;
+    }
+    return true;
+  }
+  report_fatal_error("Target has no verification method\n");
+}
+
+bool TargetVerify::run(Function &F, FunctionAnalysisManager &AM) {
   if (TT.isAMDGPU()) {
     auto *UA = &AM.getResult<UniformityInfoAnalysis>(F);
     auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
@@ -44,8 +60,77 @@ void TargetVerify::run(Function &F, FunctionAnalysisManager &AM) {
     dbgs() << TV.MessagesStr.str();
     if (!TV.MessagesStr.str().empty()) {
       TV.IsValid = false;
+      return false;
     }
+    return true;
   }
+  report_fatal_error("Target has no verification method\n");
 }
 
+PreservedAnalyses TargetVerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
+  auto TT = F.getParent()->getTargetTriple();
+
+  if (TT.isAMDGPU()) {
+    auto *Mod = F.getParent();
+
+    auto UA = &AM.getResult<UniformityInfoAnalysis>(F);
+    auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+    auto *PDT = &AM.getResult<PostDominatorTreeAnalysis>(F);
+
+    AMDGPUTargetVerify TV(Mod, DT, PDT, UA);
+    TV.run(F);
+
+    dbgs() << TV.MessagesStr.str();
+    if (!TV.MessagesStr.str().empty()) {
+      TV.IsValid = false;
+      return PreservedAnalyses::none();
+    }
+    return PreservedAnalyses::all();
+  }
+  report_fatal_error("Target has no verification method\n");
+}
+
+struct TargetVerifierLegacyPass : public FunctionPass {
+  static char ID;
+
+  std::unique_ptr<TargetVerify> TV;
+
+  TargetVerifierLegacyPass() : FunctionPass(ID) {
+    initializeTargetVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool doInitialization(Module &M) override {
+    TV = std::make_unique<TargetVerify>(&M);
+    return false;
+  }
+
+  bool runOnFunction(Function &F) override {
+    if (!TV->run(F)) {
+      errs() << "in function " << F.getName() << '\n';
+      report_fatal_error("broken function found, compilation aborted!");
+    }
+    return false;
+  }
+
+  bool doFinalization(Module &M) override {
+    bool IsValid = true;
+    for (Function &F : M)
+      if (F.isDeclaration())
+        IsValid &= TV->run(F);
+
+    if (!IsValid)
+      report_fatal_error("broken module found, compilation aborted!");
+    return false;
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+};
+char TargetVerifierLegacyPass::ID = 0;
+FunctionPass *createTargetVerifierLegacyPass() {
+  return new TargetVerifierLegacyPass();
+}
 } // namespace llvm
+using namespace llvm;
+INITIALIZE_PASS(TargetVerifierLegacyPass, "tgtverifier", "Target Verifier", false, false)
