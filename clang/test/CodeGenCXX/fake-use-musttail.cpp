@@ -5,10 +5,9 @@
 /// we emit the fake uses and their corresponding loads immediately prior to the
 /// tail call.
 
-template <class>
-char *bar(int *, const char *, int *, const int *, unsigned long);
+extern "C" char *bar(int *, const char *, int *, const int *, unsigned long);
 
-// CHECK-LABEL: define dso_local noundef ptr @_Z3fooPiPKcS_PKim(
+// CHECK-LABEL: define dso_local ptr @foo(
 // CHECK-SAME: ptr noundef [[E:%.*]], ptr noundef [[F:%.*]], ptr noundef [[G:%.*]], ptr noundef [[H:%.*]], i64 noundef [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 8
@@ -36,7 +35,7 @@ char *bar(int *, const char *, int *, const int *, unsigned long);
 // CHECK-NEXT:    notail call void (...) @llvm.fake.use(ptr [[FAKE_USE3]]) #[[ATTR3]]
 // CHECK-NEXT:    [[FAKE_USE4:%.*]] = load ptr, ptr [[E_ADDR]], align 8
 // CHECK-NEXT:    notail call void (...) @llvm.fake.use(ptr [[FAKE_USE4]]) #[[ATTR3]]
-// CHECK-NEXT:    [[CALL:%.*]] = musttail call noundef ptr @_Z3barIiEPcPiPKcS1_PKim(ptr noundef [[TMP0]], ptr noundef [[TMP1]], ptr noundef [[TMP2]], ptr noundef [[TMP3]], i64 noundef [[TMP4]])
+// CHECK-NEXT:    [[CALL:%.*]] = musttail call ptr @bar(ptr noundef [[TMP0]], ptr noundef [[TMP1]], ptr noundef [[TMP2]], ptr noundef [[TMP3]], i64 noundef [[TMP4]])
 // CHECK-NEXT:    ret ptr [[CALL]]
 // CHECK:       [[BB5:.*:]]
 // CHECK-NEXT:    [[FAKE_USE5:%.*]] = load i64, ptr [[I_ADDR]], align 8
@@ -51,7 +50,7 @@ char *bar(int *, const char *, int *, const int *, unsigned long);
 // CHECK-NEXT:    notail call void (...) @llvm.fake.use(ptr [[FAKE_USE9]]) #[[ATTR3]]
 // CHECK-NEXT:    ret ptr undef
 //
-const char *foo(int *e, const char *f, int *g, const int *h,
+extern "C" const char *foo(int *e, const char *f, int *g, const int *h,
                         unsigned long i) {
-  [[clang::musttail]] return bar<int>(e, f, g, h, i);
+  [[clang::musttail]] return bar(e, f, g, h, i);
 }
