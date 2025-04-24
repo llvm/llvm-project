@@ -67,11 +67,15 @@
 // 9. Replace UBFMXri with UBFMWri if the instruction is equivalent to a 32 bit
 //    LSR or LSL alias of UBFM.
 //
+// 10. Replace MADDX (MSUBX) with SMADDL (SMSUBL) if operands are
+//     extensions of 32-bit values.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
@@ -80,6 +84,15 @@ using namespace llvm;
 #define DEBUG_TYPE "aarch64-mi-peephole-opt"
 
 namespace {
+
+// Information about 64-bit operand of MADD
+struct MADDOperandInfo {
+  Register SrcReg = 0;
+  // Whether operand is zero extension of SrcReg
+  bool IsZExt = false;
+  // Whether operand is sign extension of SrcReg
+  bool IsSExt = false;
+};
 
 struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   static char ID;
@@ -136,6 +149,13 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MADDOperandInfo analyzeMADDOperand(const MachineOperand &MO) const;
+  MADDOperandInfo
+  analyzeMADDOperand(const MachineOperand &MO,
+                     SmallPtrSetImpl<const MachineInstr *> &VisitedPHIs) const;
+  MachineInstr *getUltimateDef(Register Reg) const;
+  bool visitMADD(MachineInstr &MI);
 
   StringRef getPassName() const override {
     return "AArch64 MI Peephole Optimization pass";
@@ -836,6 +856,198 @@ bool AArch64MIPeepholeOpt::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+// Get real definition of register bypassing intermediate copies
+MachineInstr *AArch64MIPeepholeOpt::getUltimateDef(Register Reg) const {
+  auto *MI = MRI->getUniqueVRegDef(Reg);
+  while (MI->isFullCopy() && MI->getOperand(1).getReg().isVirtual())
+    MI = MRI->getUniqueVRegDef(MI->getOperand(1).getReg());
+  assert(MI);
+  return MI;
+}
+
+namespace {
+
+bool isSExtLoad(unsigned Opc) {
+  switch (Opc) {
+  case AArch64::LDRSBXpost:
+  case AArch64::LDRSBXpre:
+  case AArch64::LDRSBXroW:
+  case AArch64::LDRSBXroX:
+  case AArch64::LDRSBXui:
+  case AArch64::LDRSHXpost:
+  case AArch64::LDRSHXpre:
+  case AArch64::LDRSHXroW:
+  case AArch64::LDRSHXroX:
+  case AArch64::LDRSHXui:
+  case AArch64::LDRSWpost:
+  case AArch64::LDRSWpre:
+  case AArch64::LDRSWroW:
+  case AArch64::LDRSWroX:
+  case AArch64::LDRSWui:
+  case AArch64::LDURSHXi:
+  case AArch64::LDURSBXi:
+  case AArch64::LDURSWi:
+    return true;
+  }
+  return false;
+}
+
+// Checks if bit 31 is known to be zero and so result can be safely
+// sign-extended
+bool isSExtInvariant(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::MOVi32imm:
+  case AArch64::MOVi64imm:
+    // Immediates with bit 31 == 0 can be safely sign-extended
+    return isUInt<31>(MI.getOperand(1).getImm());
+  case AArch64::LDRBBpost:
+  case AArch64::LDRBBpre:
+  case AArch64::LDRBBroW:
+  case AArch64::LDRBBroX:
+  case AArch64::LDRBBui:
+  case AArch64::LDRHHpost:
+  case AArch64::LDRHHpre:
+  case AArch64::LDRHHroW:
+  case AArch64::LDRHHroX:
+  case AArch64::LDRHHui:
+  case AArch64::LDURHHi:
+  case AArch64::LDURBBi:
+    // Zero-extended 8/16-bit loads can be safely sign-extended
+    return true;
+  case AArch64::UBFMXri:
+    return MI.getOperand(3).getImm() >= MI.getOperand(2).getImm() &&
+           MI.getOperand(3).getImm() - MI.getOperand(2).getImm() <= 30;
+  default:
+    return false;
+  }
+}
+
+} // anonymous namespace
+
+MADDOperandInfo
+AArch64MIPeepholeOpt::analyzeMADDOperand(const MachineOperand &MO) const {
+  SmallPtrSet<const MachineInstr *, 2> VisitedPHIs;
+  return analyzeMADDOperand(MO, VisitedPHIs);
+}
+
+MADDOperandInfo AArch64MIPeepholeOpt::analyzeMADDOperand(
+    const MachineOperand &MO,
+    SmallPtrSetImpl<const MachineInstr *> &VisitedPHIs) const {
+  MADDOperandInfo Info;
+
+  if (MO.isImm()) {
+    auto Imm = AArch64_AM::decodeLogicalImmediate(MO.getImm(), 64);
+    Info.IsZExt = isUInt<32>(Imm);
+    Info.IsSExt = isInt<32>(Imm);
+    return Info;
+  }
+
+  if (!MO.isReg())
+    return Info;
+
+  auto Reg = MO.getReg();
+  auto *MI = getUltimateDef(Reg);
+
+  // Check if MI is an extension of 32-bit value
+
+  const auto Opc = MI->getOpcode();
+  if (MI->isFullCopy() && MI->getOperand(1).getReg() == AArch64::XZR) {
+    Info.IsZExt = Info.IsSExt = true;
+  } else if (MI->isSubregToReg() && MI->getOperand(1).getImm() == 0 &&
+             MI->getOperand(3).getImm() == AArch64::sub_32) {
+    Info.SrcReg = Reg;
+    Info.IsZExt = true;
+    Info.IsSExt = isSExtInvariant(*getUltimateDef(MI->getOperand(2).getReg()));
+  } else if (Opc == AArch64::MOVi64imm) {
+    auto Imm = MI->getOperand(1).getImm();
+    Info.SrcReg = Reg;
+    Info.IsZExt = isUInt<32>(Imm);
+    Info.IsSExt = isInt<32>(Imm);
+  } else if (Opc == AArch64::ANDXri &&
+             AArch64_AM::decodeLogicalImmediate(MI->getOperand(2).getImm(),
+                                                64) <= UINT32_MAX) {
+    auto Imm =
+        AArch64_AM::decodeLogicalImmediate(MI->getOperand(2).getImm(), 64);
+    Info.SrcReg = Reg;
+    Info.IsZExt = true;
+    Info.IsSExt = isInt<32>(Imm);
+  } else if ((Opc == AArch64::SBFMXri || Opc == AArch64::UBFMXri) &&
+             MI->getOperand(3).getImm() >= MI->getOperand(2).getImm() &&
+             MI->getOperand(3).getImm() - MI->getOperand(2).getImm() <= 31) {
+    // TODO: support also [SU]BFIZ
+    // TODO: support also BFM (by checking base register)
+    Info.SrcReg = Reg;
+    if (Opc == AArch64::UBFMXri) {
+      Info.IsZExt = true;
+      Info.IsSExt =
+          MI->getOperand(3).getImm() - MI->getOperand(2).getImm() <= 30;
+    } else {
+      Info.IsSExt = true;
+    }
+  } else if (Opc == AArch64::CSELXr) {
+    auto NInfo = analyzeMADDOperand(MI->getOperand(1), VisitedPHIs);
+    auto MInfo = analyzeMADDOperand(MI->getOperand(2), VisitedPHIs);
+    Info.SrcReg = Reg;
+    Info.IsZExt = NInfo.IsZExt && MInfo.IsZExt;
+    Info.IsSExt = NInfo.IsSExt && MInfo.IsSExt;
+  } else if (isSExtLoad(Opc)) {
+    Info.SrcReg = Reg;
+    Info.IsSExt = true;
+  } else if (MI->isPHI()) {
+    Info.SrcReg = Reg;
+    Info.IsZExt = true;
+    Info.IsSExt = true;
+    if (!VisitedPHIs.insert(MI).second)
+      return Info;
+    for (unsigned I = 1, N = MI->getNumOperands(); I < N; I += 2) {
+      auto OpInfo = analyzeMADDOperand(MI->getOperand(I), VisitedPHIs);
+      Info.IsZExt &= OpInfo.IsZExt;
+      Info.IsSExt &= OpInfo.IsSExt;
+    }
+  }
+
+  return Info;
+}
+
+bool AArch64MIPeepholeOpt::visitMADD(MachineInstr &MI) {
+  // Try below transformations:
+  //   MADDX (32-bit sext) (32-bit sext) -> SMADDL
+  //   MADDX (32-bit zext) (32-bit zext) -> UMADDL
+
+  MADDOperandInfo Infos[] = {
+      analyzeMADDOperand(MI.getOperand(1)),
+      analyzeMADDOperand(MI.getOperand(2)),
+  };
+
+  unsigned Opc;
+
+  if (Infos[0].IsZExt && Infos[1].IsZExt) {
+    Opc = MI.getOpcode() == AArch64::MADDXrrr ? AArch64::UMADDLrrr
+                                              : AArch64::UMSUBLrrr;
+  } else if (Infos[0].IsSExt && Infos[1].IsSExt) {
+    Opc = MI.getOpcode() == AArch64::MADDXrrr ? AArch64::SMADDLrrr
+                                              : AArch64::SMSUBLrrr;
+  } else {
+    return false;
+  }
+
+  MI.setDesc(TII->get(Opc));
+
+  for (unsigned I = 0; I < std::size(Infos); ++I) {
+    const auto &Info = Infos[I];
+    auto &Op = MI.getOperand(I + 1);
+
+    Op.setReg(Info.SrcReg);
+
+    bool Is32Bit = TRI->getRegSizeInBits(*MRI->getRegClass(Info.SrcReg));
+    Op.setSubReg(Is32Bit ? AArch64::sub_32 : 0);
+  }
+
+  LLVM_DEBUG(dbgs() << "Updated: " << MI << "\n");
+
+  return true;
+}
+
 bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -926,6 +1138,10 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);
+        break;
+      case AArch64::MADDXrrr:
+      case AArch64::MSUBXrrr:
+        Changed = visitMADD(MI);
         break;
       }
     }
