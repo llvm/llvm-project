@@ -13,6 +13,7 @@
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
+using namespace lldb;
 using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
@@ -35,7 +36,7 @@ Error NextRequestHandler::Run(const NextArguments &args) const {
   if (args.granularity == eSteppingGranularityInstruction) {
     thread.StepInstruction(/*step_over=*/true);
   } else {
-    thread.StepOver();
+    thread.StepOver(args.singleThread ? eOnlyThisThread : eOnlyDuringStepping);
   }
 
   return Error::success();
