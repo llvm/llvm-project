@@ -290,13 +290,6 @@ struct VPTransformState {
   /// vector loop.
   void addNewMetadata(Instruction *To, const Instruction *Orig);
 
-  /// Add metadata from one instruction to another.
-  ///
-  /// This includes both the original MDs from \p From and additional ones (\see
-  /// addNewMetadata).  Use this for *newly created* instructions in the vector
-  /// loop.
-  void addMetadata(Value *To, Instruction *From);
-
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
