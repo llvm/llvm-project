@@ -719,10 +719,14 @@ static bool allUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
     const Value *P = Worklist.pop_back_val();
     for (const auto *U : P->users()) {
       if (auto *LI = dyn_cast<LoadInst>(U)) {
+        if (!LI->isSimple())
+          return false;
         SmallPtrSet<const PHINode *, 8> PHIs;
         if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
           return false;
       } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+        if (!SI->isSimple())
+          return false;
         // Ignore stores to the global.
         if (SI->getPointerOperand() != P)
           return false;
