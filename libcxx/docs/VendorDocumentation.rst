@@ -187,7 +187,7 @@ General purpose options
 
 .. option:: LIBCXX_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME:BOOL
 
-   **Default**: ``OFF``
+   **Default**: ``ON``
 
    For C++23 <stacktrace>: whether to allow invocation of ``addr2line``, ``llvm-addr2line``, or ``atos``
    at runtime (if it's available in ``PATH``) to resolve call-chain addresses in the stacktrace
