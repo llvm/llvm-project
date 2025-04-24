@@ -3,8 +3,8 @@
 
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes X64,SDAG-X64
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes X64,GISEL-X64
-; RUN: llc < %s -mtriple=i686-linux-gnu -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes I686,SDAG-I686
-; RUN: llc < %s -mtriple=i686-linux-gnu -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes I686,GISEL-I686
+; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes I686,SDAG-I686
+; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes I686,GISEL-I686
 
 define void @test_int8_to_float(i8 %x, ptr %p) nounwind {
 ; X64-LABEL: test_int8_to_float:
