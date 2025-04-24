@@ -72,9 +72,7 @@ static bool FillStackFrames(DAP &dap, lldb::SBThread &thread,
     stack_frames.emplace_back(CreateStackFrame(frame, frame_format));
   }
 
-  const bool include_extended_backtrace =
-      include_all || dap.configuration.displayExtendedBacktrace;
-  if (include_extended_backtrace && reached_end_of_stack) {
+  if (include_all && reached_end_of_stack) {
     // Check for any extended backtraces.
     for (uint32_t bt = 0;
          bt < thread.GetProcess().GetNumExtendedBacktraceTypes(); bt++) {
@@ -184,7 +182,7 @@ void StackTraceRequestHandler::operator()(
   llvm::json::Object body;
 
   lldb::SBFormat frame_format = dap.frame_format;
-  bool include_all = false;
+  bool include_all = dap.configuration.displayExtendedBacktrace;
 
   if (const auto *format = arguments->getObject("format")) {
     // Indicates that all stack frames should be included, even those the debug
