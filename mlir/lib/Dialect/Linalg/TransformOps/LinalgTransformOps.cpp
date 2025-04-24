@@ -728,27 +728,30 @@ static bool sameOrEquivalentIterArg(Value src, Value dst) {
   if (src == dst)
     return true;
 
-  // Recursively look for equivalent iter args in enclosing loops.
-  if (auto bbArg = dyn_cast<BlockArgument>(dst)) {
-    Block *parentBlock = bbArg.getOwner();
-    assert(parentBlock && "unlinked block argument");
+  auto bbArg = dyn_cast<BlockArgument>(dst);
+  if (!bbArg)
+    return false;
 
-    // Because we stop doing recursive calls when we find a non loop-like op,
-    // this should never happen.
-    assert(parentBlock->getParentOp() &&
-           "expected block argument with parent operation");
+  Block *parentBlock = bbArg.getOwner();
+  assert(parentBlock && "unlinked block argument");
 
-    // Check if parent is loop-like.
-    if (auto parentLoop =
-            dyn_cast<LoopLikeOpInterface>(parentBlock->getParentOp())) {
-      for (auto innerIterArg : parentLoop.getRegionIterArgs()) {
-        OpOperand *operand = parentLoop.getTiedLoopInit(innerIterArg);
-        Value loopBlockArgument =
-            parentLoop->getOperand(operand->getOperandNumber());
-        if (sameOrEquivalentIterArg(src, loopBlockArgument))
-          return true;
-      }
-    }
+  // Because we stop doing recursive calls when we find a non loop-like op,
+  // this should never happen.
+  assert(parentBlock->getParentOp() &&
+         "expected block argument with parent operation");
+
+  // Check if parent is loop-like.
+  auto parentLoop = dyn_cast<LoopLikeOpInterface>(parentBlock->getParentOp());
+  if (!parentLoop)
+    return false;
+
+  for (auto innerIterArg : parentLoop.getRegionIterArgs()) {
+    OpOperand *operand = parentLoop.getTiedLoopInit(innerIterArg);
+    Value loopBlockArgument =
+        parentLoop->getOperand(operand->getOperandNumber());
+    // Recursively look for equivalent iter args in enclosing loops.
+    if (sameOrEquivalentIterArg(src, loopBlockArgument))
+      return true;
   }
 
   return false;
@@ -805,11 +808,12 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
       // Iterate over the outputs of the producer and over the loop bbArgs and
       // check if any bbArg points to the same value as the producer output. In
       // such case, make the producer output point to the bbArg directly.
-      for (auto &initOperandPtr :
+      for (OpOperand &initOperandPtr :
            cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
         Value producerOperand =
             clone->getOperand(initOperandPtr.getOperandNumber());
-        for (auto containerIterArg : containerLoop.getRegionIterArgs()) {
+        for (BlockArgument containerIterArg :
+             containerLoop.getRegionIterArgs()) {
           OpOperand *bbArg = containerLoop.getTiedLoopInit(containerIterArg);
           Value consumerOperand =
               containerLoop->getOperand(bbArg->getOperandNumber());
