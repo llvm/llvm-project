@@ -4952,7 +4952,7 @@ mlir::ParseResult fir::DoConcurrentLoopOp::parse(mlir::OpAsmParser &parser,
                           {static_cast<int32_t>(lower.size()),
                            static_cast<int32_t>(upper.size()),
                            static_cast<int32_t>(steps.size()),
-                           static_cast<int32_t>(reduceOperands.size())}));
+                           static_cast<int32_t>(reduceOperands.size()), 0}));
 
   // Parse attributes.
   if (parser.parseOptionalAttrDict(result.attributes))

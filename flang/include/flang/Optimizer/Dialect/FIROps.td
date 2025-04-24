@@ -17,6 +17,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "mlir/Dialect/OpenMP/OpenMPClauses.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
@@ -3570,7 +3571,7 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
       LLVM.
   }];
 
-  let arguments = (ins
+  defvar opArgs = (ins
     Variadic<Index>:$lowerBound,
     Variadic<Index>:$upperBound,
     Variadic<Index>:$step,
@@ -3579,17 +3580,23 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
 
+  let arguments = !con(opArgs, OpenMP_PrivateClause.arguments);
+
   let regions = (region SizedRegion<1>:$region);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
-  let extraClassDeclaration = [{
+  defvar opExtraClassDeclaration = [{
     // Get Number of reduction operands
     unsigned getNumReduceOperands() {
       return getReduceOperands().size();
     }
   }];
+
+  let extraClassDeclaration =
+    !strconcat(opExtraClassDeclaration, "\n",
+               OpenMP_PrivateClause.extraClassDeclaration);
 }
 
 #endif
