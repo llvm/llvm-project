@@ -4618,10 +4618,6 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
         return false;
       }
 
-      APValue Lit;
-      if (!Evaluate(Lit, Info, CLE->getInitializer()))
-        return false;
-
       // According to GCC info page:
       //
       // 6.28 Compound Literals
@@ -4644,7 +4640,12 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
         }
       }
 
-      CompleteObject LitObj(LVal.Base, &Lit, Base->getType());
+      APValue *Lit =
+          CLE->hasStaticStorage()
+              ? &CLE->getStaticValue()
+              : Info.CurrentCall->getTemporary(Base, LVal.Base.getVersion());
+
+      CompleteObject LitObj(LVal.Base, Lit, Base->getType());
       return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal, AK);
     } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
       // Special-case character extraction so we don't have to construct an
@@ -9159,9 +9160,25 @@ bool
 LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   assert((!Info.getLangOpts().CPlusPlus || E->isFileScope()) &&
          "lvalue compound literal in c++?");
-  // Defer visiting the literal until the lvalue-to-rvalue conversion. We can
-  // only see this when folding in C, so there's no standard to follow here.
-  return Success(E);
+  APValue *Lit;
+  // If CompountLiteral has static storage, its value can be used outside
+  // this expression. So evaluate it once and store it in ASTContext.
+  if (E->hasStaticStorage()) {
+    Lit = E->getOrCreateStaticValue(Info.Ctx);
+    Result.set(E);
+    // Reset any previously evaluated state, otherwise evaluation below might
+    // fail.
+    // FIXME: Should we just re-use the previously evaluated value instead?
+    *Lit = APValue();
+  } else {
+    Lit = &Info.CurrentCall->createTemporary(E, E->getInitializer()->getType(),
+                                             ScopeKind::FullExpression, Result);
+  }
+  if (!EvaluateInPlace(*Lit, Info, Result, E->getInitializer())) {
+    *Lit = APValue();
+    return false;
+  }
+  return true;
 }
 
 bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
