@@ -2938,9 +2938,30 @@ CodeGenFunction::EmitLoadOfReference(LValue RefLVal,
   llvm::LoadInst *Load =
       Builder.CreateLoad(RefLVal.getAddress(), RefLVal.isVolatile());
   CGM.DecorateInstructionWithTBAA(Load, RefLVal.getTBAAInfo());
-  return makeNaturalAddressForPointer(Load, RefLVal.getType()->getPointeeType(),
-                                      CharUnits(), /*ForPointeeType=*/true,
-                                      PointeeBaseInfo, PointeeTBAAInfo);
+  QualType PTy = RefLVal.getType()->getPointeeType();
+  if (!PTy->isIncompleteType()) {
+    llvm::LLVMContext &Ctx = getLLVMContext();
+    llvm::MDBuilder MDB(Ctx);
+    // Emit !nonnull metadata
+    if (CGM.getTypes().getTargetAddressSpace(PTy) == 0 &&
+        !CGM.getCodeGenOpts().NullPointerIsValid)
+      Load->setMetadata(llvm::LLVMContext::MD_nonnull,
+                        llvm::MDNode::get(Ctx, {}));
+    // Emit !align metadata
+    if (PTy->isObjectType()) {
+      auto Align =
+          CGM.getNaturalPointeeTypeAlignment(RefLVal.getType()).getQuantity();
+      if (Align > 1) {
+        Load->setMetadata(
+            llvm::LLVMContext::MD_align,
+            llvm::MDNode::get(Ctx, MDB.createConstant(llvm::ConstantInt::get(
+                                       Builder.getInt64Ty(), Align))));
+      }
+    }
+  }
+  return makeNaturalAddressForPointer(Load, PTy, CharUnits(),
+                                      /*ForPointeeType=*/true, PointeeBaseInfo,
+                                      PointeeTBAAInfo);
 }
 
 LValue CodeGenFunction::EmitLoadOfReferenceLValue(LValue RefLVal) {
