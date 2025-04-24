@@ -24,6 +24,7 @@ using HostObjectFile = ObjectFileELF;
 
 #if defined(__arm64__) || defined(__aarch64__) || defined(_M_ARM64)
 #define LLDB_TARGET_ARM64
+#include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #endif
 
 #if defined(__arm__) || defined(__arm) || defined(_ARM) || defined(_M_ARM) ||  \
@@ -62,13 +63,16 @@ llvm::Error SystemInitializerLLGS::Initialize() {
 
   HostObjectFile::Initialize();
 
-#if defined(LLDB_TARGET_ARM) || defined(LLDB_TARGET_ARM64)
+#if defined(LLDB_TARGET_ARM)
   EmulateInstructionARM::Initialize();
+#endif
+#if defined(LLDB_TARGET_ARM64)
+  EmulateInstructionARM64::Initialize();
 #endif
 #if defined(LLDB_TARGET_LoongArch)
   EmulateInstructionLoongArch::Initialize();
 #endif
-#if defined(LLDB_TARGET_MIPS) || defined(LLDB_TARGET_MIPS64)
+#if defined(LLDB_TARGET_MIPS)
   EmulateInstructionMIPS::Initialize();
 #endif
 #if defined(LLDB_TARGET_MIPS64)
@@ -84,13 +88,16 @@ llvm::Error SystemInitializerLLGS::Initialize() {
 void SystemInitializerLLGS::Terminate() {
   HostObjectFile::Terminate();
 
-#if defined(LLDB_TARGET_ARM) || defined(LLDB_TARGET_ARM64)
+#if defined(LLDB_TARGET_ARM)
   EmulateInstructionARM::Terminate();
+#endif
+#if defined(LLDB_TARGET_ARM64)
+  EmulateInstructionARM64::Terminate();
 #endif
 #if defined(LLDB_TARGET_LoongArch)
   EmulateInstructionLoongArch::Terminate();
 #endif
-#if defined(LLDB_TARGET_MIPS) || defined(LLDB_TARGET_MIPS64)
+#if defined(LLDB_TARGET_MIPS)
   EmulateInstructionMIPS::Terminate();
 #endif
 #if defined(LLDB_TARGET_MIPS64)

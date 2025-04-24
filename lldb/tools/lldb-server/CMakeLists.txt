@@ -55,6 +55,7 @@ add_lldb_tool(lldb-server
       lldbVersion
       ${LLDB_PLUGINS}
       lldbPluginInstructionARM
+      lldbPluginInstructionARM64
       lldbPluginInstructionLoongArch
       lldbPluginInstructionMIPS
       lldbPluginInstructionMIPS64
