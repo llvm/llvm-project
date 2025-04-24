@@ -23979,6 +23979,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     assert(isValidElementType(V1->getType()) &&
            isValidElementType(V2->getType()) &&
            "Expected vectorizable types only.");
+    if (V1 == V2)
+      return false;
     // It is fine to compare type IDs here, since we expect only vectorizable
     // types, like ints, floats and pointers, we don't care about other type.
     if (V1->getType()->getTypeID() < V2->getType()->getTypeID())
@@ -24015,7 +24017,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
-          if (S && !S.isAltShuffle()) {
+          if (S && !S.isAltShuffle() && I1->getOpcode() == I2->getOpcode()) {
             const auto *E1 = dyn_cast<ExtractElementInst>(I1);
             const auto *E2 = dyn_cast<ExtractElementInst>(I2);
             if (!E1 || !E2)
@@ -24047,6 +24049,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
             continue;
           }
+          if (I1->getOpcode() == I2->getOpcode())
+            continue;
           return I1->getOpcode() < I2->getOpcode();
         }
         if (I1)
