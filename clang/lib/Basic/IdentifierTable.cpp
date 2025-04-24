@@ -368,11 +368,7 @@ bool IdentifierInfo::isNameKeyword(const LangOptions &LangOpts) const {
   // tests if the identifier is a keyword token in C++ mode and then isn't a
   // keyword token in C modes. In our case, if it was a keyword, we wouldn't
   // have gotten the identifier for it anyway, so that function will always
-  // return false for us. Instead, check against the token definitions directly.
-  //
-  // FIXME: It would be nice to handle things like char8_t and wchar_t here as
-  // well, but those require looking at the currently selected language options
-  // which would make this interface confusing with isCPlusPlusKeyword.
+  // return false for us. Instead, check against the identifier name directly.
   switch (getNameKwStatus(LangOpts, getName())) {
   case KS_Enabled:
   case KS_Extension:
