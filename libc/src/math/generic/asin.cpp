@@ -146,7 +146,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 
   // When |x| >= 0.5, we perform range reduction as follow:
   //
-  // Assume further that 0.5 < x <= 1, and let:
+  // Assume further that 0.5 <= x < 1, and let:
   //   y = asin(x)
   // We will use the double angle formula:
   //   cos(2y) = 1 - 2 sin^2(y)
@@ -174,7 +174,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   //   h = u - v_hi^2 = (sqrt(u) - v_hi) * (sqrt(u) + v_hi)
   // Then:
   //   sqrt(u) = v_hi + h / (sqrt(u) + v_hi)
-  //            ~ v_hi + h / (2 * v_hi)
+  //           ~ v_hi + h / (2 * v_hi)
   // So we can use:
   //   v_lo = h / (2 * v_hi).
   // Then,

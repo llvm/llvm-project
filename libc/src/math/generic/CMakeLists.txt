@@ -4097,7 +4097,6 @@ add_entrypoint_object(
   HDRS
     ../asin.h
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
