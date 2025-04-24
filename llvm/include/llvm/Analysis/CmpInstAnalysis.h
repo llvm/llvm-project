@@ -113,7 +113,7 @@ namespace llvm {
   /// Decompose an icmp into the form ((X & Mask) pred C) if
   /// possible. Unless \p AllowNonZeroC is true, C will always be 0.
   /// If \p DecomposeAnd is specified, then, for equality predicates, this
-  /// will decompose bitmasking (e.g. implemented via `and`).
+  /// will decompose bitmasking via `and`.
   std::optional<DecomposedBitTest>
   decomposeBitTest(Value *Cond, bool LookThroughTrunc = true,
                    bool AllowNonZeroC = false, bool DecomposeAnd = false);
