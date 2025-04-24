@@ -1370,10 +1370,17 @@ def ModuleFlagCGProfileEntryAttr
           ]>]
     ```
   }];
-  let parameters = (ins "FlatSymbolRefAttr":$from,
-                        "FlatSymbolRefAttr":$to,
-                        "uint64_t":$count);
-  let assemblyFormat = "`<` struct(params) `>`";
+  let parameters = (
+    ins OptionalParameter<"std::optional<FlatSymbolRefAttr>">:$from,
+        OptionalParameter<"std::optional<FlatSymbolRefAttr>">:$to,
+        "uint64_t":$count);
+  let assemblyFormat = [{
+    `<`
+      `from` `=` ($from^) : (`null`)? `,`
+      `to` `=` ($to^) : (`null`)? `,`
+      `count` `=` $count
+    `>`
+  }];
 }
 
 //===----------------------------------------------------------------------===//

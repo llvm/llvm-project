@@ -521,8 +521,12 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
 
 static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
                                                  llvm::MDTuple *mdTuple) {
-  auto getFunctionSymbol = [&](const llvm::MDOperand &funcMDO) {
-    auto *f = cast<llvm::ValueAsMetadata>(funcMDO);
+  auto getFunctionSymbol =
+      [&](const llvm::MDOperand &funcMDO) -> std::optional<FlatSymbolRefAttr> {
+    auto *f = dyn_cast_or_null<llvm::ValueAsMetadata>(funcMDO);
+    // nullptr is a valid value for the function pointer.
+    if (!f)
+      return std::nullopt;
     auto *llvmFn = cast<llvm::Function>(f->getValue()->stripPointerCasts());
     return FlatSymbolRefAttr::get(mlirModule->getContext(), llvmFn->getName());
   };
@@ -570,7 +574,8 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
 
     if (!valAttr) {
       emitWarning(mlirModule.getLoc())
-          << "unsupported module flag value: " << diagMD(val, llvmModule.get());
+          << "unsupported module flag value for key '" << key->getString()
+          << "' : " << diagMD(val, llvmModule.get());
       continue;
     }
 
