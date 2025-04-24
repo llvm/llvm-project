@@ -5059,9 +5059,12 @@ void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
         "!callee_type metadata should only exist on indirect function calls",
         &I);
   for (const auto &Op : MD->operands()) {
+    Check(isa<MDNode>(Op.get()),
+          "The callee_type metadata must be a list of type metadata nodes");
     auto *TypeMD = cast<MDNode>(Op.get());
     Check(TypeMD->hasGeneralizedMDString(),
-          "Invalid \"callee_type\" type identifier", &I);
+          "Only generalized type metadata can be part of the callee_type "
+          "metadata list");
   }
 }
 
