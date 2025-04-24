@@ -653,6 +653,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm SDOT_ZZZ : sve_intx_dot<0b0, "sdot", AArch64sdot>;
   defm UDOT_ZZZ : sve_intx_dot<0b1, "udot", AArch64udot>;
 
+  let Predicates = [HasSVE_or_SME] in {
+    def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (UDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv16i8:$MulLHS, nxv16i8:$MulRHS)),
+              (SDOT_ZZZ_S $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (UDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+    def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv8i16:$MulLHS, nxv8i16:$MulRHS)),
+              (SDOT_ZZZ_D $Acc, $MulLHS, $MulRHS)>;
+  } // End HasSVE_or_SME
+
   defm SDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b0, "sdot", int_aarch64_sve_sdot_lane>;
   defm UDOT_ZZZI : sve_intx_dot_by_indexed_elem<0b1, "udot", int_aarch64_sve_udot_lane>;
 
