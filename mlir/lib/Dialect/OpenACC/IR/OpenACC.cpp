@@ -1411,20 +1411,22 @@ static void printWaitClause(mlir::OpAsmPrinter &p, mlir::Operation *op,
   if (hasDeviceTypeValues(keywordOnly) && hasDeviceTypeValues(deviceTypes))
     p << ", ";
 
-  unsigned opIdx = 0;
-  llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
-    p << "{";
-    auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasDevNum)[it.index()]);
-    if (boolAttr && boolAttr.getValue())
-      p << "devnum: ";
-    llvm::interleaveComma(
-        llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
-          p << operands[opIdx] << " : " << operands[opIdx].getType();
-          ++opIdx;
-        });
-    p << "}";
-    printSingleDeviceType(p, it.value());
-  });
+  if (hasDeviceTypeValues(deviceTypes)) {
+    unsigned opIdx = 0;
+    llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
+      p << "{";
+      auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasDevNum)[it.index()]);
+      if (boolAttr && boolAttr.getValue())
+        p << "devnum: ";
+      llvm::interleaveComma(
+          llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
+            p << operands[opIdx] << " : " << operands[opIdx].getType();
+            ++opIdx;
+          });
+      p << "}";
+      printSingleDeviceType(p, it.value());
+    });
+  }
 
   p << ")";
 }
