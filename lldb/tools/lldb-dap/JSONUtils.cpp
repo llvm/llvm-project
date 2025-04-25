@@ -783,6 +783,16 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
     // Line numbers are 1-based.
     object.try_emplace("line", inst_line + 1);
     object.try_emplace("column", 1);
+  } else {
+    // No valid line entry or symbol.
+    llvm::json::Object source;
+    EmplaceSafeString(source, "name", frame_name);
+    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
+    EmplaceSafeString(source, "presentationHint", "deemphasize");
+    object.try_emplace("source", std::move(source));
+
+    object.try_emplace("line", 1);
+    object.try_emplace("column", 1);
   }
 
   const auto pc = frame.GetPC();
