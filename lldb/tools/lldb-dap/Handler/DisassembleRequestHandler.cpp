@@ -117,7 +117,7 @@ void DisassembleRequestHandler::operator()(
   const auto inst_count =
       GetInteger<int64_t>(arguments, "instructionCount").value_or(0);
 
-  std::string flavor_string{};
+  std::string flavor_string;
   const auto target_triple = llvm::StringRef(dap.target.GetTriple());
   // this handles both 32 and 64bit x86 architecture.
   // this logic is also duplicated in
