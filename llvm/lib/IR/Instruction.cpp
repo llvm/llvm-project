@@ -490,7 +490,7 @@ bool Instruction::hasNonDebugLocLoopMetadata() const {
   // the first item because it is a self-reference.
   for (const MDOperand &Op : llvm::drop_begin(LoopMD->operands())) {
     // check for debug location type by attempting a cast.
-    if (!dyn_cast<DILocation>(Op)) {
+    if (!isa<DILocation>(Op)) {
       return true;
     }
   }
