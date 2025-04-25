@@ -8619,14 +8619,16 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
 
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep(), SE);
+  VPValue *StepVector =
+      Plan.getOrAddLiveIn(PoisonValue::get(PhiOrTrunc->getType()));
   if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
     return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                             IndDesc, TruncI,
+                                             StepVector, IndDesc, TruncI,
                                              TruncI->getDebugLoc());
   }
   assert(isa<PHINode>(PhiOrTrunc) && "must be a phi node here");
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Phi->getDebugLoc());
+  return new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), StepVector, IndDesc, Phi->getDebugLoc());
 }
 
 VPHeaderPHIRecipe *VPRecipeBuilder::tryToOptimizeInductionPHI(

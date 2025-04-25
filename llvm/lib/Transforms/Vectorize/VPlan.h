@@ -1842,23 +1842,26 @@ class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
 
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, const InductionDescriptor &IndDesc,
-                                DebugLoc DL)
+                                VPValue *VF, VPValue *StepVector,
+                                const InductionDescriptor &IndDesc, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
         Trunc(nullptr) {
     addOperand(VF);
-    addOperand(VF); // Dummy StepVector replaced in convertToConcreteRecipes
+    // Dummy StepVector replaced in convertToConcreteRecipes
+    addOperand(StepVector);
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
-                                VPValue *VF, const InductionDescriptor &IndDesc,
+                                VPValue *VF, VPValue *StepVector,
+                                const InductionDescriptor &IndDesc,
                                 TruncInst *Trunc, DebugLoc DL)
       : VPWidenInductionRecipe(VPDef::VPWidenIntOrFpInductionSC, IV, Start,
                                Step, IndDesc, DL),
         Trunc(Trunc) {
     addOperand(VF);
-    addOperand(VF); // Dummy StepVector replaced in convertToConcreteRecipes
+    // Dummy StepVector replaced in convertToConcreteRecipes
+    addOperand(StepVector);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
     if (Trunc)
@@ -1871,7 +1874,7 @@ public:
   VPWidenIntOrFpInductionRecipe *clone() override {
     return new VPWidenIntOrFpInductionRecipe(
         getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), Trunc, getDebugLoc());
+        getStepVector(), getInductionDescriptor(), Trunc, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenIntOrFpInductionSC)

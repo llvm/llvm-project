@@ -67,8 +67,11 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
         VPValue *Step =
             vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
+        VPValue *StepVector =
+            Plan->getOrAddLiveIn(PoisonValue::get(Phi->getType()));
         NewRecipe = new VPWidenIntOrFpInductionRecipe(
-            Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
+            Phi, Start, Step, &Plan->getVF(), StepVector, *II,
+            Ingredient.getDebugLoc());
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
