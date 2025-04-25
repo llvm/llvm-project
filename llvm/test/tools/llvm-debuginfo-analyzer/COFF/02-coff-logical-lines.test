@@ -26,6 +26,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'hello-world.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Function} extern not_inlined 'main' -> 'int'
 ; ONE-NEXT: [003]     4           {Line}
 ; ONE-NEXT: [003]                 {Code} 'subq	$0x28, %rsp'
@@ -43,6 +44,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'hello-world.cpp'
 ; ONE-NEXT: [002]               {Producer} 'Microsoft (R) Optimizing Compiler'
+; ONE-NEXT: [002]               {Language} 'Cpp'
 ; ONE-NEXT: [002]               {Function} extern not_inlined 'main' -> 'int'
 ; ONE-NEXT: [003]     4           {Line}
 ; ONE-NEXT: [003]                 {Code} 'subq	$0x28, %rsp'

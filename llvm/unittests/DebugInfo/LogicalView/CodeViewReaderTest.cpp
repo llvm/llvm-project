@@ -78,6 +78,11 @@ void checkElementPropertiesClangCodeview(LVReader *Reader) {
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
   EXPECT_TRUE(CompileUnit->getProducer().starts_with("clang"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
+  LVSourceLanguage Language = CompileUnit->getSourceLanguage();
+  EXPECT_TRUE(Language.isValid());
+  ASSERT_EQ(Language.getAs<llvm::codeview::SourceLanguage>(),
+            llvm::codeview::SourceLanguage::Cpp);
+  ASSERT_EQ(Language.getName(), "Cpp");
 
   EXPECT_EQ(Function->lineCount(), 16u);
   EXPECT_EQ(Function->scopeCount(), 1u);

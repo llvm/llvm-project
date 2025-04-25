@@ -383,6 +383,11 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
     if (options().getAttributeProducer())
       CurrentElement->setProducer(dwarf::toStringRef(FormValue));
     break;
+  case dwarf::DW_AT_language:
+    if (options().getAttributeProducer())
+      CurrentElement->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::dwarf::SourceLanguage>(GetAsUnsignedConstant())});
+    break;
   case dwarf::DW_AT_upper_bound:
     CurrentElement->setUpperBound(GetBoundValue(FormValue));
     break;

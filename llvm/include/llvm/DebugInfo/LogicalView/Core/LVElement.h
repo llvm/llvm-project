@@ -14,10 +14,13 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
 #include "llvm/Support/Casting.h"
 #include <map>
 #include <set>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -63,6 +66,22 @@ enum class LVElementKind { Discarded, Global, Optimized, LastEntry };
 using LVElementKindSet = std::set<LVElementKind>;
 using LVElementDispatch = std::map<LVElementKind, LVElementGetFunction>;
 using LVElementRequest = std::vector<LVElementGetFunction>;
+
+/// A source language supported by any of the debug info representations.
+struct LVSourceLanguage {
+  LVSourceLanguage() = default;
+  LVSourceLanguage(llvm::dwarf::SourceLanguage SL) : Language(SL) {}
+  LVSourceLanguage(llvm::codeview::SourceLanguage SL) : Language(SL) {}
+
+  bool isValid() const { return Language.index() != 0; }
+  template <typename T> T getAs() { return std::get<T>(Language); }
+  StringRef getName() const;
+
+private:
+  std::variant<std::monostate, llvm::dwarf::SourceLanguage,
+               llvm::codeview::SourceLanguage>
+      Language;
+};
 
 class LVElement : public LVObject {
   enum class Property {
@@ -213,6 +232,9 @@ public:
 
   virtual StringRef getProducer() const { return StringRef(); }
   virtual void setProducer(StringRef ProducerName) {}
+
+  virtual LVSourceLanguage getSourceLanguage() const { return {}; }
+  virtual void setSourceLanguage(LVSourceLanguage SL) {}
 
   virtual bool isCompileUnit() const { return false; }
   virtual bool isRoot() const { return false; }

@@ -954,8 +954,11 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     // The name of the CU, was extracted from the 'BuildInfo' subsection.
     Reader->setCompileUnitCPUType(Compile2.Machine);
     Scope->setName(CurrentObjectName);
-    if (options().getAttributeProducer())
+    if (options().getAttributeProducer()) {
       Scope->setProducer(Compile2.Version);
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile2.getLanguage())});
+    }
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update
@@ -999,8 +1002,11 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     // The name of the CU, was extracted from the 'BuildInfo' subsection.
     Reader->setCompileUnitCPUType(Compile3.Machine);
     Scope->setName(CurrentObjectName);
-    if (options().getAttributeProducer())
+    if (options().getAttributeProducer()) {
       Scope->setProducer(Compile3.Version);
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile3.getLanguage())});
+    }
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update
