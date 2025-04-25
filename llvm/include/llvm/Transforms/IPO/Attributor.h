@@ -6338,8 +6338,8 @@ protected:
 
 /// An abstract interface for potential address space information.
 struct AANoAliasAddrSpace
-    : public StateWrapper<BitIntegerState<uint32_t>, AbstractAttribute> {
-  using Base = StateWrapper<BitIntegerState<uint32_t>, AbstractAttribute>;
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AANoAliasAddrSpace(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -6367,13 +6367,25 @@ struct AANoAliasAddrSpace
     return (AA->getIdAddr() == &ID);
   }
 
-  void setMask(uint32_t Mask) {
-    removeKnownBits(~Mask);
-    removeAssumedBits(~Mask);
+  void setMaxAddrSpace(unsigned MaxAS) {
+    MaxAddrSpace = MaxAS;
+    for (auto it = ASRanges.begin(); it != ASRanges.end();) {
+      if (it->first > MaxAS) {
+        it = ASRanges.erase(it);
+      } else if (it->second > MaxAS + 1) {
+        it->second = MaxAS + 1;
+      } else {
+        it++;
+      }
+    }
   }
 
   /// Unique ID (due to the unique address)
   static const char ID;
+
+protected:
+  SmallVector<std::pair<unsigned, unsigned>> ASRanges;
+  unsigned MaxAddrSpace = ~0;
 };
 
 struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {

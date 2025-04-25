@@ -12796,14 +12796,18 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
            "Associated value is not a pointer");
 
     if (!A.getInfoCache().getFlatAddressSpace().has_value()) {
+      resetASRanges();
       indicatePessimisticFixpoint();
       return;
     }
 
     unsigned FlatAS = A.getInfoCache().getFlatAddressSpace().value();
+    resetASRanges();
+    removeAS(FlatAS);
+
     unsigned AS = getAssociatedType()->getPointerAddressSpace();
     if (AS != FlatAS) {
-      removeAssumedBits(1 << AS);
+      removeAS(AS);
       indicateOptimisticFixpoint();
     }
   }
@@ -12813,7 +12817,7 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     uint32_t OrigAssumed = getAssumed();
 
     auto CheckAddressSpace = [&](Value &Obj) {
-      if (isa<UndefValue>(&Obj) || isa<PoisonValue>(&Obj))
+      if (isa<PoisonValue>(&Obj))
         return true;
       // Handle argument in flat address space only has addrspace cast uses
       if (auto *Arg = dyn_cast<Argument>(&Obj)) {
@@ -12824,18 +12828,26 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
               return false;
             if (ASCI->getDestAddressSpace() == FlatAS)
               return false;
-            removeAssumedBits(1 << ASCI->getDestAddressSpace());
+            removeAS(ASCI->getDestAddressSpace());
           }
+          return true;
         }
       }
-      removeAssumedBits(1 << Obj.getType()->getPointerAddressSpace());
+
+      unsigned AS = Obj.getType()->getPointerAddressSpace();
+      if (AS == FlatAS)
+        return false;
+
+      removeAS(Obj.getType()->getPointerAddressSpace());
       return true;
     };
 
     auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
                                                         DepClassTy::REQUIRED);
-    if (!AUO->forallUnderlyingObjects(CheckAddressSpace))
+    if (!AUO->forallUnderlyingObjects(CheckAddressSpace)) {
+      resetASRanges();
       return indicatePessimisticFixpoint();
+    }
 
     return OrigAssumed == getAssumed() ? ChangeStatus::UNCHANGED
                                        : ChangeStatus::CHANGED;
@@ -12854,15 +12866,14 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     LLVMContext &Ctx = getAssociatedValue().getContext();
     llvm::MDNode *NoAliasASNode = nullptr;
     MDBuilder MDB(Ctx);
-    for (unsigned int i = 1; i < 32; i++) {
-      if (i != FlatAS && isAssumed(1 << i)) {
-        if (NoAliasASNode == nullptr) {
-          NoAliasASNode = MDB.createRange(APInt(32, i), APInt(32, i + 1));
-        } else {
-          llvm::MDNode *ASRange =
-              MDB.createRange(APInt(32, i), APInt(32, i + 1));
-          NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
-        }
+    for (auto range : ASRanges) {
+      if (NoAliasASNode == nullptr) {
+        NoAliasASNode =
+            MDB.createRange(APInt(32, range.first), APInt(32, range.second));
+      } else {
+        llvm::MDNode *ASRange =
+            MDB.createRange(APInt(32, range.first), APInt(32, range.second));
+        NoAliasASNode = MDNode::getMostGenericRange(NoAliasASNode, ASRange);
       }
     }
 
@@ -12878,17 +12889,17 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
       auto *Inst = dyn_cast<Instruction>(U.getUser());
       if (!Inst)
         return true;
+      if (!isa<LoadInst>(Inst) && !isa<StoreInst>(Inst) &&
+          !isa<AtomicCmpXchgInst>(Inst) && !isa<AtomicRMWInst>(Inst))
+        return true;
       if (!A.isRunOn(Inst->getFunction()))
         return true;
-      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst) ||
-          isa<AtomicCmpXchgInst>(Inst) || isa<AtomicRMWInst>(Inst)) {
-        Inst->setMetadata(LLVMContext::MD_noalias_addrspace, NoAliasASNode);
-        Changed = true;
-      }
+      Inst->setMetadata(LLVMContext::MD_noalias_addrspace, NoAliasASNode);
+      Changed = true;
       return true;
     };
     (void)A.checkForAllUses(Pred, *this, getAssociatedValue(),
-                            /* CheckBBLivenessOnly */ true);
+                            /* CheckBBLivenessOnly=*/true);
     return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
@@ -12899,11 +12910,41 @@ struct AANoAliasAddrSpaceImpl : public AANoAliasAddrSpace {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << "noaliasaddrspace(";
-    for (unsigned int i = 1; i < 32; i++)
-      if (isAssumed(1 << i))
-        OS << ' ' << i;
+    for (auto range : ASRanges)
+      OS << ' ' << "[" << range.first << "," << range.second << ")";
     OS << " )";
     return OS.str();
+  }
+
+private:
+  void removeAS(unsigned AS) {
+    for (auto it = ASRanges.begin(); it != ASRanges.end();) {
+      if (it->first == AS) {
+        uint32_t Upper = it->second;
+        ASRanges.erase(it);
+        ASRanges.push_back(std::pair(AS + 1, Upper));
+        return;
+      } else if (it->second - 1 == AS) {
+        uint32_t Lower = it->first;
+        ASRanges.erase(it);
+        ASRanges.push_back(std::pair(Lower, AS));
+        return;
+      } else if (it->first < AS && AS < it->second - 1) {
+        uint32_t Upper = it->second;
+        uint32_t Lower = it->first;
+        ASRanges.erase(it);
+        ASRanges.push_back(std::pair(Lower, AS));
+        ASRanges.push_back(std::pair(AS + 1, Upper));
+        return;
+      } else {
+        it++;
+      }
+    }
+  }
+
+  void resetASRanges() {
+    ASRanges.clear();
+    ASRanges.push_back(std::pair(0, MaxAddrSpace));
   }
 };
 
