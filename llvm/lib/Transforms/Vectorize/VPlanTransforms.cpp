@@ -2464,9 +2464,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(
-    VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder,
-    VFRange &Range) {
+    VPlan &Plan, Loop *OrigLoop, BasicBlock *UncountableExitingBlock,
+    VPRecipeBuilder &RecipeBuilder, VFRange &Range) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
@@ -2508,7 +2507,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
     // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
     // a single predecessor and 1 if it has two.
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
-    if (OrigLoop->getUniqueExitBlock()) {
+    if (!VPEarlyExitBlock->getSinglePredecessor()) {
       // If VPEarlyExitBlock has two predecessors, they are already ordered such
       // that early exit is second (and latch exit is first), by construction.
       // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
