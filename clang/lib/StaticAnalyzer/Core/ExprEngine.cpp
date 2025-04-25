@@ -422,7 +422,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       break;
     case SubobjectAdjustment::MemberPointerAdjustment:
       // FIXME: Unimplemented.
-      State = State->invalidateRegions(Reg, InitWithAdjustments,
+      State = State->invalidateRegions(Reg, getCFGElementRef(),
                                        currBldrCtx->blockCount(), LC, true,
                                        nullptr, nullptr, nullptr);
       return State;
@@ -439,8 +439,8 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
   // values inside Reg would be correct.
   SVal InitVal = State->getSVal(Init, LC);
   if (InitVal.isUnknown()) {
-    InitVal = getSValBuilder().conjureSymbolVal(Result, LC, Init->getType(),
-                                                currBldrCtx->blockCount());
+    InitVal = getSValBuilder().conjureSymbolVal(
+        getCFGElementRef(), LC, Init->getType(), currBldrCtx->blockCount());
     State = State->bindLoc(BaseReg.castAs<Loc>(), InitVal, LC, false);
 
     // Then we'd need to take the value that certainly exists and bind it
@@ -449,7 +449,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       // Try to recover some path sensitivity in case we couldn't
       // compute the value.
       InitValWithAdjustments = getSValBuilder().conjureSymbolVal(
-          Result, LC, InitWithAdjustments->getType(),
+          getCFGElementRef(), LC, InitWithAdjustments->getType(),
           currBldrCtx->blockCount());
     }
     State =
@@ -1215,9 +1215,9 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
         // If we fail to get the value for some reason, use a symbolic value.
         if (InitVal.isUnknownOrUndef()) {
           SValBuilder &SVB = getSValBuilder();
-          InitVal = SVB.conjureSymbolVal(BMI->getInit(), stackFrame,
-                                         Field->getType(),
-                                         currBldrCtx->blockCount());
+          InitVal =
+              SVB.conjureSymbolVal(getCFGElementRef(), stackFrame,
+                                   Field->getType(), currBldrCtx->blockCount());
         }
       } else {
         InitVal = State->getSVal(BMI->getInit(), stackFrame);
@@ -2051,9 +2051,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
       for (const auto N : preVisit) {
         const LocationContext *LCtx = N->getLocationContext();
-        SVal result = svalBuilder.conjureSymbolVal(nullptr, Ex, LCtx,
-                                                   resultType,
-                                                   currBldrCtx->blockCount());
+        SVal result = svalBuilder.conjureSymbolVal(
+            /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, resultType,
+            currBldrCtx->blockCount());
         ProgramStateRef State = N->getState()->BindExpr(Ex, LCtx, result);
 
         // Escape pointers passed into the list, unless it's an ObjC boxed
@@ -2556,10 +2556,18 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
+
     // Widen.
     const LocationContext *LCtx = Pred->getLocationContext();
-    ProgramStateRef WidenedState =
-        getWidenedLoopState(Pred->getState(), LCtx, BlockCount, Term);
+
+    // FIXME:
+    // We cannot use the CFG element from the via `ExprEngine::getCFGElementRef`
+    // since we are currently at the block entrance and the current reference
+    // would be stale.  Ideally, we should pass on the terminator of the CFG
+    // block, but the terminator cannot be referred as a CFG element.
+    // Here we just pass the current stale block.
+    ProgramStateRef WidenedState = getWidenedLoopState(
+        Pred->getState(), LCtx, BlockCount, getCFGElementRef());
     nodeBuilder.generateNode(WidenedState, Pred);
     return;
   }
@@ -3541,11 +3549,10 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
       ValuesToInvalidate.push_back(SubExprVal);
     }
 
-    State = State->invalidateRegions(ValuesToInvalidate, AE,
-                                    currBldrCtx->blockCount(),
-                                    LCtx,
-                                    /*CausedByPointerEscape*/true,
-                                    /*Symbols=*/nullptr);
+    State = State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
+                                     currBldrCtx->blockCount(), LCtx,
+                                     /*CausedByPointerEscape*/ true,
+                                     /*Symbols=*/nullptr);
 
     SVal ResultVal = UnknownVal();
     State = State->BindExpr(AE, LCtx, ResultVal);
@@ -3892,7 +3899,8 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     assert(!isa<NonLoc>(X)); // Should be an Lval, or unknown, undef.
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, A, currBldrCtx->blockCount(),
+      state = state->invalidateRegions(*LV, getCFGElementRef(),
+                                       currBldrCtx->blockCount(),
                                        Pred->getLocationContext(),
                                        /*CausedByPointerEscape=*/true);
   }
@@ -3902,7 +3910,8 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     SVal X = state->getSVal(I, Pred->getLocationContext());
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, A, currBldrCtx->blockCount(),
+      state = state->invalidateRegions(*LV, getCFGElementRef(),
+                                       currBldrCtx->blockCount(),
                                        Pred->getLocationContext(),
                                        /*CausedByPointerEscape=*/true);
   }

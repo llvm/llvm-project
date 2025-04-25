@@ -242,8 +242,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
         assert(RetE && "Void returns should not have a construction context");
         QualType ReturnTy = RetE->getType();
         QualType RegionTy = ACtx.getPointerType(ReturnTy);
-        return SVB.conjureSymbolVal(&TopLevelSymRegionTag, RetE, SFC, RegionTy,
-                                    currBldrCtx->blockCount());
+        return SVB.conjureSymbolVal(&TopLevelSymRegionTag, getCFGElementRef(),
+                                    SFC, RegionTy, currBldrCtx->blockCount());
       }
       llvm_unreachable("Unhandled return value construction context!");
     }
@@ -975,10 +975,11 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // a custom global allocator.
   if (symVal.isUnknown()) {
     if (IsStandardGlobalOpNewFunction)
-      symVal = svalBuilder.getConjuredHeapSymbolVal(CNE, LCtx, blockCount);
+      symVal = svalBuilder.getConjuredHeapSymbolVal(getCFGElementRef(), LCtx,
+                                                    CNE->getType(), blockCount);
     else
-      symVal = svalBuilder.conjureSymbolVal(nullptr, CNE, LCtx, CNE->getType(),
-                                            blockCount);
+      symVal = svalBuilder.conjureSymbolVal(
+          /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, blockCount);
   }
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
@@ -1111,7 +1112,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
   }
 
   const LocationContext *LCtx = Pred->getLocationContext();
-  SVal V = svalBuilder.conjureSymbolVal(CS, LCtx, VD->getType(),
+  SVal V = svalBuilder.conjureSymbolVal(getCFGElementRef(), LCtx, VD->getType(),
                                         currBldrCtx->blockCount());
   ProgramStateRef state = Pred->getState();
   state = state->bindLoc(state->getLValue(VD, LCtx), V, LCtx);
