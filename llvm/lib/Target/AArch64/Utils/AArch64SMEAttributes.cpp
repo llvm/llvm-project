@@ -94,22 +94,28 @@ void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName) {
 }
 
 bool SMECallAttrs::requiresSMChange() const {
-  if ((Callsite | Callee).hasStreamingCompatibleInterface())
+  if (callee().hasStreamingCompatibleInterface())
     return false;
 
   // Both non-streaming
-  if (Caller.hasNonStreamingInterfaceAndBody() &&
-      (Callsite | Callee).hasNonStreamingInterface())
+  if (caller().hasNonStreamingInterfaceAndBody() &&
+      callee().hasNonStreamingInterface())
     return false;
 
   // Both streaming
-  if (Caller.hasStreamingInterfaceOrBody() &&
-      (Callsite | Callee).hasStreamingInterface())
+  if (caller().hasStreamingInterfaceOrBody() &&
+      callee().hasStreamingInterface())
     return false;
 
   return true;
 }
 
 SMECallAttrs::SMECallAttrs(const CallBase &CB)
-    : SMECallAttrs(*CB.getFunction(), CB.getCalledFunction(),
-                   CB.getAttributes()) {}
+    : CallerFn(*CB.getFunction()), CalledFn(CB.getCalledFunction()),
+      Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
+  // FIXME: We probably should not allow SME attributes on direct calls but
+  // clang duplicates streaming mode attributes at each callsite.
+  assert((IsIndirect ||
+          ((Callsite.withoutPerCallsiteFlags() | CalledFn) == CalledFn)) &&
+         "SME attributes at callsite do not match declaration");
+}
