@@ -249,342 +249,6 @@ static bool isReInterleaveMask(ShuffleVectorInst *SVI, unsigned &Factor,
   return false;
 }
 
-/// Return true if it's an interleaving mask. For instance, 111000111000 is
-/// interleaved from three 1010 masks. \p SubMask returns the mask of individual
-/// lane.
-static bool isInterleavedConstantMask(unsigned Factor, ConstantVector *Mask,
-                                      SmallVectorImpl<Constant *> &LaneMask) {
-  unsigned LaneMaskLen = LaneMask.size();
-  if (auto *Splat = Mask->getSplatValue()) {
-    std::fill(LaneMask.begin(), LaneMask.end(), Splat);
-  } else {
-    for (unsigned Idx = 0U, N = LaneMaskLen * Factor; Idx < N; ++Idx) {
-      Constant *Ref = Mask->getAggregateElement(alignDown(Idx, Factor));
-      if (Ref != Mask->getAggregateElement(Idx))
-        return false;
-      LaneMask[Idx / Factor] = Ref;
-    }
-  }
-
-  return true;
-}
-
-bool InterleavedAccessImpl::lowerInterleavedLoad(
-    Instruction *LoadOp, SmallSetVector<Instruction *, 32> &DeadInsts) {
-  if (isa<ScalableVectorType>(LoadOp->getType()))
-    return false;
-
-  if (auto *LI = dyn_cast<LoadInst>(LoadOp)) {
-    if (!LI->isSimple())
-      return false;
-  } else if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadOp)) {
-    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load);
-    // Require a constant mask and evl.
-    if (!isa<ConstantVector>(VPLoad->getArgOperand(1)))
-      return false;
-  } else {
-    llvm_unreachable("unsupported load operation");
-  }
-
-  // Check if all users of this load are shufflevectors. If we encounter any
-  // users that are extractelement instructions or binary operators, we save
-  // them to later check if they can be modified to extract from one of the
-  // shufflevectors instead of the load.
-
-  SmallVector<ShuffleVectorInst *, 4> Shuffles;
-  SmallVector<ExtractElementInst *, 4> Extracts;
-  // BinOpShuffles need to be handled a single time in case both operands of the
-  // binop are the same load.
-  SmallSetVector<ShuffleVectorInst *, 4> BinOpShuffles;
-
-  for (auto *User : LoadOp->users()) {
-    auto *Extract = dyn_cast<ExtractElementInst>(User);
-    if (Extract && isa<ConstantInt>(Extract->getIndexOperand())) {
-      Extracts.push_back(Extract);
-      continue;
-    }
-    if (auto *BI = dyn_cast<BinaryOperator>(User)) {
-      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
-            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
-            return SVI && isa<UndefValue>(SVI->getOperand(1));
-          })) {
-        for (auto *SVI : BI->users())
-          BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
-        continue;
-      }
-    }
-    auto *SVI = dyn_cast<ShuffleVectorInst>(User);
-    if (!SVI || !isa<UndefValue>(SVI->getOperand(1)))
-      return false;
-
-    Shuffles.push_back(SVI);
-  }
-
-  if (Shuffles.empty() && BinOpShuffles.empty())
-    return false;
-
-  unsigned Factor, Index;
-
-  unsigned NumLoadElements =
-      cast<FixedVectorType>(LoadOp->getType())->getNumElements();
-  auto *FirstSVI = Shuffles.size() > 0 ? Shuffles[0] : BinOpShuffles[0];
-  // Check if the first shufflevector is DE-interleave shuffle.
-  if (!isDeInterleaveMask(FirstSVI->getShuffleMask(), Factor, Index, MaxFactor,
-                          NumLoadElements))
-    return false;
-
-  // Holds the corresponding index for each DE-interleave shuffle.
-  SmallVector<unsigned, 4> Indices;
-
-  Type *VecTy = FirstSVI->getType();
-
-  // Check if other shufflevectors are also DE-interleaved of the same type
-  // and factor as the first shufflevector.
-  for (auto *Shuffle : Shuffles) {
-    if (Shuffle->getType() != VecTy)
-      return false;
-    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
-            Shuffle->getShuffleMask(), Factor, Index))
-      return false;
-
-    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
-    Indices.push_back(Index);
-  }
-  for (auto *Shuffle : BinOpShuffles) {
-    if (Shuffle->getType() != VecTy)
-      return false;
-    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
-            Shuffle->getShuffleMask(), Factor, Index))
-      return false;
-
-    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
-
-    if (cast<Instruction>(Shuffle->getOperand(0))->getOperand(0) == LoadOp)
-      Indices.push_back(Index);
-    if (cast<Instruction>(Shuffle->getOperand(0))->getOperand(1) == LoadOp)
-      Indices.push_back(Index);
-  }
-
-  // Try and modify users of the load that are extractelement instructions to
-  // use the shufflevector instructions instead of the load.
-  if (!tryReplaceExtracts(Extracts, Shuffles))
-    return false;
-
-  bool BinOpShuffleChanged =
-      replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, LoadOp);
-
-  // Check if the de-interleaved vp.load masks are the same.
-  unsigned ShuffleMaskLen = Shuffles[0]->getShuffleMask().size();
-  SmallVector<Constant *, 8> LaneMask(ShuffleMaskLen, nullptr);
-  if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadOp)) {
-    if (!isInterleavedConstantMask(
-            Factor, cast<ConstantVector>(VPLoad->getArgOperand(1)), LaneMask))
-      return false;
-  }
-
-  LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *LoadOp << "\n");
-
-  if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadOp)) {
-    auto *MaskVec = ConstantVector::get(LaneMask);
-    // Sometimes the number of Shuffles might be less than Factor, we have to
-    // fill the gaps with null. Also, lowerDeinterleavedVPLoad
-    // expects them to be sorted.
-    SmallVector<Value *, 4> ShuffleValues(Factor, nullptr);
-    for (auto [Idx, ShuffleMaskIdx] : enumerate(Indices))
-      ShuffleValues[ShuffleMaskIdx] = Shuffles[Idx];
-    if (!TLI->lowerDeinterleavedVPLoad(VPLoad, MaskVec, ShuffleValues))
-      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
-      return !Extracts.empty() || BinOpShuffleChanged;
-  } else {
-    // Try to create target specific intrinsics to replace the load and
-    // shuffles.
-    if (!TLI->lowerInterleavedLoad(cast<LoadInst>(LoadOp), Shuffles, Indices,
-                                   Factor))
-      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
-      return !Extracts.empty() || BinOpShuffleChanged;
-  }
-
-  DeadInsts.insert_range(Shuffles);
-
-  DeadInsts.insert(LoadOp);
-  return true;
-}
-
-bool InterleavedAccessImpl::replaceBinOpShuffles(
-    ArrayRef<ShuffleVectorInst *> BinOpShuffles,
-    SmallVectorImpl<ShuffleVectorInst *> &Shuffles, Instruction *LoadOp) {
-  for (auto *SVI : BinOpShuffles) {
-    BinaryOperator *BI = cast<BinaryOperator>(SVI->getOperand(0));
-    Type *BIOp0Ty = BI->getOperand(0)->getType();
-    ArrayRef<int> Mask = SVI->getShuffleMask();
-    assert(all_of(Mask, [&](int Idx) {
-      return Idx < (int)cast<FixedVectorType>(BIOp0Ty)->getNumElements();
-    }));
-
-    BasicBlock::iterator insertPos = SVI->getIterator();
-    auto *NewSVI1 =
-        new ShuffleVectorInst(BI->getOperand(0), PoisonValue::get(BIOp0Ty),
-                              Mask, SVI->getName(), insertPos);
-    auto *NewSVI2 = new ShuffleVectorInst(
-        BI->getOperand(1), PoisonValue::get(BI->getOperand(1)->getType()), Mask,
-        SVI->getName(), insertPos);
-    BinaryOperator *NewBI = BinaryOperator::CreateWithCopiedFlags(
-        BI->getOpcode(), NewSVI1, NewSVI2, BI, BI->getName(), insertPos);
-    SVI->replaceAllUsesWith(NewBI);
-    LLVM_DEBUG(dbgs() << "  Replaced: " << *BI << "\n    And   : " << *SVI
-                      << "\n  With    : " << *NewSVI1 << "\n    And   : "
-                      << *NewSVI2 << "\n    And   : " << *NewBI << "\n");
-    RecursivelyDeleteTriviallyDeadInstructions(SVI);
-    if (NewSVI1->getOperand(0) == LoadOp)
-      Shuffles.push_back(NewSVI1);
-    if (NewSVI2->getOperand(0) == LoadOp)
-      Shuffles.push_back(NewSVI2);
-  }
-
-  return !BinOpShuffles.empty();
-}
-
-bool InterleavedAccessImpl::tryReplaceExtracts(
-    ArrayRef<ExtractElementInst *> Extracts,
-    ArrayRef<ShuffleVectorInst *> Shuffles) {
-  // If there aren't any extractelement instructions to modify, there's nothing
-  // to do.
-  if (Extracts.empty())
-    return true;
-
-  // Maps extractelement instructions to vector-index pairs. The extractlement
-  // instructions will be modified to use the new vector and index operands.
-  DenseMap<ExtractElementInst *, std::pair<Value *, int>> ReplacementMap;
-
-  for (auto *Extract : Extracts) {
-    // The vector index that is extracted.
-    auto *IndexOperand = cast<ConstantInt>(Extract->getIndexOperand());
-    auto Index = IndexOperand->getSExtValue();
-
-    // Look for a suitable shufflevector instruction. The goal is to modify the
-    // extractelement instruction (which uses an interleaved load) to use one
-    // of the shufflevector instructions instead of the load.
-    for (auto *Shuffle : Shuffles) {
-      // If the shufflevector instruction doesn't dominate the extract, we
-      // can't create a use of it.
-      if (!DT->dominates(Shuffle, Extract))
-        continue;
-
-      // Inspect the indices of the shufflevector instruction. If the shuffle
-      // selects the same index that is extracted, we can modify the
-      // extractelement instruction.
-      SmallVector<int, 4> Indices;
-      Shuffle->getShuffleMask(Indices);
-      for (unsigned I = 0; I < Indices.size(); ++I)
-        if (Indices[I] == Index) {
-          assert(Extract->getOperand(0) == Shuffle->getOperand(0) &&
-                 "Vector operations do not match");
-          ReplacementMap[Extract] = std::make_pair(Shuffle, I);
-          break;
-        }
-
-      // If we found a suitable shufflevector instruction, stop looking.
-      if (ReplacementMap.count(Extract))
-        break;
-    }
-
-    // If we did not find a suitable shufflevector instruction, the
-    // extractelement instruction cannot be modified, so we must give up.
-    if (!ReplacementMap.count(Extract))
-      return false;
-  }
-
-  // Finally, perform the replacements.
-  IRBuilder<> Builder(Extracts[0]->getContext());
-  for (auto &Replacement : ReplacementMap) {
-    auto *Extract = Replacement.first;
-    auto *Vector = Replacement.second.first;
-    auto Index = Replacement.second.second;
-    Builder.SetInsertPoint(Extract);
-    Extract->replaceAllUsesWith(Builder.CreateExtractElement(Vector, Index));
-    Extract->eraseFromParent();
-  }
-
-  return true;
-}
-
-bool InterleavedAccessImpl::lowerInterleavedStore(
-    Instruction *StoreOp, SmallSetVector<Instruction *, 32> &DeadInsts) {
-  Value *StoredValue;
-  if (auto *SI = dyn_cast<StoreInst>(StoreOp)) {
-    if (!SI->isSimple())
-      return false;
-    StoredValue = SI->getValueOperand();
-  } else if (auto *VPStore = dyn_cast<VPIntrinsic>(StoreOp)) {
-    assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
-    // Require a constant mask.
-    if (!isa<ConstantVector>(VPStore->getArgOperand(2)))
-      return false;
-    StoredValue = VPStore->getArgOperand(0);
-  } else {
-    llvm_unreachable("unsupported store operation");
-  }
-
-  auto *SVI = dyn_cast<ShuffleVectorInst>(StoredValue);
-  if (!SVI || !SVI->hasOneUse() || isa<ScalableVectorType>(SVI->getType()))
-    return false;
-
-  unsigned NumStoredElements =
-      cast<FixedVectorType>(SVI->getType())->getNumElements();
-  // Check if the shufflevector is RE-interleave shuffle.
-  unsigned Factor;
-  if (!isReInterleaveMask(SVI, Factor, MaxFactor))
-    return false;
-  assert(NumStoredElements % Factor == 0 &&
-         "number of stored element should be a multiple of Factor");
-
-  // Check if the de-interleaved vp.store masks are the same.
-  unsigned LaneMaskLen = NumStoredElements / Factor;
-  SmallVector<Constant *, 8> LaneMask(LaneMaskLen, nullptr);
-  if (auto *VPStore = dyn_cast<VPIntrinsic>(StoreOp)) {
-    if (!isInterleavedConstantMask(
-            Factor, cast<ConstantVector>(VPStore->getArgOperand(2)), LaneMask))
-      return false;
-  }
-
-  LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *StoreOp << "\n");
-
-  if (auto *VPStore = dyn_cast<VPIntrinsic>(StoreOp)) {
-    IRBuilder<> Builder(VPStore);
-    // We need to effectively de-interleave the shufflemask
-    // because lowerInterleavedVPStore expected individual de-interleaved
-    // values.
-    SmallVector<Value *, 10> NewShuffles;
-    SmallVector<int, 16> NewShuffleMask(LaneMaskLen);
-    auto ShuffleMask = SVI->getShuffleMask();
-
-    for (unsigned i = 0; i < Factor; i++) {
-      for (unsigned j = 0; j < LaneMaskLen; j++)
-        NewShuffleMask[j] = ShuffleMask[i + Factor * j];
-
-      NewShuffles.push_back(Builder.CreateShuffleVector(
-          SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask));
-    }
-
-    // Try to create target specific intrinsics to replace the vp.store and
-    // shuffle.
-    if (!TLI->lowerInterleavedVPStore(VPStore, ConstantVector::get(LaneMask),
-                                      NewShuffles))
-      // We already created new shuffles.
-      return true;
-  } else {
-    // Try to create target specific intrinsics to replace the store and
-    // shuffle.
-    if (!TLI->lowerInterleavedStore(cast<StoreInst>(StoreOp), SVI, Factor))
-      return false;
-  }
-
-  // Already have a new target specific interleaved store. Erase the old store.
-  DeadInsts.insert(StoreOp);
-  DeadInsts.insert(SVI);
-  return true;
-}
-
 // For an (de)interleave tree like this:
 //
 //   A   C B   D
@@ -739,7 +403,7 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
 // Return the corresponded deinterleaved mask, or nullptr if there is no valid
 // mask.
 static Value *getMask(Value *WideMask, unsigned Factor,
-                      VectorType *LeafValueTy) {
+                      ElementCount LeafValueEC) {
   using namespace llvm::PatternMatch;
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     SmallVector<Value *, 8> Operands;
@@ -751,16 +415,350 @@ static Value *getMask(Value *WideMask, unsigned Factor,
     }
   }
 
-  if (match(WideMask, m_AllOnes())) {
-    // Scale the vector length of all-ones mask.
-    ElementCount OrigEC =
-        cast<VectorType>(WideMask->getType())->getElementCount();
-    assert(OrigEC.getKnownMinValue() % Factor == 0);
-    return ConstantVector::getSplat(OrigEC.divideCoefficientBy(Factor),
-                                    cast<Constant>(WideMask)->getSplatValue());
+  if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
+    if (auto *Splat = ConstMask->getSplatValue()) {
+      // All-ones or all-zeros mask.
+      return ConstantVector::getSplat(LeafValueEC, Splat);
+    } else if (LeafValueEC.isFixed()) {
+      unsigned LeafMaskLen = LeafValueEC.getFixedValue();
+      SmallVector<Constant *, 8> LeafMask(LeafMaskLen, nullptr);
+      // If this is a fixed-length constant mask, each lane / leaf has to
+      // use the same mask. This is done by checking if every group with Factor
+      // number of elements in the interleaved mask has homogeneous values.
+      for (unsigned Idx = 0U, N = LeafMaskLen * Factor; Idx < N; ++Idx) {
+        Constant *Ref = ConstMask->getAggregateElement(alignDown(Idx, Factor));
+        if (Ref != ConstMask->getAggregateElement(Idx))
+          return nullptr;
+        LeafMask[Idx / Factor] = Ref;
+      }
+
+      return ConstantVector::get(LeafMask);
+    }
   }
 
   return nullptr;
+}
+static Value *getMask(Value *WideMask, unsigned Factor,
+                      VectorType *LeafValueTy) {
+  return getMask(WideMask, Factor, LeafValueTy->getElementCount());
+}
+
+bool InterleavedAccessImpl::lowerInterleavedLoad(
+    Instruction *LoadOp, SmallSetVector<Instruction *, 32> &DeadInsts) {
+  if (isa<ScalableVectorType>(LoadOp->getType()))
+    return false;
+
+  if (auto *LI = dyn_cast<LoadInst>(LoadOp)) {
+    if (!LI->isSimple())
+      return false;
+  } else if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadOp)) {
+    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load);
+    // Require a constant mask.
+    if (!isa<ConstantVector>(VPLoad->getArgOperand(1)))
+      return false;
+  } else {
+    llvm_unreachable("unsupported load operation");
+  }
+
+  // Check if all users of this load are shufflevectors. If we encounter any
+  // users that are extractelement instructions or binary operators, we save
+  // them to later check if they can be modified to extract from one of the
+  // shufflevectors instead of the load.
+
+  SmallVector<ShuffleVectorInst *, 4> Shuffles;
+  SmallVector<ExtractElementInst *, 4> Extracts;
+  // BinOpShuffles need to be handled a single time in case both operands of the
+  // binop are the same load.
+  SmallSetVector<ShuffleVectorInst *, 4> BinOpShuffles;
+
+  for (auto *User : LoadOp->users()) {
+    auto *Extract = dyn_cast<ExtractElementInst>(User);
+    if (Extract && isa<ConstantInt>(Extract->getIndexOperand())) {
+      Extracts.push_back(Extract);
+      continue;
+    }
+    if (auto *BI = dyn_cast<BinaryOperator>(User)) {
+      if (!BI->user_empty() && all_of(BI->users(), [](auto *U) {
+            auto *SVI = dyn_cast<ShuffleVectorInst>(U);
+            return SVI && isa<UndefValue>(SVI->getOperand(1));
+          })) {
+        for (auto *SVI : BI->users())
+          BinOpShuffles.insert(cast<ShuffleVectorInst>(SVI));
+        continue;
+      }
+    }
+    auto *SVI = dyn_cast<ShuffleVectorInst>(User);
+    if (!SVI || !isa<UndefValue>(SVI->getOperand(1)))
+      return false;
+
+    Shuffles.push_back(SVI);
+  }
+
+  if (Shuffles.empty() && BinOpShuffles.empty())
+    return false;
+
+  unsigned Factor, Index;
+
+  unsigned NumLoadElements =
+      cast<FixedVectorType>(LoadOp->getType())->getNumElements();
+  auto *FirstSVI = Shuffles.size() > 0 ? Shuffles[0] : BinOpShuffles[0];
+  // Check if the first shufflevector is DE-interleave shuffle.
+  if (!isDeInterleaveMask(FirstSVI->getShuffleMask(), Factor, Index, MaxFactor,
+                          NumLoadElements))
+    return false;
+
+  // Holds the corresponding index for each DE-interleave shuffle.
+  SmallVector<unsigned, 4> Indices;
+
+  Type *VecTy = FirstSVI->getType();
+
+  // Check if other shufflevectors are also DE-interleaved of the same type
+  // and factor as the first shufflevector.
+  for (auto *Shuffle : Shuffles) {
+    if (Shuffle->getType() != VecTy)
+      return false;
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+            Shuffle->getShuffleMask(), Factor, Index))
+      return false;
+
+    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
+    Indices.push_back(Index);
+  }
+  for (auto *Shuffle : BinOpShuffles) {
+    if (Shuffle->getType() != VecTy)
+      return false;
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+            Shuffle->getShuffleMask(), Factor, Index))
+      return false;
+
+    assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
+
+    if (cast<Instruction>(Shuffle->getOperand(0))->getOperand(0) == LoadOp)
+      Indices.push_back(Index);
+    if (cast<Instruction>(Shuffle->getOperand(0))->getOperand(1) == LoadOp)
+      Indices.push_back(Index);
+  }
+
+  // Try and modify users of the load that are extractelement instructions to
+  // use the shufflevector instructions instead of the load.
+  if (!tryReplaceExtracts(Extracts, Shuffles))
+    return false;
+
+  bool BinOpShuffleChanged =
+      replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, LoadOp);
+
+  if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadOp)) {
+    Value *LaneMask = getMask(VPLoad->getArgOperand(1), Factor,
+                              cast<VectorType>(Shuffles[0]->getType()));
+    if (!LaneMask)
+      return false;
+
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load: " << *LoadOp
+                      << "\n");
+
+    // Sometimes the number of Shuffles might be less than Factor, we have to
+    // fill the gaps with null. Also, lowerDeinterleavedVPLoad
+    // expects them to be sorted.
+    SmallVector<Value *, 4> ShuffleValues(Factor, nullptr);
+    for (auto [Idx, ShuffleMaskIdx] : enumerate(Indices))
+      ShuffleValues[ShuffleMaskIdx] = Shuffles[Idx];
+    if (!TLI->lowerDeinterleavedVPLoad(VPLoad, LaneMask, ShuffleValues))
+      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
+      return !Extracts.empty() || BinOpShuffleChanged;
+  } else {
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *LoadOp << "\n");
+
+    // Try to create target specific intrinsics to replace the load and
+    // shuffles.
+    if (!TLI->lowerInterleavedLoad(cast<LoadInst>(LoadOp), Shuffles, Indices,
+                                   Factor))
+      // If Extracts is not empty, tryReplaceExtracts made changes earlier.
+      return !Extracts.empty() || BinOpShuffleChanged;
+  }
+
+  DeadInsts.insert_range(Shuffles);
+
+  DeadInsts.insert(LoadOp);
+  return true;
+}
+
+bool InterleavedAccessImpl::replaceBinOpShuffles(
+    ArrayRef<ShuffleVectorInst *> BinOpShuffles,
+    SmallVectorImpl<ShuffleVectorInst *> &Shuffles, Instruction *LoadOp) {
+  for (auto *SVI : BinOpShuffles) {
+    BinaryOperator *BI = cast<BinaryOperator>(SVI->getOperand(0));
+    Type *BIOp0Ty = BI->getOperand(0)->getType();
+    ArrayRef<int> Mask = SVI->getShuffleMask();
+    assert(all_of(Mask, [&](int Idx) {
+      return Idx < (int)cast<FixedVectorType>(BIOp0Ty)->getNumElements();
+    }));
+
+    BasicBlock::iterator insertPos = SVI->getIterator();
+    auto *NewSVI1 =
+        new ShuffleVectorInst(BI->getOperand(0), PoisonValue::get(BIOp0Ty),
+                              Mask, SVI->getName(), insertPos);
+    auto *NewSVI2 = new ShuffleVectorInst(
+        BI->getOperand(1), PoisonValue::get(BI->getOperand(1)->getType()), Mask,
+        SVI->getName(), insertPos);
+    BinaryOperator *NewBI = BinaryOperator::CreateWithCopiedFlags(
+        BI->getOpcode(), NewSVI1, NewSVI2, BI, BI->getName(), insertPos);
+    SVI->replaceAllUsesWith(NewBI);
+    LLVM_DEBUG(dbgs() << "  Replaced: " << *BI << "\n    And   : " << *SVI
+                      << "\n  With    : " << *NewSVI1 << "\n    And   : "
+                      << *NewSVI2 << "\n    And   : " << *NewBI << "\n");
+    RecursivelyDeleteTriviallyDeadInstructions(SVI);
+    if (NewSVI1->getOperand(0) == LoadOp)
+      Shuffles.push_back(NewSVI1);
+    if (NewSVI2->getOperand(0) == LoadOp)
+      Shuffles.push_back(NewSVI2);
+  }
+
+  return !BinOpShuffles.empty();
+}
+
+bool InterleavedAccessImpl::tryReplaceExtracts(
+    ArrayRef<ExtractElementInst *> Extracts,
+    ArrayRef<ShuffleVectorInst *> Shuffles) {
+  // If there aren't any extractelement instructions to modify, there's nothing
+  // to do.
+  if (Extracts.empty())
+    return true;
+
+  // Maps extractelement instructions to vector-index pairs. The extractlement
+  // instructions will be modified to use the new vector and index operands.
+  DenseMap<ExtractElementInst *, std::pair<Value *, int>> ReplacementMap;
+
+  for (auto *Extract : Extracts) {
+    // The vector index that is extracted.
+    auto *IndexOperand = cast<ConstantInt>(Extract->getIndexOperand());
+    auto Index = IndexOperand->getSExtValue();
+
+    // Look for a suitable shufflevector instruction. The goal is to modify the
+    // extractelement instruction (which uses an interleaved load) to use one
+    // of the shufflevector instructions instead of the load.
+    for (auto *Shuffle : Shuffles) {
+      // If the shufflevector instruction doesn't dominate the extract, we
+      // can't create a use of it.
+      if (!DT->dominates(Shuffle, Extract))
+        continue;
+
+      // Inspect the indices of the shufflevector instruction. If the shuffle
+      // selects the same index that is extracted, we can modify the
+      // extractelement instruction.
+      SmallVector<int, 4> Indices;
+      Shuffle->getShuffleMask(Indices);
+      for (unsigned I = 0; I < Indices.size(); ++I)
+        if (Indices[I] == Index) {
+          assert(Extract->getOperand(0) == Shuffle->getOperand(0) &&
+                 "Vector operations do not match");
+          ReplacementMap[Extract] = std::make_pair(Shuffle, I);
+          break;
+        }
+
+      // If we found a suitable shufflevector instruction, stop looking.
+      if (ReplacementMap.count(Extract))
+        break;
+    }
+
+    // If we did not find a suitable shufflevector instruction, the
+    // extractelement instruction cannot be modified, so we must give up.
+    if (!ReplacementMap.count(Extract))
+      return false;
+  }
+
+  // Finally, perform the replacements.
+  IRBuilder<> Builder(Extracts[0]->getContext());
+  for (auto &Replacement : ReplacementMap) {
+    auto *Extract = Replacement.first;
+    auto *Vector = Replacement.second.first;
+    auto Index = Replacement.second.second;
+    Builder.SetInsertPoint(Extract);
+    Extract->replaceAllUsesWith(Builder.CreateExtractElement(Vector, Index));
+    Extract->eraseFromParent();
+  }
+
+  return true;
+}
+
+bool InterleavedAccessImpl::lowerInterleavedStore(
+    Instruction *StoreOp, SmallSetVector<Instruction *, 32> &DeadInsts) {
+  Value *StoredValue;
+  if (auto *SI = dyn_cast<StoreInst>(StoreOp)) {
+    if (!SI->isSimple())
+      return false;
+    StoredValue = SI->getValueOperand();
+  } else if (auto *VPStore = dyn_cast<VPIntrinsic>(StoreOp)) {
+    assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
+    // Require a constant mask.
+    if (!isa<ConstantVector>(VPStore->getArgOperand(2)))
+      return false;
+    StoredValue = VPStore->getArgOperand(0);
+  } else {
+    llvm_unreachable("unsupported store operation");
+  }
+
+  auto *SVI = dyn_cast<ShuffleVectorInst>(StoredValue);
+  if (!SVI || !SVI->hasOneUse() || isa<ScalableVectorType>(SVI->getType()))
+    return false;
+
+  unsigned NumStoredElements =
+      cast<FixedVectorType>(SVI->getType())->getNumElements();
+  // Check if the shufflevector is RE-interleave shuffle.
+  unsigned Factor;
+  if (!isReInterleaveMask(SVI, Factor, MaxFactor))
+    return false;
+  assert(NumStoredElements % Factor == 0 &&
+         "number of stored element should be a multiple of Factor");
+
+  // Check if the de-interleaved vp.store masks are the same.
+  if (auto *VPStore = dyn_cast<VPIntrinsic>(StoreOp)) {
+  }
+
+  if (auto *VPStore = dyn_cast<VPIntrinsic>(StoreOp)) {
+    unsigned LaneMaskLen = NumStoredElements / Factor;
+    Value *LaneMask = getMask(VPStore->getArgOperand(2), Factor,
+                              ElementCount::getFixed(LaneMaskLen));
+    if (!LaneMask)
+      return false;
+
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store: " << *StoreOp
+                      << "\n");
+
+    IRBuilder<> Builder(VPStore);
+    // We need to effectively de-interleave the shufflemask
+    // because lowerInterleavedVPStore expected individual de-interleaved
+    // values.
+    SmallVector<Value *, 10> NewShuffles;
+    SmallVector<int, 16> NewShuffleMask(LaneMaskLen);
+    auto ShuffleMask = SVI->getShuffleMask();
+
+    for (unsigned i = 0; i < Factor; i++) {
+      for (unsigned j = 0; j < LaneMaskLen; j++)
+        NewShuffleMask[j] = ShuffleMask[i + Factor * j];
+
+      NewShuffles.push_back(Builder.CreateShuffleVector(
+          SVI->getOperand(0), SVI->getOperand(1), NewShuffleMask));
+    }
+
+    // Try to create target specific intrinsics to replace the vp.store and
+    // shuffle.
+    if (!TLI->lowerInterleavedVPStore(VPStore, LaneMask, NewShuffles))
+      // We already created new shuffles.
+      return true;
+  } else {
+    LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *StoreOp
+                      << "\n");
+
+    // Try to create target specific intrinsics to replace the store and
+    // shuffle.
+    if (!TLI->lowerInterleavedStore(cast<StoreInst>(StoreOp), SVI, Factor))
+      return false;
+  }
+
+  // Already have a new target specific interleaved store. Erase the old store.
+  DeadInsts.insert(StoreOp);
+  DeadInsts.insert(SVI);
+  return true;
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
@@ -780,7 +778,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
     if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
       return false;
-    // Check mask operand. Handle both all-true and interleaved mask.
+    // Check mask operand. Handle both all-true/false and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
     Value *Mask = getMask(WideMask, Factor,
                           cast<VectorType>(DeinterleaveValues[0]->getType()));

@@ -23933,8 +23933,7 @@ bool RISCVTargetLowering::lowerInterleavedVPStore(
         Intrinsic::riscv_seg6_store_mask, Intrinsic::riscv_seg7_store_mask,
         Intrinsic::riscv_seg8_store_mask};
 
-    SmallVector<Value *, 8> Operands(InterleaveOperands.begin(),
-                                     InterleaveOperands.end());
+    SmallVector<Value *, 8> Operands(InterleaveOperands);
     Operands.append({Store->getArgOperand(1), Mask, EVL});
     Builder.CreateIntrinsic(FixedMaskedVssegIntrIds[Factor - 2], {FVTy, XLenTy},
                             Operands);
