@@ -1701,7 +1701,6 @@ public:
       fir::emitFatalError(converter.getCurrentLocation(),
                           "SignatureBuilder should only be used once");
     declare();
-
     interfaceDetermined = true;
     return getFuncOp();
   }

@@ -46,7 +46,6 @@ struct AccClauseList;
 struct OpenACCConstruct;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
-struct ProcedureDesignator;
 } // namespace parser
 
 namespace semantics {
