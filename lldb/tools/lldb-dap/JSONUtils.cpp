@@ -1423,47 +1423,39 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
-llvm::json::Object
-CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef comm_file,
-                                  lldb::pid_t debugger_pid) {
+llvm::json::Object CreateRunInTerminalReverseRequest(
+    llvm::StringRef program, const std::vector<std::string> &args,
+    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening
   // the terminal in a new window.
   run_in_terminal_args.try_emplace("kind", "integrated");
 
-  const auto *launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {DAP::debug_adapter_path.str(), "--comm-file",
-                                   comm_file.str()};
+  std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
+                                       "--comm-file", comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
-    args.push_back("--debugger-pid");
-    args.push_back(std::to_string(debugger_pid));
+    req_args.push_back("--debugger-pid");
+    req_args.push_back(std::to_string(debugger_pid));
   }
-  args.push_back("--launch-target");
-  args.push_back(
-      GetString(launch_request_arguments, "program").value_or("").str());
-  std::vector<std::string> target_args =
-      GetStrings(launch_request_arguments, "args");
-  args.insert(args.end(), target_args.begin(), target_args.end());
+  req_args.push_back("--launch-target");
+  req_args.push_back(program.str());
+  req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", args);
 
-  const auto cwd = GetString(launch_request_arguments, "cwd").value_or("");
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
-  auto envs = GetEnvironmentFromArguments(*launch_request_arguments);
-  llvm::json::Object env_json;
-  for (size_t index = 0, env_count = envs.GetNumValues(); index < env_count;
-       index++) {
-    llvm::StringRef key = envs.GetNameAtIndex(index);
-    llvm::StringRef value = envs.GetValueAtIndex(index);
-
-    if (!key.empty())
-      env_json.try_emplace(key, value);
+  if (!env.empty()) {
+    llvm::json::Object env_json;
+    for (const auto &kv : env) {
+      if (!kv.first().empty())
+        env_json.try_emplace(kv.first(), kv.second);
+    }
+    run_in_terminal_args.try_emplace("env",
+                                     llvm::json::Value(std::move(env_json)));
   }
-  run_in_terminal_args.try_emplace("env",
-                                   llvm::json::Value(std::move(env_json)));
 
   return run_in_terminal_args;
 }
