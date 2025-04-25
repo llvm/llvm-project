@@ -100,7 +100,7 @@ mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
 
 /// Helper function for any of the times we need to add operands that are
 /// affected by a device type list. Returns a new ArrayAttr with all of the
-/// existingDeviceTypes, plus the effective new ones(or an added none, if the
+/// existingDeviceTypes, plus the effective new ones (or an added none, if the
 /// new list is empty). Additionally, adds the arguments to the argCollection
 /// the correct number of times. This will also update a 'segments' array, even
 /// if it won't be used.

@@ -1561,14 +1561,14 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
       return mlir::acc::Construct::acc_construct_serial;
     }
     /// Add an entry to the 'async-only' attribute (clause spelled without
-    /// arguments)for each of the additional device types (or a none if it is
+    /// arguments) for each of the additional device types (or a none if it is
     /// empty).
     void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
     /// Add a value to the 'async' with the current list of device types.
     void addAsyncOperand(MLIRContext *, mlir::Value,
                          llvm::ArrayRef<DeviceType>);
     /// Add an entry to the 'wait-only' attribute (clause spelled without
-    /// arguments)for each of the additional device types (or a none if it is
+    /// arguments) for each of the additional device types (or a none if it is
     /// empty).
     void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
     /// Add an array-like entry  to the 'wait' with the current list of device
@@ -1726,7 +1726,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     void addVectorLengthOperand(MLIRContext *, mlir::Value,
                                 llvm::ArrayRef<DeviceType>);
     /// Add an entry to the 'async-only' attribute (clause spelled without
-    /// arguments)for each of the additional device types (or a none if it is
+    /// arguments) for each of the additional device types (or a none if it is
     /// empty).
     void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
     /// Add a value to the 'async' with the current list of device types.
@@ -1737,7 +1737,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     void addNumGangsOperands(MLIRContext *, mlir::ValueRange,
                              llvm::ArrayRef<DeviceType>);
     /// Add an entry to the 'wait-only' attribute (clause spelled without
-    /// arguments)for each of the additional device types (or a none if it is
+    /// arguments) for each of the additional device types (or a none if it is
     /// empty).
     void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
     /// Add an array-like entry  to the 'wait' with the current list of device
@@ -1851,14 +1851,14 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     /// present.
     mlir::Value getWaitDevnum(mlir::acc::DeviceType deviceType);
     /// Add an entry to the 'async-only' attribute (clause spelled without
-    /// arguments)for each of the additional device types (or a none if it is
+    /// arguments) for each of the additional device types (or a none if it is
     /// empty).
     void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
     /// Add a value to the 'async' with the current list of device types.
     void addAsyncOperand(MLIRContext *, mlir::Value,
                          llvm::ArrayRef<DeviceType>);
     /// Add an entry to the 'wait-only' attribute (clause spelled without
-    /// arguments)for each of the additional device types (or a none if it is
+    /// arguments) for each of the additional device types (or a none if it is
     /// empty).
     void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
     /// Add an array-like entry  to the 'wait' with the current list of device
