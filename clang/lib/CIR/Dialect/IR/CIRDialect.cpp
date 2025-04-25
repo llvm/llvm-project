@@ -830,8 +830,6 @@ void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
   insertPoint = builder.saveInsertionPoint();
 }
 
-LogicalResult cir::CaseOp::verify() { return success(); }
-
 //===----------------------------------------------------------------------===//
 // SwitchOp
 //===----------------------------------------------------------------------===//
@@ -883,8 +881,6 @@ void cir::SwitchOp::getSuccessorRegions(
 
   region.push_back(RegionSuccessor(&getBody()));
 }
-
-LogicalResult cir::SwitchOp::verify() { return success(); }
 
 void cir::SwitchOp::build(
     OpBuilder &builder, OperationState &result, Value cond,

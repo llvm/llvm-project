@@ -797,8 +797,6 @@ def CaseOp : CIR_Op<"case", [
 
   let assemblyFormat = "`(` $kind `,` $value `)` $caseRegion attr-dict";
 
-  let hasVerifier = 1;
-
   let skipDefaultBuilders = 1;
   let builders = [
       OpBuilder<(ins "mlir::ArrayAttr":$value,
@@ -947,8 +945,6 @@ def SwitchOp : CIR_Op<"switch",
   let arguments = (ins CIR_IntType:$condition);
 
   let regions = (region AnyRegion:$body);
-
-  let hasVerifier = 1;
 
   let skipDefaultBuilders = 1;
   let builders = [
