@@ -48,6 +48,7 @@
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -4544,6 +4545,38 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 
         BaseVal = MTE->getOrCreateValue(false);
         assert(BaseVal && "got reference to unevaluated temporary");
+      } else if (const CompoundLiteralExpr *CLE =
+                     dyn_cast_or_null<CompoundLiteralExpr>(Base)) {
+        // In C99, a CompoundLiteralExpr is an lvalue, and we defer evaluating
+        // the initializer until now for such expressions. Such an expression
+        // can't be an ICE in C, so this only matters for fold.
+        if (LValType.isVolatileQualified()) {
+          Info.FFDiag(E);
+          return CompleteObject();
+        }
+
+        // According to GCC info page:
+        //
+        // 6.28 Compound Literals
+        //
+        // As an optimization, G++ sometimes gives array compound literals
+        // longer lifetimes: when the array either appears outside a function or
+        // has a const-qualified type. If foo and its initializer had elements
+        // of type char *const rather than char *, or if foo were a global
+        // variable, the array would have static storage duration. But it is
+        // probably safest just to avoid the use of array compound literals in
+        // C++ code.
+        //
+        // Obey that rule by checking constness for converted array types.
+        if (QualType CLETy = CLE->getType(); CLETy->isArrayType() &&
+                                             !LValType->isArrayType() &&
+                                             !CLETy.isConstant(Info.Ctx)) {
+          Info.FFDiag(E);
+          Info.Note(CLE->getExprLoc(), diag::note_declared_at);
+          return CompleteObject();
+        }
+
+        BaseVal = &CLE->getStaticValue();
       } else {
         if (!IsAccess)
           return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
@@ -4609,45 +4642,7 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
       WantObjectRepresentation ? AK_ReadObjectRepresentation : AK_Read;
 
   if (Base && !LVal.getLValueCallIndex() && !Type.isVolatileQualified()) {
-    if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(Base)) {
-      // In C99, a CompoundLiteralExpr is an lvalue, and we defer evaluating the
-      // initializer until now for such expressions. Such an expression can't be
-      // an ICE in C, so this only matters for fold.
-      if (Type.isVolatileQualified()) {
-        Info.FFDiag(Conv);
-        return false;
-      }
-
-      // According to GCC info page:
-      //
-      // 6.28 Compound Literals
-      //
-      // As an optimization, G++ sometimes gives array compound literals longer
-      // lifetimes: when the array either appears outside a function or has a
-      // const-qualified type. If foo and its initializer had elements of type
-      // char *const rather than char *, or if foo were a global variable, the
-      // array would have static storage duration. But it is probably safest
-      // just to avoid the use of array compound literals in C++ code.
-      //
-      // Obey that rule by checking constness for converted array types.
-
-      QualType CLETy = CLE->getType();
-      if (CLETy->isArrayType() && !Type->isArrayType()) {
-        if (!CLETy.isConstant(Info.Ctx)) {
-          Info.FFDiag(Conv);
-          Info.Note(CLE->getExprLoc(), diag::note_declared_at);
-          return false;
-        }
-      }
-
-      APValue *Lit =
-          CLE->hasStaticStorage()
-              ? &CLE->getStaticValue()
-              : Info.CurrentCall->getTemporary(Base, LVal.Base.getVersion());
-
-      CompleteObject LitObj(LVal.Base, Lit, Base->getType());
-      return extractSubobject(Info, Conv, LitObj, LVal.Designator, RVal, AK);
-    } else if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
+    if (isa<StringLiteral>(Base) || isa<PredefinedExpr>(Base)) {
       // Special-case character extraction so we don't have to construct an
       // APValue for the whole string.
       assert(LVal.Designator.Entries.size() <= 1 &&
@@ -9164,15 +9159,16 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   // If CompountLiteral has static storage, its value can be used outside
   // this expression. So evaluate it once and store it in ASTContext.
   if (E->hasStaticStorage()) {
-    Lit = E->getOrCreateStaticValue(Info.Ctx);
+    Lit = &E->getOrCreateStaticValue(Info.Ctx);
     Result.set(E);
     // Reset any previously evaluated state, otherwise evaluation below might
     // fail.
     // FIXME: Should we just re-use the previously evaluated value instead?
     *Lit = APValue();
   } else {
+    assert(!Info.getLangOpts().CPlusPlus);
     Lit = &Info.CurrentCall->createTemporary(E, E->getInitializer()->getType(),
-                                             ScopeKind::FullExpression, Result);
+                                             ScopeKind::Block, Result);
   }
   if (!EvaluateInPlace(*Lit, Info, Result, E->getInitializer())) {
     *Lit = APValue();
