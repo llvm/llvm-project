@@ -275,9 +275,8 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
 }
 
 ConstString Mangled::GetDemangledName(
-    bool force
     // BEGIN SWIFT
-    , const SymbolContext *sc
+    const SymbolContext *sc
     // END SWIFT
 ) const {
   return GetDemangledNameImpl(/*force=*/false, sc);
@@ -381,7 +380,7 @@ ConstString Mangled::GetDisplayDemangledName(
   if (Language *lang = Language::FindPlugin(GuessLanguage()))
     if (ConstString display_name = lang->GetDisplayDemangledName(*this))
       return display_name;
-  return GetDemangledName(/*force=*/false);
+  return GetDemangledName();
 }
 
 bool Mangled::NameMatches(const RegularExpression &regex) const {

@@ -124,7 +124,7 @@ public:
   ///
   /// \return
   ///     A const reference to the demangled name string object.
-  ConstString GetDemangledName(bool force, const SymbolContext *sc = nullptr) const;
+  ConstString GetDemangledName(const SymbolContext *sc = nullptr) const;
 
   /// Display demangled name get accessor.
   ///
