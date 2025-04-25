@@ -47,7 +47,10 @@ macro(enable_cuda_compilation name files)
     # property can only be applied to object libraries and create *.ptx files
     # instead of *.o files. The .a will consist of those *.ptx files only.
     add_flangrt_library(obj.${name}PTX OBJECT ${files})
-    set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
+    set_target_properties(obj.${name}PTX PROPERTIES
+      CUDA_PTX_COMPILATION ON
+      CUDA_SEPARABLE_COMPILATION ON
+      )
     add_flangrt_library(${name}PTX STATIC "$<TARGET_OBJECTS:obj.${name}PTX>")
 
     # Apply configuration options

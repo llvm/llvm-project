@@ -29,6 +29,9 @@
 #include <cstdio>
 #include <cstring>
 
+/// Value used for asyncId when no specific stream is specified.
+static constexpr std::int64_t kNoAsyncId = -1;
+
 namespace Fortran::runtime {
 
 class Terminator;
@@ -369,7 +372,7 @@ public:
   // before calling.  It (re)computes the byte strides after
   // allocation.  Does not allocate automatic components or
   // perform default component initialization.
-  RT_API_ATTRS int Allocate();
+  RT_API_ATTRS int Allocate(std::int64_t asyncId);
   RT_API_ATTRS void SetByteStrides();
 
   // Deallocates storage; does not call FINAL subroutines or
@@ -480,6 +483,9 @@ public:
 private:
   char storage_[byteSize]{};
 };
+
+// Deduction guide to avoid warnings from older versions of clang.
+StaticDescriptor() -> StaticDescriptor<maxRank, false, 0>;
 
 } // namespace Fortran::runtime
 #endif // FLANG_RT_RUNTIME_DESCRIPTOR_H_

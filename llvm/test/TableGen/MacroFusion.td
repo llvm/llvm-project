@@ -42,7 +42,7 @@ def TestBothFusionPredicate: Fusion<"test-both-fusion-predicate", "HasBothFusion
                                     [BothFusionPredicate]>;
 
 def TestFusion: SimpleFusion<"test-fusion", "HasTestFusion", "Test Fusion",
-                             CheckOpcode<[Inst0]>,
+                             CheckOpcode<[Inst0, Inst1]>,
                              CheckAll<[
                                CheckOpcode<[Inst1]>,
                                CheckRegOperand<0, X0>
@@ -162,7 +162,7 @@ def TestSingleFusion: SingleFusion<"test-single-fusion", "HasTestSingleFusion",
 // CHECK-PREDICATOR-NEXT:      return true;
 // CHECK-PREDICATOR-NEXT:    {
 // CHECK-PREDICATOR-NEXT:      const MachineInstr *MI = FirstMI;
-// CHECK-PREDICATOR-NEXT:      if (( MI->getOpcode() != Test::Inst0 ))
+// CHECK-PREDICATOR-NEXT:      if (!llvm::is_contained({Test::Inst0, Test::Inst1}, MI->getOpcode()))
 // CHECK-PREDICATOR-NEXT:        return false;
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    if (!SecondMI.getOperand(0).getReg().isVirtual()) {

@@ -104,13 +104,19 @@ std::string AsFortran(IgnoreTKRSet tkr) {
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
     std::optional<std::string> *warning, bool allowUnifiedMatchingRule,
-    const LanguageFeatureControl *features) {
+    bool isHostDeviceProcedure, const LanguageFeatureControl *features) {
   bool isCudaManaged{features
           ? features->IsEnabled(common::LanguageFeature::CudaManaged)
           : false};
   bool isCudaUnified{features
           ? features->IsEnabled(common::LanguageFeature::CudaUnified)
           : false};
+  if (ignoreTKR.test(common::IgnoreTKR::Device)) {
+    return true;
+  }
+  if (!y && isHostDeviceProcedure) {
+    return true;
+  }
   if (!x && !y) {
     return true;
   } else if (x && y && *x == *y) {

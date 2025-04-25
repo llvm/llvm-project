@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Attr.h"
@@ -1400,9 +1401,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
       if (Comps[I].getKind() != VTableComponent::CK_FunctionPointer)
         continue;
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
-          Context.getMemberPointerType(
-              Comps[I].getFunctionDecl()->getType(),
-              Context.getRecordType(AP.Base).getTypePtr()));
+          Context.getMemberPointerType(Comps[I].getFunctionDecl()->getType(),
+                                       /*Qualifier=*/nullptr, AP.Base));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }

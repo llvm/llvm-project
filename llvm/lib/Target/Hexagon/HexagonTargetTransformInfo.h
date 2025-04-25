@@ -63,10 +63,10 @@ public:
   // The Hexagon target can unroll loops with run-time trip counts.
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE);
+                               OptimizationRemarkEmitter *ORE) const;
 
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP);
+                             TTI::PeelingPreferences &PP) const;
 
   /// Bias LSR towards creating post-increment opportunities.
   TTI::AddressingModeKind
@@ -81,8 +81,8 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getNumberOfRegisters(bool vector) const;
-  unsigned getMaxInterleaveFactor(ElementCount VF);
+  unsigned getNumberOfRegisters(unsigned ClassID) const;
+  unsigned getMaxInterleaveFactor(ElementCount VF) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getMinVectorRegisterBitWidth() const;
   ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
@@ -91,80 +91,81 @@ public:
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
     return true;
   }
-  bool supportsEfficientVectorElementLoadStore() { return false; }
-  bool hasBranchDivergence(const Function *F = nullptr) { return false; }
-  bool enableAggressiveInterleaving(bool LoopHasReductions) {
+  bool supportsEfficientVectorElementLoadStore() const { return false; }
+  bool hasBranchDivergence(const Function *F = nullptr) const { return false; }
+  bool enableAggressiveInterleaving(bool LoopHasReductions) const {
     return false;
   }
-  bool prefersVectorizedAddressing() {
-    return false;
-  }
-  bool enableInterleavedAccessVectorization() {
-    return true;
-  }
+  bool prefersVectorizedAddressing() const { return false; }
+  bool enableInterleavedAccessVectorization() const { return true; }
 
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
-                                   TTI::TargetCostKind CostKind);
+                                   TTI::TargetCostKind CostKind) const;
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                        TTI::TargetCostKind CostKind);
+                                        TTI::TargetCostKind CostKind) const;
   InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
-                                            const SCEV *S);
-  InstructionCost
-  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
-                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                  TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
-                  const Instruction *I = nullptr);
+                                            const SCEV *S) const;
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const;
   InstructionCost getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
                                         Align Alignment, unsigned AddressSpace,
-                                        TTI::TargetCostKind CostKind);
-  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+                                        TTI::TargetCostKind CostKind) const;
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
-                                 Type *SubTp, ArrayRef<const Value *> Args = {},
-                                 const Instruction *CxtI = nullptr);
+                                 VectorType *SubTp,
+                                 ArrayRef<const Value *> Args = {},
+                                 const Instruction *CxtI = nullptr) const;
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
                                          TTI::TargetCostKind CostKind,
-                                         const Instruction *I);
+                                         const Instruction *I) const;
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false);
+      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr);
+      const Instruction *I = nullptr) const;
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+      ArrayRef<const Value *> Args = {},
+      const Instruction *CxtI = nullptr) const;
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
-                                   const Instruction *I = nullptr);
+                                   const Instruction *I = nullptr) const;
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0, Value *Op1);
+                                     unsigned Index, Value *Op0,
+                                     Value *Op1) const;
 
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                 const Instruction *I = nullptr) {
+                                 const Instruction *I = nullptr) const {
     return 1;
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment);
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment);
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace) const;
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace) const;
 
   /// @}
 
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind);
+                                     TTI::TargetCostKind CostKind) const;
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const;

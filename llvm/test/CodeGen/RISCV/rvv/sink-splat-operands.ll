@@ -5750,11 +5750,11 @@ define void @sink_splat_vfwadd_vf(ptr nocapture %a, ptr nocapture %b, float %f) 
 ; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB125_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a0)
+; CHECK-NEXT:    vl1re32.v v10, (a0)
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    addi a2, a2, -4
-; CHECK-NEXT:    vfwadd.vf v10, v8, fa0
-; CHECK-NEXT:    vs2r.v v10, (a0)
+; CHECK-NEXT:    vfwadd.vf v8, v10, fa0
+; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    j .LBB125_1
 entry:
@@ -5823,11 +5823,11 @@ define void @sink_splat_vfwmul_vf(ptr nocapture %a, ptr nocapture %b, float %f) 
 ; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
 ; CHECK-NEXT:  .LBB127_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1re32.v v8, (a0)
+; CHECK-NEXT:    vl1re32.v v10, (a0)
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    addi a2, a2, -4
-; CHECK-NEXT:    vfwmul.vf v10, v8, fa0
-; CHECK-NEXT:    vs2r.v v10, (a0)
+; CHECK-NEXT:    vfwmul.vf v8, v10, fa0
+; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    j .LBB127_1
 entry:

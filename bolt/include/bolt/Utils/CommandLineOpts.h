@@ -37,6 +37,7 @@ extern llvm::cl::opt<unsigned> BucketsPerLine;
 extern llvm::cl::opt<bool> DiffOnly;
 extern llvm::cl::opt<bool> EnableBAT;
 extern llvm::cl::opt<bool> EqualizeBBCounts;
+extern llvm::cl::opt<bool> ForcePatch;
 extern llvm::cl::opt<bool> RemoveSymtab;
 extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
 extern llvm::cl::opt<unsigned> HeatmapBlock;
@@ -80,9 +81,9 @@ extern llvm::cl::opt<unsigned> Verbosity;
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
 
-enum GadgetScannerKind { GS_PACRET, GS_ALL };
+enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
 
-extern llvm::cl::list<GadgetScannerKind> GadgetScannersToRun;
+extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
 
 } // namespace opts
 

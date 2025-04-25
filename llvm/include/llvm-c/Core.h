@@ -2566,6 +2566,7 @@ void LLVMSetUnnamedAddress(LLVMValueRef Global, LLVMUnnamedAddr UnnamedAddr);
  * type of a global value which is always a pointer type.
  *
  * @see llvm::GlobalValue::getValueType()
+ * @see llvm::Function::getFunctionType()
  */
 LLVMTypeRef LLVMGlobalGetValueType(LLVMValueRef Global);
 

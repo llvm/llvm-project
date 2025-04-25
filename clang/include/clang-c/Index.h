@@ -2214,7 +2214,11 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCAtomicConstruct = 332,
 
-  CXCursor_LastStmt = CXCursor_OpenACCAtomicConstruct,
+  /** OpenACC cache Construct.
+   */
+  CXCursor_OpenACCCacheConstruct = 333,
+
+  CXCursor_LastStmt = CXCursor_OpenACCCacheConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -3061,6 +3065,18 @@ enum CXCallingConv {
   CXCallingConv_M68kRTD = 19,
   CXCallingConv_PreserveNone = 20,
   CXCallingConv_RISCVVectorCall = 21,
+  CXCallingConv_RISCVVLSCall_32 = 22,
+  CXCallingConv_RISCVVLSCall_64 = 23,
+  CXCallingConv_RISCVVLSCall_128 = 24,
+  CXCallingConv_RISCVVLSCall_256 = 25,
+  CXCallingConv_RISCVVLSCall_512 = 26,
+  CXCallingConv_RISCVVLSCall_1024 = 27,
+  CXCallingConv_RISCVVLSCall_2048 = 28,
+  CXCallingConv_RISCVVLSCall_4096 = 29,
+  CXCallingConv_RISCVVLSCall_8192 = 30,
+  CXCallingConv_RISCVVLSCall_16384 = 31,
+  CXCallingConv_RISCVVLSCall_32768 = 32,
+  CXCallingConv_RISCVVLSCall_65536 = 33,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200
@@ -4206,6 +4222,18 @@ CINDEX_LINKAGE CXString clang_getCursorPrettyPrinted(CXCursor Cursor,
  */
 CINDEX_LINKAGE CXString clang_getTypePrettyPrinted(CXType CT,
                                                    CXPrintingPolicy cxPolicy);
+
+/**
+ * Get the fully qualified name for a type.
+ *
+ * This includes full qualification of all template parameters.
+ *
+ * Policy - Further refine the type formatting
+ * WithGlobalNsPrefix - If non-zero, function will prepend a '::' to qualified
+ * names
+ */
+CINDEX_LINKAGE CXString clang_getFullyQualifiedName(
+    CXType CT, CXPrintingPolicy Policy, unsigned WithGlobalNsPrefix);
 
 /**
  * Retrieve the display name for the entity referenced by this cursor.

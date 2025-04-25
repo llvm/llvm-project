@@ -29,7 +29,7 @@ using namespace llvm;
 namespace {
 
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("x86_64--"));
+  Triple TT("x86_64--");
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   return std::unique_ptr<TargetMachine>(
@@ -75,7 +75,7 @@ class MachineSizeOptsTest : public testing::Test {
     M = Parser->parseIRModule();
     if (!M)
       report_fatal_error("parseIRModule failed");
-    M->setTargetTriple(TM->getTargetTriple().getTriple());
+    M->setTargetTriple(TM->getTargetTriple());
     M->setDataLayout(TM->createDataLayout());
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
     if (Parser->parseMachineFunctions(*M, *MMI))

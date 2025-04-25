@@ -475,6 +475,7 @@ def FormatQualifiedNestedType : TEST_Op<"format_qual_cpmd_nested_type"> {
 
 //===----------------------------------------------------------------------===//
 // Custom Directives
+//===----------------------------------------------------------------------===//
 
 def FormatCustomDirectiveOperands
     : TEST_Op<"format_custom_directive_operands", [AttrSizedOperandSegments]> {
@@ -599,6 +600,7 @@ def FormatLiteralFollowingOptionalGroup
 
 //===----------------------------------------------------------------------===//
 // AllTypesMatch type inference
+//===----------------------------------------------------------------------===//
 
 def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
     AllTypesMatch<["value1", "value2", "result"]>
@@ -618,6 +620,7 @@ def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
 
 //===----------------------------------------------------------------------===//
 // TypesMatchWith type inference
+//===----------------------------------------------------------------------===//
 
 def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
     TypesMatchWith<"result type matches operand", "value", "result", "$_self">
@@ -655,6 +658,7 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
 
 //===----------------------------------------------------------------------===//
 // InferTypeOpInterface type inference in assembly format
+//===----------------------------------------------------------------------===//
 
 def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
   let results = (outs AnyType);

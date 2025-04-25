@@ -34,6 +34,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
+
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
@@ -57,13 +58,6 @@ endif()
 set(LIBC_NAMESPACE ${default_namespace}
   CACHE STRING "The namespace to use to enclose internal implementations. Must start with '__llvm_libc'."
 )
-
-# We will build the GPU utilities if we are not doing a runtimes build.
-option(LIBC_BUILD_GPU_LOADER "Always build the GPU loader utilities" OFF)
-if(LIBC_BUILD_GPU_LOADER OR ((NOT LLVM_RUNTIMES_BUILD) AND LLVM_LIBC_GPU_BUILD))
-  add_subdirectory(utils/gpu)
-  return()
-endif()
 
 option(LIBC_CMAKE_VERBOSE_LOGGING
   "Log details warnings and notifications during CMake configuration." OFF)
