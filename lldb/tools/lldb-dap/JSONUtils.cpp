@@ -19,6 +19,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBFunction.h"
+#include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBQueue.h"
@@ -776,12 +777,23 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
     // Calculate the line of the current PC from the start of the current
     // symbol.
-    lldb::addr_t inst_offset = frame.GetPCAddress().GetOffset() -
-                               frame.GetSymbol().GetStartAddress().GetOffset();
-    lldb::addr_t inst_line =
-        inst_offset / (frame.GetThread().GetProcess().GetAddressByteSize() / 2);
+    lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
+    lldb::SBInstructionList inst_list = target.ReadInstructions(
+        frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
+    size_t inst_line = inst_list.GetSize();
+
     // Line numbers are 1-based.
     object.try_emplace("line", inst_line + 1);
+    object.try_emplace("column", 1);
+  } else {
+    // No valid line entry or symbol.
+    llvm::json::Object source;
+    EmplaceSafeString(source, "name", frame_name);
+    source.try_emplace("sourceReference", MakeDAPFrameID(frame));
+    EmplaceSafeString(source, "presentationHint", "deemphasize");
+    object.try_emplace("source", std::move(source));
+
+    object.try_emplace("line", 1);
     object.try_emplace("column", 1);
   }
 
@@ -868,6 +880,19 @@ llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
   EmplaceSafeString(object, "name", thread_str);
 
   return llvm::json::Value(std::move(object));
+}
+
+llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format) {
+  lldb::SBMutex lock = process.GetTarget().GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  llvm::json::Array threads;
+  const uint32_t num_threads = process.GetNumThreads();
+  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
+    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
+    threads.emplace_back(CreateThread(thread, format));
+  }
+  return threads;
 }
 
 // "StoppedEvent": {
@@ -1398,47 +1423,39 @@ llvm::json::Value CreateCompileUnit(lldb::SBCompileUnit &unit) {
 
 /// See
 /// https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_RunInTerminal
-llvm::json::Object
-CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
-                                  llvm::StringRef comm_file,
-                                  lldb::pid_t debugger_pid) {
+llvm::json::Object CreateRunInTerminalReverseRequest(
+    llvm::StringRef program, const std::vector<std::string> &args,
+    const llvm::StringMap<std::string> env, llvm::StringRef cwd,
+    llvm::StringRef comm_file, lldb::pid_t debugger_pid) {
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening
   // the terminal in a new window.
   run_in_terminal_args.try_emplace("kind", "integrated");
 
-  const auto *launch_request_arguments = launch_request.getObject("arguments");
   // The program path must be the first entry in the "args" field
-  std::vector<std::string> args = {DAP::debug_adapter_path.str(), "--comm-file",
-                                   comm_file.str()};
+  std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
+                                       "--comm-file", comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
-    args.push_back("--debugger-pid");
-    args.push_back(std::to_string(debugger_pid));
+    req_args.push_back("--debugger-pid");
+    req_args.push_back(std::to_string(debugger_pid));
   }
-  args.push_back("--launch-target");
-  args.push_back(
-      GetString(launch_request_arguments, "program").value_or("").str());
-  std::vector<std::string> target_args =
-      GetStrings(launch_request_arguments, "args");
-  args.insert(args.end(), target_args.begin(), target_args.end());
+  req_args.push_back("--launch-target");
+  req_args.push_back(program.str());
+  req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", args);
 
-  const auto cwd = GetString(launch_request_arguments, "cwd").value_or("");
   if (!cwd.empty())
     run_in_terminal_args.try_emplace("cwd", cwd);
 
-  auto envs = GetEnvironmentFromArguments(*launch_request_arguments);
-  llvm::json::Object env_json;
-  for (size_t index = 0, env_count = envs.GetNumValues(); index < env_count;
-       index++) {
-    llvm::StringRef key = envs.GetNameAtIndex(index);
-    llvm::StringRef value = envs.GetValueAtIndex(index);
-
-    if (!key.empty())
-      env_json.try_emplace(key, value);
+  if (!env.empty()) {
+    llvm::json::Object env_json;
+    for (const auto &kv : env) {
+      if (!kv.first().empty())
+        env_json.try_emplace(kv.first(), kv.second);
+    }
+    run_in_terminal_args.try_emplace("env",
+                                     llvm::json::Value(std::move(env_json)));
   }
-  run_in_terminal_args.try_emplace("env",
-                                   llvm::json::Value(std::move(env_json)));
 
   return run_in_terminal_args;
 }

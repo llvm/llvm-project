@@ -128,6 +128,7 @@ on support follow.
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
      ``Smcdeleg``      Supported
+     ``Smcntrpmf``     Supported
      ``Smcsrind``      Supported
      ``Smdbltrp``      Supported
      ``Smepmp``        Supported
@@ -196,6 +197,7 @@ on support follow.
      ``Zicbop``        Supported
      ``Zicboz``        Assembly Support
      ``Ziccamoa``      Supported (`See note <#riscv-profiles-extensions-note>`__)
+     ``Ziccamoc``      Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccif``        Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Zicclsm``       Supported (`See note <#riscv-profiles-extensions-note>`__)
      ``Ziccrse``       Supported (`See note <#riscv-profiles-extensions-note>`__)
@@ -297,7 +299,7 @@ Supported
 
 .. _riscv-profiles-extensions-note:
 
-``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
+``Za128rs``, ``Za64rs``, ``Zama16b``, ``Zic64b``, ``Ziccamoa``, ``Ziccamoc``, ``Ziccif``, ``Zicclsm``, ``Ziccrse``, ``Shcounterenvw``, ``Shgatpa``, ``Shtvala``, ``Shvsatpa``, ``Shvstvala``, ``Shvstvecd``, ``Ssccptr``, ``Sscounterenw``, ``Ssstateen``, ``Ssstrict``, ``Sstvala``, ``Sstvecd``, ``Ssu64xl``, ``Svade``, ``Svbare``
   These extensions are defined as part of the `RISC-V Profiles specification <https://github.com/riscv/riscv-profiles/releases/tag/v1.0>`__.  They do not introduce any new features themselves, but instead describe existing hardware features.
 
 .. _riscv-zacas-note:
@@ -491,7 +493,7 @@ The current vendor extensions supported are:
 ``experimental-Xqcisync``
   LLVM implements `version 0.2 of the Qualcomm uC Sync Delay extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
-``Xmipscmove``
+``Xmipscmov``
   LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>` by MIPS.
 
 ``Xmipslsp``

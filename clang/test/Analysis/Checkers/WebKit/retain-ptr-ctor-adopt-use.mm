@@ -3,6 +3,9 @@
 
 #include "objc-mock-types.h"
 
+CFTypeRef CFCopyArray(CFArrayRef);
+void* CreateCopy();
+
 void basic_correct() {
   auto ns1 = adoptNS([SomeObj alloc]);
   auto ns2 = adoptNS([[SomeObj alloc] init]);
@@ -12,6 +15,8 @@ void basic_correct() {
   auto ns6 = retainPtr([ns3 next]);
   CFMutableArrayRef cf1 = adoptCF(CFArrayCreateMutable(kCFAllocatorDefault, 10));
   auto cf2 = adoptCF(SecTaskCreateFromSelf(kCFAllocatorDefault));
+  auto cf3 = adoptCF(checked_cf_cast<CFArrayRef>(CFCopyArray(cf1)));
+  CreateCopy();
 }
 
 CFMutableArrayRef provide_cf();
@@ -27,6 +32,8 @@ void basic_wrong() {
   // expected-warning@-1{{Incorrect use of adoptCF. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFTypeRef> cf3 = SecTaskCreateFromSelf(kCFAllocatorDefault);
   // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  CFCopyArray(cf1);
+  // expected-warning@-1{{The return value is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
 }
 
 RetainPtr<CVPixelBufferRef> cf_out_argument() {
@@ -68,7 +75,7 @@ RetainPtr<CFArrayRef> return_arg(CFArrayRef arg) {
 
 class MemberInit {
 public:
-  MemberInit(CFMutableArrayRef array, NSString *str, CFRunLoopRef runLoop)
+  MemberInit(RetainPtr<CFMutableArrayRef>&& array, NSString *str, CFRunLoopRef runLoop)
     : m_array(array)
     , m_str(str)
     , m_runLoop(runLoop)
@@ -80,7 +87,7 @@ private:
   RetainPtr<CFRunLoopRef> m_runLoop;
 };
 void create_member_init() {
-  MemberInit init { CFArrayCreateMutable(kCFAllocatorDefault, 10), @"hello", CFRunLoopGetCurrent() };
+  MemberInit init { adoptCF(CFArrayCreateMutable(kCFAllocatorDefault, 10)), @"hello", CFRunLoopGetCurrent() };
 }
 
 RetainPtr<CFStringRef> cfstr() {

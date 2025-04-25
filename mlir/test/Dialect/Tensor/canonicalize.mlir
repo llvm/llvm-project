@@ -1105,15 +1105,13 @@ func.func @compose_expand_of_collapse_last_two_dims(%arg0: tensor<?x64x1xf32>) -
   %expanded = tensor.expand_shape %collapsed [[0, 1]] output_shape [%div, 384] : tensor<?xf32> into tensor<?x384xf32>
   return %expanded : tensor<?x384xf32>
 }
-//       CHECK: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 * 64)>
 // CHECK-LABEL: @compose_expand_of_collapse_last_two_dims
 //  CHECK-SAME: %[[ARG0:.+]]: tensor<?x64x1xf32>
-//       CHECK: %[[CONSTANT0:.+]] = arith.constant 0 : index
 //       CHECK: %[[CONSTANT384:.+]] = arith.constant 384 : index
+//       CHECK: %[[CONSTANT0:.+]] = arith.constant 0 : index
 //       CHECK: %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARG0]] {{\[}}[0, 1, 2]] : tensor<?x64x1xf32> into tensor<?xf32>
-//       CHECK: %[[DIM:.+]] = tensor.dim %[[ARG0]], %[[CONSTANT0]] : tensor<?x64x1xf32>
-//       CHECK: %[[AFFAPPLY:.+]] = affine.apply #[[$MAP]]()[%[[DIM]]]
-//       CHECK: %[[DIVUI:.+]] = arith.divui %[[AFFAPPLY]], %[[CONSTANT384]] : index
+//       CHECK: %[[DIM:.+]] = tensor.dim %[[COLLAPSE]], %[[CONSTANT0]] : tensor<?xf32>
+//       CHECK: %[[DIVUI:.+]] = arith.divui %[[DIM]], %[[CONSTANT384]] : index
 //       CHECK: %[[RESULT:.+]] = tensor.expand_shape %[[COLLAPSE]] {{\[}}[0, 1]] output_shape [%[[DIVUI]], 384] : tensor<?xf32> into tensor<?x384xf32>
 //       CHECK: return %[[RESULT]]
 
@@ -2137,13 +2135,12 @@ func.func @empty_tensor_canonicalize(%i : index) {
 
 // -----
 
-//       CHECK: #[[$map:.*]] = affine_map<()[s0] -> (s0 floordiv 40)>
 // CHECK-LABEL: func @dim_of_expand_shape(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>
-//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
-//       CHECK:   %[[dim:.*]] = tensor.dim %[[t]], %[[c1]] : tensor<?x?xf32>
-//       CHECK:   %[[apply:.*]] = affine.apply #[[$map]]()[%[[dim]]]
-//       CHECK:   return %[[apply]]
+//       CHECK:   %[[c2:.*]] = arith.constant 2 : index
+//       CHECK:   %[[expanded:.*]] = tensor.expand_shape %[[t]] {{\[\[}}0], [1, 2, 3, 4, 5]] output_shape [%arg1, 1, %arg2, 5, 1, 8] : tensor<?x?xf32> into tensor<?x1x?x5x1x8xf32>
+//       CHECK:   %[[dim:.*]] = tensor.dim %[[expanded]], %[[c2]] : tensor<?x1x?x5x1x8xf32>
+//       CHECK:   return %[[dim]]
 func.func @dim_of_expand_shape(%t: tensor<?x?xf32>, %sz0: index, %sz1: index) -> index {
   %c2 = arith.constant 2 : index
   %0 = tensor.expand_shape %t [[0], [1, 2, 3, 4, 5]] output_shape [%sz0, 1, %sz1, 5, 1, 8]
@@ -2154,17 +2151,12 @@ func.func @dim_of_expand_shape(%t: tensor<?x?xf32>, %sz0: index, %sz1: index) ->
 
 // -----
 
-//       CHECK: #[[$map:.*]] = affine_map<()[s0, s1, s2] -> (((s0 * s1) * s2) * 7)>
 // CHECK-LABEL: func @dim_of_collapse_shape(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?x?x7x?xf32>
 //   CHECK-DAG:   %[[c1:.*]] = arith.constant 1 : index
-//   CHECK-DAG:   %[[c2:.*]] = arith.constant 2 : index
-//   CHECK-DAG:   %[[c4:.*]] = arith.constant 4 : index
-//   CHECK-DAG:   %[[dim1:.*]] = tensor.dim %[[t]], %[[c1]]
-//   CHECK-DAG:   %[[dim2:.*]] = tensor.dim %[[t]], %[[c2]]
-//   CHECK-DAG:   %[[dim4:.*]] = tensor.dim %[[t]], %[[c4]]
-//       CHECK:   %[[apply:.*]] = affine.apply #[[$map]]()[%[[dim1]], %[[dim2]], %[[dim4]]]
-//       CHECK:   return %[[apply]]
+//   CHECK-DAG:   %[[collapsed:.*]] = tensor.collapse_shape %[[t]] {{\[\[}}0], [1, 2, 3, 4]] : tensor<?x?x?x7x?xf32> into tensor<?x?xf32>
+//   CHECK-DAG:   %[[dim:.*]] = tensor.dim %[[collapsed]], %[[c1]]
+//       CHECK:   return %[[dim]]
 func.func @dim_of_collapse_shape(%t: tensor<?x?x?x7x?xf32>) -> index {
   %c1 = arith.constant 1 : index
   %0 = tensor.collapse_shape %t [[0], [1, 2, 3, 4]]

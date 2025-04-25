@@ -420,6 +420,7 @@ enum ModifierType {
   MT_Q,
   MT_ObjCClass,
   MT_ObjCInstance,
+  MT_Quoted,
 };
 
 static StringRef getModifierName(ModifierType MT) {
@@ -447,6 +448,8 @@ static StringRef getModifierName(ModifierType MT) {
     return "objcclass";
   case MT_ObjCInstance:
     return "objcinstance";
+  case MT_Quoted:
+    return "quoted";
   case MT_Unknown:
     llvm_unreachable("invalid modifier type");
   }
@@ -1113,6 +1116,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
                                .Case("q", MT_Q)
                                .Case("objcclass", MT_ObjCClass)
                                .Case("objcinstance", MT_ObjCInstance)
+                               .Case("quoted", MT_Quoted)
                                .Case("", MT_Placeholder)
                                .Default(MT_Unknown);
 
@@ -1264,6 +1268,7 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
     case MT_Placeholder:
     case MT_ObjCClass:
     case MT_ObjCInstance:
+    case MT_Quoted:
     case MT_Ordinal:
     case MT_Human: {
       Parsed.push_back(New<PlaceholderPiece>(ModType, parseModifier(Text)));

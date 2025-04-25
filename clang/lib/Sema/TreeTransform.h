@@ -3981,7 +3981,9 @@ public:
       if (Result.isInvalid())
         return TemplateArgumentLoc();
 
-      return TemplateArgumentLoc(TemplateArgument(Result.get()), Result.get());
+      return TemplateArgumentLoc(TemplateArgument(Result.get(),
+                                                  /*IsCanonical=*/false),
+                                 Result.get());
     }
 
     case TemplateArgument::Template:
@@ -4203,7 +4205,7 @@ public:
       ArrayRef<OpenACCClause *> Clauses) {
     llvm::SmallVector<Expr *> Exprs;
     Exprs.push_back(DevNumExpr);
-    Exprs.insert(Exprs.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+    llvm::append_range(Exprs, QueueIdExprs);
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Wait, BeginLoc, DirLoc, LParenLoc, QueuesLoc,
         Exprs, OpenACCAtomicKind::None, RParenLoc, EndLoc, Clauses, {});
@@ -4941,7 +4943,8 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
     E = SemaRef.ActOnConstantExpression(E);
     if (E.isInvalid())
       return true;
-    Output = TemplateArgumentLoc(TemplateArgument(E.get()), E.get());
+    Output = TemplateArgumentLoc(
+        TemplateArgument(E.get(), /*IsCanonical=*/false), E.get());
     return false;
   }
   }
@@ -5284,6 +5287,17 @@ QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
     return QualType();
   }
 
+  PointerAuthQualifier LocalPointerAuth = Quals.getPointerAuth();
+  if (LocalPointerAuth.isPresent()) {
+    if (T.getPointerAuth().isPresent()) {
+      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_redundant)
+          << TL.getType() << "__ptrauth";
+      return QualType();
+    } else if (!T->isSignableType() && !T->isDependentType()) {
+      SemaRef.Diag(Loc, diag::err_ptrauth_qualifier_nonpointer) << T;
+      return QualType();
+    }
+  }
   // C++ [dcl.fct]p7:
   //   [When] adding cv-qualifications on top of the function type [...] the
   //   cv-qualifiers are ignored.
@@ -11989,13 +12003,10 @@ void OpenACCClauseTransform<Derived>::VisitDetachClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(
-      std::remove_if(VarList.begin(), VarList.end(),
-                     [&](Expr *E) {
-                       return Self.getSema().OpenACC().CheckVarIsPointerType(
-                           OpenACCClauseKind::Detach, E);
-                     }),
-      VarList.end());
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return Self.getSema().OpenACC().CheckVarIsPointerType(
+        OpenACCClauseKind::Detach, E);
+  });
 
   ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   NewClause = OpenACCDetachClause::Create(
@@ -12343,9 +12354,6 @@ void OpenACCClauseTransform<Derived>::VisitCollapseClause(
 
   NewLoopCount =
       Self.getSema().OpenACC().CheckCollapseLoopCount(NewLoopCount.get());
-
-  if (!NewLoopCount.isUsable())
-    return;
 
   ParsedClause.setCollapseDetails(C.hasForce(), NewLoopCount.get());
   NewClause = OpenACCCollapseClause::Create(
@@ -16131,8 +16139,10 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
             E->getPackLoc());
         if (DRE.isInvalid())
           return ExprError();
-        ArgStorage = TemplateArgument(new (getSema().Context) PackExpansionExpr(
-            DRE.get(), E->getPackLoc(), std::nullopt));
+        ArgStorage = TemplateArgument(
+            new (getSema().Context)
+                PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt),
+            /*IsCanonical=*/false);
       }
       PackArgs = ArgStorage;
     }

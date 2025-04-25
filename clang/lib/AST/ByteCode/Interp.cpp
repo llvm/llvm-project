@@ -299,15 +299,14 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
     TYPE_SWITCH(Ty, S.Stk.discard<T>());
 }
 
-// FIXME: Instead of using this fairly expensive test, we should
-// just mark constexpr-unknown values when creating them.
 bool isConstexprUnknown(const Pointer &P) {
   if (!P.isBlockPointer())
     return false;
+
   if (P.isDummy())
-    return false;
-  const VarDecl *VD = P.block()->getDescriptor()->asVarDecl();
-  return VD && VD->hasLocalStorage();
+    return isa_and_nonnull<ParmVarDecl>(P.getDeclDesc()->asValueDecl());
+
+  return P.getDeclDesc()->IsConstexprUnknown;
 }
 
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
@@ -397,10 +396,12 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
       (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
     return true;
 
-  if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
-    const auto *VD = Ptr.getDeclDesc()->asValueDecl();
-    diagnoseNonConstVariable(S, OpPC, VD);
-  }
+  if (S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus &&
+      Ptr.isConst())
+    return false;
+
+  const auto *VD = Ptr.getDeclDesc()->asValueDecl();
+  diagnoseNonConstVariable(S, OpPC, VD);
   return false;
 }
 
@@ -633,20 +634,42 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                           AccessKinds AK) {
   assert(Ptr.isLive());
 
-  // FIXME: This check here might be kinda expensive. Maybe it would be better
-  // to have another field in InlineDescriptor for this?
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isVolatile())
     return true;
 
-  QualType PtrType = Ptr.getType();
-  if (!PtrType.isVolatileQualified())
-    return true;
+  if (!S.getLangOpts().CPlusPlus)
+    return Invalid(S, OpPC);
 
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  if (S.getLangOpts().CPlusPlus)
-    S.FFDiag(Loc, diag::note_constexpr_access_volatile_type) << AK << PtrType;
-  else
-    S.FFDiag(Loc);
+  // The reason why Ptr is volatile might be further up the hierarchy.
+  // Find that pointer.
+  Pointer P = Ptr;
+  while (!P.isRoot()) {
+    if (P.getType().isVolatileQualified())
+      break;
+    P = P.getBase();
+  }
+
+  const NamedDecl *ND = nullptr;
+  int DiagKind;
+  SourceLocation Loc;
+  if (const auto *F = P.getField()) {
+    DiagKind = 2;
+    Loc = F->getLocation();
+    ND = F;
+  } else if (auto *VD = P.getFieldDesc()->asValueDecl()) {
+    DiagKind = 1;
+    Loc = VD->getLocation();
+    ND = VD;
+  } else {
+    DiagKind = 0;
+    if (const auto *E = P.getFieldDesc()->asExpr())
+      Loc = E->getExprLoc();
+  }
+
+  S.FFDiag(S.Current->getLocation(OpPC),
+           diag::note_constexpr_access_volatile_obj, 1)
+      << AK << DiagKind << ND;
+  S.Note(Loc, diag::note_constexpr_volatile_here) << DiagKind;
   return false;
 }
 
@@ -722,11 +745,11 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
   if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
   if (!CheckDummy(S, OpPC, Ptr, AK))
-    return false;
-  if (!CheckExtern(S, OpPC, Ptr))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
@@ -790,6 +813,8 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;
   if (!CheckConst(S, OpPC, Ptr))
+    return false;
+  if (!S.inConstantContext() && isConstexprUnknown(Ptr))
     return false;
   return true;
 }
@@ -1205,7 +1230,8 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
       if (const FunctionDecl *VirtualDelete =
               getVirtualOperatorDelete(AllocType);
           VirtualDelete &&
-          !VirtualDelete->isReplaceableGlobalAllocationFunction()) {
+          !VirtualDelete
+               ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
         S.FFDiag(S.Current->getSource(OpPC),
                  diag::note_constexpr_new_non_replaceable)
             << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
@@ -1302,8 +1328,6 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckArray(S, OpPC, Ptr))
@@ -1723,7 +1747,9 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
         return true;
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
           << /*C++26 feature*/ 1 << E->getSourceRange();
-    } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+    } else if (
+        !OperatorNew
+             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       S.FFDiag(S.Current->getSource(OpPC),
                diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
@@ -1741,7 +1767,8 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
   } else {
     const auto *DeleteExpr = cast<CXXDeleteExpr>(E);
     const FunctionDecl *OperatorDelete = DeleteExpr->getOperatorDelete();
-    if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
+    if (!OperatorDelete
+             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       S.FFDiag(S.Current->getSource(OpPC),
                diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
@@ -1844,7 +1871,23 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
   if (!P.isBlockPointer())
     return false;
 
-  S.Stk.push<Pointer>(P.getType().getTypePtr(), TypeInfoType);
+  // Pick the most-derived type.
+  const Type *T = P.getDeclPtr().getType().getTypePtr();
+  // ... unless we're currently constructing this object.
+  // FIXME: We have a similar check to this in more places.
+  if (S.Current->getFunction()) {
+    for (const InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
+      if (const Function *Func = Frame->getFunction();
+          Func && (Func->isConstructor() || Func->isDestructor()) &&
+          P.block() == Frame->getThis().block()) {
+        T = Func->getParentDecl()->getTypeForDecl();
+        break;
+      }
+    }
+  }
+
+  S.Stk.push<Pointer>(T->getCanonicalTypeUnqualified().getTypePtr(),
+                      TypeInfoType);
   return true;
 }
 

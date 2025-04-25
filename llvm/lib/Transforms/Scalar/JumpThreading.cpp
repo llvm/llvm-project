@@ -303,7 +303,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   // size.
   if (BBDuplicateThreshold.getNumOccurrences())
     BBDupThreshold = BBDuplicateThreshold;
-  else if (F->hasFnAttribute(Attribute::MinSize))
+  else if (F->hasMinSize())
     BBDupThreshold = 3;
   else
     BBDupThreshold = DefaultBBDupThreshold;

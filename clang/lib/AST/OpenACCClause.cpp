@@ -190,18 +190,15 @@ OpenACCCollapseClause::OpenACCCollapseClause(SourceLocation BeginLoc,
                                              SourceLocation EndLoc)
     : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::Collapse, BeginLoc,
                                      LParenLoc, LoopCount, EndLoc),
-      HasForce(HasForce) {
-  assert(LoopCount && "LoopCount required");
-}
+      HasForce(HasForce) {}
 
 OpenACCCollapseClause *
 OpenACCCollapseClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                               SourceLocation LParenLoc, bool HasForce,
                               Expr *LoopCount, SourceLocation EndLoc) {
-  assert(
-      LoopCount &&
-      (LoopCount->isInstantiationDependent() || isa<ConstantExpr>(LoopCount)) &&
-      "Loop count not constant expression");
+  assert((!LoopCount || (LoopCount->isInstantiationDependent() ||
+                         isa<ConstantExpr>(LoopCount))) &&
+         "Loop count not constant expression");
   void *Mem =
       C.Allocate(sizeof(OpenACCCollapseClause), alignof(OpenACCCollapseClause));
   return new (Mem)
@@ -891,10 +888,10 @@ void OpenACCClausePrinter::VisitDeviceTypeClause(
   OS << "(";
   llvm::interleaveComma(C.getArchitectures(), OS,
                         [&](const DeviceTypeArgument &Arch) {
-                          if (Arch.first == nullptr)
+                          if (Arch.getIdentifierInfo() == nullptr)
                             OS << "*";
                           else
-                            OS << Arch.first->getName();
+                            OS << Arch.getIdentifierInfo()->getName();
                         });
   OS << ")";
 }

@@ -68,7 +68,9 @@ function(tablegen project ofn)
   # char literals, instead. If we're cross-compiling, then conservatively assume
   # that the source might be consumed by MSVC.
   # [1] https://docs.microsoft.com/en-us/cpp/cpp/compiler-limits?view=vs-2017
-  if (MSVC AND project STREQUAL LLVM)
+  # Don't pass this flag to mlir-src-sharder, since it doesn't support the
+  # flag, and it doesn't need it.
+  if (MSVC AND NOT "${project}" STREQUAL "MLIR_SRC_SHARDER")
     list(APPEND LLVM_TABLEGEN_FLAGS "--long-string-literals=0")
   endif()
   if (CMAKE_GENERATOR MATCHES "Visual Studio")

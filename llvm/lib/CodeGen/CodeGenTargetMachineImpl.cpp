@@ -162,16 +162,13 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
 
   switch (FileType) {
   case CodeGenFileType::AssemblyFile: {
-    MCInstPrinter *InstPrinter = getTarget().createMCInstPrinter(
+    std::unique_ptr<MCInstPrinter> InstPrinter(getTarget().createMCInstPrinter(
         getTargetTriple(),
         Options.MCOptions.OutputAsmVariant.value_or(MAI.getAssemblerDialect()),
-        MAI, MII, MRI);
-    for (StringRef Opt : Options.MCOptions.InstPrinterOptions) {
-      if (!InstPrinter->applyTargetSpecificCLOption(Opt)) {
-        delete InstPrinter;
+        MAI, MII, MRI));
+    for (StringRef Opt : Options.MCOptions.InstPrinterOptions)
+      if (!InstPrinter->applyTargetSpecificCLOption(Opt))
         return createStringError("invalid InstPrinter option '" + Opt + "'");
-      }
-    }
 
     // Create a code emitter if asked to show the encoding.
     std::unique_ptr<MCCodeEmitter> MCE;
@@ -182,7 +179,8 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
         getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
-        Context, std::move(FOut), InstPrinter, std::move(MCE), std::move(MAB));
+        Context, std::move(FOut), std::move(InstPrinter), std::move(MCE),
+        std::move(MAB));
     AsmStreamer.reset(S);
     break;
   }

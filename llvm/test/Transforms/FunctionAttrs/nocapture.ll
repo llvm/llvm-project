@@ -960,7 +960,7 @@ define i1 @inboundsGEPICmpNullPointerDefined(ptr %x) null_pointer_is_valid {
 define i1 @nocaptureDereferenceableOrNullICmp(ptr dereferenceable_or_null(4) %x) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i1 @nocaptureDereferenceableOrNullICmp
-; FNATTRS-SAME: (ptr readnone captures(none) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: (ptr readnone captures(address_is_null) dereferenceable_or_null(4) [[X:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[X]], null
 ; FNATTRS-NEXT:    ret i1 [[TMP1]]
 ;
