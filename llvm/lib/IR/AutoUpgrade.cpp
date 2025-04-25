@@ -5661,7 +5661,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
     // resources) An empty data layout has already been upgraded to G1 by now.
     if (!DL.contains("-p7") && !DL.starts_with("p7"))
-      Res.append("-p7:160:256:256:32");
+      Res.append("-p7:160:256:256:32:48");
     if (!DL.contains("-p8") && !DL.starts_with("p8"))
       Res.append("-p8:128:128");
     if (!DL.contains("-p9") && !DL.starts_with("p9"))
