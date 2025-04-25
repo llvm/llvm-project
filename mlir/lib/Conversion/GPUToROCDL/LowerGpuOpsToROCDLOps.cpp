@@ -134,14 +134,21 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
 
 struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  GPUSubgroupSizeOpToROCDL(const LLVMTypeConverter &converter,
+                           amdgpu::Chipset chipset)
+      : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp>(converter),
+        chipset(chipset) {}
+
   LogicalResult
   matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     LLVM::ConstantRangeAttr bounds = nullptr;
+    bool isBeforeGfx10 = chipset.majorVersion < 10;
     if (auto upperBoundAttr = op.getUpperBoundAttr()) {
       bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
-          /*bitWidth=*/32, /*lower=*/32,
-          /*upper=*/op.getUpperBoundAttr().getInt());
+          /*bitWidth=*/32, /*lower=*/isBeforeGfx10 ? 64 : 32,
+          /*upper=*/op.getUpperBoundAttr().getInt() + 1);
     }
     Value wavefrontOp = rewriter.create<ROCDL::WavefrontSizeOp>(
         op.getLoc(), rewriter.getI32Type(), bounds);
@@ -150,6 +157,8 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
     rewriter.replaceOp(op, {wavefrontOp});
     return success();
   }
+
+  const amdgpu::Chipset chipset;
 };
 
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
@@ -358,7 +367,8 @@ struct LowerGpuOpsToROCDLOpsPass final
 
     populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
                                             *maybeChipset);
-    populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime);
+    populateGpuToROCDLConversionPatterns(converter, llvmPatterns, runtime,
+                                         *maybeChipset);
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -406,7 +416,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
 
 void mlir::populateGpuToROCDLConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    mlir::gpu::amd::Runtime runtime) {
+    mlir::gpu::amd::Runtime runtime, amdgpu::Chipset chipset) {
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
   using mlir::gpu::amd::Runtime;
@@ -447,6 +457,7 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns
       .add<GPUShuffleOpLowering, GPULaneIdOpToROCDL, GPUSubgroupSizeOpToROCDL>(
           converter);
+  patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
 }
