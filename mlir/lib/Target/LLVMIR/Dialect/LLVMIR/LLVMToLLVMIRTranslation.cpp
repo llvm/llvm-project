@@ -271,6 +271,31 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   linkerMDNode->addOperand(listMDNode);
 }
 
+static llvm::Metadata *
+convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
+                       llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::LLVMContext &context = builder.getContext();
+  llvm::MDBuilder mdb(context);
+  SmallVector<llvm::Metadata *> nodes;
+
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
+    for (auto entry : arrayAttr.getAsRange<ModuleFlagCGProfileEntryAttr>()) {
+      llvm::Function *fromFn =
+          moduleTranslation.lookupFunction(entry.getFrom().getValue());
+      llvm::Function *toFn =
+          moduleTranslation.lookupFunction(entry.getTo().getValue());
+      llvm::Metadata *vals[] = {
+          llvm::ValueAsMetadata::get(fromFn), llvm::ValueAsMetadata::get(toFn),
+          mdb.createConstant(llvm::ConstantInt::get(
+              llvm::Type::getInt64Ty(context), entry.getCount()))};
+      nodes.push_back(llvm::MDNode::get(context, vals));
+    }
+    return llvm::MDTuple::getDistinct(context, nodes);
+  }
+  return nullptr;
+}
+
 static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
@@ -285,6 +310,11 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
               return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
                   llvm::Type::getInt32Ty(builder.getContext()),
                   intAttr.getInt()));
+            })
+            .Case<ArrayAttr>([&](auto arrayAttr) {
+              return convertModuleFlagValue(flagAttr.getKey().getValue(),
+                                            arrayAttr, builder,
+                                            moduleTranslation);
             })
             .Default([](auto) { return nullptr; });
 
