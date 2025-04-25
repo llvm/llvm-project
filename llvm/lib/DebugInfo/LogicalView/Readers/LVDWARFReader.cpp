@@ -307,6 +307,9 @@ void LVDWARFReader::processOneAttribute(const DWARFDie &Die,
   case dwarf::DW_AT_bit_size:
     CurrentElement->setBitSize(GetAsUnsignedConstant());
     break;
+  case dwarf::DW_AT_byte_size:
+    CurrentElement->setBitSize(*FormValue.getAsUnsignedConstant() * DWARF_CHAR_BIT);
+    break;
   case dwarf::DW_AT_call_file:
     CurrentElement->setCallFilenameIndex(IncrementFileIndex
                                              ? GetAsUnsignedConstant() + 1

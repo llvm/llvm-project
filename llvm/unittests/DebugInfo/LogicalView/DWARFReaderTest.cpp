@@ -193,6 +193,12 @@ void checkElementSelection(LVReader *Reader) {
   ASSERT_NE(Element, nullptr);
   EXPECT_NE(Element->getName().find("INTEGER"), StringRef::npos);
   EXPECT_EQ(Element->getIsType(), 1);
+  // Underlying type is `int`
+  const LVElement *UnderlyingType =
+      static_cast<LVType *>(Element)->getUnderlyingType();
+  EXPECT_EQ(UnderlyingType->getIsType(), 1);
+  EXPECT_EQ(UnderlyingType->getBitSize(), 32u);
+  EXPECT_EQ(UnderlyingType->getStorageSizeInBytes(), 4u);
 
   Element = MapElements[0x000000000f]; // 'movl	%edx, %eax'
   ASSERT_NE(Element, nullptr);

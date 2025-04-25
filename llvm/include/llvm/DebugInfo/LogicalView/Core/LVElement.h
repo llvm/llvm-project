@@ -83,6 +83,10 @@ private:
       Language;
 };
 
+// Assume 8-bit bytes; this is consistent, e.g. with
+// lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParserClang.cpp.
+constexpr unsigned int DWARF_CHAR_BIT = 8u;
+
 class LVElement : public LVObject {
   enum class Property {
     IsLine,   // A logical line.
@@ -261,6 +265,9 @@ public:
   virtual bool isBase() const { return false; }
   virtual bool isTemplateParam() const { return false; }
 
+  uint32_t getStorageSizeInBytes() const {
+    return (getBitSize() + (DWARF_CHAR_BIT - 1)) / DWARF_CHAR_BIT;
+  }
   virtual uint32_t getBitSize() const { return 0; }
   virtual void setBitSize(uint32_t Size) {}
 
