@@ -725,9 +725,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::ExtractLast:
-  case VPInstruction::ExtractPenultimateLane: {
-    unsigned Offset = getOpcode() == VPInstruction::ExtractLast ? 1 : 2;
+  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractPenultimateElement: {
+    unsigned Offset = getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -853,8 +853,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 }
 
 bool VPInstruction::isVectorToScalar() const {
-  return getOpcode() == VPInstruction::ExtractLast ||
-         getOpcode() == VPInstruction::ExtractPenultimateLane ||
+  return getOpcode() == VPInstruction::ExtractLastElement ||
+         getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeFindLastIVResult ||
@@ -924,8 +924,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::AnyOf:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ExtractLast:
-  case VPInstruction::ExtractPenultimateLane:
+  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -1043,11 +1043,11 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Broadcast:
     O << "broadcast";
     break;
-  case VPInstruction::ExtractLast:
-    O << "extract-last";
+  case VPInstruction::ExtractLastElement:
+    O << "extract-last-element";
     break;
-  case VPInstruction::ExtractPenultimateLane:
-    O << "extract-penultimate-lane";
+  case VPInstruction::ExtractPenultimateElement:
+    O << "extract-penultimate-element";
     break;
   case VPInstruction::ComputeFindLastIVResult:
     O << "compute-find-last-iv-result";
@@ -1149,7 +1149,7 @@ void VPIRInstruction::extractLastLaneOfFirstOperand(VPBuilder &Builder) {
   if (Exiting->isLiveIn())
     return;
 
-  Exiting = Builder.createNaryOp(VPInstruction::ExtractLast, {Exiting});
+  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastElement, {Exiting});
   setOperand(0, Exiting);
 }
 

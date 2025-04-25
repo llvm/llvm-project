@@ -827,8 +827,8 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming;
-  if (!match(Op,
-             m_VPInstruction<VPInstruction::ExtractLast>(m_VPValue(Incoming))))
+  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                     m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming);

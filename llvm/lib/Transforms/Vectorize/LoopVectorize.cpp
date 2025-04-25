@@ -9271,7 +9271,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
            "Cannot handle loops with uncountable early exits");
     if (IsFOR)
       ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractLast, {ResumeFromVectorLoop}, {},
+          VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
           "vector.recur.extract");
     StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
     auto *ResumePhiR = ScalarPHBuilder.createNaryOp(
@@ -9422,8 +9422,8 @@ static void addExitUsersForFirstOrderRecurrences(
       if (ExitIRI->getOperand(0) != FOR)
         continue;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractPenultimateLane, {FOR->getBackedgeValue()}, {},
-          "vector.recur.extract.for.phi");
+          VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
+          {}, "vector.recur.extract.for.phi");
       ExitIRI->setOperand(0, PenultimateElement);
       ExitUsersToFix.remove(ExitIRI);
     }
