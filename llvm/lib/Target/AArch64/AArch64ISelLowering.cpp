@@ -18421,9 +18421,10 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
   EVT VT = N->getValueType(0);
 
-  // For negative divisor, this yeilds (ptrue + asrd + subr) which is not
-  // profitable as compared to Neon sequence (cmlt + usra + sshr).
-  if (Subtarget->hasSVE() && !Divisor.isNegatedPowerOf2())
+  // If SVE is available, we can generate
+  //  sdiv(x,y) -> ptrue + asrd          , where 'y' is positive pow-2 divisor.
+  //  sdiv(x,y) -> ptrue + asrd + subr   , where 'y' is negative pow-2 divisor.
+  if (Subtarget->hasSVE() && N->getValueType(0).isVector())
     return SDValue(N, 0);
 
   // For scalable and fixed types, mark them as cheap so we can handle it much
