@@ -8745,8 +8745,6 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   unsigned CompOpcIeee = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
   unsigned CompOpc = IsMax ? ISD::FMAXNUM : ISD::FMINNUM;
 
-  // FIXME: We should probably define fminnum/fmaxnum variants with correct
-  // signed zero behavior.
   bool MinMaxMustRespectOrderedZero = false;
 
   if (isOperationLegalOrCustom(CompOpcIeee, VT)) {
@@ -8754,6 +8752,7 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
     MinMaxMustRespectOrderedZero = true;
   } else if (isOperationLegalOrCustom(CompOpc, VT)) {
     MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS, Flags);
+    MinMaxMustRespectOrderedZero = true;
   } else {
     if (VT.isVector() && !isOperationLegalOrCustom(ISD::VSELECT, VT))
       return DAG.UnrollVectorOp(N);
