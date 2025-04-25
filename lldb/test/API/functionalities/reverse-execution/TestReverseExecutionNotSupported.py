@@ -5,10 +5,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test import lldbutil
 
 
-class TestReverseContinueNotSupported(TestBase):
+class TestReverseExecutionNotSupported(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_reverse_continue_not_supported(self):
+    def test_reverse_execution_not_supported(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)

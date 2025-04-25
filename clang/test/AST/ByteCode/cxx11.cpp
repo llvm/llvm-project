@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -fexperimental-new-constant-interpreter -verify=both,expected -std=c++11 %s
-// RUN: %clang_cc1 -triple x86_64-linux -verify=both,ref -std=c++11 %s
+// RUN: %clang_cc1 -triple x86_64-linux -verify=both,expected -std=c++11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-linux -verify=both,ref      -std=c++11 %s
 
 namespace IntOrEnum {
   const int k = 0;
@@ -207,4 +207,17 @@ namespace ExternPointer {
   struct S { int a; };
   extern const S pu;
   constexpr const int *pua = &pu.a; // Ok.
+}
+
+namespace PseudoDtor {
+  typedef int I;
+  constexpr int f(int a = 1) { // both-error {{never produces a constant expression}} \
+                               // ref-note {{destroying object 'a' whose lifetime has already ended}}
+    return (
+        a.~I(), // both-note {{pseudo-destructor call is not permitted}} \
+                // expected-note {{pseudo-destructor call is not permitted}}
+        0);
+  }
+  static_assert(f() == 0, ""); // both-error {{constant expression}} \
+                               // expected-note {{in call to}}
 }
