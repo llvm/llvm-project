@@ -20,6 +20,7 @@ class ExpandFpPass : public PassInfoMixin<ExpandFpPass> {
 private:
   const TargetMachine *TM;
   CodeGenOptLevel OptLevel;
+
 public:
   explicit ExpandFpPass(const TargetMachine *TM, CodeGenOptLevel OptLevel);
 
