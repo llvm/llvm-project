@@ -432,3 +432,67 @@ define i32 @ptr_add_in_int_extra_use2(i32 %x) {
   %r = ptrtoint ptr %p2 to i32
   ret i32 %r
 }
+
+define i32 @ptrtoint_of_inttoptr_multiple_gep(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ptrtoint_of_inttoptr_multiple_gep(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr nuw i16, ptr [[PTR]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr [[PTR2]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[PTR3]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %ptr2 = getelementptr nuw i16, ptr %ptr, i32 %y
+  %ptr3 = getelementptr i32, ptr %ptr2, i32 %z
+  %r = ptrtoint ptr %ptr3 to i32
+  ret i32 %r
+}
+
+define i32 @ptrtoint_of_inttoptr_multiple_gep_extra_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ptrtoint_of_inttoptr_multiple_gep_extra_use(
+; CHECK-NEXT:    [[PTR:%.*]] = inttoptr i32 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i16, ptr [[PTR]], i32 [[Y:%.*]]
+; CHECK-NEXT:    call void @use_ptr(ptr [[PTR2]])
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr i32, ptr [[PTR2]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[PTR3]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %ptr2 = getelementptr i16, ptr %ptr, i32 %y
+  call void @use_ptr(ptr %ptr2)
+  %ptr3 = getelementptr i32, ptr %ptr2, i32 %z
+  %r = ptrtoint ptr %ptr3 to i32
+  ret i32 %r
+}
+
+define i32 @ptrtoint_of_null_multiple_gep(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ptrtoint_of_null_multiple_gep(
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i16, ptr null, i32 [[X:%.*]]
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr nuw i32, ptr [[PTR2]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr i64, ptr [[PTR3]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[PTR4]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr2 = getelementptr i16, ptr null, i32 %x
+  %ptr3 = getelementptr nuw i32, ptr %ptr2, i32 %y
+  %ptr4 = getelementptr i64, ptr %ptr3, i32 %z
+  %r = ptrtoint ptr %ptr4 to i32
+  ret i32 %r
+}
+
+define i32 @ptrtoint_of_null_multiple_gep_extra_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @ptrtoint_of_null_multiple_gep_extra_use(
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i16, ptr null, i32 [[X:%.*]]
+; CHECK-NEXT:    call void @use_ptr(ptr [[PTR2]])
+; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr nuw i32, ptr [[PTR2]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr i64, ptr [[PTR3]], i32 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = ptrtoint ptr [[PTR4]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr2 = getelementptr i16, ptr null, i32 %x
+  call void @use_ptr(ptr %ptr2)
+  %ptr3 = getelementptr nuw i32, ptr %ptr2, i32 %y
+  %ptr4 = getelementptr i64, ptr %ptr3, i32 %z
+  %r = ptrtoint ptr %ptr4 to i32
+  ret i32 %r
+}
