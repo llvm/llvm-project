@@ -426,9 +426,9 @@ define <vscale x 1 x i64> @commutable_vwadd_vv(<vscale x 1 x i32> %0, <vscale x 
 ; CHECK-LABEL: commutable_vwadd_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
+; CHECK-NEXT:    vwadd.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vwadd.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
@@ -442,9 +442,9 @@ define <vscale x 1 x i64> @commutable_vwadd_vv_masked(<vscale x 1 x i32> %0, <vs
 ; CHECK-LABEL: commutable_vwadd_vv_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwadd.vv v10, v8, v9, v0.t
+; CHECK-NEXT:    vwadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vwadd.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %b = call <vscale x 1 x i64> @llvm.riscv.vwadd.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
@@ -458,9 +458,9 @@ define <vscale x 1 x i64> @commutable_vwaddu_vv(<vscale x 1 x i32> %0, <vscale x
 ; CHECK-LABEL: commutable_vwaddu_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vwaddu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
@@ -474,9 +474,9 @@ define <vscale x 1 x i64> @commutable_vwaddu_vv_masked(<vscale x 1 x i32> %0, <v
 ; CHECK-LABEL: commutable_vwaddu_vv_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9, v0.t
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vwaddu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %b = call <vscale x 1 x i64> @llvm.riscv.vwaddu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
@@ -490,9 +490,9 @@ define <vscale x 1 x i64> @commutable_vwmul_vv(<vscale x 1 x i32> %0, <vscale x 
 ; CHECK-LABEL: commutable_vwmul_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwmul.vv v10, v8, v9
+; CHECK-NEXT:    vwmul.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmul.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
@@ -506,9 +506,9 @@ define <vscale x 1 x i64> @commutable_vwmul_vv_masked(<vscale x 1 x i32> %0, <vs
 ; CHECK-LABEL: commutable_vwmul_vv_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwmul.vv v10, v8, v9, v0.t
+; CHECK-NEXT:    vwmul.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmul.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %b = call <vscale x 1 x i64> @llvm.riscv.vwmul.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
@@ -522,9 +522,9 @@ define <vscale x 1 x i64> @commutable_vwmulu_vv(<vscale x 1 x i32> %0, <vscale x
 ; CHECK-LABEL: commutable_vwmulu_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwmulu.vv v10, v8, v9
+; CHECK-NEXT:    vwmulu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmulu.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2)
@@ -538,9 +538,9 @@ define <vscale x 1 x i64> @commutable_vwmulu_vv_masked(<vscale x 1 x i32> %0, <v
 ; CHECK-LABEL: commutable_vwmulu_vv_masked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwmulu.vv v10, v8, v9, v0.t
+; CHECK-NEXT:    vwmulu.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmulu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %b = call <vscale x 1 x i64> @llvm.riscv.vwmulu.mask.nxv1i64.nxv1i32.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
@@ -554,9 +554,9 @@ define <vscale x 1 x i64> @commutable_vwmacc_vv(<vscale x 1 x i32> %0, <vscale x
 ; CHECK-LABEL: commutable_vwmacc_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwmacc.vv v10, v8, v9
+; CHECK-NEXT:    vwmacc.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmacc.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2, iXLen 1)
@@ -571,9 +571,9 @@ define <vscale x 1 x i64> @commutable_vwmacc_vv_masked(<vscale x 1 x i32> %0, <v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmacc.vv v10, v8, v9, v0.t
-; CHECK-NEXT:    vwmacc.vv v11, v9, v8, v0.t
+; CHECK-NEXT:    vwmacc.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v11
+; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmacc.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %b = call <vscale x 1 x i64> @llvm.riscv.vwmacc.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
@@ -587,9 +587,9 @@ define <vscale x 1 x i64> @commutable_vwmaccu_vv(<vscale x 1 x i32> %0, <vscale 
 ; CHECK-LABEL: commutable_vwmaccu_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vwmaccu.vv v10, v8, v9
+; CHECK-NEXT:    vwmaccu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2, iXLen 1)
@@ -604,9 +604,9 @@ define <vscale x 1 x i64> @commutable_vwmaccu_vv_masked(<vscale x 1 x i32> %0, <
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vwmaccu.vv v10, v8, v9, v0.t
-; CHECK-NEXT:    vwmaccu.vv v11, v9, v8, v0.t
+; CHECK-NEXT:    vwmaccu.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v10, v11
+; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %0, <vscale x 1 x i32> %1, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)
   %b = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(<vscale x 1 x i64> undef, <vscale x 1 x i32> %1, <vscale x 1 x i32> %0, <vscale x 1 x i1> %mask, iXLen %2, iXLen 1)

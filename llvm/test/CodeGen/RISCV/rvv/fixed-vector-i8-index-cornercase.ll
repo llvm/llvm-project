@@ -16,33 +16,33 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK-NEXT:    addi s0, sp, 1536
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    andi sp, sp, -512
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    li a0, 512
 ; CHECK-NEXT:    addi a1, sp, 512
-; CHECK-NEXT:    vmv.x.s a2, v16
-; CHECK-NEXT:    vslidedown.vi v24, v16, 5
-; CHECK-NEXT:    li a3, 432
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.x.s a2, v8
+; CHECK-NEXT:    vslidedown.vi v24, v8, 5
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    vmv.v.x v8, a2
 ; CHECK-NEXT:    lbu a0, 770(sp)
-; CHECK-NEXT:    li a1, 431
-; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    li a1, 432
+; CHECK-NEXT:    vmv.v.x v16, a2
+; CHECK-NEXT:    li a2, 431
+; CHECK-NEXT:    vslide1down.vx v16, v16, a0
 ; CHECK-NEXT:    lbu a0, 1012(sp)
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a1
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
+; CHECK-NEXT:    vslideup.vx v16, v24, a2
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v24, v16, 4
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    li a1, 466
-; CHECK-NEXT:    vmv.s.x v16, a0
+; CHECK-NEXT:    vmv.s.x v24, a0
 ; CHECK-NEXT:    li a0, 465
 ; CHECK-NEXT:    li a2, 501
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v24, a0
+; CHECK-NEXT:    vslideup.vx v16, v8, a0
 ; CHECK-NEXT:    li a0, 500
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v8, v16, a0
+; CHECK-NEXT:    vslideup.vx v16, v24, a0
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    addi sp, s0, -1536
 ; CHECK-NEXT:    .cfi_def_cfa sp, 1536
 ; CHECK-NEXT:    ld ra, 1528(sp) # 8-byte Folded Reload
@@ -65,27 +65,26 @@ define <512 x i8> @range_restriction(<512 x i8> %a) {
 ; CHECK-NEXT:    li a2, 432
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vslide1down.vx v24, v16, a1
+; CHECK-NEXT:    vslide1down.vx v16, v16, a1
 ; CHECK-NEXT:    li a1, 431
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 5
+; CHECK-NEXT:    vmv.v.i v24, 5
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v24, v16, a1
+; CHECK-NEXT:    vslideup.vx v16, v24, a1
 ; CHECK-NEXT:    li a1, 466
 ; CHECK-NEXT:    li a2, 465
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v16, 4
+; CHECK-NEXT:    vmv.v.i v24, 4
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v24, v16, a2
+; CHECK-NEXT:    vslideup.vx v16, v24, a2
 ; CHECK-NEXT:    li a1, 44
 ; CHECK-NEXT:    li a2, 501
-; CHECK-NEXT:    vmv.s.x v16, a1
+; CHECK-NEXT:    vmv.s.x v24, a1
 ; CHECK-NEXT:    li a1, 500
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
-; CHECK-NEXT:    vslideup.vx v24, v16, a1
+; CHECK-NEXT:    vslideup.vx v16, v24, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vrgather.vv v16, v8, v24
-; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    vrgather.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %res = shufflevector <512 x i8> %a, <512 x i8> poison, <512 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 4, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 44, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 254>
   ret <512 x i8> %res
@@ -141,12 +140,12 @@ define <512 x i8> @two_source(<512 x i8> %a, <512 x i8> %b) {
 ; CHECK-NEXT:    addi a2, a2, %lo(.LCPI2_1)
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v0, (a2)
+; CHECK-NEXT:    lui a2, %hi(.LCPI2_0)
+; CHECK-NEXT:    addi a2, a2, %lo(.LCPI2_0)
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vle8.v v16, (a2)
 ; CHECK-NEXT:    li a2, 500
 ; CHECK-NEXT:    vmv.s.x v24, a3
-; CHECK-NEXT:    lui a3, %hi(.LCPI2_0)
-; CHECK-NEXT:    addi a3, a3, %lo(.LCPI2_0)
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vle8.v v16, (a3)
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vx v8, v24, a2
 ; CHECK-NEXT:    addi a1, sp, 1520

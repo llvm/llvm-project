@@ -7,8 +7,7 @@ define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i8(<vscale x 4 x i8> %va, <vscale
 ; CHECK-LABEL: inttoptr_nxv4p0_nxv4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vzext.vf8 v8, v12, v0.t
+; CHECK-NEXT:    vzext.vf8 v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x ptr> @llvm.vp.inttoptr.nxv4p0.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x ptr> %v
@@ -20,8 +19,7 @@ define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i16(<vscale x 4 x i16> %va, <vsca
 ; CHECK-LABEL: inttoptr_nxv4p0_nxv4i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v12, v8
-; CHECK-NEXT:    vzext.vf4 v8, v12, v0.t
+; CHECK-NEXT:    vzext.vf4 v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x ptr> @llvm.vp.inttoptr.nxv4p0.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x ptr> %v
@@ -33,8 +31,7 @@ define <vscale x 4 x ptr> @inttoptr_nxv4p0_nxv4i32(<vscale x 4 x i32> %va, <vsca
 ; CHECK-LABEL: inttoptr_nxv4p0_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vzext.vf2 v8, v12, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x ptr> @llvm.vp.inttoptr.nxv4p0.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x ptr> %v
@@ -56,9 +53,9 @@ define <vscale x 4 x i8> @ptrtoint_nxv4i8_nxv4p0(<vscale x 4 x ptr> %va, <vscale
 ; CHECK-LABEL: ptrtoint_nxv4i8_nxv4p0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v12, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
@@ -72,9 +69,9 @@ define <vscale x 4 x i16> @ptrtoint_nxv4i16_nxv4p0(<vscale x 4 x ptr> %va, <vsca
 ; CHECK-LABEL: ptrtoint_nxv4i16_nxv4p0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v12, v8, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i16> @llvm.vp.ptrtoint.nxv4i16.nxv4p0(<vscale x 4 x ptr> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i16> %v
@@ -86,8 +83,7 @@ define <vscale x 4 x i32> @ptrtoint_nxv4i32_nxv4p0(<vscale x 4 x ptr> %va, <vsca
 ; CHECK-LABEL: ptrtoint_nxv4i32_nxv4p0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v12, v8, 0, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.ptrtoint.nxv4i32.nxv4p0(<vscale x 4 x ptr> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i32> %v

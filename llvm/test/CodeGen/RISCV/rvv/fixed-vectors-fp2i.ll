@@ -36,8 +36,8 @@ define <2 x i1> @fp2si_v2f32_v2i1(<2 x float> %x) {
 ; CHECK-LABEL: fp2si_v2f32_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptosi <2 x float> %x to <2 x i1>
@@ -48,8 +48,7 @@ define <2 x i15> @fp2si_v2f32_v2i15(<2 x float> %x) {
 ; CHECK-LABEL: fp2si_v2f32_v2i15:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
 ; CHECK-NEXT:    ret
   %z = fptosi <2 x float> %x to <2 x i15>
   ret <2 x i15> %z
@@ -59,8 +58,7 @@ define <2 x i15> @fp2ui_v2f32_v2i15(<2 x float> %x) {
 ; CHECK-LABEL: fp2ui_v2f32_v2i15:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
 ; CHECK-NEXT:    ret
   %z = fptoui <2 x float> %x to <2 x i15>
   ret <2 x i15> %z
@@ -70,8 +68,8 @@ define <2 x i1> @fp2ui_v2f32_v2i1(<2 x float> %x) {
 ; CHECK-LABEL: fp2ui_v2f32_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptoui <2 x float> %x to <2 x i1>
@@ -110,8 +108,8 @@ define <3 x i1> @fp2si_v3f32_v3i1(<3 x float> %x) {
 ; CHECK-LABEL: fp2si_v3f32_v3i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptosi <3 x float> %x to <3 x i1>
@@ -123,16 +121,16 @@ define <3 x i15> @fp2si_v3f32_v3i15(<3 x float> %x) {
 ; ZVFH32-LABEL: fp2si_v3f32_v3i15:
 ; ZVFH32:       # %bb.0:
 ; ZVFH32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH32-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFH32-NEXT:    vslidedown.vi v8, v9, 2
-; ZVFH32-NEXT:    vmv.x.s a1, v9
-; ZVFH32-NEXT:    vslidedown.vi v9, v9, 1
-; ZVFH32-NEXT:    vmv.x.s a2, v8
+; ZVFH32-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFH32-NEXT:    vslidedown.vi v9, v8, 2
+; ZVFH32-NEXT:    vmv.x.s a1, v8
+; ZVFH32-NEXT:    vslidedown.vi v8, v8, 1
+; ZVFH32-NEXT:    vmv.x.s a2, v9
 ; ZVFH32-NEXT:    slli a1, a1, 17
 ; ZVFH32-NEXT:    srli a1, a1, 17
 ; ZVFH32-NEXT:    slli a3, a2, 30
 ; ZVFH32-NEXT:    or a1, a1, a3
-; ZVFH32-NEXT:    vmv.x.s a3, v9
+; ZVFH32-NEXT:    vmv.x.s a3, v8
 ; ZVFH32-NEXT:    slli a2, a2, 17
 ; ZVFH32-NEXT:    slli a3, a3, 17
 ; ZVFH32-NEXT:    srli a2, a2, 19
@@ -145,13 +143,13 @@ define <3 x i15> @fp2si_v3f32_v3i15(<3 x float> %x) {
 ; ZVFH64-LABEL: fp2si_v3f32_v3i15:
 ; ZVFH64:       # %bb.0:
 ; ZVFH64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH64-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFH64-NEXT:    vmv.x.s a1, v9
-; ZVFH64-NEXT:    vslidedown.vi v8, v9, 1
-; ZVFH64-NEXT:    vslidedown.vi v9, v9, 2
+; ZVFH64-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFH64-NEXT:    vmv.x.s a1, v8
+; ZVFH64-NEXT:    vslidedown.vi v9, v8, 1
+; ZVFH64-NEXT:    vslidedown.vi v8, v8, 2
 ; ZVFH64-NEXT:    slli a1, a1, 49
-; ZVFH64-NEXT:    vmv.x.s a2, v8
-; ZVFH64-NEXT:    vmv.x.s a3, v9
+; ZVFH64-NEXT:    vmv.x.s a2, v9
+; ZVFH64-NEXT:    vmv.x.s a3, v8
 ; ZVFH64-NEXT:    srli a1, a1, 49
 ; ZVFH64-NEXT:    slli a2, a2, 49
 ; ZVFH64-NEXT:    slli a3, a3, 30
@@ -167,16 +165,16 @@ define <3 x i15> @fp2si_v3f32_v3i15(<3 x float> %x) {
 ; ZVFHMIN32-LABEL: fp2si_v3f32_v3i15:
 ; ZVFHMIN32:       # %bb.0:
 ; ZVFHMIN32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN32-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFHMIN32-NEXT:    vslidedown.vi v8, v9, 2
-; ZVFHMIN32-NEXT:    vmv.x.s a1, v9
-; ZVFHMIN32-NEXT:    vslidedown.vi v9, v9, 1
-; ZVFHMIN32-NEXT:    vmv.x.s a2, v8
+; ZVFHMIN32-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFHMIN32-NEXT:    vslidedown.vi v9, v8, 2
+; ZVFHMIN32-NEXT:    vmv.x.s a1, v8
+; ZVFHMIN32-NEXT:    vslidedown.vi v8, v8, 1
+; ZVFHMIN32-NEXT:    vmv.x.s a2, v9
 ; ZVFHMIN32-NEXT:    slli a1, a1, 17
 ; ZVFHMIN32-NEXT:    srli a1, a1, 17
 ; ZVFHMIN32-NEXT:    slli a3, a2, 30
 ; ZVFHMIN32-NEXT:    or a1, a1, a3
-; ZVFHMIN32-NEXT:    vmv.x.s a3, v9
+; ZVFHMIN32-NEXT:    vmv.x.s a3, v8
 ; ZVFHMIN32-NEXT:    slli a2, a2, 17
 ; ZVFHMIN32-NEXT:    slli a3, a3, 17
 ; ZVFHMIN32-NEXT:    srli a2, a2, 19
@@ -189,13 +187,13 @@ define <3 x i15> @fp2si_v3f32_v3i15(<3 x float> %x) {
 ; ZVFHMIN64-LABEL: fp2si_v3f32_v3i15:
 ; ZVFHMIN64:       # %bb.0:
 ; ZVFHMIN64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN64-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFHMIN64-NEXT:    vmv.x.s a1, v9
-; ZVFHMIN64-NEXT:    vslidedown.vi v8, v9, 1
-; ZVFHMIN64-NEXT:    vslidedown.vi v9, v9, 2
+; ZVFHMIN64-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFHMIN64-NEXT:    vmv.x.s a1, v8
+; ZVFHMIN64-NEXT:    vslidedown.vi v9, v8, 1
+; ZVFHMIN64-NEXT:    vslidedown.vi v8, v8, 2
 ; ZVFHMIN64-NEXT:    slli a1, a1, 49
-; ZVFHMIN64-NEXT:    vmv.x.s a2, v8
-; ZVFHMIN64-NEXT:    vmv.x.s a3, v9
+; ZVFHMIN64-NEXT:    vmv.x.s a2, v9
+; ZVFHMIN64-NEXT:    vmv.x.s a3, v8
 ; ZVFHMIN64-NEXT:    srli a1, a1, 49
 ; ZVFHMIN64-NEXT:    slli a2, a2, 49
 ; ZVFHMIN64-NEXT:    slli a3, a3, 30
@@ -216,16 +214,16 @@ define <3 x i15> @fp2ui_v3f32_v3i15(<3 x float> %x) {
 ; ZVFH32-LABEL: fp2ui_v3f32_v3i15:
 ; ZVFH32:       # %bb.0:
 ; ZVFH32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH32-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFH32-NEXT:    vslidedown.vi v8, v9, 2
-; ZVFH32-NEXT:    vmv.x.s a1, v9
-; ZVFH32-NEXT:    vslidedown.vi v9, v9, 1
-; ZVFH32-NEXT:    vmv.x.s a2, v8
+; ZVFH32-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFH32-NEXT:    vslidedown.vi v9, v8, 2
+; ZVFH32-NEXT:    vmv.x.s a1, v8
+; ZVFH32-NEXT:    vslidedown.vi v8, v8, 1
+; ZVFH32-NEXT:    vmv.x.s a2, v9
 ; ZVFH32-NEXT:    slli a1, a1, 16
 ; ZVFH32-NEXT:    srli a1, a1, 16
 ; ZVFH32-NEXT:    slli a3, a2, 30
 ; ZVFH32-NEXT:    or a1, a1, a3
-; ZVFH32-NEXT:    vmv.x.s a3, v9
+; ZVFH32-NEXT:    vmv.x.s a3, v8
 ; ZVFH32-NEXT:    slli a2, a2, 17
 ; ZVFH32-NEXT:    slli a3, a3, 16
 ; ZVFH32-NEXT:    srli a2, a2, 19
@@ -238,13 +236,13 @@ define <3 x i15> @fp2ui_v3f32_v3i15(<3 x float> %x) {
 ; ZVFH64-LABEL: fp2ui_v3f32_v3i15:
 ; ZVFH64:       # %bb.0:
 ; ZVFH64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH64-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFH64-NEXT:    vmv.x.s a1, v9
-; ZVFH64-NEXT:    vslidedown.vi v8, v9, 1
-; ZVFH64-NEXT:    vslidedown.vi v9, v9, 2
+; ZVFH64-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFH64-NEXT:    vmv.x.s a1, v8
+; ZVFH64-NEXT:    vslidedown.vi v9, v8, 1
+; ZVFH64-NEXT:    vslidedown.vi v8, v8, 2
 ; ZVFH64-NEXT:    slli a1, a1, 48
-; ZVFH64-NEXT:    vmv.x.s a2, v8
-; ZVFH64-NEXT:    vmv.x.s a3, v9
+; ZVFH64-NEXT:    vmv.x.s a2, v9
+; ZVFH64-NEXT:    vmv.x.s a3, v8
 ; ZVFH64-NEXT:    srli a1, a1, 48
 ; ZVFH64-NEXT:    slli a2, a2, 48
 ; ZVFH64-NEXT:    slli a3, a3, 30
@@ -260,16 +258,16 @@ define <3 x i15> @fp2ui_v3f32_v3i15(<3 x float> %x) {
 ; ZVFHMIN32-LABEL: fp2ui_v3f32_v3i15:
 ; ZVFHMIN32:       # %bb.0:
 ; ZVFHMIN32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN32-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFHMIN32-NEXT:    vslidedown.vi v8, v9, 2
-; ZVFHMIN32-NEXT:    vmv.x.s a1, v9
-; ZVFHMIN32-NEXT:    vslidedown.vi v9, v9, 1
-; ZVFHMIN32-NEXT:    vmv.x.s a2, v8
+; ZVFHMIN32-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFHMIN32-NEXT:    vslidedown.vi v9, v8, 2
+; ZVFHMIN32-NEXT:    vmv.x.s a1, v8
+; ZVFHMIN32-NEXT:    vslidedown.vi v8, v8, 1
+; ZVFHMIN32-NEXT:    vmv.x.s a2, v9
 ; ZVFHMIN32-NEXT:    slli a1, a1, 16
 ; ZVFHMIN32-NEXT:    srli a1, a1, 16
 ; ZVFHMIN32-NEXT:    slli a3, a2, 30
 ; ZVFHMIN32-NEXT:    or a1, a1, a3
-; ZVFHMIN32-NEXT:    vmv.x.s a3, v9
+; ZVFHMIN32-NEXT:    vmv.x.s a3, v8
 ; ZVFHMIN32-NEXT:    slli a2, a2, 17
 ; ZVFHMIN32-NEXT:    slli a3, a3, 16
 ; ZVFHMIN32-NEXT:    srli a2, a2, 19
@@ -282,13 +280,13 @@ define <3 x i15> @fp2ui_v3f32_v3i15(<3 x float> %x) {
 ; ZVFHMIN64-LABEL: fp2ui_v3f32_v3i15:
 ; ZVFHMIN64:       # %bb.0:
 ; ZVFHMIN64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN64-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFHMIN64-NEXT:    vmv.x.s a1, v9
-; ZVFHMIN64-NEXT:    vslidedown.vi v8, v9, 1
-; ZVFHMIN64-NEXT:    vslidedown.vi v9, v9, 2
+; ZVFHMIN64-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFHMIN64-NEXT:    vmv.x.s a1, v8
+; ZVFHMIN64-NEXT:    vslidedown.vi v9, v8, 1
+; ZVFHMIN64-NEXT:    vslidedown.vi v8, v8, 2
 ; ZVFHMIN64-NEXT:    slli a1, a1, 48
-; ZVFHMIN64-NEXT:    vmv.x.s a2, v8
-; ZVFHMIN64-NEXT:    vmv.x.s a3, v9
+; ZVFHMIN64-NEXT:    vmv.x.s a2, v9
+; ZVFHMIN64-NEXT:    vmv.x.s a3, v8
 ; ZVFHMIN64-NEXT:    srli a1, a1, 48
 ; ZVFHMIN64-NEXT:    slli a2, a2, 48
 ; ZVFHMIN64-NEXT:    slli a3, a3, 30
@@ -308,8 +306,8 @@ define <3 x i1> @fp2ui_v3f32_v3i1(<3 x float> %x) {
 ; CHECK-LABEL: fp2ui_v3f32_v3i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptoui <3 x float> %x to <3 x i1>
@@ -348,8 +346,8 @@ define <8 x i1> @fp2si_v8f32_v8i1(<8 x float> %x) {
 ; CHECK-LABEL: fp2si_v8f32_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v8
-; CHECK-NEXT:    vand.vi v8, v10, 1
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptosi <8 x float> %x to <8 x i1>
@@ -360,8 +358,8 @@ define <8 x i1> @fp2ui_v8f32_v8i1(<8 x float> %x) {
 ; CHECK-LABEL: fp2ui_v8f32_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v10, v8
-; CHECK-NEXT:    vand.vi v8, v10, 1
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptoui <8 x float> %x to <8 x i1>
@@ -373,8 +371,8 @@ define void @fp2si_v2f32_v2i64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v9, v8
-; CHECK-NEXT:    vse64.v v9, (a1)
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v8
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %x
   %d = fptosi <2 x float> %a to <2 x i64>
@@ -387,8 +385,8 @@ define void @fp2ui_v2f32_v2i64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v9, v8
-; CHECK-NEXT:    vse64.v v9, (a1)
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v8
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %x
   %d = fptoui <2 x float> %a to <2 x i64>
@@ -400,8 +398,8 @@ define void @fp2si_v8f32_v8i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2si_v8f32_v8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v12
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
@@ -414,8 +412,8 @@ define void @fp2ui_v8f32_v8i64(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2ui_v8f32_v8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vle32.v v12, (a0)
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v12
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
@@ -429,9 +427,9 @@ define void @fp2si_v2bf16_v2i64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v9
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x bfloat>, ptr %x
@@ -445,9 +443,9 @@ define void @fp2ui_v2bf16_v2i64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v9
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x bfloat>, ptr %x
@@ -460,8 +458,8 @@ define <2 x i1> @fp2si_v2bf16_v2i1(<2 x bfloat> %x) {
 ; CHECK-LABEL: fp2si_v2bf16_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v9
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
@@ -473,8 +471,8 @@ define <2 x i1> @fp2ui_v2bf16_v2i1(<2 x bfloat> %x) {
 ; CHECK-LABEL: fp2ui_v2bf16_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v9
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
@@ -487,9 +485,9 @@ define void @fp2si_v2f16_v2i64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v9
+; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %x
@@ -503,9 +501,9 @@ define void @fp2ui_v2f16_v2i64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v9
+; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %x
@@ -518,16 +516,16 @@ define <2 x i1> @fp2si_v2f16_v2i1(<2 x half> %x) {
 ; ZVFH-LABEL: fp2si_v2f16_v2i1:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFH-NEXT:    vand.vi v8, v9, 1
+; ZVFH-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; ZVFH-NEXT:    vand.vi v8, v8, 1
 ; ZVFH-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fp2si_v2f16_v2i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vfncvt.rtz.x.f.w v8, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
+; ZVFHMIN-NEXT:    vfncvt.rtz.x.f.w v8, v8
 ; ZVFHMIN-NEXT:    vand.vi v8, v8, 1
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFHMIN-NEXT:    ret
@@ -539,16 +537,16 @@ define <2 x i1> @fp2ui_v2f16_v2i1(<2 x half> %x) {
 ; ZVFH-LABEL: fp2ui_v2f16_v2i1:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v9, v8
-; ZVFH-NEXT:    vand.vi v8, v9, 1
+; ZVFH-NEXT:    vfncvt.rtz.xu.f.w v8, v8
+; ZVFH-NEXT:    vand.vi v8, v8, 1
 ; ZVFH-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fp2ui_v2f16_v2i1:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v9
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
+; ZVFHMIN-NEXT:    vfncvt.rtz.xu.f.w v8, v8
 ; ZVFHMIN-NEXT:    vand.vi v8, v8, 1
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFHMIN-NEXT:    ret
@@ -561,9 +559,9 @@ define void @fp2si_v2f64_v2i8(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v9, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -579,9 +577,9 @@ define void @fp2ui_v2f64_v2i8(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v9, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -596,8 +594,8 @@ define <2 x i1> @fp2si_v2f64_v2i1(<2 x double> %x) {
 ; CHECK-LABEL: fp2si_v2f64_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptosi <2 x double> %x to <2 x i1>
@@ -608,8 +606,8 @@ define <2 x i1> @fp2ui_v2f64_v2i1(<2 x double> %x) {
 ; CHECK-LABEL: fp2ui_v2f64_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptoui <2 x double> %x to <2 x i1>
@@ -621,9 +619,9 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v12, v8
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -639,9 +637,9 @@ define void @fp2ui_v8f64_v8i8(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v12, v8
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
@@ -656,8 +654,8 @@ define <8 x i1> @fp2si_v8f64_v8i1(<8 x double> %x) {
 ; CHECK-LABEL: fp2si_v8f64_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v12, v8
-; CHECK-NEXT:    vand.vi v8, v12, 1
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptosi <8 x double> %x to <8 x i1>
@@ -668,8 +666,8 @@ define <8 x i1> @fp2ui_v8f64_v8i1(<8 x double> %x) {
 ; CHECK-LABEL: fp2ui_v8f64_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.xu.f.w v12, v8
-; CHECK-NEXT:    vand.vi v8, v12, 1
+; CHECK-NEXT:    vfncvt.rtz.xu.f.w v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
   %z = fptoui <8 x double> %x to <8 x i1>

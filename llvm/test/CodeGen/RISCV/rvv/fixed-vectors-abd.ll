@@ -80,9 +80,9 @@ define <4 x i16> @sabd_4h_promoted_ops(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmin.vv v10, v8, v9
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.sext = sext <4 x i8> %a to <4 x i16>
   %b.sext = sext <4 x i8> %b to <4 x i16>
@@ -115,9 +115,9 @@ define <8 x i16> @sabd_8h_promoted_ops(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmin.vv v10, v8, v9
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.sext = sext <8 x i8> %a to <8 x i16>
   %b.sext = sext <8 x i8> %b to <8 x i16>
@@ -150,9 +150,9 @@ define <2 x i32> @sabd_2s_promoted_ops(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmin.vv v10, v8, v9
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.sext = sext <2 x i16> %a to <2 x i32>
   %b.sext = sext <2 x i16> %b to <2 x i32>
@@ -185,9 +185,9 @@ define <4 x i32> @sabd_4s_promoted_ops(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmin.vv v10, v8, v9
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.sext = sext <4 x i16> %a to <4 x i32>
   %b.sext = sext <4 x i16> %b to <4 x i32>
@@ -219,9 +219,9 @@ define <2 x i64> @sabd_2d_promoted_ops(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmin.vv v10, v8, v9
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.sext = sext <2 x i32> %a to <2 x i64>
   %b.sext = sext <2 x i32> %b to <2 x i64>
@@ -292,9 +292,9 @@ define <4 x i16> @uabd_4h_promoted_ops(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vminu.vv v10, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <4 x i8> %a to <4 x i16>
   %b.zext = zext <4 x i8> %b to <4 x i16>
@@ -327,9 +327,9 @@ define <8 x i16> @uabd_8h_promoted_ops(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vminu.vv v10, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <8 x i8> %a to <8 x i16>
   %b.zext = zext <8 x i8> %b to <8 x i16>
@@ -362,9 +362,9 @@ define <2 x i32> @uabd_2s_promoted_ops(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vminu.vv v10, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <2 x i16> %a to <2 x i32>
   %b.zext = zext <2 x i16> %b to <2 x i32>
@@ -397,9 +397,9 @@ define <4 x i32> @uabd_4s_promoted_ops(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vminu.vv v10, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <4 x i16> %a to <4 x i32>
   %b.zext = zext <4 x i16> %b to <4 x i32>
@@ -431,9 +431,9 @@ define <2 x i64> @uabd_2d_promoted_ops(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vminu.vv v10, v8, v9
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vsub.vv v9, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <2 x i32> %a to <2 x i64>
   %b.zext = zext <2 x i32> %b to <2 x i64>

@@ -8,9 +8,9 @@ define i32 @vqdot_vv(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vqdot_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v8
-; CHECK-NEXT:    vsext.vf2 v14, v9
-; CHECK-NEXT:    vwmul.vv v8, v12, v14
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vwmul.vv v8, v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -28,9 +28,9 @@ define i32 @vqdot_vx_constant(<16 x i8> %a) {
 ; CHECK-LABEL: vqdot_vx_constant:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vsext.vf2 v8, v8
 ; CHECK-NEXT:    li a0, 23
-; CHECK-NEXT:    vwmul.vx v8, v12, a0
+; CHECK-NEXT:    vwmul.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -47,9 +47,9 @@ define i32 @vqdot_vx_constant_swapped(<16 x i8> %a) {
 ; CHECK-LABEL: vqdot_vx_constant_swapped:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vsext.vf2 v8, v8
 ; CHECK-NEXT:    li a0, 23
-; CHECK-NEXT:    vwmul.vx v8, v12, a0
+; CHECK-NEXT:    vwmul.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -66,11 +66,11 @@ define i32 @vqdotu_vv(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vqdotu_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vwmulu.vv v10, v8, v9
+; CHECK-NEXT:    vwmulu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vwredsumu.vs v8, v10, v8
+; CHECK-NEXT:    vwredsumu.vs v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -86,9 +86,9 @@ define i32 @vqdotu_vx_constant(<16 x i8> %a) {
 ; CHECK-LABEL: vqdotu_vx_constant:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    li a0, 123
-; CHECK-NEXT:    vwmulu.vx v8, v12, a0
+; CHECK-NEXT:    vwmulu.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -105,9 +105,9 @@ define i32 @vqdotsu_vv(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vqdotsu_vv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v8
-; CHECK-NEXT:    vzext.vf2 v14, v9
-; CHECK-NEXT:    vwmulsu.vv v8, v12, v14
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwmulsu.vv v8, v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -125,9 +125,9 @@ define i32 @vqdotsu_vv_swapped(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: vqdotsu_vv_swapped:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v8
-; CHECK-NEXT:    vzext.vf2 v14, v9
-; CHECK-NEXT:    vwmulsu.vv v8, v12, v14
+; CHECK-NEXT:    vsext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwmulsu.vv v8, v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -145,9 +145,9 @@ define i32 @vdotqsu_vx_constant(<16 x i8> %a) {
 ; CHECK-LABEL: vdotqsu_vx_constant:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vsext.vf2 v8, v8
 ; CHECK-NEXT:    li a0, 123
-; CHECK-NEXT:    vwmul.vx v8, v12, a0
+; CHECK-NEXT:    vwmul.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -164,10 +164,10 @@ define i32 @vdotqus_vx_constant(<16 x i8> %a) {
 ; CHECK-LABEL: vdotqus_vx_constant:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    li a0, -23
-; CHECK-NEXT:    vmv.v.x v14, a0
-; CHECK-NEXT:    vwmulsu.vv v8, v14, v12
+; CHECK-NEXT:    vmv.v.x v10, a0
+; CHECK-NEXT:    vwmulsu.vv v8, v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v12, zero
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12
@@ -184,9 +184,9 @@ define i32 @reduce_of_sext(<16 x i8> %a) {
 ; CHECK-LABEL: reduce_of_sext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf4 v12, v8
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vredsum.vs v8, v12, v8
+; CHECK-NEXT:    vsext.vf4 v8, v8
+; CHECK-NEXT:    vmv.s.x v12, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -199,9 +199,9 @@ define i32 @reduce_of_zext(<16 x i8> %a) {
 ; CHECK-LABEL: reduce_of_zext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf4 v12, v8
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vredsum.vs v8, v12, v8
+; CHECK-NEXT:    vzext.vf4 v8, v8
+; CHECK-NEXT:    vmv.s.x v12, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v12
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:

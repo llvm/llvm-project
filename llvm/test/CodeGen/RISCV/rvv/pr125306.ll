@@ -59,15 +59,14 @@ define <2 x i32> @main(ptr %0) {
 ; CHECK-NEXT:    vmv.v.x v11, a5
 ; CHECK-NEXT:    vslide1down.vx v8, v8, zero
 ; CHECK-NEXT:    vslide1down.vx v10, v10, zero
-; CHECK-NEXT:    vmin.vv v8, v10, v8
-; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vmin.vv v10, v10, v8
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    vslide1down.vx v11, v11, zero
-; CHECK-NEXT:    vmin.vx v10, v10, a2
-; CHECK-NEXT:    vmin.vx v10, v10, a1
-; CHECK-NEXT:    vmin.vv v11, v8, v11
-; CHECK-NEXT:    vmv1r.v v8, v10
-; CHECK-NEXT:    vand.vv v9, v11, v9
-; CHECK-NEXT:    vslideup.vi v8, v10, 1
+; CHECK-NEXT:    vmin.vx v8, v8, a2
+; CHECK-NEXT:    vmin.vx v8, v8, a1
+; CHECK-NEXT:    vmin.vv v10, v10, v11
+; CHECK-NEXT:    vslideup.vi v8, v8, 1
+; CHECK-NEXT:    vand.vv v9, v10, v9
 ; CHECK-NEXT:    vse32.v v9, (a4)
 ; CHECK-NEXT:    sh zero, 0(zero)
 ; CHECK-NEXT:    ret

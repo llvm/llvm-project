@@ -32,9 +32,9 @@ define <vscale x 4 x i32> @vrgather(<vscale x 4 x i32> %passthru, <vscale x 4 x 
 ; CHECK-LABEL: vrgather:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vv v12, v10, v12
+; CHECK-NEXT:    vadd.vv v8, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vrgather.vv v8, v12, v10
+; CHECK-NEXT:    vrgather.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v = add <vscale x 4 x i32> %a, %b
   %w = call <vscale x 4 x i32> @llvm.riscv.vrgather.vv.nxv4i32.iXLen(

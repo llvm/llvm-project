@@ -162,8 +162,7 @@ define <4 x half> @splat_c3_v4f16(<4 x half> %v) {
 ; CHECK-LABEL: splat_c3_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vrgather.vi v9, v8, 3
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vrgather.vi v8, v8, 3
 ; CHECK-NEXT:    ret
   %x = extractelement <4 x half> %v, i32 3
   %ins = insertelement <4 x half> poison, half %x, i32 0
@@ -175,29 +174,25 @@ define <4 x half> @splat_idx_v4f16(<4 x half> %v, i64 %idx) {
 ; RV32ZVFH-LABEL: splat_idx_v4f16:
 ; RV32ZVFH:       # %bb.0:
 ; RV32ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32ZVFH-NEXT:    vrgather.vx v9, v8, a0
-; RV32ZVFH-NEXT:    vmv1r.v v8, v9
+; RV32ZVFH-NEXT:    vrgather.vx v8, v8, a0
 ; RV32ZVFH-NEXT:    ret
 ;
 ; RV64ZVFH-LABEL: splat_idx_v4f16:
 ; RV64ZVFH:       # %bb.0:
 ; RV64ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64ZVFH-NEXT:    vrgather.vx v9, v8, a0
-; RV64ZVFH-NEXT:    vmv1r.v v8, v9
+; RV64ZVFH-NEXT:    vrgather.vx v8, v8, a0
 ; RV64ZVFH-NEXT:    ret
 ;
 ; RV32-NO-ZFHMIN-LABEL: splat_idx_v4f16:
 ; RV32-NO-ZFHMIN:       # %bb.0:
 ; RV32-NO-ZFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NO-ZFHMIN-NEXT:    vrgather.vx v9, v8, a0
-; RV32-NO-ZFHMIN-NEXT:    vmv1r.v v8, v9
+; RV32-NO-ZFHMIN-NEXT:    vrgather.vx v8, v8, a0
 ; RV32-NO-ZFHMIN-NEXT:    ret
 ;
 ; RV64-NO-ZFHMIN-LABEL: splat_idx_v4f16:
 ; RV64-NO-ZFHMIN:       # %bb.0:
 ; RV64-NO-ZFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NO-ZFHMIN-NEXT:    vrgather.vx v9, v8, a0
-; RV64-NO-ZFHMIN-NEXT:    vmv1r.v v8, v9
+; RV64-NO-ZFHMIN-NEXT:    vrgather.vx v8, v8, a0
 ; RV64-NO-ZFHMIN-NEXT:    ret
 ;
 ; RV32-ZFHMIN-LABEL: splat_idx_v4f16:
@@ -225,8 +220,7 @@ define <8 x float> @splat_c5_v8f32(<8 x float> %v) {
 ; CHECK-LABEL: splat_c5_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 5
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vi v8, v8, 5
 ; CHECK-NEXT:    ret
   %x = extractelement <8 x float> %v, i32 5
   %ins = insertelement <8 x float> poison, float %x, i32 0
@@ -239,8 +233,7 @@ define <8 x float> @splat_idx_v8f32(<8 x float> %v, i64 %idx) {
 ; CHECK-LABEL: splat_idx_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vrgather.vx v10, v8, a0
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %x = extractelement <8 x float> %v, i64 %idx
   %ins = insertelement <8 x float> poison, float %x, i32 0

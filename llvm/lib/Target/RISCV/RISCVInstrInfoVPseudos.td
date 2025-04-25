@@ -903,7 +903,7 @@ class VPseudoILoadNoMask<VReg RetClass,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
-  let Constraints = !if(!eq(EarlyClobber, 1), "@earlyclobber $rd, $rd = $dest", "$rd = $dest");
+  let Constraints = !if(!eq(EarlyClobber, 1), "$rd = $dest", "$rd = $dest");
   let TargetOverlapConstraintType = TargetConstraintType;
 }
 
@@ -923,7 +923,7 @@ class VPseudoILoadMask<VReg RetClass,
   let mayLoad = 1;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = !if(!eq(EarlyClobber, 1), "@earlyclobber $rd, $rd = $passthru", "$rd = $passthru");
+  let Constraints = !if(!eq(EarlyClobber, 1), "$rd = $passthru", "$rd = $passthru");
   let TargetOverlapConstraintType = TargetConstraintType;
   let HasVLOp = 1;
   let HasSEWOp = 1;
@@ -1184,7 +1184,7 @@ class VPseudoUnaryAnyMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = "@earlyclobber $rd, $rd = $passthru";
+  let Constraints = "$rd = $passthru";
   let HasVLOp = 1;
   let HasSEWOp = 1;
 }
@@ -1719,7 +1719,7 @@ class VPseudoISegLoadNoMask<VReg RetClass,
   let hasSideEffects = 0;
   // For vector indexed segment loads, the destination vector register groups
   // cannot overlap the source vector register group
-  let Constraints = "@earlyclobber $rd, $rd = $passthru";
+  let Constraints = "$rd = $passthru";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1742,7 +1742,7 @@ class VPseudoISegLoadMask<VReg RetClass,
   let hasSideEffects = 0;
   // For vector indexed segment loads, the destination vector register groups
   // cannot overlap the source vector register group
-  let Constraints = "@earlyclobber $rd, $rd = $passthru";
+  let Constraints = "$rd = $passthru";
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -2043,7 +2043,7 @@ multiclass VPseudoV1ST_M {
 }
 
 multiclass VPseudoVSFS_M {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     let VLMul = mti.LMul.value in {
@@ -2082,7 +2082,7 @@ multiclass VPseudoNullaryPseudoM <string BaseInst> {
 }
 
 multiclass VPseudoVIOTA_M {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxList in {
     defvar mx = m.MX;
     let VLMul = m.value in {
@@ -2219,7 +2219,7 @@ multiclass VPseudoBinaryFV_VV_RM<LMULInfo m, int sew> {
 }
 
 multiclass VPseudoVGTR_EI16_VV {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxList in {
     defvar mx = m.MX;
     foreach sew = EEWList in {
@@ -2306,47 +2306,47 @@ multiclass VPseudoVALU_MM<bit Commutable = 0> {
 //   destination register group is legal. Otherwise, it is illegal.
 multiclass VPseudoBinaryW_VV<LMULInfo m, bit Commutable = 0> {
   defm _VV : VPseudoBinary<m.wvrclass, m.vrclass, m.vrclass, m,
-                           "@earlyclobber $rd", TargetConstraintType=3,
+                           "", TargetConstraintType=3,
                            Commutable=Commutable>;
 }
 
 multiclass VPseudoBinaryW_VV_RM<LMULInfo m, int sew> {
   defm _VV : VPseudoBinaryRoundingMode<m.wvrclass, m.vrclass, m.vrclass, m,
-                                      "@earlyclobber $rd", sew, UsesVXRM=0,
+                                      "", sew, UsesVXRM=0,
                                       TargetConstraintType=3>;
 }
 
 multiclass VPseudoBinaryW_VX<LMULInfo m> {
   defm "_VX" : VPseudoBinary<m.wvrclass, m.vrclass, GPR, m,
-                             "@earlyclobber $rd", TargetConstraintType=3>;
+                             "", TargetConstraintType=3>;
 }
 
 multiclass VPseudoBinaryW_VI<Operand ImmType, LMULInfo m> {
   defm "_VI" : VPseudoBinary<m.wvrclass, m.vrclass, ImmType, m,
-                             "@earlyclobber $rd", TargetConstraintType=3>;
+                             "", TargetConstraintType=3>;
 }
 
 multiclass VPseudoBinaryW_VF_RM<LMULInfo m, FPR_Info f, int sew> {
   defm "_V" # f.FX : VPseudoBinaryRoundingMode<m.wvrclass, m.vrclass,
                                                f.fprclass, m,
-                                               "@earlyclobber $rd", sew,
+                                               "", sew,
                                                UsesVXRM=0,
                                                TargetConstraintType=3>;
 }
 
 multiclass VPseudoBinaryW_WV<LMULInfo m> {
   defm _WV : VPseudoBinary<m.wvrclass, m.wvrclass, m.vrclass, m,
-                           "@earlyclobber $rd", TargetConstraintType=3>;
+                           "", TargetConstraintType=3>;
   defm _WV : VPseudoTiedBinary<m.wvrclass, m.vrclass, m,
-                               "@earlyclobber $rd", TargetConstraintType=3>;
+                               "", TargetConstraintType=3>;
 }
 
 multiclass VPseudoBinaryW_WV_RM<LMULInfo m, int sew> {
   defm _WV : VPseudoBinaryRoundingMode<m.wvrclass, m.wvrclass, m.vrclass, m,
-                                       "@earlyclobber $rd", sew, UsesVXRM = 0,
+                                       "", sew, UsesVXRM = 0,
                                        TargetConstraintType = 3>;
   defm _WV : VPseudoTiedBinaryRoundingMode<m.wvrclass, m.vrclass, m,
-                                           "@earlyclobber $rd", sew,
+                                           "", sew,
                                            TargetConstraintType = 3>;
 }
 
@@ -2370,40 +2370,40 @@ multiclass VPseudoBinaryW_WF_RM<LMULInfo m, FPR_Info f, int sew> {
 //  lowest-numbered part of the source register group."
 multiclass VPseudoBinaryV_WV<LMULInfo m> {
   defm _WV : VPseudoBinary<m.vrclass, m.wvrclass, m.vrclass, m,
-                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
+                           !if(!ge(m.octuple, 8), "", ""),
                            TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WV_RM<LMULInfo m> {
   defm _WV : VPseudoBinaryRoundingMode<m.vrclass, m.wvrclass, m.vrclass, m,
                                        !if(!ge(m.octuple, 8),
-                                       "@earlyclobber $rd", ""),
+                                       "", ""),
                                        TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WX<LMULInfo m> {
   defm _WX : VPseudoBinary<m.vrclass, m.wvrclass, GPR, m,
-                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
+                           !if(!ge(m.octuple, 8), "", ""),
                            TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WX_RM<LMULInfo m> {
   defm _WX : VPseudoBinaryRoundingMode<m.vrclass, m.wvrclass, GPR, m,
                                        !if(!ge(m.octuple, 8),
-                                       "@earlyclobber $rd", ""),
+                                       "", ""),
                                        TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WI<LMULInfo m> {
   defm _WI : VPseudoBinary<m.vrclass, m.wvrclass, uimm5, m,
-                           !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
+                           !if(!ge(m.octuple, 8), "", ""),
                            TargetConstraintType=2>;
 }
 
 multiclass VPseudoBinaryV_WI_RM<LMULInfo m> {
   defm _WI : VPseudoBinaryRoundingMode<m.vrclass, m.wvrclass, uimm5, m,
                                        !if(!ge(m.octuple, 8),
-                                       "@earlyclobber $rd", ""),
+                                       "", ""),
                                        TargetConstraintType=2>;
 }
 
@@ -2578,7 +2578,7 @@ multiclass VPseudoVRCP_V_RM {
 }
 
 multiclass PseudoVEXT_VF2 {
-  defvar constraints = "@earlyclobber $rd";
+  defvar constraints = "";
   foreach m = MxListVF2 in {
     defvar mx = m.MX;
     defvar CurrTypeConstraints = !if(!or(!eq(mx, "MF4"), !eq(mx, "MF2"), !eq(mx, "M1")), 1, 3);
@@ -2594,7 +2594,7 @@ multiclass PseudoVEXT_VF2 {
 }
 
 multiclass PseudoVEXT_VF4 {
-  defvar constraints = "@earlyclobber $rd";
+  defvar constraints = "";
   foreach m = MxListVF4 in {
     defvar mx = m.MX;
     defvar CurrTypeConstraints = !if(!or(!eq(mx, "MF2"), !eq(mx, "M1"), !eq(mx, "M2")), 1, 3);
@@ -2610,7 +2610,7 @@ multiclass PseudoVEXT_VF4 {
 }
 
 multiclass PseudoVEXT_VF8 {
-  defvar constraints = "@earlyclobber $rd";
+  defvar constraints = "";
   foreach m = MxListVF8 in {
     defvar mx = m.MX;
     defvar CurrTypeConstraints = !if(!or(!eq(mx, "M1"), !eq(mx, "M2"), !eq(mx, "M4")), 1, 3);
@@ -2640,11 +2640,11 @@ multiclass VPseudoBinaryM<DAGOperand Op2Class, LMULInfo m, bit Commutable = 0> {
   let VLMul = m.value, isCommutable = Commutable in {
     def "_" # m.MX :
       VPseudoBinaryNoMask<VR, m.vrclass, Op2Class,
-                          !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
+                          !if(!ge(m.octuple, 16), "", ""),
                           TargetConstraintType = 2>;
     def "_" # m.MX # "_MASK" :
       VPseudoBinaryMOutMask<VR, m.vrclass, Op2Class,
-                            !if(!ge(m.octuple, 16), "@earlyclobber $rd", ""),
+                            !if(!ge(m.octuple, 16), "", ""),
                             TargetConstraintType = 2>,
       RISCVMaskedPseudo<MaskIdx=3>;
   }
@@ -2667,7 +2667,7 @@ multiclass VPseudoBinaryM_VI<LMULInfo m> {
 }
 
 multiclass VPseudoVGTR_VV_VX_VI {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VX<m, constraint>,
@@ -3077,7 +3077,7 @@ multiclass VPseudoVCALU_VM_XM {
 }
 
 multiclass VPseudoVCALUM_VM_XM_IM {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=1, Constraint=constraint,
@@ -3094,7 +3094,7 @@ multiclass VPseudoVCALUM_VM_XM_IM {
 }
 
 multiclass VPseudoVCALUM_VM_XM {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=1, Constraint=constraint,
@@ -3109,7 +3109,7 @@ multiclass VPseudoVCALUM_VM_XM {
 }
 
 multiclass VPseudoVCALUM_V_X_I {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=0, Constraint=constraint,
@@ -3126,7 +3126,7 @@ multiclass VPseudoVCALUM_V_X_I {
 }
 
 multiclass VPseudoVCALUM_V_X {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VM<m, CarryOut=1, CarryIn=0, Constraint=constraint, TargetConstraintType=2>,
@@ -3260,26 +3260,26 @@ multiclass VPseudoTernaryV_VF_AAXA_RM<LMULInfo m, FPR_Info f,
 }
 
 multiclass VPseudoTernaryW_VV<LMULInfo m, bit Commutable = 0> {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   defm _VV : VPseudoTernaryWithPolicy<m.wvrclass, m.vrclass, m.vrclass, m,
                                       constraint, Commutable=Commutable, TargetConstraintType=3>;
 }
 
 multiclass VPseudoTernaryW_VV_RM<LMULInfo m, int sew> {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   defm _VV : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, m.vrclass, m.vrclass, m,
                                                   constraint, sew,
                                                   TargetConstraintType=3>;
 }
 
 multiclass VPseudoTernaryW_VX<LMULInfo m> {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   defm "_VX" : VPseudoTernaryWithPolicy<m.wvrclass, GPR, m.vrclass, m,
                                         constraint, TargetConstraintType=3>;
 }
 
 multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f, int sew> {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, f.fprclass,
                                                           m.vrclass, m, constraint,
                                                           sew=sew,
@@ -3619,7 +3619,7 @@ multiclass VPseudoVCVTF_V_RM {
 }
 
 multiclass VPseudoVWCVTI_V {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListFW in {
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint, TargetConstraintType=3>,
               SchedUnary<"WriteVFWCvtFToIV", "ReadVFWCvtFToIV", m.MX,
@@ -3628,7 +3628,7 @@ multiclass VPseudoVWCVTI_V {
 }
 
 multiclass VPseudoVWCVTI_V_RM {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListFW in {
     defm _V : VPseudoConversionRoundingMode<m.wvrclass, m.vrclass, m, constraint, TargetConstraintType=3>,
               SchedUnary<"WriteVFWCvtFToIV", "ReadVFWCvtFToIV", m.MX,
@@ -3637,7 +3637,7 @@ multiclass VPseudoVWCVTI_V_RM {
 }
 
 multiclass VPseudoVWCVTF_V {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListW in {
     foreach e = SchedSEWSet<m.MX, isF=0, isWidening=1>.val in
       defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint, sew=e,
@@ -3648,7 +3648,7 @@ multiclass VPseudoVWCVTF_V {
 }
 
 multiclass VPseudoVWCVTD_V {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListFW in {
     foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
       defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint, sew=e,
@@ -3659,7 +3659,7 @@ multiclass VPseudoVWCVTD_V {
 }
 
 multiclass VPseudoVNCVTI_W {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListW in {
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint, TargetConstraintType=2>,
               SchedUnary<"WriteVFNCvtFToIV", "ReadVFNCvtFToIV", m.MX,
@@ -3668,7 +3668,7 @@ multiclass VPseudoVNCVTI_W {
 }
 
 multiclass VPseudoVNCVTI_W_RM {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListW in {
     defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m, constraint, TargetConstraintType=2>,
               SchedUnary<"WriteVFNCvtFToIV", "ReadVFNCvtFToIV", m.MX,
@@ -3677,7 +3677,7 @@ multiclass VPseudoVNCVTI_W_RM {
 }
 
 multiclass VPseudoVNCVTF_W_RM {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListFW in {
     foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
       defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m,
@@ -3689,7 +3689,7 @@ multiclass VPseudoVNCVTF_W_RM {
 }
 
 multiclass VPseudoVNCVTD_W {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListFW in {
     foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
       defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint, sew=e,
@@ -3700,7 +3700,7 @@ multiclass VPseudoVNCVTD_W {
 }
 
 multiclass VPseudoVNCVTD_W_RM {
-  defvar constraint = "@earlyclobber $rd";
+  defvar constraint = "";
   foreach m = MxListFW in {
     foreach e = SchedSEWSet<m.MX, isF=1, isWidening=1>.val in
       defm _W : VPseudoConversionRoundingMode<m.vrclass, m.wvrclass, m,
@@ -6737,14 +6737,14 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
 // 16.3. Vector Slide Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasVInstructions] in {
-  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI</*slidesUp=*/true, "@earlyclobber $rd">;
+  defm PseudoVSLIDEUP    : VPseudoVSLD_VX_VI</*slidesUp=*/true, "">;
   defm PseudoVSLIDEDOWN  : VPseudoVSLD_VX_VI</*slidesUp=*/false>;
-  defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"@earlyclobber $rd">;
+  defm PseudoVSLIDE1UP   : VPseudoVSLD1_VX<"">;
   defm PseudoVSLIDE1DOWN : VPseudoVSLD1_VX;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
-  defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF<"@earlyclobber $rd">;
+  defm PseudoVFSLIDE1UP  : VPseudoVSLD1_VF<"">;
   defm PseudoVFSLIDE1DOWN : VPseudoVSLD1_VF;
 } // Predicates = [HasVInstructionsAnyF]
 

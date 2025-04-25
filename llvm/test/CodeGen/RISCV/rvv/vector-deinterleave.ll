@@ -18,9 +18,9 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>} @vector_deinterleave_nxv16i1_nxv
 ; V-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; V-NEXT:    vmerge.vim v10, v10, 1, v0
 ; V-NEXT:    vnsrl.wi v12, v8, 0
-; V-NEXT:    vnsrl.wi v14, v8, 8
+; V-NEXT:    vnsrl.wi v8, v8, 8
 ; V-NEXT:    vmsne.vi v0, v12, 0
-; V-NEXT:    vmsne.vi v8, v14, 0
+; V-NEXT:    vmsne.vi v8, v8, 0
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv16i1_nxv32i1:
@@ -48,9 +48,8 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_nxv16i8_nxv
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; V-NEXT:    vnsrl.wi v12, v8, 0
-; V-NEXT:    vnsrl.wi v14, v8, 8
+; V-NEXT:    vnsrl.wi v10, v8, 8
 ; V-NEXT:    vmv.v.v v8, v12
-; V-NEXT:    vmv.v.v v10, v14
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv16i8_nxv32i8:
@@ -70,9 +69,8 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_nxv8i16_nxv
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; V-NEXT:    vnsrl.wi v12, v8, 0
-; V-NEXT:    vnsrl.wi v14, v8, 16
+; V-NEXT:    vnsrl.wi v10, v8, 16
 ; V-NEXT:    vmv.v.v v8, v12
-; V-NEXT:    vmv.v.v v10, v14
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv8i16_nxv16i16:
@@ -93,8 +91,7 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @vector_deinterleave_nxv4i32_nxv
 ; V-NEXT:    li a0, 32
 ; V-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; V-NEXT:    vnsrl.wx v12, v8, a0
-; V-NEXT:    vnsrl.wi v14, v8, 0
-; V-NEXT:    vmv.v.v v8, v14
+; V-NEXT:    vnsrl.wi v8, v8, 0
 ; V-NEXT:    vmv.v.v v10, v12
 ; V-NEXT:    ret
 ;
@@ -115,12 +112,12 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_nxv2i64_nxv
 ; V:       # %bb.0:
 ; V-NEXT:    li a0, 85
 ; V-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; V-NEXT:    vmv.v.x v16, a0
+; V-NEXT:    vmv.v.x v12, a0
 ; V-NEXT:    li a0, 170
-; V-NEXT:    vmv.v.x v20, a0
+; V-NEXT:    vmv.v.x v16, a0
 ; V-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; V-NEXT:    vcompress.vm v12, v8, v16
-; V-NEXT:    vcompress.vm v16, v8, v20
+; V-NEXT:    vcompress.vm v12, v8, v12
+; V-NEXT:    vcompress.vm v16, v8, v16
 ; V-NEXT:    vmv2r.v v8, v12
 ; V-NEXT:    vmv2r.v v10, v16
 ; V-NEXT:    ret
@@ -142,12 +139,12 @@ define {<vscale x 4 x i64>, <vscale x 4 x i64>} @vector_deinterleave_nxv4i64_nxv
 ; V:       # %bb.0:
 ; V-NEXT:    li a0, 85
 ; V-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; V-NEXT:    vmv.v.x v24, a0
+; V-NEXT:    vmv.v.x v16, a0
 ; V-NEXT:    li a0, 170
-; V-NEXT:    vmv.v.x v7, a0
+; V-NEXT:    vmv.v.x v24, a0
 ; V-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
-; V-NEXT:    vcompress.vm v16, v8, v24
-; V-NEXT:    vcompress.vm v24, v8, v7
+; V-NEXT:    vcompress.vm v16, v8, v16
+; V-NEXT:    vcompress.vm v24, v8, v24
 ; V-NEXT:    vmv4r.v v8, v16
 ; V-NEXT:    vmv4r.v v12, v24
 ; V-NEXT:    ret
@@ -172,16 +169,15 @@ define {<vscale x 64 x i1>, <vscale x 64 x i1>} @vector_deinterleave_nxv64i1_nxv
 ; V-NEXT:    vmv.v.i v24, 0
 ; V-NEXT:    vmerge.vim v16, v24, 1, v0
 ; V-NEXT:    vmv1r.v v0, v8
-; V-NEXT:    vmerge.vim v24, v24, 1, v0
+; V-NEXT:    vmerge.vim v8, v24, 1, v0
 ; V-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; V-NEXT:    vnsrl.wi v8, v16, 0
-; V-NEXT:    vnsrl.wi v0, v16, 8
-; V-NEXT:    vnsrl.wi v12, v24, 0
-; V-NEXT:    vnsrl.wi v4, v24, 8
+; V-NEXT:    vnsrl.wi v24, v16, 0
+; V-NEXT:    vnsrl.wi v16, v16, 8
+; V-NEXT:    vnsrl.wi v28, v8, 0
+; V-NEXT:    vnsrl.wi v20, v8, 8
 ; V-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; V-NEXT:    vmsne.vi v16, v8, 0
-; V-NEXT:    vmsne.vi v8, v0, 0
-; V-NEXT:    vmv1r.v v0, v16
+; V-NEXT:    vmsne.vi v0, v24, 0
+; V-NEXT:    vmsne.vi v8, v16, 0
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv64i1_nxv128i1:
@@ -194,14 +190,13 @@ define {<vscale x 64 x i1>, <vscale x 64 x i1>} @vector_deinterleave_nxv64i1_nxv
 ; ZIP-NEXT:    vmv1r.v v0, v9
 ; ZIP-NEXT:    vmerge.vim v24, v24, 1, v0
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; ZIP-NEXT:    ri.vunzip2a.vv v12, v16, v20
-; ZIP-NEXT:    ri.vunzip2b.vv v4, v16, v20
-; ZIP-NEXT:    ri.vunzip2a.vv v8, v24, v28
-; ZIP-NEXT:    ri.vunzip2b.vv v0, v24, v28
+; ZIP-NEXT:    ri.vunzip2a.vv v4, v16, v20
+; ZIP-NEXT:    ri.vunzip2b.vv v12, v16, v20
+; ZIP-NEXT:    ri.vunzip2a.vv v0, v24, v28
+; ZIP-NEXT:    ri.vunzip2b.vv v8, v24, v28
 ; ZIP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; ZIP-NEXT:    vmsne.vi v16, v8, 0
-; ZIP-NEXT:    vmsne.vi v8, v0, 0
-; ZIP-NEXT:    vmv1r.v v0, v16
+; ZIP-NEXT:    vmsne.vi v0, v0, 0
+; ZIP-NEXT:    vmsne.vi v8, v8, 0
 ; ZIP-NEXT:    ret
 %retval = call {<vscale x 64 x i1>, <vscale x 64 x i1>} @llvm.vector.deinterleave2.nxv128i1(<vscale x 128 x i1> %vec)
 ret {<vscale x 64 x i1>, <vscale x 64 x i1>} %retval
@@ -212,11 +207,11 @@ define {<vscale x 64 x i8>, <vscale x 64 x i8>} @vector_deinterleave_nxv64i8_nxv
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 8
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v24, v24, 8
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 8
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 8
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv64i8_nxv128i8:
@@ -238,11 +233,11 @@ define {<vscale x 32 x i16>, <vscale x 32 x i16>} @vector_deinterleave_nxv32i16_
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 16
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v24, v24, 16
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 16
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 16
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv32i16_nxv64i16:
@@ -265,11 +260,10 @@ define {<vscale x 16 x i32>, <vscale x 16 x i32>} @vector_deinterleave_nxv16i32_
 ; V-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; V-NEXT:    vmv8r.v v24, v16
 ; V-NEXT:    li a0, 32
-; V-NEXT:    vnsrl.wx v20, v24, a0
+; V-NEXT:    vnsrl.wx v20, v16, a0
 ; V-NEXT:    vnsrl.wx v16, v8, a0
-; V-NEXT:    vnsrl.wi v0, v8, 0
-; V-NEXT:    vnsrl.wi v4, v24, 0
-; V-NEXT:    vmv8r.v v8, v0
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v12, v24, 0
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv16i32_nxvv32i32:
@@ -289,12 +283,6 @@ ret {<vscale x 16 x i32>, <vscale x 16 x i32>} %retval
 define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_nxv8i64_nxv16i64(<vscale x 16 x i64> %vec) {
 ; V-LABEL: vector_deinterleave_nxv8i64_nxv16i64:
 ; V:       # %bb.0:
-; V-NEXT:    addi sp, sp, -16
-; V-NEXT:    .cfi_def_cfa_offset 16
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 4
-; V-NEXT:    sub sp, sp, a0
-; V-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; V-NEXT:    li a0, 85
 ; V-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; V-NEXT:    vmv.v.x v7, a0
@@ -304,33 +292,13 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_nxv8i64_nxv
 ; V-NEXT:    vcompress.vm v24, v8, v7
 ; V-NEXT:    vmv1r.v v28, v7
 ; V-NEXT:    vmv1r.v v29, v6
-; V-NEXT:    vcompress.vm v0, v8, v29
+; V-NEXT:    vcompress.vm v0, v8, v6
 ; V-NEXT:    vcompress.vm v8, v16, v28
-; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; V-NEXT:    vcompress.vm v8, v16, v29
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 3
-; V-NEXT:    add a0, sp, a0
-; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; V-NEXT:    vcompress.vm v16, v16, v29
 ; V-NEXT:    vmv4r.v v28, v8
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 3
-; V-NEXT:    add a0, sp, a0
-; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; V-NEXT:    vmv4r.v v4, v8
+; V-NEXT:    vmv4r.v v4, v16
 ; V-NEXT:    vmv8r.v v8, v24
 ; V-NEXT:    vmv8r.v v16, v0
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 4
-; V-NEXT:    add sp, sp, a0
-; V-NEXT:    .cfi_def_cfa sp, 16
-; V-NEXT:    addi sp, sp, 16
-; V-NEXT:    .cfi_def_cfa_offset 0
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv8i64_nxv16i64:
@@ -1018,9 +986,8 @@ define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_nxv4b
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; V-NEXT:    vnsrl.wi v10, v8, 0
-; V-NEXT:    vnsrl.wi v11, v8, 16
+; V-NEXT:    vnsrl.wi v9, v8, 16
 ; V-NEXT:    vmv.v.v v8, v10
-; V-NEXT:    vmv.v.v v9, v11
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv4bf16_nxv8bf16:
@@ -1040,9 +1007,8 @@ define {<vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_nxv4f16_n
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; V-NEXT:    vnsrl.wi v10, v8, 0
-; V-NEXT:    vnsrl.wi v11, v8, 16
+; V-NEXT:    vnsrl.wi v9, v8, 16
 ; V-NEXT:    vmv.v.v v8, v10
-; V-NEXT:    vmv.v.v v9, v11
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv4f16_nxv8f16:
@@ -1063,8 +1029,7 @@ define {<vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_nxv2f32
 ; V-NEXT:    li a0, 32
 ; V-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; V-NEXT:    vnsrl.wx v10, v8, a0
-; V-NEXT:    vnsrl.wi v11, v8, 0
-; V-NEXT:    vmv.v.v v8, v11
+; V-NEXT:    vnsrl.wi v8, v8, 0
 ; V-NEXT:    vmv.v.v v9, v10
 ; V-NEXT:    ret
 ;
@@ -1085,9 +1050,8 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_nxv8b
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; V-NEXT:    vnsrl.wi v12, v8, 0
-; V-NEXT:    vnsrl.wi v14, v8, 16
+; V-NEXT:    vnsrl.wi v10, v8, 16
 ; V-NEXT:    vmv.v.v v8, v12
-; V-NEXT:    vmv.v.v v10, v14
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv8bf16_nxv16bf16:
@@ -1107,9 +1071,8 @@ define {<vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_nxv8f16_n
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; V-NEXT:    vnsrl.wi v12, v8, 0
-; V-NEXT:    vnsrl.wi v14, v8, 16
+; V-NEXT:    vnsrl.wi v10, v8, 16
 ; V-NEXT:    vmv.v.v v8, v12
-; V-NEXT:    vmv.v.v v10, v14
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv8f16_nxv16f16:
@@ -1130,8 +1093,7 @@ define {<vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_nxv4f32
 ; V-NEXT:    li a0, 32
 ; V-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; V-NEXT:    vnsrl.wx v12, v8, a0
-; V-NEXT:    vnsrl.wi v14, v8, 0
-; V-NEXT:    vmv.v.v v8, v14
+; V-NEXT:    vnsrl.wi v8, v8, 0
 ; V-NEXT:    vmv.v.v v10, v12
 ; V-NEXT:    ret
 ;
@@ -1152,12 +1114,12 @@ define {<vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_nxv2f
 ; V:       # %bb.0:
 ; V-NEXT:    li a0, 85
 ; V-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; V-NEXT:    vmv.v.x v16, a0
+; V-NEXT:    vmv.v.x v12, a0
 ; V-NEXT:    li a0, 170
-; V-NEXT:    vmv.v.x v20, a0
+; V-NEXT:    vmv.v.x v16, a0
 ; V-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
-; V-NEXT:    vcompress.vm v12, v8, v16
-; V-NEXT:    vcompress.vm v16, v8, v20
+; V-NEXT:    vcompress.vm v12, v8, v12
+; V-NEXT:    vcompress.vm v16, v8, v16
 ; V-NEXT:    vmv2r.v v8, v12
 ; V-NEXT:    vmv2r.v v10, v16
 ; V-NEXT:    ret
@@ -1180,11 +1142,11 @@ define {<vscale x 32 x bfloat>, <vscale x 32 x bfloat>} @vector_deinterleave_nxv
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 16
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v24, v24, 16
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 16
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 16
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv32bf16_nxv64bf16:
@@ -1206,11 +1168,11 @@ define {<vscale x 32 x half>, <vscale x 32 x half>} @vector_deinterleave_nxv32f1
 ; V:       # %bb.0:
 ; V-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; V-NEXT:    vmv8r.v v24, v8
-; V-NEXT:    vnsrl.wi v8, v24, 0
-; V-NEXT:    vnsrl.wi v0, v24, 16
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v24, v24, 16
 ; V-NEXT:    vnsrl.wi v12, v16, 0
-; V-NEXT:    vnsrl.wi v4, v16, 16
-; V-NEXT:    vmv8r.v v16, v0
+; V-NEXT:    vnsrl.wi v28, v16, 16
+; V-NEXT:    vmv8r.v v16, v24
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv32f16_nxv64f16:
@@ -1233,11 +1195,10 @@ define {<vscale x 16 x float>, <vscale x 16 x float>} @vector_deinterleave_nxv16
 ; V-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; V-NEXT:    vmv8r.v v24, v16
 ; V-NEXT:    li a0, 32
-; V-NEXT:    vnsrl.wx v20, v24, a0
+; V-NEXT:    vnsrl.wx v20, v16, a0
 ; V-NEXT:    vnsrl.wx v16, v8, a0
-; V-NEXT:    vnsrl.wi v0, v8, 0
-; V-NEXT:    vnsrl.wi v4, v24, 0
-; V-NEXT:    vmv8r.v v8, v0
+; V-NEXT:    vnsrl.wi v8, v8, 0
+; V-NEXT:    vnsrl.wi v12, v24, 0
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv16f32_nxv32f32:
@@ -1257,12 +1218,6 @@ ret  {<vscale x 16 x float>, <vscale x 16 x float>} %retval
 define {<vscale x 8 x double>, <vscale x 8 x double>} @vector_deinterleave_nxv8f64_nxv16f64(<vscale x 16 x double> %vec) {
 ; V-LABEL: vector_deinterleave_nxv8f64_nxv16f64:
 ; V:       # %bb.0:
-; V-NEXT:    addi sp, sp, -16
-; V-NEXT:    .cfi_def_cfa_offset 16
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 4
-; V-NEXT:    sub sp, sp, a0
-; V-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; V-NEXT:    li a0, 85
 ; V-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; V-NEXT:    vmv.v.x v7, a0
@@ -1272,33 +1227,13 @@ define {<vscale x 8 x double>, <vscale x 8 x double>} @vector_deinterleave_nxv8f
 ; V-NEXT:    vcompress.vm v24, v8, v7
 ; V-NEXT:    vmv1r.v v28, v7
 ; V-NEXT:    vmv1r.v v29, v6
-; V-NEXT:    vcompress.vm v0, v8, v29
+; V-NEXT:    vcompress.vm v0, v8, v6
 ; V-NEXT:    vcompress.vm v8, v16, v28
-; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; V-NEXT:    vcompress.vm v8, v16, v29
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 3
-; V-NEXT:    add a0, sp, a0
-; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; V-NEXT:    addi a0, sp, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; V-NEXT:    vcompress.vm v16, v16, v29
 ; V-NEXT:    vmv4r.v v28, v8
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 3
-; V-NEXT:    add a0, sp, a0
-; V-NEXT:    addi a0, a0, 16
-; V-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; V-NEXT:    vmv4r.v v4, v8
+; V-NEXT:    vmv4r.v v4, v16
 ; V-NEXT:    vmv8r.v v8, v24
 ; V-NEXT:    vmv8r.v v16, v0
-; V-NEXT:    csrr a0, vlenb
-; V-NEXT:    slli a0, a0, 4
-; V-NEXT:    add sp, sp, a0
-; V-NEXT:    .cfi_def_cfa sp, 16
-; V-NEXT:    addi sp, sp, 16
-; V-NEXT:    .cfi_def_cfa_offset 0
 ; V-NEXT:    ret
 ;
 ; ZIP-LABEL: vector_deinterleave_nxv8f64_nxv16f64:

@@ -20,8 +20,8 @@ define <2 x double> @fixed_length(<2 x double> %a, <2 x double> %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    # kill: def $v11 killed $v10
-; CHECK-NEXT:    # kill: def $v9 killed $v8
+; CHECK-NEXT:    # kill: def $v11 killed $v10 killed $vtype
+; CHECK-NEXT:    # kill: def $v9 killed $v8 killed $vtype
 ; CHECK-NEXT:    # implicit-def: $v9
 ; CHECK-NEXT:    vfadd.vv v9, v8, v10
 ; CHECK-NEXT:    # implicit-def: $v8

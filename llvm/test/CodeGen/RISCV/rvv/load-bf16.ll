@@ -61,9 +61,9 @@ define <vscale x 32 x bfloat> @load_nxv32bf16(ptr %p) {
 define <vscale x 4 x float> @extload(ptr %p) {
 ; CHECK-LABEL: extload:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl1re16.v v10, (a0)
+; CHECK-NEXT:    vl1re16.v v8, (a0)
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v10
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
 ; CHECK-NEXT:    ret
   %x = load <vscale x 4 x bfloat>, ptr %p
   %y = fpext <vscale x 4 x bfloat> %x to <vscale x 4 x float>

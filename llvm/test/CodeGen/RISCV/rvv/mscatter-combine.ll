@@ -10,10 +10,10 @@ define void @complex_gep(ptr %p, <vscale x 2 x i64> %vec.ind, <vscale x 2 x i1> 
 ; RV32-LABEL: complex_gep:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; RV32-NEXT:    vnsrl.wi v10, v8, 0
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    li a1, 48
 ; RV32-NEXT:    addi a0, a0, 28
-; RV32-NEXT:    vmul.vx v8, v10, a1
+; RV32-NEXT:    vmul.vx v8, v8, a1
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    vsoxei32.v v9, (a0), v8, v0.t
 ; RV32-NEXT:    ret

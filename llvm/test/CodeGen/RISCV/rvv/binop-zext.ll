@@ -9,9 +9,9 @@ define <vscale x 8 x i32> @add(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: add:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v12, v8, v9
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v12
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -23,9 +23,9 @@ define <vscale x 8 x i32> @sub(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: sub:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwsubu.vv v12, v8, v9
+; CHECK-NEXT:    vwsubu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsext.vf2 v8, v12
+; CHECK-NEXT:    vsext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -37,9 +37,9 @@ define <vscale x 8 x i32> @mul(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: mul:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwmulu.vv v12, v8, v9
+; CHECK-NEXT:    vwmulu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v12
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -52,10 +52,10 @@ define <vscale x 8 x i32> @sdiv(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v9
-; CHECK-NEXT:    vzext.vf2 v12, v8
-; CHECK-NEXT:    vdivu.vv v12, v12, v10
+; CHECK-NEXT:    vzext.vf2 v8, v8
+; CHECK-NEXT:    vdivu.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v12
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -68,10 +68,10 @@ define <vscale x 8 x i32> @udiv(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v9
-; CHECK-NEXT:    vzext.vf2 v12, v8
-; CHECK-NEXT:    vdivu.vv v12, v12, v10
+; CHECK-NEXT:    vzext.vf2 v8, v8
+; CHECK-NEXT:    vdivu.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v12
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -84,10 +84,10 @@ define <vscale x 8 x i32> @srem(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v9
-; CHECK-NEXT:    vzext.vf2 v12, v8
-; CHECK-NEXT:    vremu.vv v12, v12, v10
+; CHECK-NEXT:    vzext.vf2 v8, v8
+; CHECK-NEXT:    vremu.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v12
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -100,10 +100,10 @@ define <vscale x 8 x i32> @urem(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v9
-; CHECK-NEXT:    vzext.vf2 v12, v8
-; CHECK-NEXT:    vremu.vv v12, v12, v10
+; CHECK-NEXT:    vzext.vf2 v8, v8
+; CHECK-NEXT:    vremu.vv v8, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v12
+; CHECK-NEXT:    vzext.vf2 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -115,9 +115,9 @@ define <vscale x 8 x i32> @and(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: and:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v12, v8, v9
+; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf4 v8, v12
+; CHECK-NEXT:    vzext.vf4 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -129,9 +129,9 @@ define <vscale x 8 x i32> @or(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vor.vv v12, v8, v9
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf4 v8, v12
+; CHECK-NEXT:    vzext.vf4 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>
@@ -143,9 +143,9 @@ define <vscale x 8 x i32> @xor(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: xor:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vxor.vv v12, v8, v9
+; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vzext.vf4 v8, v12
+; CHECK-NEXT:    vzext.vf4 v8, v8
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i32>

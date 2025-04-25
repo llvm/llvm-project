@@ -62,8 +62,8 @@ define void @truncstore(<vscale x 4 x float> %v, ptr %p) {
 ; CHECK-LABEL: truncstore:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfncvtbf16.f.f.w v10, v8
-; CHECK-NEXT:    vs1r.v v10, (a0)
+; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v8
+; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
   %w = fptrunc <vscale x 4 x float> %v to <vscale x 4 x bfloat>
   store <vscale x 4 x bfloat> %w, ptr %p

@@ -7,11 +7,11 @@ define void @interleave256(ptr %agg.result, ptr %0, ptr %1) {
 ; RV64-1024:       # %bb.0: # %entry
 ; RV64-1024-NEXT:    li a3, 128
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m2, ta, ma
-; RV64-1024-NEXT:    vle16.v v12, (a1)
-; RV64-1024-NEXT:    vle16.v v14, (a2)
+; RV64-1024-NEXT:    vle16.v v8, (a1)
+; RV64-1024-NEXT:    vle16.v v12, (a2)
 ; RV64-1024-NEXT:    li a1, -1
-; RV64-1024-NEXT:    vwaddu.vv v8, v12, v14
-; RV64-1024-NEXT:    vwmaccu.vx v8, a1, v14
+; RV64-1024-NEXT:    vwaddu.vv v8, v8, v12
+; RV64-1024-NEXT:    vwmaccu.vx v8, a1, v12
 ; RV64-1024-NEXT:    li a1, 256
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; RV64-1024-NEXT:    vse16.v v8, (a0)
@@ -21,11 +21,11 @@ define void @interleave256(ptr %agg.result, ptr %0, ptr %1) {
 ; RV64-2048:       # %bb.0: # %entry
 ; RV64-2048-NEXT:    li a3, 128
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m1, ta, ma
-; RV64-2048-NEXT:    vle16.v v10, (a1)
-; RV64-2048-NEXT:    vle16.v v11, (a2)
+; RV64-2048-NEXT:    vle16.v v8, (a1)
+; RV64-2048-NEXT:    vle16.v v10, (a2)
 ; RV64-2048-NEXT:    li a1, -1
-; RV64-2048-NEXT:    vwaddu.vv v8, v10, v11
-; RV64-2048-NEXT:    vwmaccu.vx v8, a1, v11
+; RV64-2048-NEXT:    vwaddu.vv v8, v8, v10
+; RV64-2048-NEXT:    vwmaccu.vx v8, a1, v10
 ; RV64-2048-NEXT:    li a1, 256
 ; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; RV64-2048-NEXT:    vse16.v v8, (a0)
@@ -45,11 +45,11 @@ define void @interleave512(ptr %agg.result, ptr %0, ptr %1) local_unnamed_addr {
 ; RV64-1024:       # %bb.0: # %entry
 ; RV64-1024-NEXT:    li a3, 256
 ; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, ta, ma
-; RV64-1024-NEXT:    vle16.v v16, (a1)
-; RV64-1024-NEXT:    vle16.v v20, (a2)
+; RV64-1024-NEXT:    vle16.v v8, (a1)
+; RV64-1024-NEXT:    vle16.v v16, (a2)
 ; RV64-1024-NEXT:    li a1, -1
-; RV64-1024-NEXT:    vwaddu.vv v8, v16, v20
-; RV64-1024-NEXT:    vwmaccu.vx v8, a1, v20
+; RV64-1024-NEXT:    vwaddu.vv v8, v8, v16
+; RV64-1024-NEXT:    vwmaccu.vx v8, a1, v16
 ; RV64-1024-NEXT:    li a1, 512
 ; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; RV64-1024-NEXT:    vse16.v v8, (a0)
@@ -59,11 +59,11 @@ define void @interleave512(ptr %agg.result, ptr %0, ptr %1) local_unnamed_addr {
 ; RV64-2048:       # %bb.0: # %entry
 ; RV64-2048-NEXT:    li a3, 256
 ; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, ta, ma
-; RV64-2048-NEXT:    vle16.v v12, (a1)
-; RV64-2048-NEXT:    vle16.v v14, (a2)
+; RV64-2048-NEXT:    vle16.v v8, (a1)
+; RV64-2048-NEXT:    vle16.v v12, (a2)
 ; RV64-2048-NEXT:    li a1, -1
-; RV64-2048-NEXT:    vwaddu.vv v8, v12, v14
-; RV64-2048-NEXT:    vwmaccu.vx v8, a1, v14
+; RV64-2048-NEXT:    vwaddu.vv v8, v8, v12
+; RV64-2048-NEXT:    vwmaccu.vx v8, a1, v12
 ; RV64-2048-NEXT:    li a1, 512
 ; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; RV64-2048-NEXT:    vse16.v v8, (a0)

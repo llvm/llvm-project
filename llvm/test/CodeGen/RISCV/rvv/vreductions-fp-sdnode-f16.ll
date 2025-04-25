@@ -19,9 +19,9 @@ define half @vreduce_fmin_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fmin_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmin.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -40,9 +40,9 @@ define half @vreduce_fmax_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fmax_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmax.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -61,9 +61,9 @@ define half @vreduce_fmin_nnan_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fmin_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmin.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -82,9 +82,9 @@ define half @vreduce_fmax_nnan_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fmax_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmax.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -111,10 +111,10 @@ define half @vreduce_fminimum_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fminimum_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vmfne.vv v8, v10, v10
-; ZVFHMIN-NEXT:    vcpop.m a0, v8
+; ZVFHMIN-NEXT:    vmfne.vv v10, v8, v8
+; ZVFHMIN-NEXT:    vcpop.m a0, v10
 ; ZVFHMIN-NEXT:    beqz a0, .LBB4_2
 ; ZVFHMIN-NEXT:  # %bb.1:
 ; ZVFHMIN-NEXT:    lui a0, 523264
@@ -122,7 +122,7 @@ define half @vreduce_fminimum_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
 ; ZVFHMIN-NEXT:  .LBB4_2:
-; ZVFHMIN-NEXT:    vfredmin.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -149,10 +149,10 @@ define half @vreduce_fmaximum_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fmaximum_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vmfne.vv v8, v10, v10
-; ZVFHMIN-NEXT:    vcpop.m a0, v8
+; ZVFHMIN-NEXT:    vmfne.vv v10, v8, v8
+; ZVFHMIN-NEXT:    vcpop.m a0, v10
 ; ZVFHMIN-NEXT:    beqz a0, .LBB5_2
 ; ZVFHMIN-NEXT:  # %bb.1:
 ; ZVFHMIN-NEXT:    lui a0, 523264
@@ -160,7 +160,7 @@ define half @vreduce_fmaximum_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
 ; ZVFHMIN-NEXT:  .LBB5_2:
-; ZVFHMIN-NEXT:    vfredmax.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -179,9 +179,9 @@ define half @vreduce_fminimum_nnan_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fminimum_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmin.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmin.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -200,9 +200,9 @@ define half @vreduce_fmaximum_nnan_nxv4f16(<vscale x 4 x half> %val) {
 ; ZVFHMIN-LABEL: vreduce_fmaximum_nnan_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vfredmax.vs v8, v10, v10
+; ZVFHMIN-NEXT:    vfredmax.vs v8, v8, v8
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret

@@ -942,8 +942,8 @@ define <vscale x 1 x i8> @vsra_vv_nxv1i8_sext_zext_mixed_trunc(<vscale x 1 x i8>
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsext.vf4 v9, v8
-; CHECK-NEXT:    vzext.vf4 v10, v8
-; CHECK-NEXT:    vsra.vv v8, v9, v10
+; CHECK-NEXT:    vzext.vf4 v8, v8
+; CHECK-NEXT:    vsra.vv v8, v9, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma

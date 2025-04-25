@@ -556,9 +556,9 @@ define <vscale x 1 x double> @test20(i64 %avl, <vscale x 1 x float> %a, <vscale 
 ; CHECK-LABEL: test20:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwadd.vv v11, v8, v9
+; CHECK-NEXT:    vfwadd.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfadd.vv v8, v11, v10
+; CHECK-NEXT:    vfadd.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.riscv.vsetvli(i64 %avl, i64 2, i64 7)

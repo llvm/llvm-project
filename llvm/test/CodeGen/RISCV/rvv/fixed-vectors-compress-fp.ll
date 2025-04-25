@@ -8,8 +8,7 @@ define <1 x bfloat> @vector_compress_v1bf16(<1 x bfloat> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v1bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <1 x bfloat> @llvm.experimental.vector.compress.v1bf16(<1 x bfloat> %v, <1 x i1> %mask, <1 x bfloat> undef)
   ret <1 x bfloat> %ret
@@ -29,8 +28,7 @@ define <2 x bfloat> @vector_compress_v2bf16(<2 x bfloat> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v2bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <2 x bfloat> @llvm.experimental.vector.compress.v2bf16(<2 x bfloat> %v, <2 x i1> %mask, <2 x bfloat> undef)
   ret <2 x bfloat> %ret
@@ -50,8 +48,7 @@ define <4 x bfloat> @vector_compress_v4bf16(<4 x bfloat> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v4bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <4 x bfloat> @llvm.experimental.vector.compress.v4bf16(<4 x bfloat> %v, <4 x i1> %mask, <4 x bfloat> undef)
   ret <4 x bfloat> %ret
@@ -71,8 +68,7 @@ define <8 x bfloat> @vector_compress_v8bf16(<8 x bfloat> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <8 x bfloat> @llvm.experimental.vector.compress.v8bf16(<8 x bfloat> %v, <8 x i1> %mask, <8 x bfloat> undef)
   ret <8 x bfloat> %ret
@@ -92,8 +88,7 @@ define <1 x half> @vector_compress_v1f16(<1 x half> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v1f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <1 x half> @llvm.experimental.vector.compress.v1f16(<1 x half> %v, <1 x i1> %mask, <1 x half> undef)
   ret <1 x half> %ret
@@ -113,8 +108,7 @@ define <2 x half> @vector_compress_v2f16(<2 x half> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <2 x half> @llvm.experimental.vector.compress.v2f16(<2 x half> %v, <2 x i1> %mask, <2 x half> undef)
   ret <2 x half> %ret
@@ -134,8 +128,7 @@ define <4 x half> @vector_compress_v4f16(<4 x half> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <4 x half> @llvm.experimental.vector.compress.v4f16(<4 x half> %v, <4 x i1> %mask, <4 x half> undef)
   ret <4 x half> %ret
@@ -155,8 +148,7 @@ define <8 x half> @vector_compress_v8f16(<8 x half> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <8 x half> @llvm.experimental.vector.compress.v8f16(<8 x half> %v, <8 x i1> %mask, <8 x half> undef)
   ret <8 x half> %ret
@@ -176,8 +168,7 @@ define <1 x float> @vector_compress_v1f32(<1 x float> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v1f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <1 x float> @llvm.experimental.vector.compress.v1f32(<1 x float> %v, <1 x i1> %mask, <1 x float> undef)
   ret <1 x float> %ret
@@ -197,8 +188,7 @@ define <2 x float> @vector_compress_v2f32(<2 x float> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <2 x float> @llvm.experimental.vector.compress.v2f32(<2 x float> %v, <2 x i1> %mask, <2 x float> undef)
   ret <2 x float> %ret
@@ -218,8 +208,7 @@ define <4 x float> @vector_compress_v4f32(<4 x float> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <4 x float> @llvm.experimental.vector.compress.v4f32(<4 x float> %v, <4 x i1> %mask, <4 x float> undef)
   ret <4 x float> %ret
@@ -239,8 +228,7 @@ define <8 x float> @vector_compress_v8f32(<8 x float> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vcompress.vm v10, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <8 x float> @llvm.experimental.vector.compress.v8f32(<8 x float> %v, <8 x i1> %mask, <8 x float> undef)
   ret <8 x float> %ret
@@ -260,8 +248,7 @@ define <1 x double> @vector_compress_v1f64(<1 x double> %v, <1 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v1f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <1 x double> @llvm.experimental.vector.compress.v1f64(<1 x double> %v, <1 x i1> %mask, <1 x double> undef)
   ret <1 x double> %ret
@@ -281,8 +268,7 @@ define <2 x double> @vector_compress_v2f64(<2 x double> %v, <2 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vcompress.vm v9, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <2 x double> @llvm.experimental.vector.compress.v2f64(<2 x double> %v, <2 x i1> %mask, <2 x double> undef)
   ret <2 x double> %ret
@@ -302,8 +288,7 @@ define <4 x double> @vector_compress_v4f64(<4 x double> %v, <4 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vcompress.vm v10, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <4 x double> @llvm.experimental.vector.compress.v4f64(<4 x double> %v, <4 x i1> %mask, <4 x double> undef)
   ret <4 x double> %ret
@@ -323,8 +308,7 @@ define <8 x double> @vector_compress_v8f64(<8 x double> %v, <8 x i1> %mask) {
 ; CHECK-LABEL: vector_compress_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vcompress.vm v12, v8, v0
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vcompress.vm v8, v8, v0
 ; CHECK-NEXT:    ret
   %ret = call <8 x double> @llvm.experimental.vector.compress.v8f64(<8 x double> %v, <8 x i1> %mask, <8 x double> undef)
   ret <8 x double> %ret

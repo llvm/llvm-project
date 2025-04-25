@@ -40,8 +40,8 @@ define void @test_store_mask_not_all_one(<vscale x 2 x float> %val, <vscale x 2 
 ; CHECK-NEXT:    vid.v v9, v0.t
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    vrsub.vx v9, v9, a1, v0.t
-; CHECK-NEXT:    vrgather.vv v10, v8, v9, v0.t
-; CHECK-NEXT:    vse32.v v10, (a0), v0.t
+; CHECK-NEXT:    vrgather.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x i1> %notallones, i32 %evl)
   call void @llvm.vp.store.nxv2f32.p0nxv2f32(<vscale x 2 x float> %rev, <vscale x 2 x float>* %ptr, <vscale x 2 x i1> %notallones, i32 %evl)
@@ -64,12 +64,12 @@ define void @test_different_evl(<vscale x 2 x float> %val, <vscale x 2 x float>*
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vrsub.vx v11, v11, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v10, v9
-; CHECK-NEXT:    vmsne.vi v0, v12, 0
+; CHECK-NEXT:    vrgatherei16.vv v9, v10, v9
+; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgather.vv v9, v8, v11
+; CHECK-NEXT:    vrgather.vv v8, v8, v11
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vse32.v v9, (a0), v0.t
+; CHECK-NEXT:    vse32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %storemask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> splat (i1 true), i32 %evl1)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x i1> splat (i1 true), i32 %evl1)

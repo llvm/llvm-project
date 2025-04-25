@@ -221,9 +221,7 @@ define <4 x i32> @zipeven_v4i32_both(<4 x i32> %a) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.i v0, 10
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vslideup.vi v9, v8, 1, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vslideup.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    ret
 ;
 ; ZIP-LABEL: zipeven_v4i32_both:

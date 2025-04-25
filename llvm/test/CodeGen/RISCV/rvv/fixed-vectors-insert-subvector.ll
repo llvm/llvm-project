@@ -285,14 +285,14 @@ define void @insert_v8i32_v2i32_0(ptr %vp, ptr %svp) {
 define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_2:
 ; VLA:       # %bb.0:
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vle32.v v8, (a0)
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLA-NEXT:    vle32.v v10, (a1)
-; VLA-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
-; VLA-NEXT:    vslideup.vi v8, v10, 2
+; VLA-NEXT:    vle32.v v8, (a1)
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vse32.v v8, (a0)
+; VLA-NEXT:    vle32.v v10, (a0)
+; VLA-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
+; VLA-NEXT:    vslideup.vi v10, v8, 2
+; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLA-NEXT:    vse32.v v10, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_2:
@@ -314,13 +314,12 @@ define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 define void @insert_v8i32_v2i32_6(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_6:
 ; VLA:       # %bb.0:
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vle32.v v8, (a0)
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLA-NEXT:    vle32.v v10, (a1)
+; VLA-NEXT:    vle32.v v8, (a1)
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vslideup.vi v8, v10, 6
-; VLA-NEXT:    vse32.v v8, (a0)
+; VLA-NEXT:    vle32.v v10, (a0)
+; VLA-NEXT:    vslideup.vi v10, v8, 6
+; VLA-NEXT:    vse32.v v10, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_6:
@@ -345,8 +344,8 @@ define void @insert_v8i32_undef_v2i32_6(ptr %vp, ptr %svp) {
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; VLA-NEXT:    vle32.v v8, (a1)
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vslideup.vi v10, v8, 6
-; VLA-NEXT:    vse32.v v10, (a0)
+; VLA-NEXT:    vslideup.vi v8, v8, 6
+; VLA-NEXT:    vse32.v v8, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_undef_v2i32_6:
@@ -657,8 +656,8 @@ define void @insert_v2i64_nxv16i64_lo2(ptr %psv, ptr %out) {
 ; VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; VLA-NEXT:    vle64.v v8, (a0)
 ; VLA-NEXT:    vsetivli zero, 4, e64, m8, ta, ma
-; VLA-NEXT:    vslideup.vi v16, v8, 2
-; VLA-NEXT:    vs8r.v v16, (a1)
+; VLA-NEXT:    vslideup.vi v8, v8, 2
+; VLA-NEXT:    vs8r.v v8, (a1)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v2i64_nxv16i64_lo2:

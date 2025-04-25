@@ -69,8 +69,8 @@ define <8 x i8> @vaaddu_vv_v8i8_floor_lshr2(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_floor_lshr2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    vnsrl.wi v8, v10, 2
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9
+; CHECK-NEXT:    vnsrl.wi v8, v8, 2
 ; CHECK-NEXT:    ret
   %xzv = zext <8 x i8> %x to <8 x i16>
   %yzv = zext <8 x i8> %y to <8 x i16>
@@ -282,9 +282,9 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_lshr2(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_ceil_lshr2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v8, v10, 2
+; CHECK-NEXT:    vadd.vi v8, v8, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 2
 ; CHECK-NEXT:    ret
@@ -301,11 +301,11 @@ define <8 x i8> @vaaddu_vv_v8i8_ceil_add2(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: vaaddu_vv_v8i8_ceil_add2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9
 ; CHECK-NEXT:    li a0, 2
 ; CHECK-NEXT:    csrwi vxrm, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vaaddu.vx v8, v10, a0
+; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret

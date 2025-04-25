@@ -32,8 +32,8 @@ define i32 @compare_bytes_simple(ptr %a, ptr %b, i32 signext %len, i32 signext %
 ; CHECK-NEXT:    vsetvli a5, a5, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a6)
 ; CHECK-NEXT:    vle8.v v10, (a7)
-; CHECK-NEXT:    vmsne.vv v12, v8, v10
-; CHECK-NEXT:    vfirst.m a7, v12
+; CHECK-NEXT:    vmsne.vv v8, v8, v10
+; CHECK-NEXT:    vfirst.m a7, v8
 ; CHECK-NEXT:    mv a6, a5
 ; CHECK-NEXT:    bltz a7, .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # %mismatch_vec_loop

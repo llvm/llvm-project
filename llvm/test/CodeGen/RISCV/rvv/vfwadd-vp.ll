@@ -8,9 +8,9 @@ define <vscale x 2 x float> @vfwadd_same_operand_nxv2bf16(<vscale x 2 x bfloat> 
 ; CHECK-NEXT:    slli a0, a0, 32
 ; CHECK-NEXT:    srli a0, a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfadd.vv v8, v9, v9
+; CHECK-NEXT:    vfadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 bb:
   %tmp = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2bf16(<vscale x 2 x bfloat> %arg, <vscale x 2 x i1> splat (i1 true), i32 %vl)
@@ -46,8 +46,7 @@ define <vscale x 2 x float> @vfwadd_same_operand(<vscale x 2 x half> %arg, i32 s
 ; ZVFH-NEXT:    slli a0, a0, 32
 ; ZVFH-NEXT:    srli a0, a0, 32
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfwadd.vv v9, v8, v8
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfwadd.vv v8, v8, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfwadd_same_operand:
@@ -55,9 +54,9 @@ define <vscale x 2 x float> @vfwadd_same_operand(<vscale x 2 x half> %arg, i32 s
 ; ZVFHMIN-NEXT:    slli a0, a0, 32
 ; ZVFHMIN-NEXT:    srli a0, a0, 32
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vfadd.vv v8, v9, v9
+; ZVFHMIN-NEXT:    vfadd.vv v8, v8, v8
 ; ZVFHMIN-NEXT:    ret
 bb:
   %tmp = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2f16(<vscale x 2 x half> %arg, <vscale x 2 x i1> splat (i1 true), i32 %vl)
@@ -80,9 +79,9 @@ define <vscale x 2 x float> @vfwadd_tu(<vscale x 2 x half> %arg, <vscale x 2 x f
 ; ZVFHMIN-NEXT:    slli a0, a0, 32
 ; ZVFHMIN-NEXT:    srli a0, a0, 32
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
-; ZVFHMIN-NEXT:    vfadd.vv v9, v9, v10
+; ZVFHMIN-NEXT:    vfadd.vv v9, v9, v8
 ; ZVFHMIN-NEXT:    vmv1r.v v8, v9
 ; ZVFHMIN-NEXT:    ret
 bb:

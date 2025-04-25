@@ -10,8 +10,7 @@ define <2 x i8> @vslide1up_2xi8(<2 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_2xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <2 x i8> poison, i8 %b, i64 0
   %v1 = shufflevector <2 x i8> %v, <2 x i8> %vb, <2 x i32> <i32 2, i32 0>
@@ -22,8 +21,7 @@ define <4 x i8> @vslide1up_4xi8(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_4xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x i8> poison, i8 %b, i64 0
   %v1 = shufflevector <4 x i8> %v, <4 x i8> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
@@ -34,8 +32,7 @@ define <4 x i8> @vslide1up_4xi8_swapped(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_4xi8_swapped:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x i8> poison, i8 %b, i64 0
   %v1 = shufflevector <4 x i8> %vb, <4 x i8> %v, <4 x i32> <i32 0, i32 4, i32 5, i32 6>
@@ -46,8 +43,7 @@ define <2 x i16> @vslide1up_2xi16(<2 x i16> %v, i16 %b) {
 ; CHECK-LABEL: vslide1up_2xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <2 x i16> poison, i16 %b, i64 0
   %v1 = shufflevector <2 x i16> %v, <2 x i16> %vb, <2 x i32> <i32 2, i32 0>
@@ -58,8 +54,7 @@ define <4 x i16> @vslide1up_4xi16(<4 x i16> %v, i16 %b) {
 ; CHECK-LABEL: vslide1up_4xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x i16> poison, i16 %b, i64 0
   %v1 = shufflevector <4 x i16> %v, <4 x i16> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
@@ -70,8 +65,7 @@ define <2 x i32> @vslide1up_2xi32(<2 x i32> %v, i32 %b) {
 ; CHECK-LABEL: vslide1up_2xi32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <2 x i32> poison, i32 %b, i64 0
   %v1 = shufflevector <2 x i32> %v, <2 x i32> %vb, <2 x i32> <i32 2, i32 0>
@@ -82,8 +76,7 @@ define <4 x i32> @vslide1up_4xi32(<4 x i32> %v, i32 %b) {
 ; CHECK-LABEL: vslide1up_4xi32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x i32> poison, i32 %b, i64 0
   %v1 = shufflevector <4 x i32> %v, <4 x i32> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
@@ -109,8 +102,7 @@ define <2 x i64> @vslide1up_2xi64(<2 x i64> %v, i64 %b) {
 ; RV64-LABEL: vslide1up_2xi64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vslide1up.vx v9, v8, a0
-; RV64-NEXT:    vmv.v.v v8, v9
+; RV64-NEXT:    vslide1up.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %vb = insertelement <2 x i64> poison, i64 %b, i64 0
   %v1 = shufflevector <2 x i64> %v, <2 x i64> %vb, <2 x i32> <i32 2, i32 0>
@@ -136,8 +128,7 @@ define <4 x i64> @vslide1up_4xi64(<4 x i64> %v, i64 %b) {
 ; RV64-LABEL: vslide1up_4xi64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vslide1up.vx v10, v8, a0
-; RV64-NEXT:    vmv.v.v v8, v10
+; RV64-NEXT:    vslide1up.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %vb = insertelement <4 x i64> poison, i64 %b, i64 0
   %v1 = shufflevector <4 x i64> %v, <4 x i64> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
@@ -149,8 +140,7 @@ define <2 x bfloat> @vslide1up_2xbf16(<2 x bfloat> %v, bfloat %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a0, fa0
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <2 x bfloat> poison, bfloat %b, i64 0
   %v1 = shufflevector <2 x bfloat> %v, <2 x bfloat> %vb, <2 x i32> <i32 2, i32 0>
@@ -162,8 +152,7 @@ define <4 x bfloat> @vslide1up_4xbf16(<4 x bfloat> %v, bfloat %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fmv.x.h a0, fa0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x bfloat> poison, bfloat %b, i64 0
   %v1 = shufflevector <4 x bfloat> %v, <4 x bfloat> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
@@ -174,16 +163,14 @@ define <2 x half> @vslide1up_2xf16(<2 x half> %v, half %b) {
 ; ZVFH-LABEL: vslide1up_2xf16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfslide1up.vf v9, v8, fa0
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfslide1up.vf v8, v8, fa0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vslide1up_2xf16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fmv.x.h a0, fa0
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vslide1up.vx v9, v8, a0
-; ZVFHMIN-NEXT:    vmv1r.v v8, v9
+; ZVFHMIN-NEXT:    vslide1up.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
   %vb = insertelement <2 x half> poison, half %b, i64 0
   %v1 = shufflevector <2 x half> %v, <2 x half> %vb, <2 x i32> <i32 2, i32 0>
@@ -194,16 +181,14 @@ define <4 x half> @vslide1up_4xf16(<4 x half> %v, half %b) {
 ; ZVFH-LABEL: vslide1up_4xf16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfslide1up.vf v9, v8, fa0
-; ZVFH-NEXT:    vmv1r.v v8, v9
+; ZVFH-NEXT:    vfslide1up.vf v8, v8, fa0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vslide1up_4xf16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    fmv.x.h a0, fa0
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vslide1up.vx v9, v8, a0
-; ZVFHMIN-NEXT:    vmv1r.v v8, v9
+; ZVFHMIN-NEXT:    vslide1up.vx v8, v8, a0
 ; ZVFHMIN-NEXT:    ret
   %vb = insertelement <4 x half> poison, half %b, i64 0
   %v1 = shufflevector <4 x half> %v, <4 x half> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
@@ -214,8 +199,7 @@ define <2 x float> @vslide1up_2xf32(<2 x float> %v, float %b) {
 ; CHECK-LABEL: vslide1up_2xf32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfslide1up.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %vb = insertelement <2 x float> poison, float %b, i64 0
   %v1 = shufflevector <2 x float> %v, <2 x float> %vb, <2 x i32> <i32 2, i32 0>
@@ -226,8 +210,7 @@ define <4 x float> @vslide1up_4xf32(<4 x float> %v, float %b) {
 ; CHECK-LABEL: vslide1up_4xf32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vfslide1up.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x float> poison, float %b, i64 0
   %v1 = shufflevector <4 x float> %v, <4 x float> %vb, <4 x i32> <i32 4, i32 0, i32 1, i32 2>
@@ -238,8 +221,7 @@ define <2 x double> @vslide1up_2xf64(<2 x double> %v, double %b) {
 ; CHECK-LABEL: vslide1up_2xf64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vfslide1up.vf v9, v8, fa0
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vfslide1up.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %vb = insertelement <2 x double> poison, double %b, i64 0
   %v1 = shufflevector <2 x double> %v, <2 x double> %vb, <2 x i32> <i32 2, i32 0>
@@ -263,8 +245,7 @@ define <4 x i8> @vslide1up_4xi8_with_splat(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_4xi8_with_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslide1up.vx v9, v8, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslide1up.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %vb = insertelement <4 x i8> poison, i8 %b, i64 0
   %v1 = shufflevector <4 x i8> %vb, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -276,10 +257,9 @@ define <2 x double> @vslide1up_v2f64_inverted(<2 x double> %v, double %b) {
 ; CHECK-LABEL: vslide1up_v2f64_inverted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; CHECK-NEXT:    vfmv.s.f v9, fa0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    ret
   %v1 = shufflevector <2 x double> %v, <2 x double> poison, <2 x i32> <i32 0, i32 0>
   %v2 = insertelement <2 x double> %v1, double %b, i64 0
@@ -290,10 +270,9 @@ define <4 x i8> @vslide1up_4xi8_inverted(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_4xi8_inverted:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vslideup.vi v8, v8, 1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    ret
   %v1 = shufflevector <4 x i8> %v, <4 x i8> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 2>
   %v2 = insertelement <4 x i8> %v1, i8 %b, i64 0
@@ -364,8 +343,7 @@ define <4 x i8> @vslide1up_4xi8_neg_undef_insert(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_4xi8_neg_undef_insert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslideup.vi v8, v8, 1
 ; CHECK-NEXT:    ret
   %v2 = shufflevector <4 x i8> poison, <4 x i8> %v, <4 x i32> <i32 0, i32 4, i32 5, i32 6>
   ret <4 x i8> %v2
@@ -375,9 +353,7 @@ define <4 x i8> @vslide1up_4xi8_neg_incorrect_insert(<4 x i8> %v, i8 %b) {
 ; CHECK-LABEL: vslide1up_4xi8_neg_incorrect_insert:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vslideup.vi v8, v8, 1
 ; CHECK-NEXT:    ret
   %v2 = shufflevector <4 x i8> poison, <4 x i8> %v, <4 x i32> <i32 4, i32 4, i32 5, i32 6>
   ret <4 x i8> %v2

@@ -6,8 +6,7 @@ define <4 x i64> @m2_splat_0(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   ret <4 x i64> %res
@@ -17,9 +16,8 @@ define <4 x i64> @m2_splat_in_chunks(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_in_chunks:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vrgather.vi v11, v9, 0
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
+; CHECK-NEXT:    vrgather.vi v9, v9, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
   ret <4 x i64> %res
@@ -29,11 +27,10 @@ define <8 x i64> @m4_splat_in_chunks(<8 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m4_splat_in_chunks:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v12, v8, 0
-; CHECK-NEXT:    vrgather.vi v13, v9, 0
-; CHECK-NEXT:    vrgather.vi v14, v10, 0
-; CHECK-NEXT:    vrgather.vi v15, v11, 1
-; CHECK-NEXT:    vmv4r.v v8, v12
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
+; CHECK-NEXT:    vrgather.vi v9, v9, 0
+; CHECK-NEXT:    vrgather.vi v10, v10, 0
+; CHECK-NEXT:    vrgather.vi v11, v11, 1
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i64> %v1, <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 4, i32 7, i32 7>
   ret <8 x i64> %res
@@ -44,9 +41,7 @@ define <4 x i64> @m2_splat_with_tail(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_with_tail:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vmv1r.v v11, v9
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x i64> %res
@@ -70,10 +65,10 @@ define <8 x i32> @m2_pair_swap_vl8(<8 x i32> %v1) vscale_range(2,2) {
 ; RV32-LABEL: m2_pair_swap_vl8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vmv.v.i v10, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vwsubu.vx v10, v12, a0
+; RV32-NEXT:    vwsubu.vx v10, v10, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    vand.vx v10, v10, a1
@@ -99,9 +94,7 @@ define <4 x i64> @m2_splat_into_identity(<4 x i64> %v1) vscale_range(2,2) {
 ; CHECK-LABEL: m2_splat_into_identity:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v10, v8, 0
-; CHECK-NEXT:    vmv1r.v v11, v9
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
   ret <4 x i64> %res
@@ -134,9 +127,8 @@ define <4 x i64> @m2_splat_two_source(<4 x i64> %v1, <4 x i64> %v2) vscale_range
 ; CHECK-LABEL: m2_splat_two_source:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v12, v8, 0
-; CHECK-NEXT:    vrgather.vi v13, v11, 1
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
+; CHECK-NEXT:    vrgather.vi v9, v11, 1
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> %v2, <4 x i32> <i32 0, i32 0, i32 7, i32 7>
   ret <4 x i64> %res
@@ -157,9 +149,8 @@ define <4 x i64> @m2_splat_into_slide_two_source_v2_lo(<4 x i64> %v1, <4 x i64> 
 ; CHECK-LABEL: m2_splat_into_slide_two_source_v2_lo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v12, v8, 0
-; CHECK-NEXT:    vmv1r.v v13, v10
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
+; CHECK-NEXT:    vmv1r.v v9, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> %v2, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x i64> %res
@@ -169,10 +160,9 @@ define <4 x i64> @m2_splat_into_slide_two_source(<4 x i64> %v1, <4 x i64> %v2) v
 ; CHECK-LABEL: m2_splat_into_slide_two_source:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v13, v10, 1
-; CHECK-NEXT:    vslideup.vi v13, v11, 1
-; CHECK-NEXT:    vrgather.vi v12, v8, 0
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vslidedown.vi v9, v10, 1
+; CHECK-NEXT:    vslideup.vi v9, v11, 1
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
 ; CHECK-NEXT:    ret
   %res = shufflevector <4 x i64> %v1, <4 x i64> %v2, <4 x i32> <i32 0, i32 0, i32 5, i32 6>
   ret <4 x i64> %res
@@ -309,10 +299,9 @@ define <16 x i32> @m4_square_num_of_shuffles_in_chunks(<16 x i32> %0) vscale_ran
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI17_0)
 ; CHECK-NEXT:    vl1r.v v12, (a0)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v16, v12
+; CHECK-NEXT:    vsext.vf2 v12, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v12, v8, v16
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vrgatherei16.vv v8, v8, v12
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <16 x i32> %0, <16 x i32> poison, <16 x i32> <i32 0, i32 5, i32 8, i32 12, i32 1, i32 4, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
@@ -338,10 +327,10 @@ define i64 @multi_chunks_shuffle(<32 x i32> %0) vscale_range(8,8) {
 ; RV32-LABEL: multi_chunks_shuffle:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vmv.v.i v10, 0
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    li a1, 63
-; RV32-NEXT:    vwsubu.vx v10, v12, a0
+; RV32-NEXT:    vwsubu.vx v10, v10, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vmv.v.x v12, a0
 ; RV32-NEXT:    lui a0, 61681

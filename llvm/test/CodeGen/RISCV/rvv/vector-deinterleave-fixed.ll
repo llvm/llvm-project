@@ -36,9 +36,8 @@ define {<16 x i8>, <16 x i8>} @vector_deinterleave_v16i8_v32i8(<32 x i8> %vec) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 8
+; CHECK-NEXT:    vnsrl.wi v9, v8, 8
 ; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vmv.v.v v9, v11
 ; CHECK-NEXT:    ret
 %retval = call {<16 x i8>, <16 x i8>} @llvm.vector.deinterleave2.v32i8(<32 x i8> %vec)
 ret {<16 x i8>, <16 x i8>} %retval
@@ -49,9 +48,8 @@ define {<8 x i16>, <8 x i16>} @vector_deinterleave_v8i16_v16i16(<16 x i16> %vec)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 16
+; CHECK-NEXT:    vnsrl.wi v9, v8, 16
 ; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vmv.v.v v9, v11
 ; CHECK-NEXT:    ret
 %retval = call {<8 x i16>, <8 x i16>} @llvm.vector.deinterleave2.v16i16(<16 x i16> %vec)
 ret {<8 x i16>, <8 x i16>} %retval
@@ -63,8 +61,7 @@ define {<4 x i32>, <4 x i32>} @vector_deinterleave_v4i32_vv8i32(<8 x i32> %vec) 
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wx v10, v8, a0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 0
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vmv.v.v v9, v10
 ; CHECK-NEXT:    ret
 %retval = call {<4 x i32>, <4 x i32>} @llvm.vector.deinterleave2.v8i32(<8 x i32> %vec)
@@ -118,11 +115,10 @@ define {<4 x i64>, <4 x i64>} @vector_deinterleave_v4i64_v8i64(<8 x i64> %vec) {
 ; V-NEXT:    vslidedown.vi v14, v8, 2, v0.t
 ; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; V-NEXT:    vmv.v.i v0, 4
-; V-NEXT:    vmv2r.v v8, v16
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; V-NEXT:    vslideup.vi v8, v16, 1, v0.t
+; V-NEXT:    vslideup.vi v16, v16, 1, v0.t
 ; V-NEXT:    vmv1r.v v0, v11
-; V-NEXT:    vmerge.vvm v10, v14, v8, v0
+; V-NEXT:    vmerge.vvm v10, v14, v16, v0
 ; V-NEXT:    vmv2r.v v8, v12
 ; V-NEXT:    ret
 ;
@@ -171,17 +167,17 @@ define {<8 x i64>, <8 x i64>} @vector_deinterleave_v8i64_v16i64(<16 x i64> %vec)
 ; CHECK-NEXT:    li a0, 170
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v20, v16, v16
-; CHECK-NEXT:    vmv.s.x v21, a0
+; CHECK-NEXT:    vmv.s.x v13, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vcompress.vm v16, v8, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vadd.vi v22, v20, -8
+; CHECK-NEXT:    vadd.vi v21, v20, -8
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vcompress.vm v12, v8, v21
+; CHECK-NEXT:    vcompress.vm v12, v8, v13
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vadd.vi v8, v20, -7
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; CHECK-NEXT:    vrgatherei16.vv v16, v24, v22, v0.t
+; CHECK-NEXT:    vrgatherei16.vv v16, v24, v21, v0.t
 ; CHECK-NEXT:    vrgatherei16.vv v12, v24, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -586,9 +582,8 @@ define {<8 x half>, <8 x half>} @vector_deinterleave_v8f16_v16f16(<16 x half> %v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 16
+; CHECK-NEXT:    vnsrl.wi v9, v8, 16
 ; CHECK-NEXT:    vmv.v.v v8, v10
-; CHECK-NEXT:    vmv.v.v v9, v11
 ; CHECK-NEXT:    ret
 %retval = call {<8 x half>, <8 x half>} @llvm.vector.deinterleave2.v16f16(<16 x half> %vec)
 ret {<8 x half>, <8 x half>} %retval
@@ -600,8 +595,7 @@ define {<4 x float>, <4 x float>} @vector_deinterleave_v4f32_v8f32(<8 x float> %
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vnsrl.wx v10, v8, a0
-; CHECK-NEXT:    vnsrl.wi v11, v8, 0
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vmv.v.v v9, v10
 ; CHECK-NEXT:    ret
 %retval = call {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float> %vec)
@@ -655,11 +649,10 @@ define {<4 x double>, <4 x double>} @vector_deinterleave_v4f64_v8f64(<8 x double
 ; V-NEXT:    vslidedown.vi v14, v8, 2, v0.t
 ; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; V-NEXT:    vmv.v.i v0, 4
-; V-NEXT:    vmv2r.v v8, v16
 ; V-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
-; V-NEXT:    vslideup.vi v8, v16, 1, v0.t
+; V-NEXT:    vslideup.vi v16, v16, 1, v0.t
 ; V-NEXT:    vmv1r.v v0, v11
-; V-NEXT:    vmerge.vvm v10, v14, v8, v0
+; V-NEXT:    vmerge.vvm v10, v14, v16, v0
 ; V-NEXT:    vmv2r.v v8, v12
 ; V-NEXT:    ret
 ;

@@ -549,9 +549,9 @@ define <vscale x 2 x i32> @test_vsetvli_x0_x0(ptr %x, ptr %y, <vscale x 2 x i32>
 ; CHECK-NEXT:    andi a3, a3, 1
 ; CHECK-NEXT:    beqz a3, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %if
-; CHECK-NEXT:    vle16.v v10, (a1)
+; CHECK-NEXT:    vle16.v v8, (a1)
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vwcvt.x.x.v v8, v10
+; CHECK-NEXT:    vwcvt.x.x.v v8, v8
 ; CHECK-NEXT:  .LBB10_2: # %if.end
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
@@ -929,8 +929,8 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x(ptr %x, ptr %y, i1 %cond) nou
 ; CHECK-NEXT:    beqz a2, .LBB21_2
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vwcvt.x.x.v v8, v9
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vwcvt.x.x.v v8, v8
 ; CHECK-NEXT:    j .LBB21_3
 ; CHECK-NEXT:  .LBB21_2:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
@@ -965,8 +965,8 @@ define <vscale x 2 x i32> @test_ratio_only_vmv_s_x2(ptr %x, ptr %y, i1 %cond) no
 ; CHECK-NEXT:    j .LBB22_3
 ; CHECK-NEXT:  .LBB22_2:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vwcvt.x.x.v v8, v9
+; CHECK-NEXT:    vle16.v v8, (a1)
+; CHECK-NEXT:    vwcvt.x.x.v v8, v8
 ; CHECK-NEXT:  .LBB22_3: # %if.end
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, zero
@@ -996,8 +996,8 @@ define void @pre_over_vle(ptr %A) {
 ; CHECK-NEXT:  .LBB23_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsext.vf4 v9, v8
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vsext.vf4 v8, v8
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, a0, 8
 ; CHECK-NEXT:    bne a0, a1, .LBB23_1
 ; CHECK-NEXT:  # %bb.2: # %exit

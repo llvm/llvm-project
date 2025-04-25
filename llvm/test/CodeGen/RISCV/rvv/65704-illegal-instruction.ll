@@ -24,8 +24,8 @@ define void @foo(<vscale x 8 x i8> %0) {
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v10, 0
-; CHECK-NEXT:    vslideup.vi v8, v10, 0
+; CHECK-NEXT:    vslideup.vi v9, v8, 0
+; CHECK-NEXT:    vslideup.vi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.x.s s1, v9
 ; CHECK-NEXT:    vmv.x.s s2, v8

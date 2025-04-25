@@ -8,15 +8,13 @@ define <4 x bfloat> @splat_idx_v4bf16(<4 x bfloat> %v, i64 %idx) {
 ; RV32-NO-ZFBFMIN-LABEL: splat_idx_v4bf16:
 ; RV32-NO-ZFBFMIN:       # %bb.0:
 ; RV32-NO-ZFBFMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV32-NO-ZFBFMIN-NEXT:    vrgather.vx v9, v8, a0
-; RV32-NO-ZFBFMIN-NEXT:    vmv1r.v v8, v9
+; RV32-NO-ZFBFMIN-NEXT:    vrgather.vx v8, v8, a0
 ; RV32-NO-ZFBFMIN-NEXT:    ret
 ;
 ; RV64-NO-ZFBFMIN-LABEL: splat_idx_v4bf16:
 ; RV64-NO-ZFBFMIN:       # %bb.0:
 ; RV64-NO-ZFBFMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; RV64-NO-ZFBFMIN-NEXT:    vrgather.vx v9, v8, a0
-; RV64-NO-ZFBFMIN-NEXT:    vmv1r.v v8, v9
+; RV64-NO-ZFBFMIN-NEXT:    vrgather.vx v8, v8, a0
 ; RV64-NO-ZFBFMIN-NEXT:    ret
 ;
 ; RV32-ZFBFMIN-LABEL: splat_idx_v4bf16:

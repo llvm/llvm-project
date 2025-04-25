@@ -10,8 +10,7 @@ define <vscale x 2 x float> @vfpext_nxv2f16_nxv2f32(<vscale x 2 x half> %a, <vsc
 ; CHECK-LABEL: vfpext_nxv2f16_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x float> %v
@@ -21,8 +20,7 @@ define <vscale x 2 x float> @vfpext_nxv2f16_nxv2f32_unmasked(<vscale x 2 x half>
 ; CHECK-LABEL: vfpext_nxv2f16_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x float> %v
@@ -34,9 +32,9 @@ define <vscale x 2 x double> @vfpext_nxv2f16_nxv2f64(<vscale x 2 x half> %a, <vs
 ; CHECK-LABEL: vfpext_nxv2f16_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8, v0.t
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x double> %v
@@ -46,9 +44,9 @@ define <vscale x 2 x double> @vfpext_nxv2f16_nxv2f64_unmasked(<vscale x 2 x half
 ; CHECK-LABEL: vfpext_nxv2f16_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f16(<vscale x 2 x half> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x double> %v
@@ -60,8 +58,7 @@ define <vscale x 2 x double> @vfpext_nxv2f32_nxv2f64(<vscale x 2 x float> %a, <v
 ; CHECK-LABEL: vfpext_nxv2f32_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x double> %v
@@ -71,8 +68,7 @@ define <vscale x 2 x double> @vfpext_nxv2f32_nxv2f64_unmasked(<vscale x 2 x floa
 ; CHECK-LABEL: vfpext_nxv2f32_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x double> %v
@@ -84,8 +80,7 @@ define <vscale x 7 x double> @vfpext_nxv7f32_nxv7f64(<vscale x 7 x float> %a, <v
 ; CHECK-LABEL: vfpext_nxv7f32_nxv7f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v8
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v16, v0.t
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 7 x double> @llvm.vp.fpext.nxv7f64.nxv7f32(<vscale x 7 x float> %a, <vscale x 7 x i1> %m, i32 %vl)
   ret <vscale x 7 x double> %v
@@ -114,8 +109,7 @@ define <vscale x 32 x float> @vfpext_nxv32f16_nxv32f32(<vscale x 32 x half> %a, 
 ; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v24, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x float> @llvm.vp.fpext.nxv32f32.nxv32f16(<vscale x 32 x half> %a, <vscale x 32 x i1> %m, i32 %vl)
   ret <vscale x 32 x float> %v
@@ -127,8 +121,7 @@ define <vscale x 2 x float> @vfpext_nxv2bf16_nxv2f32(<vscale x 2 x bfloat> %a, <
 ; CHECK-LABEL: vfpext_nxv2bf16_nxv2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x float> %v
@@ -138,8 +131,7 @@ define <vscale x 2 x float> @vfpext_nxv2bf16_nxv2f32_unmasked(<vscale x 2 x bflo
 ; CHECK-LABEL: vfpext_nxv2bf16_nxv2f32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x float> @llvm.vp.fpext.nxv2f32.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x float> %v
@@ -151,9 +143,9 @@ define <vscale x 2 x double> @vfpext_nxv2bf16_nxv2f64(<vscale x 2 x bfloat> %a, 
 ; CHECK-LABEL: vfpext_nxv2bf16_nxv2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8, v0.t
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x double> %v
@@ -163,9 +155,9 @@ define <vscale x 2 x double> @vfpext_nxv2bf16_nxv2f64_unmasked(<vscale x 2 x bfl
 ; CHECK-LABEL: vfpext_nxv2bf16_nxv2f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v10, v8
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2bf16(<vscale x 2 x bfloat> %a, <vscale x 2 x i1> splat (i1 true), i32 %vl)
   ret <vscale x 2 x double> %v

@@ -7,8 +7,8 @@ define void @fpext_v2f16_v2f32(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
-; CHECK-NEXT:    vse32.v v9, (a1)
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %x
   %d = fpext <2 x half> %a to <2 x float>
@@ -21,9 +21,9 @@ define void @fpext_v2f16_v2f64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v9
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, ptr %x
@@ -36,8 +36,8 @@ define void @fpext_v8f16_v8f32(ptr %x, ptr %y) {
 ; CHECK-LABEL: fpext_v8f16_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v10, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v10
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, ptr %x
@@ -51,9 +51,9 @@ define void @fpext_v8f16_v8f64(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vfwcvt.f.f.v v8, v12
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, ptr %x
@@ -67,8 +67,8 @@ define void @fpround_v2f32_v2f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfncvt.f.f.w v9, v8
-; CHECK-NEXT:    vse16.v v9, (a1)
+; CHECK-NEXT:    vfncvt.f.f.w v8, v8
+; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x float>, ptr %x
   %d = fptrunc <2 x float> %a to <2 x half>
@@ -81,9 +81,9 @@ define void @fpround_v2f64_v2f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfncvt.rod.f.f.w v9, v8
+; CHECK-NEXT:    vfncvt.rod.f.f.w v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v8, v9
+; CHECK-NEXT:    vfncvt.f.f.w v8, v8
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, ptr %x
@@ -97,8 +97,8 @@ define void @fpround_v8f32_v8f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfncvt.f.f.w v10, v8
-; CHECK-NEXT:    vse16.v v10, (a1)
+; CHECK-NEXT:    vfncvt.f.f.w v8, v8
+; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %x
   %d = fptrunc <8 x float> %a to <8 x half>
@@ -111,9 +111,9 @@ define void @fpround_v8f64_v8f16(ptr %x, ptr %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfncvt.rod.f.f.w v12, v8
+; CHECK-NEXT:    vfncvt.rod.f.f.w v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfncvt.f.f.w v8, v12
+; CHECK-NEXT:    vfncvt.f.f.w v8, v8
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, ptr %x

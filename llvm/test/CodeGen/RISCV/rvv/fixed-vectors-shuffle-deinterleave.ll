@@ -21,8 +21,8 @@ define void @deinterleave3_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
-; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    vrgather.vv v8, v8, v9
+; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -46,8 +46,8 @@ define void @deinterleave3_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vslidedown.vi v10, v8, 8
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
-; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    vrgather.vv v8, v8, v9
+; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -218,8 +218,8 @@ define void @deinterleave7_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    vslidedown.vi v10, v9, 4
 ; CHECK-NEXT:    vslideup.vi v10, v9, 1, v0.t
 ; CHECK-NEXT:    vmv.v.i v0, 6
-; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
+; CHECK-NEXT:    vrgather.vi v8, v8, 1
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
 entry:

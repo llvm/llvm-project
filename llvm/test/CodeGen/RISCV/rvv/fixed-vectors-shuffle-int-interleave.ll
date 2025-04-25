@@ -12,10 +12,9 @@ define <4 x i8> @interleave_v2i8(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: interleave_v2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a0, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v2i8:
@@ -32,10 +31,9 @@ define <4 x i16> @interleave_v2i16(<2 x i16> %x, <2 x i16> %y) {
 ; CHECK-LABEL: interleave_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vwaddu.vv v8, v8, v9
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a0, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v2i16:
@@ -53,10 +51,10 @@ define <4 x i32> @interleave_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: interleave_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v9, v8
+; CHECK-NEXT:    vwaddu.vv v9, v9, v8
 ; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vwmaccu.vx v10, a0, v8
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vwmaccu.vx v9, a0, v8
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v2i32:
@@ -74,26 +72,25 @@ define <4 x i32> @interleave_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-LABEL: interleave_v2i64:
 ; V128:       # %bb.0:
-; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; V128-NEXT:    vmv1r.v v10, v9
-; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; V128-NEXT:    vmv1r.v v10, v9
 ; V128-NEXT:    vslideup.vi v12, v10, 1
 ; V128-NEXT:    vslideup.vi v12, v10, 2
-; V128-NEXT:    vmv2r.v v10, v8
-; V128-NEXT:    vslideup.vi v10, v8, 1
-; V128-NEXT:    vmerge.vvm v8, v10, v12, v0
+; V128-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; V128-NEXT:    vmv.v.i v0, 10
+; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; V128-NEXT:    vslideup.vi v8, v8, 1
+; V128-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v2i64:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; V512-NEXT:    vslideup.vi v10, v9, 1
-; V512-NEXT:    vmv1r.v v11, v8
 ; V512-NEXT:    vslideup.vi v10, v9, 2
 ; V512-NEXT:    vmv.v.i v0, 10
-; V512-NEXT:    vslideup.vi v11, v8, 1
-; V512-NEXT:    vmerge.vvm v8, v11, v10, v0
+; V512-NEXT:    vslideup.vi v8, v8, 1
+; V512-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v2i64:
@@ -112,19 +109,19 @@ define <8 x i8> @interleave_v4i8(<4 x i8> %x, <4 x i8> %y) {
 ; V128-LABEL: interleave_v4i8:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; V128-NEXT:    vwaddu.vv v10, v9, v8
+; V128-NEXT:    vwaddu.vv v9, v9, v8
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v10, a0, v8
-; V128-NEXT:    vmv1r.v v8, v10
+; V128-NEXT:    vwmaccu.vx v9, a0, v8
+; V128-NEXT:    vmv1r.v v8, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v4i8:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v9, v8
+; V512-NEXT:    vwaddu.vv v9, v9, v8
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v8
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v9, a0, v8
+; V512-NEXT:    vmv1r.v v8, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v4i8:
@@ -142,19 +139,17 @@ define <8 x i16> @interleave_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; V128-LABEL: interleave_v4i16:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; V128-NEXT:    vwaddu.vv v10, v8, v9
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v10, a0, v9
-; V128-NEXT:    vmv1r.v v8, v10
+; V128-NEXT:    vwmaccu.vx v8, a0, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v4i16:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v4i16:
@@ -172,8 +167,7 @@ define <8 x i32> @interleave_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; V128-NEXT:    vmv1r.v v10, v9
-; V128-NEXT:    vmv1r.v v11, v8
-; V128-NEXT:    vwaddu.vv v8, v11, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v10
 ; V128-NEXT:    ret
@@ -181,10 +175,9 @@ define <8 x i32> @interleave_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; V512-LABEL: interleave_v4i32:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v4i32:
@@ -203,22 +196,20 @@ define <4 x i32> @interleave_v4i32_offset_2(<4 x i32> %x, <4 x i32> %y) {
 ; V128-LABEL: interleave_v4i32_offset_2:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; V128-NEXT:    vslidedown.vi v10, v9, 2
+; V128-NEXT:    vslidedown.vi v9, v9, 2
 ; V128-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v9, a0, v10
-; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    vwmaccu.vx v8, a0, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v4i32_offset_2:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; V512-NEXT:    vslidedown.vi v10, v9, 2
-; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    vslidedown.vi v9, v9, 2
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v9, a0, v10
-; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v4i32_offset_2:
@@ -239,37 +230,34 @@ define <4 x i32> @interleave_v4i32_offset_1(<4 x i32> %x, <4 x i32> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; V128-NEXT:    vmv.v.i v0, 8
-; V128-NEXT:    vmv1r.v v10, v9
-; V128-NEXT:    vslideup.vi v10, v9, 1, v0.t
+; V128-NEXT:    vslideup.vi v9, v9, 1, v0.t
 ; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; V128-NEXT:    vzext.vf2 v9, v8
+; V128-NEXT:    vzext.vf2 v8, v8
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; V128-NEXT:    vmerge.vvm v8, v9, v10, v0
+; V128-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v4i32_offset_1:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, mu
 ; V512-NEXT:    vmv.v.i v0, 8
-; V512-NEXT:    vmv1r.v v10, v9
-; V512-NEXT:    vslideup.vi v10, v9, 1, v0.t
+; V512-NEXT:    vslideup.vi v9, v9, 1, v0.t
 ; V512-NEXT:    vmv.v.i v0, 10
 ; V512-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; V512-NEXT:    vzext.vf2 v9, v8
+; V512-NEXT:    vzext.vf2 v8, v8
 ; V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
-; V512-NEXT:    vmerge.vvm v8, v9, v10, v0
+; V512-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v4i32_offset_1:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; ZIP-NEXT:    vmv.v.i v0, 8
-; ZIP-NEXT:    vmv1r.v v10, v9
-; ZIP-NEXT:    vslideup.vi v10, v9, 1, v0.t
+; ZIP-NEXT:    vslideup.vi v9, v9, 1, v0.t
 ; ZIP-NEXT:    vmv.v.i v0, 10
-; ZIP-NEXT:    ri.vzip2a.vv v11, v8, v9
-; ZIP-NEXT:    vmerge.vvm v8, v11, v10, v0
+; ZIP-NEXT:    ri.vzip2a.vv v11, v8, v10
+; ZIP-NEXT:    vmerge.vvm v8, v11, v9, v0
 ; ZIP-NEXT:    ret
   %a = shufflevector <4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 0, i32 5, i32 1, i32 6>
   ret <4 x i32> %a
@@ -279,19 +267,17 @@ define <16 x i8> @interleave_v8i8(<8 x i8> %x, <8 x i8> %y) {
 ; V128-LABEL: interleave_v8i8:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; V128-NEXT:    vwaddu.vv v10, v8, v9
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v10, a0, v9
-; V128-NEXT:    vmv1r.v v8, v10
+; V128-NEXT:    vwmaccu.vx v8, a0, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v8i8:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 8, e8, mf8, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v8i8:
@@ -309,20 +295,19 @@ define <16 x i16> @interleave_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; V128-LABEL: interleave_v8i16:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; V128-NEXT:    vmv1r.v v10, v9
-; V128-NEXT:    vmv1r.v v11, v8
-; V128-NEXT:    vwaddu.vv v8, v10, v11
+; V128-NEXT:    vmv1r.v v10, v8
+; V128-NEXT:    vwaddu.vv v8, v9, v8
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v8, a0, v11
+; V128-NEXT:    vwmaccu.vx v8, a0, v10
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: interleave_v8i16:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v9, v8
+; V512-NEXT:    vwaddu.vv v9, v9, v8
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v8
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v9, a0, v8
+; V512-NEXT:    vmv1r.v v8, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v8i16:
@@ -341,8 +326,7 @@ define <16 x i32> @interleave_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; V128-NEXT:    vmv2r.v v12, v10
-; V128-NEXT:    vmv2r.v v14, v8
-; V128-NEXT:    vwaddu.vv v8, v14, v12
+; V128-NEXT:    vwaddu.vv v8, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v12
 ; V128-NEXT:    ret
@@ -350,10 +334,9 @@ define <16 x i32> @interleave_v8i32(<8 x i32> %x, <8 x i32> %y) {
 ; V512-LABEL: interleave_v8i32:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 8, e32, mf2, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v8i32:
@@ -372,8 +355,7 @@ define <32 x i8> @interleave_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; V128-NEXT:    vmv1r.v v10, v9
-; V128-NEXT:    vmv1r.v v11, v8
-; V128-NEXT:    vwaddu.vv v8, v11, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v10
 ; V128-NEXT:    ret
@@ -381,10 +363,9 @@ define <32 x i8> @interleave_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; V512-LABEL: interleave_v16i8:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 16, e8, mf4, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v16i8:
@@ -405,8 +386,7 @@ define <32 x i16> @interleave_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; V128-NEXT:    vmv2r.v v12, v10
-; V128-NEXT:    vmv2r.v v14, v8
-; V128-NEXT:    vwaddu.vv v8, v14, v12
+; V128-NEXT:    vwaddu.vv v8, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v12
 ; V128-NEXT:    ret
@@ -414,10 +394,9 @@ define <32 x i16> @interleave_v16i16(<16 x i16> %x, <16 x i16> %y) {
 ; V512-LABEL: interleave_v16i16:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 16, e16, mf2, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v16i16:
@@ -438,8 +417,7 @@ define <32 x i32> @interleave_v16i32(<16 x i32> %x, <16 x i32> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; V128-NEXT:    vmv4r.v v16, v12
-; V128-NEXT:    vmv4r.v v20, v8
-; V128-NEXT:    vwaddu.vv v8, v20, v16
+; V128-NEXT:    vwaddu.vv v8, v8, v12
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v16
 ; V128-NEXT:    ret
@@ -448,8 +426,7 @@ define <32 x i32> @interleave_v16i32(<16 x i32> %x, <16 x i32> %y) {
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; V512-NEXT:    vmv1r.v v10, v9
-; V512-NEXT:    vmv1r.v v11, v8
-; V512-NEXT:    vwaddu.vv v8, v11, v10
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
 ; V512-NEXT:    vwmaccu.vx v8, a0, v10
 ; V512-NEXT:    ret
@@ -472,10 +449,9 @@ define <64 x i8> @interleave_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V128-NEXT:    vmv2r.v v12, v10
-; V128-NEXT:    vmv2r.v v14, v8
 ; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; V128-NEXT:    vwaddu.vv v8, v14, v12
+; V128-NEXT:    vwaddu.vv v8, v8, v10
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v12
 ; V128-NEXT:    ret
@@ -484,10 +460,9 @@ define <64 x i8> @interleave_v32i8(<32 x i8> %x, <32 x i8> %y) {
 ; V512:       # %bb.0:
 ; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_v32i8:
@@ -508,10 +483,9 @@ define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V128-NEXT:    vmv4r.v v16, v12
-; V128-NEXT:    vmv4r.v v20, v8
 ; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; V128-NEXT:    vwaddu.vv v8, v20, v16
+; V128-NEXT:    vwaddu.vv v8, v8, v12
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v16
 ; V128-NEXT:    ret
@@ -520,10 +494,9 @@ define <64 x i16> @interleave_v32i16(<32 x i16> %x, <32 x i16> %y) {
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V512-NEXT:    vmv1r.v v10, v9
-; V512-NEXT:    vmv1r.v v11, v8
 ; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; V512-NEXT:    vwaddu.vv v8, v11, v10
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
 ; V512-NEXT:    vwmaccu.vx v8, a0, v10
 ; V512-NEXT:    ret
@@ -558,20 +531,19 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V128-NEXT:    lui a1, 699051
 ; V128-NEXT:    vslidedown.vi v0, v8, 16
 ; V128-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; V128-NEXT:    vzext.vf2 v8, v24
+; V128-NEXT:    vzext.vf2 v24, v24
 ; V128-NEXT:    addi a1, a1, -1366
-; V128-NEXT:    vzext.vf2 v24, v0
+; V128-NEXT:    vzext.vf2 v8, v0
 ; V128-NEXT:    vmv.s.x v0, a1
-; V128-NEXT:    vsll.vx v8, v8, a0
+; V128-NEXT:    vsll.vx v24, v24, a0
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; V128-NEXT:    vmerge.vvm v24, v24, v8, v0
+; V128-NEXT:    vmerge.vvm v24, v8, v24, v0
 ; V128-NEXT:    addi a0, sp, 16
 ; V128-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; V128-NEXT:    vwaddu.vv v0, v8, v16
+; V128-NEXT:    vwaddu.vv v8, v8, v16
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v0, a0, v16
-; V128-NEXT:    vmv8r.v v8, v0
+; V128-NEXT:    vwmaccu.vx v8, a0, v16
 ; V128-NEXT:    vmv8r.v v16, v24
 ; V128-NEXT:    csrr a0, vlenb
 ; V128-NEXT:    slli a0, a0, 3
@@ -585,10 +557,9 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; V512-NEXT:    vmv2r.v v12, v10
-; V512-NEXT:    vmv2r.v v14, v8
 ; V512-NEXT:    li a0, 32
 ; V512-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; V512-NEXT:    vwaddu.vv v8, v14, v12
+; V512-NEXT:    vwaddu.vv v8, v8, v10
 ; V512-NEXT:    li a0, -1
 ; V512-NEXT:    vwmaccu.vx v8, a0, v12
 ; V512-NEXT:    ret
@@ -672,22 +643,20 @@ define <4 x i8> @unary_interleave_v4i8(<4 x i8> %x) {
 ; V128-LABEL: unary_interleave_v4i8:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; V128-NEXT:    vslidedown.vi v10, v8, 2
+; V128-NEXT:    vslidedown.vi v9, v8, 2
 ; V128-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v9, a0, v10
-; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    vwmaccu.vx v8, a0, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: unary_interleave_v4i8:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; V512-NEXT:    vslidedown.vi v10, v8, 2
-; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    vslidedown.vi v9, v8, 2
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v9, a0, v10
-; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_v4i8:
@@ -709,10 +678,9 @@ define <4 x i8> @unary_interleave_v4i8_invalid(<4 x i8> %x) {
 ; V128-NEXT:    lui a0, 16
 ; V128-NEXT:    addi a0, a0, 768
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; V128-NEXT:    vmv.s.x v10, a0
+; V128-NEXT:    vmv.s.x v9, a0
 ; V128-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; V128-NEXT:    vrgather.vv v9, v8, v10
-; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    vrgather.vv v8, v8, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: unary_interleave_v4i8_invalid:
@@ -720,10 +688,9 @@ define <4 x i8> @unary_interleave_v4i8_invalid(<4 x i8> %x) {
 ; V512-NEXT:    lui a0, 16
 ; V512-NEXT:    addi a0, a0, 768
 ; V512-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; V512-NEXT:    vmv.s.x v10, a0
+; V512-NEXT:    vmv.s.x v9, a0
 ; V512-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; V512-NEXT:    vrgather.vv v9, v8, v10
-; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    vrgather.vv v8, v8, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_v4i8_invalid:
@@ -731,10 +698,9 @@ define <4 x i8> @unary_interleave_v4i8_invalid(<4 x i8> %x) {
 ; ZIP-NEXT:    lui a0, 16
 ; ZIP-NEXT:    addi a0, a0, 768
 ; ZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZIP-NEXT:    vmv.s.x v10, a0
+; ZIP-NEXT:    vmv.s.x v9, a0
 ; ZIP-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
-; ZIP-NEXT:    vrgather.vv v9, v8, v10
-; ZIP-NEXT:    vmv1r.v v8, v9
+; ZIP-NEXT:    vrgather.vv v8, v8, v9
 ; ZIP-NEXT:    ret
   %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 0, i32 3, i32 1, i32 4>
   ret <4 x i8> %a
@@ -744,22 +710,20 @@ define <4 x i16> @unary_interleave_v4i16(<4 x i16> %x) {
 ; V128-LABEL: unary_interleave_v4i16:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
-; V128-NEXT:    vslidedown.vi v10, v8, 2
+; V128-NEXT:    vslidedown.vi v9, v8, 2
 ; V128-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v9, a0, v10
-; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    vwmaccu.vx v8, a0, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: unary_interleave_v4i16:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; V512-NEXT:    vslidedown.vi v10, v8, 2
-; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    vslidedown.vi v9, v8, 2
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v9, a0, v10
-; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_v4i16:
@@ -778,22 +742,20 @@ define <4 x i32> @unary_interleave_v4i32(<4 x i32> %x) {
 ; V128-LABEL: unary_interleave_v4i32:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; V128-NEXT:    vslidedown.vi v10, v8, 2
+; V128-NEXT:    vslidedown.vi v9, v8, 2
 ; V128-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v9, a0, v10
-; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    vwmaccu.vx v8, a0, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: unary_interleave_v4i32:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; V512-NEXT:    vslidedown.vi v10, v8, 2
-; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    vslidedown.vi v9, v8, 2
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v9, a0, v10
-; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_v4i32:
@@ -817,10 +779,9 @@ define <4 x i64> @unary_interleave_v4i64(<4 x i64> %x) {
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; V128-NEXT:    vmv.s.x v10, a0
 ; V128-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; V128-NEXT:    vsext.vf2 v12, v10
+; V128-NEXT:    vsext.vf2 v10, v10
 ; V128-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; V128-NEXT:    vrgatherei16.vv v10, v8, v12
-; V128-NEXT:    vmv.v.v v8, v10
+; V128-NEXT:    vrgatherei16.vv v8, v8, v10
 ; V128-NEXT:    ret
 ;
 ; RV32-V512-LABEL: unary_interleave_v4i64:
@@ -830,10 +791,9 @@ define <4 x i64> @unary_interleave_v4i64(<4 x i64> %x) {
 ; RV32-V512-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-V512-NEXT:    vmv.s.x v9, a0
 ; RV32-V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; RV32-V512-NEXT:    vsext.vf2 v10, v9
+; RV32-V512-NEXT:    vsext.vf2 v9, v9
 ; RV32-V512-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV32-V512-NEXT:    vrgatherei16.vv v9, v8, v10
-; RV32-V512-NEXT:    vmv.v.v v8, v9
+; RV32-V512-NEXT:    vrgatherei16.vv v8, v8, v9
 ; RV32-V512-NEXT:    ret
 ;
 ; RV64-V512-LABEL: unary_interleave_v4i64:
@@ -842,9 +802,8 @@ define <4 x i64> @unary_interleave_v4i64(<4 x i64> %x) {
 ; RV64-V512-NEXT:    addi a0, a0, 512
 ; RV64-V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; RV64-V512-NEXT:    vmv.s.x v9, a0
-; RV64-V512-NEXT:    vsext.vf8 v10, v9
-; RV64-V512-NEXT:    vrgather.vv v9, v8, v10
-; RV64-V512-NEXT:    vmv.v.v v8, v9
+; RV64-V512-NEXT:    vsext.vf8 v9, v9
+; RV64-V512-NEXT:    vrgather.vv v8, v8, v9
 ; RV64-V512-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_v4i64:
@@ -863,22 +822,20 @@ define <8 x i8> @unary_interleave_v8i8(<8 x i8> %x) {
 ; V128-LABEL: unary_interleave_v8i8:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
-; V128-NEXT:    vslidedown.vi v10, v8, 4
+; V128-NEXT:    vslidedown.vi v9, v8, 4
 ; V128-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; V128-NEXT:    vwaddu.vv v9, v8, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v9, a0, v10
-; V128-NEXT:    vmv1r.v v8, v9
+; V128-NEXT:    vwmaccu.vx v8, a0, v9
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: unary_interleave_v8i8:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; V512-NEXT:    vslidedown.vi v10, v8, 4
-; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    vslidedown.vi v9, v8, 4
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v9, a0, v10
-; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_v8i8:
@@ -897,9 +854,9 @@ define <8 x i16> @unary_interleave_v8i16(<8 x i16> %x) {
 ; V128-LABEL: unary_interleave_v8i16:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
-; V128-NEXT:    vslidedown.vi v10, v8, 4
+; V128-NEXT:    vslidedown.vi v9, v8, 4
 ; V128-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; V128-NEXT:    vwaddu.vv v9, v10, v8
+; V128-NEXT:    vwaddu.vv v9, v9, v8
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v9, a0, v8
 ; V128-NEXT:    vmv1r.v v8, v9
@@ -908,8 +865,8 @@ define <8 x i16> @unary_interleave_v8i16(<8 x i16> %x) {
 ; V512-LABEL: unary_interleave_v8i16:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e16, mf4, ta, ma
-; V512-NEXT:    vslidedown.vi v10, v8, 4
-; V512-NEXT:    vwaddu.vv v9, v10, v8
+; V512-NEXT:    vslidedown.vi v9, v8, 4
+; V512-NEXT:    vwaddu.vv v9, v9, v8
 ; V512-NEXT:    li a0, -1
 ; V512-NEXT:    vwmaccu.vx v9, a0, v8
 ; V512-NEXT:    vmv1r.v v8, v9
@@ -931,22 +888,20 @@ define <8 x i32> @unary_interleave_v8i32(<8 x i32> %x) {
 ; V128-LABEL: unary_interleave_v8i32:
 ; V128:       # %bb.0:
 ; V128-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; V128-NEXT:    vslidedown.vi v12, v8, 4
+; V128-NEXT:    vslidedown.vi v10, v8, 4
 ; V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; V128-NEXT:    vwaddu.vv v10, v8, v12
+; V128-NEXT:    vwaddu.vv v8, v8, v10
 ; V128-NEXT:    li a0, -1
-; V128-NEXT:    vwmaccu.vx v10, a0, v12
-; V128-NEXT:    vmv2r.v v8, v10
+; V128-NEXT:    vwmaccu.vx v8, a0, v10
 ; V128-NEXT:    ret
 ;
 ; V512-LABEL: unary_interleave_v8i32:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
-; V512-NEXT:    vslidedown.vi v10, v8, 4
-; V512-NEXT:    vwaddu.vv v9, v8, v10
+; V512-NEXT:    vslidedown.vi v9, v8, 4
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v9, a0, v10
-; V512-NEXT:    vmv1r.v v8, v9
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_v8i32:
@@ -988,8 +943,7 @@ define <16 x i16> @interleave_slp(<8 x i16> %v0, <8 x i16> %v1) {
 ; V128:       # %bb.0: # %entry
 ; V128-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; V128-NEXT:    vmv1r.v v10, v9
-; V128-NEXT:    vmv1r.v v11, v8
-; V128-NEXT:    vwaddu.vv v8, v11, v10
+; V128-NEXT:    vwaddu.vv v8, v8, v9
 ; V128-NEXT:    li a0, -1
 ; V128-NEXT:    vwmaccu.vx v8, a0, v10
 ; V128-NEXT:    ret
@@ -997,10 +951,9 @@ define <16 x i16> @interleave_slp(<8 x i16> %v0, <8 x i16> %v1) {
 ; V512-LABEL: interleave_slp:
 ; V512:       # %bb.0: # %entry
 ; V512-NEXT:    vsetivli zero, 8, e16, mf4, ta, ma
-; V512-NEXT:    vwaddu.vv v10, v8, v9
+; V512-NEXT:    vwaddu.vv v8, v8, v9
 ; V512-NEXT:    li a0, -1
-; V512-NEXT:    vwmaccu.vx v10, a0, v9
-; V512-NEXT:    vmv1r.v v8, v10
+; V512-NEXT:    vwmaccu.vx v8, a0, v9
 ; V512-NEXT:    ret
 ;
 ; ZIP-LABEL: interleave_slp:

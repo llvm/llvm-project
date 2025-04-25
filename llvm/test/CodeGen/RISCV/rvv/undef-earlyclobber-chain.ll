@@ -5,7 +5,7 @@ define <vscale x 2 x float> @vrgather_all_undef(ptr %p) {
 ; CHECK-LABEL: vrgather_all_undef:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v8, v9, 0
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 2 x float> @llvm.riscv.vrgather.vx.nxv2f32.i64(<vscale x 2 x float> undef, <vscale x 2 x float> undef, i64 0, i64 0)
@@ -18,9 +18,9 @@ define dso_local signext i32 @undef_early_clobber_chain() {
 ; CHECK-NEXT:    addi sp, sp, -400
 ; CHECK-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
-; CHECK-NEXT:    vrgather.vi v9, v8, 0
+; CHECK-NEXT:    vrgather.vi v8, v8, 0
 ; CHECK-NEXT:    mv a0, sp
-; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    addi sp, sp, 400
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
@@ -41,30 +41,30 @@ define internal void @SubRegLivenessUndefInPhi(i64 %cond) {
 ; CHECK-NEXT:  # %bb.1: # %Cond1
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vadd.vi v12, v8, 1
-; CHECK-NEXT:    vadd.vi v10, v8, 3
+; CHECK-NEXT:    vadd.vi v10, v8, 1
+; CHECK-NEXT:    vadd.vi v12, v8, 3
 ; CHECK-NEXT:    j .LBB2_3
 ; CHECK-NEXT:  .LBB2_2: # %Cond2
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 3
-; CHECK-NEXT:    vadd.vi v10, v9, 1
-; CHECK-NEXT:    vadd.vi v11, v9, 3
+; CHECK-NEXT:    vadd.vi v9, v8, 1
+; CHECK-NEXT:    vadd.vi v11, v8, 3
 ; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v9, a0
-; CHECK-NEXT:    vslideup.vx v12, v10, a0
-; CHECK-NEXT:    vslideup.vx v10, v11, a0
+; CHECK-NEXT:    vslideup.vx v8, v8, a0
+; CHECK-NEXT:    vslideup.vx v10, v9, a0
+; CHECK-NEXT:    vslideup.vx v12, v11, a0
 ; CHECK-NEXT:  .LBB2_3: # %UseSR
 ; CHECK-NEXT:    vl1r.v v14, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
-; CHECK-NEXT:    vrgatherei16.vv v8, v14, v12
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v8, v15, v8
-; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v8, v14, v8
 ; CHECK-NEXT:    vrgatherei16.vv v9, v14, v10
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v9, v14, v12
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (zero)
@@ -114,16 +114,16 @@ define internal void @SubRegLivenessUndef() {
 ; CHECK-NEXT:    vadd.vi v12, v8, 3
 ; CHECK-NEXT:  .LBB3_1: # %loopIR3.i.i
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vl1r.v v14, (zero)
+; CHECK-NEXT:    vl1r.v v9, (zero)
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v15, v14, v8
-; CHECK-NEXT:    vrgatherei16.vv v9, v14, v10
+; CHECK-NEXT:    vrgatherei16.vv v11, v9, v8
+; CHECK-NEXT:    vrgatherei16.vv v13, v9, v10
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v9, v15, v9
+; CHECK-NEXT:    vand.vv v11, v11, v13
 ; CHECK-NEXT:    vsetivli zero, 4, e8, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v11, v14, v12
+; CHECK-NEXT:    vrgatherei16.vv v9, v9, v12
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vand.vv v9, v9, v11
+; CHECK-NEXT:    vand.vv v9, v11, v9
 ; CHECK-NEXT:    vs1r.v v9, (zero)
 ; CHECK-NEXT:    j .LBB3_1
 loopIR.preheader.i.i:
@@ -159,9 +159,8 @@ define void @repeat_shuffle(<2 x double> %v, ptr noalias %q) {
 ; CHECK-LABEL: repeat_shuffle:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v10, v8
-; CHECK-NEXT:    vslideup.vi v10, v8, 2
-; CHECK-NEXT:    vse64.v v10, (a0)
+; CHECK-NEXT:    vslideup.vi v8, v8, 2
+; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %w = shufflevector <2 x double> %v, <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   store <4 x double> %w, ptr %q

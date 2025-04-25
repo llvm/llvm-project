@@ -15,11 +15,11 @@ define <2 x i32> @vdot_lane_s32(<2 x i32> noundef %var_1, <8 x i8> noundef %var_
 ; CHECK-NEXT:    vnsrl.wi v8, v11, 0
 ; CHECK-NEXT:    vnsrl.wi v9, v11, 16
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vwadd.vv v10, v8, v9
+; CHECK-NEXT:    vwadd.vv v8, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v10, 0
-; CHECK-NEXT:    vnsrl.wx v9, v10, a0
-; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vnsrl.wi v9, v8, 0
+; CHECK-NEXT:    vnsrl.wx v8, v8, a0
+; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 entry:
   %a = shufflevector <8 x i16> %x, <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -43,16 +43,16 @@ define <vscale x 2 x i16> @intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16(<vscale x 
 ; NOVLOPT-LABEL: intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16:
 ; NOVLOPT:       # %bb.0: # %entry
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; NOVLOPT-NEXT:    vwadd.vv v10, v8, v9
+; NOVLOPT-NEXT:    vwadd.vv v8, v8, v9
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; NOVLOPT-NEXT:    vnsrl.wv v8, v10, v12
+; NOVLOPT-NEXT:    vnsrl.wv v8, v8, v12
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: intrinsic_vnsrl_wv_nxv2i16_nxv2i32_nxv2i16:
 ; VLOPT:       # %bb.0: # %entry
 ; VLOPT-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; VLOPT-NEXT:    vwadd.vv v10, v8, v9
-; VLOPT-NEXT:    vnsrl.wv v8, v10, v12
+; VLOPT-NEXT:    vwadd.vv v8, v8, v9
+; VLOPT-NEXT:    vnsrl.wv v8, v8, v12
 ; VLOPT-NEXT:    ret
 entry:
   %c = sext <vscale x 2 x i16> %a to <vscale x 2 x i32>
@@ -77,18 +77,18 @@ define <vscale x 2 x i16> @vnclip(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b, 
 ; NOVLOPT-LABEL: vnclip:
 ; NOVLOPT:       # %bb.0: # %entry
 ; NOVLOPT-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; NOVLOPT-NEXT:    vwadd.vv v10, v8, v9
+; NOVLOPT-NEXT:    vwadd.vv v8, v8, v9
 ; NOVLOPT-NEXT:    csrwi vxrm, 0
 ; NOVLOPT-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; NOVLOPT-NEXT:    vnclip.wv v8, v10, v12
+; NOVLOPT-NEXT:    vnclip.wv v8, v8, v12
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vnclip:
 ; VLOPT:       # %bb.0: # %entry
 ; VLOPT-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; VLOPT-NEXT:    vwadd.vv v10, v8, v9
+; VLOPT-NEXT:    vwadd.vv v8, v8, v9
 ; VLOPT-NEXT:    csrwi vxrm, 0
-; VLOPT-NEXT:    vnclip.wv v8, v10, v12
+; VLOPT-NEXT:    vnclip.wv v8, v8, v12
 ; VLOPT-NEXT:    ret
 entry:
   %c = sext <vscale x 2 x i16> %a to <vscale x 2 x i32>

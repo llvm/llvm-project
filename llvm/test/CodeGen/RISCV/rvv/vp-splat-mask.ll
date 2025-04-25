@@ -70,9 +70,8 @@ define <vscale x 16 x i1> @vp_splat_nxv16i1(i1 %val, <vscale x 16 x i1> %m, i32 
 ; CHECK-LABEL: vp_splat_nxv16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.x v10, a0
-; CHECK-NEXT:    vmsne.vi v8, v10, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %splat = call <vscale x 16 x i1> @llvm.experimental.vp.splat.nxv16i1(i1 %val, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i1> %splat
@@ -82,9 +81,8 @@ define <vscale x 32 x i1> @vp_splat_nxv32i1(i1 %val, <vscale x 32 x i1> %m, i32 
 ; CHECK-LABEL: vp_splat_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
-; CHECK-NEXT:    vmv.v.x v12, a0
-; CHECK-NEXT:    vmsne.vi v8, v12, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %splat = call <vscale x 32 x i1> @llvm.experimental.vp.splat.nxv32i1(i1 %val, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i1> %splat
@@ -94,9 +92,8 @@ define <vscale x 64 x i1> @vp_splat_nxv64i1(i1 %val, <vscale x 64 x i1> %m, i32 
 ; CHECK-LABEL: vp_splat_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vmv.v.x v16, a0
-; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %splat = call <vscale x 64 x i1> @llvm.experimental.vp.splat.nxv64i1(i1 %val, <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i1> %splat

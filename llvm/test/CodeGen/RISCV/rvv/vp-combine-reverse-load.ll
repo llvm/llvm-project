@@ -37,11 +37,11 @@ define <vscale x 2 x float> @test_load_mask_not_all_one(<vscale x 2 x float>* %p
 ; CHECK-LABEL: test_load_mask_not_all_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0), v0.t
-; CHECK-NEXT:    vid.v v8, v0.t
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
+; CHECK-NEXT:    vid.v v9, v0.t
 ; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vrsub.vx v10, v8, a1, v0.t
-; CHECK-NEXT:    vrgather.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vrsub.vx v9, v9, a1, v0.t
+; CHECK-NEXT:    vrgather.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %notallones, i32 %evl)
   %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %load, <vscale x 2 x i1> %notallones, i32 %evl)
@@ -60,14 +60,14 @@ define <vscale x 2 x float> @test_different_evl(<vscale x 2 x float>* %ptr, <vsc
 ; CHECK-NEXT:    vrsub.vx v8, v8, a3
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
-; CHECK-NEXT:    vrgatherei16.vv v10, v9, v8
-; CHECK-NEXT:    vmsne.vi v0, v10, 0
+; CHECK-NEXT:    vrgatherei16.vv v8, v9, v8
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0), v0.t
+; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vrsub.vx v10, v8, a2
-; CHECK-NEXT:    vrgather.vv v8, v9, v10
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vrsub.vx v9, v9, a2
+; CHECK-NEXT:    vrgather.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %loadmask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> splat (i1 true), i32 %evl1)
   %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %loadmask, i32 %evl2)

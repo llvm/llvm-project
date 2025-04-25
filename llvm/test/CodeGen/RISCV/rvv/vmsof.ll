@@ -12,8 +12,7 @@ define <vscale x 1 x i1> @intrinsic_vmsof_m_nxv1i1(<vscale x 1 x i1> %0, iXLen %
 ; CHECK-LABEL: intrinsic_vmsof_m_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vmsof.m v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsof.m v0, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i1> @llvm.riscv.vmsof.nxv1i1(
@@ -54,8 +53,7 @@ define <vscale x 2 x i1> @intrinsic_vmsof_m_nxv2i1(<vscale x 2 x i1> %0, iXLen %
 ; CHECK-LABEL: intrinsic_vmsof_m_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; CHECK-NEXT:    vmsof.m v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsof.m v0, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i1> @llvm.riscv.vmsof.nxv2i1(
@@ -96,8 +94,7 @@ define <vscale x 4 x i1> @intrinsic_vmsof_m_nxv4i1(<vscale x 4 x i1> %0, iXLen %
 ; CHECK-LABEL: intrinsic_vmsof_m_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmsof.m v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsof.m v0, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i1> @llvm.riscv.vmsof.nxv4i1(
@@ -138,8 +135,7 @@ define <vscale x 8 x i1> @intrinsic_vmsof_m_nxv8i1(<vscale x 8 x i1> %0, iXLen %
 ; CHECK-LABEL: intrinsic_vmsof_m_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmsof.m v8, v0
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vmsof.m v0, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i1> @llvm.riscv.vmsof.nxv8i1(
@@ -180,8 +176,7 @@ define <vscale x 16 x i1> @intrinsic_vmsof_m_nxv16i1(<vscale x 16 x i1> %0, iXLe
 ; CHECK-LABEL: intrinsic_vmsof_m_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vmsof.m v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsof.m v0, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i1> @llvm.riscv.vmsof.nxv16i1(
@@ -222,8 +217,7 @@ define <vscale x 32 x i1> @intrinsic_vmsof_m_nxv32i1(<vscale x 32 x i1> %0, iXLe
 ; CHECK-LABEL: intrinsic_vmsof_m_nxv32i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; CHECK-NEXT:    vmsof.m v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsof.m v0, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i1> @llvm.riscv.vmsof.nxv32i1(
@@ -264,8 +258,7 @@ define <vscale x 64 x i1> @intrinsic_vmsof_m_nxv64i1(<vscale x 64 x i1> %0, iXLe
 ; CHECK-LABEL: intrinsic_vmsof_m_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmsof.m v8, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmsof.m v0, v0
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 64 x i1> @llvm.riscv.vmsof.nxv64i1(
