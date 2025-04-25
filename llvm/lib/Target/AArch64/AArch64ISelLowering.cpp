@@ -18424,13 +18424,7 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   // If SVE is available, we can generate
   //  sdiv(x,y) -> ptrue + asrd          , where 'y' is positive pow-2 divisor.
   //  sdiv(x,y) -> ptrue + asrd + subr   , where 'y' is negative pow-2 divisor.
-  if (Subtarget->hasSVE() && N->getValueType(0).isVector())
-    return SDValue(N, 0);
-
-  // For scalable and fixed types, mark them as cheap so we can handle it much
-  // later. This allows us to handle larger than legal types.
-  if (VT.isScalableVector() ||
-      (VT.isFixedLengthVector() && Subtarget->useSVEForFixedLengthVectors()))
+  if (VT.isVector() && Subtarget->isSVEorStreamingSVEAvailable())
     return SDValue(N, 0);
 
   // fold (sdiv X, pow2)
