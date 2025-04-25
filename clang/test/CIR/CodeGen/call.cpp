@@ -5,7 +5,7 @@ void f2() {
   f1();
 }
 
-// CHECK-LABEL:  cir.func @_Z2f1v
+// CHECK-LABEL: cir.func @_Z2f1v
 // CHECK-LABEL: cir.func @_Z2f2v
 // CHECK:         cir.call @_Z2f1v() : () -> ()
 

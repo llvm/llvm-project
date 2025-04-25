@@ -781,8 +781,6 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
   // In what follows, we continue past 'errorNYI' as if nothing happened because
   // the rest of the implementation is better than doing nothing.
 
-  // Any attempts to use a MultiVersion function should result in retrieving the
-  // iFunc instead. Name mangling will handle the rest of the changes.
   if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
     // For the device mark the function as one that should be emitted.
     if (getLangOpts().OpenMPIsTargetDevice && fd->isDefined() && !dontDefer &&
@@ -790,8 +788,10 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
       errorNYI(fd->getSourceRange(),
                "getOrCreateCIRFunction: OpenMP target function");
 
+    // Any attempts to use a MultiVersion function should result in retrieving
+    // the iFunc instead. Name mangling will handle the rest of the changes.
     if (fd->isMultiVersion())
-      errorNYI(fd->getSourceRange(), "multi-version functions NYI");
+      errorNYI(fd->getSourceRange(), "getOrCreateCIRFunction: multi-version");
   }
 
   // Lookup the entry, lazily creating it if necessary.
