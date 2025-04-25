@@ -5084,11 +5084,11 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(i32 (atomic_load_8  DForm:$src)), (LBZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_16 DForm:$src)), (LHZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  DForm:$src)), (LBZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 DForm:$src)), (LHZ  memri:$src)>;
 def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_8  XForm:$src)), (LBZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_16 XForm:$src)), (LHZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  XForm:$src)), (LBZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 XForm:$src)), (LHZX memrr:$src)>;
 def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores
