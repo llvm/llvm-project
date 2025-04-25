@@ -296,9 +296,6 @@ public:
   /// @{
   using CompilerInvocationBase::LangOpts;
   using CompilerInvocationBase::TargetOpts;
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
-    return HSOpts;
-  }
   std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
   std::shared_ptr<CASOptions> getCASOptsPtr() { return CASOpts; }
   void setCASOption(std::shared_ptr<CASOptions> CASOpts) {
