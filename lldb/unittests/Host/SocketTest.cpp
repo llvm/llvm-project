@@ -340,9 +340,7 @@ TEST_F(SocketTest, DomainGetConnectURI) {
 
   EXPECT_EQ(socket_b_up->GetRemoteConnectionURI(), "");
 }
-#endif
 
-#if LLDB_ENABLE_POSIX
 TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
   // Generate a name for the domain socket.
   llvm::SmallString<64> name;
@@ -353,11 +351,12 @@ TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
 
   DomainSocket socket(true);
   Status error = socket.Listen(name, /*backlog=*/10);
-  ASSERT_FALSE(error.ToError());
+  ASSERT_THAT_ERROR(error.takeError(), llvm::Succeeded());
   NativeSocket native_socket = socket.GetNativeSocket();
 
   llvm::Expected<std::unique_ptr<DomainSocket>> sock =
-      DomainSocket::FromBoundNativeSocket(native_socket, /*should_close=*/true);
+      DomainSocket::FromBoundNativeSocket(native_socket,
+                                          /*should_close=*/false);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_EQ(Socket::ProtocolUnixDomain, sock->get()->GetSocketProtocol());
 }
@@ -366,19 +365,19 @@ TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
 #if __linux__
 TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
   // Generate a name for the abstract socket.
-  llvm::SmallString<64> name;
-  std::error_code EC = llvm::sys::fs::createUniqueDirectory(
-      "AbstractSocketFromBoundNativeSocket", name);
-  ASSERT_FALSE(EC);
+  llvm::SmallString<100> name;
+  llvm::sys::fs::createUniquePath("AbstractSocketFromBoundNativeSocket", name,
+                                  true);
   llvm::sys::path::append(name, "test");
 
   AbstractSocket socket;
   Status error = socket.Listen(name, /*backlog=*/10);
-  ASSERT_FALSE(error.ToError());
+  ASSERT_THAT_ERROR(error.takeError(), llvm::Succeeded());
   NativeSocket native_socket = socket.GetNativeSocket();
 
   llvm::Expected<std::unique_ptr<DomainSocket>> sock =
-      DomainSocket::FromBoundNativeSocket(native_socket, /*should_close=*/true);
+      DomainSocket::FromBoundNativeSocket(native_socket,
+                                          /*should_close=*/false);
   ASSERT_THAT_EXPECTED(sock, llvm::Succeeded());
   ASSERT_EQ(Socket::ProtocolUnixAbstract, sock->get()->GetSocketProtocol());
 }

@@ -194,7 +194,6 @@ std::vector<std::string> DomainSocket::GetListeningConnectionURI() const {
 
 llvm::Expected<std::unique_ptr<DomainSocket>>
 DomainSocket::FromBoundNativeSocket(NativeSocket sockfd, bool should_close) {
-#ifdef __linux__
   // Check if fd represents domain socket or abstract socket.
   struct sockaddr_un addr;
   socklen_t addr_len = sizeof(addr);
@@ -202,6 +201,7 @@ DomainSocket::FromBoundNativeSocket(NativeSocket sockfd, bool should_close) {
     return llvm::createStringError("not a socket or error occurred");
   if (addr.sun_family != AF_UNIX)
     return llvm::createStringError("Bad socket type");
+#ifdef __linux__
   if (addr_len > offsetof(struct sockaddr_un, sun_path) &&
       addr.sun_path[0] == '\0')
     return std::make_unique<AbstractSocket>(sockfd, should_close);

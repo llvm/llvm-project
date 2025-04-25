@@ -472,7 +472,8 @@ int main_platform(int argc, char *argv[]) {
       llvm::Expected<std::unique_ptr<DomainSocket>> domain_socket =
           DomainSocket::FromBoundNativeSocket(sockfd, /*should_close=*/true);
       if (!domain_socket) {
-        LLDB_LOGF(log, "Failed to create socket: %s\n", error.AsCString());
+        LLDB_LOG_ERROR(log, domain_socket.takeError(),
+                       "Failed to create socket: {0}");
         return socket_error;
       }
       socket = std::move(domain_socket.get());
