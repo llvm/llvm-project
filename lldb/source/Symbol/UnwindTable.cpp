@@ -91,30 +91,35 @@ void UnwindTable::ModuleWasUpdated() {
 
 UnwindTable::~UnwindTable() = default;
 
-std::optional<AddressRange>
-UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
+AddressRanges UnwindTable::GetAddressRanges(const Address &addr,
+                                            const SymbolContext &sc) {
   AddressRange range;
 
   // First check the unwind info from the object file plugin
   if (m_object_file_unwind_up &&
       m_object_file_unwind_up->GetAddressRange(addr, range))
-    return range;
+    return {range};
 
   // Check the symbol context
-  if (sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
-                         false, range) &&
-      range.GetBaseAddress().IsValid())
-    return range;
+  AddressRanges result;
+  for (size_t idx = 0;
+       sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, idx,
+                          false, range) &&
+       range.GetBaseAddress().IsValid();
+       ++idx)
+    result.push_back(range);
+  if (!result.empty())
+    return result;
 
   // Does the eh_frame unwind info has a function bounds for this addr?
   if (m_eh_frame_up && m_eh_frame_up->GetAddressRange(addr, range))
-    return range;
+    return {range};
 
   // Try debug_frame as well
   if (m_debug_frame_up && m_debug_frame_up->GetAddressRange(addr, range))
-    return range;
+    return {range};
 
-  return std::nullopt;
+  return {};
 }
 
 FuncUnwindersSP
@@ -140,14 +145,14 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
       return pos->second;
   }
 
-  auto range_or = GetAddressRange(addr, sc);
-  if (!range_or)
+  AddressRanges ranges = GetAddressRanges(addr, sc);
+  if (ranges.empty())
     return nullptr;
 
-  FuncUnwindersSP func_unwinder_sp(new FuncUnwinders(*this, *range_or));
-  m_unwinds.insert(insert_pos,
-                   std::make_pair(range_or->GetBaseAddress().GetFileAddress(),
-                                  func_unwinder_sp));
+  auto func_unwinder_sp = std::make_shared<FuncUnwinders>(*this, addr, ranges);
+  for (const AddressRange &range : ranges)
+    m_unwinds.emplace_hint(insert_pos, range.GetBaseAddress().GetFileAddress(),
+                           func_unwinder_sp);
   return func_unwinder_sp;
 }
 
@@ -159,11 +164,11 @@ FuncUnwindersSP UnwindTable::GetUncachedFuncUnwindersContainingAddress(
     const Address &addr, const SymbolContext &sc) {
   Initialize();
 
-  auto range_or = GetAddressRange(addr, sc);
-  if (!range_or)
+  AddressRanges ranges = GetAddressRanges(addr, sc);
+  if (ranges.empty())
     return nullptr;
 
-  return std::make_shared<FuncUnwinders>(*this, *range_or);
+  return std::make_shared<FuncUnwinders>(*this, addr, std::move(ranges));
 }
 
 void UnwindTable::Dump(Stream &s) {

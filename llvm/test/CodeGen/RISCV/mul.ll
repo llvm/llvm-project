@@ -1298,34 +1298,34 @@ define i64 @muli64_m3840(i64 %a) nounwind {
 define i128 @muli128_m3840(i128 %a) nounwind {
 ; RV32I-LABEL: muli128_m3840:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lw a6, 0(a1)
 ; RV32I-NEXT:    lw a3, 4(a1)
 ; RV32I-NEXT:    lw a2, 8(a1)
+; RV32I-NEXT:    lw a5, 0(a1)
 ; RV32I-NEXT:    lw a4, 12(a1)
 ; RV32I-NEXT:    srli a1, a3, 20
-; RV32I-NEXT:    slli a5, a2, 12
+; RV32I-NEXT:    slli a6, a2, 12
 ; RV32I-NEXT:    srli a7, a3, 24
 ; RV32I-NEXT:    slli t0, a2, 8
 ; RV32I-NEXT:    srli t1, a2, 20
-; RV32I-NEXT:    or a1, a5, a1
-; RV32I-NEXT:    slli a5, a4, 12
+; RV32I-NEXT:    or a1, a6, a1
+; RV32I-NEXT:    slli a6, a4, 12
 ; RV32I-NEXT:    srli t2, a2, 24
 ; RV32I-NEXT:    slli a4, a4, 8
 ; RV32I-NEXT:    or a2, t0, a7
-; RV32I-NEXT:    srli a7, a6, 20
-; RV32I-NEXT:    or a5, a5, t1
+; RV32I-NEXT:    srli a7, a5, 20
+; RV32I-NEXT:    or a6, a6, t1
 ; RV32I-NEXT:    slli t0, a3, 12
 ; RV32I-NEXT:    or t1, a4, t2
-; RV32I-NEXT:    srli t2, a6, 24
+; RV32I-NEXT:    srli t2, a5, 24
 ; RV32I-NEXT:    slli t3, a3, 8
 ; RV32I-NEXT:    or a3, t0, a7
-; RV32I-NEXT:    slli a4, a6, 12
-; RV32I-NEXT:    slli a6, a6, 8
+; RV32I-NEXT:    slli a4, a5, 12
+; RV32I-NEXT:    slli a5, a5, 8
 ; RV32I-NEXT:    or t0, t3, t2
-; RV32I-NEXT:    sltu a7, a2, a1
-; RV32I-NEXT:    sub a5, t1, a5
-; RV32I-NEXT:    sub a5, a5, a7
-; RV32I-NEXT:    sltu a7, a6, a4
+; RV32I-NEXT:    sltu t2, a2, a1
+; RV32I-NEXT:    sub a6, t1, a6
+; RV32I-NEXT:    sltu a7, a5, a4
+; RV32I-NEXT:    sub a6, a6, t2
 ; RV32I-NEXT:    mv t1, a7
 ; RV32I-NEXT:    beq t0, a3, .LBB36_2
 ; RV32I-NEXT:  # %bb.1:
@@ -1333,15 +1333,15 @@ define i128 @muli128_m3840(i128 %a) nounwind {
 ; RV32I-NEXT:  .LBB36_2:
 ; RV32I-NEXT:    sub a2, a2, a1
 ; RV32I-NEXT:    sub a1, t0, a3
-; RV32I-NEXT:    sub a3, a6, a4
-; RV32I-NEXT:    sltu a4, a2, t1
+; RV32I-NEXT:    sub a5, a5, a4
+; RV32I-NEXT:    sltu a3, a2, t1
 ; RV32I-NEXT:    sub a2, a2, t1
 ; RV32I-NEXT:    sub a1, a1, a7
-; RV32I-NEXT:    sub a5, a5, a4
-; RV32I-NEXT:    sw a3, 0(a0)
+; RV32I-NEXT:    sub a3, a6, a3
+; RV32I-NEXT:    sw a5, 0(a0)
 ; RV32I-NEXT:    sw a1, 4(a0)
 ; RV32I-NEXT:    sw a2, 8(a0)
-; RV32I-NEXT:    sw a5, 12(a0)
+; RV32I-NEXT:    sw a3, 12(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV32IM-LABEL: muli128_m3840:

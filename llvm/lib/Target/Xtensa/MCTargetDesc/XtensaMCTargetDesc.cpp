@@ -77,6 +77,12 @@ bool Xtensa::isValidAddrOffsetForOpcode(unsigned Opcode, int64_t Offset) {
 // Verify Special Register
 bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits) {
   switch (RegNo) {
+  case Xtensa::BREG:
+    return FeatureBits[Xtensa::FeatureBoolean];
+  case Xtensa::LBEG:
+  case Xtensa::LEND:
+  case Xtensa::LCOUNT:
+    return FeatureBits[Xtensa::FeatureLoop];
   case Xtensa::WINDOWBASE:
   case Xtensa::WINDOWSTART:
     return FeatureBits[Xtensa::FeatureWindowed];

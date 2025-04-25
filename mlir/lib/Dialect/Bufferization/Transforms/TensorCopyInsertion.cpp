@@ -52,14 +52,23 @@ mlir::bufferization::insertTensorCopies(Operation *op,
                                         const AnalysisState &state) {
   IRRewriter rewriter(op->getContext());
 
-  WalkResult result = op->walk([&](Operation *op) {
-    auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op);
+  // It may be more efficient to walk in pre-order here, but the current
+  // implementation visits regions of ops even if they are not allowed or
+  // bufferizable, and existing tests rely on this behavior.
+  // For now, only exclude nested operations if they are in a different symbol
+  // table scope.
+  WalkResult result = op->walk([&](Operation *nestedOp) {
+    if (op->hasTrait<OpTrait::SymbolTable>() &&
+        nestedOp->getParentWithTrait<OpTrait::SymbolTable>() != op)
+      return WalkResult::skip();
+
+    auto bufferizableOp = state.getOptions().dynCastBufferizableOp(nestedOp);
     if (!bufferizableOp)
       return WalkResult::skip();
 
     // Find inplacability conflicts and resolve them. (Typically with explicit
     // tensor copies in the form of AllocTensorOps.)
-    rewriter.setInsertionPoint(op);
+    rewriter.setInsertionPoint(nestedOp);
     if (failed(bufferizableOp.resolveConflicts(rewriter, state)))
       return WalkResult::interrupt();
 

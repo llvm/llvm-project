@@ -165,7 +165,7 @@ struct OffloadModuleOpts {
   bool OpenMPIsTargetDevice = false;
   bool OpenMPIsGPU = false;
   bool OpenMPForceUSM = false;
-  uint32_t OpenMPVersion = 11;
+  uint32_t OpenMPVersion = 31;
   std::string OMPHostIRFile = {};
   std::vector<llvm::Triple> OMPTargetTriples = {};
   bool NoGPULib = false;

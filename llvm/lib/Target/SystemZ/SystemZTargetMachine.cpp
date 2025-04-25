@@ -48,6 +48,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
   initializeSystemZDAGToDAGISelLegacyPass(PR);
+  initializeSystemZCopyPhysRegsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {

@@ -7,7 +7,7 @@
 template<class T> auto f(T t) -> decltype(++t); // precxx17-warning {{incrementing expression of type bool is deprecated}}
 
 auto f(...) -> void;
-void g() { f(true); }
+void g() { f(true); } // precxx17-note {{while substituting deduced template arguments}}
 
 #ifdef FAILED_CXX17
 
@@ -30,7 +30,7 @@ void f() {
 
 int main() {
   f<bool>(); // cxx20-note {{in instantiation of function template specialization 'f<bool>' requested here}}
-  static_assert(!can_increment<bool>); 
+  static_assert(!can_increment<bool>);
 
   return 0;
 }

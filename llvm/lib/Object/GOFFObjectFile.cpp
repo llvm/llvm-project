@@ -503,8 +503,9 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     std::copy(CompleteData.data(), CompleteData.data() + TxtDataSize,
               Data.begin() + TxtDataOffset);
   }
-  SectionDataCache[Sec.d.a] = Data;
-  return ArrayRef<uint8_t>(SectionDataCache[Sec.d.a]);
+  auto &Cache = SectionDataCache[Sec.d.a];
+  Cache = Data;
+  return ArrayRef<uint8_t>(Cache);
 }
 
 uint64_t GOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {

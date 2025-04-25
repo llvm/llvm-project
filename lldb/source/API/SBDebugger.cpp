@@ -179,48 +179,9 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
-  auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
-                       const FileSpec &spec,
-                       Status &error) -> llvm::sys::DynamicLibrary {
-    llvm::sys::DynamicLibrary dynlib =
-        llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
-    if (dynlib.isValid()) {
-      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
-
-      lldb::SBDebugger debugger_sb(debugger_sp);
-      // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
-      // function.
-      // TODO: mangle this differently for your system - on OSX, the first
-      // underscore needs to be removed and the second one stays
-      LLDBCommandPluginInit init_func =
-          (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
-              "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
-      if (init_func) {
-        if (init_func(debugger_sb))
-          return dynlib;
-        else
-          error = Status::FromErrorString(
-              "plug-in refused to load "
-              "(lldb::PluginInitialize(lldb::SBDebugger) "
-              "returned false)");
-      } else {
-        error = Status::FromErrorString(
-            "plug-in is missing the required initialization: "
-            "lldb::PluginInitialize(lldb::SBDebugger)");
-      }
-    } else {
-      if (FileSystem::Instance().Exists(spec))
-        error = Status::FromErrorString(
-            "this file does not represent a loadable dylib");
-      else
-        error = Status::FromErrorString("no such file");
-    }
-    return llvm::sys::DynamicLibrary();
-  };
-
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
+          std::make_unique<SystemInitializerFull>())) {
     error.SetError(Status::FromError(std::move(e)));
   }
   return error;
@@ -509,14 +470,14 @@ SBFile SBDebugger::GetInputFile() {
 FILE *SBDebugger::GetOutputFileHandle() {
   LLDB_INSTRUMENT_VA(this);
   if (m_opaque_sp)
-    return m_opaque_sp->GetOutputStreamSP()->GetFile().GetStream();
+    return m_opaque_sp->GetOutputFileSP()->GetStream();
   return nullptr;
 }
 
 SBFile SBDebugger::GetOutputFile() {
   LLDB_INSTRUMENT_VA(this);
   if (m_opaque_sp)
-    return SBFile(m_opaque_sp->GetOutputStreamSP()->GetFileSP());
+    return SBFile(m_opaque_sp->GetOutputFileSP());
   return SBFile();
 }
 
@@ -524,7 +485,7 @@ FILE *SBDebugger::GetErrorFileHandle() {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_sp)
-    return m_opaque_sp->GetErrorStreamSP()->GetFile().GetStream();
+    return m_opaque_sp->GetErrorFileSP()->GetStream();
   return nullptr;
 }
 
@@ -532,7 +493,7 @@ SBFile SBDebugger::GetErrorFile() {
   LLDB_INSTRUMENT_VA(this);
   SBFile file;
   if (m_opaque_sp)
-    return SBFile(m_opaque_sp->GetErrorStreamSP()->GetFileSP());
+    return SBFile(m_opaque_sp->GetErrorFileSP());
   return SBFile();
 }
 
@@ -573,8 +534,8 @@ void SBDebugger::HandleCommand(const char *command) {
 
     sb_interpreter.HandleCommand(command, result, false);
 
-    result.PutError(m_opaque_sp->GetErrorStreamSP()->GetFileSP());
-    result.PutOutput(m_opaque_sp->GetOutputStreamSP()->GetFileSP());
+    result.PutError(m_opaque_sp->GetErrorFileSP());
+    result.PutOutput(m_opaque_sp->GetOutputFileSP());
 
     if (!m_opaque_sp->GetAsyncExecution()) {
       SBProcess process(GetCommandInterpreter().GetProcess());

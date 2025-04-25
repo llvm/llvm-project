@@ -12,11 +12,11 @@
 define internal void @foo(<vscale x 1 x i16> %v15, <vscale x 1 x i16> %0, <vscale x 1 x i16> %vs12.i.i.i, <vscale x 1 x i16> %1, <vscale x 8 x i8> %v37) {
 ; NOSUBREG-LABEL: foo:
 ; NOSUBREG:       # %bb.0: # %loopIR.preheader.i.i
-; NOSUBREG-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; NOSUBREG-NEXT:    vmv.v.i v14, 0
-; NOSUBREG-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; NOSUBREG-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; NOSUBREG-NEXT:    vmv.v.i v9, 0
-; NOSUBREG-NEXT:    vmv.v.i v8, 0
+; NOSUBREG-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; NOSUBREG-NEXT:    vmv.v.i v14, 0
+; NOSUBREG-NEXT:    vmv1r.v v8, v9
 ; NOSUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
 ; NOSUBREG-NEXT:    vrgatherei16.vv v8, v9, v14
 ; NOSUBREG-NEXT:  .LBB0_1: # %loopIR3.i.i
@@ -32,11 +32,11 @@ define internal void @foo(<vscale x 1 x i16> %v15, <vscale x 1 x i16> %0, <vscal
 ;
 ; SUBREG-LABEL: foo:
 ; SUBREG:       # %bb.0: # %loopIR.preheader.i.i
-; SUBREG-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; SUBREG-NEXT:    vmv.v.i v14, 0
-; SUBREG-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; SUBREG-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; SUBREG-NEXT:    vmv.v.i v9, 0
-; SUBREG-NEXT:    vmv.v.i v8, 0
+; SUBREG-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; SUBREG-NEXT:    vmv.v.i v14, 0
+; SUBREG-NEXT:    vmv1r.v v8, v9
 ; SUBREG-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
 ; SUBREG-NEXT:    vrgatherei16.vv v8, v9, v14
 ; SUBREG-NEXT:  .LBB0_1: # %loopIR3.i.i

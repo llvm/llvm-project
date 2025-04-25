@@ -98,7 +98,7 @@ define amdgpu_ps void @global_store_saddr_i8_zext_vgpr_offset_neg2048(ptr addrsp
 ; Uniformity edge cases
 ; --------------------------------------------------------------------------------
 
-@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) undef
+@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) poison
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps void @global_store_saddr_uniform_ptr_in_vgprs(i32 %voffset, i8 %data) {
@@ -1253,6 +1253,7 @@ define amdgpu_ps void @atomic_global_store_saddr_i32_zext_vgpr(ptr addrspace(1) 
 ; GFX12-LABEL: atomic_global_store_saddr_i32_zext_vgpr:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1275,6 +1276,7 @@ define amdgpu_ps void @atomic_global_store_saddr_i32_zext_vgpr_offset_neg128(ptr
 ; GFX12-LABEL: atomic_global_store_saddr_i32_zext_vgpr_offset_neg128:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b32 v0, v1, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1298,6 +1300,7 @@ define amdgpu_ps void @atomic_global_store_saddr_i64_zext_vgpr(ptr addrspace(1) 
 ; GFX12-LABEL: atomic_global_store_saddr_i64_zext_vgpr:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b64 v0, v[1:2], s[2:3] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
@@ -1320,6 +1323,7 @@ define amdgpu_ps void @atomic_global_store_saddr_i64_zext_vgpr_offset_neg128(ptr
 ; GFX12-LABEL: atomic_global_store_saddr_i64_zext_vgpr_offset_neg128:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b64 v0, v[1:2], s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64

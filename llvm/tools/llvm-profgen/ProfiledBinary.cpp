@@ -242,8 +242,7 @@ void ProfiledBinary::load() {
     loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
   }
 
-  DisassembleFunctionSet.insert(DisassembleFunctions.begin(),
-                                DisassembleFunctions.end());
+  DisassembleFunctionSet.insert_range(DisassembleFunctions);
 
   if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
     checkPseudoProbe(ELFObj);

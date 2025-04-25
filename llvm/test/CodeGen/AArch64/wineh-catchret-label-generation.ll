@@ -35,7 +35,7 @@ define fastcc ptr @test_function(i1 %0, ptr %_Fmtfl.i.i, i1 %1) personality ptr 
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .seh_endfunclet
 ; CHECK-NEXT:    .seh_handlerdata
-; CHECK-NEXT:    .word ($cppxdata$test_function)@IMGREL
+; CHECK-NEXT:    .word $cppxdata$test_function@IMGREL
 ; CHECK-NEXT:    .text
 ; CHECK-NEXT:    .seh_endproc
 ; CHECK-NEXT:    .def "?catch$5@?0?test_function@4HA";

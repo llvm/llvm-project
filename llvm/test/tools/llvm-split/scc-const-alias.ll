@@ -5,12 +5,12 @@
 ; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
 
 ; Checks are not critical here - verifier will assert if we fail.
-; CHECK0: @g1 = global i32 99
-; CHECK0: @c1Alias = external global i8
-; CHECK0: @g1Alias = internal alias i8, ptr @g1
+; CHECK0: @g1 = external global i32
+; CHECK0: @c1Alias = internal alias i8, inttoptr (i64 42 to ptr)
 
-; CHECK1: @g1 = external global i32
-; CHECK1: @c1Alias = internal alias i8, inttoptr (i64 42 to ptr)
+; CHECK1: @g1 = global i32 99
+; CHECK1: @c1Alias = external global i8
+; CHECK1: @g1Alias = internal alias i8, ptr @g1
 
 ; Third file is actually empty.
 ; CHECK2: @g1 = external global i32

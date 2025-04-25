@@ -5,6 +5,7 @@ add_flang_library(flangFrontend
   CompilerInstance.cpp
   CompilerInvocation.cpp
   CodeGenOptions.cpp
+  ParserActions.cpp
   FrontendAction.cpp
   FrontendActions.cpp
   FrontendOptions.cpp
@@ -18,9 +19,6 @@ add_flang_library(flangFrontend
   FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
   HLFIRDialect
-  MLIRIR
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_LIBS
   CUFDialect
@@ -35,11 +33,13 @@ add_flang_library(flangFrontend
   FIRSupport
   FIRBuilder
   FIRCodeGen
+  FIRCodeGenDialect
   FIRTransforms
   HLFIRDialect
   HLFIRTransforms
   flangPasses
   FIROpenACCSupport
+  FIROpenMPSupport
   FlangOpenMPTransforms
 
   LINK_COMPONENTS
@@ -55,6 +55,11 @@ add_flang_library(flangFrontend
   FrontendDriver
   FrontendOpenACC
   FrontendOpenMP
+
+  MLIR_DEPS
+  MLIRIR
+  ${dialect_libs}
+  ${extension_libs}
 
   MLIR_LIBS
   MLIRTransforms

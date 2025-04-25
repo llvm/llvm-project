@@ -188,6 +188,16 @@ func.func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf
 //   CHECK-LABEL: func @vector_fma
 // CHECK-COUNT-4: vector.fma %{{.+}}, %{{.+}}, %{{.+}} : vector<2x2xf32>
 
+// TODO: We should be able to unroll this like the example above - this will require extending UnrollElementwisePattern.
+func.func @negative_vector_fma_3d(%a: vector<3x2x2xf32>) -> vector<3x2x2xf32>{
+  %0 = vector.fma %a, %a, %a : vector<3x2x2xf32>
+  return %0 : vector<3x2x2xf32>
+}
+// CHECK-LABEL: func @negative_vector_fma_3d
+//   CHECK-NOT: vector.extract_strided_slice
+//       CHECK: %[[R0:.*]] = vector.fma %{{.+}} : vector<3x2x2xf32>
+//       CHECK: return 
+
 func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
   %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [1] : vector<4x6xf32> to vector<4xf32>
   return %0 : vector<4xf32>
@@ -212,6 +222,15 @@ func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> 
 //       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R5]], %[[V1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 //       CHECK:   return %[[V2]] : vector<4xf32>
 
+// This is a negative test case to ensure that further unrolling is not performed. Since the vector.multi_reduction
+// operation has already been unrolled, attempting additional unrolling should not be allowed.
+func.func @negative_vector_multi_reduction(%v: vector<4x2xf32>, %acc: f32) -> f32 {
+  %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [0, 1] : vector<4x2xf32> to f32
+  return %0 : f32
+}
+// CHECK-LABEL: func @negative_vector_multi_reduction
+//  CHECK-NEXT:   %[[R0:.*]] = vector.multi_reduction <add>, %{{.*}}, %{{.*}} [0, 1] : vector<4x2xf32> to f32
+//  CHECK-NEXT:   return %[[R0]] : f32
 
 func.func @vector_reduction(%v : vector<8xf32>) -> f32 {
   %0 = vector.reduction <add>, %v : vector<8xf32> into f32

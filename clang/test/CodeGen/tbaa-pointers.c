@@ -208,8 +208,10 @@ int void_ptrs(void **ptr) {
 // COMMON-LABEL: define i32 @void_ptrs(
 // COMMON-SAME: ptr noundef [[PTRA:%.+]])
 // COMMON:        [[PTR_ADDR:%.+]]  = alloca ptr, align 8
-// COMMON-NEXT:   store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
-// COMMON-NEXT:   [[L0:%.+]] = load ptr, ptr  [[PTR_ADDR]], align 8, !tbaa  [[ANYPTR]]
+// DISABLE-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+// DEFAULT-NEXT:  store ptr [[PTRA]], ptr [[PTR_ADDR]], align 8, !tbaa [[ANYP2:!.+]]
+// DISABLE-NEXT:  [[L0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYPTR]]
+// DEFAULT-NEXT:  [[L0:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[ANYP2]]
 // COMMON-NEXT:   [[L1:%.+]] = load ptr, ptr [[L0]], align 8, !tbaa  [[ANYPTR]]
 // COMMON-NEXT:   [[BOOL:%.+]] = icmp ne ptr [[L1]], null
 // COMMON-NEXT:   [[BOOL_EXT:%.+]] = zext i1 [[BOOL]] to i64
@@ -220,7 +222,8 @@ int void_ptrs(void **ptr) {
 }
 
 // DEFAULT: [[P2INT_0]] = !{[[P2INT:!.+]], [[P2INT]], i64 0}
-// DEFAULT: [[P2INT]] = !{!"p2 int", [[ANY_POINTER:!.+]], i64 0}
+// DEFAULT: [[P2INT]] = !{!"p2 int", [[ANY_P2_POINTER:!.+]], i64 0}
+// DEFAULT: [[ANY_P2_POINTER]] = !{!"any p2 pointer", [[ANY_POINTER:!.+]], i64 0}
 // DISABLE: [[ANYPTR]] = !{[[ANY_POINTER:!.+]], [[ANY_POINTER]], i64 0}
 // COMMON: [[ANY_POINTER]] = !{!"any pointer", [[CHAR:!.+]], i64 0}
 // COMMON: [[CHAR]] = !{!"omnipotent char", [[TBAA_ROOT:!.+]], i64 0}
@@ -228,17 +231,19 @@ int void_ptrs(void **ptr) {
 // DEFAULT: [[P1INT_0]] = !{[[P1INT:!.+]], [[P1INT]], i64 0}
 // DEFAULT: [[P1INT]] = !{!"p1 int", [[ANY_POINTER]], i64 0}
 // DEFAULT: [[P3INT_0]] = !{[[P3INT:!.+]], [[P3INT]], i64 0}
-// DEFAULT: [[P3INT]] = !{!"p3 int", [[ANY_POINTER]], i64 0}
+// DEFAULT: [[P3INT]] = !{!"p3 int", [[ANY_P3_POINTER:!.+]], i64 0}
+// DEFAULT: [[ANY_P3_POINTER]] = !{!"any p3 pointer", [[ANY_P2_POINTER]], i64 0}
 // DEFAULT: [[P4CHAR_0]] = !{[[P4CHAR:!.+]], [[P4CHAR]], i64 0}
-// DEFAULT: [[P4CHAR]] = !{!"p4 omnipotent char", [[ANY_POINTER]], i64 0}
+// DEFAULT: [[P4CHAR]] = !{!"p4 omnipotent char", [[ANY_P4_POINTER:!.*]], i64 0}
+// DEFAULT: [[ANY_P4_POINTER]] = !{!"any p4 pointer", [[ANY_P3_POINTER]], i64 0}
 // DEFAULT: [[P3CHAR_0]] = !{[[P3CHAR:!.+]], [[P3CHAR]], i64 0}
-// DEFAULT: [[P3CHAR]] = !{!"p3 omnipotent char", [[ANY_POINTER]], i64 0}
+// DEFAULT: [[P3CHAR]] = !{!"p3 omnipotent char", [[ANY_P3_POINTER]], i64 0}
 // DEFAULT: [[P2CHAR_0]] = !{[[P2CHAR:!.+]], [[P2CHAR]], i64 0}
-// DEFAULT: [[P2CHAR]] = !{!"p2 omnipotent char", [[ANY_POINTER]], i64 0}
+// DEFAULT: [[P2CHAR]] = !{!"p2 omnipotent char", [[ANY_P2_POINTER]], i64 0}
 // DEFAULT: [[P1CHAR_0]] = !{[[P1CHAR:!.+]], [[P1CHAR]], i64 0}
 // DEFAULT: [[P1CHAR]] = !{!"p1 omnipotent char", [[ANY_POINTER]], i64 0}
 // DEFAULT: [[P2S1_TAG]] = !{[[P2S1:!.+]], [[P2S1]], i64 0}
-// DEFAULT: [[P2S1]] = !{!"p2 _ZTS2S1", [[ANY_POINTER]], i64 0}
+// DEFAULT: [[P2S1]] = !{!"p2 _ZTS2S1", [[ANY_P2_POINTER]], i64 0}
 // DEFAULT: [[P1S1_TAG:!.+]] = !{[[P1S1:!.+]], [[P1S1]], i64 0}
 // DEFAULT: [[P1S1]] = !{!"p1 _ZTS2S1", [[ANY_POINTER]], i64 0}
 // DEFAULT: [[P1S2_TAG]] = !{[[P1S2:!.+]], [[P1S2]], i64 0}
@@ -251,3 +256,4 @@ int void_ptrs(void **ptr) {
 // COMMON:  [[INT_TAG]] = !{[[INT_TY:!.+]], [[INT_TY]], i64 0}
 // COMMON:  [[INT_TY]] = !{!"int", [[CHAR]], i64 0}
 // DEFAULT: [[ANYPTR]] = !{[[ANY_POINTER]],  [[ANY_POINTER]], i64 0}
+// DEFAULT: [[ANYP2]] = !{[[ANY_P2_POINTER]],  [[ANY_P2_POINTER]], i64 0}

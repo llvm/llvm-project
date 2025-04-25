@@ -1,0 +1,32 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test lowering of CUDA pointers.
+
+module mod1
+
+integer, device, pointer :: x(:)
+
+contains
+
+subroutine allocate_pointer
+  real, device, pointer :: pr(:)
+  allocate(pr(10))
+end 
+
+! CHECK-LABEL: func.func @_QMmod1Pallocate_pointer()
+! CHECK-COUNT-2: fir.embox %{{.*}} {allocator_idx = 2 : i32} : (!fir.ptr<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+
+subroutine c_f_pointer_sync
+  use iso_c_binding
+  use, intrinsic :: __fortran_builtins, only: c_devptr => __builtin_c_devptr
+  type(c_devptr) :: cd1
+  integer, parameter :: N = 2000
+  call c_f_pointer(cd1, x, (/ 2000 /))
+end 
+
+! CHECK-LABEL: func.func @_QMmod1Pc_f_pointer_sync()
+! CHECK: %[[ADDR_X:.*]] = fir.address_of(@_QMmod1Ex) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+! CHECK: %[[CONV:.*]] = fir.convert %[[ADDR_X]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<i8>
+! CHECK: fir.call @_FortranACUFSyncGlobalDescriptor(%[[CONV]], %{{.*}}, %{{.*}}) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.ref<i8>, i32) -> ()
+
+end module

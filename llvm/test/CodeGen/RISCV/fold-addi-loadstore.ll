@@ -929,19 +929,19 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call f
-; RV32I-NEXT:    addi s5, s5, 1
-; RV32I-NEXT:    seqz a0, s5
-; RV32I-NEXT:    add s6, s6, a0
 ; RV32I-NEXT:    lw a0, 8(s7)
 ; RV32I-NEXT:    lw a1, 12(s7)
-; RV32I-NEXT:    add a1, a1, s4
+; RV32I-NEXT:    addi s5, s5, 1
+; RV32I-NEXT:    seqz a2, s5
+; RV32I-NEXT:    add s6, s6, a2
 ; RV32I-NEXT:    xor a2, s5, s2
+; RV32I-NEXT:    add a1, a1, s4
+; RV32I-NEXT:    xor a3, s6, s1
+; RV32I-NEXT:    or a2, a2, a3
 ; RV32I-NEXT:    add s3, a0, s3
 ; RV32I-NEXT:    sltu s4, s3, a0
 ; RV32I-NEXT:    add s4, a1, s4
-; RV32I-NEXT:    xor a0, s6, s1
-; RV32I-NEXT:    or a0, a2, a0
-; RV32I-NEXT:    bnez a0, .LBB20_5
+; RV32I-NEXT:    bnez a2, .LBB20_5
 ; RV32I-NEXT:  .LBB20_6: # %for.cond.cleanup
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a1, s4
@@ -994,19 +994,19 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-MEDIUM-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32I-MEDIUM-NEXT:    mv a0, s0
 ; RV32I-MEDIUM-NEXT:    call f
-; RV32I-MEDIUM-NEXT:    addi s5, s5, 1
-; RV32I-MEDIUM-NEXT:    seqz a0, s5
-; RV32I-MEDIUM-NEXT:    add s6, s6, a0
 ; RV32I-MEDIUM-NEXT:    lw a0, 8(s7)
 ; RV32I-MEDIUM-NEXT:    lw a1, 12(s7)
-; RV32I-MEDIUM-NEXT:    add a1, a1, s4
+; RV32I-MEDIUM-NEXT:    addi s5, s5, 1
+; RV32I-MEDIUM-NEXT:    seqz a2, s5
+; RV32I-MEDIUM-NEXT:    add s6, s6, a2
 ; RV32I-MEDIUM-NEXT:    xor a2, s5, s2
+; RV32I-MEDIUM-NEXT:    add a1, a1, s4
+; RV32I-MEDIUM-NEXT:    xor a3, s6, s1
+; RV32I-MEDIUM-NEXT:    or a2, a2, a3
 ; RV32I-MEDIUM-NEXT:    add s3, a0, s3
 ; RV32I-MEDIUM-NEXT:    sltu s4, s3, a0
 ; RV32I-MEDIUM-NEXT:    add s4, a1, s4
-; RV32I-MEDIUM-NEXT:    xor a0, s6, s1
-; RV32I-MEDIUM-NEXT:    or a0, a2, a0
-; RV32I-MEDIUM-NEXT:    bnez a0, .LBB20_5
+; RV32I-MEDIUM-NEXT:    bnez a2, .LBB20_5
 ; RV32I-MEDIUM-NEXT:  .LBB20_6: # %for.cond.cleanup
 ; RV32I-MEDIUM-NEXT:    mv a0, s3
 ; RV32I-MEDIUM-NEXT:    mv a1, s4
@@ -1042,8 +1042,8 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call f
 ; RV64I-NEXT:    ld a0, 8(s3)
-; RV64I-NEXT:    add s2, a0, s2
 ; RV64I-NEXT:    addi s1, s1, -1
+; RV64I-NEXT:    add s2, a0, s2
 ; RV64I-NEXT:    bnez s1, .LBB20_2
 ; RV64I-NEXT:    j .LBB20_4
 ; RV64I-NEXT:  .LBB20_3:
@@ -1078,8 +1078,8 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV64I-MEDIUM-NEXT:    mv a0, s0
 ; RV64I-MEDIUM-NEXT:    call f
 ; RV64I-MEDIUM-NEXT:    ld a0, 8(s3)
-; RV64I-MEDIUM-NEXT:    add s2, a0, s2
 ; RV64I-MEDIUM-NEXT:    addi s1, s1, -1
+; RV64I-MEDIUM-NEXT:    add s2, a0, s2
 ; RV64I-MEDIUM-NEXT:    bnez s1, .LBB20_2
 ; RV64I-MEDIUM-NEXT:    j .LBB20_4
 ; RV64I-MEDIUM-NEXT:  .LBB20_3:
@@ -1108,18 +1108,18 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV64I-LARGE-NEXT:    mv s0, a2
 ; RV64I-LARGE-NEXT:    mv s1, a1
 ; RV64I-LARGE-NEXT:    li s2, 0
-; RV64I-LARGE-NEXT:    slli a0, a0, 4
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi14:
 ; RV64I-LARGE-NEXT:    auipc a1, %pcrel_hi(.LCPI20_0)
-; RV64I-LARGE-NEXT:    add s3, a2, a0
-; RV64I-LARGE-NEXT:    ld s4, %pcrel_lo(.Lpcrel_hi14)(a1)
+; RV64I-LARGE-NEXT:    ld s3, %pcrel_lo(.Lpcrel_hi14)(a1)
+; RV64I-LARGE-NEXT:    slli a0, a0, 4
+; RV64I-LARGE-NEXT:    add s4, a2, a0
 ; RV64I-LARGE-NEXT:  .LBB20_2: # %for.body
 ; RV64I-LARGE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-LARGE-NEXT:    mv a0, s0
-; RV64I-LARGE-NEXT:    jalr s4
-; RV64I-LARGE-NEXT:    ld a0, 8(s3)
-; RV64I-LARGE-NEXT:    add s2, a0, s2
+; RV64I-LARGE-NEXT:    jalr s3
+; RV64I-LARGE-NEXT:    ld a0, 8(s4)
 ; RV64I-LARGE-NEXT:    addi s1, s1, -1
+; RV64I-LARGE-NEXT:    add s2, a0, s2
 ; RV64I-LARGE-NEXT:    bnez s1, .LBB20_2
 ; RV64I-LARGE-NEXT:    j .LBB20_4
 ; RV64I-LARGE-NEXT:  .LBB20_3:
@@ -1226,4 +1226,73 @@ for.inc.peel:                                     ; preds = %entry
   %spec.select = select i1 %tobool.not.3.peel, i32 1, i32 0
   store i32 %spec.select, ptr null, align 4
   ret i32 0
+}
+
+@ki_end = external dso_local global [0 x i8], align 1
+
+define i1 @pr134525() nounwind {
+; RV32I-LABEL: pr134525:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    lui a0, %hi(ki_end)
+; RV32I-NEXT:    addi a0, a0, %lo(ki_end)
+; RV32I-NEXT:    lui a1, 523776
+; RV32I-NEXT:    lui a2, 32
+; RV32I-NEXT:    add a1, a0, a1
+; RV32I-NEXT:    addi a2, a2, 1
+; RV32I-NEXT:    sltu a2, a1, a2
+; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    ret
+;
+; RV32I-MEDIUM-LABEL: pr134525:
+; RV32I-MEDIUM:       # %bb.0: # %entry
+; RV32I-MEDIUM-NEXT:  .Lpcrel_hi15:
+; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ki_end)
+; RV32I-MEDIUM-NEXT:    lui a1, 523776
+; RV32I-MEDIUM-NEXT:    lui a2, 32
+; RV32I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi15)
+; RV32I-MEDIUM-NEXT:    addi a2, a2, 1
+; RV32I-MEDIUM-NEXT:    add a1, a0, a1
+; RV32I-MEDIUM-NEXT:    sltu a2, a1, a2
+; RV32I-MEDIUM-NEXT:    sltu a0, a1, a0
+; RV32I-MEDIUM-NEXT:    not a0, a0
+; RV32I-MEDIUM-NEXT:    and a0, a0, a2
+; RV32I-MEDIUM-NEXT:    ret
+;
+; RV64I-LABEL: pr134525:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    lui a0, %hi(ki_end+2145386496)
+; RV64I-NEXT:    addi a0, a0, %lo(ki_end+2145386496)
+; RV64I-NEXT:    lui a1, 32
+; RV64I-NEXT:    addiw a1, a1, 1
+; RV64I-NEXT:    sltu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64I-MEDIUM-LABEL: pr134525:
+; RV64I-MEDIUM:       # %bb.0: # %entry
+; RV64I-MEDIUM-NEXT:  .Lpcrel_hi15:
+; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(ki_end)
+; RV64I-MEDIUM-NEXT:    lui a1, 523776
+; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi15)
+; RV64I-MEDIUM-NEXT:    add a0, a0, a1
+; RV64I-MEDIUM-NEXT:    lui a1, 32
+; RV64I-MEDIUM-NEXT:    addiw a1, a1, 1
+; RV64I-MEDIUM-NEXT:    sltu a0, a0, a1
+; RV64I-MEDIUM-NEXT:    ret
+;
+; RV64I-LARGE-LABEL: pr134525:
+; RV64I-LARGE:       # %bb.0: # %entry
+; RV64I-LARGE-NEXT:  .Lpcrel_hi16:
+; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI22_0)
+; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi16)(a0)
+; RV64I-LARGE-NEXT:    lui a1, 523776
+; RV64I-LARGE-NEXT:    add a0, a0, a1
+; RV64I-LARGE-NEXT:    lui a1, 32
+; RV64I-LARGE-NEXT:    addiw a1, a1, 1
+; RV64I-LARGE-NEXT:    sltu a0, a0, a1
+; RV64I-LARGE-NEXT:    ret
+entry:
+  %cmp = icmp ult i64 sub (i64 ptrtoint (ptr @ki_end to i64), i64 -2145386496), 131073
+  ret i1 %cmp
 }

@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
-; RUN: llc -mtriple=riscv64 -mattr=+xmipscmove -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+xmipscmov -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
 
 ;; There are a few different ways to lower (select (and A, B), X, Y). This test
@@ -12,22 +12,22 @@
 define signext i32 @select_of_and(i1 zeroext %a, i1 zeroext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV32I-LABEL: select_of_and:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    bnez a0, .LBB0_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a2, a3
-; RV32I-NEXT:  .LBB0_2:
+; RV32I-NEXT:    and a1, a0, a1
 ; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    bnez a1, .LBB0_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:  .LBB0_2:
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: select_of_and:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    bnez a0, .LBB0_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a2, a3
-; RV64I-NEXT:  .LBB0_2:
+; RV64I-NEXT:    and a1, a0, a1
 ; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:    bnez a1, .LBB0_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a0, a3
+; RV64I-NEXT:  .LBB0_2:
 ; RV64I-NEXT:    ret
 ;
 ; RV64I-CCMOV-LABEL: select_of_and:

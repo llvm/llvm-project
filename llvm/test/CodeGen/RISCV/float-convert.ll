@@ -1417,13 +1417,13 @@ define signext i16 @fcvt_w_s_sat_i16(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_w_s_sat_i16:
 ; RV32IF:       # %bb.0: # %start
 ; RV32IF-NEXT:    feq.s a0, fa0, fa0
-; RV32IF-NEXT:    lui a1, 815104
-; RV32IF-NEXT:    fmv.w.x fa5, a1
 ; RV32IF-NEXT:    lui a1, %hi(.LCPI24_0)
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI24_0)(a1)
+; RV32IF-NEXT:    lui a1, 815104
+; RV32IF-NEXT:    fmv.w.x fa4, a1
+; RV32IF-NEXT:    fmax.s fa4, fa0, fa4
 ; RV32IF-NEXT:    neg a0, a0
-; RV32IF-NEXT:    fmax.s fa5, fa0, fa5
-; RV32IF-NEXT:    flw fa4, %lo(.LCPI24_0)(a1)
-; RV32IF-NEXT:    fmin.s fa5, fa5, fa4
+; RV32IF-NEXT:    fmin.s fa5, fa4, fa5
 ; RV32IF-NEXT:    fcvt.w.s a1, fa5, rtz
 ; RV32IF-NEXT:    and a0, a0, a1
 ; RV32IF-NEXT:    ret
@@ -1431,13 +1431,13 @@ define signext i16 @fcvt_w_s_sat_i16(float %a) nounwind {
 ; RV64IF-LABEL: fcvt_w_s_sat_i16:
 ; RV64IF:       # %bb.0: # %start
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
-; RV64IF-NEXT:    lui a1, 815104
-; RV64IF-NEXT:    fmv.w.x fa5, a1
 ; RV64IF-NEXT:    lui a1, %hi(.LCPI24_0)
+; RV64IF-NEXT:    flw fa5, %lo(.LCPI24_0)(a1)
+; RV64IF-NEXT:    lui a1, 815104
+; RV64IF-NEXT:    fmv.w.x fa4, a1
+; RV64IF-NEXT:    fmax.s fa4, fa0, fa4
 ; RV64IF-NEXT:    neg a0, a0
-; RV64IF-NEXT:    fmax.s fa5, fa0, fa5
-; RV64IF-NEXT:    flw fa4, %lo(.LCPI24_0)(a1)
-; RV64IF-NEXT:    fmin.s fa5, fa5, fa4
+; RV64IF-NEXT:    fmin.s fa5, fa4, fa5
 ; RV64IF-NEXT:    fcvt.l.s a1, fa5, rtz
 ; RV64IF-NEXT:    and a0, a0, a1
 ; RV64IF-NEXT:    ret
@@ -1602,21 +1602,21 @@ define zeroext i16 @fcvt_wu_s_i16(float %a) nounwind {
 define zeroext i16 @fcvt_wu_s_sat_i16(float %a) nounwind {
 ; RV32IF-LABEL: fcvt_wu_s_sat_i16:
 ; RV32IF:       # %bb.0: # %start
-; RV32IF-NEXT:    fmv.w.x fa5, zero
 ; RV32IF-NEXT:    lui a0, %hi(.LCPI26_0)
-; RV32IF-NEXT:    fmax.s fa5, fa0, fa5
-; RV32IF-NEXT:    flw fa4, %lo(.LCPI26_0)(a0)
-; RV32IF-NEXT:    fmin.s fa5, fa5, fa4
+; RV32IF-NEXT:    flw fa5, %lo(.LCPI26_0)(a0)
+; RV32IF-NEXT:    fmv.w.x fa4, zero
+; RV32IF-NEXT:    fmax.s fa4, fa0, fa4
+; RV32IF-NEXT:    fmin.s fa5, fa4, fa5
 ; RV32IF-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: fcvt_wu_s_sat_i16:
 ; RV64IF:       # %bb.0: # %start
-; RV64IF-NEXT:    fmv.w.x fa5, zero
 ; RV64IF-NEXT:    lui a0, %hi(.LCPI26_0)
-; RV64IF-NEXT:    fmax.s fa5, fa0, fa5
-; RV64IF-NEXT:    flw fa4, %lo(.LCPI26_0)(a0)
-; RV64IF-NEXT:    fmin.s fa5, fa5, fa4
+; RV64IF-NEXT:    flw fa5, %lo(.LCPI26_0)(a0)
+; RV64IF-NEXT:    fmv.w.x fa4, zero
+; RV64IF-NEXT:    fmax.s fa4, fa0, fa4
+; RV64IF-NEXT:    fmin.s fa5, fa4, fa5
 ; RV64IF-NEXT:    fcvt.lu.s a0, fa5, rtz
 ; RV64IF-NEXT:    ret
 ;
@@ -2002,7 +2002,7 @@ define zeroext i8 @fcvt_wu_s_sat_i8(float %a) nounwind {
 ; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    and a0, a0, s1
 ; RV32I-NEXT:  .LBB30_3: # %start
-; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    zext.b a0, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -2036,7 +2036,7 @@ define zeroext i8 @fcvt_wu_s_sat_i8(float %a) nounwind {
 ; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    and a0, a0, s1
 ; RV64I-NEXT:  .LBB30_3: # %start
-; RV64I-NEXT:    andi a0, a0, 255
+; RV64I-NEXT:    zext.b a0, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

@@ -22,6 +22,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
   namespace lldb_private {                                                     \
@@ -46,6 +47,12 @@ namespace lldb_private {
 class CommandInterpreter;
 class Debugger;
 class StringList;
+
+struct RegisteredPluginInfo {
+  llvm::StringRef name = "";
+  llvm::StringRef description = "";
+  bool enabled = false;
+};
 
 class PluginManager {
 public:
@@ -134,8 +141,10 @@ public:
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
 
   // Language
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             LanguageCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 LanguageCreateInstance create_callback,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
@@ -167,6 +176,12 @@ public:
 
   static SystemRuntimeCreateInstance
   GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx);
+
+  static std::vector<RegisteredPluginInfo> GetSystemRuntimePluginInfo();
+
+  // Modify the enabled state of a SystemRuntime plugin.
+  // Returns false if the plugin name is not found.
+  static bool SetSystemRuntimePluginEnabled(llvm::StringRef name, bool enabled);
 
   // ObjectFile
   static bool
@@ -598,6 +613,14 @@ public:
                                     llvm::StringRef setting_name);
 
   static bool CreateSettingForStructuredDataPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForCPlusPlusLanguagePlugin(Debugger &debugger,
+                                       llvm::StringRef setting_name);
+
+  static bool CreateSettingForCPlusPlusLanguagePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 };

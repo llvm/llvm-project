@@ -3498,6 +3498,13 @@ class PPCAsmPseudo<string asm, dag iops>
   let TSFlags{10} = MemriOp;
 }
 
+// Mask immediates for MMA instructions (2, 4 and 8 bits).
+def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
+def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
+def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
+
+def MMA : Predicate<"Subtarget->hasMMA()">;
+
 // Prefixed instructions may require access to the above defs at a later
 // time so we include this after the def.
 include "PPCInstrP10.td"
@@ -5077,11 +5084,11 @@ defm : TrapExtendedMnemonic<"lng", 6>;
 defm : TrapExtendedMnemonic<"u", 31>;
 
 // Atomic loads
-def : Pat<(i32 (atomic_load_8  DForm:$src)), (LBZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_16 DForm:$src)), (LHZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  DForm:$src)), (LBZ  memri:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 DForm:$src)), (LHZ  memri:$src)>;
 def : Pat<(i32 (atomic_load_32 DForm:$src)), (LWZ  memri:$src)>;
-def : Pat<(i32 (atomic_load_8  XForm:$src)), (LBZX memrr:$src)>;
-def : Pat<(i32 (atomic_load_16 XForm:$src)), (LHZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_8  XForm:$src)), (LBZX memrr:$src)>;
+def : Pat<(i32 (atomic_load_azext_16 XForm:$src)), (LHZX memrr:$src)>;
 def : Pat<(i32 (atomic_load_32 XForm:$src)), (LWZX memrr:$src)>;
 
 // Atomic stores

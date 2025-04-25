@@ -58,11 +58,9 @@ define ptx_kernel void @foo5(ptr noalias readonly %from, ptr %to) {
 
 ; i128 is non standard integer in nvptx64
 ; SM20-LABEL: .visible .entry foo6(
-; SM20: ld.global.u64
-; SM20: ld.global.u64
+; SM20: ld.global.v2.u64
 ; SM35-LABEL: .visible .entry foo6(
-; SM35: ld.global.nc.u64
-; SM35: ld.global.nc.u64
+; SM35: ld.global.nc.v2.u64
 define ptx_kernel void @foo6(ptr noalias readonly %from, ptr %to) {
   %1 = load i128, ptr %from
   store i128 %1, ptr %to

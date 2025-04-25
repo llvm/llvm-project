@@ -142,20 +142,20 @@ define i32 @freeze_anonstruct(ptr %p) {
 define i32 @freeze_anonstruct2(ptr %p) {
 ; RV32-LABEL: freeze_anonstruct2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 0(a0)
-; RV32-NEXT:    lh a0, 4(a0)
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    lh a1, 4(a0)
+; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    srli a1, a1, 16
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: freeze_anonstruct2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lw a1, 0(a0)
-; RV64-NEXT:    lh a0, 4(a0)
-; RV64-NEXT:    slli a0, a0, 48
-; RV64-NEXT:    srli a0, a0, 48
-; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    lh a1, 4(a0)
+; RV64-NEXT:    lw a0, 0(a0)
+; RV64-NEXT:    slli a1, a1, 48
+; RV64-NEXT:    srli a1, a1, 48
+; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    ret
   %s = load {i32, i16}, ptr %p
   %y1 = freeze {i32, i16} %s
@@ -169,20 +169,20 @@ define i32 @freeze_anonstruct2(ptr %p) {
 define i32 @freeze_anonstruct2_sext(ptr %p) {
 ; RV32-LABEL: freeze_anonstruct2_sext:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a1, 0(a0)
-; RV32-NEXT:    lh a0, 4(a0)
-; RV32-NEXT:    slli a0, a0, 16
-; RV32-NEXT:    srai a0, a0, 16
-; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    lh a1, 4(a0)
+; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    slli a1, a1, 16
+; RV32-NEXT:    srai a1, a1, 16
+; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: freeze_anonstruct2_sext:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lw a1, 0(a0)
-; RV64-NEXT:    lh a0, 4(a0)
-; RV64-NEXT:    slli a0, a0, 48
-; RV64-NEXT:    srai a0, a0, 48
-; RV64-NEXT:    addw a0, a1, a0
+; RV64-NEXT:    lh a1, 4(a0)
+; RV64-NEXT:    lw a0, 0(a0)
+; RV64-NEXT:    slli a1, a1, 48
+; RV64-NEXT:    srai a1, a1, 48
+; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    ret
   %s = load {i32, i16}, ptr %p
   %y1 = freeze {i32, i16} %s

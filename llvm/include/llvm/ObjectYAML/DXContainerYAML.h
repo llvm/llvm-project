@@ -74,17 +74,42 @@ struct ShaderHash {
 };
 
 #define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
-struct RootSignatureDesc {
-  RootSignatureDesc() = default;
-  RootSignatureDesc(const object::DirectX::RootSignature &Data);
+
+struct RootConstantsYaml {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+};
+
+struct RootParameterYamlDesc {
+  uint32_t Type;
+  uint32_t Visibility;
+  uint32_t Offset;
+
+  union {
+    RootConstantsYaml Constants;
+  };
+};
+
+struct RootSignatureYamlDesc {
+  RootSignatureYamlDesc() = default;
 
   uint32_t Version;
-  uint32_t NumParameters;
+  uint32_t NumRootParameters;
   uint32_t RootParametersOffset;
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
 
+  SmallVector<RootParameterYamlDesc> Parameters;
+
   uint32_t getEncodedFlags();
+
+  iterator_range<RootParameterYamlDesc *> params() {
+    return make_range(Parameters.begin(), Parameters.end());
+  }
+
+  static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
+  create(const object::DirectX::RootSignature &Data);
 
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
@@ -176,7 +201,7 @@ struct Part {
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
-  std::optional<DXContainerYAML::RootSignatureDesc> RootSignature;
+  std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
 };
 
 struct Object {
@@ -192,6 +217,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::ResourceBindInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureElement)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::PSVInfo::MaskVector)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::SignatureParameter)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterYamlDesc)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -259,9 +285,17 @@ template <> struct MappingTraits<DXContainerYAML::Signature> {
   static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
 };
 
-template <> struct MappingTraits<DXContainerYAML::RootSignatureDesc> {
+template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
   static void mapping(IO &IO,
-                      DXContainerYAML::RootSignatureDesc &RootSignature);
+                      DXContainerYAML::RootSignatureYamlDesc &RootSignature);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::RootConstantsYaml> {
+  static void mapping(IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C);
 };
 
 } // namespace yaml

@@ -47,12 +47,12 @@ define void @test(ptr %0, ptr %1) nounwind {
 ; CHECK-NEXT:    fcvt.d.s fs6, fa0
 ; CHECK-NEXT:    fcvt.d.s fs5, fs5
 ; CHECK-NEXT:    fcvt.d.s fs4, fs4
+; CHECK-NEXT:    lhu a0, 14(s1)
 ; CHECK-NEXT:    fcvt.d.s fs3, fs3
 ; CHECK-NEXT:    fcvt.d.s fs2, fs2
 ; CHECK-NEXT:    fcvt.d.s fs1, fs1
-; CHECK-NEXT:    fcvt.d.s fs0, fs0
-; CHECK-NEXT:    lhu a0, 14(s1)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
+; CHECK-NEXT:    fcvt.d.s fs0, fs0
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fcvt.d.s fa5, fa0
 ; CHECK-NEXT:    fsd fs2, 32(s0)
