@@ -14,6 +14,7 @@
 
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -33,13 +34,20 @@ struct ConvertFuncToEmitC
 } // namespace
 
 void ConvertFuncToEmitC::runOnOperation() {
+  TypeConverter typeConverter;
+  // Fallback converter
+  // See note https://mlir.llvm.org/docs/DialectConversion/#type-converter
+  // Type converters are called most to least recently inserted
+  typeConverter.addConversion([](Type t) { return t; });
+  populateEmitCSizeTTypeConversions(typeConverter);
+
   ConversionTarget target(getContext());
 
   target.addLegalDialect<emitc::EmitCDialect>();
   target.addIllegalOp<func::CallOp, func::FuncOp, func::ReturnOp>();
 
   RewritePatternSet patterns(&getContext());
-  populateFuncToEmitCPatterns(patterns);
+  populateFuncToEmitCPatterns(patterns, typeConverter);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
