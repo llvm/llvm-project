@@ -4933,6 +4933,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   } else if (const auto *PD =
                  dyn_cast<CXXPseudoDestructorExpr>(E->getCallee())) {
+    if (!this->emitCheckPseudoDtor(E))
+      return false;
     const Expr *Base = PD->getBase();
     if (!Base->isGLValue())
       return this->discard(Base);
