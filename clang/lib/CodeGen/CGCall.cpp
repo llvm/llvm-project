@@ -4857,7 +4857,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
 
   if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
       cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue &&
-      !type->isArrayParameterType()) {
+      !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
     LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
     assert(L.isSimple());
     args.addUncopiedAggregate(L, type);
@@ -6001,8 +6001,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     for (auto it = EHStack.find(CurrentCleanupScopeDepth); it != EHStack.end();
          ++it) {
       EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
-      if (!(Cleanup && Cleanup->getCleanup()->isRedundantBeforeReturn()))
+      // Fake uses can be safely emitted immediately prior to the tail call, so
+      // we choose to emit them just before the call here.
+      if (Cleanup && Cleanup->isFakeUse()) {
+        CGBuilderTy::InsertPointGuard IPG(Builder);
+        Builder.SetInsertPoint(CI);
+        Cleanup->getCleanup()->Emit(*this, EHScopeStack::Cleanup::Flags());
+      } else if (!(Cleanup &&
+                   Cleanup->getCleanup()->isRedundantBeforeReturn())) {
         CGM.ErrorUnsupported(MustTailCall, "tail call skipping over cleanups");
+      }
     }
     if (CI->getType()->isVoidTy())
       Builder.CreateRetVoid();
