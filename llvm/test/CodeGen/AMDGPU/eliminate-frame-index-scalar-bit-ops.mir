@@ -5,7 +5,7 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck -check-prefix=MUBUFW64 %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck -check-prefix=MUBUFW32 %s
 
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck -check-prefix=FLATSCRW64 %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck -check-prefix=FLATSCRW64 %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck -check-prefix=FLATSCRW32 %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs -run-pass=prologepilog %s -o - | FileCheck -check-prefix=FLATSCRW32 %s
 

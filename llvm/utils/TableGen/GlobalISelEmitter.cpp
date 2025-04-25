@@ -63,7 +63,7 @@ STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternsTested,
           "Number of patterns executed according to coverage information");
 
-cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
+static cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
 
 static cl::opt<bool> WarnOnSkippedPatterns(
     "warn-on-skipped-patterns",
@@ -217,6 +217,9 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
       continue;
 
     if (Predicate.isLoad() && Predicate.getMemoryVT())
+      continue;
+
+    if (Predicate.isStore() && Predicate.getMemoryVT())
       continue;
 
     if (Predicate.isLoad() || Predicate.isStore()) {
@@ -624,7 +627,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
         0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
     return InsnMatcher;
   }
-  if (Predicate.isLoad() && Predicate.isAnyExtLoad()) {
+  if ((Predicate.isLoad() || Predicate.isAtomic()) &&
+      Predicate.isAnyExtLoad()) {
     InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
         0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
     return InsnMatcher;

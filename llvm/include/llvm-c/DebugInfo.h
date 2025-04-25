@@ -160,6 +160,8 @@ typedef enum {
 /**
  * The kind of metadata nodes.
  */
+// NOTE: New entries should always be appended instead of matching the order
+// in Metadata.def.
 enum {
   LLVMMDStringMetadataKind,
   LLVMConstantAsMetadataMetadataKind,
@@ -200,6 +202,8 @@ enum {
   LLVMDIExprMetadataKind,
   LLVMDIFragmentMetadataKind,
   LLVMDILifetimeMetadataKind,
+  LLVMDISubrangeTypeMetadataKind,
+  LLVMDIFixedPointTypeMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 

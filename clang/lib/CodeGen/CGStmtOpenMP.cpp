@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -393,8 +394,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
       Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
   Address DTeamValsAddr(DTeamValsInst, RedVarType,
                         Context.getTypeAlignInChars(RedVarQualType));
-  llvm::Value *NullPtrDTeamVals =
-      llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+  llvm::Value *NullPtrDTeamVals = llvm::ConstantPointerNull::get(
+      llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
   Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
 
   // Placeholder for d_teams_done_ptr initialized to nullptr
@@ -402,8 +403,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
       Builder.CreateAlloca(Int32Ty, nullptr, "d_teams_done_ptr");
   Address DTeamsDoneAddr(DTeamsDonePtrInst, Int32Ty,
                          Context.getTypeAlignInChars(Context.UnsignedIntTy));
-  llvm::Value *NullPtrDTeamsDone =
-      llvm::ConstantPointerNull::get(Int32Ty->getPointerTo());
+  llvm::Value *NullPtrDTeamsDone = llvm::ConstantPointerNull::get(
+      llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
   Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
 
   assert(DTeamValsInst && "Device team vals pointer cannot be null");
@@ -419,8 +420,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
     Address DScanStorageAddr(
         DScanStorageInst, RedVarType,
         Context.getTypeAlignInChars(Context.UnsignedIntTy));
-    llvm::Value *NullPtrDScanStorage =
-        llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+    llvm::Value *NullPtrDScanStorage = llvm::ConstantPointerNull::get(
+        llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
     Builder.CreateStore(NullPtrDScanStorage, DScanStorageAddr);
 
     assert(DScanStorageInst && "Device scan storage pointer cannot be null");
@@ -432,8 +433,8 @@ void CodeGenFunction::InitializeXteamRedCapturedVars(
       Address DSegmentValsAddr(
           DSegmentValsInst, RedVarType,
           Context.getTypeAlignInChars(Context.UnsignedIntTy));
-      llvm::Value *NullPtrDSegmentVals =
-          llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
+      llvm::Value *NullPtrDSegmentVals = llvm::ConstantPointerNull::get(
+          llvm::PointerType::get(getLLVMContext(), /*AddressSpace=*/0));
       Builder.CreateStore(NullPtrDSegmentVals, DSegmentValsAddr);
 
       assert(DSegmentValsInst && "Segment Vals Array pointer cannot be null");
@@ -956,14 +957,19 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     // If Xteam found, use it. Otherwise, query again. This is required to make
     // sure that the outlined routines have the correct signature.
     if (FStmt) {
-      if (!CGM.isXteamRedKernel(FStmt))
-        isXteamKernel =
-            CGM.checkAndSetXteamRedKernel(D) == CodeGenModule::NxSuccess;
-      else
+      if (!CGM.isXteamRedKernel(FStmt)) {
+        CodeGenModule::NoLoopXteamErr NxStatus =
+            CGM.checkAndSetXteamRedKernel(D);
+        DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                        CGM.emitNxResult("[Xteam-host]", D, NxStatus));
+        isXteamKernel = (NxStatus == CodeGenModule::NxSuccess);
+      } else
         isXteamKernel = true;
     } else {
-      isXteamKernel =
-          CGM.checkAndSetXteamRedKernel(D) == CodeGenModule::NxSuccess;
+      CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetXteamRedKernel(D);
+      DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                      CGM.emitNxResult("[Xteam-host]", D, NxStatus));
+      isXteamKernel = (NxStatus == CodeGenModule::NxSuccess);
     }
   }
 
@@ -2924,10 +2930,86 @@ static void emitSimdlenSafelenClause(CodeGenFunction &CGF,
   }
 }
 
+// Check for the presence of an `OMPOrderedDirective`,
+// i.e., `ordered` in `#pragma omp ordered simd`.
+//
+// Consider the following source code:
+// ```
+// __attribute__((noinline)) void omp_simd_loop(float X[ARRAY_SIZE][ARRAY_SIZE])
+// {
+//     for (int r = 1; r < ARRAY_SIZE; ++r) {
+//         for (int c = 1; c < ARRAY_SIZE; ++c) {
+// #pragma omp simd
+//             for (int k = 2; k < ARRAY_SIZE; ++k) {
+// #pragma omp ordered simd
+//                 X[r][k] = X[r][k - 2] + sinf((float)(r / c));
+//             }
+//         }
+//     }
+// }
+// ```
+//
+// Suppose we are in `CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective
+// &D)`. By examining `D.dump()` we have the following AST containing
+// `OMPOrderedDirective`:
+//
+// ```
+// OMPSimdDirective 0x1c32950
+// `-CapturedStmt 0x1c32028
+//   |-CapturedDecl 0x1c310e8
+//   | |-ForStmt 0x1c31e30
+//   | | |-DeclStmt 0x1c31298
+//   | | | `-VarDecl 0x1c31208  used k 'int' cinit
+//   | | |   `-IntegerLiteral 0x1c31278 'int' 2
+//   | | |-<<<NULL>>>
+//   | | |-BinaryOperator 0x1c31308 'int' '<'
+//   | | | |-ImplicitCastExpr 0x1c312f0 'int' <LValueToRValue>
+//   | | | | `-DeclRefExpr 0x1c312b0 'int' lvalue Var 0x1c31208 'k' 'int'
+//   | | | `-IntegerLiteral 0x1c312d0 'int' 256
+//   | | |-UnaryOperator 0x1c31348 'int' prefix '++'
+//   | | | `-DeclRefExpr 0x1c31328 'int' lvalue Var 0x1c31208 'k' 'int'
+//   | | `-CompoundStmt 0x1c31e18
+//   | |   `-OMPOrderedDirective 0x1c31dd8
+//   | |     |-OMPSimdClause 0x1c31380
+//   | |     `-CapturedStmt 0x1c31cd0
+// ```
+//
+// Note the presence of `OMPOrderedDirective` above:
+// It's (transitively) nested in a `CapturedStmt` representing the pragma
+// annotated compound statement. Thus, we need to consider this nesting and
+// include checking the `getCapturedStmt` in this case.
+static bool hasOrderedDirective(const Stmt *S) {
+  if (isa<OMPOrderedDirective>(S))
+    return true;
+
+  if (const auto *CS = dyn_cast<CapturedStmt>(S))
+    return hasOrderedDirective(CS->getCapturedStmt());
+
+  for (const Stmt *Child : S->children()) {
+    if (Child && hasOrderedDirective(Child))
+      return true;
+  }
+
+  return false;
+}
+
+static void applyConservativeSimdOrderedDirective(const Stmt &AssociatedStmt,
+                                                  LoopInfoStack &LoopStack) {
+  // Check for the presence of an `OMPOrderedDirective`
+  // i.e., `ordered` in `#pragma omp ordered simd`
+  bool HasOrderedDirective = hasOrderedDirective(&AssociatedStmt);
+  // If present then conservatively disable loop vectorization
+  // analogously to how `emitSimdlenSafelenClause` does.
+  if (HasOrderedDirective)
+    LoopStack.setParallel(/*Enable=*/false);
+}
+
 void CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective &D) {
   // Walk clauses and process safelen/lastprivate.
   LoopStack.setParallel(/*Enable=*/true);
   LoopStack.setVectorizeEnable();
+  const Stmt *AssociatedStmt = D.getAssociatedStmt();
+  applyConservativeSimdOrderedDirective(*AssociatedStmt, LoopStack);
   emitSimdlenSafelenClause(*this, D);
   if (const auto *C = D.getSingleClause<OMPOrderClause>())
     if (C->getKind() == OMPC_ORDER_concurrent)
@@ -6949,7 +7031,7 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
   if (CGF.CGM.getOpenMPRuntime().needsHintsForFastFPAtomics()) {
 
     userRequestsAMDGPUFastFPAtomics =
-        Context.getTargetInfo().allowAMDGPUUnsafeFPAtomics();
+      CGF.CGM.getLangOpts().AtomicIgnoreDenormalMode;
 
     if (Hint) {
       if (Hint->getIntegerConstantExpr(Context).value() ==
@@ -7012,12 +7094,6 @@ emitOMPAtomicRMW(CodeGenFunction &CGF, LValue X, RValue Update,
                  BinaryOperatorKind BO, llvm::AtomicOrdering AO,
                  bool IsXLHSInRHSPart, const Expr *Hint, SourceLocation Loc) {
   ASTContext &Context = CGF.getContext();
-
-  if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(CGF, X, Update, BO)) {
-    // this will force emission of cmpxchg in the caller using
-    // clang machinery
-    return std::make_pair(false, RValue::get(nullptr));
-  }
 
   bool useFPAtomics = canUseAMDGPUFastFPAtomics(CGF, X, Update, BO, Hint, Loc);
   if (useFPAtomics) {
@@ -7376,14 +7452,6 @@ static void emitOMPAtomicCompareExpr(
 
   llvm::Value *EVal = EmitRValueWithCastIfNeeded(X, E);
 
-  if (CGF.CGM.getOpenMPRuntime().mustEmitSafeAtomic(
-          CGF, XLVal, RValue::get(EVal),
-          cast<BinaryOperator>(CE)->getOpcode())) {
-    CGF.CGM.getOpenMPRuntime().emitAtomicCASLoop(
-        CGF, XLVal, RValue::get(EVal), cast<BinaryOperator>(CE)->getOpcode());
-    return;
-  }
-
   // Check if fast AMDGPU FP atomics can be used for the current operation:
   bool canUseFastAtomics = canUseAMDGPUFastFPAtomics(
       CGF, XLVal, RValue::get(EVal), cast<BinaryOperator>(CE)->getOpcode(),
@@ -7615,8 +7683,11 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
   const Stmt *OptKernelKey = CGM.getOptKernelKey(S);
   if (OptKernelKey)
     FStmt = CGM.getSingleForStmt(OptKernelKey);
-  if (FStmt && CGM.getLangOpts().OpenMPOffloadMandatory)
-    CGM.checkAndSetXteamRedKernel(S);
+  if (FStmt && CGM.getLangOpts().OpenMPOffloadMandatory) {
+    CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetXteamRedKernel(S);
+    DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
+                    CGM.emitNxResult("[Xteam-host]", S, NxStatus));
+  }
 
   if (CGM.getLangOpts().OpenMPOffloadMandatory && !IsOffloadEntry) {
     unsigned DiagID = CGM.getDiags().getCustomDiagID(

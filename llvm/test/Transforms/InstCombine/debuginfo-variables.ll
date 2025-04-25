@@ -1,8 +1,6 @@
 ; RUN: opt < %s -passes=debugify,instcombine -S | FileCheck %s
-; RUN: opt < %s -passes=debugify,instcombine -S --try-experimental-debuginfo-iterators | FileCheck %s
 
-; RUN: opt < %s -passes=debugify,instcombine --debugify-diop-diexprs --experimental-debuginfo-iterators=true  -S | FileCheck %s --check-prefix DIOP-DBGINFO
-; RUN: opt < %s -passes=debugify,instcombine --debugify-diop-diexprs --experimental-debuginfo-iterators=false -S | FileCheck %s --check-prefix DIOP-DBGINFO
+; RUN: opt < %s -passes=debugify,instcombine --debugify-diop-diexprs -S | FileCheck %s --check-prefix DIOP-DBGINFO
 
 declare void @escape32(i32)
 

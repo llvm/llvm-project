@@ -114,7 +114,7 @@ static bool loadArFile(const char *argv0, const std::string ArchiveName,
       }
       if (Verbose)
         errs() << "Linking member '" << goodname << "' of archive library.\n";
-      if (M.get()->getTargetTriple() != "") {
+      if (M->getTargetTriple().str() != "") {
         bool Err = L.linkInModule(std::move(M), ApplicableFlags);
         if (Err)
           return false;
@@ -180,7 +180,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       }
       if (Verbose)
         errs() << "Linking bc File'" << File << "' to module.\n";
-      if (M.get()->getTargetTriple() != "") {
+      if (M->getTargetTriple().str() != "") {
         bool Err = L.linkInModule(std::move(M), ApplicableFlags);
         if (Err)
           return false;

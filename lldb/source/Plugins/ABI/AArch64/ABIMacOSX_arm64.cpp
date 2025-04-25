@@ -142,7 +142,8 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
       return false;
 
     CompilerType value_type = value->GetCompilerType();
-    std::optional<uint64_t> bit_size = value_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size =
+        llvm::expectedToOptional(value_type.GetBitSize(&thread));
     if (!bit_size)
       return false;
 
@@ -343,55 +344,46 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   return error;
 }
 
-bool ABIMacOSX_arm64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABIMacOSX_arm64::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = arm64_dwarf::lr;
   uint32_t sp_reg_num = arm64_dwarf::sp;
   uint32_t pc_reg_num = arm64_dwarf::pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // Our previous PC is in the LR
-  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
+  // Our previous PC is in the LR, all other registers are the same.
+  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
 
-  unwind_plan.AppendRow(row);
-
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("arm64 at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("arm64 at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABIMacOSX_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABIMacOSX_arm64::CreateDefaultUnwindPlan() {
   uint32_t fp_reg_num = arm64_dwarf::fp;
   uint32_t pc_reg_num = arm64_dwarf::pc;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
   const int32_t ptr_size = 8;
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
-  row->SetOffset(0);
-  row->SetUnspecifiedRegistersAreUndefined(true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("arm64-apple-darwin default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(std::move(row));
+  plan_sp->SetSourceName("arm64-apple-darwin default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return plan_sp;
 }
 
 // AAPCS64 (Procedure Call Standard for the ARM 64-bit Architecture) says
@@ -490,8 +482,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     uint32_t &NGRN,       // NGRN (see ABI documentation)
     uint32_t &NSRN,       // NSRN (see ABI documentation)
     DataExtractor &data) {
-  std::optional<uint64_t> byte_size =
-      value_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> byte_size = llvm::expectedToOptional(
+      value_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!byte_size || *byte_size == 0)
     return false;
 
@@ -508,8 +500,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     if (NSRN < 8 && (8 - NSRN) >= homogeneous_count) {
       if (!base_type)
         return false;
-      std::optional<uint64_t> base_byte_size =
-          base_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+      std::optional<uint64_t> base_byte_size = llvm::expectedToOptional(
+          base_type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
       if (!base_byte_size)
         return false;
       uint32_t data_offset = 0;
@@ -643,7 +635,8 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   if (!reg_ctx)
     return return_valobj_sp;
 
-  std::optional<uint64_t> byte_size = return_compiler_type.GetByteSize(&thread);
+  std::optional<uint64_t> byte_size =
+      llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
   if (!byte_size)
     return return_valobj_sp;
 

@@ -15,10 +15,15 @@
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
+#include "shared/rpc_server.h"
 
 using namespace llvm;
 using namespace omp;
 using namespace target;
+
+#ifdef OFFLOAD_ENABLE_EMISSARY_APIS
+#include "Emissary.h"
+#endif
 
 template <uint32_t NumLanes>
 rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
@@ -55,6 +60,55 @@ rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     });
     break;
   }
+#ifdef OFFLOAD_ENABLE_EMISSARY_APIS
+  case ALT_LIBC_MALLOC: {
+    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
+          Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
+    });
+    break;
+  }
+  case ALT_LIBC_FREE: {
+    Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+      Device.free(reinterpret_cast<void *>(Buffer->data[0]),
+                  TARGET_ALLOC_DEVICE_NON_BLOCKING);
+    });
+    break;
+  }
+  case EMISSARY_PREMALLOC: {
+    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
+      size_t sz = (size_t)Buffer->data[0];
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.getFree_ArgBuf(sz));
+    });
+    break;
+  }
+  case EMISSARY_FREE: {
+    void *Args[NumLanes] = {nullptr};
+    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
+      Args[ID] = reinterpret_cast<void *>(buffer->data[0]);
+      Device.moveBusyToFree_ArgBuf(Args[ID]);
+    });
+    break;
+  }
+  case OFFLOAD_EMISSARY: {
+    // uint64_t Sizes[NumLanes] = {0};
+    unsigned long long Results[NumLanes] = {0};
+    void *Args[NumLanes] = {nullptr};
+    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
+      Args[ID] = reinterpret_cast<void *>(buffer->data[0]);
+      Results[ID] = Emissary((char *)Args[ID]);
+    });
+    Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
+      Device.moveBusyToFree_ArgBuf(Args[ID]);
+      Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
+    });
+    break;
+  }
+#else
+  case EMISSARY_PREMALLOC:
+  case EMISSARY_FREE:
+  case OFFLOAD_EMISSARY:
+#endif
   default:
     return rpc::RPC_UNHANDLED_OPCODE;
     break;
@@ -88,10 +142,9 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
       handleOffloadOpcodes(Device, *Port, Device.getWarpSize());
 
   // Let the `libc` library handle any other unhandled opcodes.
-#ifdef LIBOMPTARGET_RPC_SUPPORT
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = handle_libc_opcodes(*Port, Device.getWarpSize());
-#endif
+    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port,
+                                                         Device.getWarpSize());
 
   Port->close();
 
@@ -128,6 +181,7 @@ void RPCServerTy::ServerThread::run() {
     Lock.unlock();
     while (NumUsers.load(std::memory_order_relaxed) > 0 &&
            Running.load(std::memory_order_relaxed)) {
+      std::lock_guard<decltype(Mutex)> Lock(BufferMutex);
       for (const auto &[Buffer, Device] : llvm::zip_equal(Buffers, Devices)) {
         if (!Buffer || !Device)
           continue;
@@ -146,7 +200,7 @@ RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
       Devices(std::make_unique<plugin::GenericDeviceTy *[]>(
           Plugin.getNumDevices())),
       Thread(new ServerThread(Buffers.get(), Devices.get(),
-                              Plugin.getNumDevices())) {}
+                              Plugin.getNumDevices(), BufferMutex)) {}
 
 llvm::Error RPCServerTy::startThread() {
   Thread->startThread();
@@ -187,6 +241,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   if (auto Err = Device.dataSubmit(ClientGlobal.getPtr(), &client,
                                    sizeof(rpc::Client), nullptr))
     return Err;
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   Buffers[Device.getDeviceId()] = RPCBuffer;
   Devices[Device.getDeviceId()] = &Device;
 
@@ -194,6 +249,7 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
 }
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST);
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;

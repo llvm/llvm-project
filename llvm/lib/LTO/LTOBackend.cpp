@@ -207,9 +207,9 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
 
 static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
-  StringRef TheTriple = M.getTargetTriple();
+  const Triple &TheTriple = M.getTargetTriple();
   SubtargetFeatures Features;
-  Features.getDefaultSubtargetFeatures(Triple(TheTriple));
+  Features.getDefaultSubtargetFeatures(TheTriple);
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
@@ -226,8 +226,13 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   else
     CodeModel = M.getCodeModel();
 
+  TargetOptions TargetOpts = Conf.Options;
+  if (TargetOpts.MCOptions.ABIName.empty()) {
+    TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
+  }
+
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple, Conf.CPU, Features.getString(), Conf.Options, RelocModel,
+      TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
       CodeModel, Conf.CGOptLevel));
 
   assert(TM && "Failed to create target machine");
@@ -281,7 +286,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));
+      new TargetLibraryInfoImpl(TM->getTargetTriple()));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -457,7 +462,7 @@ static void codegen(const CodegenConfig &Conf, TargetMachine *TM,
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
   legacy::PassManager CodeGenPasses;
-  TargetLibraryInfoImpl TLII(Triple(Mod.getTargetTriple()));
+  TargetLibraryInfoImpl TLII(Mod.getTargetTriple());
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   // No need to make index available if the module is empty.
   // In theory these passes should not use the index for an empty
@@ -477,6 +482,9 @@ static void codegen(const CodegenConfig &Conf, TargetMachine *TM,
 
   if (DwoOut)
     DwoOut->keep();
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 static void splitCodeGen(const CodegenConfig &CodegenC, TargetMachine *TM,
@@ -537,9 +545,9 @@ static void splitCodeGen(const CodegenConfig &CodegenC, TargetMachine *TM,
 static Expected<const Target *> initAndLookupTarget(const Config &C,
                                                     Module &Mod) {
   if (!C.OverrideTriple.empty())
-    Mod.setTargetTriple(C.OverrideTriple);
+    Mod.setTargetTriple(Triple(C.OverrideTriple));
   else if (Mod.getTargetTriple().empty())
-    Mod.setTargetTriple(C.DefaultTriple);
+    Mod.setTargetTriple(Triple(C.DefaultTriple));
 
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(Mod.getTargetTriple(), Msg);

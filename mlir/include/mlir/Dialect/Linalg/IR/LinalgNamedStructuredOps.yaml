@@ -4072,12 +4072,12 @@ structured_op: !LinalgStructuredOpConfig
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)[s0, s1, s2, s3, s4, s5, s6,
-      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d8, d1 * s3 + d5 * s5, d2 * s7
-      + d6 * s9, d3 * s11 + d7 * s13)>
+      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d5, d2 * s3 + d6 * s5, d3 * s7
+      + d7 * s9, d4 * s11 + d8 * s13)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)[s0, s1, s2, s3, s4, s5, s6,
-      s7, s8, s9, s10, s11, s12, s13, s14] -> (d4, d8, d5, d6, d7)>
+      s7, s8, s9, s10, s11, s12, s13, s14] -> (d1, d5, d6, d7, d8)>
     - affine_map<(d0, d1, d2, d3, d4, d5, d6, d7, d8)[s0, s1, s2, s3, s4, s5, s6,
-      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d4, d1, d2, d3)>
+      s7, s8, s9, s10, s11, s12, s13, s14] -> (d0, d1, d2, d3, d4)>
   iterator_types:
   - parallel
   - parallel

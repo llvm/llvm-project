@@ -440,8 +440,7 @@ void DWARF5AcceleratorTable::computeBucketCount() {
   for (const auto &E : Entries)
     Uniques.push_back(E.second.HashValue);
   array_pod_sort(Uniques.begin(), Uniques.end());
-  std::vector<uint32_t>::iterator P =
-      std::unique(Uniques.begin(), Uniques.end());
+  std::vector<uint32_t>::iterator P = llvm::unique(Uniques);
 
   UniqueHashCount = std::distance(Uniques.begin(), P);
 

@@ -39,7 +39,7 @@ bool TargetFrameLowering::enableCalleeSaveSkip(const MachineFunction &MF) const 
   return false;
 }
 
-bool TargetFrameLowering::enableCFIFixup(MachineFunction &MF) const {
+bool TargetFrameLowering::enableCFIFixup(const MachineFunction &MF) const {
   return MF.needsFrameMoves() &&
          !MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
 }
@@ -62,16 +62,6 @@ TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return StackOffset::getFixed(MFI.getObjectOffset(FI) + MFI.getStackSize() -
                                getOffsetOfLocalArea() +
                                MFI.getOffsetAdjustment());
-}
-
-DIExprBuilder::Iterator TargetFrameLowering::insertFrameLocation(
-    const MachineFunction &MF, DIExprBuilder &Builder,
-    DIExprBuilder::Iterator BI, Type *ResultType) const {
-  std::initializer_list<DIOp::Variant> IL = {
-      DIOp::Referrer(PointerType::get(ResultType,
-                                      MF.getDataLayout().getAllocaAddrSpace())),
-      DIOp::Deref(ResultType)};
-  return Builder.insert(BI, IL) + IL.size();
 }
 
 /// Returns the offset from the stack pointer to the slot of the specified
@@ -219,5 +209,5 @@ TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
 TargetFrameLowering::DwarfFrameBase
 TargetFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF)}};
+  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF).id()}};
 }

@@ -200,7 +200,7 @@ Value *ParallelLoopGenerator::createParallelLoop(
   Function *SubFn;
   std::tie(IV, SubFn) = createSubFn(Stride, Struct, UsedValues, Map);
   *LoopBody = Builder.GetInsertPoint();
-  Builder.SetInsertPoint(&*BeforeLoop);
+  Builder.SetInsertPoint(BeforeLoop);
 
   // Add one as the upper bound provided by OpenMP is a < comparison
   // whereas the codegenForSequential function creates a <= comparison.

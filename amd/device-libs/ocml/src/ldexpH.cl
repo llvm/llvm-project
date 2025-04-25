@@ -16,6 +16,6 @@ MATH_MANGLE2(ldexp)(half2 x, int2 n)
 CONSTATTR half
 MATH_MANGLE(ldexp)(half x, int n)
 {
-    return BUILTIN_FLDEXP_F16(x, BUILTIN_CLAMP_S32(n, SHRT_MIN, SHRT_MAX));
+    return BUILTIN_FLDEXP_F16(x, n);
 }
 

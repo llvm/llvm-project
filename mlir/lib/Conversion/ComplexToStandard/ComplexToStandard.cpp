@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 
+#include "mlir/Conversion/ComplexCommon/DivisionConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -19,7 +20,7 @@
 #include <type_traits>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTCOMPLEXTOSTANDARD
+#define GEN_PASS_DEF_CONVERTCOMPLEXTOSTANDARDPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -262,6 +263,9 @@ struct CosOpConversion : public TrigonometricOpConversion<complex::CosOp> {
 };
 
 struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
+  DivOpConversion(MLIRContext *context, complex::ComplexRangeFlags target)
+      : OpConversionPattern<complex::DivOp>(context), complexRange(target) {}
+
   using OpConversionPattern<complex::DivOp>::OpConversionPattern;
 
   LogicalResult
@@ -281,214 +285,27 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
     Value rhsImag =
         rewriter.create<complex::ImOp>(loc, elementType, adaptor.getRhs());
 
-    // Smith's algorithm to divide complex numbers. It is just a bit smarter
-    // way to compute the following formula:
-    //  (lhsReal + lhsImag * i) / (rhsReal + rhsImag * i)
-    //    = (lhsReal + lhsImag * i) (rhsReal - rhsImag * i) /
-    //          ((rhsReal + rhsImag * i)(rhsReal - rhsImag * i))
-    //    = ((lhsReal * rhsReal + lhsImag * rhsImag) +
-    //          (lhsImag * rhsReal - lhsReal * rhsImag) * i) / ||rhs||^2
-    //
-    // Depending on whether |rhsReal| < |rhsImag| we compute either
-    //   rhsRealImagRatio = rhsReal / rhsImag
-    //   rhsRealImagDenom = rhsImag + rhsReal * rhsRealImagRatio
-    //   resultReal = (lhsReal * rhsRealImagRatio + lhsImag) / rhsRealImagDenom
-    //   resultImag = (lhsImag * rhsRealImagRatio - lhsReal) / rhsRealImagDenom
-    //
-    // or
-    //
-    //   rhsImagRealRatio = rhsImag / rhsReal
-    //   rhsImagRealDenom = rhsReal + rhsImag * rhsImagRealRatio
-    //   resultReal = (lhsReal + lhsImag * rhsImagRealRatio) / rhsImagRealDenom
-    //   resultImag = (lhsImag - lhsReal * rhsImagRealRatio) / rhsImagRealDenom
-    //
-    // See https://dl.acm.org/citation.cfm?id=368661 for more details.
-    Value rhsRealImagRatio =
-        rewriter.create<arith::DivFOp>(loc, rhsReal, rhsImag, fmf);
-    Value rhsRealImagDenom = rewriter.create<arith::AddFOp>(
-        loc, rhsImag,
-        rewriter.create<arith::MulFOp>(loc, rhsRealImagRatio, rhsReal, fmf),
-        fmf);
-    Value realNumerator1 = rewriter.create<arith::AddFOp>(
-        loc,
-        rewriter.create<arith::MulFOp>(loc, lhsReal, rhsRealImagRatio, fmf),
-        lhsImag, fmf);
-    Value resultReal1 = rewriter.create<arith::DivFOp>(loc, realNumerator1,
-                                                       rhsRealImagDenom, fmf);
-    Value imagNumerator1 = rewriter.create<arith::SubFOp>(
-        loc,
-        rewriter.create<arith::MulFOp>(loc, lhsImag, rhsRealImagRatio, fmf),
-        lhsReal, fmf);
-    Value resultImag1 = rewriter.create<arith::DivFOp>(loc, imagNumerator1,
-                                                       rhsRealImagDenom, fmf);
+    Value resultReal, resultImag;
 
-    Value rhsImagRealRatio =
-        rewriter.create<arith::DivFOp>(loc, rhsImag, rhsReal, fmf);
-    Value rhsImagRealDenom = rewriter.create<arith::AddFOp>(
-        loc, rhsReal,
-        rewriter.create<arith::MulFOp>(loc, rhsImagRealRatio, rhsImag, fmf),
-        fmf);
-    Value realNumerator2 = rewriter.create<arith::AddFOp>(
-        loc, lhsReal,
-        rewriter.create<arith::MulFOp>(loc, lhsImag, rhsImagRealRatio, fmf),
-        fmf);
-    Value resultReal2 = rewriter.create<arith::DivFOp>(loc, realNumerator2,
-                                                       rhsImagRealDenom, fmf);
-    Value imagNumerator2 = rewriter.create<arith::SubFOp>(
-        loc, lhsImag,
-        rewriter.create<arith::MulFOp>(loc, lhsReal, rhsImagRealRatio, fmf),
-        fmf);
-    Value resultImag2 = rewriter.create<arith::DivFOp>(loc, imagNumerator2,
-                                                       rhsImagRealDenom, fmf);
+    if (complexRange == complex::ComplexRangeFlags::basic ||
+        complexRange == complex::ComplexRangeFlags::none) {
+      mlir::complex::convertDivToStandardUsingAlgebraic(
+          rewriter, loc, lhsReal, lhsImag, rhsReal, rhsImag, fmf, &resultReal,
+          &resultImag);
+    } else if (complexRange == complex::ComplexRangeFlags::improved) {
+      mlir::complex::convertDivToStandardUsingRangeReduction(
+          rewriter, loc, lhsReal, lhsImag, rhsReal, rhsImag, fmf, &resultReal,
+          &resultImag);
+    }
 
-    // Consider corner cases.
-    // Case 1. Zero denominator, numerator contains at most one NaN value.
-    Value zero = rewriter.create<arith::ConstantOp>(
-        loc, elementType, rewriter.getZeroAttr(elementType));
-    Value rhsRealAbs = rewriter.create<math::AbsFOp>(loc, rhsReal, fmf);
-    Value rhsRealIsZero = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OEQ, rhsRealAbs, zero);
-    Value rhsImagAbs = rewriter.create<math::AbsFOp>(loc, rhsImag, fmf);
-    Value rhsImagIsZero = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OEQ, rhsImagAbs, zero);
-    Value lhsRealIsNotNaN = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::ORD, lhsReal, zero);
-    Value lhsImagIsNotNaN = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::ORD, lhsImag, zero);
-    Value lhsContainsNotNaNValue =
-        rewriter.create<arith::OrIOp>(loc, lhsRealIsNotNaN, lhsImagIsNotNaN);
-    Value resultIsInfinity = rewriter.create<arith::AndIOp>(
-        loc, lhsContainsNotNaNValue,
-        rewriter.create<arith::AndIOp>(loc, rhsRealIsZero, rhsImagIsZero));
-    Value inf = rewriter.create<arith::ConstantOp>(
-        loc, elementType,
-        rewriter.getFloatAttr(
-            elementType, APFloat::getInf(elementType.getFloatSemantics())));
-    Value infWithSignOfRhsReal =
-        rewriter.create<math::CopySignOp>(loc, inf, rhsReal);
-    Value infinityResultReal =
-        rewriter.create<arith::MulFOp>(loc, infWithSignOfRhsReal, lhsReal, fmf);
-    Value infinityResultImag =
-        rewriter.create<arith::MulFOp>(loc, infWithSignOfRhsReal, lhsImag, fmf);
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
+                                                   resultImag);
 
-    // Case 2. Infinite numerator, finite denominator.
-    Value rhsRealFinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::ONE, rhsRealAbs, inf);
-    Value rhsImagFinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::ONE, rhsImagAbs, inf);
-    Value rhsFinite =
-        rewriter.create<arith::AndIOp>(loc, rhsRealFinite, rhsImagFinite);
-    Value lhsRealAbs = rewriter.create<math::AbsFOp>(loc, lhsReal, fmf);
-    Value lhsRealInfinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OEQ, lhsRealAbs, inf);
-    Value lhsImagAbs = rewriter.create<math::AbsFOp>(loc, lhsImag, fmf);
-    Value lhsImagInfinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OEQ, lhsImagAbs, inf);
-    Value lhsInfinite =
-        rewriter.create<arith::OrIOp>(loc, lhsRealInfinite, lhsImagInfinite);
-    Value infNumFiniteDenom =
-        rewriter.create<arith::AndIOp>(loc, lhsInfinite, rhsFinite);
-    Value one = rewriter.create<arith::ConstantOp>(
-        loc, elementType, rewriter.getFloatAttr(elementType, 1));
-    Value lhsRealIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<arith::SelectOp>(loc, lhsRealInfinite, one, zero),
-        lhsReal);
-    Value lhsImagIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<arith::SelectOp>(loc, lhsImagInfinite, one, zero),
-        lhsImag);
-    Value lhsRealIsInfWithSignTimesRhsReal =
-        rewriter.create<arith::MulFOp>(loc, lhsRealIsInfWithSign, rhsReal, fmf);
-    Value lhsImagIsInfWithSignTimesRhsImag =
-        rewriter.create<arith::MulFOp>(loc, lhsImagIsInfWithSign, rhsImag, fmf);
-    Value resultReal3 = rewriter.create<arith::MulFOp>(
-        loc, inf,
-        rewriter.create<arith::AddFOp>(loc, lhsRealIsInfWithSignTimesRhsReal,
-                                       lhsImagIsInfWithSignTimesRhsImag, fmf),
-        fmf);
-    Value lhsRealIsInfWithSignTimesRhsImag =
-        rewriter.create<arith::MulFOp>(loc, lhsRealIsInfWithSign, rhsImag, fmf);
-    Value lhsImagIsInfWithSignTimesRhsReal =
-        rewriter.create<arith::MulFOp>(loc, lhsImagIsInfWithSign, rhsReal, fmf);
-    Value resultImag3 = rewriter.create<arith::MulFOp>(
-        loc, inf,
-        rewriter.create<arith::SubFOp>(loc, lhsImagIsInfWithSignTimesRhsReal,
-                                       lhsRealIsInfWithSignTimesRhsImag, fmf),
-        fmf);
-
-    // Case 3: Finite numerator, infinite denominator.
-    Value lhsRealFinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::ONE, lhsRealAbs, inf);
-    Value lhsImagFinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::ONE, lhsImagAbs, inf);
-    Value lhsFinite =
-        rewriter.create<arith::AndIOp>(loc, lhsRealFinite, lhsImagFinite);
-    Value rhsRealInfinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OEQ, rhsRealAbs, inf);
-    Value rhsImagInfinite = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OEQ, rhsImagAbs, inf);
-    Value rhsInfinite =
-        rewriter.create<arith::OrIOp>(loc, rhsRealInfinite, rhsImagInfinite);
-    Value finiteNumInfiniteDenom =
-        rewriter.create<arith::AndIOp>(loc, lhsFinite, rhsInfinite);
-    Value rhsRealIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<arith::SelectOp>(loc, rhsRealInfinite, one, zero),
-        rhsReal);
-    Value rhsImagIsInfWithSign = rewriter.create<math::CopySignOp>(
-        loc, rewriter.create<arith::SelectOp>(loc, rhsImagInfinite, one, zero),
-        rhsImag);
-    Value rhsRealIsInfWithSignTimesLhsReal =
-        rewriter.create<arith::MulFOp>(loc, lhsReal, rhsRealIsInfWithSign, fmf);
-    Value rhsImagIsInfWithSignTimesLhsImag =
-        rewriter.create<arith::MulFOp>(loc, lhsImag, rhsImagIsInfWithSign, fmf);
-    Value resultReal4 = rewriter.create<arith::MulFOp>(
-        loc, zero,
-        rewriter.create<arith::AddFOp>(loc, rhsRealIsInfWithSignTimesLhsReal,
-                                       rhsImagIsInfWithSignTimesLhsImag, fmf),
-        fmf);
-    Value rhsRealIsInfWithSignTimesLhsImag =
-        rewriter.create<arith::MulFOp>(loc, lhsImag, rhsRealIsInfWithSign, fmf);
-    Value rhsImagIsInfWithSignTimesLhsReal =
-        rewriter.create<arith::MulFOp>(loc, lhsReal, rhsImagIsInfWithSign, fmf);
-    Value resultImag4 = rewriter.create<arith::MulFOp>(
-        loc, zero,
-        rewriter.create<arith::SubFOp>(loc, rhsRealIsInfWithSignTimesLhsImag,
-                                       rhsImagIsInfWithSignTimesLhsReal, fmf),
-        fmf);
-
-    Value realAbsSmallerThanImagAbs = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OLT, rhsRealAbs, rhsImagAbs);
-    Value resultReal = rewriter.create<arith::SelectOp>(
-        loc, realAbsSmallerThanImagAbs, resultReal1, resultReal2);
-    Value resultImag = rewriter.create<arith::SelectOp>(
-        loc, realAbsSmallerThanImagAbs, resultImag1, resultImag2);
-    Value resultRealSpecialCase3 = rewriter.create<arith::SelectOp>(
-        loc, finiteNumInfiniteDenom, resultReal4, resultReal);
-    Value resultImagSpecialCase3 = rewriter.create<arith::SelectOp>(
-        loc, finiteNumInfiniteDenom, resultImag4, resultImag);
-    Value resultRealSpecialCase2 = rewriter.create<arith::SelectOp>(
-        loc, infNumFiniteDenom, resultReal3, resultRealSpecialCase3);
-    Value resultImagSpecialCase2 = rewriter.create<arith::SelectOp>(
-        loc, infNumFiniteDenom, resultImag3, resultImagSpecialCase3);
-    Value resultRealSpecialCase1 = rewriter.create<arith::SelectOp>(
-        loc, resultIsInfinity, infinityResultReal, resultRealSpecialCase2);
-    Value resultImagSpecialCase1 = rewriter.create<arith::SelectOp>(
-        loc, resultIsInfinity, infinityResultImag, resultImagSpecialCase2);
-
-    Value resultRealIsNaN = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::UNO, resultReal, zero);
-    Value resultImagIsNaN = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::UNO, resultImag, zero);
-    Value resultIsNaN =
-        rewriter.create<arith::AndIOp>(loc, resultRealIsNaN, resultImagIsNaN);
-    Value resultRealWithSpecialCases = rewriter.create<arith::SelectOp>(
-        loc, resultIsNaN, resultRealSpecialCase1, resultReal);
-    Value resultImagWithSpecialCases = rewriter.create<arith::SelectOp>(
-        loc, resultIsNaN, resultImagSpecialCase1, resultImag);
-
-    rewriter.replaceOpWithNewOp<complex::CreateOp>(
-        op, type, resultRealWithSpecialCases, resultImagWithSpecialCases);
     return success();
   }
+
+private:
+  complex::ComplexRangeFlags complexRange;
 };
 
 struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
@@ -1219,7 +1036,7 @@ struct AngleOpConversion : public OpConversionPattern<complex::AngleOp> {
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, complex::ComplexRangeFlags complexRange) {
   // clang-format off
   patterns.add<
       AbsOpConversion,
@@ -1231,7 +1048,6 @@ void mlir::populateComplexToStandardConversionPatterns(
       ComparisonOpConversion<complex::NotEqualOp, arith::CmpFPredicate::UNE>,
       ConjOpConversion,
       CosOpConversion,
-      DivOpConversion,
       ExpOpConversion,
       Expm1OpConversion,
       Log1pOpConversion,
@@ -1246,19 +1062,25 @@ void mlir::populateComplexToStandardConversionPatterns(
       PowOpConversion,
       RsqrtOpConversion
   >(patterns.getContext());
+
+    patterns.add<DivOpConversion>(patterns.getContext(), complexRange);
+
   // clang-format on
 }
 
 namespace {
 struct ConvertComplexToStandardPass
-    : public impl::ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
+    : public impl::ConvertComplexToStandardPassBase<
+          ConvertComplexToStandardPass> {
+  using Base::Base;
+
   void runOnOperation() override;
 };
 
 void ConvertComplexToStandardPass::runOnOperation() {
   // Convert to the Standard dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
-  populateComplexToStandardConversionPatterns(patterns);
+  populateComplexToStandardConversionPatterns(patterns, complexRange);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithDialect, math::MathDialect>();
@@ -1268,7 +1090,3 @@ void ConvertComplexToStandardPass::runOnOperation() {
     signalPassFailure();
 }
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertComplexToStandardPass() {
-  return std::make_unique<ConvertComplexToStandardPass>();
-}

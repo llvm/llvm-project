@@ -40,6 +40,9 @@ public:
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
 
+  using TemporalDivergenceTuple =
+      std::tuple<ConstValueRefT, InstructionT *, const CycleT *>;
+
   GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
   GenericUniformityInfo() = default;
@@ -77,6 +80,8 @@ public:
   bool hasDivergentTerminator(const BlockT &B);
 
   void print(raw_ostream &Out) const;
+
+  iterator_range<TemporalDivergenceTuple *> getTemporalDivergenceList() const;
 
 private:
   using ImplT = GenericUniformityAnalysisImpl<ContextT>;

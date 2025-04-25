@@ -148,6 +148,12 @@ module MetadataKind = struct
     | DIMacroMetadataKind
     | DIMacroFileMetadataKind
     | DICommonBlockMetadataKind
+    | DIStringTypeMetadataKind
+    | DIGenericSubrangeMetadataKind
+    | DIArgListMetadataKind
+    | DIAssignIDMetadataKind
+    | DISubrangeTypeMetadataKind
+    | DIFixedPointTypeMetadataKind
 end
 
 (** The amount of debug information to emit. *)

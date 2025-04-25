@@ -1,8 +1,6 @@
 #include "Interface.h"
 #include "Mapping.h"
 
-#include "llvm/Frontend/OpenMP/OMPGridValues.h"
-
 using namespace ompx::mapping;
 
 namespace ompx::mapping {

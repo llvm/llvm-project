@@ -30,7 +30,7 @@ class MachineModuleInfo;
 /// Represents the location at which a variable is stored.
 struct DbgVariableLocation {
   /// Base register.
-  unsigned Register;
+  MCRegister Register;
 
   /// Chain of offsetted loads necessary to load the value if it lives in
   /// memory. Every load except for the last is pointer-sized.
@@ -83,9 +83,6 @@ protected:
   /// History of DBG_VALUE and clobber instructions for each user
   /// variable.  Variables are listed in order of appearance.
   DbgValueHistoryMap DbgValues;
-
-  /// History of DBG_DEF and DBG_KILL instructions for each lifetime.
-  DbgDefKillHistoryMap DbgDefKills;
 
   /// Mapping of inlined labels and DBG_LABEL machine instruction.
   DbgLabelInstrMap DbgLabels;

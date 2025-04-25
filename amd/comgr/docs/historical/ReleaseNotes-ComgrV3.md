@@ -1,0 +1,243 @@
+Comgr v3.0 Release Notes
+========================
+
+This document contains the release notes for the Code Object Manager (Comgr),
+part of the ROCm Software Stack, release v3.0. Here we describe the status of
+Comgr, including major improvements from the previous release and new feature
+
+These are in-progress notes for the upcoming Comgr v3.0 release.
+Release notes for previous releases can be found in
+[docs/historical](docs/historical).
+
+Potentially Breaking Changes
+----------------------------
+These changes are ones which we think may surprise users when upgrading to
+Comgr v3.0 because of the opportunity they pose for disruption to existing
+code bases.
+
+-  Removed -h option from comgr-objdump: The -h option (short for -headers) is a
+legal comgr-objdump option. However registering this as an LLVM option by Comgr
+prevents other LLVM tools or instances from registering a -h option in the same
+process, which is an issue because -h is a common short form for -help.
+-  Updated default code object version used when linking code object specific
+device library from v4 to v5
+-  Updated shared library name on Windows 64-bit to include Comgr major version
+(libamd\_comgr.dll -> libamd\_comgr\_X.dll, where X is the major version)
+- oclc\_daz\_opt\_on.bc and oclc\_daz\_opt\_off.bc, and the corresponding
+  variable \_\_oclc\_daz\_opt are no longer necessary.
+- Updated default device library linking behavior for several actions.
+  Previously, linking was done for some actions and not others, and not
+  controllable by the user. Now, linking is not done by default, but can
+  optionally be enabled via the
+  amd\_comgr\_action\_info\_set\_device\_lib\_linking() API. Users relying
+  on enabled-by-default behavior should update to use the new API to avoid
+  changes in behavior.
+
+  Note: This does not apply to the \*COMPILE\_SOURCE\_WITH\_DEVICE\_LIBS\_TO\_BC
+  action. This action is not affected by the
+  amd\_comgr\_action\_info\_set\_device\_lib\_linking() API. The new API will
+  allow us to deprecate and remove this action in favor of the
+  \*COMPILE\_SOURCE\_TO\_BC action.
+
+New Features
+------------
+- Added support for linking code\_object\_v4/5 device library files.
+- Enabled llvm dylib builds. When llvm dylibs are enabled, a new package
+rocm-llvm-core will contain the required dylibs for Comgr.
+- Moved build to C++17, allowing us to use more modern features in the
+implementation and tests.
+- Enabled thread-safe execution of Comgr by enclosing primary Comgr actions in
+an std::scoped\_lock()
+- Added support for bitcode and archive unbundling during linking via the new
+llvm OffloadBundler API.
+- Added support for code object v6 and generic targets.
+- Added mechanism to bypass device library file system writes if Comgr is able
+to locate a local device library directory via the clang-resource-dir
+
+Bug Fixes
+---------
+- Fixed symbolizer assertion for non-null terminated file-slice content,
+by bypassing null-termination check in llvm::MemoryBuffer
+- Fixed bug and add error checking for internal unbundling. Previously internal
+unbundler would fail if files weren't already present in filesystem.
+- Fixed issue where lookUpCodeObject() would fail if code object ISA strings
+weren't listed in order.
+- Added support for subdirectories in amd\_comgr\_set\_data\_name(). Previously
+names with a "/" would generate a file-not-found error.
+- Added amdgpu-internalize-symbols option to bitcode codegen action, which has
+significant performance implications
+- Fixed an issue where -nogpulib was always included in HIP compilations, which
+prevented correct execution of
+COMPILE\_SOURCE\_WITH\_DEVICE\_LIBS\_TO\_BC action.
+- Fixed a multi-threading bug where programs would hang when calling Comgr APIs
+like amd\_comgr\_iterate\_symbols() from multiple threads
+- Fixed an issue where providing DataObjects with an empty name to the bitcode
+linking action caused errors when AMD\_COMGR\_SAVE\_TEMPS was enabled, or when
+linking bitcode bundles.
+- Updated to use lld::lldMain() introduced in D110949 instead of the older
+lld::elf::link in Comgr's linkWithLLD()
+- Added -x assembler option to assembly compilation. Before, if an assembly file
+did not end with a .s file extension, it was not handled properly by the Comgr
+ASSEMBLE\_SOURCE\_TO\_RELOCATABLE action.
+- Switched getline() from C++ to C-style to avoid issues with stdlibc++ and
+pytorch
+- Added new -relink-builtin-bitcode-postop LLVM option to device library. This
+fixes an issue with the \*COMPILE\_SOURCE\_WITH\_DEVICE\_LIBRARIES\_TO\_BC where
+OpenCL applications that leveraged AMDGPUSimplifyLibCalls optimizations would
+need to re-link bitcodes separately to avoid errors at runtime.
+- Correctly set directory to object file path when forwarding -save-temps for
+HIP compilations with AMD\_COMGR\_SAVE\_TEMPS set
+- Added new ['--skip-line-zero'](https://github.com/llvm/llvm-project/pull/82240)
+LLVM option by default in comgr-symbolizer to support symbolization of instructions
+having no source correspondence in the debug information.
+
+New APIs
+--------
+- amd\_comgr\_populate\_mangled\_names() (v2.5)
+- amd\_comgr\_get\_mangled\_name() (v2.5)
+    - Support bitcode and executable name lowering. The first call populates a
+    list of mangled names for a given data object, while the second fetches a
+    name from a given object and index.
+- amd\_comgr\_populate\_name\_expression\_map() (v2.6)
+- amd\_comgr\_map\_name\_expression\_to\_symbol\_name() (v2.6)
+    - Support bitcode and code object name expression mapping. The first call
+    populates a map of name expressions for a given comgr data object, using
+    LLVM APIs to traverse the bitcode or code object. The second call returns
+    a value (mangled symbol name) from the map for a given key (unmangled
+    name expression). These calls assume that names of interest have been
+    enclosed the HIP runtime using a stub attribute containg the following
+    string in the name: "__amdgcn_name_expr".
+- amd\_comgr\_map\_elf\_virtual\_address\_to\_code\_object\_offset() (v2.7)
+    - For a given executable and ELF virtual address, return a code object
+    offset. This API will benifet the ROCm debugger and profilier
+- amd\_comgr\_action\_info\_set\_bundle\_entry\_ids() (v2.8)
+- amd\_comgr\_action\_info\_get\_bundle\_entry\_id\_count() (v2.8)
+- amd\_comgr\_action\_info\_get\_bundle\_entry\_id() (v2.8)
+    - A user can provide a set of bundle entry IDs, which are processed when
+    calling the AMD\_COMGR\_UNBUNDLE action
+- amd\_comgr\_action\_info\_set\_device\_lib\_linking() (v2.9)
+    - By setting this ActionInfo property, a user can explicitly dictate if
+    device libraries should be linked for a given action. (Previouly, the
+    action type implicitly determined device library linking).
+
+
+Deprecated APIs
+---------------
+
+Removed APIs
+------------
+- amd\_comgr\_action\_info\_set\_options() (v3.0)
+- amd\_comgr\_action\_info\_get\_options() (v3.0)
+  - Use  amd\_comgr\_action\_info\_set\_option\_list(),
+    amd\_comgr\_action\_info\_get\_option\_list\_count(), and
+    amd\_comgr\_action\_info\_get\_option\_list\_item() instead
+
+New Comgr Actions and Data Types
+--------------------------------
+- (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_RELOCATABLE
+  - This action performs compile-to-bitcode, linking device libraries, and
+codegen-to-relocatable in a single step. By doing so, clients are able to defer more
+of the flag handling to toolchain. Currently only supports HIP.
+- (Data Type) AMD\_COMGR\_DATA\_KIND\_BC\_BUNDLE
+- (Data Type) AMD\_COMGR\_DATA\_KIND\_AR\_BUNDLE
+  - These data kinds can now be passed to an AMD\_COMGR\_ACTION\_LINK\_BC\_TO\_BC
+action, and Comgr will internally unbundle and link via the OffloadBundler and linkInModule APIs.
+- (Language Type) AMD\_COMGR\_LANGUAGE\_LLVM\_IR
+  - This language can now be passed to AMD\_COMGR\_ACTION\_COMPILE\_\* actions
+  to enable compilation of LLVM IR (.ll or .bc) files. This is useful for MLIR
+  contexts.
+- (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_EXECUTABLE
+  - This action allows compilation from source directly to executable, including
+  linking device libraries.
+- (Action) AMD\_COMGR\_ACTION\_UNBUNDLE
+  - This accepts a set of bitcode bundles, object file bundles, and archive
+  bundles,and returns set of unbundled bitcode, object files, and archives,
+  selecting bundles based on the bundle entry IDs provided.
+- (Data Type) AMD\_COMGR\_DATA\_KIND\_OBJ\_BUNDLE
+  - This data kind represents a clang-offload-bundle of object files, and can be
+  passed when calling the AMD\_COMGR\_ACTION\_UNBUNDLE action
+- (Data Type) AMD\_COMGR\_DATA\_KIND\_SPIRV
+  - This data kind represents a SPIR-V binary file (.spv)
+- (Action) AMD\_COMGR\_ACTION\_TRANSLATE\_SPIRV\_TO\_BC
+  - This accepts a set of SPIR-V (.spv) inputs, and returns a set of translated
+  bitcode (.bc) outputs
+
+Deprecated Comgr Actions and Data Types
+---------------------------------------
+
+Removed Comgr Actions and Data Types
+------------------------------------
+- (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_FATBIN
+  - This workaround has been removed in favor of
+  \*\_COMPILE\_SOURCE\_(WITH\_DEVICE\_LIBS\_)TO\_BC
+- (Action) AMD\_COMGR\_ACTION\_OPTIMIZE\_BC\_TO\_BC
+  - This is a legacy action that was never implemented
+- (Language) AMD\_COMGR\_LANGUAGE\_HC
+  - This is a legacy language that was never used
+- (Action) AMD\_COMGR\_ACTION\_ADD\_DEVICE\_LIBRARIES
+  - This has been replaced with
+  AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_WITH\_DEVICE\_LIBS\_TO\_BC
+
+Comgr Testing, Debugging, and Logging Updates
+---------------------------------------------
+- Added support for C++ tests. Although Comgr APIs are C-compatible, we can now
+use C++ features in testing (C++ threading APIs, etc.)
+- Clean up test directory by moving sources to subdirectory
+- Several tests updated to pass while verbose logs are redirected to stdout
+- Log information reported when AMD\_COMGR\_EMIT\_VERBOSE\_LOGS updated to:
+    - Show both user-facing clang options used (Compilation Args) and internal
+    driver options (Driver Job Args)
+    - Show files linked by linkBitcodeToBitcode()
+- Remove support for code object v2 compilation in tests and test CMAKE due to
+deprecation of code object v2 in LLVM. However, we still test loading and
+metadata querys for code object v2 objects.
+- Remove support for code object v3 compilation in tests and test CMAKE due to
+deprecation of code object v3 in LLVM. However, we still test loading and
+metadata querys for code object v3 objects.
+- Revamp symbolizer test to fail on errors, among other improvments
+- Improve linking and unbundling log to correctly store temporary files in /tmp,
+and to output clang-offload-bundler command to allow users to re-create Comgr
+unbundling.
+- Add git branch and commit hash for Comgr, and commit hash for LLVM to log
+output for Comgr actions. This can help us debug issues more quickly in cases
+where reporters provide Comgr logs.
+- Fix multiple bugs with mangled names test
+- Update default arch for test binaries from gfx830 to gfx900
+- Refactor nested kernel behavior into new test, as this behavior is less common
+and shouldn't be featured in the baseline tests
+- Add metadata parsing tests for code objects with multiple AMDGPU metadata note entries.
+- Updated Comgr HIP test to not rely on HIP\_COMPILER being set, or a valid HIP
+installation. We can test the functionality of Comgr HIP compilation without
+directly relying on HIP
+- Added framework for Comgr lit tests. These tests will allow us to easily
+validate generated artifacts with command-line tools like llvm-dis,
+llvm-objdump, etc. Moving forward, most new Comgr tests should be written as
+lit tests, and tests in comgr/test should be transitioned to comgr/test-lit.
+
+New Targets
+-----------
+ - gfx940
+ - gfx941
+ - gfx942
+ - gfx1036
+ - gfx1150
+ - gfx1151
+ - gfx1152
+ - gfx9-generic
+ - gfx9-4-generic
+ - gfx10-1-generic
+ - gfx10-3-generic
+ - gfx11-generic
+ - gfx12-generic
+
+Removed Targets
+---------------
+
+Significant Known Problems
+--------------------------
+- Several Comgr actions currently write and read files from the filesystem,
+which is a known performance issue. We aim to address this by improving
+clang's virtual file system support
+- Several Comgr actions currently fork new processes for compilation actions. We
+aim to address this by librayizing llvm tools that are currently only useable as
+a separate process.

@@ -13,7 +13,7 @@ include_directories(${CUDAToolkit_INCLUDE_DIRS})
 # added to the library name.
 set(CUFRT_LIBNAME flang_rt.cuda_${CUDAToolkit_VERSION_MAJOR})
 
-add_flang_library(${CUFRT_LIBNAME}
+set(sources
   allocator.cpp
   allocatable.cpp
   descriptor.cpp
@@ -23,6 +23,11 @@ add_flang_library(${CUFRT_LIBNAME}
   memory.cpp
   pointer.cpp
   registration.cpp
+)
+runtime_source_files(sources SUBDIR "cuda")
+
+add_flang_library(${CUFRT_LIBNAME}
+  ${sources}
 )
 
 if (BUILD_SHARED_LIBS)

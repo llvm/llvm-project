@@ -1,37 +1,18 @@
-/*******************************************************************************
-*
-* University of Illinois/NCSA
-* Open Source License
-*
-* Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documentation files (the "Software"), to deal
-* with the Software without restriction, including without limitation the
-* rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-* sell copies of the Software, and to permit persons to whom the Software is
-* furnished to do so, subject to the following conditions:
-*
-*     * Redistributions of source code must retain the above copyright notice,
-*       this list of conditions and the following disclaimers.
-*
-*     * Redistributions in binary form must reproduce the above copyright
-*       notice, this list of conditions and the following disclaimers in the
-*       documentation and/or other materials provided with the distribution.
-*
-*     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
-*       contributors may be used to endorse or promote products derived from
-*       this Software without specific prior written permission.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
-* THE SOFTWARE.
-*
-*******************************************************************************/
+//===- amd_comgr.h.in - User-facing APIs ----------------------------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file defines the user-facing Comgr APIs, including compilation,
+/// metadata, and disassembly, symbol lookup, and symbolization APIs.
+///
+/// It is copied into amd_comgr.h by CMake during the Comgr build.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef AMD_COMGR_H_
 #define AMD_COMGR_H_
@@ -112,7 +93,7 @@ extern "C" {
  * passed to operations must be disjoint, together with all the @p
  * amd_comgr_data_t handles that have been added to it. The exception is that
  * the default device library data object handles can be non-disjoint as they
- * are imutable.
+ * are immutable.
  *
  * The library supports generating and inspecting code objects that
  * contain machine code for a certain set of instruction set
@@ -135,6 +116,15 @@ extern "C" {
  * amd_comgr_do_action to perform an action specified by
  * @p amd_comgr_action_kind_t.
  *
+ * Data objects are reference counted and are destroyed when the
+ * reference count reaches 0. When a data object is created, its
+ * reference count is 1, it has 0 bytes of data, it has an empty name,
+ * and it has no metadata.
+ *
+ * Mutating a data object is only permitted before it is used as part of
+ * the input to an action. A data object which is the result of an action
+ * must not be mutated.
+ *
  * Some data objects can have associated metadata. There are
  * operations for querying this metadata.
  *
@@ -148,6 +138,8 @@ extern "C" {
  *   These files do not appear in the current working directory, but are
  *   instead left in a platform-specific temporary directory (/tmp on Linux and
  *   C:\Temp or the path found in the TEMP environment variable on Windows).
+ * - @p AMD_COMGR_SAVE_LLVM_TEMPS: If this is set, and is not "0", Comgr
+ *   forwards "--save-temps=obj" to Clang Driver invocations
  * - @p AMD_COMGR_REDIRECT_LOGS: If this is not set, or is set to "0", logs are
  *   returned to the caller as normal. If this is set to "stdout"/"-" or
  *   "stderr", logs are instead redirected to the standard output or error
@@ -157,7 +149,6 @@ extern "C" {
  * - @p AMD_COMGR_EMIT_VERBOSE_LOGS: If this is set, and is not "0", logs will
  *   include additional Comgr-specific informational messages.
  */
-
 
 /** \defgroup symbol_versions_group Symbol Versions
  *
@@ -233,6 +224,18 @@ extern "C" {
  * and has the symbol version string of ``"@amd_comgr_NAME@_2.9"``.
  */
 #define AMD_COMGR_VERSION_2_9
+
+/**
+ * The function was introduced or changed in version 3.0 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.0"``.
+ */
+#define AMD_COMGR_VERSION_3_0
+
+/**
+ * The function was introduced or changed in version 3.1 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_3.1"``.
+ */
+#define AMD_COMGR_VERSION_3_1
 
 /** @} */
 
@@ -556,11 +559,6 @@ amd_comgr_get_isa_metadata(
 /**
  * @brief Create a data object that can hold data of a specified kind.
  *
- * Data objects are reference counted and are destroyed when the
- * reference count reaches 0. When a data object is created its
- * reference count is 1, it has 0 bytes of data, it has an empty name,
- * and it has no metadata.
- *
  * @param[in] kind The kind of data the object is intended to hold.
  *
  * @param[out] data A handle to the data object created. Its reference
@@ -581,11 +579,15 @@ amd_comgr_create_data(
   amd_comgr_data_kind_t kind,
   amd_comgr_data_t *data) AMD_COMGR_VERSION_1_8;
 
- /**
+/**
  * @brief Indicate that no longer using a data object handle.
  *
  * The reference count of the associated data object is
  * decremented. If it reaches 0 it is destroyed.
+ *
+ * @note Although this may lead to the destruction of a data object, it is not
+ * considered a mutation for the purposes of the restrictions described in @ref
+ * codeobjectmanager.
  *
  * @param[in] data The data object to release.
  *
@@ -632,6 +634,9 @@ amd_comgr_get_data_kind(
  * associated with the data object is also replaced which invalidates
  * all metadata handles to the old metadata.
  *
+ * @warning This function mutates the data object; see @ref codeobjectmanager
+ * for restrictions.
+ *
  * @param[in] data The data object to update.
  *
  * @param[in] size The number of bytes in the data specified by @p bytes.
@@ -660,6 +665,9 @@ amd_comgr_set_data(
  * file into the data object. The slice is specified by @p offset and @p size.
  * Internally this API calls amd_comgr_set_data and resets data object's
  * current state.
+ *
+ * @warning This function mutates the data object; see @ref codeobjectmanager
+ * for restrictions.
  *
  * @param[in, out] data The data object to update.
  *
@@ -694,6 +702,9 @@ amd_comgr_set_data_from_file_slice(
  * reference the contents of the include data object with the same
  * name. The name may also be used for other data objects in log and
  * diagnostic output.
+ *
+ * @warning This function mutates the data object; see @ref codeobjectmanager
+ * for restrictions.
  *
  * @param[in] data The data object to update.
  *
@@ -1422,6 +1433,41 @@ amd_comgr_action_info_get_bundle_entry_id(
   char *bundle_entry_id) AMD_COMGR_VERSION_2_8;
 
 /**
+ * @brief Set whether the specified action should use an 
+ * in-memory virtual file system (VFS).
+ *
+ * @warning Environment variable @p AMD_COMGR_SAVE_TEMPS may override options 
+ * set by this API and @p AMD_COMGR_USE_VFS. If @p AMD_COMGR_SAVE_TEMPS is set 
+ * to "1", all actions are performed using the real file system irrespective of 
+ * the value of @p should_use_vfs @p AMD_COMGR_USE_VFS;
+ *
+ * @warning Environment variable @p AMD_COMGR_USE_VFS may override options 
+ * set by this API. If @p AMD_COMGR_USE_VFS is set to "1", all actions 
+ * are performed using VFS. If @p AMD_COMGR_USE_VFS is set to "0", 
+ * none of the actions are performed using VFS.
+ *
+ * If @p AMD_COMGR_USE_VFS is unset, this API can be used to selectively
+ * turn VFS usage on/off for specified actions.
+ *
+ * @param[in] action_info A handle to the action info object to be
+ * updated.
+ *
+ * @param[in] should_use_vfs A boolean that directs the choice to
+ * use the VFS.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * action_info is an invalid action info object.
+ *
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_action_info_set_vfs(
+  amd_comgr_action_info_t action_info,
+  bool should_use_vfs) AMD_COMGR_VERSION_3_1;
+
+/**
  * @brief Set the device library linking behavior of an action info object.
  *
  * Device library linking can be either enforced or omitted for compilation
@@ -1566,17 +1612,18 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR = 0x0,
   /**
-   * Copy all existing data objects in @p input to @p output, then add the
-   * device-specific and language-specific precompiled headers required for
-   * compilation.
+   * Copy all existing data objects in @p input to @p output.
    *
-   * Currently the only supported languages are @p AMD_COMGR_LANGUAGE_OPENCL_1_2
-   * and @p AMD_COMGR_LANGUAGE_OPENCL_2_0.
+   * Currently the action is a no-op, as the OpenCL pre-compiled headers
+   * are no longer used.
    *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name or language
-   * is not set in @p info, or the language is not supported.
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if any of the
+   * input or output are not initialized.
    */
-  AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS = 0x1,
+  AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS
+    AMD_COMGR_DEPRECATED("Will be removed in Comgr v4.0. Currently the action\
+    is a no-op, as the OpenCL pre-compiled headers are no longer used.")
+    = 0x1,
   /**
    * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve
@@ -1775,6 +1822,23 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name or language is not set in @p info.
    */
   AMD_COMGR_ACTION_UNBUNDLE = 0xF,
+
+   /**
+   * Compile each source SPIR-V object in @p input into a relocatable.
+   * For each successful compilation, add a relocatable object to @p result
+   *
+   * We accomplish this by first translating the .spv files to .bc via the
+   * SPIR-V translator. We then extract any relevant -cc1 flags from the embedded
+   * @llvm.cmdline variable. Finally, we compile the bitcode to a reloctable,
+   * appending any extracted flags.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any translation, flag extraction, or
+   * compilation fails.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
+   * if any input is not SPIR-V.
+   */
+  AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE = 0x10,
 
    /**
    * Translate each source SPIR-V object in @p input into LLVM IR Bitcode.
@@ -2509,7 +2573,7 @@ amd_comgr_status_t AMD_COMGR_API
 amd_comgr_map_name_expression_to_symbol_name(
     amd_comgr_data_t data,
     size_t *size,
-    char *name_expression,
+    const char *name_expression,
     char *symbol_name) AMD_COMGR_VERSION_2_6;
 
 /**

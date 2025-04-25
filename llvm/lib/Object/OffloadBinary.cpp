@@ -125,7 +125,6 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
         OffloadBundleFatBin::create(*Buffer, SectionOffset + Offset, fileName);
     if (!FatBundleOrErr)
       return FatBundleOrErr.takeError();
-    OffloadBundleFatBin &Bundle = **FatBundleOrErr;
 
     // add current Bundle to list.
     Bundles.emplace_back(std::move(**FatBundleOrErr));
@@ -218,7 +217,6 @@ Error extractFromArchive(const Archive &Library,
 
 Error OffloadBundleFatBin::ReadEntries(StringRef Buffer,
                                        uint64_t SectionOffset) {
-  uint64_t BundleNumber = 0;
   uint64_t NumOfEntries = 0;
 
   // get Reader
@@ -244,7 +242,6 @@ Error OffloadBundleFatBin::ReadEntries(StringRef Buffer,
     uint64_t EntryOffset;
     uint64_t EntryIDSize;
     StringRef EntryID;
-    uint64_t absOffset;
 
     if (auto EC = Reader.readInteger(EntryOffset)) {
       return errorCodeToError(object_error::parse_failed);
@@ -295,7 +292,7 @@ OffloadBundleFatBin::create(MemoryBufferRef Buf, uint64_t SectionOffset,
 Error OffloadBundleFatBin::extractBundle(const ObjectFile &Source) {
   // This will extract all entries in the Bundle
   SmallVectorImpl<OffloadBundleEntry>::iterator it = Entries.begin();
-  for (int64_t I = 0; I < getNumEntries(); I++) {
+  for (uint64_t I = 0; I < getNumEntries(); I++) {
 
     if (it->Size > 0) {
       // create output file name. Which should be
@@ -457,13 +454,8 @@ Error object::extractOffloadBundleFatBinary(
          llvm::file_magic::offload_bundle_compressed)) {
 
       uint64_t SectionOffset = 0;
-      if (Obj.isELF()) {
+      if (Obj.isELF())
         SectionOffset = ELFSectionRef(Sec).getOffset();
-      } else if (Obj.isCOFF()) {
-        if (const COFFObjectFile *COFFObj = dyn_cast<COFFObjectFile>(&Obj)) {
-          const coff_section *CoffSection = COFFObj->getCOFFSection(Sec);
-        }
-      }
 
       MemoryBufferRef Contents(*Buffer, Obj.getFileName());
 
@@ -544,6 +536,7 @@ OffloadKind object::getOffloadKind(StringRef Name) {
       .Case("openmp", OFK_OpenMP)
       .Case("cuda", OFK_Cuda)
       .Case("hip", OFK_HIP)
+      .Case("sycl", OFK_SYCL)
       .Default(OFK_None);
 }
 
@@ -555,6 +548,8 @@ StringRef object::getOffloadKindName(OffloadKind Kind) {
     return "cuda";
   case OFK_HIP:
     return "hip";
+  case OFK_SYCL:
+    return "sycl";
   default:
     return "none";
   }

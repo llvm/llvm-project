@@ -11,7 +11,7 @@
 #ifndef FORTRAN_RUNTIME_ALLOCATABLE_H_
 #define FORTRAN_RUNTIME_ALLOCATABLE_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
 namespace Fortran::runtime {
@@ -94,9 +94,9 @@ int RTDECL(AllocatableCheckLengthParameter)(Descriptor &,
 // Successfully allocated memory is initialized if the allocatable has a
 // derived type, and is always initialized by AllocatableAllocateSource().
 // Performs all necessary coarray synchronization and validation actions.
-int RTDECL(AllocatableAllocate)(Descriptor &, bool hasStat = false,
-    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+int RTDECL(AllocatableAllocate)(Descriptor &, std::int64_t asyncId = -1,
+    bool hasStat = false, const Descriptor *errMsg = nullptr,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 int RTDECL(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);

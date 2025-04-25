@@ -2,10 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; RUN: opt -passes=debugify,instcombine -S < %s | FileCheck %s -check-prefix DBGINFO
 
-; RUN: opt -passes=debugify,instcombine -S < %s --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DBGINFO
-
-; RUN: opt -passes=debugify,instcombine --debugify-diop-diexprs --experimental-debuginfo-iterators=true  -S < %s | FileCheck %s -check-prefix DIOP-DBGINFO
-; RUN: opt -passes=debugify,instcombine --debugify-diop-diexprs --experimental-debuginfo-iterators=false -S < %s | FileCheck %s -check-prefix DIOP-DBGINFO
+; RUN: opt -passes=debugify,instcombine --debugify-diop-diexprs -S < %s | FileCheck %s -check-prefix DIOP-DBGINFO
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32"
 

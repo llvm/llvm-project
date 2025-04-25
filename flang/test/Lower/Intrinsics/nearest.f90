@@ -30,7 +30,7 @@
   ! CHECK:       %[[V_21:[0-9]+]] = fir.if %[[V_20]] -> (f16) {
   ! CHECK:         %[[V_22:[0-9]+]] = arith.select %[[V_11]], %cst{{[_0-9]*}}, %cst{{[_0-9]*}} : f16
   ! CHECK:         %[[V_23:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                            fir.call @feraiseexcept(%[[V_23]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                            fir.call {{.*}}feraiseexcept(%[[V_23]]) fastmath<contract> : (i32)
   ! CHECK:         fir.result %[[V_22]] : f16
   ! CHECK:       } else {
   ! CHECK-DAG:     %[[V_22:[0-9]+]] = arith.subi %[[V_12]], %c1{{.*}} : i16
@@ -40,12 +40,12 @@
   ! CHECK:         %[[V_26:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 516 : i32}> : (f16) -> i1
   ! CHECK:         fir.if %[[V_26]] {
   ! CHECK:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         %[[V_27:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 144 : i32}> : (f16) -> i1
   ! CHECK:         fir.if %[[V_27]] {
   ! CHECK:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         fir.result %[[V_25]] : f16
   ! CHECK:       }
@@ -92,7 +92,7 @@ end
   ! CHECK:       %[[V_24:[0-9]+]] = fir.if %[[V_23]] -> (bf16) {
   ! CHECK:         %[[V_25:[0-9]+]] = arith.select %[[V_13]], %cst{{[_0-9]*}}, %cst{{[_0-9]*}} : bf16
   ! CHECK:         %[[V_26:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                            fir.call @feraiseexcept(%[[V_26]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                            fir.call {{.*}}feraiseexcept(%[[V_26]]) fastmath<contract> : (i32)
   ! CHECK:         fir.result %[[V_25]] : bf16
   ! CHECK:       } else {
   ! CHECK:         %[[V_25:[0-9]+]] = arith.bitcast %[[V_5]] : bf16 to i16
@@ -103,12 +103,12 @@ end
   ! CHECK:         %[[V_30:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_29]]) <{bit = 516 : i32}> : (bf16) -> i1
   ! CHECK:         fir.if %[[V_30]] {
   ! CHECK:           %[[V_32:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_32]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_32]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         %[[V_31:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_29]]) <{bit = 144 : i32}> : (bf16) -> i1
   ! CHECK:         fir.if %[[V_31]] {
   ! CHECK:           %[[V_32:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_32]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_32]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         fir.result %[[V_29]] : bf16
   ! CHECK:       }
@@ -152,7 +152,7 @@ end
   ! CHECK:       %[[V_21:[0-9]+]] = fir.if %[[V_20]] -> (f32) {
   ! CHECK:         %[[V_22:[0-9]+]] = arith.select %[[V_11]], %cst{{[_0-9]*}}, %cst{{[_0-9]*}} : f32
   ! CHECK:         %[[V_23:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                            fir.call @feraiseexcept(%[[V_23]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                            fir.call {{.*}}feraiseexcept(%[[V_23]]) fastmath<contract> : (i32)
   ! CHECK:         fir.result %[[V_22]] : f32
   ! CHECK:       } else {
   ! CHECK-DAG:     %[[V_22:[0-9]+]] = arith.subi %[[V_12]], %c1{{.*}} : i32
@@ -162,12 +162,12 @@ end
   ! CHECK:         %[[V_26:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 516 : i32}> : (f32) -> i1
   ! CHECK:         fir.if %[[V_26]] {
   ! CHECK:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         %[[V_27:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 144 : i32}> : (f32) -> i1
   ! CHECK:         fir.if %[[V_27]] {
   ! CHECK:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         fir.result %[[V_25]] : f32
   ! CHECK:       }
@@ -211,7 +211,7 @@ end
   ! CHECK:       %[[V_21:[0-9]+]] = fir.if %[[V_20]] -> (f64) {
   ! CHECK:         %[[V_22:[0-9]+]] = arith.select %[[V_11]], %cst{{[_0-9]*}}, %cst{{[_0-9]*}} : f64
   ! CHECK:         %[[V_23:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                            fir.call @feraiseexcept(%[[V_23]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                            fir.call {{.*}}feraiseexcept(%[[V_23]]) fastmath<contract> : (i32)
   ! CHECK:         fir.result %[[V_22]] : f64
   ! CHECK:       } else {
   ! CHECK-DAG:     %[[V_22:[0-9]+]] = arith.subi %[[V_12]], %c1{{.*}} : i64
@@ -221,12 +221,12 @@ end
   ! CHECK:         %[[V_26:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 516 : i32}> : (f64) -> i1
   ! CHECK:         fir.if %[[V_26]] {
   ! CHECK:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         %[[V_27:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 144 : i32}> : (f64) -> i1
   ! CHECK:         fir.if %[[V_27]] {
   ! CHECK:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK:         }
   ! CHECK:         fir.result %[[V_25]] : f64
   ! CHECK:       }
@@ -270,7 +270,7 @@ end
   ! CHECK-KIND10:       %[[V_21:[0-9]+]] = fir.if %[[V_20]] -> (f80) {
   ! CHECK-KIND10:         %[[V_22:[0-9]+]] = arith.select %[[V_11]], %cst{{[_0-9]*}}, %cst{{[_0-9]*}} : f80
   ! CHECK-KIND10:         %[[V_23:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK-KIND10:                            fir.call @feraiseexcept(%[[V_23]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND10:                            fir.call {{.*}}feraiseexcept(%[[V_23]]) fastmath<contract> : (i32)
   ! CHECK-KIND10:         fir.result %[[V_22]] : f80
   ! CHECK-KIND10:       } else {
   ! CHECK-KIND10:         %[[V_22:[0-9]+]] = fir.call @_FortranANearest10(%[[V_5]], %[[V_11]]) fastmath<contract> : (f80, i1) -> f80
@@ -317,7 +317,7 @@ end
   ! CHECK-KIND16:       %[[V_21:[0-9]+]] = fir.if %[[V_20]] -> (f128) {
   ! CHECK-KIND16:         %[[V_22:[0-9]+]] = arith.select %[[V_11]], %cst{{[_0-9]*}}, %cst{{[_0-9]*}} : f128
   ! CHECK-KIND16:         %[[V_23:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK-KIND16:                            fir.call @feraiseexcept(%[[V_23]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:                            fir.call {{.*}}feraiseexcept(%[[V_23]]) fastmath<contract> : (i32)
   ! CHECK-KIND16:         fir.result %[[V_22]] : f128
   ! CHECK-KIND16:       } else {
   ! CHECK-KIND16-DAG:     %[[V_22:[0-9]+]] = arith.subi %[[V_12]], %c1{{.*}} : i128
@@ -327,12 +327,12 @@ end
   ! CHECK-KIND16:         %[[V_26:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 516 : i32}> : (f128) -> i1
   ! CHECK-KIND16:         fir.if %[[V_26]] {
   ! CHECK-KIND16:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK-KIND16:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK-KIND16:         }
   ! CHECK-KIND16:         %[[V_27:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_25]]) <{bit = 144 : i32}> : (f128) -> i1
   ! CHECK-KIND16:         fir.if %[[V_27]] {
   ! CHECK-KIND16:           %[[V_28:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK-KIND16:                              fir.call @feraiseexcept(%[[V_28]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:                              fir.call {{.*}}feraiseexcept(%[[V_28]]) fastmath<contract> : (i32)
   ! CHECK-KIND16:         }
   ! CHECK-KIND16:         fir.result %[[V_25]] : f128
   ! CHECK-KIND16:       }
@@ -378,7 +378,7 @@ end
   ! CHECK-KIND16:       %[[V_22:[0-9]+]] = fir.if %[[V_21]] -> (f128) {
   ! CHECK-KIND16:         %[[V_23:[0-9]+]] = arith.select %[[V_12]], %cst{{[_0-9]*}}, %cst{{[_0-9]*}} : f128
   ! CHECK-KIND16:         %[[V_24:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK-KIND16:                            fir.call @feraiseexcept(%[[V_24]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:                            fir.call {{.*}}feraiseexcept(%[[V_24]]) fastmath<contract> : (i32)
   ! CHECK-KIND16:         fir.result %[[V_23]] : f128
   ! CHECK-KIND16:       } else {
   ! CHECK-KIND16-DAG:     %[[V_23:[0-9]+]] = arith.subi %[[V_13]], %c1{{.*}} : i128
@@ -388,12 +388,12 @@ end
   ! CHECK-KIND16:         %[[V_27:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_26]]) <{bit = 516 : i32}> : (f128) -> i1
   ! CHECK-KIND16:         fir.if %[[V_27]] {
   ! CHECK-KIND16:           %[[V_29:[0-9]+]] = fir.call @_FortranAMapException(%c40{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK-KIND16:                              fir.call @feraiseexcept(%[[V_29]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:                              fir.call {{.*}}feraiseexcept(%[[V_29]]) fastmath<contract> : (i32)
   ! CHECK-KIND16:         }
   ! CHECK-KIND16:         %[[V_28:[0-9]+]] = "llvm.intr.is.fpclass"(%[[V_26]]) <{bit = 144 : i32}> : (f128) -> i1
   ! CHECK-KIND16:         fir.if %[[V_28]] {
   ! CHECK-KIND16:           %[[V_29:[0-9]+]] = fir.call @_FortranAMapException(%c48{{.*}}) fastmath<contract> : (i32) -> i32
-  ! CHECK-KIND16:                              fir.call @feraiseexcept(%[[V_29]]) fastmath<contract> : (i32) -> i32
+  ! CHECK-KIND16:                              fir.call {{.*}}feraiseexcept(%[[V_29]]) fastmath<contract> : (i32)
   ! CHECK-KIND16:         }
   ! CHECK-KIND16:         fir.result %[[V_26]] : f128
   ! CHECK-KIND16:       }

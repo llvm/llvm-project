@@ -161,9 +161,7 @@ public:
     return isAmdHsaOS() || isMesaKernel(F);
   }
 
-  bool isGCN() const {
-    return TargetTriple.getArch() == Triple::amdgcn;
-  }
+  bool isGCN() const { return TargetTriple.isAMDGCN(); }
 
   bool isGCN3Encoding() const {
     return GCN3Encoding;

@@ -34,10 +34,11 @@ namespace object {
 /// The producer of the associated offloading image.
 enum OffloadKind : uint16_t {
   OFK_None = 0,
-  OFK_OpenMP,
-  OFK_Cuda,
-  OFK_HIP,
-  OFK_LAST,
+  OFK_OpenMP = (1 << 0),
+  OFK_Cuda = (1 << 1),
+  OFK_HIP = (1 << 2),
+  OFK_SYCL = (1 << 3),
+  OFK_LAST = (1 << 4),
 };
 
 /// The type of contents the offloading image contains.
@@ -223,7 +224,7 @@ struct OffloadBundleEntry {
        << ", ID Length = " << IDLength << ", ID = " << ID;
   }
   void dumpURI(raw_ostream &OS, StringRef filePath) {
-    OS << ID.data() << "\tfile:\/\/" << filePath << "#offset=" << Offset
+    OS << ID.data() << "\tfile://" << filePath << "#offset=" << Offset
        << "&size=" << Size << "\n";
   }
 };
@@ -309,8 +310,6 @@ struct OffloadBundleURI {
     case MEMORY_URI:
       parseMemoryURI(str);
       break;
-    default:
-      report_fatal_error("Unrecognized URI type.");
     }
   }
 
@@ -329,7 +328,6 @@ struct OffloadBundleURI {
         str = str.drop_front(OffsetStr.size());
 
         if (str.consume_front("&size=")) {
-          Size;
           str.getAsInteger(10, Size);
         } else
           report_fatal_error("Reading 'size' in URI.");

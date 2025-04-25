@@ -1165,7 +1165,6 @@ private:
   const MachineFrameInfo *MFI;
   BitVector CalleeSavedRegs;
   LexicalScopes LS;
-  TargetPassConfig *TPC;
 
   // An empty DIExpression. Used default / placeholder DbgValueProperties
   // objects, as we can't have null expressions.
@@ -1483,17 +1482,15 @@ private:
   /// block information can be fully computed before exploration finishes,
   /// allowing us to emit it and free data structures earlier than otherwise.
   /// It's also good for locality.
-  bool depthFirstVLocAndEmit(unsigned MaxNumBlocks,
-                             const ScopeToDILocT &ScopeToDILocation,
-                             const ScopeToVarsT &ScopeToVars,
-                             ScopeToAssignBlocksT &ScopeToBlocks,
-                             LiveInsT &Output, FuncValueTable &MOutLocs,
-                             FuncValueTable &MInLocs,
-                             SmallVectorImpl<VLocTracker> &AllTheVLocs,
-                             MachineFunction &MF, const TargetPassConfig &TPC);
+  bool depthFirstVLocAndEmit(
+      unsigned MaxNumBlocks, const ScopeToDILocT &ScopeToDILocation,
+      const ScopeToVarsT &ScopeToVars, ScopeToAssignBlocksT &ScopeToBlocks,
+      LiveInsT &Output, FuncValueTable &MOutLocs, FuncValueTable &MInLocs,
+      SmallVectorImpl<VLocTracker> &AllTheVLocs, MachineFunction &MF,
+      bool ShouldEmitDebugEntryValues);
 
   bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
-                    TargetPassConfig *TPC, unsigned InputBBLimit,
+                    bool ShouldEmitDebugEntryValues, unsigned InputBBLimit,
                     unsigned InputDbgValLimit) override;
 
 public:

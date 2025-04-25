@@ -4,7 +4,7 @@
 set(ORC_COMMON_SOURCES
   debug.cpp
   dlfcn_wrapper.cpp
-  extensible_rtti.cpp
+  rtti.cpp
   log_error_to_stderr.cpp
   run_program_wrapper.cpp
   resolve.cpp
@@ -18,7 +18,7 @@ set(ORC_COMMON_IMPL_HEADERS
   endianness.h
   error.h
   executor_address.h
-  extensible_rtti.h
+  rtti.h
   simple_packed_serialization.h
   stl_extras.h
   wrapper_function_utils.h

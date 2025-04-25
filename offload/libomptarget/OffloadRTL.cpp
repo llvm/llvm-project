@@ -57,11 +57,3 @@ void deinitRuntime() {
 
   RefCount--;
 }
-
-// HACK: These depricated device stubs still needs host versions for fallback
-// FIXME: Deprecate upstream, change test cases to use malloc & free directly
-extern "C" char *global_allocate(uint32_t sz) { return (char *)malloc(sz); }
-extern "C" int global_free(void *ptr) {
-  free(ptr);
-  return 0;
-}
