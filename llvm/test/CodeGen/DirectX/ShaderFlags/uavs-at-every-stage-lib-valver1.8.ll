@@ -23,7 +23,5 @@ define void @test() "hlsl.export" {
 !dx.valver = !{!1}
 !1 = !{i32 1, i32 8}
 
-; Set dx.resmayalias to prevent the shader flag ResMayNotAlias from being set,
-; as to not distract from the shader flag that is actually being tested
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"dx.resmayalias", i32 1}

@@ -40,8 +40,6 @@ define float @loadSRV() #0 {
 ; But if it does, ensure that it has no effect.
 !0 = !{i32 1, !"dx.resmayalias", i32 0}
 
-; Set dx.valver to prevent the flag UAVsAtEveryStage from being set, as to not
-; distract from the flag that is actually being tested
 !dx.valver = !{!1}
 !1 = !{i32 1, i32 8}
 
