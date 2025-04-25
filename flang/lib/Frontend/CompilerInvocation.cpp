@@ -27,7 +27,6 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/OptionUtils.h"
 #include "clang/Driver/Options.h"
-#include "clang/Driver/Driver.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -433,13 +432,17 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
-    opts.setProfileInstr(Fortran::frontend::CodeGenOptions::ProfileInstrKind::ProfileIRInstr);
-    opts.DebugInfoForProfiling = args.hasArg(clang::driver::options::OPT_fdebug_info_for_profiling);
-    opts.AtomicProfileUpdate = args.hasArg(clang::driver::options::OPT_fprofile_update_EQ);
+    opts.setProfileInstr(
+        Fortran::frontend::CodeGenOptions::ProfileInstrKind::ProfileIRInstr);
+    opts.DebugInfoForProfiling =
+        args.hasArg(clang::driver::options::OPT_fdebug_info_for_profiling);
+    opts.AtomicProfileUpdate =
+        args.hasArg(clang::driver::options::OPT_fprofile_update_EQ);
   }
- 
+
   if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
-    opts.setProfileUse(Fortran::frontend::CodeGenOptions::ProfileInstrKind::ProfileIRInstr);
+    opts.setProfileUse(
+        Fortran::frontend::CodeGenOptions::ProfileInstrKind::ProfileIRInstr);
     opts.ProfileInstrumentUsePath = A->getValue();
   }
 

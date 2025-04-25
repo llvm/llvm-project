@@ -156,7 +156,6 @@ public:
     ProfileCSIRInstr, // IR level PGO context sensitive instrumentation in LLVM.
   };
 
-
   /// Name of the profile file to use as output for -fprofile-instr-generate,
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
@@ -171,7 +170,7 @@ public:
   /// Name of the profile file to use as input for -fprofile-instr-use
   std::string ProfileInstrumentUsePath;
 
-    /// Name of the profile remapping file to apply to the profile data supplied
+  /// Name of the profile remapping file to apply to the profile data supplied
   /// by -fprofile-sample-use or -fprofile-instr-use.
   std::string ProfileRemappingFile;
 
@@ -181,19 +180,17 @@ public:
   }
 
   /// Check if IR level profile instrumentation is on.
-  bool hasProfileIRInstr() const {
-    return getProfileInstr() == ProfileIRInstr;
-  }
+  bool hasProfileIRInstr() const { return getProfileInstr() == ProfileIRInstr; }
 
   /// Check if CS IR level profile instrumentation is on.
   bool hasProfileCSIRInstr() const {
     return getProfileInstr() == ProfileCSIRInstr;
   }
-    /// Check if IR level profile use is on.
-    bool hasProfileIRUse() const {
-      return getProfileUse() == ProfileIRInstr ||
-             getProfileUse() == ProfileCSIRInstr;
-    }
+  /// Check if IR level profile use is on.
+  bool hasProfileIRUse() const {
+    return getProfileUse() == ProfileIRInstr ||
+           getProfileUse() == ProfileCSIRInstr;
+  }
   /// Check if CSIR profile use is on.
   bool hasProfileCSIRUse() const { return getProfileUse() == ProfileCSIRInstr; }
 

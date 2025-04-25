@@ -56,21 +56,21 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/PGOOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
-#include "llvm/ProfileData/InstrProfCorrelator.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
 
@@ -133,19 +133,20 @@ static bool saveMLIRTempFile(const CompilerInvocation &ci,
 // Custom BeginSourceFileAction
 //===----------------------------------------------------------------------===//
 
-
 static llvm::cl::opt<llvm::PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
-  "pgo-cold-func-opt", llvm::cl::init(llvm::PGOOptions::ColdFuncOpt::Default), llvm::cl::Hidden,
-  llvm::cl::desc(
-      "Function attribute to apply to cold functions as determined by PGO"),
-    llvm::cl::values(clEnumValN(llvm::PGOOptions::ColdFuncOpt::Default, "default",
-                        "Default (no attribute)"),
-             clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptSize, "optsize",
-                        "Mark cold functions with optsize."),
-             clEnumValN(llvm::PGOOptions::ColdFuncOpt::MinSize, "minsize",
-                        "Mark cold functions with minsize."),
-             clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptNone, "optnone",
-                        "Mark cold functions with optnone.")));
+    "pgo-cold-func-opt", llvm::cl::init(llvm::PGOOptions::ColdFuncOpt::Default),
+    llvm::cl::Hidden,
+    llvm::cl::desc(
+        "Function attribute to apply to cold functions as determined by PGO"),
+    llvm::cl::values(clEnumValN(llvm::PGOOptions::ColdFuncOpt::Default,
+                                "default", "Default (no attribute)"),
+                     clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptSize,
+                                "optsize", "Mark cold functions with optsize."),
+                     clEnumValN(llvm::PGOOptions::ColdFuncOpt::MinSize,
+                                "minsize", "Mark cold functions with minsize."),
+                     clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptNone,
+                                "optnone",
+                                "Mark cold functions with optnone.")));
 
 bool PrescanAction::beginSourceFileAction() { return runPrescan(); }
 
@@ -909,19 +910,18 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   delete tlii;
 }
 
-
 // Default filename used for profile generation.
 namespace llvm {
-  extern llvm::cl::opt<bool> DebugInfoCorrelate;
-  extern llvm::cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
-
+extern llvm::cl::opt<bool> DebugInfoCorrelate;
+extern llvm::cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 
 std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != llvm::InstrProfCorrelator::NONE
+  return DebugInfoCorrelate ||
+                 ProfileCorrelate != llvm::InstrProfCorrelator::NONE
              ? "default_%m.proflite"
              : "default_%m.profraw";
 }
-}
+} // namespace llvm
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   CompilerInstance &ci = getInstance();
@@ -940,29 +940,28 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   llvm::PipelineTuningOptions pto;
   std::optional<llvm::PGOOptions> pgoOpt;
- 
-  if (opts.hasProfileIRInstr()){
+
+  if (opts.hasProfileIRInstr()) {
     // -fprofile-generate.
     pgoOpt = llvm::PGOOptions(
-      opts.InstrProfileOutput.empty() ? llvm::getDefaultProfileGenName()
-                                             : opts.InstrProfileOutput,
-      "", "", opts.MemoryProfileUsePath, nullptr, llvm::PGOOptions::IRInstr,
-      llvm::PGOOptions::NoCSAction, ClPGOColdFuncAttr,
-      opts.DebugInfoForProfiling,
-      /*PseudoProbeForProfiling=*/false, opts.AtomicProfileUpdate);
-    }
-    else if (opts.hasProfileIRUse()) {
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = llvm::vfs::getRealFileSystem();
-      // -fprofile-use.
-      auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
-                                                      : llvm::PGOOptions::NoCSAction;
-      pgoOpt = llvm::PGOOptions(opts.ProfileInstrumentUsePath, "",
-        opts.ProfileRemappingFile,
-        opts.MemoryProfileUsePath, VFS,
-                          llvm::PGOOptions::IRUse, CSAction, ClPGOColdFuncAttr,
-                          opts.DebugInfoForProfiling);
-    }
- 
+        opts.InstrProfileOutput.empty() ? llvm::getDefaultProfileGenName()
+                                        : opts.InstrProfileOutput,
+        "", "", opts.MemoryProfileUsePath, nullptr, llvm::PGOOptions::IRInstr,
+        llvm::PGOOptions::NoCSAction, ClPGOColdFuncAttr,
+        opts.DebugInfoForProfiling,
+        /*PseudoProbeForProfiling=*/false, opts.AtomicProfileUpdate);
+  } else if (opts.hasProfileIRUse()) {
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+        llvm::vfs::getRealFileSystem();
+    // -fprofile-use.
+    auto CSAction = opts.hasProfileCSIRUse() ? llvm::PGOOptions::CSIRUse
+                                             : llvm::PGOOptions::NoCSAction;
+    pgoOpt = llvm::PGOOptions(
+        opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
+        opts.MemoryProfileUsePath, VFS, llvm::PGOOptions::IRUse, CSAction,
+        ClPGOColdFuncAttr, opts.DebugInfoForProfiling);
+  }
+
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
   si.registerCallbacks(pic, &mam);
