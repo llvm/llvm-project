@@ -160,6 +160,7 @@ struct MissingFeatures {
   static bool lambdaFieldToName() { return false; }
   static bool targetSpecificCXXABI() { return false; }
   static bool moduleNameHash() { return false; }
+  static bool setDSOLocal() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
