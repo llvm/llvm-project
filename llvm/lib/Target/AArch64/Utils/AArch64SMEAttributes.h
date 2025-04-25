@@ -165,11 +165,7 @@ public:
   SMECallAttrs(const CallBase &CB);
 
   SMEAttrs &caller() { return CallerFn; }
-  SMEAttrs &callee() {
-    if (IsIndirect)
-      return Callsite;
-    return CalledFn;
-  }
+  SMEAttrs &callee() { return IsIndirect ? Callsite : CalledFn; }
   SMEAttrs &callsite() { return Callsite; }
   SMEAttrs const &caller() const { return CallerFn; }
   SMEAttrs const &callee() const {
