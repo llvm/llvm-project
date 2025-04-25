@@ -29,9 +29,10 @@ define dso_local i32 @main() local_unnamed_addr #2 {
 ; CHECK-NEXT:    [[ADD2_I:%.*]] = add nsw i32 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP_I]], i32 [[I_019_I]]
 ; CHECK-NEXT:    store i32 [[ADD2_I]], ptr [[GEP_I]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX_I]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX6_I:%.*]] = getelementptr inbounds nuw i32, ptr [[A2]], i32 [[SUB_I]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX6_I]], align 4
-; CHECK-NEXT:    [[ADD7_I:%.*]] = add nsw i32 [[TMP3]], [[TMP0]]
+; CHECK-NEXT:    [[ADD7_I:%.*]] = add nsw i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[ARRAYIDX8_I:%.*]] = getelementptr inbounds nuw i32, ptr [[A0]], i32 [[SUB_I]]
 ; CHECK-NEXT:    store i32 [[ADD7_I]], ptr [[ARRAYIDX8_I]], align 4
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_019_I]], 1
