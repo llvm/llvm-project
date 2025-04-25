@@ -82,7 +82,7 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, Transport &transport)
     : log(log), transport(transport), broadcaster("lldb-dap"),
       exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      is_attach(false), stop_at_entry(false),
+      stop_at_entry(false), is_attach(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
@@ -668,7 +668,7 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // creation. We also use target triple and platform from the launch
   // configuration, if given, since in some cases ELF file doesn't contain
   // enough information to determine correct arch and platform (or ELF can be
-  // omitted at all), so it is good to leave the user an apportunity to specify
+  // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
   auto target = this->debugger.CreateTarget(
       configuration.program.value_or("").data(),
@@ -676,12 +676,6 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
       configuration.platformName.value_or("").data(),
       true, // Add dependent modules.
       error);
-
-  if (error.Fail()) {
-    // Update message if there was an error.
-    error.SetErrorStringWithFormat(
-        "Could not create a target for a program: %s.", error.GetCString());
-  }
 
   return target;
 }

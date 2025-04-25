@@ -176,6 +176,9 @@ class RequestHandler : public BaseRequestHandler {
 
   protocol::ErrorResponseBody ToResponse(llvm::Error err) const {
     protocol::ErrorMessage error_message;
+    // Default to showing the user errors unless otherwise specified by a
+    // DAPError.
+    error_message.showUser = true;
     error_message.sendTelemetry = false;
     if (llvm::Error unhandled = llvm::handleErrors(
             std::move(err), [&](const DAPError &E) -> llvm::Error {
@@ -185,8 +188,9 @@ class RequestHandler : public BaseRequestHandler {
               error_message.url = E.getURL();
               error_message.urlLabel = E.getURLLabel();
               return llvm::Error::success();
-            }))
+            })) {
       error_message.format = llvm::toString(std::move(unhandled));
+    }
     protocol::ErrorResponseBody body;
     body.error = error_message;
     return body;

@@ -27,6 +27,34 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         lines = output.splitlines()
         self.assertIn(program, lines[0], "make sure program path is in first argument")
 
+    def test_failing_launch_program(self):
+        """
+        Tests launching with an invalid program.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+        response = self.launch(program, expectFailure=True)
+        self.assertFalse(response["success"])
+        self.assertEqual(
+            "'{0}' does not exist".format(program), response["body"]["error"]["format"]
+        )
+
+    def test_failing_launch_commands_and_run_in_terminal(self):
+        """
+        Tests launching with an invalid program.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+        response = self.launch(
+            program, launchCommands=["a b c"], runInTerminal=True, expectFailure=True
+        )
+        self.assertFalse(response["success"])
+        self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
+        self.assertEqual(
+            "launchCommands and runInTerminal are mutually exclusive",
+            self.get_dict_value(response, ['body', 'error', 'format']),
+        )
+
     @skipIfWindows
     def test_termination(self):
         """

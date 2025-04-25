@@ -7,11 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBUtils.h"
-#include "DAP.h"
 #include "JSONUtils.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBStringList.h"
-
+#include "lldb/API/SBThread.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <mutex>
+#include <system_error>
 
 namespace lldb_dap {
 
