@@ -1817,7 +1817,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       return DAG.getConstantFP(*CFP, getCurSDLoc(), VT);
 
     if (isa<UndefValue>(C) && !V->getType()->isAggregateType())
-      return DAG.getUNDEF(VT);
+      return isa<PoisonValue>(C) ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
 
     if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
       visit(CE->getOpcode(), *CE);
@@ -1844,7 +1844,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const ConstantDataSequential *CDS =
           dyn_cast<ConstantDataSequential>(C)) {
       SmallVector<SDValue, 4> Ops;
-      for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i) {
+      for (uint64_t i = 0, e = CDS->getNumElements(); i != e; ++i) {
         SDNode *Val = getValue(CDS->getElementAsConstant(i)).getNode();
         // Add each leaf value from the operand to the Constants list
         // to form a flattened list of all the values.
@@ -3018,8 +3018,7 @@ static SDValue getLoadStackGuard(SelectionDAG &DAG, const SDLoc &DL,
     auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant |
                  MachineMemOperand::MODereferenceable;
     MachineMemOperand *MemRef = MF.getMachineMemOperand(
-        MPInfo, Flags, LocationSize::precise(PtrTy.getSizeInBits() / 8),
-        DAG.getEVTAlign(PtrTy));
+        MPInfo, Flags, PtrTy.getSizeInBits() / 8, DAG.getEVTAlign(PtrTy));
     DAG.setNodeMemRefs(Node, {MemRef});
   }
   if (PtrTy != PtrMemTy)
@@ -3501,18 +3500,9 @@ void SelectionDAGBuilder::visitIndirectBr(const IndirectBrInst &I) {
 }
 
 void SelectionDAGBuilder::visitUnreachable(const UnreachableInst &I) {
-  if (!DAG.getTarget().Options.TrapUnreachable)
+  if (!I.shouldLowerToTrap(DAG.getTarget().Options.TrapUnreachable,
+                           DAG.getTarget().Options.NoTrapAfterNoreturn))
     return;
-
-  // We may be able to ignore unreachable behind a noreturn call.
-  if (const CallInst *Call = dyn_cast_or_null<CallInst>(I.getPrevNode());
-      Call && Call->doesNotReturn()) {
-    if (DAG.getTarget().Options.NoTrapAfterNoreturn)
-      return;
-    // Do not emit an additional trap instruction.
-    if (Call->isNonContinuableTrap())
-      return;
-  }
 
   DAG.setRoot(DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, DAG.getRoot()));
 }
@@ -5055,9 +5045,9 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
-      AAMDNodes(), nullptr, SSID, SuccessOrdering, FailureOrdering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
+      FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5115,9 +5105,8 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), DAG.getEVTAlign(MemVT),
-      AAMDNodes(), nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -5161,16 +5150,16 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
 
   auto Flags = TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
 
+  const MDNode *Ranges = getRangeMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
-      nullptr, SSID, Order);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      I.getAlign(), AAMDNodes(), Ranges, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
   SDValue Ptr = getValue(I.getPointerOperand());
-  SDValue L = DAG.getAtomic(ISD::ATOMIC_LOAD, dl, MemVT, MemVT, InChain,
-                            Ptr, MMO);
+  SDValue L =
+      DAG.getAtomicLoad(ISD::NON_EXTLOAD, dl, MemVT, MemVT, InChain, Ptr, MMO);
 
   SDValue OutChain = L.getValue(1);
   if (MemVT != VT)
@@ -5200,9 +5189,8 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags,
-      LocationSize::precise(MemVT.getStoreSize()), I.getAlign(), AAMDNodes(),
-      nullptr, SSID, Ordering);
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue Val = getValue(I.getValueOperand());
   if (Val.getValueType() != MemVT)
@@ -5311,9 +5299,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
     else if (Info.fallbackAddressSpace)
       MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops,
-                                     Info.memVT, MPI, Info.align, Info.flags,
-                                     Info.size, I.getAAMetadata());
+    Result = DAG.getMemIntrinsicNode(
+        Info.opc, getCurSDLoc(), VTs, Ops, Info.memVT, MPI, Info.align,
+        Info.flags, LocationSize::precise(Info.size), I.getAAMetadata());
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -11841,9 +11829,18 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         else if (Arg.hasAttribute(Attribute::ZExt))
           AssertOp = ISD::AssertZext;
 
-        ArgValues.push_back(getCopyFromParts(DAG, dl, &InVals[i], NumParts,
-                                             PartVT, VT, nullptr, NewRoot,
-                                             F.getCallingConv(), AssertOp));
+        SDValue OutVal =
+            getCopyFromParts(DAG, dl, &InVals[i], NumParts, PartVT, VT, nullptr,
+                             NewRoot, F.getCallingConv(), AssertOp);
+
+        FPClassTest NoFPClass = Arg.getNoFPClass();
+        if (NoFPClass != fcNone) {
+          SDValue SDNoFPClass = DAG.getTargetConstant(
+              static_cast<uint64_t>(NoFPClass), dl, MVT::i32);
+          OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
+                               OutVal, SDNoFPClass);
+        }
+        ArgValues.push_back(OutVal);
       }
 
       i += NumParts;

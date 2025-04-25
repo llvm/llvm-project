@@ -357,6 +357,12 @@ private:
   /// True if another function body was merged into this one.
   bool HasFunctionsFoldedInto{false};
 
+  /// True if the function is used for patching code at a fixed address.
+  bool IsPatch{false};
+
+  /// True if the function should not have an associated symbol table entry.
+  bool IsAnonymous{false};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -1168,6 +1174,11 @@ public:
     return getSecondaryEntryPointSymbol(BB.getLabel());
   }
 
+  /// Remove a label from the secondary entry point map.
+  void removeSymbolFromSecondaryEntryPointMap(const MCSymbol *Label) {
+    SecondaryEntryPoints.erase(Label);
+  }
+
   /// Return true if the basic block is an entry point into the function
   /// (either primary or secondary).
   bool isEntryPoint(const BinaryBasicBlock &BB) const {
@@ -1357,6 +1368,12 @@ public:
 
   /// Return true if other functions were folded into this one.
   bool hasFunctionsFoldedInto() const { return HasFunctionsFoldedInto; }
+
+  /// Return true if this function is used for patching existing code.
+  bool isPatch() const { return IsPatch; }
+
+  /// Return true if the function should not have associated symbol table entry.
+  bool isAnonymous() const { return IsAnonymous; }
 
   /// If this function was folded, return the function it was folded into.
   BinaryFunction *getFoldedIntoFunction() const { return FoldedIntoFunction; }
@@ -1734,6 +1751,18 @@ public:
   /// Indicate that another function body was merged with this function.
   void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
 
+  /// Indicate that this function is a patch.
+  void setIsPatch(bool V) {
+    assert(isInjected() && "Only injected functions can be used as patches");
+    IsPatch = V;
+  }
+
+  /// Indicate if the function should have a name in the symbol table.
+  void setAnonymous(bool V) {
+    assert(isInjected() && "Only injected functions could be anonymous");
+    IsAnonymous = V;
+  }
+
   void setHasSDTMarker(bool V) { HasSDTMarker = V; }
 
   /// Mark the function as using ORC format for stack unwinding.
@@ -2100,6 +2129,10 @@ public:
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
+  }
+
+  bool isStartOfConstantIsland(uint64_t Offset) const {
+    return hasConstantIsland() && Islands->DataOffsets.count(Offset);
   }
 
   /// Return true iff the symbol could be seen inside this function otherwise

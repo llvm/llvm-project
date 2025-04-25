@@ -376,9 +376,17 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
+  Attribute CallAttr = Attrs.getRetAttr(Attribute::Range);
+  Attribute FnAttr;
+  if (const Function *F = getCalledFunction())
+    FnAttr = F->getRetAttribute(Attribute::Range);
+
+  if (CallAttr.isValid() && FnAttr.isValid())
+    return CallAttr.getRange().intersectWith(FnAttr.getRange());
+  if (CallAttr.isValid())
+    return CallAttr.getRange();
+  if (FnAttr.isValid())
+    return FnAttr.getRange();
   return std::nullopt;
 }
 
@@ -4527,6 +4535,27 @@ FuncletPadInst *FuncletPadInst::cloneImpl() const {
 UnreachableInst *UnreachableInst::cloneImpl() const {
   LLVMContext &Context = getContext();
   return new UnreachableInst(Context);
+}
+
+bool UnreachableInst::shouldLowerToTrap(bool TrapUnreachable,
+                                        bool NoTrapAfterNoreturn) const {
+  if (!TrapUnreachable)
+    return false;
+
+  // We may be able to ignore unreachable behind a noreturn call.
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (NoTrapAfterNoreturn)
+      return false;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return false;
+  }
+
+  if (getFunction()->hasFnAttribute(Attribute::Naked))
+    return false;
+
+  return true;
 }
 
 FreezeInst *FreezeInst::cloneImpl() const {

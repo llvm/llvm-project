@@ -24,6 +24,8 @@ math_mpfr_test(name = "atan2")
 
 math_mpfr_test(name = "atan2f")
 
+math_mpfr_test(name = "atan")
+
 math_mpfr_test(name = "atanf")
 
 math_mpfr_test(name = "atanhf")

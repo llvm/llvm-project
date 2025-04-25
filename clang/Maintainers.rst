@@ -159,6 +159,11 @@ OpenBSD driver
 | Brad Smith
 | brad\@comstyle.com (email), brad (Phabricator), brad0 (GitHub)
 
+Offloading driver
+~~~~~~~~~~~~~~~~~
+| Joseph Huber
+| joseph.huber\@amd.com (email), jhuber6 (GitHub)
+
 
 Driver parts not covered by someone else
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

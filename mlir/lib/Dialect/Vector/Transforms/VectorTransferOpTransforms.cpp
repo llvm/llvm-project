@@ -929,17 +929,8 @@ class RewriteScalarWrite : public OpRewritePattern<vector::TransferWriteOp> {
     if (!xferOp.getPermutationMap().isMinorIdentity())
       return failure();
     // Only float and integer element types are supported.
-    Value scalar;
-    if (vecType.getRank() == 0) {
-      // vector.extract does not support vector<f32> etc., so use
-      // vector.extractelement instead.
-      scalar = rewriter.create<vector::ExtractElementOp>(xferOp.getLoc(),
-                                                         xferOp.getVector());
-    } else {
-      SmallVector<int64_t> pos(vecType.getRank(), 0);
-      scalar = rewriter.create<vector::ExtractOp>(xferOp.getLoc(),
-                                                  xferOp.getVector(), pos);
-    }
+    Value scalar =
+        rewriter.create<vector::ExtractOp>(xferOp.getLoc(), xferOp.getVector());
     // Construct a scalar store.
     if (isa<MemRefType>(xferOp.getSource().getType())) {
       rewriter.replaceOpWithNewOp<memref::StoreOp>(
@@ -985,7 +976,6 @@ void mlir::vector::populateVectorTransferDropUnitDimsPatterns(
   patterns
       .add<TransferReadDropUnitDimsPattern, TransferWriteDropUnitDimsPattern>(
           patterns.getContext(), benefit);
-  populateShapeCastFoldingPatterns(patterns);
 }
 
 void mlir::vector::populateFlattenVectorTransferPatterns(
@@ -994,6 +984,5 @@ void mlir::vector::populateFlattenVectorTransferPatterns(
   patterns.add<FlattenContiguousRowMajorTransferReadPattern,
                FlattenContiguousRowMajorTransferWritePattern>(
       patterns.getContext(), targetVectorBitwidth, benefit);
-  populateShapeCastFoldingPatterns(patterns, benefit);
   populateDropUnitDimWithShapeCastPatterns(patterns, benefit);
 }

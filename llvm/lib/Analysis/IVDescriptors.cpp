@@ -1296,11 +1296,8 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
             InductionBinOp->getOpcode() == Instruction::FSub))) &&
          "Binary opcode should be specified for FP induction");
 
-  if (Casts) {
-    for (auto &Inst : *Casts) {
-      RedundantCasts.push_back(Inst);
-    }
-  }
+  if (Casts)
+    llvm::append_range(RedundantCasts, *Casts);
 }
 
 ConstantInt *InductionDescriptor::getConstIntStepValue() const {

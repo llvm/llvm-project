@@ -44,7 +44,6 @@ using SymbolVector = std::vector<SymbolRef>;
 
 // Forward declarations
 struct DataRef;
-template <typename T> struct Variable;
 
 // Reference a base object in memory.  This can be a Fortran symbol,
 // static data (e.g., CHARACTER literal), or compiler-created temporary.

@@ -84,6 +84,7 @@ struct RecordKeeperImpl {
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
+  FoldingSet<InstancesOpInit> TheInstancesOpInitPool;
   DenseMap<std::pair<const RecTy *, const Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<const TypedInit *, unsigned>, VarBitInit *>
       TheVarBitInitPool;
@@ -335,7 +336,7 @@ static const RecordRecTy *resolveRecordTypes(const RecordRecTy *T1,
     if (T2->isSubClassOf(R)) {
       CommonSuperClasses.push_back(R);
     } else {
-      R->getDirectSuperClasses(Stack);
+      append_range(Stack, make_first_range(R->getDirectSuperClasses()));
     }
   }
 
@@ -1014,8 +1015,7 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
           const auto *InnerList = dyn_cast<ListInit>(InnerInit);
           if (!InnerList)
             return std::nullopt;
-          for (const Init *InnerElem : InnerList->getValues())
-            Flattened.push_back(InnerElem);
+          llvm::append_range(Flattened, InnerList->getValues());
         };
         return Flattened;
       };
@@ -2222,6 +2222,70 @@ std::string ExistsOpInit::getAsString() const {
       .str();
 }
 
+static void ProfileInstancesOpInit(FoldingSetNodeID &ID, const RecTy *Type,
+                                   const Init *Regex) {
+  ID.AddPointer(Type);
+  ID.AddPointer(Regex);
+}
+
+const InstancesOpInit *InstancesOpInit::get(const RecTy *Type,
+                                            const Init *Regex) {
+  FoldingSetNodeID ID;
+  ProfileInstancesOpInit(ID, Type, Regex);
+
+  detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
+  void *IP = nullptr;
+  if (const InstancesOpInit *I =
+          RK.TheInstancesOpInitPool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  InstancesOpInit *I = new (RK.Allocator) InstancesOpInit(Type, Regex);
+  RK.TheInstancesOpInitPool.InsertNode(I, IP);
+  return I;
+}
+
+void InstancesOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileInstancesOpInit(ID, Type, Regex);
+}
+
+const Init *InstancesOpInit::Fold(const Record *CurRec, bool IsFinal) const {
+  if (CurRec && !IsFinal)
+    return this;
+
+  const auto *RegexInit = dyn_cast<StringInit>(Regex);
+  if (!RegexInit)
+    return this;
+
+  StringRef RegexStr = RegexInit->getValue();
+  llvm::Regex Matcher(RegexStr);
+  if (!Matcher.isValid())
+    PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
+
+  const RecordKeeper &RK = Type->getRecordKeeper();
+  SmallVector<Init *, 8> Selected;
+  for (auto &Def : RK.getAllDerivedDefinitionsIfDefined(Type->getAsString()))
+    if (Matcher.match(Def->getName()))
+      Selected.push_back(Def->getDefInit());
+
+  return ListInit::get(Selected, Type);
+}
+
+const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
+  const Init *NewRegex = Regex->resolveReferences(R);
+  if (Regex != NewRegex || R.isFinal())
+    return get(Type, NewRegex)->Fold(R.getCurrentRecord(), R.isFinal());
+  return this;
+}
+
+const Init *InstancesOpInit::getBit(unsigned Bit) const {
+  return VarBitInit::get(this, Bit);
+}
+
+std::string InstancesOpInit::getAsString() const {
+  return "!instances<" + Type->getAsString() + ">(" + Regex->getAsString() +
+         ")";
+}
+
 const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {
   if (const auto *RecordType = dyn_cast<RecordRecTy>(getType())) {
     for (const Record *Rec : RecordType->getClasses()) {
@@ -2418,11 +2482,8 @@ const DefInit *VarDefInit::instantiate() {
 
   NewRec->resolveReferences(R);
 
-  // Add superclasses.
-  for (const auto &[SC, Loc] : Class->getSuperClasses())
-    NewRec->addSuperClass(SC, Loc);
-
-  NewRec->addSuperClass(
+  // Add superclass.
+  NewRec->addDirectSuperClass(
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
 
   // Resolve internal references and store in record keeper
@@ -2898,7 +2959,7 @@ void Record::checkName() {
 
 const RecordRecTy *Record::getType() const {
   SmallVector<const Record *, 4> DirectSCs;
-  getDirectSuperClasses(DirectSCs);
+  append_range(DirectSCs, make_first_range(getDirectSuperClasses()));
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
@@ -2928,35 +2989,6 @@ void Record::setName(const Init *NewName) {
   // record name be an Init is to provide this flexibility.  The extra
   // resolve steps after completely instantiating defs takes care of
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
-}
-
-// NOTE for the next two functions:
-// Superclasses are in post-order, so the final one is a direct
-// superclass. All of its transitive superclases immediately precede it,
-// so we can step through the direct superclasses in reverse order.
-
-bool Record::hasDirectSuperClass(const Record *Superclass) const {
-  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
-
-  for (int I = SCs.size() - 1; I >= 0; --I) {
-    const Record *SC = SCs[I].first;
-    if (SC == Superclass)
-      return true;
-    I -= SC->getSuperClasses().size();
-  }
-
-  return false;
-}
-
-void Record::getDirectSuperClasses(
-    SmallVectorImpl<const Record *> &Classes) const {
-  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
-
-  while (!SCs.empty()) {
-    const Record *SC = SCs.back().first;
-    SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
-    Classes.push_back(SC);
-  }
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
@@ -3032,10 +3064,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  ArrayRef<std::pair<const Record *, SMRange>> SC = R.getSuperClasses();
-  if (!SC.empty()) {
+  std::vector<const Record *> SCs = R.getSuperClasses();
+  if (!SCs.empty()) {
     OS << "\t//";
-    for (const auto &[SC, _] : SC)
+    for (const Record *SC : SCs)
       OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";

@@ -2,59 +2,45 @@
 
 
         ! CHECK: bne %xcc, .BB0     ! encoding: [0x12,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne %xcc, .BB0
 
         ! CHECK: be %xcc, .BB0      ! encoding: [0x02,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be %xcc, .BB0
 
         ! CHECK: bg %xcc, .BB0      ! encoding: [0x14,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg %xcc, .BB0
 
         ! CHECK: ble %xcc, .BB0      ! encoding: [0x04,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble %xcc, .BB0
 
         ! CHECK: bge %xcc, .BB0      ! encoding: [0x16,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge %xcc, .BB0
 
         ! CHECK: bl %xcc, .BB0      ! encoding: [0x06,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl %xcc, .BB0
 
         ! CHECK: bgu %xcc, .BB0      ! encoding: [0x18,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu %xcc, .BB0
 
         ! CHECK: bleu %xcc, .BB0      ! encoding: [0x08,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu %xcc, .BB0
 
         ! CHECK: bcc %xcc, .BB0      ! encoding: [0x1a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc %xcc, .BB0
 
         ! CHECK: bcs %xcc, .BB0      ! encoding: [0x0a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs %xcc, .BB0
 
         ! CHECK: bpos %xcc, .BB0      ! encoding: [0x1c,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos %xcc, .BB0
 
         ! CHECK: bneg %xcc, .BB0      ! encoding: [0x0c,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg %xcc, .BB0
 
         ! CHECK: bvc %xcc, .BB0      ! encoding: [0x1e,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc %xcc, .BB0
 
         ! CHECK: bvs %xcc, .BB0      ! encoding: [0x0e,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs %xcc, .BB0
 
 
@@ -234,893 +220,670 @@
         fmovso   %fcc0, %f1, %f2
 
         ! CHECK: bne,a %icc, .BB0     ! encoding: [0x32,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,a %icc, .BB0
 
         ! CHECK: be,a %icc, .BB0      ! encoding: [0x22,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,a %icc, .BB0
 
         ! CHECK: bg,a %icc, .BB0      ! encoding: [0x34,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,a %icc, .BB0
 
         ! CHECK: ble,a %icc, .BB0      ! encoding: [0x24,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,a %icc, .BB0
 
         ! CHECK: bge,a %icc, .BB0      ! encoding: [0x36,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,a %icc, .BB0
 
         ! CHECK: bl,a %icc, .BB0      ! encoding: [0x26,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,a %icc, .BB0
 
         ! CHECK: bgu,a %icc, .BB0      ! encoding: [0x38,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,a %icc, .BB0
 
         ! CHECK: bleu,a %icc, .BB0      ! encoding: [0x28,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,a %icc, .BB0
 
         ! CHECK: bcc,a %icc, .BB0      ! encoding: [0x3a,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,a %icc, .BB0
 
         ! CHECK: bcs,a %icc, .BB0      ! encoding: [0x2a,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,a %icc, .BB0
 
         ! CHECK: bpos,a %icc, .BB0      ! encoding: [0x3c,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,a %icc, .BB0
 
         ! CHECK: bneg,a %icc, .BB0      ! encoding: [0x2c,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,a %icc, .BB0
 
         ! CHECK: bvc,a %icc, .BB0      ! encoding: [0x3e,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,a %icc, .BB0
 
         ! CHECK: bvs,a %icc, .BB0      ! encoding: [0x2e,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,a %icc, .BB0
 
         ! CHECK: bne,pn %icc, .BB0     ! encoding: [0x12,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,pn %icc, .BB0
 
         ! CHECK: be,pn %icc, .BB0      ! encoding: [0x02,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,pn %icc, .BB0
 
         ! CHECK: bg,pn %icc, .BB0      ! encoding: [0x14,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,pn %icc, .BB0
 
         ! CHECK: ble,pn %icc, .BB0      ! encoding: [0x04,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,pn %icc, .BB0
 
         ! CHECK: bge,pn %icc, .BB0      ! encoding: [0x16,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,pn %icc, .BB0
 
         ! CHECK: bl,pn %icc, .BB0      ! encoding: [0x06,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,pn %icc, .BB0
 
         ! CHECK: bgu,pn %icc, .BB0      ! encoding: [0x18,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,pn %icc, .BB0
 
         ! CHECK: bleu,pn %icc, .BB0      ! encoding: [0x08,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,pn %icc, .BB0
 
         ! CHECK: bcc,pn %icc, .BB0      ! encoding: [0x1a,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,pn %icc, .BB0
 
         ! CHECK: bcs,pn %icc, .BB0      ! encoding: [0x0a,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,pn %icc, .BB0
 
         ! CHECK: bpos,pn %icc, .BB0      ! encoding: [0x1c,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,pn %icc, .BB0
 
         ! CHECK: bneg,pn %icc, .BB0      ! encoding: [0x0c,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,pn %icc, .BB0
 
         ! CHECK: bvc,pn %icc, .BB0      ! encoding: [0x1e,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,pn %icc, .BB0
 
         ! CHECK: bvs,pn %icc, .BB0      ! encoding: [0x0e,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,pn %icc, .BB0
 
         ! CHECK: bne,a,pn %icc, .BB0     ! encoding: [0x32,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,a,pn %icc, .BB0
 
         ! CHECK: be,a,pn %icc, .BB0      ! encoding: [0x22,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,a,pn %icc, .BB0
 
         ! CHECK: bg,a,pn %icc, .BB0      ! encoding: [0x34,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,a,pn %icc, .BB0
 
         ! CHECK: ble,a,pn %icc, .BB0      ! encoding: [0x24,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,a,pn %icc, .BB0
 
         ! CHECK: bge,a,pn %icc, .BB0      ! encoding: [0x36,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,a,pn %icc, .BB0
 
         ! CHECK: bl,a,pn %icc, .BB0      ! encoding: [0x26,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,a,pn %icc, .BB0
 
         ! CHECK: bgu,a,pn %icc, .BB0      ! encoding: [0x38,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,a,pn %icc, .BB0
 
         ! CHECK: bleu,a,pn %icc, .BB0      ! encoding: [0x28,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,a,pn %icc, .BB0
 
         ! CHECK: bcc,a,pn %icc, .BB0      ! encoding: [0x3a,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,a,pn %icc, .BB0
 
         ! CHECK: bcs,a,pn %icc, .BB0      ! encoding: [0x2a,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,a,pn %icc, .BB0
 
         ! CHECK: bpos,a,pn %icc, .BB0      ! encoding: [0x3c,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,a,pn %icc, .BB0
 
         ! CHECK: bneg,a,pn %icc, .BB0      ! encoding: [0x2c,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,a,pn %icc, .BB0
 
         ! CHECK: bvc,a,pn %icc, .BB0      ! encoding: [0x3e,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,a,pn %icc, .BB0
 
         ! CHECK: bvs,a,pn %icc, .BB0      ! encoding: [0x2e,0b01000AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,a,pn %icc, .BB0
 
         ! CHECK: bne %icc, .BB0     ! encoding: [0x12,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,pt %icc, .BB0
 
         ! CHECK: be %icc, .BB0      ! encoding: [0x02,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,pt %icc, .BB0
 
         ! CHECK: bg %icc, .BB0      ! encoding: [0x14,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,pt %icc, .BB0
 
         ! CHECK: ble %icc, .BB0      ! encoding: [0x04,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,pt %icc, .BB0
 
         ! CHECK: bge %icc, .BB0      ! encoding: [0x16,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,pt %icc, .BB0
 
         ! CHECK: bl %icc, .BB0      ! encoding: [0x06,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,pt %icc, .BB0
 
         ! CHECK: bgu %icc, .BB0      ! encoding: [0x18,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,pt %icc, .BB0
 
         ! CHECK: bleu %icc, .BB0      ! encoding: [0x08,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,pt %icc, .BB0
 
         ! CHECK: bcc %icc, .BB0      ! encoding: [0x1a,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,pt %icc, .BB0
 
         ! CHECK: bcs %icc, .BB0      ! encoding: [0x0a,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,pt %icc, .BB0
 
         ! CHECK: bpos %icc, .BB0      ! encoding: [0x1c,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,pt %icc, .BB0
 
         ! CHECK: bneg %icc, .BB0      ! encoding: [0x0c,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,pt %icc, .BB0
 
         ! CHECK: bvc %icc, .BB0      ! encoding: [0x1e,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,pt %icc, .BB0
 
         ! CHECK: bvs %icc, .BB0      ! encoding: [0x0e,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,pt %icc, .BB0
 
         ! CHECK: bne,a %icc, .BB0     ! encoding: [0x32,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,a,pt %icc, .BB0
 
         ! CHECK: be,a %icc, .BB0      ! encoding: [0x22,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,a,pt %icc, .BB0
 
         ! CHECK: bg,a %icc, .BB0      ! encoding: [0x34,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,a,pt %icc, .BB0
 
         ! CHECK: ble,a %icc, .BB0      ! encoding: [0x24,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,a,pt %icc, .BB0
 
         ! CHECK: bge,a %icc, .BB0      ! encoding: [0x36,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,a,pt %icc, .BB0
 
         ! CHECK: bl,a %icc, .BB0      ! encoding: [0x26,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,a,pt %icc, .BB0
 
         ! CHECK: bgu,a %icc, .BB0      ! encoding: [0x38,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,a,pt %icc, .BB0
 
         ! CHECK: bleu,a %icc, .BB0      ! encoding: [0x28,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,a,pt %icc, .BB0
 
         ! CHECK: bcc,a %icc, .BB0      ! encoding: [0x3a,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,a,pt %icc, .BB0
 
         ! CHECK: bcs,a %icc, .BB0      ! encoding: [0x2a,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,a,pt %icc, .BB0
 
         ! CHECK: bpos,a %icc, .BB0      ! encoding: [0x3c,0b01001AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,a,pt %icc, .BB0
 
 
         ! CHECK: bne,a %xcc, .BB0     ! encoding: [0x32,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,a %xcc, .BB0
 
         ! CHECK: be,a %xcc, .BB0      ! encoding: [0x22,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,a %xcc, .BB0
 
         ! CHECK: bg,a %xcc, .BB0      ! encoding: [0x34,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,a %xcc, .BB0
 
         ! CHECK: ble,a %xcc, .BB0      ! encoding: [0x24,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,a %xcc, .BB0
 
         ! CHECK: bge,a %xcc, .BB0      ! encoding: [0x36,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,a %xcc, .BB0
 
         ! CHECK: bl,a %xcc, .BB0      ! encoding: [0x26,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,a %xcc, .BB0
 
         ! CHECK: bgu,a %xcc, .BB0      ! encoding: [0x38,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,a %xcc, .BB0
 
         ! CHECK: bleu,a %xcc, .BB0      ! encoding: [0x28,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,a %xcc, .BB0
 
         ! CHECK: bcc,a %xcc, .BB0      ! encoding: [0x3a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,a %xcc, .BB0
 
         ! CHECK: bcs,a %xcc, .BB0      ! encoding: [0x2a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,a %xcc, .BB0
 
         ! CHECK: bpos,a %xcc, .BB0      ! encoding: [0x3c,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,a %xcc, .BB0
 
         ! CHECK: bneg,a %xcc, .BB0      ! encoding: [0x2c,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,a %xcc, .BB0
 
         ! CHECK: bvc,a %xcc, .BB0      ! encoding: [0x3e,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,a %xcc, .BB0
 
         ! CHECK: bvs,a %xcc, .BB0      ! encoding: [0x2e,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,a %xcc, .BB0
 
         ! CHECK: bne,pn %xcc, .BB0     ! encoding: [0x12,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,pn %xcc, .BB0
 
         ! CHECK: be,pn %xcc, .BB0      ! encoding: [0x02,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,pn %xcc, .BB0
 
         ! CHECK: bg,pn %xcc, .BB0      ! encoding: [0x14,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,pn %xcc, .BB0
 
         ! CHECK: ble,pn %xcc, .BB0      ! encoding: [0x04,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,pn %xcc, .BB0
 
         ! CHECK: bge,pn %xcc, .BB0      ! encoding: [0x16,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,pn %xcc, .BB0
 
         ! CHECK: bl,pn %xcc, .BB0      ! encoding: [0x06,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,pn %xcc, .BB0
 
         ! CHECK: bgu,pn %xcc, .BB0      ! encoding: [0x18,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,pn %xcc, .BB0
 
         ! CHECK: bleu,pn %xcc, .BB0      ! encoding: [0x08,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,pn %xcc, .BB0
 
         ! CHECK: bcc,pn %xcc, .BB0      ! encoding: [0x1a,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,pn %xcc, .BB0
 
         ! CHECK: bcs,pn %xcc, .BB0      ! encoding: [0x0a,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,pn %xcc, .BB0
 
         ! CHECK: bpos,pn %xcc, .BB0      ! encoding: [0x1c,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,pn %xcc, .BB0
 
         ! CHECK: bneg,pn %xcc, .BB0      ! encoding: [0x0c,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,pn %xcc, .BB0
 
         ! CHECK: bvc,pn %xcc, .BB0      ! encoding: [0x1e,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,pn %xcc, .BB0
 
         ! CHECK: bvs,pn %xcc, .BB0      ! encoding: [0x0e,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,pn %xcc, .BB0
 
         ! CHECK: bne,a,pn %xcc, .BB0     ! encoding: [0x32,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,a,pn %xcc, .BB0
 
         ! CHECK: be,a,pn %xcc, .BB0      ! encoding: [0x22,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,a,pn %xcc, .BB0
 
         ! CHECK: bg,a,pn %xcc, .BB0      ! encoding: [0x34,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,a,pn %xcc, .BB0
 
         ! CHECK: ble,a,pn %xcc, .BB0      ! encoding: [0x24,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,a,pn %xcc, .BB0
 
         ! CHECK: bge,a,pn %xcc, .BB0      ! encoding: [0x36,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,a,pn %xcc, .BB0
 
         ! CHECK: bl,a,pn %xcc, .BB0      ! encoding: [0x26,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,a,pn %xcc, .BB0
 
         ! CHECK: bgu,a,pn %xcc, .BB0      ! encoding: [0x38,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,a,pn %xcc, .BB0
 
         ! CHECK: bleu,a,pn %xcc, .BB0      ! encoding: [0x28,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,a,pn %xcc, .BB0
 
         ! CHECK: bcc,a,pn %xcc, .BB0      ! encoding: [0x3a,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,a,pn %xcc, .BB0
 
         ! CHECK: bcs,a,pn %xcc, .BB0      ! encoding: [0x2a,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,a,pn %xcc, .BB0
 
         ! CHECK: bpos,a,pn %xcc, .BB0      ! encoding: [0x3c,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,a,pn %xcc, .BB0
 
         ! CHECK: bneg,a,pn %xcc, .BB0      ! encoding: [0x2c,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,a,pn %xcc, .BB0
 
         ! CHECK: bvc,a,pn %xcc, .BB0      ! encoding: [0x3e,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,a,pn %xcc, .BB0
 
         ! CHECK: bvs,a,pn %xcc, .BB0      ! encoding: [0x2e,0b01100AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,a,pn %xcc, .BB0
 
         ! CHECK: bne %xcc, .BB0     ! encoding: [0x12,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,pt %xcc, .BB0
 
         ! CHECK: be %xcc, .BB0      ! encoding: [0x02,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,pt %xcc, .BB0
 
         ! CHECK: bg %xcc, .BB0      ! encoding: [0x14,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,pt %xcc, .BB0
 
         ! CHECK: ble %xcc, .BB0      ! encoding: [0x04,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,pt %xcc, .BB0
 
         ! CHECK: bge %xcc, .BB0      ! encoding: [0x16,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,pt %xcc, .BB0
 
         ! CHECK: bl %xcc, .BB0      ! encoding: [0x06,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,pt %xcc, .BB0
 
         ! CHECK: bgu %xcc, .BB0      ! encoding: [0x18,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,pt %xcc, .BB0
 
         ! CHECK: bleu %xcc, .BB0      ! encoding: [0x08,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,pt %xcc, .BB0
 
         ! CHECK: bcc %xcc, .BB0      ! encoding: [0x1a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,pt %xcc, .BB0
 
         ! CHECK: bcs %xcc, .BB0      ! encoding: [0x0a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,pt %xcc, .BB0
 
         ! CHECK: bpos %xcc, .BB0      ! encoding: [0x1c,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,pt %xcc, .BB0
 
         ! CHECK: bneg %xcc, .BB0      ! encoding: [0x0c,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bneg,pt %xcc, .BB0
 
         ! CHECK: bvc %xcc, .BB0      ! encoding: [0x1e,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvc,pt %xcc, .BB0
 
         ! CHECK: bvs %xcc, .BB0      ! encoding: [0x0e,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bvs,pt %xcc, .BB0
 
         ! CHECK: bne,a %xcc, .BB0     ! encoding: [0x32,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bne,a,pt %xcc, .BB0
 
         ! CHECK: be,a %xcc, .BB0      ! encoding: [0x22,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         be,a,pt %xcc, .BB0
 
         ! CHECK: bg,a %xcc, .BB0      ! encoding: [0x34,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bg,a,pt %xcc, .BB0
 
         ! CHECK: ble,a %xcc, .BB0      ! encoding: [0x24,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         ble,a,pt %xcc, .BB0
 
         ! CHECK: bge,a %xcc, .BB0      ! encoding: [0x36,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bge,a,pt %xcc, .BB0
 
         ! CHECK: bl,a %xcc, .BB0      ! encoding: [0x26,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bl,a,pt %xcc, .BB0
 
         ! CHECK: bgu,a %xcc, .BB0      ! encoding: [0x38,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bgu,a,pt %xcc, .BB0
 
         ! CHECK: bleu,a %xcc, .BB0      ! encoding: [0x28,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bleu,a,pt %xcc, .BB0
 
         ! CHECK: bcc,a %xcc, .BB0      ! encoding: [0x3a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcc,a,pt %xcc, .BB0
 
         ! CHECK: bcs,a %xcc, .BB0      ! encoding: [0x2a,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bcs,a,pt %xcc, .BB0
 
         ! CHECK: bpos,a %xcc, .BB0      ! encoding: [0x3c,0b01101AAA,A,A]
-        ! CHECK-NEXT:         ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         bpos,a,pt %xcc, .BB0
 
         ! CHECK:             fba %fcc0, .BB0                        ! encoding: [0x11,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fba %fcc0, .BB0
 
         ! CHECK:             fba %fcc0, .BB0                        ! encoding: [0x11,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fb %fcc0, .BB0
 
         ! CHECK:             fbn %fcc0, .BB0                        ! encoding: [0x01,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbn %fcc0, .BB0
 
         ! CHECK:             fbu %fcc0, .BB0                      ! encoding: [0x0f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu %fcc0, .BB0
 
         ! CHECK:             fbg %fcc0, .BB0                      ! encoding: [0x0d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbg %fcc0, .BB0
         ! CHECK:             fbug %fcc0, .BB0                     ! encoding: [0x0b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbug %fcc0, .BB0
 
         ! CHECK:             fbl %fcc0, .BB0                      ! encoding: [0x09,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbl %fcc0, .BB0
 
         ! CHECK:             fbul %fcc0, .BB0                     ! encoding: [0x07,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbul %fcc0, .BB0
 
         ! CHECK:             fblg %fcc0, .BB0                     ! encoding: [0x05,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fblg %fcc0, .BB0
 
         ! CHECK:             fbne %fcc0, .BB0                     ! encoding: [0x03,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbne %fcc0, .BB0
 
         ! CHECK:             fbe %fcc0, .BB0                      ! encoding: [0x13,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbe %fcc0, .BB0
 
         ! CHECK:             fbue %fcc0, .BB0                     ! encoding: [0x15,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbue %fcc0, .BB0
 
         ! CHECK:             fbge %fcc0, .BB0                     ! encoding: [0x17,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbge %fcc0, .BB0
 
         ! CHECK:             fbuge %fcc0, .BB0                    ! encoding: [0x19,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbuge %fcc0, .BB0
 
         ! CHECK:             fble %fcc0, .BB0                     ! encoding: [0x1b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fble %fcc0, .BB0
 
         ! CHECK:             fbule %fcc0, .BB0                    ! encoding: [0x1d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbule %fcc0, .BB0
 
         ! CHECK:             fbo %fcc0, .BB0                      ! encoding: [0x1f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo %fcc0, .BB0
 
         ! CHECK:             fbu %fcc0, .BB0                      ! encoding: [0x0f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu,pt %fcc0, .BB0
 
         ! CHECK:             fbg %fcc0, .BB0                      ! encoding: [0x0d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbg,pt %fcc0, .BB0
         ! CHECK:             fbug %fcc0, .BB0                     ! encoding: [0x0b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbug,pt %fcc0, .BB0
 
         ! CHECK:             fbl %fcc0, .BB0                      ! encoding: [0x09,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbl,pt %fcc0, .BB0
 
         ! CHECK:             fbul %fcc0, .BB0                     ! encoding: [0x07,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbul,pt %fcc0, .BB0
 
         ! CHECK:             fblg %fcc0, .BB0                     ! encoding: [0x05,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fblg,pt %fcc0, .BB0
 
         ! CHECK:             fbne %fcc0, .BB0                     ! encoding: [0x03,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbne,pt %fcc0, .BB0
 
         ! CHECK:             fbe %fcc0, .BB0                      ! encoding: [0x13,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbe,pt %fcc0, .BB0
 
         ! CHECK:             fbue %fcc0, .BB0                     ! encoding: [0x15,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbue,pt %fcc0, .BB0
 
         ! CHECK:             fbge %fcc0, .BB0                     ! encoding: [0x17,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbge,pt %fcc0, .BB0
 
         ! CHECK:             fbuge %fcc0, .BB0                    ! encoding: [0x19,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbuge,pt %fcc0, .BB0
 
         ! CHECK:             fble %fcc0, .BB0                     ! encoding: [0x1b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fble,pt %fcc0, .BB0
 
         ! CHECK:             fbule %fcc0, .BB0                    ! encoding: [0x1d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbule,pt %fcc0, .BB0
 
         ! CHECK:             fbo %fcc0, .BB0                      ! encoding: [0x1f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo,pt %fcc0, .BB0
 
 
         ! CHECK:             fbo,a %fcc0, .BB0                      ! encoding: [0x3f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo,a %fcc0, .BB0
 
         ! CHECK:             fbu,a %fcc0, .BB0                      ! encoding: [0x2f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu,a %fcc0, .BB0
 
         ! CHECK:             fbg,a %fcc0, .BB0                      ! encoding: [0x2d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbg,a %fcc0, .BB0
         ! CHECK:             fbug,a %fcc0, .BB0                     ! encoding: [0x2b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbug,a %fcc0, .BB0
 
         ! CHECK:             fbl,a %fcc0, .BB0                      ! encoding: [0x29,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbl,a %fcc0, .BB0
 
         ! CHECK:             fbul,a %fcc0, .BB0                     ! encoding: [0x27,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbul,a %fcc0, .BB0
 
         ! CHECK:             fblg,a %fcc0, .BB0                     ! encoding: [0x25,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fblg,a %fcc0, .BB0
 
         ! CHECK:             fbne,a %fcc0, .BB0                     ! encoding: [0x23,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbne,a %fcc0, .BB0
 
         ! CHECK:             fbe,a %fcc0, .BB0                      ! encoding: [0x33,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbe,a %fcc0, .BB0
 
         ! CHECK:             fbue,a %fcc0, .BB0                     ! encoding: [0x35,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbue,a %fcc0, .BB0
 
         ! CHECK:             fbge,a %fcc0, .BB0                     ! encoding: [0x37,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbge,a %fcc0, .BB0
 
         ! CHECK:             fbuge,a %fcc0, .BB0                    ! encoding: [0x39,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbuge,a %fcc0, .BB0
 
         ! CHECK:             fble,a %fcc0, .BB0                     ! encoding: [0x3b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fble,a %fcc0, .BB0
 
         ! CHECK:             fbule,a %fcc0, .BB0                    ! encoding: [0x3d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbule,a %fcc0, .BB0
 
         ! CHECK:             fbo,a %fcc0, .BB0                      ! encoding: [0x3f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo,a %fcc0, .BB0
 
                 ! CHECK:             fbo,a %fcc0, .BB0                      ! encoding: [0x3f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo,a %fcc0, .BB0
 
         ! CHECK:             fbu,a %fcc0, .BB0                      ! encoding: [0x2f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu,a,pt %fcc0, .BB0
 
         ! CHECK:             fbg,a %fcc0, .BB0                      ! encoding: [0x2d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbg,a,pt %fcc0, .BB0
 
         ! CHECK:             fbug,a %fcc0, .BB0                     ! encoding: [0x2b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbug,a,pt %fcc0, .BB0
 
         ! CHECK:             fbl,a %fcc0, .BB0                      ! encoding: [0x29,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbl,a,pt %fcc0, .BB0
 
         ! CHECK:             fbul,a %fcc0, .BB0                     ! encoding: [0x27,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbul,a,pt %fcc0, .BB0
 
         ! CHECK:             fblg,a %fcc0, .BB0                     ! encoding: [0x25,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fblg,a,pt %fcc0, .BB0
 
         ! CHECK:             fbne,a %fcc0, .BB0                     ! encoding: [0x23,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbne,a,pt %fcc0, .BB0
 
         ! CHECK:             fbe,a %fcc0, .BB0                      ! encoding: [0x33,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbe,a,pt %fcc0, .BB0
 
         ! CHECK:             fbue,a %fcc0, .BB0                     ! encoding: [0x35,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbue,a,pt %fcc0, .BB0
 
         ! CHECK:             fbge,a %fcc0, .BB0                     ! encoding: [0x37,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbge,a,pt %fcc0, .BB0
 
         ! CHECK:             fbuge,a %fcc0, .BB0                    ! encoding: [0x39,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbuge,a,pt %fcc0, .BB0
 
         ! CHECK:             fble,a %fcc0, .BB0                     ! encoding: [0x3b,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fble,a,pt %fcc0, .BB0
 
         ! CHECK:             fbule,a %fcc0, .BB0                    ! encoding: [0x3d,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbule,a,pt %fcc0, .BB0
 
         ! CHECK:             fbo,a %fcc0, .BB0                      ! encoding: [0x3f,0b01001AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo,a,pt %fcc0, .BB0
 
         ! CHECK:             fbu,pn %fcc0, .BB0                 ! encoding: [0x0f,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu,pn %fcc0, .BB0
 
         ! CHECK:             fbg,pn %fcc0, .BB0                      ! encoding: [0x0d,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbg,pn %fcc0, .BB0
         ! CHECK:             fbug,pn %fcc0, .BB0                     ! encoding: [0x0b,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbug,pn %fcc0, .BB0
 
         ! CHECK:             fbl,pn %fcc0, .BB0                      ! encoding: [0x09,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbl,pn %fcc0, .BB0
 
         ! CHECK:             fbul,pn %fcc0, .BB0                     ! encoding: [0x07,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbul,pn %fcc0, .BB0
 
         ! CHECK:             fblg,pn %fcc0, .BB0                     ! encoding: [0x05,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fblg,pn %fcc0, .BB0
 
         ! CHECK:             fbne,pn %fcc0, .BB0                     ! encoding: [0x03,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbne,pn %fcc0, .BB0
 
         ! CHECK:             fbe,pn %fcc0, .BB0                      ! encoding: [0x13,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbe,pn %fcc0, .BB0
 
         ! CHECK:             fbue,pn %fcc0, .BB0                     ! encoding: [0x15,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbue,pn %fcc0, .BB0
 
         ! CHECK:             fbge,pn %fcc0, .BB0                     ! encoding: [0x17,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbge,pn %fcc0, .BB0
 
         ! CHECK:             fbuge,pn %fcc0, .BB0                    ! encoding: [0x19,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbuge,pn %fcc0, .BB0
 
         ! CHECK:             fble,pn %fcc0, .BB0                     ! encoding: [0x1b,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fble,pn %fcc0, .BB0
 
         ! CHECK:             fbule,pn %fcc0, .BB0                    ! encoding: [0x1d,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbule,pn %fcc0, .BB0
 
         ! CHECK:             fbo,pn %fcc0, .BB0                      ! encoding: [0x1f,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo,pn %fcc0, .BB0
 
                 ! CHECK:             fbu,a,pn %fcc0, .BB0                      ! encoding: [0x2f,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu,a,pn %fcc0, .BB0
 
         ! CHECK:             fbg,a,pn %fcc0, .BB0                      ! encoding: [0x2d,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbg,a,pn %fcc0, .BB0
 
         ! CHECK:             fbug,a,pn %fcc0, .BB0                     ! encoding: [0x2b,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbug,a,pn %fcc0, .BB0
 
         ! CHECK:             fbl,a,pn %fcc0, .BB0                      ! encoding: [0x29,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbl,a,pn %fcc0, .BB0
 
         ! CHECK:             fbul,a,pn %fcc0, .BB0                     ! encoding: [0x27,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbul,a,pn %fcc0, .BB0
 
         ! CHECK:             fblg,a,pn %fcc0, .BB0                     ! encoding: [0x25,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fblg,a,pn %fcc0, .BB0
 
         ! CHECK:             fbne,a,pn %fcc0, .BB0                     ! encoding: [0x23,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbne,a,pn %fcc0, .BB0
 
         ! CHECK:             fbe,a,pn %fcc0, .BB0                      ! encoding: [0x33,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbe,a,pn %fcc0, .BB0
 
         ! CHECK:             fbue,a,pn %fcc0, .BB0                     ! encoding: [0x35,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbue,a,pn %fcc0, .BB0
 
         ! CHECK:             fbge,a,pn %fcc0, .BB0                     ! encoding: [0x37,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbge,a,pn %fcc0, .BB0
 
         ! CHECK:             fbuge,a,pn %fcc0, .BB0                    ! encoding: [0x39,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbuge,a,pn %fcc0, .BB0
 
         ! CHECK:             fble,a,pn %fcc0, .BB0                     ! encoding: [0x3b,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fble,a,pn %fcc0, .BB0
 
         ! CHECK:             fbule,a,pn %fcc0, .BB0                    ! encoding: [0x3d,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbule,a,pn %fcc0, .BB0
 
         ! CHECK:             fbo,a,pn %fcc0, .BB0                      ! encoding: [0x3f,0b01000AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbo,a,pn %fcc0, .BB0
 
         ! CHECK: movu %fcc1, %g1, %g2            ! encoding: [0x85,0x61,0xc8,0x01]
@@ -1130,38 +893,27 @@
         fmovsg %fcc2, %f1, %f2
 
         ! CHECK:             fbug %fcc3, .BB0                ! encoding: [0x0b,0b01111AAA,A,A]
-        ! CHECK-NEXT:                                        ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbug %fcc3, .BB0
 
         ! CHECK:             fbu %fcc3, .BB0                 ! encoding: [0x0f,0b01111AAA,A,A]
-        ! CHECK-NEXT:                                        ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbu,pt %fcc3, .BB0
 
         ! CHECK:             fbl,a %fcc3, .BB0               ! encoding: [0x29,0b01111AAA,A,A]
-        ! CHECK-NEXT:                                        ! fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbl,a %fcc3, .BB0
 
         ! CHECK:             fbue,pn %fcc3, .BB0             ! encoding: [0x15,0b01110AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbue,pn %fcc3, .BB0
 
         ! CHECK:             fbne,a,pn %fcc3, .BB0           ! encoding: [0x23,0b01110AAA,A,A]
-        ! CHECK-NEXT:                                        !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br19
         fbne,a,pn %fcc3, .BB0
 
 
         ! CHECK:                brz %g1, .BB0                   ! encoding: [0x02'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                                           !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         ! CHECK:                brlez %g1, .BB0                 ! encoding: [0x04'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                                           !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         ! CHECK:                brlz %g1, .BB0                  ! encoding: [0x06'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                                           !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         ! CHECK:                brnz %g1, .BB0                  ! encoding: [0x0a'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                                           !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         ! CHECK:                brgz %g1, .BB0                  ! encoding: [0x0c'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                                           !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         ! CHECK:                brgez %g1, .BB0                 ! encoding: [0x0e'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                                           !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
 
         brz   %g1, .BB0
         brlez %g1, .BB0
@@ -1171,23 +923,18 @@
         brgez %g1, .BB0
 
         ! CHECK: brz %g1, .BB0                   ! encoding: [0x02'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                            !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         brz,pt   %g1, .BB0
 
         ! CHECK: brz,a %g1, .BB0                 ! encoding: [0x22'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                            !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         brz,a   %g1, .BB0
 
         ! CHECK: brz,a %g1, .BB0                 ! encoding: [0x22'A',0xc8'A',0x40'A',A]
-        ! CHECK-NEXT:                            !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         brz,a,pt   %g1, .BB0
 
         ! CHECK:  brz,pn %g1, .BB0               ! encoding: [0x02'A',0xc0'A',0x40'A',A]
-        ! CHECK-NEXT:                            !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         brz,pn   %g1, .BB0
 
         ! CHECK:  brz,a,pn %g1, .BB0              ! encoding: [0x22'A',0xc0'A',0x40'A',A]
-        ! CHECK-NEXT:                             !   fixup A - offset: 0, value: .BB0, kind: fixup_sparc_br16
         brz,a,pn   %g1, .BB0
 
         ! CHECK: movrz   %g1, %g2, %g3 ! encoding: [0x87,0x78,0x44,0x02]

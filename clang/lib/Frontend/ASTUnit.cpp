@@ -832,7 +832,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = HSOpts ? HSOpts : std::make_shared<HeaderSearchOptions>();
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
-  AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
+  AST->HeaderInfo.reset(new HeaderSearch(AST->getHeaderSearchOpts(),
                                          AST->getSourceManager(),
                                          AST->getDiagnostics(),
                                          AST->getLangOpts(),
@@ -844,7 +844,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   HeaderSearch &HeaderInfo = *AST->HeaderInfo;
 
   AST->PP = std::make_shared<Preprocessor>(
-      AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
+      *AST->PPOpts, AST->getDiagnostics(), *AST->LangOpts,
       AST->getSourceManager(), HeaderInfo, AST->ModuleLoader,
       /*IILookup=*/nullptr,
       /*OwnsHeaderSearch=*/false);
@@ -1153,7 +1153,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     assert(VFS == &FileMgr->getVirtualFileSystem() &&
            "VFS passed to Parse and VFS in FileMgr are different");
 
-  auto CCInvocation = std::make_shared<CompilerInvocation>(*Invocation);
+  CCInvocation = std::make_shared<CompilerInvocation>(*Invocation);
   if (OverrideMainBuffer) {
     assert(Preamble &&
            "No preamble was built, but OverrideMainBuffer is not null");

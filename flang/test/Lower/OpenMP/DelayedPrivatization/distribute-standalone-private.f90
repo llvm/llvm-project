@@ -31,7 +31,7 @@ end subroutine standalone_distribute
 ! CHECK:               %[[VAR_PRIV_DECL:.*]]:2 = hlfir.declare %[[VAR_ARG]]
 ! CHECK:               %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_ARG]]
 
-! CHECK:               hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#1 : i32, !fir.ref<i32>
+! CHECK:               hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:               %{{.*}} = fir.load %[[VAR_PRIV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               %{{.*}} = fir.load %[[I_PRIV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               arith.addi %{{.*}}, %{{.*}} : i32

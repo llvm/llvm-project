@@ -139,6 +139,7 @@ public:
   }
 
   /// Get the pointer where source information is stored.
+  // FIXME: This should provide a type-safe interface.
   void *getOpaqueData() const {
     return Data;
   }
@@ -1355,7 +1356,7 @@ public:
 };
 
 struct MemberPointerLocInfo : public PointerLikeLocInfo {
-  TypeSourceInfo *ClassTInfo;
+  void *QualifierData = nullptr;
 };
 
 /// Wrapper for source info for member pointers.
@@ -1371,28 +1372,32 @@ public:
     setSigilLoc(Loc);
   }
 
-  const Type *getClass() const {
-    return getTypePtr()->getClass();
+  NestedNameSpecifierLoc getQualifierLoc() const {
+    return NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
+                                  getLocalData()->QualifierData);
   }
 
-  TypeSourceInfo *getClassTInfo() const {
-    return getLocalData()->ClassTInfo;
-  }
-
-  void setClassTInfo(TypeSourceInfo* TI) {
-    getLocalData()->ClassTInfo = TI;
+  void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
+    assert(QualifierLoc.getNestedNameSpecifier() ==
+               getTypePtr()->getQualifier() &&
+           "Inconsistent nested-name-specifier pointer");
+    getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
     setSigilLoc(Loc);
-    setClassTInfo(nullptr);
+    if (auto *Qualifier = getTypePtr()->getQualifier()) {
+      NestedNameSpecifierLocBuilder Builder;
+      Builder.MakeTrivial(Context, Qualifier, Loc);
+      setQualifierLoc(Builder.getWithLocInContext(Context));
+    } else
+      getLocalData()->QualifierData = nullptr;
   }
 
   SourceRange getLocalSourceRange() const {
-    if (TypeSourceInfo *TI = getClassTInfo())
-      return SourceRange(TI->getTypeLoc().getBeginLoc(), getStarLoc());
-    else
-      return SourceRange(getStarLoc());
+    if (NestedNameSpecifierLoc QL = getQualifierLoc())
+      return SourceRange(QL.getBeginLoc(), getStarLoc());
+    return SourceRange(getStarLoc());
   }
 };
 
@@ -2497,8 +2502,9 @@ public:
     if (!getLocalData()->QualifierData)
       return NestedNameSpecifierLoc();
 
-    return NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
-                                  getLocalData()->QualifierData);
+    return NestedNameSpecifierLoc(
+        getTypePtr()->getDependentTemplateName().getQualifier(),
+        getLocalData()->QualifierData);
   }
 
   void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
@@ -2511,8 +2517,8 @@ public:
       return;
     }
 
-    assert(QualifierLoc.getNestedNameSpecifier()
-                                        == getTypePtr()->getQualifier() &&
+    assert(QualifierLoc.getNestedNameSpecifier() ==
+               getTypePtr()->getDependentTemplateName().getQualifier() &&
            "Inconsistent nested-name-specifier pointer");
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }

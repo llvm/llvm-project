@@ -234,7 +234,7 @@ COMPILER_RT_VISIBILITY extern int64_t INSTR_PROF_PROFILE_BITMAP_BIAS_VAR
 #endif
 static const int ContinuousModeSupported = 1;
 static const int UseBiasVar = 1;
-/* TODO: If there are two DSOs, the second DSO initilization will truncate the
+/* TODO: If there are two DSOs, the second DSO initialization will truncate the
  * first profile file. */
 static const char *FileOpenMode = "w+b";
 /* This symbol is defined by the compiler when runtime counter relocation is
@@ -419,17 +419,17 @@ static int getProfileFileSizeForMerging(FILE *ProfileFile,
  * \p ProfileBuffer. Returns -1 on failure. On success, the caller is
  * responsible for unmapping the mmap'd buffer in \p ProfileBuffer. */
 static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
-                                 char **ProfileBuffer) {
-  *ProfileBuffer = mmap(NULL, ProfileFileSize, PROT_READ, MAP_SHARED | MAP_FILE,
-                        fileno(ProfileFile), 0);
-  if (*ProfileBuffer == MAP_FAILED) {
-    PROF_ERR("Unable to merge profile data, mmap failed: %s\n",
-             strerror(errno));
+                                 ManagedMemory *ProfileBuffer) {
+  lprofGetFileContentBuffer(ProfileFile, ProfileFileSize, ProfileBuffer);
+
+  if (ProfileBuffer->Status == MS_INVALID) {
+    PROF_ERR("Unable to merge profile data: %s\n", "reading file failed");
     return -1;
   }
 
-  if (__llvm_profile_check_compatibility(*ProfileBuffer, ProfileFileSize)) {
-    (void)munmap(*ProfileBuffer, ProfileFileSize);
+  if (__llvm_profile_check_compatibility(ProfileBuffer->Addr,
+                                         ProfileFileSize)) {
+    (void)lprofReleaseBuffer(ProfileBuffer, ProfileFileSize);
     PROF_WARN("Unable to merge profile data: %s\n",
               "source profile file is not compatible.");
     return -1;
@@ -438,13 +438,13 @@ static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
 }
 
 /* Read profile data in \c ProfileFile and merge with in-memory
-   profile counters. Returns -1 if there is fatal error, otheriwse
+   profile counters. Returns -1 if there is fatal error, otherwise
    0 is returned. Returning 0 does not mean merge is actually
    performed. If merge is actually done, *MergeDone is set to 1.
 */
 static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   uint64_t ProfileFileSize;
-  char *ProfileBuffer;
+  ManagedMemory ProfileBuffer;
 
   /* Get the size of the profile on disk. */
   if (getProfileFileSizeForMerging(ProfileFile, &ProfileFileSize) == -1)
@@ -460,9 +460,9 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
     return -1;
 
   /* Now start merging */
-  if (__llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize)) {
+  if (__llvm_profile_merge_from_buffer(ProfileBuffer.Addr, ProfileFileSize)) {
     PROF_ERR("%s\n", "Invalid profile data to merge");
-    (void)munmap(ProfileBuffer, ProfileFileSize);
+    (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
     return -1;
   }
 
@@ -471,7 +471,7 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
   (void)COMPILER_RT_FTRUNCATE(ProfileFile,
                               __llvm_profile_get_size_for_buffer());
 
-  (void)munmap(ProfileBuffer, ProfileFileSize);
+  (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
   *MergeDone = 1;
 
   return 0;
@@ -672,13 +672,13 @@ static void initializeProfileForContinuousMode(void) {
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
-      char *ProfileBuffer;
+      ManagedMemory ProfileBuffer;
       if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
         lprofUnlockFileHandle(File);
         fclose(File);
         return;
       }
-      (void)munmap(ProfileBuffer, ProfileFileSize);
+      (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
     }
   } else {
     File = fopen(Filename, FileOpenMode);
@@ -850,8 +850,9 @@ static int parseFilenamePattern(const char *FilenamePat,
         __llvm_profile_set_page_size(getpagesize());
         __llvm_profile_enable_continuous_mode();
 #else
-        PROF_WARN("%s", "Continous mode is currently only supported for Mach-O,"
-                        " ELF and COFF formats.");
+        PROF_WARN("%s",
+                  "Continuous mode is currently only supported for Mach-O,"
+                  " ELF and COFF formats.");
         return -1;
 #endif
       } else {
@@ -1257,12 +1258,12 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
     } else {
       /* The merged profile has a non-zero length. Check that it is compatible
        * with the data in this process. */
-      char *ProfileBuffer;
+      ManagedMemory ProfileBuffer;
       if (mmapProfileForMerging(File, ProfileFileSize, &ProfileBuffer) == -1) {
         lprofUnlockFileHandle(File);
         return 1;
       }
-      (void)munmap(ProfileBuffer, ProfileFileSize);
+      (void)lprofReleaseBuffer(&ProfileBuffer, ProfileFileSize);
     }
     mmapForContinuousMode(0, File);
     lprofUnlockFileHandle(File);
@@ -1273,6 +1274,7 @@ COMPILER_RT_VISIBILITY int __llvm_profile_set_file_object(FILE *File,
   return 0;
 }
 
+#ifndef __APPLE__
 int __llvm_write_custom_profile(const char *Target,
                                 const __llvm_profile_data *DataBegin,
                                 const __llvm_profile_data *DataEnd,
@@ -1381,5 +1383,6 @@ int __llvm_write_custom_profile(const char *Target,
 
   return ReturnValue;
 }
+#endif
 
 #endif

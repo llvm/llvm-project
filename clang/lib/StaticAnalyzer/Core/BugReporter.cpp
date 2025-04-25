@@ -2827,7 +2827,7 @@ static void CompactMacroExpandedPieces(PathPieces &path,
   // Now take the pieces and construct a new PathDiagnostic.
   path.clear();
 
-  path.insert(path.end(), Pieces.begin(), Pieces.end());
+  llvm::append_range(path, Pieces);
 }
 
 /// Generate notes from all visitors.

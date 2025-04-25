@@ -89,6 +89,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
   case Intrinsic::modf:
   case Intrinsic::copysign:
   case Intrinsic::floor:
@@ -843,9 +845,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
 
-  for (auto I = ECs.begin(), E = ECs.end(); I != E; ++I) {
+  for (const auto &E : ECs) {
+    if (!E->isLeader())
+      continue;
     uint64_t LeaderDemandedBits = 0;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = llvm::bit_width(LeaderDemandedBits);
@@ -857,7 +861,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // indvars.
     // If we are required to shrink a PHI, abandon this entire equivalence class.
     bool Abort = false;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
         Abort = true;
         break;
@@ -865,7 +869,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (Abort)
       continue;
 
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
+    for (Value *M : ECs.members(*E)) {
       auto *MI = dyn_cast<Instruction>(M);
       if (!MI)
         continue;
@@ -982,19 +986,38 @@ MDNode *llvm::intersectAccessGroups(const Instruction *Inst1,
   return MDNode::get(Ctx, Intersection);
 }
 
+/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
+/// vectorization.
+void llvm::getMetadataToPropagate(
+    Instruction *Inst,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
+  Inst->getAllMetadataOtherThanDebugLoc(Metadata);
+  static const unsigned SupportedIDs[] = {
+      LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,      LLVMContext::MD_fpmath,
+      LLVMContext::MD_nontemporal,  LLVMContext::MD_invariant_load,
+      LLVMContext::MD_access_group, LLVMContext::MD_mmra};
+
+  // Remove any unsupported metadata kinds from Metadata.
+  for (unsigned Idx = 0; Idx != Metadata.size();) {
+    if (is_contained(SupportedIDs, Metadata[Idx].first)) {
+      ++Idx;
+    } else {
+      // Swap element to end and remove it.
+      std::swap(Metadata[Idx], Metadata.back());
+      Metadata.pop_back();
+    }
+  }
+}
+
 /// \returns \p I after propagating metadata from \p VL.
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
     return Inst;
-  Instruction *I0 = cast<Instruction>(VL[0]);
-  SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
-  I0->getAllMetadataOtherThanDebugLoc(Metadata);
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+  getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
-  for (auto Kind : {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                    LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
-                    LLVMContext::MD_nontemporal, LLVMContext::MD_invariant_load,
-                    LLVMContext::MD_access_group, LLVMContext::MD_mmra}) {
-    MDNode *MD = I0->getMetadata(Kind);
+  for (auto &[Kind, MD] : Metadata) {
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
@@ -1680,9 +1703,7 @@ void InterleaveGroup<InstT>::addMetadata(InstT *NewInst) const {
 namespace llvm {
 template <>
 void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
-  SmallVector<Value *, 4> VL;
-  std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
-                 [](std::pair<int, Instruction *> p) { return p.second; });
+  SmallVector<Value *, 4> VL(make_second_range(Members));
   propagateMetadata(NewInst, VL);
 }
 } // namespace llvm

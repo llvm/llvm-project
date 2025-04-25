@@ -97,6 +97,20 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
     llvm.return
   }
 
+  llvm.func @test_target_and_atomic_update(%x: !llvm.ptr, %expr : i32) {
+    omp.target {
+      omp.terminator
+    }
+
+    omp.atomic.update %x : !llvm.ptr {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+
+    llvm.return
+  }
+
 // CHECK-LABEL: define void @test_nested_target_in_parallel_with_private({{.*}}) {
 // CHECK:        br label %omp.parallel.fake.region
 // CHECK:       omp.parallel.fake.region:
@@ -127,6 +141,13 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 // CHECK:       }
 
 // CHECK-LABEL: define {{.*}} amdgpu_kernel void @__omp_offloading_{{.*}}_test_nested_target_in_task_with_private_{{.*}} {
+// CHECK:         call i32 @__kmpc_target_init
+// CHECK:       user_code.entry:
+// CHECK:         call void @__kmpc_target_deinit()
+// CHECK:         ret void
+// CHECK:       }
+
+// CHECK-LABEL: define {{.*}} amdgpu_kernel void @__omp_offloading_{{.*}}_test_target_and_atomic_update_{{.*}} {
 // CHECK:         call i32 @__kmpc_target_init
 // CHECK:       user_code.entry:
 // CHECK:         call void @__kmpc_target_deinit()

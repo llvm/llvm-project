@@ -532,8 +532,7 @@ public:
       auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
       IRBuilder<> Builder(&*InsertAt);
 
-      It->second =
-          Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {}, {});
+      It->second = Builder.CreateIntrinsic(Intrinsic::amdgcn_lds_kernel_id, {});
     }
 
     return It->second;
@@ -1503,10 +1502,8 @@ public:
   const AMDGPUTargetMachine *TM;
   static char ID;
 
-  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM_ = nullptr)
-      : ModulePass(ID), TM(TM_) {
-    initializeAMDGPULowerModuleLDSLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM = nullptr)
+      : ModulePass(ID), TM(TM) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     if (!TM)

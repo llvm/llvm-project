@@ -8,30 +8,18 @@
 
 #include "sincos_helpers.h"
 #include <clc/clc.h>
+#include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_sincos_helpers.h>
 #include <clc/math/math.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/relational/clc_select.h>
 
-_CLC_OVERLOAD _CLC_DEF float cos(float x)
-{
-    int ix = as_int(x);
-    int ax = ix & 0x7fffffff;
-    float dx = as_float(ax);
-
-    float r0, r1;
-    int regn = __clc_argReductionS(&r0, &r1, dx);
-
-    float ss = -__clc_sinf_piby4(r0, r1);
-    float cc =  __clc_cosf_piby4(r0, r1);
-
-    float c =  (regn & 1) != 0 ? ss : cc;
-    c = as_float(as_int(c) ^ ((regn > 1) << 31));
-
-    c = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : c;
-
-    return c;
-}
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, cos, float);
+// FP32 and FP16 versions.
+#define __CLC_BODY <cos.inc>
+#include <clc/math/gentype.inc>
 
 #ifdef cl_khr_fp64
 
@@ -58,13 +46,5 @@ _CLC_OVERLOAD _CLC_DEF double cos(double x) {
 }
 
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, cos, double);
-
-#endif
-
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-_CLC_DEFINE_UNARY_BUILTIN_FP16(cos)
 
 #endif

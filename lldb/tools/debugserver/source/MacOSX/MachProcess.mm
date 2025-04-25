@@ -1594,6 +1594,10 @@ bool MachProcess::Interrupt() {
                          m_sent_interrupt_signo);
       }
     } else {
+      // We've requested that the process stop anew; if we had recorded this
+      // requested stop as being in place when we resumed (& therefore would
+      // throw it away), clear that.
+      m_auto_resume_signo = 0;
       DNBLogThreadedIf(LOG_PROCESS, "MachProcess::Interrupt() - previously "
                                     "sent an interrupt signal %i that hasn't "
                                     "been received yet, interrupt aborted",

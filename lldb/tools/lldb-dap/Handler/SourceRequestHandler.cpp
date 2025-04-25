@@ -11,6 +11,7 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBProcess.h"
@@ -29,7 +30,7 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
       args.source->sourceReference.value_or(args.sourceReference);
 
   if (!source)
-    return llvm::createStringError(
+    return llvm::make_error<DAPError>(
         "invalid arguments, expected source.sourceReference to be set");
 
   lldb::SBProcess process = dap.target.GetProcess();
@@ -39,11 +40,12 @@ SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
   // Lower 32 bits is the frame index
   lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(source));
   if (!frame.IsValid())
-    return llvm::createStringError("source not found");
+    return llvm::make_error<DAPError>("source not found");
 
   lldb::SBInstructionList insts = frame.GetSymbol().GetInstructions(dap.target);
   lldb::SBStream stream;
-  insts.GetDescription(stream);
+  lldb::SBExecutionContext exe_ctx(frame);
+  insts.GetDescription(stream, exe_ctx);
 
   return protocol::SourceResponseBody{/*content=*/stream.GetData(),
                                       /*mimeType=*/"text/x-lldb.disassembly"};

@@ -1323,7 +1323,7 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
 
 size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
                                              Block *parent_block, DWARFDIE die,
-                                             addr_t subprogram_low_pc) {
+                                             addr_t function_file_addr) {
   size_t blocks_added = 0;
   for (; die; die = die.GetSibling()) {
     dw_tag_t tag = die.Tag();
@@ -1346,19 +1346,9 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
                                  decl_line, decl_column, call_file, call_line,
                                  call_column, nullptr)) {
       for (const llvm::DWARFAddressRange &range : ranges) {
-        if (!range.valid())
-          continue;
-        if (range.LowPC >= subprogram_low_pc)
-          block->AddRange(Block::Range(range.LowPC - subprogram_low_pc,
+        if (range.valid() && range.LowPC >= m_first_code_address)
+          block->AddRange(Block::Range(range.LowPC - function_file_addr,
                                        range.HighPC - range.LowPC));
-        else {
-          GetObjectFile()->GetModule()->ReportError(
-              "{0:x8}: adding range [{1:x16}-{2:x16}) which has a base "
-              "that is less than the function's low PC {3:x16}. Please file "
-              "a bug and attach the file at the "
-              "start of this error message",
-              block->GetID(), range.LowPC, range.HighPC, subprogram_low_pc);
-        }
       }
       block->FinalizeRanges();
 
@@ -1386,7 +1376,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(CompileUnit &comp_unit,
 
       if (die.HasChildren()) {
         blocks_added += ParseBlocksRecursive(
-            comp_unit, block, die.GetFirstChild(), subprogram_low_pc);
+            comp_unit, block, die.GetFirstChild(), function_file_addr);
       }
     }
   }
@@ -3296,7 +3286,7 @@ static DWARFExpressionList GetExprListFromAtLocation(DWARFFormValue form_value,
   if (data.ValidOffset(offset)) {
     data = DataExtractor(data, offset, data.GetByteSize() - offset);
     const DWARFUnit *dwarf_cu = form_value.GetUnit();
-    if (DWARFExpression::ParseDWARFLocationList(dwarf_cu, data, &location_list))
+    if (dwarf_cu->ParseDWARFLocationList(data, location_list))
       location_list.SetFuncFileAddress(func_low_pc);
   }
 

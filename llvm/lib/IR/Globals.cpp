@@ -557,6 +557,15 @@ void GlobalVariable::setCodeModel(CodeModel::Model CM) {
   assert(getCodeModel() == CM && "Code model representation error!");
 }
 
+void GlobalVariable::clearCodeModel() {
+  unsigned CodeModelData = 0;
+  unsigned OldData = getGlobalValueSubClassData();
+  unsigned NewData = (OldData & ~(CodeModelMask << CodeModelShift)) |
+                     (CodeModelData << CodeModelShift);
+  setGlobalValueSubClassData(NewData);
+  assert(getCodeModel() == std::nullopt && "Code model representation error!");
+}
+
 //===----------------------------------------------------------------------===//
 // GlobalAlias Implementation
 //===----------------------------------------------------------------------===//

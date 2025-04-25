@@ -29,6 +29,16 @@ def CIRCanonicalize : Pass<"cir-canonicalize"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def HoistAllocas : Pass<"cir-hoist-allocas"> {
+  let summary = "Hoist allocas to the entry of the function";
+  let description = [{
+    This pass hoist all non-dynamic allocas to the entry of the function.
+    This is helpful for later code generation.
+  }];
+  let constructor = "mlir::createHoistAllocasPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let summary = "Produces flatten CFG";
   let description = [{

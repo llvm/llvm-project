@@ -215,25 +215,14 @@ def buildkite_get_metrics(
             if job["name"] not in BUILDKITE_WORKFLOW_TO_TRACK:
                 continue
 
+            # Don't count canceled jobs.
+            if job["canceled_at"]:
+                continue
+
             created_at = dateutil.parser.isoparse(job["created_at"])
-            scheduled_at = (
-                created_at
-                if job["scheduled_at"] is None
-                else dateutil.parser.isoparse(job["scheduled_at"])
-            )
-            started_at = (
-                scheduled_at
-                if job["started_at"] is None
-                else dateutil.parser.isoparse(job["started_at"])
-            )
-            if job["canceled_at"] is None:
-                finished_at = (
-                    started_at
-                    if job["finished_at"] is None
-                    else dateutil.parser.isoparse(job["finished_at"])
-                )
-            else:
-                finished_at = dateutil.parser.isoparse(job["canceled_at"])
+            scheduled_at = dateutil.parser.isoparse(job["scheduled_at"])
+            started_at = dateutil.parser.isoparse(job["started_at"])
+            finished_at = dateutil.parser.isoparse(job["finished_at"])
 
             job_name = BUILDKITE_WORKFLOW_TO_TRACK[job["name"]]
             queue_time = (started_at - scheduled_at).seconds
@@ -292,6 +281,13 @@ def github_get_metrics(
     workflow_metrics = []
     queued_count = collections.Counter()
     running_count = collections.Counter()
+
+    # Initialize all the counters to 0 so we report 0 when no job is queued
+    # or running.
+    for wf_name, wf_metric_name in GITHUB_WORKFLOW_TO_TRACK.items():
+        for job_name, job_metric_name in GITHUB_JOB_TO_TRACK[wf_metric_name].items():
+            queued_count[wf_metric_name + "_" + job_metric_name] = 0
+            running_count[wf_metric_name + "_" + job_metric_name] = 0
 
     # The list of workflows this iteration will process.
     # MaxSize = GITHUB_WORKFLOWS_MAX_PROCESS_COUNT

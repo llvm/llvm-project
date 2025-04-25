@@ -717,6 +717,13 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     return false;
   }
 
+  if (const FunctionDecl *CalleeDecl = CE->getDirectCallee();
+      CalleeDecl && CalleeDecl->hasAttr<NotTailCalledAttr>()) {
+    Diag(St->getBeginLoc(), diag::err_musttail_mismatch) << /*show-function-callee=*/true << CalleeDecl;
+    Diag(CalleeDecl->getLocation(), diag::note_musttail_disabled_by_not_tail_called);
+    return false;
+  }
+
   if (const auto *EWC = dyn_cast<ExprWithCleanups>(E)) {
     if (EWC->cleanupsHaveSideEffects()) {
       Diag(St->getBeginLoc(), diag::err_musttail_needs_trivial_args) << &MTA;
@@ -1616,8 +1623,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         EnumVals.push_back(std::make_pair(Val, EDI));
       }
       llvm::stable_sort(EnumVals, CmpEnumVals);
-      auto EI = EnumVals.begin(), EIEnd =
-        std::unique(EnumVals.begin(), EnumVals.end(), EqEnumVals);
+      auto EI = EnumVals.begin(), EIEnd = llvm::unique(EnumVals, EqEnumVals);
 
       // See which case values aren't in enum.
       for (CaseValsTy::const_iterator CI = CaseVals.begin();
@@ -1770,8 +1776,7 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
           if (EnumVals.empty())
             return;
           llvm::stable_sort(EnumVals, CmpEnumVals);
-          EnumValsTy::iterator EIend =
-              std::unique(EnumVals.begin(), EnumVals.end(), EqEnumVals);
+          EnumValsTy::iterator EIend = llvm::unique(EnumVals, EqEnumVals);
 
           // See which values aren't in the enum.
           EnumValsTy::const_iterator EI = EnumVals.begin();

@@ -2866,19 +2866,21 @@ TEST_F(FormatTest, ShortEnums) {
 }
 
 TEST_F(FormatTest, ShortCompoundRequirement) {
+  constexpr StringRef Code("template <typename T>\n"
+                           "concept c = requires(T x) {\n"
+                           "  { x + 1 } -> std::same_as<int>;\n"
+                           "};");
+
   FormatStyle Style = getLLVMStyle();
   EXPECT_TRUE(Style.AllowShortCompoundRequirementOnASingleLine);
-  verifyFormat("template <typename T>\n"
-               "concept c = requires(T x) {\n"
-               "  { x + 1 } -> std::same_as<int>;\n"
-               "};",
-               Style);
+  verifyFormat(Code, Style);
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
                "  { x + 1 } -> std::same_as<int>;\n"
                "  { x + 2 } -> std::same_as<int>;\n"
                "};",
                Style);
+
   Style.AllowShortCompoundRequirementOnASingleLine = false;
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
@@ -2886,7 +2888,7 @@ TEST_F(FormatTest, ShortCompoundRequirement) {
                "    x + 1\n"
                "  } -> std::same_as<int>;\n"
                "};",
-               Style);
+               Code, Style);
   verifyFormat("template <typename T>\n"
                "concept c = requires(T x) {\n"
                "  {\n"
@@ -2897,6 +2899,11 @@ TEST_F(FormatTest, ShortCompoundRequirement) {
                "  } -> std::same_as<int>;\n"
                "};",
                Style);
+
+  Style.AllowShortCompoundRequirementOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  verifyFormat(Code, Style);
 }
 
 TEST_F(FormatTest, ShortCaseLabels) {
@@ -3419,6 +3426,17 @@ TEST_F(FormatTest, MultiLineControlStatements) {
                "{\n"
                "};",
                Style);
+
+  Style = getLLVMStyle();
+  Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.AllowShortLoopsOnASingleLine = true;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_MultiLine;
+  verifyFormat("if (true) { return; }", Style);
+  verifyFormat("while (true) { return; }", Style);
+  // Failing test in https://reviews.llvm.org/D114521#3151727
+  verifyFormat("for (;;) { bar(); }", Style);
 }
 
 TEST_F(FormatTest, BeforeWhile) {
@@ -6473,6 +6491,18 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "\n"
                "#if 1\n"
                "#endif",
+               Style);
+
+  verifyFormat("#ifndef ABCDE\n"
+               "  #define ABCDE 0\n"
+               "#endif\n"
+               "\n"
+               "#define FGHIJK",
+               "#ifndef ABCDE\n"
+               "#define ABCDE 0\n"
+               "#endif\n"
+               "\n"
+               "#define FGHIJK",
                Style);
 }
 
@@ -12627,9 +12657,6 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa __attribute__((unused))\n"
                "aaaaaaaaaaaaaaaaaaaaaaa(int i);");
   verifyFormat("__attribute__((nodebug)) ::qualified_type f();");
-  verifyFormat(
-      "RenderWidgetHostViewCocoa *\n"
-      "    __attribute__((objc_precise_lifetime)) keepSelfAlive = self;");
   FormatStyle AfterType = getLLVMStyle();
   AfterType.BreakAfterReturnType = FormatStyle::RTBS_All;
   verifyFormat("__attribute__((nodebug)) void\n"
@@ -12640,6 +12667,12 @@ TEST_F(FormatTest, UnderstandsAttributes) {
                AfterType);
 
   FormatStyle CustomAttrs = getLLVMStyle();
+  CustomAttrs.AttributeMacros.push_back("my_attr_name");
+  verifyFormat("void MyGoodOldFunction(\n"
+               "    void *const long_enough = nullptr,\n"
+               "    void *my_attr_name even_longeeeeeeeeeeeeeeeeer = nullptr);",
+               CustomAttrs);
+
   CustomAttrs.AttributeMacros.push_back("__unused");
   CustomAttrs.AttributeMacros.push_back("__attr1");
   CustomAttrs.AttributeMacros.push_back("__attr2");
@@ -15134,6 +15167,13 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                MergeInlineOnly);
   verifyFormat("int f() {\n"
                "}",
+               MergeInlineOnly);
+
+  MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("class Foo\n"
+               "  {\n"
+               "  void f() { foo(); }\n"
+               "  };",
                MergeInlineOnly);
 
   // Also verify behavior when BraceWrapping.AfterFunction = true
@@ -20194,6 +20234,16 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "double b();",
                AlignmentLeft);
 
+  auto Style = AlignmentLeft;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  verifyFormat("int function_name(const wchar_t*  title,\n"
+               "                  int             x          = 0,\n"
+               "                  long            extraStyle = 0,\n"
+               "                  bool            readOnly   = false,\n"
+               "                  FancyClassType* module     = nullptr);",
+               Style);
+
   // PAS_Middle
   FormatStyle AlignmentMiddle = Alignment;
   AlignmentMiddle.PointerAlignment = FormatStyle::PAS_Middle;
@@ -20425,7 +20475,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                Alignment);
 
   // See PR37175
-  FormatStyle Style = getMozillaStyle();
+  Style = getMozillaStyle();
   Style.AlignConsecutiveDeclarations.Enabled = true;
   verifyFormat("DECOR1 /**/ int8_t /**/ DECOR2 /**/\n"
                "foo(int a);",
@@ -22470,8 +22520,7 @@ TEST_F(FormatTest, UnderstandsPragmas) {
                "#pragma comment(linker,      \\\n"
                "                 \"argument\" \\\n"
                "                 \"argument\"",
-               getStyleWithColumns(
-                   getChromiumStyle(FormatStyle::LanguageKind::LK_Cpp), 32));
+               getStyleWithColumns(getChromiumStyle(FormatStyle::LK_Cpp), 32));
 }
 
 TEST_F(FormatTest, UnderstandsPragmaOmpTarget) {
@@ -23700,6 +23749,7 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("function([]() { return b; })", MergeInline);
   verifyFormat("function([]() { return b; }, a)", MergeInline);
   verifyFormat("function(a, []() { return b; })", MergeInline);
+  verifyFormat("auto guard = foo{[&] { exit_status = true; }};", MergeInline);
 
   // Check option "BraceWrapping.BeforeLambdaBody" and different state of
   // AllowShortLambdasOnASingleLine
@@ -24253,6 +24303,37 @@ TEST_F(FormatTest, EmptyLinesInLambdas) {
                "  x(); //\n"
                "\n"
                "};");
+}
+
+TEST_F(FormatTest, LambdaBracesInGNU) {
+  auto Style = getGNUStyle();
+  EXPECT_EQ(Style.LambdaBodyIndentation, FormatStyle::LBI_Signature);
+
+  constexpr StringRef Code("auto x = [&] ()\n"
+                           "  {\n"
+                           "    for (int i = 0; i < y; ++i)\n"
+                           "      return 97;\n"
+                           "  };");
+  verifyFormat(Code, Style);
+
+  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
+  verifyFormat(Code, Style);
+  verifyFormat("for_each_thread ([] (thread_info *thread)\n"
+               "  {\n"
+               "    /* Lambda body.  */\n"
+               "  });",
+               "for_each_thread([](thread_info *thread) {\n"
+               "  /* Lambda body.  */\n"
+               "});",
+               Style);
+  verifyFormat("iterate_over_lwps (scope_ptid, [=] (struct lwp_info *info)\n"
+               "  {\n"
+               "    /* Lambda body.  */\n"
+               "  });",
+               "iterate_over_lwps(scope_ptid, [=](struct lwp_info *info) {\n"
+               "  /* Lambda body.  */\n"
+               "});",
+               Style);
 }
 
 TEST_F(FormatTest, FormatsBlocks) {
@@ -25380,8 +25461,10 @@ TEST_F(FormatTest, AlternativeOperators) {
   verifyFormat("%:define ABC abc"); // #define ABC abc
   verifyFormat("%:%:");             // ##
 
+  verifyFormat("return not ::f();");
+  verifyFormat("return not *foo;");
+
   verifyFormat("a = v(not;);\n"
-               "b = v(not+);\n"
                "c = v(not x);\n"
                "d = v(not 1);\n"
                "e = v(not 123.f);");
@@ -25389,7 +25472,6 @@ TEST_F(FormatTest, AlternativeOperators) {
   verifyNoChange("#define ASSEMBLER_INSTRUCTION_LIST(V)  \\\n"
                  "  V(and)                               \\\n"
                  "  V(not)                               \\\n"
-                 "  V(not!)                              \\\n"
                  "  V(other)",
                  getLLVMStyleWithColumns(40));
 }
@@ -25954,14 +26036,14 @@ TEST_F(FormatTest, GoogleDefaultStyle) {
                Style);
 }
 TEST_F(FormatTest, ChromiumDefaultStyle) {
-  FormatStyle Style = getChromiumStyle(FormatStyle::LanguageKind::LK_Cpp);
+  FormatStyle Style = getChromiumStyle(FormatStyle::LK_Cpp);
   verifyFormat("extern \"C\" {\n"
                "int foo();\n"
                "}",
                Style);
 }
 TEST_F(FormatTest, MicrosoftDefaultStyle) {
-  FormatStyle Style = getMicrosoftStyle(FormatStyle::LanguageKind::LK_Cpp);
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_Cpp);
   verifyFormat("extern \"C\"\n"
                "{\n"
                "    int foo();\n"
@@ -27894,6 +27976,65 @@ TEST_F(FormatTest, RemoveSemicolon) {
 
   Style.TypenameMacros.push_back("STRUCT");
   verifyFormat("STRUCT(T, B) { int i; };", Style);
+}
+
+TEST_F(FormatTest, EnumTrailingComma) {
+  constexpr StringRef Code("enum : int { /**/ };\n"
+                           "enum {\n"
+                           "  a,\n"
+                           "  b,\n"
+                           "  c, //\n"
+                           "};\n"
+                           "enum Color { red, green, blue /**/ };");
+  verifyFormat(Code);
+
+  auto Style = getLLVMStyle();
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum : int { /**/ };\n"
+               "enum {\n"
+               "  a,\n"
+               "  b,\n"
+               "  c, //\n"
+               "};\n"
+               "enum Color { red, green, blue, /**/ };",
+               Code, Style);
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Remove;
+  verifyFormat("enum : int { /**/ };\n"
+               "enum {\n"
+               "  a,\n"
+               "  b,\n"
+               "  c //\n"
+               "};\n"
+               "enum Color { red, green, blue /**/ };",
+               Code, Style);
+
+  EXPECT_TRUE(Style.AllowShortEnumsOnASingleLine);
+  Style.AllowShortEnumsOnASingleLine = false;
+
+  constexpr StringRef Input("enum {\n"
+                            "  //\n"
+                            "  a,\n"
+                            "  /**/\n"
+                            "  b,\n"
+                            "};");
+  verifyFormat(Input, Input, Style, {tooling::Range(12, 3)}); // line 3
+  verifyFormat("enum {\n"
+               "  //\n"
+               "  a,\n"
+               "  /**/\n"
+               "  b\n"
+               "};",
+               Input, Style, {tooling::Range(24, 3)}); // line 5
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U,\n"
+               "};",
+               "enum class MyEnum_E {\n"
+               "  MY_ENUM = 0U\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {
