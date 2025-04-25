@@ -659,6 +659,30 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
+bool ShouldDisplayAssemblySource(
+    const lldb::SBLineEntry &line_entry,
+    lldb::StopDisassemblyType stop_disassembly_display) {
+  if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
+    return false;
+
+  if (stop_disassembly_display == lldb::eStopDisassemblyTypeAlways)
+    return true;
+
+  // A line entry of 0 indicates the line is compiler generated i.e. no source
+  // file is associated with the frame.
+  auto file_spec = line_entry.GetFileSpec();
+  if (!file_spec.IsValid() || line_entry.GetLine() == 0 ||
+      line_entry.GetLine() == LLDB_INVALID_LINE_NUMBER)
+    return true;
+
+  if (stop_disassembly_display == lldb::eStopDisassemblyTypeNoSource &&
+      !file_spec.Exists()) {
+    return true;
+  }
+
+  return false;
+}
+
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",
@@ -720,8 +744,9 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
-                                   lldb::SBFormat &format) {
+llvm::json::Value
+CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
+                 lldb::StopDisassemblyType stop_disassembly_display) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
   object.try_emplace("id", frame_id);
@@ -751,11 +776,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
   EmplaceSafeString(object, "name", frame_name);
 
   auto line_entry = frame.GetLineEntry();
-  // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file is associated with the frame.
-  if (line_entry.GetFileSpec().IsValid() &&
-      (line_entry.GetLine() != 0 ||
-       line_entry.GetLine() != LLDB_INVALID_LINE_NUMBER)) {
+  if (!ShouldDisplayAssemblySource(line_entry, stop_disassembly_display)) {
     object.try_emplace("source", CreateSource(line_entry));
     object.try_emplace("line", line_entry.GetLine());
     auto column = line_entry.GetColumn();
