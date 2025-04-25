@@ -386,6 +386,53 @@ public:
     }
   }
 
+  void VisitWaitClause(const OpenACCWaitClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, DataOp>) {
+      if (!clause.hasExprs()) {
+        operation.setWaitOnlyAttr(
+            handleDeviceTypeAffectedClause(operation.getWaitOnlyAttr()));
+      } else {
+        llvm::SmallVector<mlir::Value> values;
+
+        if (clause.hasDevNumExpr())
+          values.push_back(createIntExpr(clause.getDevNumExpr()));
+        for (const Expr *E : clause.getQueueIdExprs())
+          values.push_back(createIntExpr(E));
+
+        llvm::SmallVector<int32_t> segments;
+        if (operation.getWaitOperandsSegments())
+          llvm::copy(*operation.getWaitOperandsSegments(),
+                     std::back_inserter(segments));
+
+        unsigned beforeSegmentSize = segments.size();
+
+        mlir::MutableOperandRange range = operation.getWaitOperandsMutable();
+        operation.setWaitOperandsDeviceTypeAttr(handleDeviceTypeAffectedClause(
+            operation.getWaitOperandsDeviceTypeAttr(), values, range,
+            segments));
+        operation.setWaitOperandsSegments(segments);
+
+        // In addition to having to set the 'segments', wait also has a list of
+        // bool attributes whether it is annotated with 'devnum'.  We can use
+        // our knowledge of how much the 'segments' array grew to determine how
+        // many we need to add.
+        llvm::SmallVector<bool> hasDevNums;
+        if (operation.getHasWaitDevnumAttr())
+          for (mlir::Attribute A : operation.getHasWaitDevnumAttr())
+            hasDevNums.push_back(cast<mlir::BoolAttr>(A).getValue());
+
+        hasDevNums.insert(hasDevNums.end(), segments.size() - beforeSegmentSize,
+                          clause.hasDevNumExpr());
+
+        operation.setHasWaitDevnumAttr(builder.getBoolArrayAttr(hasDevNums));
+      }
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Enter data, exit data, update, Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
   void VisitDefaultAsyncClause(const OpenACCDefaultAsyncClause &clause) {
     if constexpr (isOneOfTypes<OpTy, SetOp>) {
       operation.getDefaultAsyncMutable().append(
