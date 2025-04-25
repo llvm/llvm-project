@@ -71,7 +71,7 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("debugInfoHadIncompleteTypes",
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
-  module.try_emplace("symbolsLoaded", num_symbols_loaded);
+  module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
 
@@ -311,7 +311,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_variable_errors = 0;
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
-  uint32_t num_symbols_loaded = 0;
+  uint32_t symtab_symbol_count = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -321,8 +321,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
     Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
-      module_stat.num_symbols_loaded = symtab->GetNumSymbols();
-      num_symbols_loaded += module_stat.num_symbols_loaded;
+      module_stat.symtab_symbol_count = symtab->GetNumSymbols();
+      symtab_symbol_count += module_stat.symtab_symbol_count;
       ++symtabs_loaded;
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
       if (module_stat.symtab_loaded_from_cache)
@@ -414,7 +414,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
        num_modules_with_incomplete_types},
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
-      {"totalSymbolsLoaded", num_symbols_loaded},
+      {"totalSymbolTableSymbolCount", symtab_symbol_count},
   };
 
   if (include_targets) {

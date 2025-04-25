@@ -156,8 +156,13 @@ def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
 
 def CppKeywordInC : DiagGroup<"c++-keyword">;
+def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe">;
+def DefaultConstInit : DiagGroup<"default-const-init", [DefaultConstInitUnsafe]>;
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
-def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, CppKeywordInC]>;
+def CXXCompat: DiagGroup<"c++-compat",
+                         [ImplicitVoidPtrCast, DefaultConstInit,
+                         CppKeywordInC]>;
+
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
 def GNUCaseRange : DiagGroup<"gnu-case-range">;

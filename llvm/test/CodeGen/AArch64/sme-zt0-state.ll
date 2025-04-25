@@ -167,6 +167,39 @@ define void @zt0_new_caller_zt0_new_callee() "aarch64_new_zt0" nounwind {
   ret void;
 }
 
+; Expect commit of lazy-save if ZA is dormant
+; Expect smstart ZA & clear ZT0
+; No spill & fill of ZT0 around __arm_tpidr2_save
+; Expect spill & fill of ZT0 around __arm_sme_state call
+; Before return, expect smstop ZA
+define i64 @zt0_new_caller_abi_routine_callee() "aarch64_new_zt0" nounwind {
+; CHECK-LABEL: zt0_new_caller_abi_routine_callee:
+; CHECK:       // %bb.0: // %prelude
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    cbz x8, .LBB7_2
+; CHECK-NEXT:  // %bb.1: // %save.za
+; CHECK-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    zero { zt0 }
+; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:    str zt0, [x19]
+; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    ldr zt0, [x19]
+; CHECK-NEXT:    smstop za
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
+; CHECK-NEXT:    ret
+  %res = call {i64, i64} @__arm_sme_state()
+  %res.0 = extractvalue {i64, i64} %res, 0
+  ret i64 %res.0
+}
+
+declare {i64, i64} @__arm_sme_state()
+
 ;
 ; New-ZA Caller
 ;
@@ -179,11 +212,11 @@ define void @zt0_new_caller() "aarch64_new_zt0" nounwind {
 ; CHECK:       // %bb.0: // %prelude
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbz x8, .LBB7_2
+; CHECK-NEXT:    cbz x8, .LBB8_2
 ; CHECK-NEXT:  // %bb.1: // %save.za
 ; CHECK-NEXT:    bl __arm_tpidr2_save
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    zero { zt0 }
 ; CHECK-NEXT:    bl callee
@@ -202,11 +235,11 @@ define void @new_za_zt0_caller() "aarch64_new_za" "aarch64_new_zt0" nounwind {
 ; CHECK:       // %bb.0: // %prelude
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbz x8, .LBB8_2
+; CHECK-NEXT:    cbz x8, .LBB9_2
 ; CHECK-NEXT:  // %bb.1: // %save.za
 ; CHECK-NEXT:    bl __arm_tpidr2_save
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:  .LBB8_2:
+; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    zero {za}
 ; CHECK-NEXT:    zero { zt0 }

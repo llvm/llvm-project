@@ -505,6 +505,19 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPICF",
+    srcs = ["lib/CAPI/Dialect/ControlFlow.cpp"],
+    hdrs = ["include/mlir-c/Dialect/ControlFlow.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ControlFlowDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIEmitC",
     srcs = [
         "lib/CAPI/Dialect/EmitC.cpp",
