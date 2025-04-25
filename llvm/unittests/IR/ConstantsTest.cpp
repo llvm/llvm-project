@@ -29,6 +29,7 @@ TEST(ConstantsTest, UseCounts) {
 
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
   EXPECT_FALSE(Zero->hasNUses(1));
@@ -49,6 +50,7 @@ TEST(ConstantsTest, UseCounts) {
   // Still looks like use_empty with uses.
   EXPECT_TRUE(Zero->use_empty());
   EXPECT_EQ(Zero->getNumUses(), 0u);
+  EXPECT_TRUE(Zero->hasNUses(0));
   EXPECT_FALSE(Zero->hasOneUse());
   EXPECT_FALSE(Zero->hasOneUser());
   EXPECT_FALSE(Zero->hasNUses(1));
