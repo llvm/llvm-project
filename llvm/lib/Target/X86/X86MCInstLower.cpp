@@ -1571,7 +1571,7 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
     if (auto VTy = dyn_cast<FixedVectorType>(CI->getType())) {
       for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
         if (I != 0)
-          CS << ",";
+          CS << ',';
         printConstant(CI->getValue(), CS, PrintZero);
       }
     } else
@@ -1580,7 +1580,7 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
     if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
       for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
         if (I != 0)
-          CS << ",";
+          CS << ',';
         printConstant(CF->getValueAPF(), CS, PrintZero);
       }
     } else
