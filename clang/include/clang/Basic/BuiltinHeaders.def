@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 HEADER(NO_HEADER, nullptr)
-HEADER(ARMACLE_H, "arm_acle.h")
 HEADER(BLOCKS_H, "Blocks.h")
 HEADER(COMPLEX_H, "complex.h")
 HEADER(CTYPE_H, "ctype.h")
