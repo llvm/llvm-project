@@ -90,7 +90,8 @@ void RestartRequestHandler::operator()(
   if (arguments) {
     // The optional `arguments` field in RestartRequest can contain an updated
     // version of the launch arguments. If there's one, use it.
-    if (const llvm::json::Value *restart_arguments = arguments->get("arguments")) {
+    if (const llvm::json::Value *restart_arguments =
+            arguments->get("arguments")) {
       protocol::LaunchRequestArguments updated_arguments;
       llvm::json::Path::Root root;
       if (!fromJSON(*restart_arguments, updated_arguments, root)) {

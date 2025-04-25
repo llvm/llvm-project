@@ -52,7 +52,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
         self.assertEqual(
             "launchCommands and runInTerminal are mutually exclusive",
-            self.get_dict_value(response, ['body', 'error', 'format']),
+            self.get_dict_value(response, ["body", "error", "format"]),
         )
 
     @skipIfWindows
