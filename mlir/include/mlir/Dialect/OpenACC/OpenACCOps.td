@@ -1429,7 +1429,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     /// arguments)for each of the additional device types (or a none if it is
     /// empty).
     void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
-    /// Add an arrya-like entry  to the 'wait' with the current list of device
+    /// Add an array-like entry  to the 'wait' with the current list of device
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
@@ -1571,7 +1571,7 @@ def OpenACC_SerialOp : OpenACC_Op<"serial",
     /// arguments)for each of the additional device types (or a none if it is
     /// empty).
     void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
-    /// Add an arrya-like entry  to the 'wait' with the current list of device
+    /// Add an array-like entry  to the 'wait' with the current list of device
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
@@ -1740,7 +1740,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
     /// arguments)for each of the additional device types (or a none if it is
     /// empty).
     void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
-    /// Add an arrya-like entry  to the 'wait' with the current list of device
+    /// Add an array-like entry  to the 'wait' with the current list of device
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
@@ -1861,7 +1861,7 @@ def OpenACC_DataOp : OpenACC_Op<"data",
     /// arguments)for each of the additional device types (or a none if it is
     /// empty).
     void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
-    /// Add an arrya-like entry  to the 'wait' with the current list of device
+    /// Add an array-like entry  to the 'wait' with the current list of device
     /// types.
     void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
                          llvm::ArrayRef<DeviceType>);
