@@ -161,10 +161,14 @@ class DAPTestCaseBase(TestBase):
         return value
 
     def get_stackFrames_and_totalFramesCount(
-        self, threadId=None, startFrame=None, levels=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
         response = self.dap_server.request_stackTrace(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         if response:
             stackFrames = self.get_dict_value(response, ["body", "stackFrames"])
@@ -177,9 +181,15 @@ class DAPTestCaseBase(TestBase):
             return (stackFrames, totalFrames)
         return (None, 0)
 
-    def get_stackFrames(self, threadId=None, startFrame=None, levels=None, dump=False):
+    def get_stackFrames(
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
+    ):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         return stackFrames
 

@@ -2000,3 +2000,27 @@ declare void @call_v4_i8(%struct.char4 alignstack(4))
 declare void @call_v4_i16(%struct.short4 alignstack(8))
 declare void @call_v4_i32(%struct.int4 alignstack(16))
 declare void @call_v4_f32(%struct.float4 alignstack(16))
+
+define void @st_param_bfloat() {
+; CHECK-LABEL: st_param_bfloat(
+; CHECK: {
+; CHECK-NEXT:	.reg .b16 	%rs<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:// %bb.0:
+; CHECK-NEXT:	mov.b16 	%rs1, 0x4100;
+; CHECK-NEXT:	{ // callseq 83, 0
+; CHECK-NEXT:	.param .align 2 .b8 param0[2];
+; CHECK-NEXT:	st.param.b16 	[param0], %rs1;
+; CHECK-NEXT:	call.uni
+; CHECK-NEXT:	call_bfloat,
+; CHECK-NEXT:	(
+; CHECK-NEXT:	param0
+; CHECK-NEXT:	);
+; CHECK-NEXT:	} // callseq 83
+; CHECK-NEXT:	ret;
+  %five = bitcast i16 16640 to bfloat
+  call void @call_bfloat(bfloat %five)
+  ret void
+}
+
+declare void @call_bfloat(bfloat)

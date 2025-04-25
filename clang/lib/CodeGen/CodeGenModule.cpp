@@ -5378,11 +5378,33 @@ void CodeGenModule::EmitTentativeDefinition(const VarDecl *D) {
   EmitGlobalVarDefinition(D);
 }
 
+// Return a GlobalDecl. Use the base variants for destructors and constructors.
+static GlobalDecl getBaseVariantGlobalDecl(const NamedDecl *D) {
+  if (auto const *CD = dyn_cast<const CXXConstructorDecl>(D))
+    return GlobalDecl(CD, CXXCtorType::Ctor_Base);
+  else if (auto const *DD = dyn_cast<const CXXDestructorDecl>(D))
+    return GlobalDecl(DD, CXXDtorType::Dtor_Base);
+  return GlobalDecl(D);
+}
+
 void CodeGenModule::EmitExternalDeclaration(const DeclaratorDecl *D) {
-  if (auto const *V = dyn_cast<const VarDecl>(D))
-    EmitExternalVarDeclaration(V);
-  if (auto const *FD = dyn_cast<const FunctionDecl>(D))
-    EmitExternalFunctionDeclaration(FD);
+  CGDebugInfo *DI = getModuleDebugInfo();
+  if (!DI || !getCodeGenOpts().hasReducedDebugInfo())
+    return;
+
+  GlobalDecl GD = getBaseVariantGlobalDecl(D);
+  if (!GD)
+    return;
+
+  llvm::Constant *Addr = GetAddrOfGlobal(GD)->stripPointerCasts();
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    DI->EmitExternalVariable(
+        cast<llvm::GlobalVariable>(Addr->stripPointerCasts()), VD);
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    llvm::Function *Fn = cast<llvm::Function>(Addr);
+    if (!Fn->getSubprogram())
+      DI->EmitFunctionDecl(GD, FD->getLocation(), FD->getType(), Fn);
+  }
 }
 
 CharUnits CodeGenModule::GetTargetTypeStoreSize(llvm::Type *Ty) const {
@@ -5823,30 +5845,6 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (CGDebugInfo *DI = getModuleDebugInfo())
     if (getCodeGenOpts().hasReducedDebugInfo())
       DI->EmitGlobalVariable(GV, D);
-}
-
-void CodeGenModule::EmitExternalVarDeclaration(const VarDecl *D) {
-  if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().hasReducedDebugInfo()) {
-      QualType ASTTy = D->getType();
-      llvm::Type *Ty = getTypes().ConvertTypeForMem(D->getType());
-      llvm::Constant *GV =
-          GetOrCreateLLVMGlobal(D->getName(), Ty, ASTTy.getAddressSpace(), D);
-      DI->EmitExternalVariable(
-          cast<llvm::GlobalVariable>(GV->stripPointerCasts()), D);
-    }
-}
-
-void CodeGenModule::EmitExternalFunctionDeclaration(const FunctionDecl *FD) {
-  if (CGDebugInfo *DI = getModuleDebugInfo())
-    if (getCodeGenOpts().hasReducedDebugInfo()) {
-      auto *Ty = getTypes().ConvertType(FD->getType());
-      StringRef MangledName = getMangledName(FD);
-      auto *Fn = cast<llvm::Function>(
-          GetOrCreateLLVMFunction(MangledName, Ty, FD, /* ForVTable */ false));
-      if (!Fn->getSubprogram())
-        DI->EmitFunctionDecl(FD, FD->getLocation(), FD->getType(), Fn);
-    }
 }
 
 static bool isVarDeclStrongDefinition(const ASTContext &Context,
