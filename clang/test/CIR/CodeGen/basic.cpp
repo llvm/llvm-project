@@ -6,7 +6,7 @@ int f1() {
 }
 
 // CHECK: module
-// CHECK: cir.func @f1() -> !s32i
+// CHECK: cir.func @_Z2f1v() -> !s32i
 // CHECK:    %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:    %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"] {alignment = 4 : i64}
 // CHECK:    %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!s32i>, !s32i
@@ -19,7 +19,7 @@ int f2() {
   return i;
 }
 
-// CHECK: cir.func @f2() -> !s32i
+// CHECK: cir.func @_Z2f2v() -> !s32i
 // CHECK:    %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:    %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
 // CHECK:    %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
@@ -33,7 +33,7 @@ int f3(int i) {
   return i;
 }
 
-// CHECK: cir.func @f3(%[[ARG:.*]]: !s32i loc({{.*}})) -> !s32i
+// CHECK: cir.func @_Z2f3i(%[[ARG:.*]]: !s32i loc({{.*}})) -> !s32i
 // CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !s32i, !cir.ptr<!s32i>
@@ -46,7 +46,7 @@ int f4(const int i) {
   return i;
 }
 
-// CHECK: cir.func @f4(%[[ARG:.*]]: !s32i loc({{.*}})) -> !s32i
+// CHECK: cir.func @_Z2f4i(%[[ARG:.*]]: !s32i loc({{.*}})) -> !s32i
 // CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init, const] {alignment = 4 : i64}
 // CHECK:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !s32i, !cir.ptr<!s32i>
@@ -66,7 +66,7 @@ int *f5() {
   return p;
 }
 
-// CHECK:      cir.func @f5() -> !cir.ptr<!s32i>
+// CHECK:      cir.func @_Z2f5v() -> !cir.ptr<!s32i>
 // CHECK-NEXT:   %[[RET_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
 // CHECK-NEXT:   %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p", init] {alignment = 8 : i64}
 // CHECK-NEXT:   %[[NULLPTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>
@@ -95,7 +95,7 @@ size_type max_size() {
   return size_type(~0) / sizeof(_Tp);
 }
 
-// CHECK: cir.func @max_size()
+// CHECK: cir.func @_Z8max_sizev() -> !u64i
 // CHECK:   %0 = cir.alloca !u64i, !cir.ptr<!u64i>, ["__retval"] {alignment = 8 : i64}
 // CHECK:   %1 = cir.const #cir.int<0> : !s32i
 // CHECK:   %2 = cir.unary(not, %1) : !s32i, !s32i
