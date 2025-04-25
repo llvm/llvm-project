@@ -678,7 +678,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__copysign_negative_select_pinf_rh
   ret float %copysign
 }
 
-; can fold to fneg(fabs(x))
+; can't fold to fneg(fabs(x))
 define nofpclass(pinf pnorm psub pzero) float @ret_nofpclass_nopositives_copysign(float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_nofpclass_nopositives_copysign
 ; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
@@ -702,6 +702,18 @@ define nofpclass(pinf pnorm psub pzero) float @ret_nofpclass_nopositives_copysig
 }
 
 ; can fold to fneg(fabs(x))
+define nofpclass(pnorm psub pzero) float @ret_nofpclass_nopositive_finites_copysign_nnan_ninf_flag(float %x, float %unknown.sign) {
+; CHECK-LABEL: define nofpclass(pzero psub pnorm) float @ret_nofpclass_nopositive_finites_copysign_nnan_ninf_flag
+; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = fneg nnan ninf float [[TMP1]]
+; CHECK-NEXT:    ret float [[COPYSIGN]]
+;
+  %copysign = call nnan ninf float @llvm.copysign.f32(float %x, float %unknown.sign)
+  ret float %copysign
+}
+
+; can't fold to fneg(fabs(x))
 define nofpclass(nan pinf pnorm psub pzero) float @ret_nofpclass_nopositives_nonan_copysign(float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @ret_nofpclass_nopositives_nonan_copysign
 ; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
@@ -713,7 +725,7 @@ define nofpclass(nan pinf pnorm psub pzero) float @ret_nofpclass_nopositives_non
   ret float %copysign
 }
 
-; can fold to fabs(x)
+; can't fold to fabs(x)
 define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_nonegatives_copysign(float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_nofpclass_nonegatives_copysign
 ; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
