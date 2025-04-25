@@ -3309,6 +3309,12 @@ SwiftLanguageRuntime::GetSwiftRuntimeTypeInfo(
 
   // Resolve all type aliases.
   type = type.GetCanonicalType();
+  if (!type)  {
+    // FIXME: We could print a better error message if
+    // GetCanonicalType() returned an Expected.
+    return llvm::createStringError(
+        "could not get canonical type (possibly due to unresolved typealias)");
+}
 
   // Resolve all generic type parameters in the type for the current
   // frame. Generic parameter binding has to happen in the scratch
