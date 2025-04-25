@@ -161,10 +161,14 @@ class DAPTestCaseBase(TestBase):
         return value
 
     def get_stackFrames_and_totalFramesCount(
-        self, threadId=None, startFrame=None, levels=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
         response = self.dap_server.request_stackTrace(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         if response:
             stackFrames = self.get_dict_value(response, ["body", "stackFrames"])
@@ -177,9 +181,15 @@ class DAPTestCaseBase(TestBase):
             return (stackFrames, totalFrames)
         return (None, 0)
 
-    def get_stackFrames(self, threadId=None, startFrame=None, levels=None, dump=False):
+    def get_stackFrames(
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
+    ):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
-            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
+            threadId=threadId,
+            startFrame=startFrame,
+            levels=levels,
+            format=format,
+            dump=dump,
         )
         return stackFrames
 
@@ -207,14 +217,22 @@ class DAPTestCaseBase(TestBase):
     def get_console(self, timeout=0.0):
         return self.dap_server.get_output("console", timeout=timeout)
 
+    def get_important(self, timeout=0.0):
+        return self.dap_server.get_output("important", timeout=timeout)
+
+    def collect_stdout(self, timeout_secs, pattern=None):
+        return self.dap_server.collect_output(
+            "stdout", timeout_secs=timeout_secs, pattern=pattern
+        )
+
     def collect_console(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
             "console", timeout_secs=timeout_secs, pattern=pattern
         )
 
-    def collect_stdout(self, timeout_secs, pattern=None):
+    def collect_important(self, timeout_secs, pattern=None):
         return self.dap_server.collect_output(
-            "stdout", timeout_secs=timeout_secs, pattern=pattern
+            "important", timeout_secs=timeout_secs, pattern=pattern
         )
 
     def get_local_as_int(self, name, threadId=None):
@@ -443,7 +461,8 @@ class DAPTestCaseBase(TestBase):
 
         if not (response and response["success"]):
             self.assertTrue(
-                response["success"], "launch failed (%s)" % (response["message"])
+                response["success"],
+                "launch failed (%s)" % (response["body"]["error"]["format"]),
             )
         return response
 

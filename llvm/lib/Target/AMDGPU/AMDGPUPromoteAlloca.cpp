@@ -729,6 +729,11 @@ static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
   // complicated.
   if (isa<FixedVectorType>(AccessTy)) {
     TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
+    // If the type size and the store size don't match, we would need to do more
+    // than just bitcast to translate between an extracted/insertable subvectors
+    // and the accessed value.
+    if (AccTS * 8 != DL.getTypeSizeInBits(AccessTy))
+      return false;
     TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
     return AccTS.isKnownMultipleOf(VecTS);
   }
@@ -813,15 +818,17 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
 
     if (VectorType::isValidElementType(ElemTy) && NumElems > 0) {
       unsigned ElementSize = DL->getTypeSizeInBits(ElemTy) / 8;
-      unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
-      // Expand vector if required to match padding of inner type,
-      // i.e. odd size subvectors.
-      // Storage size of new vector must match that of alloca for correct
-      // behaviour of byte offsets and GEP computation.
-      if (NumElems * ElementSize != AllocaSize)
-        NumElems = AllocaSize / ElementSize;
-      if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
-        VectorTy = FixedVectorType::get(ElemTy, NumElems);
+      if (ElementSize > 0) {
+        unsigned AllocaSize = DL->getTypeStoreSize(AllocaTy);
+        // Expand vector if required to match padding of inner type,
+        // i.e. odd size subvectors.
+        // Storage size of new vector must match that of alloca for correct
+        // behaviour of byte offsets and GEP computation.
+        if (NumElems * ElementSize != AllocaSize)
+          NumElems = AllocaSize / ElementSize;
+        if (NumElems > 0 && (AllocaSize % ElementSize) == 0)
+          VectorTy = FixedVectorType::get(ElemTy, NumElems);
+      }
     }
   }
 
@@ -861,7 +868,14 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
   LLVM_DEBUG(dbgs() << "  Attempting promotion to: " << *VectorTy << "\n");
 
   Type *VecEltTy = VectorTy->getElementType();
-  unsigned ElementSize = DL->getTypeSizeInBits(VecEltTy) / 8;
+  unsigned ElementSizeInBits = DL->getTypeSizeInBits(VecEltTy);
+  if (ElementSizeInBits != DL->getTypeAllocSizeInBits(VecEltTy)) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector if the allocation size "
+                         "does not match the type's size\n");
+    return false;
+  }
+  unsigned ElementSize = ElementSizeInBits / 8;
+  assert(ElementSize > 0);
   for (auto *U : Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
 

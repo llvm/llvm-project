@@ -2154,7 +2154,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     } else {
       // In C++0x, "for (T NS:a" might not be a typo for ::
-      bool MightBeForRangeStmt = getLangOpts().CPlusPlus;
+      bool MightBeForRangeStmt = getLangOpts().CPlusPlus || getLangOpts().ObjC;
       ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       DG = ParseSimpleDeclaration(
@@ -2545,9 +2545,9 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc, Hint.StateLoc,
                             ArgsUnion(Hint.ValueExpr)};
-    TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
-                     Hint.PragmaNameLoc->Loc, ArgHints, 4,
-                     ParsedAttr::Form::Pragma());
+    TempAttrs.addNew(Hint.PragmaNameLoc->getIdentifierInfo(), Hint.Range,
+                     /*scopeName=*/nullptr, Hint.PragmaNameLoc->getLoc(),
+                     ArgHints, /*numArgs=*/4, ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.

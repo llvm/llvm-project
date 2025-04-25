@@ -165,9 +165,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
                           MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : BB->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
@@ -1915,16 +1913,4 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
       return false;
   }
   return true;
-}
-
-bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
-                                         const BasicBlock &Dest) {
-  assert(Src.getParent() == Dest.getParent());
-  if (!Src.getParent()->isPresplitCoroutine())
-    return false;
-  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
-    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
-      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
-             SW->getDefaultDest() == &Dest;
-  return false;
 }

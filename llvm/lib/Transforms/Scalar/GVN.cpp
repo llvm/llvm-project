@@ -165,9 +165,8 @@ struct llvm::GVNPass::Expression {
   }
 
   friend hash_code hash_value(const Expression &Value) {
-    return hash_combine(
-        Value.Opcode, Value.Ty,
-        hash_combine_range(Value.VarArgs.begin(), Value.VarArgs.end()));
+    return hash_combine(Value.Opcode, Value.Ty,
+                        hash_combine_range(Value.VarArgs));
   }
 };
 

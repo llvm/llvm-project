@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
+#include <unordered_map>
 #include <vector>
 
 // TODO: We could autogenerate these

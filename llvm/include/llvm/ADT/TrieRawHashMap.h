@@ -72,7 +72,7 @@ public:
 private:
   template <class T> struct AllocValueType {
     char Base[TrieContentBaseSize];
-    std::aligned_union_t<sizeof(T), T> Content;
+    alignas(T) char Content[sizeof(T)];
   };
 
 protected:

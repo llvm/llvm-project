@@ -313,17 +313,17 @@ func.func @test_identity(%arg0: tensor<13x21x3xi4>) -> tensor<13x21x3xi4> {
 func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable.read' op illegal: requires [variable]}}
-  %0 = tosa.variable.read @stored_var : tensor<2x4x8xi16>
+  // expected-error@+1 {{'tosa.variable_read' op illegal: requires [variable]}}
+  %0 = tosa.variable_read @stored_var : tensor<2x4x8xi8>
   return
 }
 
 // -----
-func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
+func.func @test_variable_write_type(%arg0: tensor<2x4x8xi8>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable.write' op illegal: requires [variable]}}
-  tosa.variable.write @stored_var, %arg0 : tensor<2x4x8xi16>
+  // expected-error@+1 {{'tosa.variable_write' op illegal: requires [variable]}}
+  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi8>
   return
 }
 
@@ -497,9 +497,9 @@ func.func @test_mul_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8
 
 // -----
 
-func.func @test_table_non_const(%arg0 : tensor<4x5xi8>, %arg1 : tensor<513xi8>) -> () {
+func.func @test_table_non_const(%arg0 : tensor<4x5xi8>, %arg1 : tensor<256xi8>) -> () {
   // expected-error@+1 {{'tosa.table' op expected compile time resolvable constant, but got variable value for operand #1}}
-  %0 = tosa.table %arg0, %arg1 : (tensor<4x5xi8>, tensor<513xi8>) -> tensor<4x5xi8>
+  %0 = tosa.table %arg0, %arg1 : (tensor<4x5xi8>, tensor<256xi8>) -> tensor<4x5xi8>
   return
 }
 
