@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -fextend-variable-liveness -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -fextend-variable-liveness -o - %s | FileCheck %s
 
 /// Tests that when we have fake uses in a function ending in a musttail call,
 /// we emit the fake uses and their corresponding loads immediately prior to the
