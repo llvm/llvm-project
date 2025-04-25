@@ -997,7 +997,7 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
 
 Symtab *Module::GetSymtab(bool can_create) {
   if (SymbolFile *symbols = GetSymbolFile(can_create))
-    return symbols->GetSymtab();
+    return symbols->GetSymtab(can_create);
   return nullptr;
 }
 

@@ -4382,6 +4382,43 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known.Zero |= APInt::getBitsSetFrom(BitWidth, VT.getScalarSizeInBits());
     break;
   }
+  case ISD::ATOMIC_LOAD: {
+    // If we are looking at the loaded value.
+    if (Op.getResNo() == 0) {
+      auto *AT = cast<AtomicSDNode>(Op);
+      unsigned ScalarMemorySize = AT->getMemoryVT().getScalarSizeInBits();
+      KnownBits KnownScalarMemory(ScalarMemorySize);
+      if (const MDNode *MD = AT->getRanges())
+        computeKnownBitsFromRangeMetadata(*MD, KnownScalarMemory);
+
+      switch (AT->getExtensionType()) {
+      case ISD::ZEXTLOAD:
+        Known = KnownScalarMemory.zext(BitWidth);
+        break;
+      case ISD::SEXTLOAD:
+        Known = KnownScalarMemory.sext(BitWidth);
+        break;
+      case ISD::EXTLOAD:
+        switch (TLI->getExtendForAtomicOps()) {
+        case ISD::ZERO_EXTEND:
+          Known = KnownScalarMemory.zext(BitWidth);
+          break;
+        case ISD::SIGN_EXTEND:
+          Known = KnownScalarMemory.sext(BitWidth);
+          break;
+        default:
+          Known = KnownScalarMemory.anyext(BitWidth);
+          break;
+        }
+        break;
+      case ISD::NON_EXTLOAD:
+        Known = KnownScalarMemory;
+        break;
+      }
+      assert(Known.getBitWidth() == BitWidth);
+    }
+    break;
+  }
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
     if (Op.getResNo() == 1) {
       // The boolean result conforms to getBooleanContents.
@@ -4407,21 +4444,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ATOMIC_LOAD_MIN:
   case ISD::ATOMIC_LOAD_MAX:
   case ISD::ATOMIC_LOAD_UMIN:
-  case ISD::ATOMIC_LOAD_UMAX:
-  case ISD::ATOMIC_LOAD: {
+  case ISD::ATOMIC_LOAD_UMAX: {
     // If we are looking at the loaded value.
     if (Op.getResNo() == 0) {
       auto *AT = cast<AtomicSDNode>(Op);
       unsigned MemBits = AT->getMemoryVT().getScalarSizeInBits();
 
-      // For atomic_load, prefer to use the extension type.
-      if (Op->getOpcode() == ISD::ATOMIC_LOAD) {
-        if (AT->getExtensionType() == ISD::ZEXTLOAD)
-          Known.Zero.setBitsFrom(MemBits);
-        else if (AT->getExtensionType() != ISD::SEXTLOAD &&
-                 TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
-          Known.Zero.setBitsFrom(MemBits);
-      } else if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
+      if (TLI->getExtendForAtomicOps() == ISD::ZERO_EXTEND)
         Known.Zero.setBitsFrom(MemBits);
     }
     break;
@@ -5802,6 +5831,15 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
           !isKnownNeverNaN(Op.getOperand(I), SNaN, Depth + 1))
         return false;
     return true;
+  }
+  case ISD::AssertNoFPClass: {
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+    if ((NoFPClass & fcNan) == fcNan)
+      return true;
+    if (SNaN && (NoFPClass & fcSNan) == fcSNan)
+      return true;
+    return isKnownNeverNaN(Op.getOperand(0), DemandedElts, SNaN, Depth + 1);
   }
   default:
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
@@ -7457,6 +7495,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            N2.getOpcode() == ISD::TargetConstant && "Invalid FP_ROUND!");
     if (N1.getValueType() == VT) return N1;  // noop conversion.
     break;
+  case ISD::AssertNoFPClass: {
+    assert(N1.getValueType().isFloatingPoint() &&
+           "AssertNoFPClass is used for a non-floating type");
+    assert(isa<ConstantSDNode>(N2) && "NoFPClass is not Constant");
+    FPClassTest NoFPClass = static_cast<FPClassTest>(N2->getAsZExtVal());
+    assert(llvm::to_underlying(NoFPClass) <=
+               BitmaskEnumDetail::Mask<FPClassTest>() &&
+           "FPClassTest value too large");
+    break;
+  }
   case ISD::AssertSext:
   case ISD::AssertZext: {
     EVT EVT = cast<VTSDNode>(N2)->getVT();
