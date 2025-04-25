@@ -78,10 +78,9 @@ private:
   bool handleOstreamOperator(const CallEvent &Call, CheckerContext &C) const;
   bool handleSwap(ProgramStateRef State, SVal First, SVal Second,
                   CheckerContext &C) const;
-  std::pair<SVal, ProgramStateRef>
-  retrieveOrConjureInnerPtrVal(ProgramStateRef State,
-                               const MemRegion *ThisRegion, const Expr *E,
-                               QualType Type, CheckerContext &C) const;
+  std::pair<SVal, ProgramStateRef> retrieveOrConjureInnerPtrVal(
+      ProgramStateRef State, const MemRegion *ThisRegion,
+      ConstCFGElementRef Elem, QualType Type, CheckerContext &C) const;
 
   using SmartPtrMethodHandlerFn =
       void (SmartPtrModeling::*)(const CallEvent &Call, CheckerContext &) const;
@@ -306,7 +305,7 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
       return false;
 
     const auto PtrVal = C.getSValBuilder().getConjuredHeapSymbolVal(
-        Call.getOriginExpr(), C.getLocationContext(),
+        Call.getCFGElementRef(), C.getLocationContext(),
         getPointerTypeFromTemplateArg(Call, C), C.blockCount());
 
     const MemRegion *ThisRegion = ThisRegionOpt->getAsRegion();
@@ -437,12 +436,12 @@ bool SmartPtrModeling::evalCall(const CallEvent &Call,
 }
 
 std::pair<SVal, ProgramStateRef> SmartPtrModeling::retrieveOrConjureInnerPtrVal(
-    ProgramStateRef State, const MemRegion *ThisRegion, const Expr *E,
+    ProgramStateRef State, const MemRegion *ThisRegion, ConstCFGElementRef Elem,
     QualType Type, CheckerContext &C) const {
   const auto *Ptr = State->get<TrackedRegionMap>(ThisRegion);
   if (Ptr)
     return {*Ptr, State};
-  auto Val = C.getSValBuilder().conjureSymbolVal(E, C.getLocationContext(),
+  auto Val = C.getSValBuilder().conjureSymbolVal(Elem, C.getLocationContext(),
                                                  Type, C.blockCount());
   State = State->set<TrackedRegionMap>(ThisRegion, Val);
   return {Val, State};
@@ -469,6 +468,7 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
   // https://en.cppreference.com/w/cpp/memory/unique_ptr/operator_cmp.
 
   auto makeSValFor = [&C, this](ProgramStateRef State, const Expr *E,
+                                ConstCFGElementRef Elem,
                                 SVal S) -> std::pair<SVal, ProgramStateRef> {
     if (S.isZeroConstant()) {
       return {S, State};
@@ -477,7 +477,7 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
     assert(Reg &&
            "this pointer of std::unique_ptr should be obtainable as MemRegion");
     QualType Type = getInnerPointerType(C, E->getType()->getAsCXXRecordDecl());
-    return retrieveOrConjureInnerPtrVal(State, Reg, E, Type, C);
+    return retrieveOrConjureInnerPtrVal(State, Reg, Elem, Type, C);
   };
 
   SVal First = Call.getArgSVal(0);
@@ -491,8 +491,10 @@ bool SmartPtrModeling::handleComparisionOp(const CallEvent &Call,
   ProgramStateRef State = C.getState();
 
   SVal FirstPtrVal, SecondPtrVal;
-  std::tie(FirstPtrVal, State) = makeSValFor(State, FirstExpr, First);
-  std::tie(SecondPtrVal, State) = makeSValFor(State, SecondExpr, Second);
+  std::tie(FirstPtrVal, State) =
+      makeSValFor(State, FirstExpr, Call.getCFGElementRef(), First);
+  std::tie(SecondPtrVal, State) =
+      makeSValFor(State, SecondExpr, Call.getCFGElementRef(), Second);
   BinaryOperatorKind BOK =
       operationKindFromOverloadedOperator(OOK, true).GetBinaryOpUnsafe();
   auto RetVal = Bldr.evalBinOp(State, BOK, FirstPtrVal, SecondPtrVal,
@@ -530,7 +532,7 @@ bool SmartPtrModeling::handleOstreamOperator(const CallEvent &Call,
   if (!StreamThisRegion)
     return false;
   State =
-      State->invalidateRegions({StreamThisRegion}, Call.getOriginExpr(),
+      State->invalidateRegions({StreamThisRegion}, Call.getCFGElementRef(),
                                C.blockCount(), C.getLocationContext(), false);
   State =
       State->BindExpr(Call.getOriginExpr(), C.getLocationContext(), StreamVal);
@@ -722,7 +724,7 @@ void SmartPtrModeling::handleGet(const CallEvent &Call,
 
   SVal InnerPointerVal;
   std::tie(InnerPointerVal, State) = retrieveOrConjureInnerPtrVal(
-      State, ThisRegion, Call.getOriginExpr(), Call.getResultType(), C);
+      State, ThisRegion, Call.getCFGElementRef(), Call.getResultType(), C);
   State = State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
                           InnerPointerVal);
   // TODO: Add NoteTag, for how the raw pointer got using 'get' method.
