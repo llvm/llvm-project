@@ -2030,8 +2030,7 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
   if (show_source) {
     ExecutionContext exe_ctx(shared_from_this());
     bool have_source = false, have_debuginfo = false;
-    Debugger::StopDisassemblyType disasm_display =
-        Debugger::eStopDisassemblyTypeNever;
+    lldb::StopDisassemblyType disasm_display = lldb::eStopDisassemblyTypeNever;
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {
       Debugger &debugger = target->GetDebugger();
@@ -2064,20 +2063,20 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
         }
       }
       switch (disasm_display) {
-      case Debugger::eStopDisassemblyTypeNever:
+      case lldb::eStopDisassemblyTypeNever:
         break;
 
-      case Debugger::eStopDisassemblyTypeNoDebugInfo:
+      case lldb::eStopDisassemblyTypeNoDebugInfo:
         if (have_debuginfo)
           break;
         [[fallthrough]];
 
-      case Debugger::eStopDisassemblyTypeNoSource:
+      case lldb::eStopDisassemblyTypeNoSource:
         if (have_source)
           break;
         [[fallthrough]];
 
-      case Debugger::eStopDisassemblyTypeAlways:
+      case lldb::eStopDisassemblyTypeAlways:
         if (target) {
           const uint32_t disasm_lines = debugger.GetDisassemblyLineCount();
           if (disasm_lines > 0) {

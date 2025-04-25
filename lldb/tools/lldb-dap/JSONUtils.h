@@ -346,6 +346,21 @@ llvm::json::Value CreateSource(const lldb::SBLineEntry &line_entry);
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateSource(llvm::StringRef source_path);
 
+/// Return true if the given line entry should be displayed as assembly.
+///
+/// \param[in] line_entry
+///     The LLDB line entry to check.
+///
+/// \param[in] stop_disassembly_display
+///     The value of the "stop-disassembly-display" setting.
+///
+/// \return
+///     True if the line entry should be displayed as assembly, false
+///     otherwise.
+bool ShouldDisplayAssemblySource(
+    const lldb::SBLineEntry &line_entry,
+    lldb::StopDisassemblyType stop_disassembly_display);
+
 /// Create a "StackFrame" object for a LLDB frame object.
 ///
 /// This function will fill in the following keys in the returned
@@ -364,11 +379,14 @@ llvm::json::Value CreateSource(llvm::StringRef source_path);
 ///     The LLDB format to use when populating out the "StackFrame"
 ///     object.
 ///
+/// \param[in] stop_disassembly_display
+///     The value of the "stop-disassembly-display" setting.
+///
 /// \return
 ///     A "StackFrame" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
-                                   lldb::SBFormat &format);
+llvm::json::Value CreateStackFrame(lldb::SBFrame &frame, lldb::SBFormat &format,
+                                   lldb::StopDisassemblyType);
 
 /// Create a "StackFrame" label object for a LLDB thread.
 ///
