@@ -204,7 +204,7 @@ std::string GetStringValue(const lldb::SBStructuredData &data) {
     return "";
 
   std::string str(str_length, 0);
-  data.GetStringValue(&str[0], str_length + 1);
+  data.GetStringValue(str.data(), str_length + 1);
   return str;
 }
 
