@@ -963,10 +963,10 @@ public:
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 
-  /// Returns the code model (tiny, small, kernel, medium or large model)
+  /// Returns the large data threshold.
   std::optional<uint64_t> getLargeDataThreshold() const;
 
-  /// Set the code model (tiny, small, kernel, medium or large)
+  /// Set the large data threshold.
   void setLargeDataThreshold(uint64_t Threshold);
   /// @}
 
