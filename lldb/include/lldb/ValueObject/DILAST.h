@@ -90,14 +90,14 @@ private:
 
 class UnaryOpNode : public ASTNode {
 public:
-  UnaryOpNode(uint32_t location, UnaryOpKind kind, ASTNodeUP rhs)
+  UnaryOpNode(uint32_t location, UnaryOpKind kind, ASTNodeUP operand)
       : ASTNode(location, NodeKind::eUnaryOpNode), m_kind(kind),
-        m_rhs(std::move(rhs)) {}
+        m_operand(std::move(operand)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
   UnaryOpKind kind() const { return m_kind; }
-  ASTNode *rhs() const { return m_rhs.get(); }
+  ASTNode *operand() const { return m_operand.get(); }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eUnaryOpNode;
@@ -105,7 +105,7 @@ public:
 
 private:
   UnaryOpKind m_kind;
-  ASTNodeUP m_rhs;
+  ASTNodeUP m_operand;
 };
 
 /// This class contains one Visit method for each specialized type of
