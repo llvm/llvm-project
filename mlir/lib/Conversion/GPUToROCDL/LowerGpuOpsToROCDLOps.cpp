@@ -52,6 +52,25 @@ namespace mlir {
 
 using namespace mlir;
 
+// Truncate or extend the result depending on the index bitwidth specified
+// by the LLVMTypeConverter options.
+static Value truncOrExtToLLVMType(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value value,
+                                  const LLVMTypeConverter &converter) {
+  int64_t intWidth = cast<IntegerType>(value.getType()).getWidth();
+  int64_t indexBitwidth = converter.getIndexTypeBitwidth();
+  auto indexBitwidthType =
+      IntegerType::get(rewriter.getContext(), converter.getIndexTypeBitwidth());
+  // TODO: use <=> in C++20.
+  if (indexBitwidth > intWidth) {
+    return rewriter.create<LLVM::SExtOp>(loc, indexBitwidthType, value);
+  }
+  if (indexBitwidth < intWidth) {
+    return rewriter.create<LLVM::TruncOp>(loc, indexBitwidthType, value);
+  }
+  return value;
+}
+
 /// Returns true if the given `gpu.func` can be safely called using the bare
 /// pointer calling convention.
 static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
@@ -109,6 +128,20 @@ struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
           loc, IntegerType::get(context, indexBitwidth), laneId);
     }
     rewriter.replaceOp(op, {laneId});
+    return success();
+  }
+};
+
+struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value wavefrontOp = rewriter.create<ROCDL::WavefrontSizeOp>(
+        op.getLoc(), IntegerType::get(rewriter.getContext(), 32));
+    wavefrontOp = truncOrExtToLLVMType(rewriter, op.getLoc(), wavefrontOp,
+                                       *getTypeConverter());
+    rewriter.replaceOp(op, {wavefrontOp});
     return success();
   }
 };
@@ -405,7 +438,9 @@ void mlir::populateGpuToROCDLConversionPatterns(
   // TODO: Add alignment for workgroup memory
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
-  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
+  patterns
+      .add<GPUShuffleOpLowering, GPULaneIdOpToROCDL, GPUSubgroupSizeOpToROCDL>(
+          converter);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
 }
