@@ -2947,6 +2947,13 @@ inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool CheckPseudoDtor(InterpState &S, CodePtr OpPC) {
+  if (!S.getLangOpts().CPlusPlus20)
+    S.CCEDiag(S.Current->getSource(OpPC),
+              diag::note_constexpr_pseudo_destructor);
+  return true;
+}
+
 inline bool Assume(InterpState &S, CodePtr OpPC) {
   const auto Val = S.Stk.pop<Boolean>();
 
