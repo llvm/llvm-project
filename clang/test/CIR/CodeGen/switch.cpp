@@ -16,7 +16,7 @@ void sw1(int a) {
   }
   }
 }
-// CIR: cir.func @sw1
+// CIR: cir.func @_Z3sw1i
 // CIR: cir.switch (%3 : !s32i) {
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR: cir.break
@@ -64,7 +64,7 @@ void sw2(int a) {
   }
 }
 
-// CIR: cir.func @sw2
+// CIR: cir.func @_Z3sw2i
 // CIR: cir.scope {
 // CIR-NEXT:   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
 // CIR-NEXT:   %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["fomo", init]
@@ -97,7 +97,7 @@ void sw5(int a) {
   }
 }
 
-// CIR: cir.func @sw5
+// CIR: cir.func @_Z3sw5i
 // CIR: cir.switch (%1 : !s32i) {
 // CIR-NEXT:   cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT:     cir.yield
@@ -126,7 +126,7 @@ void sw12(int a) {
   }
 }
 
-//      CIR: cir.func @sw12
+//      CIR: cir.func @_Z4sw12i
 //      CIR:   cir.scope {
 //      CIR:     cir.switch
 // CIR-NEXT:     cir.case(equal, [#cir.int<3> : !s32i]) {
@@ -157,7 +157,7 @@ void sw13(int a, int b) {
   }
 }
 
-//      CIR:  cir.func @sw13
+//      CIR:  cir.func @_Z4sw13ii
 //      CIR:    cir.scope {
 //      CIR:      cir.switch
 // CIR-NEXT:      cir.case(equal, [#cir.int<1> : !s32i]) {
