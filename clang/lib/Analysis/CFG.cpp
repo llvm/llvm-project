@@ -5871,17 +5871,16 @@ static void print_construction_context(raw_ostream &OS,
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
-                       const CFGElement &E, bool TerminateWithNewLine = true);
+                       const CFGElement &E);
 
-void CFGElement::dumpToStream(llvm::raw_ostream &OS,
-                              bool TerminateWithNewLine) const {
+void CFGElement::dumpToStream(llvm::raw_ostream &OS) const {
   LangOptions LangOpts;
   StmtPrinterHelper Helper(nullptr, LangOpts);
-  print_elem(OS, Helper, *this, TerminateWithNewLine);
+  print_elem(OS, Helper, *this);
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
-                       const CFGElement &E, bool TerminateWithNewLine) {
+                       const CFGElement &E) {
   switch (E.getKind()) {
   case CFGElement::Kind::Statement:
   case CFGElement::Kind::CXXRecordTypedCall:
@@ -5898,9 +5897,7 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (Children.begin() != Children.end()) {
         OS << "({ ... ; ";
         Helper.handledStmt(*SE->getSubStmt()->body_rbegin(),OS);
-        OS << " })";
-        if (TerminateWithNewLine)
-          OS << '\n';
+        OS << " })\n";
         return;
       }
     }
@@ -5909,8 +5906,7 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (B->getOpcode() == BO_Comma) {
         OS << "... , ";
         Helper.handledStmt(B->getRHS(),OS);
-        if (TerminateWithNewLine)
-          OS << '\n';
+        OS << '\n';
         return;
       }
     }
@@ -5942,14 +5938,15 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     }
 
     // Expressions need a newline.
-    if (isa<Expr>(S) && TerminateWithNewLine)
+    if (isa<Expr>(S))
       OS << '\n';
 
-    return;
+    break;
   }
 
   case CFGElement::Kind::Initializer:
     print_initializer(OS, Helper, E.castAs<CFGInitializer>().getInitializer());
+    OS << '\n';
     break;
 
   case CFGElement::Kind::AutomaticObjectDtor: {
@@ -5963,44 +5960,43 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
 
     OS << ".~";
     T.getUnqualifiedType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << "() (Implicit destructor)";
+    OS << "() (Implicit destructor)\n";
     break;
   }
 
   case CFGElement::Kind::CleanupFunction:
     OS << "CleanupFunction ("
-       << E.castAs<CFGCleanupFunction>().getFunctionDecl()->getName() << ")";
+       << E.castAs<CFGCleanupFunction>().getFunctionDecl()->getName() << ")\n";
     break;
 
   case CFGElement::Kind::LifetimeEnds:
     Helper.handleDecl(E.castAs<CFGLifetimeEnds>().getVarDecl(), OS);
-    OS << " (Lifetime ends)";
+    OS << " (Lifetime ends)\n";
     break;
 
   case CFGElement::Kind::LoopExit:
-    OS << E.castAs<CFGLoopExit>().getLoopStmt()->getStmtClassName()
-       << " (LoopExit)";
+    OS << E.castAs<CFGLoopExit>().getLoopStmt()->getStmtClassName() << " (LoopExit)\n";
     break;
 
   case CFGElement::Kind::ScopeBegin:
     OS << "CFGScopeBegin(";
     if (const VarDecl *VD = E.castAs<CFGScopeBegin>().getVarDecl())
       OS << VD->getQualifiedNameAsString();
-    OS << ")";
+    OS << ")\n";
     break;
 
   case CFGElement::Kind::ScopeEnd:
     OS << "CFGScopeEnd(";
     if (const VarDecl *VD = E.castAs<CFGScopeEnd>().getVarDecl())
       OS << VD->getQualifiedNameAsString();
-    OS << ")";
+    OS << ")\n";
     break;
 
   case CFGElement::Kind::NewAllocator:
     OS << "CFGNewAllocator(";
     if (const CXXNewExpr *AllocExpr = E.castAs<CFGNewAllocator>().getAllocatorExpr())
       AllocExpr->getType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << ")";
+    OS << ")\n";
     break;
 
   case CFGElement::Kind::DeleteDtor: {
@@ -6012,14 +6008,14 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
         const_cast<CXXDeleteExpr*>(DE.getDeleteExpr());
     Helper.handledStmt(cast<Stmt>(DelExpr->getArgument()), OS);
     OS << "->~" << RD->getName().str() << "()";
-    OS << " (Implicit destructor)";
+    OS << " (Implicit destructor)\n";
     break;
   }
 
   case CFGElement::Kind::BaseDtor: {
     const CXXBaseSpecifier *BS = E.castAs<CFGBaseDtor>().getBaseSpecifier();
     OS << "~" << BS->getType()->getAsCXXRecordDecl()->getName() << "()";
-    OS << " (Base object destructor)";
+    OS << " (Base object destructor)\n";
     break;
   }
 
@@ -6028,7 +6024,7 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     const Type *T = FD->getType()->getBaseElementTypeUnsafe();
     OS << "this->" << FD->getName();
     OS << ".~" << T->getAsCXXRecordDecl()->getName() << "()";
-    OS << " (Member object destructor)";
+    OS << " (Member object destructor)\n";
     break;
   }
 
@@ -6037,12 +6033,10 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
         E.castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
     OS << "~";
     BT->getType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << "() (Temporary object destructor)";
+    OS << "() (Temporary object destructor)\n";
     break;
   }
   }
-  if (TerminateWithNewLine)
-    OS << '\n';
 }
 
 static void print_block(raw_ostream &OS, const CFG* cfg,

@@ -131,8 +131,7 @@ void ErrnoTesterChecker::evalSetErrnoIfErrorRange(CheckerContext &C,
   ProgramStateRef StateFailure = State->BindExpr(
       Call.getOriginExpr(), C.getLocationContext(), SVB.makeIntVal(1, true));
   DefinedOrUnknownSVal ErrnoVal = SVB.conjureSymbolVal(
-      /*symbolTag=*/nullptr, Call.getCFGElementRef(), C.getLocationContext(),
-      C.blockCount());
+      nullptr, Call.getOriginExpr(), C.getLocationContext(), C.blockCount());
   StateFailure = StateFailure->assume(ErrnoVal, true);
   assert(StateFailure && "Failed to assume on an initial value.");
   StateFailure =
