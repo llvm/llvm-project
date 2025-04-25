@@ -15297,8 +15297,6 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
     return SDValue();
 
   EVT LoadedVT = ALoad->getMemoryVT();
-  EVT ResultVT = N->getValueType(0);
-
   uint64_t Mask = maskTrailingOnes<uint64_t>(LoadedVT.getSizeInBits());
   uint64_t ExpectedMask = LoadedVT.getSizeInBits() == 8    ? 0xFF
                           : LoadedVT.getSizeInBits() == 16 ? 0xFFFF
@@ -15307,13 +15305,9 @@ static SDValue reduceANDOfAtomicLoad(SDNode *N,
   if (Mask != ExpectedMask)
     return SDValue();
 
-  SDLoc DL(N);
-  SDValue Chain = ALoad->getChain();
-  SDValue Ptr = ALoad->getBasePtr();
-  MachineMemOperand *MemOp = ALoad->getMemOperand();
-  SDValue ZextLoad = DAG.getExtLoad(ISD::ZEXTLOAD, DL, ResultVT, Chain, Ptr,
-                                    MemOp->getPointerInfo(), LoadedVT,
-                                    MemOp->getAlign(), MemOp->getFlags());
+  SDValue ZextLoad = DAG.getAtomicLoad(
+      ISD::ZEXTLOAD, SDLoc(N), ALoad->getMemoryVT(), N->getValueType(0),
+      ALoad->getChain(), ALoad->getBasePtr(), ALoad->getMemOperand());
   DCI.CombineTo(N, ZextLoad);
   DAG.ReplaceAllUsesOfValueWith(SDValue(N0.getNode(), 1), ZextLoad.getValue(1));
   DCI.recursivelyDeleteUnusedNodes(N0.getNode());
