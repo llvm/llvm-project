@@ -270,9 +270,11 @@ struct GenBinaryFuncName : CopyStructVisitor<GenBinaryFuncName<IsMove>, IsMove>,
   void visitPtrAuth(QualType FT, const FieldDecl *FD,
                     CharUnits CurStructOffset) {
     this->appendStr("_pa");
-    PointerAuthQualifier PtrAuth = FT.getPointerAuth();
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth().withoutKeyNone();
     this->appendStr(llvm::to_string(PtrAuth.getKey()) + "_");
     this->appendStr(llvm::to_string(PtrAuth.getExtraDiscriminator()) + "_");
+    if (PtrAuth.authenticatesNullValues())
+      this->appendStr("anv_");
     CharUnits FieldOffset = CurStructOffset + this->getFieldOffset(FD);
     this->appendStr(llvm::to_string(FieldOffset.getQuantity()));
   }
@@ -578,10 +580,9 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
     RValue SrcVal = this->CGF->EmitLoadOfLValue(SrcLV, SourceLocation());
     this->CGF->EmitStoreThroughLValue(SrcVal, DstLV);
   }
-
   void visitPtrAuth(QualType FT, const FieldDecl *FD, CharUnits CurStackOffset,
                     std::array<Address, 2> Addrs) {
-    PointerAuthQualifier PtrAuth = FT.getPointerAuth();
+    PointerAuthQualifier PtrAuth = FT.getPointerAuth().withoutKeyNone();
     Addrs[DstIdx] = this->getAddrWithOffset(Addrs[DstIdx], CurStackOffset, FD);
     Addrs[SrcIdx] = this->getAddrWithOffset(Addrs[SrcIdx], CurStackOffset, FD);
     this->CGF->EmitPointerAuthCopy(PtrAuth, FT, Addrs[DstIdx], Addrs[SrcIdx]);
