@@ -860,7 +860,8 @@ class DebugCommunication(object):
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
-        args_dict["commandEscapePrefix"] = commandEscapePrefix
+        if commandEscapePrefix:
+            args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
 
@@ -1046,7 +1047,7 @@ class DebugCommunication(object):
         return self.send_recv({"command": "modules", "type": "request"})
 
     def request_stackTrace(
-        self, threadId=None, startFrame=None, levels=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
     ):
         if threadId is None:
             threadId = self.get_thread_id()
@@ -1055,6 +1056,8 @@ class DebugCommunication(object):
             args_dict["startFrame"] = startFrame
         if levels is not None:
             args_dict["levels"] = levels
+        if format is not None:
+            args_dict["format"] = format
         command_dict = {
             "command": "stackTrace",
             "type": "request",
