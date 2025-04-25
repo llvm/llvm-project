@@ -966,8 +966,8 @@ std::string TreePredicateFn::getPredCode() const {
   if (isAtomic()) {
     if (getMemoryVT() == nullptr && getAddressSpaces() == nullptr &&
         // FIXME: Should atomic loads be IsLoad, IsAtomic, or both?
-        !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() && !isSignExtLoad() &&
-        !isAtomicOrderingMonotonic() &&
+        !isNonExtLoad() && !isAnyExtLoad() && !isZeroExtLoad() &&
+        !isSignExtLoad() && !isAtomicOrderingMonotonic() &&
         !isAtomicOrderingAcquire() && !isAtomicOrderingRelease() &&
         !isAtomicOrderingAcquireRelease() &&
         !isAtomicOrderingSequentiallyConsistent() &&
@@ -1074,10 +1074,12 @@ std::string TreePredicateFn::getPredCode() const {
         "return false;\n";
 
   if (isAtomic()) {
-    if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() + isZeroExtLoad()) > 1)
-      PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
-                      "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and IsZeroExtLoad are "
-                      "mutually exclusive");
+    if ((isNonExtLoad() + isAnyExtLoad() + isSignExtLoad() + isZeroExtLoad()) >
+        1)
+      PrintFatalError(
+          getOrigPatFragRecord()->getRecord()->getLoc(),
+          "IsNonExtLoad, IsAnyExtLoad, IsSignExtLoad, and IsZeroExtLoad are "
+          "mutually exclusive");
 
     if (isNonExtLoad())
       Code += "if (cast<AtomicSDNode>(N)->getExtensionType() != "
