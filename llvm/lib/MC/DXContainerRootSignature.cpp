@@ -8,7 +8,9 @@
 
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/EndianStream.h"
+#include <variant>
 
 using namespace llvm;
 using namespace llvm::mcdxbc;
@@ -32,22 +34,15 @@ size_t RootSignatureDesc::getSize() const {
   size_t Size = sizeof(dxbc::RootSignatureHeader) +
                 Parameters.size() * sizeof(dxbc::RootParameterHeader);
 
-  for (const mcdxbc::RootParameter &P : Parameters) {
-    switch (P.Header.ParameterType) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      Size += sizeof(dxbc::RootConstants);
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      if (Version == 1)
-        Size += sizeof(dxbc::RST0::v0::RootDescriptor);
-      else
-        Size += sizeof(dxbc::RST0::v1::RootDescriptor);
-
-      break;
-    }
+  for (const auto &P : Parameters) {
+    std::visit(
+        [&Size](auto &Value) -> void {
+          using T = std::decay_t<decltype(Value)>;
+          Size += sizeof(T);
+        },
+        P);
   }
+
   return Size;
 }
 
@@ -66,39 +61,40 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
-  for (const mcdxbc::RootParameter &P : Parameters) {
-    support::endian::write(BOS, P.Header.ParameterType,
-                           llvm::endianness::little);
-    support::endian::write(BOS, P.Header.ShaderVisibility,
-                           llvm::endianness::little);
+  for (const auto &P : Parameters.Headers) {
+    support::endian::write(BOS, P.ParameterType, llvm::endianness::little);
+    support::endian::write(BOS, P.ShaderVisibility, llvm::endianness::little);
 
     ParamsOffsets.push_back(writePlaceholder(BOS));
   }
 
   assert(NumParameters == ParamsOffsets.size());
-  for (size_t I = 0; I < NumParameters; ++I) {
+  auto P = Parameters.begin();
+  for (size_t I = 0; I < NumParameters; ++I, P++) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
-    const mcdxbc::RootParameter &P = Parameters[I];
 
-    switch (P.Header.ParameterType) {
-    case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      support::endian::write(BOS, P.Constants.ShaderRegister,
+    if (std::holds_alternative<dxbc::RootConstants>(*P)) {
+      auto Constants = std::get<dxbc::RootConstants>(*P);
+      support::endian::write(BOS, Constants.ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, P.Constants.RegisterSpace,
+      support::endian::write(BOS, Constants.RegisterSpace,
                              llvm::endianness::little);
-      support::endian::write(BOS, P.Constants.Num32BitValues,
+      support::endian::write(BOS, Constants.Num32BitValues,
                              llvm::endianness::little);
-      break;
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
-    case llvm::to_underlying(dxbc::RootParameterType::SRV):
-    case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      support::endian::write(BOS, P.Descriptor.ShaderRegister,
+    } else if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor>(*P)) {
+      auto Descriptor = std::get<dxbc::RST0::v0::RootDescriptor>(*P);
+      support::endian::write(BOS, Descriptor.ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, P.Descriptor.RegisterSpace,
+      support::endian::write(BOS, Descriptor.RegisterSpace,
                              llvm::endianness::little);
-      if (Version > 1)
-        support::endian::write(BOS, P.Descriptor.Flags,
-                               llvm::endianness::little);
+    } else if (std::holds_alternative<dxbc::RST0::v1::RootDescriptor>(*P)) {
+      auto Descriptor = std::get<dxbc::RST0::v1::RootDescriptor>(*P);
+
+      support::endian::write(BOS, Descriptor.ShaderRegister,
+                             llvm::endianness::little);
+      support::endian::write(BOS, Descriptor.RegisterSpace,
+                             llvm::endianness::little);
+      support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
     }
   }
   assert(Storage.size() == getSize());
