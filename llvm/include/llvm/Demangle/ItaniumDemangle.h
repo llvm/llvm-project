@@ -610,6 +610,8 @@ public:
   }
 };
 
+class PointerType;
+
 class ObjCProtoName : public Node {
   const Node *Ty;
   std::string_view Protocol;
