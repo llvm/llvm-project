@@ -775,6 +775,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.countlsuhk
     libc.src.stdfix.countlsuk
     libc.src.stdfix.countlsulk
+    libc.src.stdfix.idivr
+    libc.src.stdfix.idivlr
+    libc.src.stdfix.idivk
+    libc.src.stdfix.idivulk
+    libc.src.stdfix.idivur
+    libc.src.stdfix.idivulr
+    libc.src.stdfix.idivuk
+    libc.src.stdfix.idivulk
   )
 endif()
 
