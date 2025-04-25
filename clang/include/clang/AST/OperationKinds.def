@@ -121,7 +121,7 @@ CAST_OPERATION(FunctionToPointerDecay)
 /// CK_NullToPointer - Null pointer constant to pointer, ObjC
 /// pointer, or block pointer.
 ///   (void*) 0
-///   (void*) nullptr
+///   (std::nullptr_t) x
 ///   void (^block)() = 0;
 CAST_OPERATION(NullToPointer)
 
