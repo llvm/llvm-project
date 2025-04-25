@@ -4844,8 +4844,7 @@ static void TryListInitialization(Sema &S,
                                   bool TreatUnavailableAsInvalid) {
   QualType DestType = Entity.getType();
 
-  if (S.getLangOpts().HLSL &&
-      !S.HLSL().TransformInitList(Entity, Kind, InitList))
+  if (S.getLangOpts().HLSL && !S.HLSL().transformInitList(Entity, InitList))
     return;
 
   // C++ doesn't allow scalar initialization with more than one argument.
@@ -8328,10 +8327,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
       // If this is a call, allow conversion to a transparent union.
       ExprResult CurInitExprRes = CurInit;
-      if (ConvTy != Sema::Compatible &&
-          Entity.isParameterKind() &&
-          S.CheckTransparentUnionArgumentConstraints(Step->Type, CurInitExprRes)
-            == Sema::Compatible)
+      if (!S.IsAssignConvertCompatible(ConvTy) && Entity.isParameterKind() &&
+          S.CheckTransparentUnionArgumentConstraints(
+              Step->Type, CurInitExprRes) == Sema::Compatible)
         ConvTy = Sema::Compatible;
       if (CurInitExprRes.isInvalid())
         return ExprError();

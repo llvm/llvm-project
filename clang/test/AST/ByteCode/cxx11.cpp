@@ -194,3 +194,17 @@ namespace DynamicCast {
     int g : (S*)(void*)(sptr) == sptr;
   };
 }
+
+namespace GlobalInitializer {
+  extern int &g; // both-note {{here}}
+  struct S {
+    int G : g; // both-error {{constant expression}} \
+               // both-note {{initializer of 'g' is unknown}}
+  };
+}
+
+namespace ExternPointer {
+  struct S { int a; };
+  extern const S pu;
+  constexpr const int *pua = &pu.a; // Ok.
+}
