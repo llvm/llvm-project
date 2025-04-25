@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -968,8 +969,10 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
     }
     std::this_thread::sleep_for(std::chrono::microseconds(250));
   }
-  error.SetErrorStringWithFormat("process failed to stop within %lld seconds",
-                                 seconds.count());
+  error.SetErrorString(
+      llvm::formatv("process failed to stop within {0}", seconds)
+          .str()
+          .c_str());
   return error;
 }
 
