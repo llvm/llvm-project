@@ -69,10 +69,15 @@ let Latency = 4 in {
 
 // Integer division/remainder
 // Worst case latency is used.
-def : WriteRes<WriteIDiv32, [SMX60_IEU]> { let Latency = 12; }
-def : WriteRes<WriteIDiv, [SMX60_IEU]> { let Latency = 20; }
-def : WriteRes<WriteIRem32, [SMX60_IEU]> { let Latency = 12; }
-def : WriteRes<WriteIRem, [SMX60_IEU]> { let Latency = 20; }
+let Latency = 12, ReleaseAtCycles = [12] in {
+  def : WriteRes<WriteIDiv32, [SMX60_IEUA]>;
+  def : WriteRes<WriteIRem32, [SMX60_IEUA]>;
+}
+
+let Latency = 20, ReleaseAtCycles = [20] in {
+  def : WriteRes<WriteIDiv, [SMX60_IEUA]>;
+  def : WriteRes<WriteIRem, [SMX60_IEUA]>;
+}
 
 // Bitmanip
 def : WriteRes<WriteRotateImm, [SMX60_IEU]>;
