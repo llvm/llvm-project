@@ -145,8 +145,8 @@ public:
 /// entity that's captured by a block.
 enum class BlockCaptureEntityKind {
   None,
-  AddressDiscriminatedPointerAuth,
   CXXRecord, // Copy or destroy
+  AddressDiscriminatedPointerAuth,
   ARCWeak,
   ARCStrong,
   NonTrivialCStruct,
