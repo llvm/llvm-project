@@ -168,8 +168,6 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
   // Restore all registers immediately before the return and any
   // terminators that precede it.
   MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
