@@ -1480,7 +1480,7 @@ def TernaryOp : CIR_Op<"ternary",
     Example:
 
     ```mlir
-    // x = cond ? a : b;
+    // cond = a && b;
 
     %x = cir.ternary (%cond, true_region {
       ...

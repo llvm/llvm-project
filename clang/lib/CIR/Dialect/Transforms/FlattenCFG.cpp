@@ -270,7 +270,7 @@ public:
     // when relevant.
     if (op->getResultTypes().size())
       locs.push_back(loc);
-    auto *continueBlock =
+    Block *continueBlock =
         rewriter.createBlock(remainingOpsBlock, op->getResultTypes(), locs);
     rewriter.create<cir::BrOp>(loc, remainingOpsBlock);
 
@@ -290,7 +290,7 @@ public:
     falseBlock = &falseRegion.front();
     mlir::Operation *falseTerminator = falseRegion.back().getTerminator();
     rewriter.setInsertionPointToEnd(&falseRegion.back());
-    cir::YieldOp falseYieldOp = dyn_cast<cir::YieldOp>(falseTerminator);
+    auto falseYieldOp = dyn_cast<cir::YieldOp>(falseTerminator);
     rewriter.replaceOpWithNewOp<cir::BrOp>(falseYieldOp, falseYieldOp.getArgs(),
                                            continueBlock);
     rewriter.inlineRegionBefore(falseRegion, continueBlock);
