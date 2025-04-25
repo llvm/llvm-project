@@ -9,6 +9,7 @@
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBEvent.h"
@@ -117,6 +118,8 @@ static void EventThreadFunction(DAP &dap) {
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
   dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
+  dap.debugger.GetBroadcaster().AddListener(listener, eBroadcastBitError |
+                                                          eBroadcastBitWarning);
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -222,6 +225,15 @@ static void EventThreadFunction(DAP &dap) {
             dap.SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
+      } else if (event_mask & eBroadcastBitError ||
+                 event_mask & eBroadcastBitWarning) {
+        SBStructuredData data = SBDebugger::GetDiagnosticFromEvent(event);
+        if (!data.IsValid())
+          continue;
+        std::string type = GetStringValue(data.GetValueForKey("type"));
+        std::string message = GetStringValue(data.GetValueForKey("message"));
+        dap.SendOutput(OutputType::Important,
+                       llvm::formatv("{0}: {1}", type, message).str());
       } else if (event.BroadcasterMatchesRef(dap.broadcaster)) {
         if (event_mask & eBroadcastBitStopEventThread) {
           done = true;

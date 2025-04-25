@@ -162,6 +162,9 @@ GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 /// Take ownership of the stored error.
 llvm::Error ToError(const lldb::SBError &error);
 
+/// Provides the string value if this data structure is a string type.
+std::string GetStringValue(const lldb::SBStructuredData &data);
+
 } // namespace lldb_dap
 
 #endif
