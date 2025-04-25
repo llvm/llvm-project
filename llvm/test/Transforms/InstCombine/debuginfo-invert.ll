@@ -16,7 +16,7 @@ define i32 @test(i32 noundef %x, i32 noundef %y) !dbg !10 {
 entry:
   %cmp = icmp ne i32 %x, 0
   %conv = zext i1 %cmp to i32
-  #dbg_value(i32 %conv, !15, !DIExpression(), !16)
+    #dbg_value(i32 %conv, !15, !DIExpression(), !16)
   %and = and i32 %conv, %y
   ret i32 %and
 }
