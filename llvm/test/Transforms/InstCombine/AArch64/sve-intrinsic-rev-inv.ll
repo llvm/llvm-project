@@ -7,9 +7,7 @@ define <vscale x 16 x i1> @aarch64_sve_rev_inv(<vscale x 16 x i1> %0) #0{
 ; CHECK-LABEL: define <vscale x 16 x i1> @aarch64_sve_rev_inv(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.nxv16i1(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.nxv16i1(<vscale x 16 x i1> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 ;
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev(<vscale x 16 x i1> %0)
@@ -21,9 +19,7 @@ define <vscale x 16 x i1> @aarch64_sve_rev_b16_inv(<vscale x 16 x i1> %0) #0{
 ; CHECK-LABEL: define <vscale x 16 x i1> @aarch64_sve_rev_b16_inv(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b16(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b16(<vscale x 16 x i1> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 ;
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b16(<vscale x 16 x i1> %0)
@@ -35,9 +31,7 @@ define <vscale x 16 x i1> @aarch64_sve_rev_b32_inv(<vscale x 16 x i1> %0) #0{
 ; CHECK-LABEL: define <vscale x 16 x i1> @aarch64_sve_rev_b32_inv(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b32(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b32(<vscale x 16 x i1> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 ;
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b32(<vscale x 16 x i1> %0)
@@ -49,9 +43,7 @@ define <vscale x 16 x i1> @aarch64_sve_rev_b64_inv(<vscale x 16 x i1> %0)#0 {
 ; CHECK-LABEL: define <vscale x 16 x i1> @aarch64_sve_rev_b64_inv(
 ; CHECK-SAME: <vscale x 16 x i1> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b64(<vscale x 16 x i1> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b64(<vscale x 16 x i1> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
 ;
 entry:
   %1 = call <vscale x 16 x i1> @llvm.aarch64.sve.rev.b64(<vscale x 16 x i1> %0)
@@ -63,9 +55,7 @@ entry:
 define <vscale x 4 x i32> @aarch64_sve_revb_inv(<vscale x 4 x i32> %pred, <vscale x 4 x i1> %passthru, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @aarch64_sve_revb_inv(
 ; CHECK-SAME: <vscale x 4 x i32> [[PRED:%.*]], <vscale x 4 x i1> [[PASSTHRU:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> [[PRED]], <vscale x 4 x i1> [[PASSTHRU]], <vscale x 4 x i32> [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> [[PRED]], <vscale x 4 x i1> [[PASSTHRU]], <vscale x 4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> %pred, <vscale x 4 x i1> %passthru, <vscale x 4 x i32> %a)
   %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.revb.nxv4i32(<vscale x 4 x i32> %pred, <vscale x 4 x i1> %passthru, <vscale x 4 x i32> %1)
@@ -75,9 +65,7 @@ define <vscale x 4 x i32> @aarch64_sve_revb_inv(<vscale x 4 x i32> %pred, <vscal
 define <vscale x 16 x i8> @aarch64_sve_revd_inv(<vscale x 16 x i8> %pred, <vscale x 16 x i1> %passthru, <vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @aarch64_sve_revd_inv(
 ; CHECK-SAME: <vscale x 16 x i8> [[PRED:%.*]], <vscale x 16 x i1> [[PASSTHRU:%.*]], <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> [[PRED]], <vscale x 16 x i1> [[PASSTHRU]], <vscale x 16 x i8> [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> [[PRED]], <vscale x 16 x i1> [[PASSTHRU]], <vscale x 16 x i8> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[A]]
 ;
   %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> %pred, <vscale x 16 x i1> %passthru, <vscale x 16 x i8> %a)
   %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.revd.nxv16i8(<vscale x 16 x i8> %pred, <vscale x 16 x i1> %passthru, <vscale x 16 x i8> %1)
@@ -87,9 +75,7 @@ define <vscale x 16 x i8> @aarch64_sve_revd_inv(<vscale x 16 x i8> %pred, <vscal
 define <vscale x 4 x i32> @aarch64_sve_revh_inv(<vscale x 4 x i32> %pred, <vscale x 4 x i1> %passthru, <vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @aarch64_sve_revh_inv(
 ; CHECK-SAME: <vscale x 4 x i32> [[PRED:%.*]], <vscale x 4 x i1> [[PASSTHRU:%.*]], <vscale x 4 x i32> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> [[PRED]], <vscale x 4 x i1> [[PASSTHRU]], <vscale x 4 x i32> [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> [[PRED]], <vscale x 4 x i1> [[PASSTHRU]], <vscale x 4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A]]
 ;
   %1 = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> %pred, <vscale x 4 x i1> %passthru, <vscale x 4 x i32> %a)
   %2 = call <vscale x 4 x i32> @llvm.aarch64.sve.revh.nxv4i32(<vscale x 4 x i32> %pred, <vscale x 4 x i1> %passthru, <vscale x 4 x i32> %1)
@@ -99,9 +85,7 @@ define <vscale x 4 x i32> @aarch64_sve_revh_inv(<vscale x 4 x i32> %pred, <vscal
 define <vscale x 2 x i64> @aarch64_sve_revw_inv(<vscale x 2 x i64> %pred, <vscale x 2 x i1> %passthru, <vscale x 2 x i64> %a) #0 {
 ; CHECK-LABEL: define <vscale x 2 x i64> @aarch64_sve_revw_inv(
 ; CHECK-SAME: <vscale x 2 x i64> [[PRED:%.*]], <vscale x 2 x i1> [[PASSTHRU:%.*]], <vscale x 2 x i64> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> [[PRED]], <vscale x 2 x i1> [[PASSTHRU]], <vscale x 2 x i64> [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> [[PRED]], <vscale x 2 x i1> [[PASSTHRU]], <vscale x 2 x i64> [[TMP1]])
-; CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP2]]
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[A]]
 ;
   %1 = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> %pred, <vscale x 2 x i1> %passthru, <vscale x 2 x i64> %a)
   %2 = call <vscale x 2 x i64> @llvm.aarch64.sve.revw.nxv2i64(<vscale x 2 x i64> %pred, <vscale x 2 x i1> %passthru, <vscale x 2 x i64> %1)
