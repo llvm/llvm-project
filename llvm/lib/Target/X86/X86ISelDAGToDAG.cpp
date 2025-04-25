@@ -897,20 +897,29 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     Chain = Chain.getOperand(0);
   }
 
-  if (!Chain.getNumOperands())
+  while (true) {
+    if (!Chain.getNumOperands())
+      return false;
+    // Since we are not checking for AA here, conservatively abort if the chain
+    // writes to memory. It's not safe to move the callee (a load) across a store.
+    if (isa<MemSDNode>(Chain.getNode()) &&
+        cast<MemSDNode>(Chain.getNode())->writeMem())
+      return false;
+
+    if (Chain.getOperand(0).getNode() == Callee.getNode())
+      return true;
+    if (Chain.getOperand(0).getOpcode() == ISD::TokenFactor &&
+        Callee.getValue(1).isOperandOf(Chain.getOperand(0).getNode()) &&
+        Callee.getValue(1).hasOneUse())
+      return true;
+
+    // Look past CopyToReg's.
+    if (Chain.getOperand(0).getOpcode() == ISD::CopyToReg) {
+      Chain = Chain.getOperand(0);
+      continue;
+    }
     return false;
-  // Since we are not checking for AA here, conservatively abort if the chain
-  // writes to memory. It's not safe to move the callee (a load) across a store.
-  if (isa<MemSDNode>(Chain.getNode()) &&
-      cast<MemSDNode>(Chain.getNode())->writeMem())
-    return false;
-  if (Chain.getOperand(0).getNode() == Callee.getNode())
-    return true;
-  if (Chain.getOperand(0).getOpcode() == ISD::TokenFactor &&
-      Callee.getValue(1).isOperandOf(Chain.getOperand(0).getNode()) &&
-      Callee.getValue(1).hasOneUse())
-    return true;
-  return false;
+  }
 }
 
 static bool isEndbrImm64(uint64_t Imm) {
