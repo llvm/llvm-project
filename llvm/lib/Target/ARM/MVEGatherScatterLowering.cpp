@@ -1099,8 +1099,7 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
 
   // The instruction has now been "absorbed" into the phi value
   Offs->replaceAllUsesWith(NewPhi);
-  if (Offs->use_empty())
-    Offs->eraseFromParent();
+  Offs->eraseFromParent();
   // Clean up the old increment in case it's unused because we built a new
   // one
   if (IncInstruction->use_empty())
