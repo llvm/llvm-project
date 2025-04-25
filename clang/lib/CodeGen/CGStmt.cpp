@@ -560,6 +560,7 @@ void CodeGenFunction::EmitNoLoopXteamScanPhaseTwoCode(
 
     Address XteamRedSumArg1 = GetAddrOfLocalVar((*Args)[RVI.ArgPos]);
     llvm::Value *DTeamVals = Builder.CreateLoad(XteamRedSumArg1);
+    (void)DTeamVals;
 
     Address XteamRedSumArg3 = GetAddrOfLocalVar((*Args)[RVI.ArgPos + 2]);
     llvm::Value *DScanStorage = Builder.CreateLoad(XteamRedSumArg3);
@@ -681,7 +682,7 @@ void CodeGenFunction::EmitXteamRedCode(const OMPExecutableDirective &D,
     // EmitStmt(CapturedForStmt);
 
     // Now emit the calls to xteam_sum, one for each reduction variable
-    EmitXteamRedSum(CapturedForStmt, *Args, CGM.getXteamRedBlockSize(D));
+    EmitXteamRedOperation(CapturedForStmt, *Args, CGM.getXteamRedBlockSize(D));
   }
 
   // Xteam codegen done
@@ -705,14 +706,9 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
             RedVarType->isIntegerTy()) &&
            "Unhandled type");
     llvm::AllocaInst *XteamRedInst = Builder.CreateAlloca(RedVarType);
-    llvm::Value *InitVal = nullptr;
-    if (RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
-        RedVarType->isHalfTy() || RedVarType->isBFloatTy())
-      InitVal = llvm::ConstantFP::getZero(RedVarType);
-    else if (RedVarType->isIntegerTy())
-      InitVal = llvm::ConstantInt::get(RedVarType, 0);
-    else
-      llvm_unreachable("Unhandled type");
+    // The initial value (referred to as the sentinel value) of the local
+    // reduction variable depends on the opcode.
+    llvm::Value *InitVal = getXteamRedSentinel(RedVarType, Itr->second.Opcode);
     Address XteamRedVarAddr(
         XteamRedInst, RedVarType,
         getContext().getTypeAlignInChars(RedVarExpr->getType()));
@@ -725,11 +721,56 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
   }
 }
 
-// Emit __kmpc_xteam_sum(*xteam_red_local_addr, red_var_addr) for each reduction
-// in the helper map for the given For Stmt
-void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
-                                      const FunctionArgList &Args,
-                                      int BlockSize) {
+llvm::Value *
+CodeGenFunction::getXteamRedSentinel(llvm::Type *RedVarType,
+                                     CodeGenModule::XteamRedOpKind Opcode) {
+  assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
+          RedVarType->isHalfTy() || RedVarType->isBFloatTy() ||
+          RedVarType->isIntegerTy()) &&
+         "Unhandled type");
+  assert(Opcode != CodeGenModule::XR_OP_unknown &&
+         "Unexpected Xteam reduction opcode");
+  if (RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
+      RedVarType->isHalfTy() || RedVarType->isBFloatTy()) {
+    if (Opcode == CodeGenModule::XR_OP_add)
+      return llvm::ConstantFP::getZero(RedVarType);
+    else if (Opcode == CodeGenModule::XR_OP_min)
+      return llvm::ConstantFP::getInfinity(RedVarType);
+    else // max operator
+      return llvm::ConstantFP::getInfinity(RedVarType, /*Negative=*/true);
+  } else {
+    // Integer type
+    if (RedVarType->getPrimitiveSizeInBits() == 16)
+      return llvm::ConstantInt::get(Int16Ty,
+                                    Opcode == CodeGenModule::XR_OP_add ? 0
+                                    : Opcode == CodeGenModule::XR_OP_min
+                                        ? std::numeric_limits<int16_t>::max()
+                                        : std::numeric_limits<int16_t>::min());
+    else if (RedVarType->getPrimitiveSizeInBits() == 32)
+      return llvm::ConstantInt::get(Int32Ty,
+                                    Opcode == CodeGenModule::XR_OP_add ? 0
+                                    : Opcode == CodeGenModule::XR_OP_min
+                                        ? std::numeric_limits<int32_t>::max()
+                                        : std::numeric_limits<int32_t>::min());
+    else {
+      assert(RedVarType->getPrimitiveSizeInBits() == 64 &&
+             "Expected a 64-bit integer");
+      return llvm::ConstantInt::get(Int64Ty,
+                                    Opcode == CodeGenModule::XR_OP_add ? 0
+                                    : Opcode == CodeGenModule::XR_OP_min
+                                        ? std::numeric_limits<int64_t>::max()
+                                        : std::numeric_limits<int64_t>::min());
+    }
+  }
+  llvm_unreachable(
+      "Unexpected type or opcode in Xteam reduction sentinel generation");
+}
+
+// Emit a call to the DeviceRTL Xteam reduction function for each reduction
+// variable in the helper map for the given For Stmt.
+void CodeGenFunction::EmitXteamRedOperation(const ForStmt *FStmt,
+                                            const FunctionArgList &Args,
+                                            int BlockSize) {
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
 
@@ -759,10 +800,12 @@ void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
     const Expr *OrigRedVarExpr = RVI.RedVarExpr;
     const DeclRefExpr *DRE = cast<DeclRefExpr>(OrigRedVarExpr);
     Address OrigRedVarAddr = EmitLValue(DRE).getAddress();
-    // Pass in OrigRedVarAddr.getPointer to kmpc_xteam_sum
-    RT.getXteamRedSum(*this, Builder.CreateLoad(RVI.RedVarAddr),
-                      OrigRedVarAddr.emitRawPointer(*this), DTeamVals, DTeamsDonePtr,
-                      ThreadStartIdx, NumTeams, BlockSize, IsFast);
+    // Note that fast Xteam reduction is available only for sum operator.
+    RT.getXteamRedOperation(*this, Builder.CreateLoad(RVI.RedVarAddr),
+                            OrigRedVarAddr.emitRawPointer(*this), DTeamVals,
+                            DTeamsDonePtr, ThreadStartIdx, NumTeams, BlockSize,
+                            RVI.Opcode,
+                            IsFast && RVI.Opcode == CodeGenModule::XR_OP_add);
   }
 }
 
@@ -850,17 +893,12 @@ void CodeGenFunction::EmitXteamScanPhaseTwo(const ForStmt *FStmt,
       DSegmentVals = DScanStorage;
     }
 
-    const Expr *OrigRedVarExpr = RVI.RedVarExpr;
-    const DeclRefExpr *DRE = cast<DeclRefExpr>(OrigRedVarExpr);
-    Address OrigRedVarAddr = EmitLValue(DRE).getAddress();
     RT.getXteamScanPhaseTwo(*this, Builder.CreateLoad(RVI.RedVarAddr),
                             SegmentSize, DTeamVals, DScanStorage, DSegmentVals,
                             ThreadStartIdx, BlockSize, IsInclusiveScan);
   }
 }
 
-// Emit reduction into local aggregator for a statement within the reduced loop
-// where applicable
 bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   if (CGM.getCurrentXteamRedStmt() == nullptr)
     return false;
@@ -884,6 +922,10 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   const CodeGenModule::XteamRedVarMap &RedVarMap =
       CGM.getXteamRedVarMap(CGM.getCurrentXteamRedStmt());
 
+  // Currently, there is limited support in Xteam reduction for calls with
+  // reduction variables in arguments. Either the call has to be at the
+  // statement level or it has to be a call to a builtin function (e.g. min/max)
+  // on the rhs of an assignment statement. Handle call at the statement level.
   if (isa<CallExpr>(S)) {
     const CallExpr *CE = cast<CallExpr>(S);
     assert(CE && "Unexpected null call expression");
@@ -964,43 +1006,131 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
     RedRHSExpr = RedBO->getRHS()->IgnoreImpCasts();
   } else {
     const Expr *L1RhsExpr = RedBO->getRHS()->IgnoreImpCasts();
-    assert(isa<BinaryOperator>(L1RhsExpr) &&
+    assert((isa<BinaryOperator>(L1RhsExpr) || isa<CallExpr>(L1RhsExpr) ||
+            isa<PseudoObjectExpr>(L1RhsExpr)) &&
            "Expected rhs to be a binary operator");
-    const BinaryOperator *L2BO = cast<BinaryOperator>(L1RhsExpr);
-    auto OpcL2BO = L2BO->getOpcode();
-    assert(OpcL2BO == BO_Add && "Unexpected operator");
-    // If the redvar is lhs, use the rhs in the generated reduction statement
-    // and vice-versa.
-    if (CGM.isXteamRedVarExpr(L2BO->getLHS()->IgnoreImpCasts(), RedVarDecl))
-      RedRHSExpr = L2BO->getRHS();
-    else if (CGM.isXteamRedVarExpr(L2BO->getRHS()->IgnoreImpCasts(),
-                                   RedVarDecl))
-      RedRHSExpr = L2BO->getLHS();
-    else
-      llvm_unreachable("Unhandled add expression during xteam reduction");
+    if (isa<BinaryOperator>(L1RhsExpr)) {
+      const BinaryOperator *L2BO = cast<BinaryOperator>(L1RhsExpr);
+      auto OpcL2BO = L2BO->getOpcode();
+      assert(OpcL2BO == BO_Add && "Unexpected operator");
+      // If the redvar is lhs, use the rhs in the generated reduction statement
+      // and vice-versa.
+      if (CGM.isXteamRedVarExpr(L2BO->getLHS()->IgnoreImpCasts(), RedVarDecl))
+        RedRHSExpr = L2BO->getRHS();
+      else if (CGM.isXteamRedVarExpr(L2BO->getRHS()->IgnoreImpCasts(),
+                                     RedVarDecl))
+        RedRHSExpr = L2BO->getLHS();
+      else
+        llvm_unreachable("Unhandled add expression during xteam reduction");
+    } else if (isa<CallExpr>(L1RhsExpr)) {
+      const CallExpr *Call = cast<CallExpr>(L1RhsExpr);
+      assert(CGM.getStatusOptKernelBuiltin(Call) == CodeGenModule::NxSuccess &&
+             "Expected a call to an Xteam supported builtin");
+      EmitXteamRedStmtForBuiltinCall(Call, RedVarDecl, RedVarMap);
+      return true;
+    } else {
+      assert(isa<PseudoObjectExpr>(L1RhsExpr) && "Expected a PseudoObjectExpr");
+      auto [Status, ReturnExpr] = CGM.getStatusXteamSupportedPseudoObject(
+          cast<PseudoObjectExpr>(L1RhsExpr));
+      assert(Status == CodeGenModule::NxSuccess &&
+             "Expected call expression from analysis of PseudoObjectExpr");
+      const CallExpr *Call = cast<CallExpr>(ReturnExpr);
+      assert(CGM.getStatusOptKernelBuiltin(Call) == CodeGenModule::NxSuccess &&
+             "Expected a call to an Xteam supported builtin");
+      EmitXteamRedStmtForBuiltinCall(Call, RedVarDecl, RedVarMap);
+      return true;
+    }
   }
   assert(RedRHSExpr != nullptr && "Did not find a valid reduction rhs");
-  llvm::Value *RHSValue = EmitScalarExpr(RedRHSExpr);
-  Address XteamRedLocalAddr = RedVarMap.find(RedVarDecl)->second.RedVarAddr;
-  // Compute *xteam_red_local_addr + rhs_value
+
+  EmitLocalReductionStmt(RedRHSExpr, RedVarDecl, RedVarMap,
+                         CodeGenModule::XR_OP_add);
+  return true;
+}
+
+void CodeGenFunction::EmitLocalReductionStmt(
+    const Expr *E, const VarDecl *RedVarDecl,
+    const CodeGenModule::XteamRedVarMap &RedVarMap,
+    CodeGenModule::XteamRedOpKind OpKind) {
+  // For add, generate *xteam_local = *xteam_local + rhs_value
+  // For min/max, generate *xteam_local = min/max(*xteam_local, other_operand)
+
+  // First, generate the other operand.
+  llvm::Value *RHSValue = EmitScalarExpr(E);
+  // Now handle the local reduction variable accesses.
+  auto It = RedVarMap.find(RedVarDecl);
+  assert(It != RedVarMap.end() && "Variable must be found in reduction map");
+  Address XteamRedLocalAddr = It->second.RedVarAddr;
+  llvm::Type *RedVarType = ConvertTypeForMem(It->second.RedVarExpr->getType());
+  llvm::Value *Op1 = Builder.CreateLoad(XteamRedLocalAddr);
   llvm::Value *RedRHS = nullptr;
-  llvm::Type *RedVarType = ConvertTypeForMem(RedVarDecl->getType());
   if (RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
       RedVarType->isHalfTy() || RedVarType->isBFloatTy()) {
-    auto RHSOp = RHSValue->getType()->isIntegerTy()
-                     ? Builder.CreateSIToFP(RHSValue, RedVarType)
-                     : Builder.CreateFPCast(RHSValue, RedVarType);
-    RedRHS = Builder.CreateFAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSOp);
+    auto Op2 = RHSValue->getType()->isIntegerTy()
+                   ? Builder.CreateSIToFP(RHSValue, RedVarType)
+                   : Builder.CreateFPCast(RHSValue, RedVarType);
+    if (OpKind == CodeGenModule::XR_OP_add)
+      RedRHS = Builder.CreateFAdd(Op1, Op2);
+    else if (OpKind == CodeGenModule::XR_OP_min)
+      RedRHS =
+          Builder.CreateMinNum(Op1, Op2, /*FMFSource=*/nullptr, "xteam.min");
+    else if (OpKind == CodeGenModule::XR_OP_max)
+      RedRHS =
+          Builder.CreateMaxNum(Op1, Op2, /*FMFSource=*/nullptr, "xteam.max");
+    else
+      llvm_unreachable("Unexpected reduction kind");
   } else if (RedVarType->isIntegerTy()) {
-    auto RHSOp = RHSValue->getType()->isIntegerTy()
-                     ? Builder.CreateIntCast(RHSValue, RedVarType, false)
-                     : Builder.CreateFPToSI(RHSValue, RedVarType);
-    RedRHS = Builder.CreateAdd(Builder.CreateLoad(XteamRedLocalAddr), RHSOp);
+    auto Op2 = RHSValue->getType()->isIntegerTy()
+                   ? Builder.CreateIntCast(RHSValue, RedVarType, false)
+                   : Builder.CreateFPToSI(RHSValue, RedVarType);
+    if (OpKind == CodeGenModule::XR_OP_add)
+      RedRHS = Builder.CreateAdd(Op1, Op2);
+    else if (OpKind == CodeGenModule::XR_OP_min)
+      // TODO Fix when unsigned
+      RedRHS = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smin, Op1, Op2,
+                                             nullptr, "xteam.min");
+    else if (OpKind == CodeGenModule::XR_OP_max)
+      // TODO fix when unsigned
+      RedRHS = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax, Op1, Op2,
+                                             nullptr, "xteam.max");
+    else
+      llvm_unreachable("Unexpected reduction kind");
   } else
     llvm_unreachable("Unhandled type");
-  // *xteam_red_local_addr = *xteam_red_local_addr + rhs_value
+  assert(RedRHS && "Right hand side of statement cannot be null");
   Builder.CreateStore(RedRHS, XteamRedLocalAddr);
-  return true;
+}
+
+std::pair<const Expr *, CodeGenModule::XteamRedOpKind>
+CodeGenFunction::ExtractXteamRedRhsExpr(const CallExpr *Call,
+                                        const VarDecl *RedVarDecl) {
+  // Traverse arguments, identifying and ignoring the reduction variable, and
+  // then extracting the other argument.
+  CodeGenModule::XteamRedOpKind Opcode;
+  std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
+  if (CGM.isOptKernelAMDGCNMax(CallName))
+    Opcode = CodeGenModule::XR_OP_max;
+  else if (CGM.isOptKernelAMDGCNMin(CallName))
+    Opcode = CodeGenModule::XR_OP_min;
+  else
+    llvm_unreachable("Epecting either min or max");
+
+  for (unsigned ArgIndex = 0; ArgIndex < Call->getNumArgs(); ++ArgIndex) {
+    const Expr *Arg = Call->getArg(ArgIndex);
+    while (isa<ImplicitCastExpr>(Arg))
+      Arg = cast<ImplicitCastExpr>(Arg)->getSubExpr();
+    if (CGM.isXteamRedVarExpr(Arg, RedVarDecl))
+      continue;
+    return std::make_pair(Call->getArg(ArgIndex), Opcode);
+  }
+  llvm_unreachable("Could not extract expected arg of min/max");
+}
+
+void CodeGenFunction::EmitXteamRedStmtForBuiltinCall(
+    const CallExpr *Call, const VarDecl *RedVarDecl,
+    const CodeGenModule::XteamRedVarMap &RedVarMap) {
+  auto [RhsExpr, Opcode] = ExtractXteamRedRhsExpr(Call, RedVarDecl);
+  EmitLocalReductionStmt(RhsExpr, RedVarDecl, RedVarMap, Opcode);
 }
 
 void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
@@ -1167,6 +1297,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OMPTileDirectiveClass:
     EmitOMPTileDirective(cast<OMPTileDirective>(*S));
+    break;
+  case Stmt::OMPStripeDirectiveClass:
+    EmitOMPStripeDirective(cast<OMPStripeDirective>(*S));
     break;
   case Stmt::OMPUnrollDirectiveClass:
     EmitOMPUnrollDirective(cast<OMPUnrollDirective>(*S));
@@ -1438,6 +1571,10 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OpenACCAtomicConstructClass:
     EmitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*S));
+    break;
+  case Stmt::OpenACCCacheConstructClass:
+    EmitOpenACCCacheConstruct(cast<OpenACCCacheConstruct>(*S));
+    break;
   }
 }
 
@@ -1730,6 +1867,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   HLSLControlFlowHintAttr::Spelling flattenOrBranch =
       HLSLControlFlowHintAttr::SpellingNotCalculated;
   const CallExpr *musttail = nullptr;
+  const AtomicAttr *AA = nullptr;
 
   for (const auto *A : S.getAttrs()) {
     switch (A->getKind()) {
@@ -1760,6 +1898,9 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
         Builder.CreateAssumption(AssumptionVal);
       }
     } break;
+    case attr::Atomic:
+      AA = cast<AtomicAttr>(A);
+      break;
     case attr::HLSLControlFlowHint: {
       flattenOrBranch = cast<HLSLControlFlowHintAttr>(A)->getSemanticSpelling();
     } break;
@@ -1771,6 +1912,7 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   SaveAndRestore save_noconvergent(InNoConvergentAttributedStmt, noconvergent);
   SaveAndRestore save_musttail(MustTailCall, musttail);
   SaveAndRestore save_flattenOrBranch(HLSLControlFlowAttr, flattenOrBranch);
+  CGAtomicOptionsRAII AORAII(CGM, AA);
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 
@@ -1848,6 +1990,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       if (CondConstant)
         incrementProfileCounter(&S);
       if (Executed) {
+        MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
@@ -1887,10 +2030,13 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // there is a 'return' within the body, but this is particularly beneficial
   // when one if-stmt is nested within another if-stmt so that all of the MC/DC
   // updates are kept linear and consistent.
-  if (!CGM.getCodeGenOpts().MCDCCoverage)
-    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH);
-  else {
+  if (!CGM.getCodeGenOpts().MCDCCoverage) {
+    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH,
+                         /*ConditionalOp=*/nullptr,
+                         /*ConditionalDecl=*/S.getConditionVariable());
+  } else {
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+    MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
     Builder.CreateCondBr(BoolCondVal, ThenBlock, ElseBlock);
   }
 
@@ -2033,6 +2179,8 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // evaluation of the controlling expression takes place before each
   // execution of the loop body.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+
+  MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
 
   // while(1) is common, avoid extra exit blocks.  Be sure
   // to correctly handle break/continue though.
@@ -2392,6 +2540,9 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
       // C99 6.8.5p2/p4: The first substatement is executed if the expression
       // compares unequal to 0.  The condition must be a scalar type.
       llvm::Value *BoolCondVal = EvaluateExprAsBool(CondExpr);
+
+      MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
+
       llvm::MDNode *Weights =
           createProfileWeightsForLoop(CondExpr, getProfileCount(S.getBody()));
       if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
@@ -2800,7 +2951,7 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
     EmitStopPoint(&S);
 
   for (const auto *I : S.decls())
-    EmitDecl(*I);
+    EmitDecl(*I, /*EvaluateConditionDecl=*/true);
 }
 
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
@@ -3365,7 +3516,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       // Emit the condition variable if needed inside the entire cleanup scope
       // used by this special case for constant folded switches.
       if (S.getConditionVariable())
-        EmitDecl(*S.getConditionVariable());
+        EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/true);
 
       // At this point, we are no longer "within" a switch instance, so
       // we can temporarily enforce this to ensure that any embedded case
@@ -3397,6 +3548,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
+  MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
 
   // Create basic block to hold stuff that comes after switch
   // statement. We also need to create a default block now so that
@@ -3404,6 +3556,19 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
+  if (HLSLControlFlowAttr != HLSLControlFlowHintAttr::SpellingNotCalculated) {
+    llvm::MDBuilder MDHelper(CGM.getLLVMContext());
+    llvm::ConstantInt *BranchHintConstant =
+        HLSLControlFlowAttr ==
+                HLSLControlFlowHintAttr::Spelling::Microsoft_branch
+            ? llvm::ConstantInt::get(CGM.Int32Ty, 1)
+            : llvm::ConstantInt::get(CGM.Int32Ty, 2);
+    llvm::Metadata *Vals[] = {MDHelper.createString("hlsl.controlflow.hint"),
+                              MDHelper.createConstant(BranchHintConstant)};
+    SwitchInsn->setMetadata("hlsl.controlflow.hint",
+                            llvm::MDNode::get(CGM.getLLVMContext(), Vals));
+  }
+
   if (PGO.haveRegionCounts()) {
     // Walk the SwitchCase list to find how many there are.
     uint64_t DefaultCount = 0;
@@ -3714,11 +3879,14 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
 
   // Slap the source location of the inline asm into a !srcloc metadata on the
   // call.
-  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S))
-    Result.setMetadata("srcloc",
-                       getAsmSrcLocInfo(gccAsmStmt->getAsmString(), CGF));
-  else {
-    // At least put the line number on MS inline asm blobs.
+  const StringLiteral *SL;
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S);
+      gccAsmStmt &&
+      (SL = dyn_cast<StringLiteral>(gccAsmStmt->getAsmStringExpr()))) {
+    Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, CGF));
+  } else {
+    // At least put the line number on MS inline asm blobs and GCC asm constexpr
+    // strings.
     llvm::Constant *Loc =
         llvm::ConstantInt::get(CGF.Int64Ty, S.getAsmLoc().getRawEncoding());
     Result.setMetadata("srcloc",
@@ -3833,9 +4001,9 @@ static void EmitHipStdParUnsupportedAsm(CodeGenFunction *CGF,
                                         const AsmStmt &S) {
   constexpr auto Name = "__ASM__hipstdpar_unsupported";
 
-  StringRef Asm;
+  std::string Asm;
   if (auto GCCAsm = dyn_cast<GCCAsmStmt>(&S))
-    Asm = GCCAsm->getAsmString()->getString();
+    Asm = GCCAsm->getAsmString();
 
   auto &Ctx = CGF->CGM.getLLVMContext();
 
@@ -4178,7 +4346,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
   // Clobbers
   for (unsigned i = 0, e = S.getNumClobbers(); i != e; i++) {
-    StringRef Clobber = S.getClobber(i);
+    std::string Clobber = S.getClobber(i);
 
     if (Clobber == "memory")
       ReadOnly = ReadNone = false;
@@ -4199,7 +4367,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
         if (Constraints.find("=&A") != std::string::npos)
           continue;
         std::string::size_type position1 =
-            Constraints.find("={" + Clobber.str() + "}");
+            Constraints.find("={" + Clobber + "}");
         if (position1 != std::string::npos) {
           Constraints.insert(position1 + 1, "&");
           continue;

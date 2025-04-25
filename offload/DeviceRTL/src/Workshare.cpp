@@ -739,28 +739,6 @@ void __kmpc_distribute_static_init_8u(IdentTy *loc, int32_t global_tid,
 
 void __kmpc_for_static_fini(IdentTy *loc, int32_t global_tid) {}
 
-#ifndef FORTRAN_NO_LONGER_NEEDS
-void __kmpc_for_static_init_4_simple_spmd(int64_t *, int32_t global_tid,
-                                          int32_t schedtype, int32_t *plastiter,
-                                          int32_t *plower, int32_t *pupper,
-                                          int32_t *pstride, int32_t incr,
-                                          int32_t chunk) {
-
-  omptarget_nvptx_LoopSupport<int32_t, int32_t>::for_static_init(
-      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      /*IsSPMDExecutionMode=*/true);
-}
-
-void __kmpc_for_static_init_8_simple_spmd(int64_t *, int32_t global_tid,
-                                          int32_t schedtype, int32_t *plastiter,
-                                          int64_t *plower, int64_t *pupper,
-                                          int64_t *pstride, int64_t incr,
-                                          int64_t chunk) {
-  omptarget_nvptx_LoopSupport<int64_t, int64_t>::for_static_init(
-      global_tid, schedtype, plastiter, plower, pupper, pstride, chunk,
-      /*IsSPMDExecutionMode=*/true);
-}
-#endif
 void __kmpc_distribute_static_fini(IdentTy *loc, int32_t global_tid) {}
 }
 
@@ -900,7 +878,6 @@ public:
     Ty ThreadChunk = 0;
     Ty NumThreads = 1;
     Ty TId = 0;
-    ASSERT(TId == mapping::getThreadIdInBlock(), "Bad thread id");
 
     // All teams need to participate.
     Ty NumBlocks = mapping::getNumberOfBlocksInKernel();
@@ -992,19 +969,19 @@ public:
           IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,       \
           TY num_threads, TY block_chunk, TY thread_chunk) {                   \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
-        loc, fn, arg, num_iters + 1, num_threads, block_chunk, thread_chunk);  \
+        loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk);      \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void                                  \
       __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),  \
                                         void *arg, TY num_iters,               \
                                         TY block_chunk) {                      \
-    ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters + 1,       \
+    ompx::StaticLoopChunker<TY>::Distribute(loc, fn, arg, num_iters,           \
                                             block_chunk);                      \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void __kmpc_for_static_loop##BW(      \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
       TY num_threads, TY thread_chunk) {                                       \
-    ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters + 1, num_threads, \
+    ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters, num_threads,     \
                                      thread_chunk);                            \
   }
 

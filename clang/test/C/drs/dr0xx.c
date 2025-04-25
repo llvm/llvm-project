@@ -139,7 +139,9 @@ int dr010_c = sizeof(dr010_t); /* expected-error {{invalid application of 'sizeo
  * Note: DR034 has a question resolved by DR011 and another question where the
  * result is UB.
  */
-static int dr011_a[]; /* expected-warning {{tentative array definition assumed to have one element}} */
+static int dr011_a[]; /* expected-warning {{tentative array definition assumed to have one element}}
+                         expected-warning {{tentative definition of variable with internal linkage has incomplete array type 'int[]'}}
+                       */
 void dr011(void) {
   extern int i[];
   {

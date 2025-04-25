@@ -1,3 +1,11 @@
+//===- spirv-translator.c -------------------------------------------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "amd_comgr.h"
 #include "common.h"
 #include <stdio.h>
@@ -31,8 +39,8 @@ int main(int argc, char *argv[]) {
   amd_comgr_(create_action_info(&DataAction));
   amd_comgr_(create_data_set(&DataSetBc));
 
-  amd_comgr_(do_action(AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC,
-                      DataAction, DataSetSpirv, DataSetBc));
+  amd_comgr_(do_action(AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC, DataAction,
+                       DataSetSpirv, DataSetBc));
 
   amd_comgr_(action_data_count(DataSetBc, AMD_COMGR_DATA_KIND_BC, &Count));
 
@@ -46,8 +54,8 @@ int main(int argc, char *argv[]) {
   // Write bitcode to file
   amd_comgr_data_t DataSpirvBc;
 
-  amd_comgr_(action_data_get_data(
-      DataSetBc, AMD_COMGR_DATA_KIND_BC, 0, &DataSpirvBc));
+  amd_comgr_(
+      action_data_get_data(DataSetBc, AMD_COMGR_DATA_KIND_BC, 0, &DataSpirvBc));
 
   dumpData(DataSpirvBc, argv[3]);
 

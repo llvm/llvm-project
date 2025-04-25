@@ -112,15 +112,15 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                       const TargetRegisterInfo *TRI,
                                       const TargetInstrInfo *TII,
                                       const TargetLowering &TLI,
-                                      unsigned &PhysReg, int &Cost) {
+                                      MCRegister &PhysReg, int &Cost) {
   if (Op != 2 || User->getOpcode() != ISD::CopyToReg)
     return;
 
-  unsigned Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
+  Register Reg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
   if (TLI.checkForPhysRegDependency(Def, User, Op, TRI, TII, PhysReg, Cost))
     return;
 
-  if (Register::isVirtualRegister(Reg))
+  if (Reg.isVirtual())
     return;
 
   unsigned ResNo = User->getOperand(2).getResNo();
@@ -133,7 +133,7 @@ static void CheckForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
       PhysReg = Reg;
   }
 
-  if (PhysReg != 0) {
+  if (PhysReg) {
     const TargetRegisterClass *RC =
         TRI->getMinimalPhysRegClass(Reg, Def->getSimpleValueType(ResNo));
     Cost = RC->getCopyCost();
@@ -487,20 +487,19 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
         assert(OpVT != MVT::Glue && "Glued nodes should be in same sunit!");
         bool isChain = OpVT == MVT::Other;
 
-        unsigned PhysReg = 0;
+        MCRegister PhysReg;
         int Cost = 1;
         // Determine if this is a physical register dependency.
         const TargetLowering &TLI = DAG->getTargetLoweringInfo();
         CheckForPhysRegDependency(OpN, N, i, TRI, TII, TLI, PhysReg, Cost);
-        assert((PhysReg == 0 || !isChain) &&
-               "Chain dependence via physreg data?");
+        assert((!PhysReg || !isChain) && "Chain dependence via physreg data?");
         // FIXME: See ScheduleDAGSDNodes::EmitCopyFromReg. For now, scheduler
         // emits a copy from the physical register to a virtual register unless
         // it requires a cross class copy (cost < 0). That means we are only
         // treating "expensive to copy" register dependency as physical register
         // dependency. This may change in the future though.
         if (Cost >= 0 && !StressSched)
-          PhysReg = 0;
+          PhysReg = MCRegister();
 
         // If this is a ctrl dep, latency is 1.
         unsigned OpLatency = isChain ? 1 : OpSU->Latency;
@@ -664,8 +663,8 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
       TII->getOperandLatency(InstrItins, Def, DefIdx, Use, OpIdx);
   if (Latency > 1U && Use->getOpcode() == ISD::CopyToReg &&
       !BB->succ_empty()) {
-    unsigned Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
-    if (Register::isVirtualRegister(Reg))
+    Register Reg = cast<RegisterSDNode>(Use->getOperand(1))->getReg();
+    if (Reg.isVirtual())
       // This copy is a liveout value. It is likely coalesced, so reduce the
       // latency so not to penalize the def.
       // FIXME: need target specific adjustment here?
@@ -1066,62 +1065,6 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 
       LastOrder = Order;
     }
-
-    std::stable_sort(DAG->DbgDefKillBegin(), DAG->DbgDefKillEnd(),
-                     [](const SDDbgDefKill *LHS, const SDDbgDefKill *RHS) {
-                       return LHS->getOrder() < RHS->getOrder();
-                     });
-
-    SDDbgInfo::DbgDefKillIterator DDKI = DAG->DbgDefKillBegin();
-    SDDbgInfo::DbgDefKillIterator DDKE = DAG->DbgDefKillEnd();
-    // Now emit the rest according to source order.
-    LastOrder = 0;
-    for (const auto &InstrOrder : Orders) {
-      unsigned Order = InstrOrder.first;
-      MachineInstr *MI = InstrOrder.second;
-      if (!MI)
-        continue;
-
-      // Insert all SDDbgDefKill's whose order(s) are before "Order".
-      for (; DDKI != DDKE && (*DDKI)->getOrder() >= LastOrder &&
-             (*DDKI)->getOrder() < Order;
-           ++DDKI) {
-
-        MachineInstr *DbgMI = Emitter.EmitDbgDefKill(*DDKI, VRBaseMap);
-        if (DbgMI) {
-          if (!LastOrder) {
-
-            // Insert to start of the BB (after PHIs).
-            BB->insert(BBBegin, DbgMI);
-          } else {
-            // Insert at the instruction, which may be in a different
-            // block, if the block was split by a custom inserter.
-            MachineBasicBlock::iterator Pos = MI;
-            MI->getParent()->insert(Pos, DbgMI);
-          }
-        }
-      }
-      if (DDKI == DDKE)
-        break;
-
-      LastOrder = Order;
-    }
-
-    // Add trailing DbgDefKill's before the terminator. FIXME: May want to add
-    // some of them before one or more conditional branches?
-    SmallVector<MachineInstr *, 8> DbgDKMIs;
-    for (; DDKI != DDKE; ++DDKI) {
-      if ((*DDKI)->isEmitted())
-        continue;
-      assert((*DDKI)->getOrder() >= LastOrder &&
-             "emitting DBG_VALUE out of order");
-      if (MachineInstr *DbgMI = Emitter.EmitDbgDefKill(*DDKI, VRBaseMap))
-        DbgDKMIs.push_back(DbgMI);
-    }
-
-    InsertBB = Emitter.getBlock();
-    Pos = InsertBB->getFirstTerminator();
-    InsertBB->insert(Pos, DbgDKMIs.begin(), DbgDKMIs.end());
   }
 
   InsertPos = Emitter.getInsertPos();

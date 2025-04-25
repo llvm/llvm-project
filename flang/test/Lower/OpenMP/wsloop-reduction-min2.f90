@@ -41,7 +41,7 @@ end program
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
 ! CHECK:                 %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFEr"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 fir.store %[[VAL_10]] to %[[VAL_5]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_10]] to %[[VAL_5]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_12:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 ! CHECK:                 hlfir.assign %[[VAL_12]] to %[[VAL_11]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.yield

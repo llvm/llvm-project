@@ -104,15 +104,19 @@ bool SymbolContext::DumpStopContext(
 
     if (addr_t file_addr = addr.GetFileAddress();
         file_addr != LLDB_INVALID_ADDRESS) {
-      const addr_t function_offset =
-          file_addr - function->GetAddress().GetFileAddress();
+      // Avoiding signed arithmetic due to UB in -INT_MAX.
+      const char sign =
+          file_addr >= function->GetAddress().GetFileAddress() ? '+' : '-';
+      addr_t offset = file_addr - function->GetAddress().GetFileAddress();
+      if (sign == '-')
+        offset = -offset;
       if (!show_function_name) {
         // Print +offset even if offset is 0
         dumped_something = true;
-        s->Printf("+%" PRIu64 ">", function_offset);
-      } else if (function_offset) {
+        s->Format("{0}{1}>", sign, offset);
+      } else if (offset) {
         dumped_something = true;
-        s->Printf(" + %" PRIu64, function_offset);
+        s->Format(" {0} {1}", sign, offset);
       }
     }
 
@@ -351,8 +355,8 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
 
   if ((scope & eSymbolContextFunction) && (function != nullptr)) {
-    if (range_idx == 0) {
-      range = function->GetAddressRange();
+    if (range_idx < function->GetAddressRanges().size()) {
+      range = function->GetAddressRanges()[range_idx];
       return true;
     }
   }
@@ -866,6 +870,36 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
   }
 
   return nullptr; // no error; we just didn't find anything
+}
+
+char const *SymbolContext::GetPossiblyInlinedFunctionName(
+    Mangled::NamePreference mangling_preference) const {
+  const char *name = nullptr;
+  if (function)
+    name = function->GetMangled().GetName(mangling_preference).AsCString();
+  else if (symbol)
+    name = symbol->GetMangled().GetName(mangling_preference).AsCString();
+
+  if (!block)
+    return name;
+
+  const Block *inline_block = block->GetContainingInlinedBlock();
+  if (!inline_block)
+    return name;
+
+  const InlineFunctionInfo *inline_info =
+      inline_block->GetInlinedFunctionInfo();
+  if (!inline_info)
+    return name;
+
+  // If we do have an inlined frame name, return that.
+  if (char const *inline_name =
+          inline_info->GetMangled().GetName(mangling_preference).AsCString())
+    return inline_name;
+
+  // Sometimes an inline frame may not have mangling information,
+  // but does have a valid name.
+  return inline_info->GetName().AsCString();
 }
 
 //

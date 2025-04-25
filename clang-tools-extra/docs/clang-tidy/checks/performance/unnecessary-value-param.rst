@@ -54,6 +54,10 @@ Will become:
     Field = std::move(Value);
   }
 
+Because the fix-it needs to change the signature of the function, it may break
+builds if the function is used in multiple translation units or some codes
+depends on funcion signatures.
+
 Options
 -------
 

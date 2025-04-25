@@ -111,6 +111,8 @@ std::string OHOS::getMultiarchTriple(const llvm::Triple &T) const {
     return "x86_64-linux-ohos";
   case llvm::Triple::aarch64:
     return "aarch64-linux-ohos";
+  case llvm::Triple::loongarch64:
+    return "loongarch64-linux-ohos";
   }
   return T.str();
 }
@@ -339,7 +341,7 @@ std::string OHOS::getDynamicLinker(const ArgList &Args) const {
 }
 
 std::string OHOS::getCompilerRT(const ArgList &Args, StringRef Component,
-                                FileType Type) const {
+                                FileType Type, bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, "lib", getMultiarchTriple(getTriple()),
                           SelectedMultilib.gccSuffix());
@@ -368,7 +370,9 @@ void OHOS::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-z");
   CmdArgs.push_back("relro");
   CmdArgs.push_back("-z");
-  CmdArgs.push_back("max-page-size=4096");
+  CmdArgs.push_back(getArch() == llvm::Triple::loongarch64
+                        ? "max-page-size=16384"
+                        : "max-page-size=4096");
   // .gnu.hash section is not compatible with the MIPS target
   if (getArch() != llvm::Triple::mipsel)
     CmdArgs.push_back("--hash-style=both");

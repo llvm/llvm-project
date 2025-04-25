@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
@@ -146,24 +147,20 @@ Address CodeGenFunction::LoadCXXThisAddress() {
 /// Emit the address of a field using a member data pointer.
 ///
 /// \param E Only used for emergency diagnostics
-Address
-CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
-                                                 llvm::Value *memberPtr,
-                                      const MemberPointerType *memberPtrType,
-                                                 LValueBaseInfo *BaseInfo,
-                                                 TBAAAccessInfo *TBAAInfo) {
+Address CodeGenFunction::EmitCXXMemberDataPointerAddress(
+    const Expr *E, Address base, llvm::Value *memberPtr,
+    const MemberPointerType *memberPtrType, bool IsInBounds,
+    LValueBaseInfo *BaseInfo, TBAAAccessInfo *TBAAInfo) {
   // Ask the ABI to compute the actual address.
-  llvm::Value *ptr =
-    CGM.getCXXABI().EmitMemberDataPointerAddress(*this, E, base,
-                                                 memberPtr, memberPtrType);
+  llvm::Value *ptr = CGM.getCXXABI().EmitMemberDataPointerAddress(
+      *this, E, base, memberPtr, memberPtrType, IsInBounds);
 
   QualType memberType = memberPtrType->getPointeeType();
   CharUnits memberAlign =
       CGM.getNaturalTypeAlignment(memberType, BaseInfo, TBAAInfo);
-  memberAlign =
-    CGM.getDynamicOffsetAlignment(base.getAlignment(),
-                            memberPtrType->getClass()->getAsCXXRecordDecl(),
-                                  memberAlign);
+  memberAlign = CGM.getDynamicOffsetAlignment(
+      base.getAlignment(), memberPtrType->getMostRecentCXXRecordDecl(),
+      memberAlign);
   return Address(ptr, ConvertTypeForMem(memberPtrType->getPointeeType()),
                  memberAlign);
 }
@@ -928,11 +925,14 @@ namespace {
       Qualifiers Qual = F->getType().getQualifiers();
       if (Qual.hasVolatile() || Qual.hasObjCLifetime())
         return false;
+      if (PointerAuthQualifier Q = F->getType().getPointerAuth();
+          Q && Q.isAddressDiscriminated())
+        return false;
       return true;
     }
 
     void addMemcpyableField(FieldDecl *F) {
-      if (F->isZeroSize(CGF.getContext()))
+      if (isEmptyFieldForLayout(CGF.getContext(), F))
         return;
       if (!FirstField)
         addInitialField(F);
@@ -1814,7 +1814,7 @@ namespace {
                               const CXXDestructorDecl *DD)
        : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
    void PushCleanupForField(const FieldDecl *Field) {
-     if (Field->isZeroSize(Context))
+     if (isEmptyFieldForLayout(Context, Field))
        return;
      unsigned FieldIndex = Field->getFieldIndex();
      if (FieldHasTrivialDestructorBody(Context, Field)) {
@@ -2899,7 +2899,8 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
   }
 
   if (CGM.getCodeGenOpts().SanitizeTrap.has(M)) {
-    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail);
+    bool NoMerge = !CGM.getCodeGenOpts().SanitizeMergeHandlers.has(M);
+    EmitTrapCheck(TypeTest, SanitizerHandler::CFICheckFail, NoMerge);
     return;
   }
 
@@ -2940,9 +2941,13 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
       CGM.CreateMetadataIdentifierForType(QualType(RD->getTypeForDecl(), 0));
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
+  auto CheckedLoadIntrinsic = CGM.getVTables().useRelativeLayout()
+                                  ? llvm::Intrinsic::type_checked_load_relative
+                                  : llvm::Intrinsic::type_checked_load;
   llvm::Value *CheckedLoad = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::type_checked_load),
+      CGM.getIntrinsic(CheckedLoadIntrinsic),
       {VTable, llvm::ConstantInt::get(Int32Ty, VTableByteOffset), TypeId});
+
   llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
 
   std::string TypeName = RD->getQualifiedNameAsString();

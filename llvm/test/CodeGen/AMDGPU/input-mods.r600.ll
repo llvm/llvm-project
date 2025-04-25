@@ -43,7 +43,7 @@ define amdgpu_ps void @test(<4 x float> inreg %reg0) {
    %r1 = call float @llvm.fabs.f32(float %r0)
    %r2 = fsub float -0.000000e+00, %r1
    %r3 = call afn float @llvm.exp2.f32(float %r2)
-   %vec = insertelement <4 x float> undef, float %r3, i32 0
+   %vec = insertelement <4 x float> poison, float %r3, i32 0
    call void @llvm.r600.store.swizzle(<4 x float> %vec, i32 0, i32 0)
    ret void
 }

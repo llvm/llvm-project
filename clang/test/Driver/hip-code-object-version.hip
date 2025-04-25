@@ -31,7 +31,6 @@
 // V6: "-mllvm" "--amdhsa-code-object-version=6"
 // V6: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx906"
 
-
 // Check bundle ID for code object version default
 
 // RUN: %clang -### --target=x86_64-linux-gnu \

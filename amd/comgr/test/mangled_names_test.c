@@ -1,37 +1,10 @@
-/*******************************************************************************
- *
- * University of Illinois/NCSA
- * Open Source License
- *
- * Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * with the Software without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- *     * Redistributions of source code must retain the above copyright notice,
- *       this list of conditions and the following disclaimers.
- *
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimers in the
- *       documentation and/or other materials provided with the distribution.
- *
- *     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived from
- *       this Software without specific prior written permission.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
- * THE SOFTWARE.
- *
- ******************************************************************************/
+//===- mangled_names_test.c -----------------------------------------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #include "amd_comgr.h"
 #include "common.h"
@@ -166,14 +139,14 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_populate_mangled_names(DataBc, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  if (NumNames != 3) {
+  if (NumNames != 4) {
     printf("amd_populate_mangled_names Failed: "
-           "produced %zu bitcode names (expected 2)\n",
+           "produced %zu bitcode names (expected 4)\n",
            NumNames);
     exit(1);
   }
 
-  const char *BcNames[] = {"__oclc_ABI_version", "source1", "source2"};
+  const char *BcNames[] = {"source1", "__clang_ocl_kern_imp_source1", "source2", "__clang_ocl_kern_imp_source2"};
 
   for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
@@ -248,14 +221,14 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_populate_mangled_names(DataExec, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  if (NumNames != 4) {
+  if (NumNames != 6) {
     printf("amd_populate_mangled_names Failed: "
-           "produced %zu executable names (expected 4)\n",
+           "produced %zu executable names (expected 6)\n",
            NumNames);
     exit(1);
   }
 
-  const char *ExecNames[] = {"source1", "source1.kd", "source2", "source2.kd"};
+  const char *ExecNames[] = {"source1", "source1.kd", "__clang_ocl_kern_imp_source1", "source2", "source2.kd", "__clang_ocl_kern_imp_source2"};
 
   for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;

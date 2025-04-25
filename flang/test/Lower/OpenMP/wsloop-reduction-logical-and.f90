@@ -38,7 +38,7 @@
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
 ! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_reductionEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_11]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:                 %[[VAL_19:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i32) -> i64
@@ -86,7 +86,7 @@ end subroutine simple_reduction
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
 ! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] {uniq_name = "_QFsimple_reduction_switch_orderEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_16]] to %[[VAL_11]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> i64
 ! CHECK:                 %[[VAL_20:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_19]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
@@ -145,7 +145,7 @@ end subroutine
 ! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 ! CHECK:                 %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFmultiple_reductionsEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:                 fir.store %[[VAL_26]] to %[[VAL_19]]#1 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_19]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_30:.*]] = fir.load %[[VAL_27]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK:                 %[[VAL_31:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> i64

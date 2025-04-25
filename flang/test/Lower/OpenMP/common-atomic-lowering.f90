@@ -36,13 +36,13 @@
 !CHECK: %[[val_15:.*]] = fir.load %[[val_14]] : !fir.ref<i32>
 !CHECK: %[[val_16:.*]] = arith.addi %[[val_c8_2]], %[[val_15]] : i32
 !CHECK: %[[val_17:.*]] = hlfir.no_reassoc %[[val_16]] : i32
-!CHECK: omp.atomic.update %[[val_5]]#1 : !fir.ref<i32> {
+!CHECK: omp.atomic.update %[[val_5]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG:.*]]: i32):
 !CHECK:      %[[val_18:.*]] = arith.addi %[[val_17]], %[[ARG]] : i32
 !CHECK:      omp.yield(%[[val_18]] : i32)
 !CHECK: }
 !CHECK: %[[val_c8_3:.*]] = arith.constant 8 : i32
-!CHECK: omp.atomic.update %[[val_5]]#1 : !fir.ref<i32> {
+!CHECK: omp.atomic.update %[[val_5]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG]]: i32):
 !CHECK:     %[[val_18:.*]] = arith.subi %[[val_c8_3]], %[[ARG]] : i32
 !CHECK:     omp.yield(%[[val_18]] : i32)

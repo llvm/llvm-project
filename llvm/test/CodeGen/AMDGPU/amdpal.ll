@@ -72,7 +72,7 @@ entry:
   %e = getelementptr [2 x i32], ptr addrspace(5) %v1, i32 0, i32 %idx
   %x = load i32, ptr addrspace(5) %e
   %xf = bitcast i32 %x to float
-  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %xf, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %xf, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
   ret void
 }
 

@@ -38,8 +38,9 @@ protected:
   void SetUp() override { M = std::make_unique<Module>("Dummy", Context); }
 
   std::unique_ptr<TargetMachine>
-  createTargetMachine(std::string TT, StringRef CPU, StringRef FS) {
+  createTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
     std::string Error;
+    Triple TT(TStr);
     const Target *T = TargetRegistry::lookupTarget(TT, Error);
     if (!T)
       return nullptr;

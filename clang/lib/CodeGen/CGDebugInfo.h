@@ -355,12 +355,12 @@ class CGDebugInfo {
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
   /// A cache that maps names of artificial inlined functions to subprograms.
-  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+  llvm::StringMap<llvm::DISubprogram *> InlinedSubprogramMap;
 
   /// A function that returns the subprogram corresponding to the artificial
   /// inlined function for traps.
-  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
-                                                  llvm::DIFile *FileScope);
+  llvm::DISubprogram *createInlinedSubprogram(StringRef FuncName,
+                                              llvm::DIFile *FileScope);
 
   /// Helpers for collecting fields of a record.
   /// @{
@@ -643,6 +643,13 @@ public:
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
                                                 StringRef Category,
                                                 StringRef FailureMsg);
+  /// Create a debug location from `Location` that adds an artificial inline
+  /// frame where the frame name is FuncName
+  ///
+  /// This is used to indiciate instructions that come from compiler
+  /// instrumentation.
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                            StringRef FuncName);
 
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
@@ -653,21 +660,19 @@ private:
                                      CGBuilderTy &Builder,
                                      const bool UsePointerValue = false);
 
-  /// Emit call to llvm.dbg.def for a variable definition.
+  /// Emit call to llvm.dbg.declare for a variable definition.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.def, or nullptr otherwise.
-  llvm::DILocalVariable *EmitDef(const VarDecl *decl, llvm::Value *AI,
-                                 std::optional<unsigned> ArgNo,
-                                 CGBuilderTy &Builder,
-                                 const bool UsePointerValue = false);
+  llvm::DILocalVariable *EmitDeclareForHeterogeneousDwarf(
+      const VarDecl *decl, llvm::Value *AI, std::optional<unsigned> ArgNo,
+      CGBuilderTy &Builder, const bool UsePointerValue = false);
 
-  /// Emit call to llvm.dbg.def for a structured binding definition.
+  /// Emit call to llvm.dbg.declare for a structured binding definition.
   /// Returns a pointer to the DILocalVariable associated with the
   /// llvm.dbg.def, or nullptr otherwise.
-  llvm::DILocalVariable *EmitDef(const BindingDecl *decl, llvm::Value *AI,
-                                 std::optional<unsigned> ArgNo,
-                                 CGBuilderTy &Builder,
-                                 const bool UsePointerValue = false);
+  llvm::DILocalVariable *EmitDeclareForHeterogeneousDwarf(
+      const BindingDecl *decl, llvm::Value *AI, std::optional<unsigned> ArgNo,
+      CGBuilderTy &Builder, const bool UsePointerValue = false);
 
   /// Emit call to llvm.dbg.declare for a binding declaration.
   /// Returns a pointer to the DILocalVariable associated with the
@@ -812,20 +817,7 @@ private:
   /// anonymous decl and create static variables for them. The first
   /// time this is called it needs to be on a union and then from
   /// there we can have additional unnamed fields.
-  llvm::DIGlobalVariable *CollectAnonRecordDeclsForHeterogeneousDwarfDIExpr(
-      const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
-      StringRef LinkageName, llvm::dwarf::MemorySpace MS,
-      llvm::GlobalVariable *Var, llvm::DIScope *DContext);
-
-  /// Return a global variable that represents one of the collection of global
-  /// variables created for an anonmyous union (-gheterogeneous-dwarf).
-  ///
-  /// Recursively collect all of the member fields of a global
-  /// anonymous decl and create static variables for them. The first
-  /// time this is called it needs to be on a union and then from
-  /// there we can have additional unnamed fields.
-  llvm::DIGlobalVariableExpression *
-  CollectAnonRecordDeclsForHeterogeneousDwarfDIExpression(
+  llvm::DIGlobalVariableExpression *CollectAnonRecordDeclsForHeterogeneousDwarf(
       const RecordDecl *RD, llvm::DIFile *Unit, unsigned LineNo,
       StringRef LinkageName, llvm::dwarf::MemorySpace MS,
       llvm::GlobalVariable *Var, llvm::DIScope *DContext);

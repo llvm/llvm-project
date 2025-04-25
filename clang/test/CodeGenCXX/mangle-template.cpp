@@ -70,7 +70,7 @@ namespace test7 {
     static const unsigned value = sizeof(T);
   };
 
-  template<unsigned> struct int_c { 
+  template<unsigned> struct int_c {
     typedef float type;
   };
 
@@ -92,7 +92,7 @@ namespace test8 {
     };
   };
 
-  template<unsigned> struct int_c { 
+  template<unsigned> struct int_c {
     typedef float type;
   };
 
@@ -399,3 +399,37 @@ namespace type_qualifier {
   // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvv_ELi1EE
   template void g<int*>(int);
 }
+
+namespace unresolved_template_specialization_type {
+  template <int> struct enable_if {};
+  struct Foo {
+    static const int value = true;
+  };
+  struct HashStateBase {
+    template <typename> using is_hashable = Foo;
+  };
+  template <class> struct raw_hash_set {
+    template <typename H>
+    static enable_if<H::template is_hashable<int>::value>
+        AbslHashValue() {}
+  };
+  template enable_if<true> raw_hash_set<int>::AbslHashValue<HashStateBase>();
+  // CHECK: @_ZN39unresolved_template_specialization_type12raw_hash_setIiE13AbslHashValueINS_13HashStateBaseEEENS_9enable_ifIXsrNT_11is_hashableIiEE5valueEEEv
+} // namespace unresolved_template_specialization_type
+
+namespace GH133610 {
+  template <class T> struct A {
+    template <class V> struct B { int MEM; };
+  };
+
+  struct D {};
+  struct C: public A<int>::B<D> {};
+
+  template <class T, class U, class V>
+  auto k(T t, U u, V v) -> decltype (t.U::template B<V>::MEM) { return {}; }
+
+  void t() {
+    k( C(), A<int>(), D() );
+  }
+  // CHECK: @_ZN8GH1336101kINS_1CENS_1AIiEENS_1DEEEDtdtfp_sr1U1BIT1_EE3MEMET_T0_S5_
+} // namespace GH133610

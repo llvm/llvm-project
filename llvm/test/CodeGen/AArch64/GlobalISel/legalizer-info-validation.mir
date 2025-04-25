@@ -70,11 +70,11 @@
 # DEBUG-NEXT: .. the first uncovered type index: 1, OK
 # DEBUG-NEXT: .. the first uncovered imm index: 0, OK
 #
-# DEBUG-NEXT: G_ABDS (opcode 67): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_ABDS (opcode 65): 1 type index, 0 imm indices
 # DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
 #
-# DEBUG-NEXT:G_ABDU (opcode 68): 1 type index, 0 imm indices
+# DEBUG-NEXT:G_ABDU (opcode 66): 1 type index, 0 imm indices
 # DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
 #

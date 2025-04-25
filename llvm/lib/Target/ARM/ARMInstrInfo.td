@@ -465,19 +465,16 @@ class BinOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$RHS), res>;
 class UnOpFrag <dag res> : PatFrag<(ops node:$Src), res>;
 
 // An 'and' node with a single use.
-def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
+let HasOneUse = 1 in
+def and_su : PatFrag<(ops node:$lhs, node:$rhs), (and node:$lhs, node:$rhs)>;
 
 // An 'xor' node with a single use.
-def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs), [{
-  return N->hasOneUse();
-}]>;
+let HasOneUse = 1 in
+def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 
 // An 'fmul' node with a single use.
-def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs),[{
-  return N->hasOneUse();
-}]>;
+let HasOneUse = 1 in
+def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (fmul node:$lhs, node:$rhs)>;
 
 // An 'fadd' node which checks for single non-hazardous use.
 def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{

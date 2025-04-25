@@ -1,6 +1,5 @@
 
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-
 cmake_minimum_required(VERSION 3.20.0)
 
 include(CMakeDependentOption)
@@ -162,7 +161,8 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "Clang is not enabled, but is required for the Flang driver")
+    message(STATUS "Enabling clang as a dependency to flang")
+    list(APPEND LLVM_ENABLE_PROJECTS "clang")
   endif()
 endif()
 
@@ -180,12 +180,18 @@ if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
     "https://compiler-rt.llvm.org/ for building the runtimes.")
 endif()
 
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  if (NOT "flang" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(FATAL_ERROR "Flang is not enabled, but is required for the Flang-RT runtime")
+  endif ()
+endif ()
+
 # Select the runtimes to build
 #
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -219,10 +225,6 @@ endforeach()
 if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgcn-amd-amdhsa" OR
    "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda")
   set(LLVM_LIBC_GPU_BUILD ON)
-endif()
-if (NOT "libc" IN_LIST LLVM_ENABLE_PROJECTS AND LLVM_LIBC_GPU_BUILD)
-  message(STATUS "Enabling libc project to build libc testing tools")
-  list(APPEND LLVM_ENABLE_PROJECTS "libc")
 endif()
 
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
@@ -287,7 +289,7 @@ if(LLVM_CCACHE_BUILD)
   if(CCACHE_PROGRAM)
     set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
     set(LLVM_CCACHE_DIR "" CACHE STRING "Directory to keep ccached data")
-    set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes"
+    set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros"
         CACHE STRING "Parameters to pass through to ccache")
 
     if(NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
@@ -301,7 +303,7 @@ if(LLVM_CCACHE_BUILD)
       set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
     else()
       if(LLVM_CCACHE_MAXSIZE OR LLVM_CCACHE_DIR OR
-         NOT LLVM_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes")
+         NOT LLVM_CCACHE_PARAMS MATCHES "CCACHE_CPP2=yes CCACHE_HASHDIR=yes CCACHE_SLOPPINESS=pch_defines,time_macros")
         message(FATAL_ERROR "Ccache configuration through CMake is not supported on Windows. Please use environment variables.")
       endif()
       # RULE_LAUNCH_COMPILE should work with Ninja but currently has issues
@@ -554,6 +556,9 @@ option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only 
 set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
   "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
+
+option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
+  "Add additional fields to DILocations to support Key Instructions" OFF)
 
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
@@ -845,7 +850,7 @@ option (LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OF
 option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
-option (LLVM_BUILD_TELEMETRY "Build the telemetry library. This does not enable telemetry." ON)
+option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
@@ -981,8 +986,8 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
 
 if(LLVM_INCLUDE_TESTS)
-  # Lit test suite requires at least python 3.6
-  set(LLVM_MINIMUM_PYTHON_VERSION 3.6)
+  # All LLVM Python files should be compatible down to this minimum version.
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.8)
 else()
   # FIXME: it is unknown if this is the actual minimum bound
   set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
@@ -1176,13 +1181,16 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
 
 endif()
 
-# Configure the three LLVM configuration header files.
+# Configure the LLVM configuration header files.
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/config.h)
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/llvm-config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/llvm-config.h)
+configure_file(
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/Targets.h.cmake
+  ${LLVM_INCLUDE_DIR}/llvm/Config/Targets.h)
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)
@@ -1201,6 +1209,7 @@ endif()
 if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
           add_compile_definitions(_XOPEN_SOURCE=700)
           add_compile_definitions(_LARGE_FILE_API)
+          add_compile_options(-pthread)
 
   # Modules should be built with -shared -Wl,-G, so we can use runtime linking
   # with plugins.

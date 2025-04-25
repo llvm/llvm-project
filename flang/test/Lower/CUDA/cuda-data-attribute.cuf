@@ -97,8 +97,8 @@ end
 ! CHECK: %[[DECL_B:.*]]:2 = hlfir.declare %[[ALLOC_B]](%[[SHAPE]]) {data_attr = #cuf.cuda<managed>, uniq_name = "_QMcuda_varFcuda_alloc_freeEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 
 ! CHECK: cuf.free %[[DECL_B]]#1 : !fir.ref<!fir.array<?xf32>> {data_attr = #cuf.cuda<managed>}
-! CHECK: cuf.free %[[DECL_U]]#1 : !fir.ref<i32> {data_attr = #cuf.cuda<unified>}
-! CHECK: cuf.free %[[DECL_A]]#1 : !fir.ref<!fir.array<10xf32>> {data_attr = #cuf.cuda<device>}
+! CHECK: cuf.free %[[DECL_U]]#0 : !fir.ref<i32> {data_attr = #cuf.cuda<unified>}
+! CHECK: cuf.free %[[DECL_A]]#0 : !fir.ref<!fir.array<10xf32>> {data_attr = #cuf.cuda<device>}
 
 subroutine dummy(x)
   real, target, device :: x

@@ -25,7 +25,8 @@ inline namespace SharedLiveDebugValues {
 class LDVImpl {
 public:
   virtual bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
-                            TargetPassConfig *TPC, unsigned InputBBLimit,
+                            bool ShouldEmitDebugEntryValues,
+                            unsigned InputBBLimit,
                             unsigned InputDbgValLimit) = 0;
   virtual ~LDVImpl() = default;
 };
@@ -35,7 +36,6 @@ public:
 // Factory functions for LiveDebugValues implementations.
 extern LDVImpl *makeVarLocBasedLiveDebugValues();
 extern LDVImpl *makeInstrRefBasedLiveDebugValues();
-extern LDVImpl *makeHeterogeneousLiveDebugValues();
 
 extern bool debuginfoShouldUseDebugInstrRef(const Triple &T);
 

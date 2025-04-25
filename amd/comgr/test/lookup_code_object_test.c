@@ -1,3 +1,11 @@
+//===- lookup_code_object_test.c ------------------------------------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "amd_comgr.h"
 #include "common.h"
 #include <fcntl.h>
