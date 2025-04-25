@@ -19,6 +19,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBFunction.h"
+#include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBLineEntry.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBQueue.h"
@@ -776,10 +777,11 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
 
     // Calculate the line of the current PC from the start of the current
     // symbol.
-    lldb::addr_t inst_offset = frame.GetPCAddress().GetOffset() -
-                               frame.GetSymbol().GetStartAddress().GetOffset();
-    lldb::addr_t inst_line =
-        inst_offset / (frame.GetThread().GetProcess().GetAddressByteSize() / 2);
+    lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
+    lldb::SBInstructionList inst_list = target.ReadInstructions(
+        frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
+    size_t inst_line = inst_list.GetSize();
+
     // Line numbers are 1-based.
     object.try_emplace("line", inst_line + 1);
     object.try_emplace("column", 1);
