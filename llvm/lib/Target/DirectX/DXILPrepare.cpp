@@ -161,13 +161,13 @@ class DXILPrepareModule : public ModulePass {
                          Builder.getPtrTy(PtrTy->getAddressSpace())));
   }
 
-  static llvm::SmallVector<unsigned> getCompatibleInstructionMDs(Module &M) {
-    llvm::SmallVector<unsigned, 16> ret = {
-        M.getMDKindID("dx.nonuniform"), M.getMDKindID("dx.controlflow.hints"),
-        M.getMDKindID("dx.precise"),    LLVMContext::MD_range,
-        LLVMContext::MD_alias_scope,    LLVMContext::MD_noalias};
-
-    return ret;
+  static std::array<unsigned, 6> getCompatibleInstructionMDs(llvm::Module &M) {
+    return {M.getMDKindID("dx.nonuniform"),
+            M.getMDKindID("dx.controlflow.hints"),
+            M.getMDKindID("dx.precise"),
+            llvm::LLVMContext::MD_range,
+            llvm::LLVMContext::MD_alias_scope,
+            llvm::LLVMContext::MD_noalias};
   }
 
 public:
@@ -186,8 +186,7 @@ public:
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
     // construct whitelist of valid metadata node kinds
-    llvm::SmallVector<unsigned> DXILCompatibleMDs =
-        getCompatibleInstructionMDs(M);
+    std::array<unsigned, 6> DXILCompatibleMDs = getCompatibleInstructionMDs(M);
 
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
