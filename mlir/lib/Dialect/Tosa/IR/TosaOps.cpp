@@ -558,7 +558,8 @@ static LogicalResult verifyConvOpErrorIf(T op) {
     return success();
 
   const int64_t biasChannels = biasType.getDimSize(0);
-  const int64_t outputChannels = outputType.getDimSize(3);
+  const int64_t outputChannels =
+      outputType.getDimSize(outputType.getRank() - 1);
   if (biasChannels == ShapedType::kDynamic ||
       outputChannels == ShapedType::kDynamic)
     // Skip following checks if biasChannels or outputChannels is dynamic dim
