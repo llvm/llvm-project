@@ -1680,7 +1680,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
   Function *CalledFunc = CB.getCalledFunction();
   for (Argument &Arg : CalledFunc->args()) {
     if (!Arg.getType()->isPointerTy() || Arg.hasPassPointeeByValueCopyAttr() ||
-        Arg.hasNUses(0))
+        Arg.use_empty())
       continue;
     MaybeAlign Alignment = Arg.getParamAlign();
     if (!Alignment)
@@ -2154,7 +2154,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() != Intrinsic::objc_autoreleaseReturnValue ||
-            !II->hasNUses(0) ||
+            !II->use_empty() ||
             objcarc::GetRCIdentityRoot(II->getOperand(0)) != RetOpnd)
           break;
 
