@@ -1401,19 +1401,13 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
   SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
   llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
-  auto ApplyNot = [](DIExpression *Src) {
-    SmallVector<uint64_t> Elements;
-    Elements.reserve(Src->getElements().size() + 1);
-    Elements.push_back(dwarf::DW_OP_not);
-    Elements.append(Src->getElements().begin(), Src->getElements().end());
-    return DIExpression::get(Src->getContext(), Elements);
-  };
 
+  SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
   for (auto *DVI : DbgValues)
-    DVI->setExpression(ApplyNot(DVI->getExpression()));
+    DVI->setExpression(DIExpression::prependOpcodes(DVI->getExpression(), Ops));
 
   for (DbgVariableRecord *DVR : DbgVariableRecords)
-    DVR->setExpression(ApplyNot(DVR->getExpression()));
+    DVR->setExpression(DIExpression::prependOpcodes(DVR->getExpression(), Ops));
 }
 
 /// Given a 'sub' instruction, return the RHS of the instruction if the LHS is a
