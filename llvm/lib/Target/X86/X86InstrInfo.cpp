@@ -7395,6 +7395,36 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       }
     }
     break;
+  case X86::VEXTRACTF128rri:
+  case X86::VEXTRACTI128rri:
+    // Replaces subvector extraction with a load.
+    // TODO: Add AVX512 variants.
+    if (OpNum == 1) {
+      unsigned Idx = MI.getOperand(MI.getNumOperands() - 1).getImm();
+      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+      const TargetRegisterClass *RC = getRegClass(MI.getDesc(), 0, &RI, MF);
+      unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
+      assert((RCSize == 16) && "Unexpected dst register size");
+      int PtrOffset = Idx * RCSize;
+
+      unsigned NewOpCode;
+      switch (MI.getOpcode()) {
+      case X86::VEXTRACTF128rri:
+        NewOpCode = Alignment < Align(RCSize) ? X86::VMOVUPSrm : X86::VMOVAPSrm;
+        break;
+      case X86::VEXTRACTI128rri:
+        NewOpCode = Alignment < Align(RCSize) ? X86::VMOVDQUrm : X86::VMOVDQArm;
+        break;
+      default:
+        llvm_unreachable("Unexpected EXTRACT_SUBVECTOR instruction");
+      }
+
+      MachineInstr *NewMI =
+          fuseInst(MF, NewOpCode, OpNum, MOs, InsertPt, MI, *this, PtrOffset);
+      NewMI->removeOperand(NewMI->getNumOperands() - 1);
+      return NewMI;
+    }
+    break;
   case X86::MOV32r0:
     if (auto *NewMI =
             makeM0Inst(*this, (Size == 4) ? X86::MOV32mi : X86::MOV64mi32, MOs,

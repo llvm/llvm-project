@@ -202,8 +202,7 @@ define <5 x float> @sin_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq sinf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -274,8 +273,7 @@ define <3 x double> @sin_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -396,8 +394,7 @@ define <5 x float> @tan_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq tanf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -468,8 +465,7 @@ define <3 x double> @tan_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq tan@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -590,8 +586,7 @@ define <5 x float> @acos_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq acosf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -662,8 +657,7 @@ define <3 x double> @acos_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq acos@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -784,8 +778,7 @@ define <5 x float> @asin_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq asinf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -856,8 +849,7 @@ define <3 x double> @asin_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq asin@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -978,8 +970,7 @@ define <5 x float> @atan_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq atanf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -1050,8 +1041,7 @@ define <3 x double> @atan_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq atan@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -1172,8 +1162,7 @@ define <5 x float> @cosh_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq coshf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -1244,8 +1233,7 @@ define <3 x double> @cosh_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq cosh@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -1366,8 +1354,7 @@ define <5 x float> @sinh_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq sinhf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -1438,8 +1425,7 @@ define <3 x double> @sinh_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq sinh@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -1560,8 +1546,7 @@ define <5 x float> @tanh_v5f32(<5 x float> %x) nounwind {
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq tanhf@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
@@ -1632,8 +1617,7 @@ define <3 x double> @tanh_v3f64(<3 x double> %x) nounwind {
 ; CHECK-NEXT:    vmovapd (%rsp), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq tanh@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload

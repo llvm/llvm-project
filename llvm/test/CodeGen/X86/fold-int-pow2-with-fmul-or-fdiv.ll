@@ -290,11 +290,9 @@ define <8 x half> @fmul_pow2_8xhalf(<8 x i16> %i) {
 ; CHECK-AVX2-NEXT:    # xmm0 = mem[3,3,3,3]
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-AVX2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 32-byte Reload
 ; CHECK-AVX2-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-AVX2-NEXT:    vzeroupper
 ; CHECK-AVX2-NEXT:    callq __truncsfhf2@PLT
 ; CHECK-AVX2-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-AVX2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
