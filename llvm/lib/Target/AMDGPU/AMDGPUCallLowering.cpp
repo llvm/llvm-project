@@ -510,7 +510,7 @@ void AMDGPUCallLowering::lowerPreloadedParameter(
   const DataLayout &DL = B.getDataLayout();
 
   LLT ResTy = getLLTForType(*ArgTy, DL);
-  LLT ScalarTy = LLT::scalar(DL.getTypeSizeInBits(ArgTy));
+  LLT ScalarTy = LLT::scalar(ResTy.getScalarSizeInBits());
   unsigned TotalSize = 0;
   SmallVector<Register> SrcRegs(PreloadRegs.size());
 
@@ -550,7 +550,7 @@ void AMDGPUCallLowering::lowerPreloadedParameter(
   if (SrcRegs.size() > 1)
     Res = B.buildMergeLikeInstr(MergeTy, SrcRegs).getReg(0);
 
-  if (DL.getTypeStoreSizeInBits(ArgTy) < MergeTy.getSizeInBits())
+  if (ScalarTy.getSizeInBits() < MergeTy.getSizeInBits())
     Res = B.buildTrunc(ScalarTy, Res).getReg(0);
 
   if (ResTy.isVector())
