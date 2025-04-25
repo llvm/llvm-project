@@ -2595,14 +2595,8 @@ uint16_t RegSizeInBits(const MCRegisterInfo &MRI, MCRegister RegNo) {
     return 64;
   if (X86MCRegisterClasses[X86::RFP80RegClassID].contains(RegNo))
     return 80;
-  if (X86MCRegisterClasses[X86::VR128RegClassID].contains(RegNo) ||
-      X86MCRegisterClasses[X86::VR128XRegClassID].contains(RegNo))
-    return 128;
-  if (X86MCRegisterClasses[X86::VR256XRegClassID].contains(RegNo))
-    return 256;
-  if (X86MCRegisterClasses[X86::VR512RegClassID].contains(RegNo))
-    return 512;
-  llvm_unreachable("Register without known register class");
+  // Unknown register size
+  return 0;
 }
 
 bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
@@ -2639,6 +2633,12 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
         // sizes, but not to other types.
         uint16_t RegSize =
             RegSizeInBits(*getContext().getRegisterInfo(), RegNo);
+        if (RegSize == 0)
+          return Error(
+              Start,
+              "cannot cast register '" +
+                  StringRef(getContext().getRegisterInfo()->getName(RegNo)) +
+                  "'; its size is not easily defined.");
         if (RegSize != Size)
           return Error(
               Start,
