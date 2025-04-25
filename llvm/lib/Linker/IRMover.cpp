@@ -969,8 +969,6 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   NG->copyAttributesFrom(SrcGV);
   forceRenaming(NG, SrcGV->getName());
 
-  Constant *Ret = ConstantExpr::getBitCast(NG, TypeMap.get(SrcGV->getType()));
-
   Mapper.scheduleMapAppendingVariable(
       *NG,
       (DstGV && !DstGV->isDeclaration()) ? DstGV->getInitializer() : nullptr,
@@ -982,7 +980,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     RAUWWorklist.push_back(std::make_pair(DstGV, NG));
   }
 
-  return Ret;
+  return NG;
 }
 
 bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
