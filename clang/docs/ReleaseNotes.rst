@@ -140,6 +140,13 @@ C Language Changes
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
+- Clang now diagnoses ``const``-qualified object definitions without an
+  initializer. If the object is zero-initialized, it will be diagnosed under
+  the new warning ``-Wdefault-const-init`` (which is grouped under
+  ``-Wc++-compat`` because this construct is not compatible with C++). If the
+  object is left uninitialized, it will be diagnosed unsed the new warning
+  ``-Wdefault-const-init-unsafe`` (which is grouped under
+  ``-Wdefault-const-init``). #GH19297
 - Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)

@@ -1448,6 +1448,18 @@ void Sema::ActOnEndOfTranslationUnit() {
     // No initialization is performed for a tentative definition.
     CheckCompleteVariableDeclaration(VD);
 
+    // In C, if the definition is const-qualified and has no initializer, it
+    // is left uninitialized unless it has static or thread storage duration.
+    QualType Type = VD->getType();
+    if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
+        Type.isConstQualified() && !VD->getAnyInitializer()) {
+      unsigned DiagID = diag::warn_default_init_const_unsafe;
+      if (VD->getStorageDuration() == SD_Static ||
+          VD->getStorageDuration() == SD_Thread)
+        DiagID = diag::warn_default_init_const;
+      Diag(VD->getLocation(), DiagID) << Type << /*not a field*/ 0;
+    }
+
     // Notify the consumer that we've completed a tentative definition.
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);

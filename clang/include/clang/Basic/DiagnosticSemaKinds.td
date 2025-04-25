@@ -8197,6 +8197,16 @@ def err_address_space_qualified_new : Error<
 def err_address_space_qualified_delete : Error<
   "'delete' cannot delete objects of type %0 in address space '%1'">;
 
+def note_default_init_const_member : Note<
+  "member %0 declared 'const' here">;
+def warn_default_init_const : Warning<
+  "default initialization of an object of type %0%select{| with const member}1 "
+  "is incompatible with C++">,
+  InGroup<DefaultConstInit>, DefaultIgnore;
+def warn_default_init_const_unsafe : Warning<
+  "default initialization of an object of type %0%select{| with const member}1 "
+  "leaves the object uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"
   "%select{| without a user-provided default constructor}1">;

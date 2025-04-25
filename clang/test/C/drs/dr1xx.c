@@ -289,7 +289,7 @@ void dr124(void) {
  */
 void dr126(void) {
   typedef int *IP;
-  const IP object; /* expected-note {{variable 'object' declared const here}} */
+  const IP object = 0; /* expected-note {{variable 'object' declared const here}} */
 
   /* The root of the DR is whether 'object' is a pointer to a const int, or a
    * const pointer to int.
@@ -329,7 +329,7 @@ void dr129(void) {
 void dr131(void) {
   struct S {
     const int i; /* expected-note {{data member 'i' declared const here}} */
-  } s1, s2;
+  } s1 = { 0 }, s2 = { 0 };
   s1 = s2; /* expected-error {{cannot assign to variable 's1' with const-qualified data member 'i'}} */
 }
 
