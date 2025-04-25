@@ -1472,6 +1472,6 @@ let Command = "statistics dump" in {
         Group<1>,
         Arg<"Boolean">,
         Desc<"Dump statistics for known plugins including name, order, and "
-             "enabled "
-             "state. Defaults to true for both summary and default mode.">;
+             "enabled state. Defaults to true for both summary and default "
+             "mode.">;
 }
