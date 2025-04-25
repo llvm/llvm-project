@@ -193,21 +193,6 @@ void MCWasmStreamer::finishImpl() {
   this->MCObjectStreamer::finishImpl();
 }
 
-void MCWasmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                  uint64_t Size, Align ByteAlignment,
-                                  SMLoc Loc) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
-void MCWasmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                    uint64_t Size, Align ByteAlignment) {
-  llvm_unreachable("Wasm doesn't support this directive");
-}
-
 MCStreamer *llvm::createWasmStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,

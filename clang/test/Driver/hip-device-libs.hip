@@ -208,10 +208,9 @@
 // ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
 
-// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
-// ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]hip.bc"
+// RESDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm_resource_dir(/|\\\\)lib(64)?(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
+// ROCMDIR-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR:[^"]+(/|\\\\)rocm(/|\\\\)amdgcn(/|\\\\).*]]ocml.bc"
 
-// ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ocml.bc"
 // ALL-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]ockl.bc"
 
 // FLUSHD-SAME: "-mlink-builtin-bitcode" "[[DEVICELIB_DIR]]oclc_daz_opt_on.bc"

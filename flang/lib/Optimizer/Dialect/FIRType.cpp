@@ -435,6 +435,7 @@ bool isRecordWithDescriptorMember(mlir::Type ty) {
   ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
     for (auto [field, memTy] : recTy.getTypeList()) {
+      memTy = unwrapSequenceType(memTy);
       if (mlir::isa<fir::BaseBoxType>(memTy))
         return true;
       if (mlir::isa<fir::RecordType>(memTy) &&
@@ -677,8 +678,13 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
       .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
         return fir::SequenceType::get(seqTy.getShape(), newElementType);
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-            fir::ClassType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType, fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        auto newEleTy =
+            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
+        return FIRT::get(newEleTy, t.isVolatile());
+      })
+      .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
         return FIRT::get(
             changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
@@ -687,8 +693,8 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
         mlir::Type newInnerType =
             changeElementType(t.getEleTy(), newElementType, false);
         if (turnBoxIntoClass)
-          return fir::ClassType::get(newInnerType);
-        return fir::BoxType::get(newInnerType);
+          return fir::ClassType::get(newInnerType, t.isVolatile());
+        return fir::BoxType::get(newInnerType, t.isVolatile());
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||

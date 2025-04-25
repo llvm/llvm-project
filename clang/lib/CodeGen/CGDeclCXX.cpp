@@ -1157,8 +1157,22 @@ void CodeGenFunction::GenerateCXXGlobalCleanUpFunc(
             CGM.getCXXABI().useSinitAndSterm() &&
             "Arg could not be nullptr unless using sinit and sterm functions.");
         CI = Builder.CreateCall(CalleeTy, Callee);
-      } else
+      } else {
+        // If the object lives in a different address space, the `this` pointer
+        // address space won't match the dtor `this` param. An addrspacecast is
+        // required.
+        assert(Arg->getType()->isPointerTy());
+        assert(CalleeTy->getParamType(0)->isPointerTy());
+        unsigned ActualAddrSpace = Arg->getType()->getPointerAddressSpace();
+        unsigned ExpectedAddrSpace =
+            CalleeTy->getParamType(0)->getPointerAddressSpace();
+        if (ActualAddrSpace != ExpectedAddrSpace) {
+          llvm::PointerType *PTy =
+              llvm::PointerType::get(getLLVMContext(), ExpectedAddrSpace);
+          Arg = llvm::ConstantExpr::getAddrSpaceCast(Arg, PTy);
+        }
         CI = Builder.CreateCall(CalleeTy, Callee, Arg);
+      }
 
       // Make sure the call and the callee agree on calling convention.
       if (llvm::Function *F = dyn_cast<llvm::Function>(Callee))

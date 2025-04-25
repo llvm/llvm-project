@@ -35,7 +35,7 @@ public:
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
@@ -43,8 +43,7 @@ public:
 
 } // end anonymous namespace
 
-const MCFixupKindInfo &
-BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[BPF::NumTargetFixupKinds] = {
     { "FK_BPF_PCRel_4",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
   };

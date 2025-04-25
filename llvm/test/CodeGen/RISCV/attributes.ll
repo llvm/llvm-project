@@ -147,6 +147,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+ssdbltrp %s -o - | FileCheck --check-prefixes=CHECK,RV32SSDBLTRP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+ssqosid %s -o - | FileCheck --check-prefix=RV32SSQOSID %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCDELEG %s
+; RUN: llc -mtriple=riscv32 -mattr=+smcntrpmf %s -o - | FileCheck --check-prefixes=CHECK,RV32SMCNTRPMF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV32SMEPMP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV32SMRNMI %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV32ZFBFMIN %s
@@ -264,6 +265,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zcmp %s -o - | FileCheck --check-prefixes=CHECK,RV64ZCMP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zcmt %s -o - | FileCheck --check-prefixes=CHECK,RV64ZCMT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ziccamoa %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCAMOA %s
+; RUN: llc -mtriple=riscv64 -mattr=+ziccamoc %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCAMOC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ziccif %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCIF %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zicclsm %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCLSM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ziccrse %s -o - | FileCheck --check-prefixes=CHECK,RV64ZICCRSE %s
@@ -301,6 +303,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+ssdbltrp %s -o - | FileCheck --check-prefixes=CHECK,RV64SSDBLTRP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+ssqosid %s -o - | FileCheck --check-prefix=RV64SSQOSID %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smcdeleg %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCDELEG %s
+; RUN: llc -mtriple=riscv64 -mattr=+smcntrpmf %s -o - | FileCheck --check-prefixes=CHECK,RV64SMCNTRPMF %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smepmp %s -o - | FileCheck --check-prefixes=CHECK,RV64SMEPMP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+smrnmi %s -o - | FileCheck --check-prefixes=CHECK,RV64SMRNMI %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfbfmin %s -o - | FileCheck --check-prefixes=CHECK,RV64ZFBFMIN %s
@@ -485,6 +488,7 @@
 ; RV32SSDBLTRP: .attribute 5, "rv32i2p1_ssdbltrp1p0"
 ; RV32SSQOSID: .attribute 5, "rv32i2p1_ssqosid1p0"
 ; RV32SMCDELEG: .attribute 5, "rv32i2p1_smcdeleg1p0"
+; RV32SMCNTRPMF: .attribute 5, "rv32i2p1_smcntrpmf1p0"
 ; RV32SMEPMP: .attribute 5, "rv32i2p1_smepmp1p0"
 ; RV32SMRNMI: .attribute 5, "rv32i2p1_smrnmi1p0"
 ; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin1p0"
@@ -599,6 +603,7 @@
 ; RV64ZCMP: .attribute 5, "rv64i2p1_zca1p0_zcmp1p0"
 ; RV64ZCMT: .attribute 5, "rv64i2p1_zicsr2p0_zca1p0_zcmt1p0"
 ; RV64ZICCAMOA: .attribute 5, "rv64i2p1_ziccamoa1p0"
+; RV64ZICCAMOC: .attribute 5, "rv64i2p1_ziccamoc1p0"
 ; RV64ZICCIF: .attribute 5, "rv64i2p1_ziccif1p0"
 ; RV64ZICCLSM: .attribute 5, "rv64i2p1_zicclsm1p0"
 ; RV64ZICCRSE: .attribute 5, "rv64i2p1_ziccrse1p0"
@@ -636,6 +641,7 @@
 ; RV64SSDBLTRP: .attribute 5, "rv64i2p1_ssdbltrp1p0"
 ; RV64SSQOSID: .attribute 5, "rv64i2p1_ssqosid1p0"
 ; RV64SMCDELEG: .attribute 5, "rv64i2p1_smcdeleg1p0"
+; RV64SMCNTRPMF: .attribute 5, "rv64i2p1_smcntrpmf1p0"
 ; RV64SMEPMP: .attribute 5, "rv64i2p1_smepmp1p0"
 ; RV64SMRNMI: .attribute 5, "rv64i2p1_smrnmi1p0"
 ; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0"

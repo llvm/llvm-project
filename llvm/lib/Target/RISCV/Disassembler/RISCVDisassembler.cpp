@@ -737,8 +737,8 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},
     {DecoderTableXSfcease32, {RISCV::FeatureVendorXSfcease}, "SiFive sf.cease"},
     {DecoderTableXmipslsp32, {RISCV::FeatureVendorXMIPSLSP}, "MIPS mips.lsp"},
-    {DecoderTableXmipscmove32,
-     {RISCV::FeatureVendorXMIPSCMove},
+    {DecoderTableXmipscmov32,
+     {RISCV::FeatureVendorXMIPSCMov},
      "MIPS mips.ccmov"},
     // Standard Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},

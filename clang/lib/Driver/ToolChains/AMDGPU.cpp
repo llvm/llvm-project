@@ -59,8 +59,6 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       OCKL = FilePath;
     } else if (BaseName == "opencl") {
       OpenCL = FilePath;
-    } else if (BaseName == "hip") {
-      HIP = FilePath;
     } else if (BaseName == "asanrtl") {
       AsanRTL = FilePath;
     } else if (BaseName == "oclc_finite_only_off") {

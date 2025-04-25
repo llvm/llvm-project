@@ -119,7 +119,7 @@ void __thread_specific_ptr<_Tp>::set_pointer(pointer __p) {
 }
 
 template <>
-struct _LIBCPP_TEMPLATE_VIS hash<__thread_id> : public __unary_function<__thread_id, size_t> {
+struct hash<__thread_id> : public __unary_function<__thread_id, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(__thread_id __v) const _NOEXCEPT {
     return hash<__libcpp_thread_id>()(__v.__id_);
   }

@@ -212,7 +212,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "A::operator<=>[abi:tag]<A::B>"}};
 
   for (const auto &test : test_cases) {
-    CPlusPlusLanguage::CPPMethodName method(ConstString(test.input));
+    CPlusPlusLanguage::CxxMethodName method(ConstString(test.input));
     EXPECT_TRUE(method.IsValid()) << test.input;
     if (method.IsValid()) {
       EXPECT_EQ(test.return_type, method.GetReturnType().str());
@@ -243,22 +243,22 @@ TEST(CPlusPlusLanguage, InvalidMethodNameParsing) {
   };
 
   for (const auto &name : test_cases) {
-    CPlusPlusLanguage::CPPMethodName method{ConstString(name)};
+    CPlusPlusLanguage::CxxMethodName method{ConstString(name)};
     EXPECT_FALSE(method.IsValid()) << name;
   }
 }
 
 TEST(CPlusPlusLanguage, ContainsPath) {
-  CPlusPlusLanguage::CPPMethodName reference_1(
+  CPlusPlusLanguage::CxxMethodName reference_1(
       ConstString("int foo::bar::func01(int a, double b)"));
-  CPlusPlusLanguage::CPPMethodName reference_2(
+  CPlusPlusLanguage::CxxMethodName reference_2(
       ConstString("int foofoo::bar::func01(std::string a, int b)"));
-  CPlusPlusLanguage::CPPMethodName reference_3(ConstString("int func01()"));
-  CPlusPlusLanguage::CPPMethodName reference_4(
+  CPlusPlusLanguage::CxxMethodName reference_3(ConstString("int func01()"));
+  CPlusPlusLanguage::CxxMethodName reference_4(
       ConstString("bar::baz::operator bool()"));
-  CPlusPlusLanguage::CPPMethodName reference_5(
+  CPlusPlusLanguage::CxxMethodName reference_5(
       ConstString("bar::baz::operator bool<int, Type<double>>()"));
-  CPlusPlusLanguage::CPPMethodName reference_6(ConstString(
+  CPlusPlusLanguage::CxxMethodName reference_6(ConstString(
       "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()"));
 
   EXPECT_TRUE(reference_1.ContainsPath(""));

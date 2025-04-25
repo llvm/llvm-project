@@ -153,7 +153,7 @@ template <class _Tp, class _Container>
 _LIBCPP_HIDE_FROM_ABI bool operator<(const stack<_Tp, _Container>& __x, const stack<_Tp, _Container>& __y);
 
 template <class _Tp, class _Container /*= deque<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS stack {
+class stack {
 public:
   typedef _Container container_type;
   typedef typename container_type::value_type value_type;
@@ -373,8 +373,7 @@ inline _LIBCPP_HIDE_FROM_ABI void swap(stack<_Tp, _Container>& __x, stack<_Tp, _
 }
 
 template <class _Tp, class _Container, class _Alloc>
-struct _LIBCPP_TEMPLATE_VIS uses_allocator<stack<_Tp, _Container>, _Alloc> : public uses_allocator<_Container, _Alloc> {
-};
+struct uses_allocator<stack<_Tp, _Container>, _Alloc> : public uses_allocator<_Container, _Alloc> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

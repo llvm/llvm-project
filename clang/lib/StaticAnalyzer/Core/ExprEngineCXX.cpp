@@ -242,8 +242,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
         assert(RetE && "Void returns should not have a construction context");
         QualType ReturnTy = RetE->getType();
         QualType RegionTy = ACtx.getPointerType(ReturnTy);
-        return SVB.conjureSymbolVal(&TopLevelSymRegionTag, RetE, SFC, RegionTy,
-                                    currBldrCtx->blockCount());
+        return SVB.conjureSymbolVal(&TopLevelSymRegionTag, getCFGElementRef(),
+                                    SFC, RegionTy, currBldrCtx->blockCount());
       }
       llvm_unreachable("Unhandled return value construction context!");
     }
@@ -644,9 +644,10 @@ void ExprEngine::handleConstructor(const Expr *E,
     // FIXME: For now this code essentially bails out. We need to find the
     // correct target region and set it.
     // FIXME: Instead of relying on the ParentMap, we should have the
-    // trigger-statement (InitListExpr in this case) passed down from CFG or
-    // otherwise always available during construction.
-    if (isa_and_nonnull<InitListExpr>(LCtx->getParentMap().getParent(E))) {
+    // trigger-statement (InitListExpr or CXXParenListInitExpr in this case)
+    // passed down from CFG or otherwise always available during construction.
+    if (isa_and_nonnull<InitListExpr, CXXParenListInitExpr>(
+            LCtx->getParentMap().getParent(E))) {
       MemRegionManager &MRMgr = getSValBuilder().getRegionManager();
       Target = loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
       CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
@@ -974,10 +975,11 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // a custom global allocator.
   if (symVal.isUnknown()) {
     if (IsStandardGlobalOpNewFunction)
-      symVal = svalBuilder.getConjuredHeapSymbolVal(CNE, LCtx, blockCount);
+      symVal = svalBuilder.getConjuredHeapSymbolVal(getCFGElementRef(), LCtx,
+                                                    CNE->getType(), blockCount);
     else
-      symVal = svalBuilder.conjureSymbolVal(nullptr, CNE, LCtx, CNE->getType(),
-                                            blockCount);
+      symVal = svalBuilder.conjureSymbolVal(
+          /*symbolTag=*/nullptr, getCFGElementRef(), LCtx, blockCount);
   }
 
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
@@ -1017,7 +1019,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       // values are properly placed inside the required region, however if an
       // initializer list is used, this doesn't happen automatically.
       auto *Init = CNE->getInitializer();
-      bool isInitList = isa_and_nonnull<InitListExpr>(Init);
+      bool isInitList =
+          isa_and_nonnull<InitListExpr, CXXParenListInitExpr>(Init);
 
       QualType ObjTy =
           isInitList ? Init->getType() : CNE->getType()->getPointeeType();
@@ -1109,7 +1112,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
   }
 
   const LocationContext *LCtx = Pred->getLocationContext();
-  SVal V = svalBuilder.conjureSymbolVal(CS, LCtx, VD->getType(),
+  SVal V = svalBuilder.conjureSymbolVal(getCFGElementRef(), LCtx, VD->getType(),
                                         currBldrCtx->blockCount());
   ProgramStateRef state = Pred->getState();
   state = state->bindLoc(state->getLValue(VD, LCtx), V, LCtx);
