@@ -4019,6 +4019,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asin_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asin_test.cpp
+  DEPENDS
+    libc.src.math.asin
+)
+
+add_fp_unittest(
   asinf16_test
   SUITE
     libc-math-smoke-tests
