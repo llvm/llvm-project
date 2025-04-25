@@ -23,6 +23,17 @@ namespace rootsig {
 
 // Definition of the various enumerations and flags
 
+enum class DescriptorRangeFlags : unsigned {
+  None = 0,
+  DescriptorsVolatile = 0x1,
+  DataVolatile = 0x2,
+  DataStaticWhileSetAtExecute = 0x4,
+  DataStatic = 0x8,
+  DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
+  ValidFlags = 0x1000f,
+  ValidSamplerFlags = DescriptorsVolatile,
+};
+
 enum class ShaderVisibility {
   All = 0,
   Vertex = 1,
@@ -55,6 +66,22 @@ struct DescriptorTableClause {
   ClauseType Type;
   Register Reg;
   uint32_t Space = 0;
+  DescriptorRangeFlags Flags;
+
+  void setDefaultFlags() {
+    switch (Type) {
+    case ClauseType::CBuffer:
+    case ClauseType::SRV:
+      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      break;
+    case ClauseType::UAV:
+      Flags = DescriptorRangeFlags::DataVolatile;
+      break;
+    case ClauseType::Sampler:
+      Flags = DescriptorRangeFlags::None;
+      break;
+    }
+  }
 };
 
 // Models RootElement : DescriptorTable | DescriptorTableClause
