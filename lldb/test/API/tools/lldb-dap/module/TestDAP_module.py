@@ -57,6 +57,17 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(program, program_module["path"])
         self.assertIn("addressRange", program_module)
 
+        # Collect all the module names we saw as events.
+        module_event_names = set()
+        for module_event in self.dap_server.module_events:
+            module_event_names.add(module_event["body"]["module"]["name"])
+        self.assertNotEqual(len(module_event_names), 0)
+
+        # Make sure we got an event for every active module.
+        for module in active_modules:
+            # assertIn doesn't work with set.
+            self.assertTrue(module in module_event_names)
+
     @skipIfWindows
     def test_modules(self):
         """

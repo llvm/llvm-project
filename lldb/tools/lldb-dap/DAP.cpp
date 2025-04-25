@@ -692,7 +692,9 @@ void DAP::SetTarget(const lldb::SBTarget target) {
     lldb::SBListener listener = this->debugger.GetListener();
     listener.StartListeningForEvents(
         this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitBreakpointChanged);
+        lldb::SBTarget::eBroadcastBitBreakpointChanged |
+            lldb::SBTarget::eBroadcastBitModulesLoaded |
+            lldb::SBTarget::eBroadcastBitModulesUnloaded);
     listener.StartListeningForEvents(this->broadcaster,
                                      eBroadcastBitStopEventThread);
   }
