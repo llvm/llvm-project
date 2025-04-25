@@ -2490,7 +2490,7 @@ private:
 
 // These declarations must appear before any functions are implicitly used
 // so that they have the correct visibility specifier.
-#  define _LIBCPP_DECLARE(...) extern template __VA_ARGS__;
+#  define _LIBCPP_DECLARE(...) extern template _LIBCPP_EXPORTED_FROM_ABI __VA_ARGS__;
 #  ifdef _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
 _LIBCPP_STRING_UNSTABLE_EXTERN_TEMPLATE_LIST(_LIBCPP_DECLARE, char)
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
