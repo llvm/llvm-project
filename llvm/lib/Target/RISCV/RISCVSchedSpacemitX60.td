@@ -140,11 +140,13 @@ let Latency = 5 in {
 }
 
 // Floating point units Half precision
-def : WriteRes<WriteFAdd16, [SMX60_FP]> { let Latency = 3; }
-def : WriteRes<WriteFMul16, [SMX60_FP]> { let Latency = 3; }
+let Latency = 3 in {
+  def : WriteRes<WriteFAdd16, [SMX60_FP]>;
+  def : WriteRes<WriteFMul16, [SMX60_FP]>;
+  def : WriteRes<WriteFSGNJ16, [SMX60_FP]>;
+  def : WriteRes<WriteFMinMax16, [SMX60_FP]>;
+}
 def : WriteRes<WriteFMA16, [SMX60_FP]> { let Latency = 4; }
-def : WriteRes<WriteFSGNJ16, [SMX60_FP]> { let Latency = 3; }
-def : WriteRes<WriteFMinMax16, [SMX60_FP]> { let Latency = 3; }
 
 // Worst case latency is used
 let Latency = 7, ReleaseAtCycles = [7] in {
@@ -153,11 +155,13 @@ let Latency = 7, ReleaseAtCycles = [7] in {
 }
 
 // Single precision
-def : WriteRes<WriteFAdd32, [SMX60_FP]> { let Latency = 3; }
+let Latency = 3 in {
+  def : WriteRes<WriteFAdd32, [SMX60_FP]>;
+  def : WriteRes<WriteFSGNJ32, [SMX60_FP]>;
+  def : WriteRes<WriteFMinMax32, [SMX60_FP]>;
+}
 def : WriteRes<WriteFMul32, [SMX60_FP]> { let Latency = 4; }
 def : WriteRes<WriteFMA32, [SMX60_FP]> { let Latency = 5; }
-def : WriteRes<WriteFSGNJ32, [SMX60_FP]> { let Latency = 3; }
-def : WriteRes<WriteFMinMax32, [SMX60_FP]> { let Latency = 3; }
 
 // Worst case latency is used
 let Latency = 10, ReleaseAtCycles = [10] in {
@@ -166,11 +170,15 @@ let Latency = 10, ReleaseAtCycles = [10] in {
 }
 
 // Double precision
-def : WriteRes<WriteFAdd64, [SMX60_FP]> { let Latency = 4; }
-def : WriteRes<WriteFMul64, [SMX60_FP]> { let Latency = 4; }
+let Latency = 4 in {
+  def : WriteRes<WriteFAdd64, [SMX60_FP]>;
+  def : WriteRes<WriteFMul64, [SMX60_FP]>;
+}
+let Latency = 3 in {
+  def : WriteRes<WriteFSGNJ64, [SMX60_FP]>;
+  def : WriteRes<WriteFMinMax64, [SMX60_FP]>;
+}
 def : WriteRes<WriteFMA64, [SMX60_FP]> { let Latency = 5; }
-def : WriteRes<WriteFSGNJ64, [SMX60_FP]> { let Latency = 3; }
-def : WriteRes<WriteFMinMax64, [SMX60_FP]> { let Latency = 3; }
 
 let Latency = 10, ReleaseAtCycles = [10] in {
   def :  WriteRes<WriteFDiv64, [SMX60_FP]>;
