@@ -79,7 +79,6 @@ struct RootConstantsYaml {
   uint32_t Num32BitValues;
 };
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) bool Val = false;
 struct RootDescriptorYaml {
   RootDescriptorYaml() = default;
 
@@ -88,6 +87,7 @@ struct RootDescriptorYaml {
 
   uint32_t getEncodedFlags() const;
 
+#define ROOT_DESCRIPTOR_FLAG(Num, Val) bool Val = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 
@@ -95,7 +95,7 @@ struct RootParameterYamlDesc {
   uint32_t Type;
   uint32_t Visibility;
   uint32_t Offset;
-  RootParameterYamlDesc() {};
+  RootParameterYamlDesc(){};
   RootParameterYamlDesc(uint32_t T) : Type(T) {
     switch (T) {
 
@@ -116,7 +116,6 @@ struct RootParameterYamlDesc {
   };
 };
 
-#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
 struct RootSignatureYamlDesc {
   RootSignatureYamlDesc() = default;
 
@@ -137,6 +136,7 @@ struct RootSignatureYamlDesc {
   static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
   create(const object::DirectX::RootSignature &Data);
 
+#define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 

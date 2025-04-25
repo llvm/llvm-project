@@ -120,18 +120,20 @@ template <typename T> struct ViewArray {
 namespace DirectX {
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
-  uint32_t Version;
   StringRef ParamData;
   RootParameterView(uint32_t V, const dxbc::RootParameterHeader &H, StringRef P)
-      : Header(H), Version(V), ParamData(P) {}
+      : Header(H), ParamData(P) {}
 
-  template <typename T> Expected<T> readParameter() {
-    T Struct;
-    if (sizeof(T) != ParamData.size())
+  template <typename T, typename VersionT = T> Expected<T> readParameter() {
+    assert(sizeof(VersionT) <= sizeof(T) &&
+           "Parameter of higher version must inherit all previous version data "
+           "members");
+    if (sizeof(VersionT) != ParamData.size())
       return make_error<GenericBinaryError>(
           "Reading structure out of file bounds", object_error::parse_failed);
 
-    memcpy(&Struct, ParamData.data(), sizeof(T));
+    T Struct;
+    memcpy(&Struct, ParamData.data(), sizeof(VersionT));
     // DXContainer is always little endian
     if (sys::IsBigEndianHost)
       Struct.swapBytes();
@@ -150,34 +152,20 @@ struct RootConstantView : RootParameterView {
   }
 };
 
-struct RootDescriptorView_V1_0 : RootParameterView {
+struct RootDescriptorView : RootParameterView {
   static bool classof(const RootParameterView *V) {
-    return (V->Version == 1 &&
-            (V->Header.ParameterType ==
-                 llvm::to_underlying(dxbc::RootParameterType::CBV) ||
-             V->Header.ParameterType ==
-                 llvm::to_underlying(dxbc::RootParameterType::SRV) ||
-             V->Header.ParameterType ==
-                 llvm::to_underlying(dxbc::RootParameterType::UAV)));
+    return (V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::CBV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::SRV) ||
+            V->Header.ParameterType ==
+                llvm::to_underlying(dxbc::RootParameterType::UAV));
   }
 
-  llvm::Expected<dxbc::RST0::v0::RootDescriptor> read() {
-    return readParameter<dxbc::RST0::v0::RootDescriptor>();
-  }
-};
-
-struct RootDescriptorView_V1_1 : RootParameterView {
-  static bool classof(const RootParameterView *V) {
-    return (V->Version == 2 &&
-            (V->Header.ParameterType ==
-                 llvm::to_underlying(dxbc::RootParameterType::CBV) ||
-             V->Header.ParameterType ==
-                 llvm::to_underlying(dxbc::RootParameterType::SRV) ||
-             V->Header.ParameterType ==
-                 llvm::to_underlying(dxbc::RootParameterType::UAV)));
-  }
-
-  llvm::Expected<dxbc::RST0::v1::RootDescriptor> read() {
+  llvm::Expected<dxbc::RST0::v1::RootDescriptor> read(uint32_t Version) {
+    if (Version == 1)
+      return readParameter<dxbc::RST0::v1::RootDescriptor,
+                           dxbc::RST0::v0::RootDescriptor>();
     return readParameter<dxbc::RST0::v1::RootDescriptor>();
   }
 };

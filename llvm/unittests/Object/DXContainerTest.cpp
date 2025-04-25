@@ -994,10 +994,10 @@ TEST(RootSignature, ParseRootDescriptor) {
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
-    DirectX::RootDescriptorView_V1_0 *RootDescriptorView =
-        dyn_cast<DirectX::RootDescriptorView_V1_0>(&*ParamView);
+    DirectX::RootDescriptorView *RootDescriptorView =
+        dyn_cast<DirectX::RootDescriptorView>(&*ParamView);
     ASSERT_TRUE(RootDescriptorView != nullptr);
-    auto Descriptor = RootDescriptorView->read();
+    auto Descriptor = RootDescriptorView->read(RS.getVersion());
 
     ASSERT_THAT_ERROR(Descriptor.takeError(), Succeeded());
 
@@ -1038,10 +1038,10 @@ TEST(RootSignature, ParseRootDescriptor) {
     auto ParamView = RS.getParameter(RootParam);
     ASSERT_THAT_ERROR(ParamView.takeError(), Succeeded());
 
-    DirectX::RootDescriptorView_V1_1 *RootDescriptorView =
-        dyn_cast<DirectX::RootDescriptorView_V1_1>(&*ParamView);
+    DirectX::RootDescriptorView *RootDescriptorView =
+        dyn_cast<DirectX::RootDescriptorView>(&*ParamView);
     ASSERT_TRUE(RootDescriptorView != nullptr);
-    auto Descriptor = RootDescriptorView->read();
+    auto Descriptor = RootDescriptorView->read(RS.getVersion());
 
     ASSERT_THAT_ERROR(Descriptor.takeError(), Succeeded());
 
