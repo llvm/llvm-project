@@ -32,6 +32,34 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
+static bool hasUAVsAtEveryStage(DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI) {
+  if (DRM.uavs().empty())
+    return false;
+
+  switch (MMDI.ShaderProfile) {
+  default:
+    return false;
+  case Triple::EnvironmentType::Compute:
+  case Triple::EnvironmentType::Pixel:
+    return false;
+  case Triple::EnvironmentType::Vertex:
+  case Triple::EnvironmentType::Geometry:
+  case Triple::EnvironmentType::Hull:
+  case Triple::EnvironmentType::Domain:
+    return true;
+  case Triple::EnvironmentType::Library:
+  case Triple::EnvironmentType::RayGeneration:
+  case Triple::EnvironmentType::Intersection:
+  case Triple::EnvironmentType::AnyHit:
+  case Triple::EnvironmentType::ClosestHit:
+  case Triple::EnvironmentType::Miss:
+  case Triple::EnvironmentType::Callable:
+  case Triple::EnvironmentType::Mesh:
+  case Triple::EnvironmentType::Amplification:
+    return MMDI.ValidatorVersion < VersionTuple(1, 8);
+  }
+}
+
 static bool checkWaveOps(Intrinsic::ID IID) {
   // Currently unsupported intrinsics
   // case Intrinsic::dx_wave_getlanecount:
@@ -266,25 +294,7 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
   if (NumUAVs > 8)
     CombinedSFMask.Max64UAVs = true;
 
-  // Set UAVsAtEveryStage flag based on the presence of UAVs, the shader
-  // model version, and the shader environment
-  if (!DRM.uavs().empty()) {
-    if (MMDI.ValidatorVersion < VersionTuple(1, 8))
-      CombinedSFMask.UAVsAtEveryStage =
-          MMDI.ShaderProfile != Triple::EnvironmentType::Compute &&
-          MMDI.ShaderProfile != Triple::EnvironmentType::Pixel;
-    else // MMDI.ValidatorVersion >= VersionTuple(1, 8)
-      switch (MMDI.ShaderProfile) {
-      default:
-        break;
-      case Triple::EnvironmentType::Vertex:
-      case Triple::EnvironmentType::Hull:
-      case Triple::EnvironmentType::Domain:
-      case Triple::EnvironmentType::Geometry:
-        CombinedSFMask.UAVsAtEveryStage = true;
-        break;
-      }
-  }
+  CombinedSFMask.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
