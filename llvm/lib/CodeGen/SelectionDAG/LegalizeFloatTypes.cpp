@@ -168,6 +168,7 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::POISON:
     case ISD::UNDEF:       R = SoftenFloatRes_UNDEF(N); break;
     case ISD::VAARG:       R = SoftenFloatRes_VAARG(N); break;
+    case ISD::AssertNoFPClass:       R = GetSoftenedFloat(N->getOperand(0)); break;
     case ISD::VECREDUCE_FADD:
     case ISD::VECREDUCE_FMUL:
     case ISD::VECREDUCE_FMIN:
@@ -2576,6 +2577,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
       R = PromoteFloatOp_FAKE_USE(N, OpNo);
       break;
     case ISD::FCOPYSIGN:  R = PromoteFloatOp_FCOPYSIGN(N, OpNo); break;
+    case ISD::AssertNoFPClass:
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:
     case ISD::LROUND:
@@ -2803,6 +2805,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FTRUNC:
     case ISD::FTAN:
     case ISD::FTANH:
+    case ISD::AssertNoFPClass:
     case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
 
     // Binary FP Operations
