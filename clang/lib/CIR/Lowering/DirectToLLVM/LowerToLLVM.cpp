@@ -19,6 +19,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Types.h"
@@ -28,6 +29,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LoweringHelpers.h"
@@ -1292,6 +1294,90 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
+    cir::ShiftOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto cirAmtTy = mlir::dyn_cast<cir::IntType>(op.getAmount().getType());
+  auto cirValTy = mlir::dyn_cast<cir::IntType>(op.getValue().getType());
+
+  // Operands could also be vector type
+  assert(!cir::MissingFeatures::vectorType());
+  mlir::Type llvmTy = getTypeConverter()->convertType(op.getType());
+  mlir::Value amt = adaptor.getAmount();
+  mlir::Value val = adaptor.getValue();
+
+  // TODO(cir): Assert for vector types
+  assert((cirValTy && cirAmtTy) &&
+         "shift input type must be integer or vector type, otherwise NYI");
+
+  assert((cirValTy == op.getType()) && "inconsistent operands' types NYI");
+
+  // Ensure shift amount is the same type as the value. Some undefined
+  // behavior might occur in the casts below as per [C99 6.5.7.3].
+  // Vector type shift amount needs no cast as type consistency is expected to
+  // be already be enforced at CIRGen.
+  if (cirAmtTy)
+    amt = getLLVMIntCast(rewriter, amt, mlir::cast<mlir::IntegerType>(llvmTy),
+                         true, cirAmtTy.getWidth(), cirValTy.getWidth());
+
+  // Lower to the proper LLVM shift operation.
+  if (op.getIsShiftleft()) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, val, amt);
+  } else {
+    assert(!cir::MissingFeatures::vectorType());
+    bool isUnsigned = !cirValTy.isSigned();
+    if (isUnsigned)
+      rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
+    else
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);
+  }
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
+    cir::SelectOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto getConstantBool = [](mlir::Value value) -> cir::BoolAttr {
+    auto definingOp =
+        mlir::dyn_cast_if_present<cir::ConstantOp>(value.getDefiningOp());
+    if (!definingOp)
+      return {};
+
+    auto constValue = mlir::dyn_cast<cir::BoolAttr>(definingOp.getValue());
+    if (!constValue)
+      return {};
+
+    return constValue;
+  };
+
+  // Two special cases in the LLVMIR codegen of select op:
+  // - select %0, %1, false => and %0, %1
+  // - select %0, true, %1 => or %0, %1
+  if (mlir::isa<cir::BoolType>(op.getTrueValue().getType())) {
+    cir::BoolAttr trueValue = getConstantBool(op.getTrueValue());
+    cir::BoolAttr falseValue = getConstantBool(op.getFalseValue());
+    if (falseValue && !falseValue.getValue()) {
+      // select %0, %1, false => and %0, %1
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, adaptor.getCondition(),
+                                                     adaptor.getTrueValue());
+      return mlir::success();
+    }
+    if (trueValue && trueValue.getValue()) {
+      // select %0, true, %1 => or %0, %1
+      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(op, adaptor.getCondition(),
+                                                    adaptor.getFalseValue());
+      return mlir::success();
+    }
+  }
+
+  mlir::Value llvmCondition = adaptor.getCondition();
+  rewriter.replaceOpWithNewOp<mlir::LLVM::SelectOp>(
+      op, llvmCondition, adaptor.getTrueValue(), adaptor.getFalseValue());
+
+  return mlir::success();
+}
+
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout) {
   converter.addConversion([&](cir::PointerType type) -> mlir::Type {
@@ -1465,6 +1551,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
                CIRToLLVMGetGlobalOpLowering,
+               CIRToLLVMGetMemberOpLowering,
+               CIRToLLVMSelectOpLowering,
+               CIRToLLVMShiftOpLowering,
+               CIRToLLVMStackSaveOpLowering,
+               CIRToLLVMStackRestoreOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering
       // clang-format on
@@ -1494,6 +1585,29 @@ mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
+    cir::GetMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type llResTy = getTypeConverter()->convertType(op.getType());
+  const auto recordTy =
+      mlir::cast<cir::RecordType>(op.getAddrTy().getPointee());
+  assert(recordTy && "expected record type");
+
+  switch (recordTy.getKind()) {
+  case cir::RecordType::Struct: {
+    // Since the base address is a pointer to an aggregate, the first offset
+    // is always zero. The second offset tell us which member it will access.
+    llvm::SmallVector<mlir::LLVM::GEPArg, 2> offset{0, op.getIndex()};
+    const mlir::Type elementTy = getTypeConverter()->convertType(recordTy);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, llResTy, elementTy,
+                                                   adaptor.getAddr(), offset);
+    return mlir::success();
+  }
+  case cir::RecordType::Union:
+    return op.emitError() << "NYI: union get_member lowering";
+  }
+}
+
 mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
     cir::TrapOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1507,6 +1621,21 @@ mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
   // block.
   rewriter.create<mlir::LLVM::UnreachableOp>(loc);
 
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMStackSaveOpLowering::matchAndRewrite(
+    cir::StackSaveOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Type ptrTy = getTypeConverter()->convertType(op.getType());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StackSaveOp>(op, ptrTy);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
+    cir::StackRestoreOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op, adaptor.getPtr());
   return mlir::success();
 }
 

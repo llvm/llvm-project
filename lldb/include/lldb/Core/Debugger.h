@@ -303,6 +303,9 @@ public:
   const FormatEntity::Entry *GetStatuslineFormat() const;
   bool SetStatuslineFormat(const FormatEntity::Entry &format);
 
+  llvm::StringRef GetSeparator() const;
+  bool SetSeparator(llvm::StringRef s);
+
   llvm::StringRef GetShowProgressAnsiPrefix() const;
 
   llvm::StringRef GetShowProgressAnsiSuffix() const;

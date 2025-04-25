@@ -13395,6 +13395,12 @@ struct DiagNonTrivalCUnionCopyVisitor
         asDerived().visit(FD->getType(), FD, InNonTrivialUnion);
   }
 
+  void visitPtrAuth(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
+    if (InNonTrivialUnion)
+      S.Diag(FD->getLocation(), diag::note_non_trivial_c_union)
+          << 1 << 2 << QT << FD->getName();
+  }
+
   void preVisit(QualType::PrimitiveCopyKind PCK, QualType QT,
                 const FieldDecl *FD, bool InNonTrivialUnion) {}
   void visitTrivial(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {}
@@ -16150,7 +16156,13 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FSI->UsesFPIntrin && FD && !FD->hasAttr<StrictFPAttr>())
     FD->addAttr(StrictFPAttr::CreateImplicit(Context));
 
-  sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
+  SourceLocation AnalysisLoc;
+  if (Body)
+    AnalysisLoc = Body->getEndLoc();
+  else if (FD)
+    AnalysisLoc = FD->getEndLoc();
+  sema::AnalysisBasedWarnings::Policy WP =
+      AnalysisWarnings.getPolicyInEffectAt(AnalysisLoc);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
   // If we skip function body, we can't tell if a function is a coroutine.

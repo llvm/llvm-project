@@ -159,6 +159,8 @@ class TestCase(TestBase):
         """
         self.build()
         target = self.createTestTarget()
+
+        # Verify top-level keys.
         debug_stats = self.get_stats()
         debug_stat_keys = [
             "memory",
@@ -168,6 +170,8 @@ class TestCase(TestBase):
             "totalSymbolTableIndexTime",
             "totalSymbolTablesLoadedFromCache",
             "totalSymbolTablesSavedToCache",
+            "totalSymbolTableSymbolCount",
+            "totalSymbolTablesLoaded",
             "totalDebugInfoByteSize",
             "totalDebugInfoIndexTime",
             "totalDebugInfoIndexLoadedFromCache",
@@ -175,16 +179,58 @@ class TestCase(TestBase):
             "totalDebugInfoParseTime",
         ]
         self.verify_keys(debug_stats, '"debug_stats"', debug_stat_keys, None)
-        stats = debug_stats["targets"][0]
-        keys_exist = [
+        if self.getPlatform() != "windows":
+            self.assertGreater(debug_stats["totalSymbolTableSymbolCount"], 0)
+            self.assertGreater(debug_stats["totalSymbolTablesLoaded"], 0)
+
+        # Verify target stats keys.
+        target_stats = debug_stats["targets"][0]
+        target_stat_keys_exist = [
             "expressionEvaluation",
             "frameVariable",
             "moduleIdentifiers",
             "targetCreateTime",
         ]
-        keys_missing = ["firstStopTime", "launchOrAttachTime"]
-        self.verify_keys(stats, '"stats"', keys_exist, keys_missing)
-        self.assertGreater(stats["targetCreateTime"], 0.0)
+        target_stat_keys_missing = ["firstStopTime", "launchOrAttachTime"]
+        self.verify_keys(
+            target_stats,
+            '"target_stats"',
+            target_stat_keys_exist,
+            target_stat_keys_missing,
+        )
+        self.assertGreater(target_stats["targetCreateTime"], 0.0)
+
+        # Verify module stats keys.
+        for module_stats in debug_stats["modules"]:
+            module_stat_keys_exist = [
+                "symbolTableSymbolCount",
+            ]
+            self.verify_keys(
+                module_stats, '"module_stats"', module_stat_keys_exist, None
+            )
+            if self.getPlatform() != "windows":
+                self.assertGreater(module_stats["symbolTableSymbolCount"], 0)
+
+    def test_default_no_run_no_preload_symbols(self):
+        """Test "statistics dump" without running the target and without
+        preloading symbols.
+
+        Checks that symbol count are zero.
+        """
+        # Make sure symbols will not be preloaded.
+        self.runCmd("settings set target.preload-symbols false")
+
+        # Build and load the target
+        self.build()
+        self.createTestTarget()
+
+        # Get statistics
+        debug_stats = self.get_stats()
+
+        # No symbols should be loaded in the main module.
+        main_module_stats = debug_stats["modules"][0]
+        if self.getPlatform() != "windows":
+            self.assertEqual(main_module_stats["symbolTableSymbolCount"], 0)
 
     def test_default_with_run(self):
         """Test "statistics dump" when running the target to a breakpoint.

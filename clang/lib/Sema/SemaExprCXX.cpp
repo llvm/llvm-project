@@ -4745,19 +4745,13 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_HLSL_Array_RValue:
     if (ToType->isArrayParameterType()) {
       FromType = Context.getArrayParameterType(FromType);
-      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                               /*BasePath=*/nullptr, CCK)
-                 .get();
-    } else { // FromType must be ArrayParameterType
-      assert(FromType->isArrayParameterType() &&
-             "FromType must be ArrayParameterType in ICK_HLSL_Array_RValue \
-              if it is not ToType");
+    } else if (FromType->isArrayParameterType()) {
       const ArrayParameterType *APT = cast<ArrayParameterType>(FromType);
       FromType = APT->getConstantArrayType(Context);
-      From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
-                               /*BasePath=*/nullptr, CCK)
-                 .get();
     }
+    From = ImpCastExprToType(From, FromType, CK_HLSLArrayRValue, VK_PRValue,
+                             /*BasePath=*/nullptr, CCK)
+               .get();
     break;
 
   case ICK_Function_To_Pointer:
@@ -6153,9 +6147,8 @@ static APValue EvaluateSizeTTypeTrait(Sema &S, TypeTrait Kind,
       S.Diag(KWLoc, diag::err_arg_is_not_destructurable) << T << ArgRange;
       return APValue();
     }
-    llvm::APSInt V =
-        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
-    return APValue{V};
+    return APValue(
+        S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType()));
     break;
   }
   default:
