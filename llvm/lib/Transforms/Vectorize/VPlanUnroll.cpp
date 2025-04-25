@@ -344,8 +344,8 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
       if (Plan.hasScalarVFOnly()) {
         auto *I = cast<VPInstruction>(&R);
-        // Extracting from end with VF = 1 implies retrieving retrieving the
-        // last or penultimate scalar part (UF-1 or UF-2).
+        // Extracting from end with VF = 1 implies retrieving the last or
+        // penultimate scalar part (UF-1 or UF-2).
         unsigned Offset =
             I->getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
         I->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
