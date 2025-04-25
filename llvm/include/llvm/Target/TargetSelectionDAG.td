@@ -1835,6 +1835,13 @@ defm atomic_load_uinc_wrap : binary_atomic_op<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op<atomic_load_udec_wrap>;
 defm atomic_cmp_swap  : ternary_atomic_op<atomic_cmp_swap>;
 
+/// Atomic load which does not extend.
+def atomic_load_nonext :
+  PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsNonExtLoad = true;
+}
+
 /// Atomic load which zeroes the excess high bits.
 def atomic_load_zext :
   PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
@@ -1876,10 +1883,35 @@ def atomic_load_32 :
   let IsAtomic = true;
   let MemoryVT = i32;
 }
+
 def atomic_load_64 :
   PatFrag<(ops node:$ptr),
           (atomic_load node:$ptr)> {
   let IsAtomic = true;
+  let MemoryVT = i64;
+}
+
+def atomic_load_nonext_8 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i8;
+}
+
+def atomic_load_nonext_16 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i16;
+}
+
+def atomic_load_nonext_32 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i32;
+}
+
+def atomic_load_nonext_64 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
   let MemoryVT = i64;
 }
 
