@@ -2838,8 +2838,11 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
   if (!ST->sinkSplatOperands())
     return false;
 
-  for (auto &U : I->operands()) {
-    auto *Op = dyn_cast<Instruction>(U.get());
+  for (auto OpIdx : enumerate(I->operands())) {
+    if (!canSplatOperand(I, OpIdx.index()))
+      continue;
+
+    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
     // Make sure we are not already sinking this operand
     if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
       continue;
@@ -2856,13 +2859,13 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     if (cast<VectorType>(Op->getType())->getElementType()->isIntegerTy(1))
       continue;
 
-    // All uses of the splat/vp.splat should be sunk to avoid duplicating it
-    // across gpr and vector registers
-    if (any_of(Op->uses(), [this](Use &U) {
-          return !canSplatOperand(cast<Instruction>(U.getUser()),
-                                  U.getOperandNo());
-        }))
-      continue;
+    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
+    // and vector registers
+    for (Use &U : Op->uses()) {
+      Instruction *Insn = cast<Instruction>(U.getUser());
+      if (!canSplatOperand(Insn, U.getOperandNo()))
+        return false;
+    }
 
     // Sink any fpexts since they might be used in a widening fp pattern.
     if (IsVPSplat) {
@@ -2875,9 +2878,9 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
         Ops.push_back(&InsertElt->getOperandUse(1));
       Ops.push_back(InsertEltUse);
     }
-    Ops.push_back(&U);
+    Ops.push_back(&OpIdx.value());
   }
-  return !Ops.empty();
+  return true;
 }
 
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
