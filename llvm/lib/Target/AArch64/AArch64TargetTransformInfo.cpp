@@ -352,7 +352,7 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   SMEAttrs FAttrs(*F);
   SMECallAttrs CallAttrs(Call);
 
-  if (SMECallAttrs(FAttrs, CallAttrs.calleeOrCallsite()).requiresSMChange()) {
+  if (SMECallAttrs(FAttrs, CallAttrs.callee()).requiresSMChange()) {
     if (F == Call.getCaller()) // (1)
       return CallPenaltyChangeSM * DefaultCallPenalty;
     if (SMECallAttrs(FAttrs, CallAttrs.caller()).requiresSMChange()) // (2)

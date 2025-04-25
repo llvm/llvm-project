@@ -44,7 +44,8 @@ public:
     ZA_Shift = 6,
     ZA_Mask = 0b111 << ZA_Shift,
     ZT0_Shift = 9,
-    ZT0_Mask = 0b111 << ZT0_Shift
+    ZT0_Mask = 0b111 << ZT0_Shift,
+    Callsite_Flags = ZT0_Undef
   };
 
   SMEAttrs() = default;
@@ -135,6 +136,14 @@ public:
     return Merged;
   }
 
+  SMEAttrs withoutPerCallsiteFlags() const {
+    return (Bitmask & ~Callsite_Flags);
+  }
+
+  bool operator==(SMEAttrs const &Other) const {
+    return Bitmask == Other.Bitmask;
+  }
+
 private:
   void addKnownFunctionAttrs(StringRef FuncName);
 };
@@ -143,44 +152,48 @@ private:
 /// interfaces to query whether a streaming mode change or lazy-save mechanism
 /// is required when going from one function to another (e.g. through a call).
 class SMECallAttrs {
-  SMEAttrs Caller;
-  SMEAttrs Callee;
+  SMEAttrs CallerFn;
+  SMEAttrs CalledFn;
   SMEAttrs Callsite;
+  bool IsIndirect = false;
 
 public:
   SMECallAttrs(SMEAttrs Caller, SMEAttrs Callee,
                SMEAttrs Callsite = SMEAttrs::Normal)
-      : Caller(Caller), Callee(Callee), Callsite(Callsite) {}
+      : CallerFn(Caller), CalledFn(Callee), Callsite(Callsite) {}
 
   SMECallAttrs(const CallBase &CB);
 
-  SMEAttrs &caller() { return Caller; }
-  SMEAttrs &callee() { return Callee; }
+  SMEAttrs &caller() { return CallerFn; }
+  SMEAttrs &callee() {
+    if (IsIndirect)
+      return Callsite;
+    return CalledFn;
+  }
   SMEAttrs &callsite() { return Callsite; }
-  SMEAttrs const &caller() const { return Caller; }
-  SMEAttrs const &callee() const { return Callee; }
+  SMEAttrs const &caller() const { return CallerFn; }
+  SMEAttrs const &callee() const {
+    return const_cast<SMECallAttrs *>(this)->callee();
+  }
   SMEAttrs const &callsite() const { return Callsite; }
-  SMEAttrs calleeOrCallsite() const { return Callsite | Callee; }
 
   /// \return true if a call from Caller -> Callee requires a change in
   /// streaming mode.
   bool requiresSMChange() const;
 
   bool requiresLazySave() const {
-    return Caller.hasZAState() && (Callsite | Callee).hasPrivateZAInterface() &&
-           !Callee.isSMEABIRoutine();
+    return caller().hasZAState() && callee().hasPrivateZAInterface() &&
+           !callee().isSMEABIRoutine();
   }
 
   bool requiresPreservingZT0() const {
-    return Caller.hasZT0State() && !Callsite.hasUndefZT0() &&
-           !(Callsite | Callee).sharesZT0() &&
-           !(Callsite | Callee).hasAgnosticZAInterface();
+    return caller().hasZT0State() && !callsite().hasUndefZT0() &&
+           !callee().sharesZT0() && !callee().hasAgnosticZAInterface();
   }
 
   bool requiresDisablingZABeforeCall() const {
-    return Caller.hasZT0State() && !Caller.hasZAState() &&
-           (Callsite | Callee).hasPrivateZAInterface() &&
-           !Callee.isSMEABIRoutine();
+    return caller().hasZT0State() && !caller().hasZAState() &&
+           callee().hasPrivateZAInterface() && !callee().isSMEABIRoutine();
   }
 
   bool requiresEnablingZAAfterCall() const {
@@ -188,9 +201,8 @@ public:
   }
 
   bool requiresPreservingAllZAState() const {
-    return Caller.hasAgnosticZAInterface() &&
-           !(Callsite | Callee).hasAgnosticZAInterface() &&
-           !Callee.isSMEABIRoutine();
+    return caller().hasAgnosticZAInterface() &&
+           !callee().hasAgnosticZAInterface() && !callee().isSMEABIRoutine();
   }
 };
 
