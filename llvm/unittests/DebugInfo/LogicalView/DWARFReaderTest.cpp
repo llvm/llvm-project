@@ -72,6 +72,11 @@ void checkElementProperties(LVReader *Reader) {
   EXPECT_EQ(CompileUnit->getBaseAddress(), 0u);
   EXPECT_TRUE(CompileUnit->getProducer().starts_with("clang"));
   EXPECT_EQ(CompileUnit->getName(), "test.cpp");
+  LVSourceLanguage Language = CompileUnit->getSourceLanguage();
+  EXPECT_TRUE(Language.isValid());
+  EXPECT_EQ(Language.getAs<llvm::dwarf::SourceLanguage>(),
+            llvm::dwarf::DW_LANG_C_plus_plus_14);
+  EXPECT_EQ(Language.getName(), "DW_LANG_C_plus_plus_14");
 
   EXPECT_EQ(CompileUnit->lineCount(), 0u);
   EXPECT_EQ(CompileUnit->scopeCount(), 1u);

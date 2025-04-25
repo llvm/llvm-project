@@ -45,6 +45,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-44884.cpp'
 ; ONE-NEXT: [002]               {Producer} 'clang version 19{{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT: [002]     1         {Function} extern not_inlined 'bar' -> 'int'
 ; ONE-NEXT: [003]     1           {Parameter} 'Input' -> 'float'
 ; ONE-NEXT: [003]     1           {Line}
@@ -84,6 +85,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [001]             {CompileUnit} 'pr-44884.cpp'
 ; ONE-NEXT: [002]               {Producer} 'GNU C++14 10.3.0 {{.*}}'
+; ONE-NEXT: [002]               {Language} 'DW_LANG_C_plus_plus'
 ; ONE-NEXT: [002]     1         {Function} extern not_inlined 'bar' -> 'int'
 ; ONE-NEXT: [003]     1           {Parameter} 'Input' -> 'float'
 ; ONE-NEXT: [003]     1           {Line}
