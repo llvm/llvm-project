@@ -321,6 +321,14 @@ Symbols:
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeMethod));
 }
 
+static bool NameInfoEquals(const DemangledNameInfo &lhs,
+                           const DemangledNameInfo &rhs) {
+  return std::tie(lhs.BasenameRange, lhs.ArgumentsRange, lhs.ScopeRange,
+                  lhs.QualifiersRange) ==
+         std::tie(rhs.BasenameRange, rhs.ArgumentsRange, rhs.ScopeRange,
+                  rhs.QualifiersRange);
+}
+
 TEST(MangledTest, DemangledNameInfo_SetMangledResets) {
   Mangled mangled;
   EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
@@ -339,7 +347,7 @@ TEST(MangledTest, DemangledNameInfo_SetMangledResets) {
   ASSERT_NE(info2, std::nullopt);
   EXPECT_TRUE(info2->hasBasename());
 
-  EXPECT_NE(info1.value(), info2.value());
+  EXPECT_FALSE(NameInfoEquals(info1.value(), info2.value()));
   EXPECT_EQ(mangled.GetDemangledName(), "func()");
 }
 
@@ -375,11 +383,12 @@ TEST(MangledTest, DemangledNameInfo_SetValue) {
   mangled.SetValue(ConstString("_Z3foov"));
   auto demangled_foo = mangled.GetDemangledInfo();
   EXPECT_NE(demangled_foo, std::nullopt);
-  EXPECT_NE(demangled_foo, demangled_func);
+  EXPECT_FALSE(NameInfoEquals(demangled_foo.value(), demangled_func.value()));
 
   // SetValue(demangled) resets demangled-info
   mangled.SetValue(ConstString("_Z4funcv"));
-  EXPECT_EQ(mangled.GetDemangledInfo(), demangled_func);
+  EXPECT_TRUE(NameInfoEquals(mangled.GetDemangledInfo().value(),
+                             demangled_func.value()));
 
   // SetValue(empty) resets demangled-info
   mangled.SetValue(ConstString());
