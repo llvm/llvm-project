@@ -785,3 +785,82 @@ func.func @test_while_loop_cond_output_not_bool(%arg0: tensor<10xi32>, %arg1: te
   }
   return
 }
+
+// -----
+
+func.func @test_variable_multiple_declaration() -> () {
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  // expected-error@+1 {{'tosa.variable' op illegal to have multiple declaration of 'stored_var'}}
+  tosa.variable @stored_var = dense<-3> : tensor<2x4x8xi32>
+  return
+}
+
+// -----
+
+func.func @test_variable_shape_mismatch() -> () {
+  // expected-error@+1 {{inferred shape of elements literal ([2]) does not match type ([3])}}
+  tosa.variable @stored_var = dense<[3.14, 2.14]> : tensor<3xf32>
+  // expected-error@+1 {{custom op 'tosa.variable' expected attribute}}
+  return
+}
+
+// -----
+
+func.func @test_variable_type_mismatch() -> () {
+  // expected-error@+1 {{expected integer elements, but parsed floating-point}}
+  tosa.variable @stored_var = dense<-1.2> : tensor<2x4x8xi32>
+  // expected-error@+1 {{custom op 'tosa.variable' expected attribute}}
+  return
+}
+
+// -----
+
+func.func @test_variable_read_no_declaration() -> () {
+  // expected-error@+1 {{'tosa.variable_read' op 'stored_var' has not been declared by 'tosa.variable'}}
+  %0 = tosa.variable_read @stored_var : tensor<f32>
+  return
+}
+
+// -----
+
+func.func @test_variable_read_type_mismatch() -> () {
+  tosa.variable @stored_var = dense<-1.2> : tensor<2x4x8xf32>
+  // expected-error@+1 {{'tosa.variable_read' op require same element type for 'output1' ('i32') and the input tensor ('f32')}}
+  %0 = tosa.variable_read @stored_var : tensor<2x4x8xi32>
+  return
+}
+
+// -----
+
+func.func @test_variable_read_shape_mismatch() -> () {
+  tosa.variable @stored_var = dense<-1.2> : tensor<8x4x2xf32>
+  // expected-error@+1 {{'tosa.variable_read' op require same shapes for 'output1' ('tensor<2x4x8xf32>') and the input tensor ('tensor<8x4x2xf32>')}}
+  %0 = tosa.variable_read @stored_var : tensor<2x4x8xf32>
+  return
+}
+
+// -----
+
+func.func @test_variable_write_no_declaration(%arg0: tensor<f32>) -> () {
+  // expected-error@+1 {{'tosa.variable_write' op 'stored_var' has not been declared by 'tosa.variable'}}
+  tosa.variable_write @stored_var, %arg0 : tensor<f32>
+  return
+}
+
+// -----
+
+func.func @test_variable_write_type_mismatch(%arg0: tensor<2x4x8xi32>) -> () {
+  tosa.variable @stored_var = dense<-1.2> : tensor<2x4x8xf32>
+  // expected-error@+1 {{'tosa.variable_write' op require same element type for 'input1' ('i32') and the input tensor ('f32')}}
+  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi32>
+  return
+}
+
+// -----
+
+func.func @test_variable_write_shape_mismatch(%arg0: tensor<2x4x8xf32>) -> () {
+  tosa.variable @stored_var = dense<-1.2> : tensor<8x4x2xf32>
+  // expected-error@+1 {{'tosa.variable_write' op require same shapes for 'input1' ('tensor<2x4x8xf32>') and the input tensor ('tensor<8x4x2xf32>')}}
+  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xf32>
+  return
+}
