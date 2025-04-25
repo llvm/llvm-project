@@ -166,10 +166,6 @@ public:
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
-  void Leave(const parser::OmpClause::Fail &);
-  void Enter(const parser::OmpFailClause &);
-  void Leave(const parser::OmpFailClause &);
-
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
   bool IsVariableListItem(const Symbol &sym);
@@ -345,7 +341,6 @@ private:
   using LoopConstruct = std::variant<const parser::DoConstruct *,
       const parser::OpenMPLoopConstruct *>;
   std::vector<LoopConstruct> loopStack_;
-  bool isFailClause{false};
 };
 
 /// Find a duplicate entry in the range, and return an iterator to it.

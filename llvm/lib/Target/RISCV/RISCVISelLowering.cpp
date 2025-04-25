@@ -395,7 +395,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
-    setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
+    setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    // TODO: These should be set to LibCall, but this currently breaks
+    //   the Linux kernel build. See #101786. Lacks i128 tests, too.
+    if (Subtarget.is64Bit())
+      setOperationAction(ISD::CTPOP, MVT::i128, Expand);
+    else
+      setOperationAction(ISD::CTPOP, MVT::i32, Expand);
+    setOperationAction(ISD::CTPOP, MVT::i64, Expand);
   }
 
   if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb() ||
@@ -2909,7 +2916,7 @@ InstructionCost RISCVTargetLowering::getVRGatherVVCost(MVT VT) const {
   bool Log2CostModel =
       Subtarget.getVRGatherCostModel() == llvm::RISCVSubtarget::NLog2N;
   if (Log2CostModel && LMULCost.isValid()) {
-    unsigned Log = Log2_64(*LMULCost.getValue());
+    unsigned Log = Log2_64(LMULCost.getValue());
     if (Log > 0)
       return LMULCost * Log;
   }
@@ -6956,7 +6963,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 134 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
@@ -6980,7 +6987,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 134 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
@@ -8744,7 +8751,7 @@ foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
 
   unsigned ConstSelOpNo = 1;
   unsigned OtherSelOpNo = 2;
-  if (!dyn_cast<ConstantSDNode>(Sel->getOperand(ConstSelOpNo))) {
+  if (!isa<ConstantSDNode>(Sel->getOperand(ConstSelOpNo))) {
     ConstSelOpNo = 2;
     OtherSelOpNo = 1;
   }
@@ -9588,6 +9595,13 @@ getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
   return SmallerVT;
 }
 
+static bool isValidVisniInsertExtractIndex(SDValue Idx) {
+  auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
+  if (!IdxC || isNullConstant(Idx))
+    return false;
+  return isUInt<5>(IdxC->getZExtValue());
+}
+
 // Custom-legalize INSERT_VECTOR_ELT so that the value is inserted into the
 // first position of a vector, and that vector is slid up to the insert index.
 // By limiting the active vector length to index+1 and merging with the
@@ -9698,6 +9712,23 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         return Vec;
       return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
     }
+
+    // Use ri.vinsert.v.x if available.
+    if (Subtarget.hasVendorXRivosVisni() && VecVT.isInteger() &&
+        isValidVisniInsertExtractIndex(Idx)) {
+      // Tail policy applies to elements past VLMAX (by assumption Idx < VLMAX)
+      SDValue PolicyOp =
+          DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
+      Vec = DAG.getNode(RISCVISD::RI_VINSERT_VL, DL, ContainerVT, Vec, Val, Idx,
+                        VL, PolicyOp);
+      if (AlignedIdx)
+        Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigContainerVT, OrigVec,
+                          Vec, AlignedIdx);
+      if (!VecVT.isFixedLengthVector())
+        return Vec;
+      return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
+    }
+
     ValInVec = lowerScalarInsert(Val, VL, ContainerVT, DL, DAG, Subtarget);
   } else {
     // On RV32, i64-element vectors must be specially handled to place the
@@ -9895,6 +9926,14 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
       Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
                         DAG.getConstant(0, DL, XLenVT));
     }
+  }
+
+  // Use ri.vextract.x.v if available.
+  // TODO: Avoid index 0 and just use the vmv.x.s
+  if (Subtarget.hasVendorXRivosVisni() && EltVT.isInteger() &&
+      isValidVisniInsertExtractIndex(Idx)) {
+    SDValue Elt = DAG.getNode(RISCVISD::RI_VEXTRACT, DL, XLenVT, Vec, Idx);
+    return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt);
   }
 
   // If after narrowing, the required slide is still greater than LMUL2,
@@ -11543,6 +11582,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       EVT NewVT = VT.getDoubleNumVectorElementsVT();
       SDValue ZeroIdx = DAG.getVectorIdxConstant(0, DL);
       Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewVT, Src, ZeroIdx);
+      // Freeze the source so we can increase its use count.
+      Src = DAG.getFreeze(Src);
       SDValue Even = lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, Src,
                                DAG.getUNDEF(NewVT), DL, DAG, Subtarget);
       SDValue Odd = lowerVZIP(RISCVISD::RI_VUNZIP2B_VL, Src,
@@ -11552,6 +11593,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
       return DAG.getMergeValues({Even, Odd}, DL);
     }
 
+    // Freeze the sources so we can increase their use count.
+    V1 = DAG.getFreeze(V1);
+    V2 = DAG.getFreeze(V2);
     SDValue Even =
         lowerVZIP(RISCVISD::RI_VUNZIP2A_VL, V1, V2, DL, DAG, Subtarget);
     SDValue Odd =
@@ -11793,8 +11837,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   // TODO: Figure out the best lowering for the spread variants
   if (Subtarget.hasVendorXRivosVizip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
-    SDValue V1 = Op->getOperand(0);
-    SDValue V2 = Op->getOperand(1);
+    // Freeze the sources so we can increase their use count.
+    SDValue V1 = DAG.getFreeze(Op->getOperand(0));
+    SDValue V2 = DAG.getFreeze(Op->getOperand(1));
     SDValue Lo = lowerVZIP(RISCVISD::RI_VZIP2A_VL, V1, V2, DL, DAG, Subtarget);
     SDValue Hi = lowerVZIP(RISCVISD::RI_VZIP2B_VL, V1, V2, DL, DAG, Subtarget);
     return DAG.getMergeValues({Lo, Hi}, DL);
@@ -16002,6 +16047,7 @@ struct NodeExtensionHelper {
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
     case ISD::OR:
+    case RISCVISD::OR_VL:
       return RISCVISD::VWADD_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -16025,6 +16071,7 @@ struct NodeExtensionHelper {
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
     case ISD::OR:
+    case RISCVISD::OR_VL:
       return RISCVISD::VWADDU_VL;
     case ISD::SUB:
     case RISCVISD::SUB_VL:
@@ -16082,6 +16129,7 @@ struct NodeExtensionHelper {
     case ISD::ADD:
     case RISCVISD::ADD_VL:
     case ISD::OR:
+    case RISCVISD::OR_VL:
       return SupportsExt == ExtKind::SExt ? RISCVISD::VWADD_W_VL
                                           : RISCVISD::VWADDU_W_VL;
     case ISD::SUB:
@@ -16272,6 +16320,8 @@ struct NodeExtensionHelper {
     case RISCVISD::VFWADD_W_VL:
     case RISCVISD::VFWSUB_W_VL:
       return true;
+    case RISCVISD::OR_VL:
+      return Root->getFlags().hasDisjoint();
     case ISD::SHL:
       return Root->getValueType(0).isScalableVector() &&
              Subtarget.hasStdExtZvbb();
@@ -16357,6 +16407,7 @@ struct NodeExtensionHelper {
     case ISD::OR:
     case RISCVISD::ADD_VL:
     case RISCVISD::MUL_VL:
+    case RISCVISD::OR_VL:
     case RISCVISD::VWADD_W_VL:
     case RISCVISD::VWADDU_W_VL:
     case RISCVISD::FADD_VL:
@@ -16573,6 +16624,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
   case ISD::OR:
   case RISCVISD::ADD_VL:
   case RISCVISD::SUB_VL:
+  case RISCVISD::OR_VL:
   case RISCVISD::FADD_VL:
   case RISCVISD::FSUB_VL:
     // add|sub|fadd|fsub-> vwadd(u)|vwsub(u)|vfwadd|vfwsub
@@ -16623,7 +16675,7 @@ NodeExtensionHelper::getSupportedFoldings(const SDNode *Root) {
 
 /// Combine a binary or FMA operation to its equivalent VW or VW_W form.
 /// The supported combines are:
-/// add | add_vl | or disjoint -> vwadd(u) | vwadd(u)_w
+/// add | add_vl | or disjoint | or_vl disjoint -> vwadd(u) | vwadd(u)_w
 /// sub | sub_vl -> vwsub(u) | vwsub(u)_w
 /// mul | mul_vl -> vwmul(u) | vwmul_su
 /// shl | shl_vl -> vwsll
@@ -19459,6 +19511,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::VWSUB_W_VL:
   case RISCVISD::VWSUBU_W_VL:
     return performVWADDSUBW_VLCombine(N, DCI, Subtarget);
+  case RISCVISD::OR_VL:
   case RISCVISD::SUB_VL:
   case RISCVISD::MUL_VL:
     return combineOp_VLToVWOp_VL(N, DCI, Subtarget);
@@ -22300,12 +22353,14 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VCPOP_VL)
   NODE_NAME_CASE(VFIRST_VL)
+  NODE_NAME_CASE(RI_VINSERT_VL)
   NODE_NAME_CASE(RI_VZIPEVEN_VL)
   NODE_NAME_CASE(RI_VZIPODD_VL)
   NODE_NAME_CASE(RI_VZIP2A_VL)
   NODE_NAME_CASE(RI_VZIP2B_VL)
   NODE_NAME_CASE(RI_VUNZIP2A_VL)
   NODE_NAME_CASE(RI_VUNZIP2B_VL)
+  NODE_NAME_CASE(RI_VEXTRACT)
   NODE_NAME_CASE(READ_CSR)
   NODE_NAME_CASE(WRITE_CSR)
   NODE_NAME_CASE(SWAP_CSR)

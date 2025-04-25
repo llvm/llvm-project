@@ -234,9 +234,11 @@ def int_amdgcn_init_exec_from_input : Intrinsic<[],
 def int_amdgcn_init_whole_wave : Intrinsic<[llvm_i1_ty], [], [
     IntrHasSideEffects, IntrNoMem, IntrConvergent]>;
 
-def int_amdgcn_wavefrontsize :
-  ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
-  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>;
+def int_amdgcn_wavefrontsize
+    : ClangBuiltin<"__builtin_amdgcn_wavefrontsize">,
+      DefaultAttrsIntrinsic<[llvm_i32_ty], [],
+                            [NoUndef<RetIndex>, Range<RetIndex, 32, 65>,
+                             IntrNoMem, IntrSpeculatable]>;
 
 // Represent a relocation constant.
 def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
