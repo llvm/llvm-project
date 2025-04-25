@@ -1595,11 +1595,9 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
 
   assert(!ElemT);
   // Structs etc.
-  const Descriptor *Desc = S.P.createDescriptor(
-      NewCall, ElemType.getTypePtr(),
-      IsArray ? std::nullopt : Descriptor::InlineDescMD,
-      /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
-      /*Init=*/nullptr);
+  const Descriptor *Desc =
+      S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
+                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
 
   if (IsArray) {
     Block *B =

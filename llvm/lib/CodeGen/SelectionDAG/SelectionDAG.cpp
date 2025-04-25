@@ -7499,7 +7499,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(N1.getValueType().isFloatingPoint() &&
            "AssertNoFPClass is used for a non-floating type");
     assert(isa<ConstantSDNode>(N2) && "NoFPClass is not Constant");
-    FPClassTest NoFPClass = static_cast<FPClassTest>(N2->getAsZExtVal());
+    [[maybe_unused]] FPClassTest NoFPClass =
+           static_cast<FPClassTest>(N2->getAsZExtVal());
     assert(llvm::to_underlying(NoFPClass) <=
                BitmaskEnumDetail::Mask<FPClassTest>() &&
            "FPClassTest value too large");
