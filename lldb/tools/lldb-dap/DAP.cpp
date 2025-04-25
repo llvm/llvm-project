@@ -847,8 +847,10 @@ static std::optional<T> getArgumentsIfRequest(const Message &pm,
 }
 
 llvm::Error DAP::Loop() {
-  std::future<llvm::Error> queue_reader =
-      std::async(std::launch::async, [&]() -> llvm::Error {
+  // Can't use \a std::future<llvm::Error> because it doesn't compile on
+  // Windows.
+  std::future<lldb::SBError> queue_reader =
+      std::async(std::launch::async, [&]() -> lldb::SBError {
         llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
         auto cleanup = llvm::make_scope_exit([&]() {
           // Ensure we're marked as disconnecting when the reader exits.
@@ -870,8 +872,11 @@ llvm::Error DAP::Loop() {
             continue;
           }
 
-          if (llvm::Error err = next.takeError())
-            return err;
+          if (llvm::Error err = next.takeError()) {
+            lldb::SBError errWrapper;
+            errWrapper.SetErrorString(llvm::toString(std::move(err)).c_str());
+            return errWrapper;
+          }
 
           if (const protocol::Request *req =
                   std::get_if<protocol::Request>(&*next);
@@ -909,7 +914,7 @@ llvm::Error DAP::Loop() {
           m_queue_cv.notify_one();
         }
 
-        return llvm::Error::success();
+        return lldb::SBError();
       });
 
   auto cleanup = llvm::make_scope_exit([&]() {
@@ -933,7 +938,7 @@ llvm::Error DAP::Loop() {
                                      "unhandled packet");
   }
 
-  return queue_reader.get();
+  return ToError(queue_reader.get());
 }
 
 lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
