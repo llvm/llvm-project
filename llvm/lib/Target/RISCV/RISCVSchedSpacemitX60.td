@@ -36,7 +36,9 @@ let BufferSize = 0 in {
   def SMX60_LS : ProcResource<2>;
 
   // An IEU can decode and issue two instructions at the same time
-  def SMX60_IEU : ProcResource<2>;
+  def SMX60_IEUA : ProcResource<1>;
+  def SMX60_IEUB : ProcResource<1>;
+  def SMX60_IEU : ProcResGroup<[SMX60_IEUA, SMX60_IEUB]>;
 
   // Although the X60 does appear to support multiple issue for at least some
   // floating point instructions, this model assumes single issue as
@@ -47,9 +49,9 @@ let BufferSize = 0 in {
 //===----------------------------------------------------------------------===//
 
 // Branching
-def : WriteRes<WriteJmp, [SMX60_IEU]>;
-def : WriteRes<WriteJal, [SMX60_IEU]>;
-def : WriteRes<WriteJalr, [SMX60_IEU]>;
+def : WriteRes<WriteJmp, [SMX60_IEUA]>;
+def : WriteRes<WriteJal, [SMX60_IEUA]>;
+def : WriteRes<WriteJalr, [SMX60_IEUA]>;
 
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [SMX60_IEU]>;
