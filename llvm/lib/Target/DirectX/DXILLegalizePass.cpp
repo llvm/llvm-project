@@ -12,6 +12,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <functional>
@@ -31,16 +32,17 @@ static void legalizeFreeze(Instruction &I,
   ToRemove.push_back(FI);
 }
 
-static void fixI8TruncUseChain(Instruction &I,
-                               SmallVectorImpl<Instruction *> &ToRemove,
-                               DenseMap<Value *, Value *> &ReplacedValues) {
+static void fixI8UseChain(Instruction &I,
+                          SmallVectorImpl<Instruction *> &ToRemove,
+                          DenseMap<Value *, Value *> &ReplacedValues) {
 
   auto ProcessOperands = [&](SmallVector<Value *> &NewOperands) {
     Type *InstrType = IntegerType::get(I.getContext(), 32);
 
     for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
       Value *Op = I.getOperand(OpIdx);
-      if (ReplacedValues.count(Op))
+      if (ReplacedValues.count(Op) &&
+          ReplacedValues[Op]->getType()->isIntegerTy())
         InstrType = ReplacedValues[Op]->getType();
     }
 
@@ -73,6 +75,31 @@ static void fixI8TruncUseChain(Instruction &I,
     }
   }
 
+  if (auto *Store = dyn_cast<StoreInst>(&I)) {
+    if (!Store->getValueOperand()->getType()->isIntegerTy(8))
+      return;
+    SmallVector<Value *> NewOperands;
+    ProcessOperands(NewOperands);
+    Value *NewStore = Builder.CreateStore(NewOperands[0], NewOperands[1]);
+    ReplacedValues[Store] = NewStore;
+    ToRemove.push_back(Store);
+    return;
+  }
+
+  if (auto *Load = dyn_cast<LoadInst>(&I)) {
+    if (!I.getType()->isIntegerTy(8))
+      return;
+    SmallVector<Value *> NewOperands;
+    ProcessOperands(NewOperands);
+    Type *ElementType = NewOperands[0]->getType();
+    if (auto *AI = dyn_cast<AllocaInst>(NewOperands[0]))
+      ElementType = AI->getAllocatedType();
+    LoadInst *NewLoad = Builder.CreateLoad(ElementType, NewOperands[0]);
+    ReplacedValues[Load] = NewLoad;
+    ToRemove.push_back(Load);
+    return;
+  }
+
   if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
     if (!I.getType()->isIntegerTy(8))
       return;
@@ -81,13 +108,26 @@ static void fixI8TruncUseChain(Instruction &I,
     Value *NewInst =
         Builder.CreateBinOp(BO->getOpcode(), NewOperands[0], NewOperands[1]);
     if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {
-      if (OBO->hasNoSignedWrap())
-        cast<BinaryOperator>(NewInst)->setHasNoSignedWrap();
-      if (OBO->hasNoUnsignedWrap())
-        cast<BinaryOperator>(NewInst)->setHasNoUnsignedWrap();
+      auto *NewBO = dyn_cast<BinaryOperator>(NewInst);
+      if (NewBO && OBO->hasNoSignedWrap())
+        NewBO->setHasNoSignedWrap();
+      if (NewBO && OBO->hasNoUnsignedWrap())
+        NewBO->setHasNoUnsignedWrap();
     }
     ReplacedValues[BO] = NewInst;
     ToRemove.push_back(BO);
+    return;
+  }
+
+  if (auto *Sel = dyn_cast<SelectInst>(&I)) {
+    if (!I.getType()->isIntegerTy(8))
+      return;
+    SmallVector<Value *> NewOperands;
+    ProcessOperands(NewOperands);
+    Value *NewInst = Builder.CreateSelect(Sel->getCondition(), NewOperands[1],
+                                          NewOperands[2]);
+    ReplacedValues[Sel] = NewInst;
+    ToRemove.push_back(Sel);
     return;
   }
 
@@ -105,11 +145,48 @@ static void fixI8TruncUseChain(Instruction &I,
   }
 
   if (auto *Cast = dyn_cast<CastInst>(&I)) {
+
     if (Cast->getSrcTy()->isIntegerTy(8)) {
       ToRemove.push_back(Cast);
       Cast->replaceAllUsesWith(ReplacedValues[Cast->getOperand(0)]);
     }
   }
+}
+
+static void upcastI8AllocasAndUses(Instruction &I,
+                                   SmallVectorImpl<Instruction *> &ToRemove,
+                                   DenseMap<Value *, Value *> &ReplacedValues) {
+  auto *AI = dyn_cast<AllocaInst>(&I);
+  if (!AI || !AI->getAllocatedType()->isIntegerTy(8))
+    return;
+
+  std::optional<Type *> TargetType;
+  bool Conflict = false;
+  for (User *U : AI->users()) {
+    auto *Load = dyn_cast<LoadInst>(U);
+    if (!Load)
+      continue;
+    for (User *LU : Load->users()) {
+      auto *Cast = dyn_cast<CastInst>(LU);
+      if (!Cast)
+        continue;
+      Type *T = Cast->getType();
+      if (!TargetType)
+        TargetType = T;
+
+      if (TargetType.value() != T) {
+        Conflict = true;
+        break;
+      }
+    }
+  }
+  if (!TargetType || Conflict)
+    return;
+
+  IRBuilder<> Builder(AI);
+  AllocaInst *NewAlloca = Builder.CreateAlloca(TargetType.value());
+  ReplacedValues[AI] = NewAlloca;
+  ToRemove.push_back(AI);
 }
 
 static void
@@ -178,7 +255,8 @@ private:
       LegalizationPipeline;
 
   void initializeLegalizationPipeline() {
-    LegalizationPipeline.push_back(fixI8TruncUseChain);
+    LegalizationPipeline.push_back(upcastI8AllocasAndUses);
+    LegalizationPipeline.push_back(fixI8UseChain);
     LegalizationPipeline.push_back(downcastI64toI32InsertExtractElements);
     LegalizationPipeline.push_back(legalizeFreeze);
   }
