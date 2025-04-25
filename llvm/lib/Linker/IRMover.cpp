@@ -80,7 +80,6 @@ public:
   /// Return the mapped type to use for the specified input type from the
   /// source module.
   Type *get(Type *SrcTy);
-  Type *get(Type *SrcTy, SmallPtrSet<StructType *, 8> &Visited);
 
   FunctionType *get(FunctionType *T) {
     return cast<FunctionType>(get((Type *)T));
@@ -232,11 +231,6 @@ Error TypeMapTy::linkDefinedTypeBodies() {
 }
 
 Type *TypeMapTy::get(Type *Ty) {
-  SmallPtrSet<StructType *, 8> Visited;
-  return get(Ty, Visited);
-}
-
-Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   // If we already have an entry for this type, return it.
   Type **Entry = &MappedTypes[Ty];
   if (*Entry)
@@ -252,11 +246,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
              "mapping to a source type");
     }
 #endif
-
-    if (!Visited.insert(cast<StructType>(Ty)).second) {
-      StructType *DTy = StructType::create(Ty->getContext());
-      return *Entry = DTy;
-    }
   }
 
   // If this is not a recursive type, then just map all of the elements and
@@ -272,7 +261,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   bool AnyChange = false;
   ElementTypes.resize(Ty->getNumContainedTypes());
   for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I) {
-    ElementTypes[I] = get(Ty->getContainedType(I), Visited);
+    ElementTypes[I] = get(Ty->getContainedType(I));
     AnyChange |= ElementTypes[I] != Ty->getContainedType(I);
   }
 
