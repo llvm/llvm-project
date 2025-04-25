@@ -285,10 +285,9 @@ static Error writeMemProfV4(ProfOStream &OS,
 }
 
 // Write out the MemProf data in a requested version.
-Error writeMemProf(ProfOStream &OS,
-                          memprof::IndexedMemProfData &MemProfData,
-                          memprof::IndexedVersion MemProfVersionRequested,
-                          bool MemProfFullSchema) {
+Error writeMemProf(ProfOStream &OS, memprof::IndexedMemProfData &MemProfData,
+                   memprof::IndexedVersion MemProfVersionRequested,
+                   bool MemProfFullSchema) {
   switch (MemProfVersionRequested) {
   case memprof::Version2:
     return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
