@@ -42,7 +42,4 @@ define float @loadSRV() #0 {
 !0 = !{i32 1, !"dx.resmayalias", i32 0}
 !1 = !{i32 1, i32 8}
 
-!dx.valver = !{!1}
-!1 = !{i32 1, i32 8}
-
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}
