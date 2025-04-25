@@ -6001,10 +6001,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     for (auto it = EHStack.find(CurrentCleanupScopeDepth); it != EHStack.end();
          ++it) {
       EHCleanupScope *Cleanup = dyn_cast<EHCleanupScope>(&*it);
-      // Fake uses can be safely emitted immediately prior to the tail call; we
-      // choose to emit the fake use before the call rather than after, to avoid
-      // forcing variable values from every call on the "stack" to be preserved
-      // simultaneously.
+      // Fake uses can be safely emitted immediately prior to the tail call, so
+      // we choose to emit them just before the call here.
       if (Cleanup && Cleanup->isFakeUse()) {
         CGBuilderTy::InsertPointGuard IPG(Builder);
         Builder.SetInsertPoint(CI);
