@@ -63,7 +63,7 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %subgroupSize = gpu.subgroup_size : index
 
-    // CHECK: = rocdl.wavefrontsize upper_bound 64 : i32
+    // CHECK: = rocdl.wavefrontsize range <i32, 32, 64> : i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %subgroupSize2 = gpu.subgroup_size upper_bound 64 : index
 

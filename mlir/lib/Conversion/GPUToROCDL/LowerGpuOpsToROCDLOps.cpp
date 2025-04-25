@@ -137,8 +137,14 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   LogicalResult
   matchAndRewrite(gpu::SubgroupSizeOp op, gpu::SubgroupSizeOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    LLVM::ConstantRangeAttr bounds = nullptr;
+    if (auto upperBoundAttr = op.getUpperBoundAttr()) {
+      bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+          /*bitWidth=*/32, /*lower=*/32,
+          /*upper=*/op.getUpperBoundAttr().getInt());
+    }
     Value wavefrontOp = rewriter.create<ROCDL::WavefrontSizeOp>(
-        op.getLoc(), rewriter.getI32Type(), op.getUpperBoundAttr());
+        op.getLoc(), rewriter.getI32Type(), bounds);
     wavefrontOp = truncOrExtToLLVMType(rewriter, op.getLoc(), wavefrontOp,
                                        *getTypeConverter());
     rewriter.replaceOp(op, {wavefrontOp});

@@ -216,10 +216,7 @@ def ROCDL_BlockIdXOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.x">;
 def ROCDL_BlockIdYOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.y">;
 def ROCDL_BlockIdZOp : ROCDL_SpecialIdRegisterOp<"workgroup.id.z">;
 
-def ROCDL_WavefrontSizeOp : ROCDL_IntrPure1Op<"wavefrontsize">,
-    Arguments<(ins OptionalAttr<IndexAttr>:$upper_bound)> {
-  let assemblyFormat = "(`upper_bound` $upper_bound^)? attr-dict `:` type($res)";
-}
+def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
