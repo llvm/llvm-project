@@ -109,7 +109,7 @@ def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
 def : StPat<truncstorei8, SB, GPR, i16>;
 
 let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<atomic_load_8,  LB, i16>;
+  def : LdPat<atomic_load_aext_8,  LB, i16>;
   def : LdPat<atomic_load_16, LH, i16>;
 
   def : StPat<atomic_store_8,  SB, GPR, i16>;
