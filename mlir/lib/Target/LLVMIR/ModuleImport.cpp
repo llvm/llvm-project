@@ -523,7 +523,7 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
                                                  llvm::MDTuple *mdTuple) {
   auto getFunctionSymbol =
       [&](const llvm::MDOperand &funcMDO) -> std::optional<FlatSymbolRefAttr> {
-    auto *f = dyn_cast_or_null<llvm::ValueAsMetadata>(funcMDO);
+    auto *f = cast_or_null<llvm::ValueAsMetadata>(funcMDO);
     // nullptr is a valid value for the function pointer.
     if (!f)
       return std::nullopt;
