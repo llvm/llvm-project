@@ -163,20 +163,9 @@ class DXILPrepareModule : public ModulePass {
 
   static llvm::SmallVector<unsigned> getCompatibleInstructionMDs(Module &M) {
     llvm::SmallVector<unsigned, 16> ret = {
-        M.getMDKindID("dx.nonuniform"),
-        M.getMDKindID("dx.controlflow.hints"),
-        M.getMDKindID("dx.precise"),
-        LLVMContext::MD_prof,
-        LLVMContext::MD_fpmath,
-        LLVMContext::MD_range,
-        LLVMContext::MD_tbaa_struct,
-        LLVMContext::MD_invariant_load,
-        LLVMContext::MD_alias_scope,
-        LLVMContext::MD_noalias,
-        LLVMContext::MD_nontemporal,
-        LLVMContext::MD_nonnull,
-        LLVMContext::MD_dereferenceable,
-        LLVMContext::MD_dereferenceable_or_null};
+        M.getMDKindID("dx.nonuniform"), M.getMDKindID("dx.controlflow.hints"),
+        M.getMDKindID("dx.precise"),    LLVMContext::MD_range,
+        LLVMContext::MD_alias_scope,    LLVMContext::MD_noalias};
 
     return ret;
   }
