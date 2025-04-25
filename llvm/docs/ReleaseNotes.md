@@ -203,6 +203,10 @@ Changes to the C API
   * `LLVMConstNUWMul`
   * `LLVMConstNSWMul`
 
+* Added `LLVMConstDataArray` and `LLVMGetRawDataValues` to allow creating and
+  reading `ConstantDataArray` values without needing extra `LLVMValueRef`s for
+  individual elements.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
