@@ -358,6 +358,25 @@ bool fromJSON(const llvm::json::Value &, StepInArguments &, llvm::json::Path);
 /// body field is required.
 using StepInResponse = VoidResponse;
 
+/// Arguments for `stepOut` request.
+struct StepOutArguments {
+  /// Specifies the thread for which to resume execution for one step-out (of
+  /// the given granularity).
+  uint64_t threadId = LLDB_INVALID_THREAD_ID;
+
+  /// If this flag is true, all other suspended threads are not resumed.
+  std::optional<bool> singleThread;
+
+  /// Stepping granularity. If no granularity is specified, a granularity of
+  /// `statement` is assumed.
+  SteppingGranularity granularity = eSteppingGranularityStatement;
+};
+bool fromJSON(const llvm::json::Value &, StepOutArguments &, llvm::json::Path);
+
+/// Response to `stepOut` request. This is just an acknowledgement, so no
+/// body field is required.
+using StepOutResponse = VoidResponse;
+
 } // namespace lldb_dap::protocol
 
 #endif

@@ -293,4 +293,12 @@ bool fromJSON(const llvm::json::Value &Params, StepInArguments &SIA,
          OM.mapOptional("granularity", SIA.granularity);
 }
 
+bool fromJSON(const llvm::json::Value &Params, StepOutArguments &SOA,
+              llvm::json::Path P) {
+  json::ObjectMapper OM(Params, P);
+  return OM && OM.map("threadId", SOA.threadId) &&
+         OM.mapOptional("singleThread", SOA.singleThread) &&
+         OM.mapOptional("granularity", SOA.granularity);
+}
+
 } // namespace lldb_dap::protocol
