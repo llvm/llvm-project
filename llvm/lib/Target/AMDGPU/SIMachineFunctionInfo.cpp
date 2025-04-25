@@ -48,6 +48,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is completely removed.
   IsDynamicVGPREnabled = ST.isDynamicVGPREnabled() || AMDGPU::hasDynamicVGPR(F);
 
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;

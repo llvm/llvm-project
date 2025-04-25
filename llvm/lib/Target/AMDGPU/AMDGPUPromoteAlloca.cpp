@@ -200,6 +200,8 @@ unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
     return 128;
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
+  // Temporaily check both the attribute and the subtarget feature, until the
+  // latter is removed.
   bool IsDynamicVGPR = AMDGPU::hasDynamicVGPR(F) || ST.isDynamicVGPREnabled();
 
   unsigned MaxVGPRs =

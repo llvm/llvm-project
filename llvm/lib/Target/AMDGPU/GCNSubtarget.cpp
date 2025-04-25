@@ -502,6 +502,8 @@ unsigned GCNSubtarget::getMaxNumSGPRs(const Function &F) const {
 
 unsigned GCNSubtarget::getBaseMaxNumVGPRs(
     const Function &F, std::pair<unsigned, unsigned> WavesPerEU) const {
+  // Temporarily check both the attribute and the subtarget feature, until the
+  // latter is removed.
   bool IsDynamicVGPR = isDynamicVGPREnabled() || AMDGPU::hasDynamicVGPR(F);
 
   // Compute maximum number of VGPRs function can use using default/requested
