@@ -220,13 +220,26 @@ GCNRewritePartialRegUsesImpl::getRegClassWithShiftedSubregs(
       LLVM_DEBUG(dbgs() << "couldn't find target regclass\n");
       return nullptr;
     }
+#if LLPC_BUILD_NPI
+    if (!SubRegRC->isAllocatable()) {
+      SubRegRC = TRI->getAllocatableClass(SubRegRC);
+      if (!SubRegRC) {
+        LLVM_DEBUG(dbgs() << "couldn't find allocatable regclass\n");
+        return nullptr;
+      }
+    }
+#else /* LLPC_BUILD_NPI */
     LLVM_DEBUG(dbgs() << TRI->getRegClassName(SubRegRC)
                       << (SubRegRC->isAllocatable() ? "" : " not alloc")
                       << " -> ");
+#endif /* LLPC_BUILD_NPI */
 
     if (OldSubReg == CoverSubregIdx) {
       // Covering subreg will become a full register, RC should be allocatable.
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
       assert(SubRegRC->isAllocatable());
+#endif /* LLPC_BUILD_NPI */
       NewSubReg = AMDGPU::NoSubRegister;
       LLVM_DEBUG(dbgs() << "whole reg");
     } else {

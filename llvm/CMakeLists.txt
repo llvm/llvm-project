@@ -8,12 +8,9 @@ include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
 if (LLPC_BUILD_NPI)
-  set(AMDGPU_TABLEGEN_FLAGS -DLLPC_BUILD_NPI)
+  list(APPEND LLVM_TABLEGEN_FLAGS "-DLLPC_BUILD_NPI")
   add_compile_definitions(LLPC_BUILD_NPI)
-else()
-  set(AMDGPU_TABLEGEN_FLAGS "")
 endif()
-
 
 # Builds with custom install names and installation rpath setups may not work
 # in the build tree. Allow these cases to use CMake's default build tree
