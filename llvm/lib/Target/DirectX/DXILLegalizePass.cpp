@@ -145,11 +145,23 @@ static void fixI8UseChain(Instruction &I,
   }
 
   if (auto *Cast = dyn_cast<CastInst>(&I)) {
-
-    if (Cast->getSrcTy()->isIntegerTy(8)) {
-      ToRemove.push_back(Cast);
-      Cast->replaceAllUsesWith(ReplacedValues[Cast->getOperand(0)]);
+    if (!Cast->getSrcTy()->isIntegerTy(8))
+      return;
+    
+    ToRemove.push_back(Cast);
+    auto* Replacement =ReplacedValues[Cast->getOperand(0)];
+    if (Cast->getType() == Replacement->getType()) {
+      Cast->replaceAllUsesWith(Replacement);
+      return;
     }
+    Value* AdjustedCast = nullptr;
+    if (Cast->getOpcode() == Instruction::ZExt)
+      AdjustedCast = Builder.CreateZExtOrTrunc(Replacement, Cast->getType());
+    if (Cast->getOpcode() == Instruction::SExt)
+      AdjustedCast = Builder.CreateSExtOrTrunc(Replacement, Cast->getType());
+  
+    if(AdjustedCast)
+      Cast->replaceAllUsesWith(AdjustedCast);
   }
 }
 
@@ -160,8 +172,9 @@ static void upcastI8AllocasAndUses(Instruction &I,
   if (!AI || !AI->getAllocatedType()->isIntegerTy(8))
     return;
 
-  std::optional<Type *> TargetType;
-  bool Conflict = false;
+  Type *SmallestType = nullptr;
+
+  // Gather all cast targets
   for (User *U : AI->users()) {
     auto *Load = dyn_cast<LoadInst>(U);
     if (!Load)
@@ -170,21 +183,20 @@ static void upcastI8AllocasAndUses(Instruction &I,
       auto *Cast = dyn_cast<CastInst>(LU);
       if (!Cast)
         continue;
-      Type *T = Cast->getType();
-      if (!TargetType)
-        TargetType = T;
-
-      if (TargetType.value() != T) {
-        Conflict = true;
-        break;
-      }
+      Type *Ty = Cast->getType();
+      if (!SmallestType ||
+          Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())
+        SmallestType = Ty;
     }
   }
-  if (!TargetType || Conflict)
-    return;
 
+  if (!SmallestType)
+    return; // no valid casts found
+
+  // Replace alloca
   IRBuilder<> Builder(AI);
-  AllocaInst *NewAlloca = Builder.CreateAlloca(TargetType.value());
+  auto *NewAlloca =
+      Builder.CreateAlloca(SmallestType);
   ReplacedValues[AI] = NewAlloca;
   ToRemove.push_back(AI);
 }
