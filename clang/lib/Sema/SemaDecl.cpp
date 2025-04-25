@@ -59,6 +59,7 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -6112,17 +6113,23 @@ static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo *II) {
   if (!II)
     return false;
 
-  // Clear all the C language options, set all the C++ language options, but
-  // otherwise leave all the defaults alone. This isn't ideal because some
-  // feature flags are language-specific, but this is a reasonable
-  // approximation.
-  LangOptions LO = S.getLangOpts();
-  LO.CPlusPlus = LO.CPlusPlus11 = LO.CPlusPlus14 = LO.CPlusPlus17 =
-      LO.CPlusPlus20 = LO.CPlusPlus23 = LO.CPlusPlus26 = 1;
-  LO.C99 = LO.C11 = LO.C17 = LO.C23 = LO.C2y = 0;
-  LO.Char8 = 1; // Presume this is always a keyword in C++.
-  LO.WChar = 1; // Presume this is always a keyword in C++.
-  return II->isNameKeyword(LO);
+  // Build a static map of identifiers for all of the keywords in C++ that are
+  // not keywords in C. This allows us to do pointer comparisons instead of
+  // string comparisons when deciding whether the given identifier is a keyword
+  // or not. Note, this treats all keywords as being enabled, regardless of the
+  // setting of other language options. It intentionally disables the modules
+  // keywords because those are conditional keywords, so may be safe to use.
+  static llvm::SmallPtrSet<IdentifierInfo *, 32> Keywords;
+  if (Keywords.empty()) {
+#define MODULES_KEYWORD(NAME)
+#define KEYWORD(NAME, FLAGS)                                                   \
+  Keywords.insert(&S.getPreprocessor().getIdentifierTable().get(#NAME));
+#define CXX_KEYWORD_OPERATOR(NAME, TOK)                                        \
+  Keywords.insert(&S.getPreprocessor().getIdentifierTable().get(#NAME));
+#include "clang/Basic/TokenKinds.def"
+  }
+
+  return Keywords.contains(II);
 }
 
 void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
