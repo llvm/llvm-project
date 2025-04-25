@@ -3099,6 +3099,16 @@ TEST_F(TokenAnnotatorTest, CSharpNullableTypes) {
   EXPECT_TOKEN(Tokens[1], tok::question, TT_ConditionalExpr);
 }
 
+TEST_F(TokenAnnotatorTest, CSharpGenericTypeConstraint) {
+  auto Tokens = annotate("namespace A {\n"
+                         "  delegate T MyDelegate<T>()\n"
+                         "      where T : new();\n"
+                         "}",
+                         getGoogleStyle(FormatStyle::LK_CSharp));
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::r_brace, TT_NamespaceRBrace);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsLabels) {
   auto Tokens = annotate("{ x: break; }");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
