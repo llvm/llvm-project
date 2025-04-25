@@ -1536,14 +1536,13 @@ multiclass ScratchFLATLoadPats_D16_t16<string inst, SDPatternOperator node, Valu
 
 let OtherPredicates = [HasFlatAddressSpace] in {
 
-def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_aext_16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
@@ -1678,11 +1677,11 @@ def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_aext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;

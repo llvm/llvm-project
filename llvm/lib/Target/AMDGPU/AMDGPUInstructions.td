@@ -502,10 +502,6 @@ def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextloadi16 node:$ptr)> {
   let IsLoad = 1;
 }
 
-def atomic_load_8_#as : PatFrag<(ops node:$ptr), (atomic_load_8 node:$ptr)> {
-  let IsAtomic = 1;
-}
-
 def atomic_load_16_#as : PatFrag<(ops node:$ptr), (atomic_load_16 node:$ptr)> {
   let IsAtomic = 1;
 }
@@ -526,11 +522,19 @@ def atomic_load_sext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_8 node:$
   let IsAtomic = 1;
 }
 
+def atomic_load_aext_8_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_8 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
 def atomic_load_zext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_zext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
 
 def atomic_load_sext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_sext_16 node:$ptr)> {
+  let IsAtomic = 1;
+}
+
+def atomic_load_aext_16_#as : PatFrag<(ops node:$ptr), (atomic_load_aext_16 node:$ptr)> {
   let IsAtomic = 1;
 }
 

@@ -51,9 +51,9 @@ class seq_cst_load<PatFrags base>
 let Predicates = [HasRCPC] in {
   // v8.3 Release Consistent Processor Consistent support, optional in v8.2.
   // 8-bit loads
-  def : Pat<(acquiring_load<atomic_load_8> GPR64sp:$ptr), (LDAPRB GPR64sp:$ptr)>;
+  def : Pat<(acquiring_load<atomic_load_azext_8> GPR64sp:$ptr), (LDAPRB GPR64sp:$ptr)>;
   // 16-bit loads
-  def : Pat<(acquiring_load<atomic_load_16> GPR64sp:$ptr), (LDAPRH GPR64sp:$ptr)>;
+  def : Pat<(acquiring_load<atomic_load_azext_16> GPR64sp:$ptr), (LDAPRH GPR64sp:$ptr)>;
   // 32-bit loads
   def : Pat<(acquiring_load<atomic_load_32> GPR64sp:$ptr), (LDAPRW GPR64sp:$ptr)>;
   // 64-bit loads
