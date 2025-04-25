@@ -38,6 +38,9 @@ let BufferSize = 0 in {
   // An IEU can decode and issue two instructions at the same time
   def SMX60_IEU : ProcResource<2>;
 
+  // Although the X60 does appear to support multiple issue for at least some
+  // floating point instructions, this model assumes single issue as
+  // increasing it reduces the gains we saw in performance
   def SMX60_FP : ProcResource<1>;
 }
 
