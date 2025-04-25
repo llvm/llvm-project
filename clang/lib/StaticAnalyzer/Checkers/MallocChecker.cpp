@@ -1833,10 +1833,8 @@ ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
   unsigned Count = C.blockCount();
   SValBuilder &SVB = C.getSValBuilder();
   const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
-  DefinedSVal RetVal =
-      isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
-               : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), LCtx,
-                                              CE->getType(), Count);
+  DefinedSVal RetVal = isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
+                                : SVB.getConjuredHeapSymbolVal(CE, LCtx, Count);
   return State->BindExpr(CE, C.getLocationContext(), RetVal);
 }
 
@@ -2306,7 +2304,7 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   // Assume that after memory is freed, it contains unknown values. This
   // conforts languages standards, since reading from freed memory is considered
   // UB and may result in arbitrary value.
-  State = State->invalidateRegions({location}, Call.getCFGElementRef(),
+  State = State->invalidateRegions({location}, Call.getOriginExpr(),
                                    C.blockCount(), C.getLocationContext(),
                                    /*CausesPointerEscape=*/false,
                                    /*InvalidatedSymbols=*/nullptr);
