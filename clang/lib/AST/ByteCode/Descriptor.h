@@ -184,7 +184,7 @@ public:
              bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize,
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize, bool IsConst,
              bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
