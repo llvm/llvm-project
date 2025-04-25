@@ -204,14 +204,18 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class BreakpointLocationsRequestHandler : public LegacyRequestHandler {
+class BreakpointLocationsRequestHandler
+    : public RequestHandler<
+          protocol::BreakpointLocationsArguments,
+          llvm::Expected<protocol::BreakpointLocationsResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "breakpointLocations"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureBreakpointLocationsRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::BreakpointLocationsResponseBody>
+  Run(const protocol::BreakpointLocationsArguments &args) const override;
 };
 
 class CompletionsRequestHandler : public LegacyRequestHandler {

@@ -245,6 +245,23 @@ bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
          parseSourceMap(Params, C.sourceMap, P);
 }
 
+bool fromJSON(const json::Value &Params, BreakpointLocationsArguments &BLA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("source", BLA.source) && O.map("line", BLA.line) &&
+         O.mapOptional("column", BLA.column) &&
+         O.mapOptional("endLine", BLA.endLine) &&
+         O.mapOptional("endColumn", BLA.endColumn);
+}
+
+llvm::json::Value toJSON(const BreakpointLocationsResponseBody &BLRB) {
+  llvm::json::Array breakpoints_json;
+  for (const auto &breakpoint : BLRB.breakpoints) {
+    breakpoints_json.push_back(toJSON(breakpoint));
+  }
+  return llvm::json::Object{{"breakpoints", std::move(breakpoints_json)}};
+}
+
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
