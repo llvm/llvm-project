@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
@@ -32,9 +33,8 @@ class MCInst;
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
-struct SubtargetFeatureKV {
+struct BasicSubtargetFeatureKV {
   const char *Key;                      ///< K-V key string
-  const char *Desc;                     ///< Help descriptor
   unsigned Value;                       ///< K-V integer value
   FeatureBitArray Implies;              ///< K-V bit mask
 
@@ -44,19 +44,27 @@ struct SubtargetFeatureKV {
   }
 
   /// Compare routine for std::is_sorted.
-  bool operator<(const SubtargetFeatureKV &Other) const {
+  bool operator<(const BasicSubtargetFeatureKV &Other) const {
     return StringRef(Key) < StringRef(Other.Key);
   }
+  BasicSubtargetFeatureKV(const char *Key, unsigned Value,
+                         FeatureBitArray Implies)
+      : Key(Key), Value(Value), Implies(Implies) {}
+};
+
+struct SubtargetFeatureKV : BasicSubtargetFeatureKV {
+  const char *Desc;                    ///< Help descriptor
+  SubtargetFeatureKV(const char *Key, const char *Desc, unsigned Value,
+                     FeatureBitArray Implies)
+      : BasicSubtargetFeatureKV(Key, Value, Implies), Desc(Desc) {}
 };
 
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
-struct SubtargetSubTypeKV {
+struct BasicSubtargetSubTypeKV {
   const char *Key;                      ///< K-V key string
   FeatureBitArray Implies;              ///< K-V bit mask
-  FeatureBitArray TuneImplies;          ///< K-V bit mask
-  const MCSchedModel *SchedModel;
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const {
@@ -64,10 +72,20 @@ struct SubtargetSubTypeKV {
   }
 
   /// Compare routine for std::is_sorted.
-  bool operator<(const SubtargetSubTypeKV &Other) const {
+  bool operator<(const BasicSubtargetSubTypeKV &Other) const {
     return StringRef(Key) < StringRef(Other.Key);
   }
 };
+
+struct SubtargetSubTypeKV : BasicSubtargetSubTypeKV {
+  FeatureBitArray TuneImplies;	       ///< K-V bit mask
+  const MCSchedModel *SchedModel;
+};
+
+std::optional<llvm::StringMap<bool>>
+getCPUDefaultTargetFeatures(StringRef CPU,
+                            ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
+                            ArrayRef<BasicSubtargetFeatureKV> ProcFeatures);
 
 //===----------------------------------------------------------------------===//
 ///
