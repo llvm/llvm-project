@@ -274,22 +274,34 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
   llvm_unreachable("Fully covered switch above!");
 }
 
+ConstString Mangled::GetDemangledName(
+    bool force
+    // BEGIN SWIFT
+    , const SymbolContext *sc
+    // END SWIFT
+) const {
+  return GetDemangledNameImpl(/*force=*/false, sc);
+}
+
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledName( // BEGIN SWIFT
-    const SymbolContext *sc
+ConstString Mangled::GetDemangledNameImpl(
+    bool force
+    // BEGIN SWIFT
+    , const SymbolContext *sc
     // END SWIFT
 ) const {
   if (!m_mangled)
     return m_demangled;
 
   // Re-use previously demangled names.
-  if (!m_demangled.IsNull())
+  if (!force && !m_demangled.IsNull())
     return m_demangled;
 
-  if (m_mangled.GetMangledCounterpart(m_demangled) && !m_demangled.IsNull())
+  if (!force && m_mangled.GetMangledCounterpart(m_demangled) &&
+      !m_demangled.IsNull())
     return m_demangled;
 
   // We didn't already mangle this name, demangle it and if all goes well
@@ -369,7 +381,7 @@ ConstString Mangled::GetDisplayDemangledName(
   if (Language *lang = Language::FindPlugin(GuessLanguage()))
     if (ConstString display_name = lang->GetDisplayDemangledName(*this))
       return display_name;
-  return GetDemangledName();
+  return GetDemangledName(/*force=*/false);
 }
 
 bool Mangled::NameMatches(const RegularExpression &regex) const {
