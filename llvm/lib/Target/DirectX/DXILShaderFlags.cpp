@@ -32,7 +32,8 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-static bool hasUAVsAtEveryStage(DXILResourceMap &DRM, const ModuleMetadataInfo &MMDI) {
+static bool hasUAVsAtEveryStage(DXILResourceMap &DRM,
+                                const ModuleMetadataInfo &MMDI) {
   if (DRM.uavs().empty())
     return false;
 
