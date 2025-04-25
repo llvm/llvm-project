@@ -1,5 +1,6 @@
 import lldb
 
+
 def report_command(debugger, command, exe_ctx, result, internal_dict):
     global stop_thread
     print(f"About to report out stop_thread: {stop_thread}")
@@ -7,7 +8,8 @@ def report_command(debugger, command, exe_ctx, result, internal_dict):
     result.AppendMessage(mssg)
 
     result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
-    
+
+
 class stop_handler:
     def __init__(self, target, extra_args, dict):
         global stop_thread
@@ -19,10 +21,10 @@ class stop_handler:
         thread = exe_ctx.thread
         stop_thread = thread.idx
 
+
 def __lldb_init_module(debugger, internal_dict):
     global stop_thread
     stop_thread = 0
     debugger.HandleCommand(
-           f"command script add -o -f '{__name__}.report_command' report_command"
-)
-
+        f"command script add -o -f '{__name__}.report_command' report_command"
+    )

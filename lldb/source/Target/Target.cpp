@@ -3056,9 +3056,9 @@ bool Target::RunStopHooks(bool at_initial_stop) {
 
   bool no_active_hooks =
       llvm::none_of(m_stop_hooks, [at_initial_stop](auto &p) {
-      bool should_run_now = !at_initial_stop || p.second->GetRunAtFirstStop();
-      return p.second->IsActive() && should_run_now; 
-  });
+        bool should_run_now = !at_initial_stop || p.second->GetRunAtFirstStop();
+        return p.second->IsActive() && should_run_now;
+      });
   if (no_active_hooks)
     return false;
 
@@ -3096,14 +3096,13 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   if (num_exe_ctx == 0) {
     if (at_initial_stop && num_threads > 0) {
       lldb::ThreadSP thread_to_use_sp = cur_threadlist.GetThreadAtIndex(0);
-      exc_ctx_with_reasons.emplace_back(m_process_sp.get(),
-                                        thread_to_use_sp.get(),
-                                        thread_to_use_sp->GetStackFrameAtIndex(0).get());
+      exc_ctx_with_reasons.emplace_back(
+          m_process_sp.get(), thread_to_use_sp.get(),
+          thread_to_use_sp->GetStackFrameAtIndex(0).get());
       num_exe_ctx = 1;
     } else
       return false;
   }
-  
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
   auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
@@ -3604,8 +3603,8 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
           std::nullopt, nullptr, false, attach_info.GetHijackListener(), stream,
           true, SelectMostRelevantFrame);
       process_sp->RestoreProcessEvents();
-      
-      // Run the stop hooks here.  Since we were hijacking the events, they 
+
+      // Run the stop hooks here.  Since we were hijacking the events, they
       // wouldn't have gotten run as part of event delivery.
       RunStopHooks(true /* at_initial_stop */);
 

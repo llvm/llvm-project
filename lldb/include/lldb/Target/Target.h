@@ -1369,11 +1369,11 @@ public:
     }
 
     bool GetAutoContinue() const { return m_auto_continue; }
-    
+
     void SetRunAtFirstStop(bool at_first_stop) {
       m_at_first_stop = at_first_stop;
     }
-    
+
     bool GetRunAtFirstStop() const { return m_at_first_stop; }
 
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;

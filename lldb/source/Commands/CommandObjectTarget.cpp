@@ -4795,7 +4795,7 @@ public:
         m_use_one_liner = true;
         m_one_liner.push_back(std::string(option_arg));
         break;
-        
+
       case 'F': {
         bool value, success;
         value = OptionArgParser::ToBoolean(option_arg, false, &success);
@@ -5019,7 +5019,7 @@ protected:
 
     if (specifier_up)
       new_hook_sp->SetSpecifier(specifier_up.release());
-      
+
     // Should we run at first stop:
     new_hook_sp->SetRunAtFirstStop(m_options.m_at_first_stop);
 

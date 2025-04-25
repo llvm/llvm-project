@@ -109,4 +109,3 @@ class TestStopHooks(TestBase):
         self.expect(
             "target stop-hook list", substrs=["expr g_var++", "thread backtrace"]
         )
-        
