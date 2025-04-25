@@ -342,6 +342,9 @@ void DAP::SendOutput(OutputType o, const llvm::StringRef output) {
   case OutputType::Console:
     category = "console";
     break;
+  case OutputType::Important:
+    category = "important";
+    break;
   case OutputType::Stdout:
     category = "stdout";
     break;
