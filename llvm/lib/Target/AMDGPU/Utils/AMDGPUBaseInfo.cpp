@@ -2126,9 +2126,8 @@ bool getHasDepthExport(const Function &F) {
   return F.getFnAttributeAsParsedInteger("amdgpu-depth-export", 0) != 0;
 }
 
-bool getIsDynamicVGPR(const Function &F) {
-  return F.hasFnAttribute("amdgpu-dynamic-vgpr") &&
-         F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
+bool hasDynamicVGPR(const Function &F) {
+  return F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
 }
 
 bool isShader(CallingConv::ID cc) {

@@ -48,8 +48,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxNumWorkGroups = ST.getMaxNumWorkGroups(F);
   assert(MaxNumWorkGroups.size() == 3);
 
-  IsDynamicVGPREnabled =
-      ST.isDynamicVGPREnabled() || AMDGPU::getIsDynamicVGPR(F);
+  IsDynamicVGPREnabled = ST.isDynamicVGPREnabled() || AMDGPU::hasDynamicVGPR(F);
 
   Occupancy = ST.computeOccupancy(F, getLDSSize()).second;
   CallingConv::ID CC = F.getCallingConv();

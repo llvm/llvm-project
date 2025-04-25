@@ -199,13 +199,9 @@ unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
   if (!TM.getTargetTriple().isAMDGCN())
     return 128;
 
-  bool IsDynamicVGPR = AMDGPU::getIsDynamicVGPR(F);
 
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-
-  // FIXME: Delete after all users are migrated to use the attribute.
-  if (ST.isDynamicVGPREnabled())
-    IsDynamicVGPR = true;
+  bool IsDynamicVGPR = AMDGPU::hasDynamicVGPR(F) || ST.isDynamicVGPREnabled();
 
   unsigned MaxVGPRs =
       ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first, IsDynamicVGPR);

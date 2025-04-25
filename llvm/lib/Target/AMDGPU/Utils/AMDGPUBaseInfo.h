@@ -1303,7 +1303,7 @@ bool getHasColorExport(const Function &F);
 
 bool getHasDepthExport(const Function &F);
 
-bool getIsDynamicVGPR(const Function &F);
+bool hasDynamicVGPR(const Function &F);
 
 LLVM_READNONE
 bool isShader(CallingConv::ID CC);
