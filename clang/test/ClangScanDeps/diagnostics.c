@@ -38,6 +38,7 @@ module mod { header "mod.h" }
 // CHECK-NEXT:         "[[PREFIX]]/mod.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

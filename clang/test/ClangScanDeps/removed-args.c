@@ -43,6 +43,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/mod_header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "ModHeader"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -70,6 +71,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/mod_tu.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "ModTU"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

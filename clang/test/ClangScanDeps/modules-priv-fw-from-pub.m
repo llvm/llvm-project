@@ -46,6 +46,7 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:         "[[PREFIX]]/modules/dependency.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "Dependency"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -70,6 +71,7 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:           "link-name": "FW"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "FW"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -94,6 +96,7 @@ module Dependency { header "dependency.h" }
 // CHECK-NEXT:           "link-name": "FW"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "FW_Private"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

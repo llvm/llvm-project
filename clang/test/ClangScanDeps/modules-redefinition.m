@@ -50,6 +50,7 @@ module third {}
 // CHECK-NEXT:         [[PREFIX]]/third/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     }
 // CHECK:        ]

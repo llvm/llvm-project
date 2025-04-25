@@ -39,6 +39,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/a/dep.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
@@ -77,6 +78,7 @@
 // CHECK-NEXT:         "[[PREFIX]]/b/dep.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

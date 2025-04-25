@@ -71,6 +71,7 @@ framework module FW {
 // CHECK-NEXT:           "link-name": "FW"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "FW"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]

@@ -21,6 +21,7 @@
 // CHECK-NEXT:       "{{.*}}A.h"
 // CHECK-NEXT:     ],
 // CHECK-NEXT:     "link-libraries": [],
+// CHECK-NEXT:     "clang-modules-exported": [],
 // CHECK-NEXT:     "name": "A"
 // CHECK-NEXT:   }
 

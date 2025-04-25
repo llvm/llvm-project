@@ -25,6 +25,7 @@
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "A"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -37,6 +38,7 @@
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "B"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],

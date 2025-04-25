@@ -53,6 +53,7 @@ module transitive {
 // CHECK-NEXT:           "link-name": "Framework"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "Framework"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -71,6 +72,7 @@ module transitive {
 // CHECK-NEXT:         "[[PREFIX]]/direct.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "direct"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -95,6 +97,7 @@ module transitive {
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/frameworks/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "root"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
@@ -113,6 +116,7 @@ module transitive {
 // CHECK-NEXT:           "link-name": "libTransitive"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "clang-modules-exported": [],
 // CHECK-NEXT:       "name": "transitive"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ],
