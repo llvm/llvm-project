@@ -4361,11 +4361,6 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
   if (!ME || !ME->getMemberDecl()->getType()->isCountAttributedType())
     return;
 
-  if (!Addr.isValid()) {
-    LValue LV = EmitCheckedLValue(E, TCK_MemberAccess);
-    Addr = LV.getAddress();
-  }
-
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
   if (FlexibleArray &&
@@ -4379,6 +4374,13 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
   if (std::optional<int64_t> Diff =
           getOffsetDifferenceInBits(*this, CountFD, FD)) {
+    if (!Addr.isValid()) {
+      // An invalid Address indicates we're checking a pointer array access.
+      // Emit the checked L-Value here.
+      LValue LV = EmitCheckedLValue(E, TCK_MemberAccess);
+      Addr = LV.getAddress();
+    }
+
     // FIXME: The 'static_cast' is necessary, otherwise the result turns into a
     // uint64_t, which messes things up if we have a negative offset difference.
     Diff = *Diff / static_cast<int64_t>(CGM.getContext().getCharWidth());
