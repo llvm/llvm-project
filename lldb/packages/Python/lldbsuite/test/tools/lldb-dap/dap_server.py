@@ -380,6 +380,17 @@ class DebugCommunication(object):
             )
         return None
 
+    def wait_for_events(self, events, timeout=None):
+        """Wait for a list of events in `events` in any order.
+        Return the events not hit before the timeout expired"""
+        events = events[:]  # Make a copy to avoid modifying the input
+        while events:
+            event_dict = self.wait_for_event(filter=events, timeout=timeout)
+            if event_dict is None:
+                break
+            events.remove(event_dict["event"])
+        return events
+
     def wait_for_stopped(self, timeout=None):
         stopped_events = []
         stopped_event = self.wait_for_event(
@@ -621,9 +632,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
 
         if response["success"]:
-            # Wait for a 'process' and 'initialized' event in any order
-            self.wait_for_event(filter=["process", "initialized"])
-            self.wait_for_event(filter=["process", "initialized"])
+            self.wait_for_events(["process", "initialized"])
         return response
 
     def request_breakpointLocations(
@@ -878,9 +887,7 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
 
         if response["success"]:
-            # Wait for a 'process' and 'initialized' event in any order
-            self.wait_for_event(filter=["process", "initialized"])
-            self.wait_for_event(filter=["process", "initialized"])
+            self.wait_for_events(["process", "initialized"])
         return response
 
     def request_next(self, threadId, granularity="statement"):
