@@ -1886,6 +1886,7 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
     return false;
   }
 }
+
 bool CPlusPlusLanguage::HandleFrameFormatVariable(
     const SymbolContext &sc, const ExecutionContext *exe_ctx,
     FormatEntity::Entry::Type type, Stream &s) {
