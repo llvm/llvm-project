@@ -64,19 +64,6 @@ struct DemangledNameInfo {
     return BasenameRange.second > BasenameRange.first &&
            BasenameRange.second > 0;
   }
-
-  friend bool operator==(const DemangledNameInfo &lhs,
-                         const DemangledNameInfo &rhs) {
-    return std::tie(lhs.BasenameRange, lhs.ArgumentsRange, lhs.ScopeRange,
-                    lhs.QualifiersRange) ==
-           std::tie(rhs.BasenameRange, rhs.ArgumentsRange, rhs.ScopeRange,
-                    lhs.QualifiersRange);
-  }
-
-  friend bool operator!=(const DemangledNameInfo &lhs,
-                         const DemangledNameInfo &rhs) {
-    return !(lhs == rhs);
-  }
 };
 
 /// An OutputBuffer which keeps a record of where certain parts of a
