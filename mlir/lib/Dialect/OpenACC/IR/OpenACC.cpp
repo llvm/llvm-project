@@ -2699,8 +2699,8 @@ void acc::DataOp::addAsyncOperand(
       getAsyncOperandsMutable()));
 }
 
-void acc::DataOp::addWaitOnly(
-    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+void acc::DataOp::addWaitOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
   setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
                                                      effectiveDeviceTypes));
 }
