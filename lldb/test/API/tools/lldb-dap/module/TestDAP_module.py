@@ -58,15 +58,25 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn("addressRange", program_module)
 
         # Collect all the module names we saw as events.
-        module_event_names = set()
+        module_new_names = []
+        module_changed_names = []
         for module_event in self.dap_server.module_events:
-            module_event_names.add(module_event["body"]["module"]["name"])
-        self.assertNotEqual(len(module_event_names), 0)
+            module_name = module_event["body"]["module"]["name"]
+            reason = module_event["body"]["reason"]
+            if reason == "new":
+                module_new_names.append(module_name)
+            elif reason == "changed":
+                module_changed_names.append(module_name)
 
         # Make sure we got an event for every active module.
+        self.assertNotEqual(len(module_new_names), 0)
         for module in active_modules:
-            # assertIn doesn't work with set.
-            self.assertTrue(module in module_event_names)
+            self.assertIn(module, module_new_names)
+
+        # Make sure we got an update event for the program module when the
+        # symbols got added.
+        self.assertNotEqual(len(module_changed_names), 0)
+        self.assertIn(program_module["name"], module_changed_names)
 
     @skipIfWindows
     def test_modules(self):
