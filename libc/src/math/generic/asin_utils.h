@@ -165,10 +165,10 @@ constexpr double ASIN_COEFFS[9][12] = {
 LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
                                    double &err) {
   using fputil::multiply_add;
-  // k = round(u * 64).
+  // k = round(u * 32).
   double k = fputil::nearest_integer(u.hi * 0x1.0p5);
   idx = static_cast<unsigned>(k);
-  // y = u - k/64.
+  // y = u - k/32.
   double y_hi = multiply_add(k, -0x1.0p-5, u.hi); // Exact
   DoubleDouble y = fputil::exact_add(y_hi, u.lo);
   double y2 = y.hi * y.hi;
