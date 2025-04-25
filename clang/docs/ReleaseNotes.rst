@@ -150,6 +150,18 @@ C Language Changes
 - Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from ``void *`` to another pointer type as
   being incompatible with C++. (#GH17792)
+- Added ``-Wc++-hidden-decl``, grouped under ``-Wc++-compat``, which diagnoses
+  use of tag types which are visible in C but not visible in C++ due to scoping
+  rules. e.g.,
+
+  .. code-block:: c
+
+    struct S {
+      struct T {
+        int x;
+      } t;
+    };
+    struct T t; // Invalid C++, valid C, now diagnosed
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^

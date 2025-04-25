@@ -1428,6 +1428,17 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
   return false;
 }
 
+bool DeclContext::LexicallyEncloses(const DeclContext* DC) const {
+  if (getPrimaryContext() != this)
+    return getPrimaryContext()->LexicallyEncloses(DC);
+
+  for (; DC; DC = DC->getLexicalParent())
+    if (!isa<LinkageSpecDecl>(DC) && !isa<ExportDecl>(DC) &&
+        DC->getPrimaryContext() == this)
+      return true;
+  return false;
+}
+
 DeclContext *DeclContext::getNonTransparentContext() {
   DeclContext *DC = this;
   while (DC->isTransparentContext()) {
