@@ -715,7 +715,7 @@ SrcSafetyAnalysis::create(BinaryFunction &BF,
 
 static BriefReport<MCPhysReg> make_generic_report(MCInstReference Location,
                                                   StringRef Text) {
-  auto Report = std::make_shared<GenericReport>(Location, Text);
+  auto Report = std::make_shared<GenericDiagnostic>(Location, Text);
   return BriefReport<MCPhysReg>(Report, std::nullopt);
 }
 
@@ -723,7 +723,7 @@ template <typename T>
 static BriefReport<T> make_report(const GadgetKind &Kind,
                                   MCInstReference Location,
                                   T RequestedDetails) {
-  auto Report = std::make_shared<GadgetReport>(Kind, Location);
+  auto Report = std::make_shared<GadgetDiagnostic>(Kind, Location);
   return BriefReport<T>(Report, RequestedDetails);
 }
 
@@ -821,7 +821,7 @@ collectRegsToTrack(ArrayRef<BriefReport<MCPhysReg>> Reports) {
   return SmallVector<MCPhysReg>(RegsToTrack.begin(), RegsToTrack.end());
 }
 
-void FunctionAnalysis::findUnsafeUses(
+void FunctionAnalysisContext::findUnsafeUses(
     SmallVector<BriefReport<MCPhysReg>> &Reports) {
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, {});
   LLVM_DEBUG({ dbgs() << "Running src register safety analysis...\n"; });
@@ -855,7 +855,7 @@ void FunctionAnalysis::findUnsafeUses(
   });
 }
 
-void FunctionAnalysis::augmentUnsafeUseReports(
+void FunctionAnalysisContext::augmentUnsafeUseReports(
     ArrayRef<BriefReport<MCPhysReg>> Reports) {
   SmallVector<MCPhysReg> RegsToTrack = collectRegsToTrack(Reports);
   // Re-compute the analysis with register tracking.
@@ -881,7 +881,7 @@ void FunctionAnalysis::augmentUnsafeUseReports(
   }
 }
 
-void FunctionAnalysis::handleSimpleReports(
+void FunctionAnalysisContext::handleSimpleReports(
     SmallVector<BriefReport<MCPhysReg>> &Reports) {
   // Before re-running the detailed analysis, process the reports which do not
   // need any additional details to be attached.
@@ -892,7 +892,7 @@ void FunctionAnalysis::handleSimpleReports(
   llvm::erase_if(Reports, [](const auto &R) { return !R.RequestedDetails; });
 }
 
-void FunctionAnalysis::run() {
+void FunctionAnalysisContext::run() {
   LLVM_DEBUG({
     dbgs() << "Analyzing function " << BF.getPrintName()
            << ", AllocatorId = " << AllocatorId << "\n";
@@ -908,7 +908,7 @@ void FunctionAnalysis::run() {
 
 void Analysis::runOnFunction(BinaryFunction &BF,
                              MCPlusBuilder::AllocatorIdTy AllocatorId) {
-  FunctionAnalysis FA(BF, AllocatorId, PacRetGadgetsOnly);
+  FunctionAnalysisContext FA(BF, AllocatorId, PacRetGadgetsOnly);
   FA.run();
 
   const FunctionAnalysisResult &FAR = FA.getResult();
@@ -954,8 +954,8 @@ static void reportFoundGadgetInSingleBBSingleRelatedInst(
   }
 }
 
-void Report::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
-                            StringRef IssueKind) const {
+void Diagnostic::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
+                                StringRef IssueKind) const {
   BinaryFunction *BF = Location.getFunction();
   BinaryBasicBlock *BB = Location.getBasicBlock();
 
@@ -968,8 +968,8 @@ void Report::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
   BC.printInstruction(OS, Location, Location.getAddress(), BF);
 }
 
-void GadgetReport::generateReport(raw_ostream &OS,
-                                  const BinaryContext &BC) const {
+void GadgetDiagnostic::generateReport(raw_ostream &OS,
+                                      const BinaryContext &BC) const {
   printBasicInfo(OS, BC, Kind.getDescription());
 }
 
@@ -1007,8 +1007,8 @@ void ClobberingInfo::print(raw_ostream &OS,
   printRelatedInstrs(OS, Location, ClobberingInstrs);
 }
 
-void GenericReport::generateReport(raw_ostream &OS,
-                                   const BinaryContext &BC) const {
+void GenericDiagnostic::generateReport(raw_ostream &OS,
+                                       const BinaryContext &BC) const {
   printBasicInfo(OS, BC, Text);
 }
 
@@ -1029,7 +1029,7 @@ Error Analysis::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
     if (!AnalysisResults.count(BF))
       continue;
-    for (const DetailedReport &R : AnalysisResults[BF].Diagnostics) {
+    for (const FinalReport &R : AnalysisResults[BF].Diagnostics) {
       R.Issue->generateReport(outs(), BC);
       if (R.Details)
         R.Details->print(outs(), R.Issue->Location);

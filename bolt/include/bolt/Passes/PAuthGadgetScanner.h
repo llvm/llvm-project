@@ -196,23 +196,48 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
+// The report classes are designed to be used in an immutable manner.
+// When an issue report is constructed in multiple steps, an attempt is made
+// to distinguish intermediate and final results at the type level.
+//
+// Here is an overview of issue life-cycle:
+// * an analysis (SrcSafetyAnalysis at now, DstSafetyAnalysis will be added
+//   later to support the detection of authentication oracles) computes register
+//   state for each instruction in the function.
+// * each instruction is checked to be a gadget of some kind, taking the
+//   computed state into account. If a gadget is found, its kind and location
+//   are stored into a subclass of Diagnostic wrapped into BriefReport<ReqT>.
+// * if any issue is to be reported for the function, the same analysis is
+//   re-run to collect extra information to provide to the user. Which extra
+//   information can be requested depends on the particular analysis (for
+//   example, SrcSafetyAnalysis is able to compute the set of instructions
+//   clobbering the particular register, thus ReqT is MCPhysReg). At this stage,
+//   `FinalReport`s are created.
+//
+// Here, the subclasses of Diagnostic store the pieces of information which
+// are kept unchanged since they are collected on the first run of the analysis.
+// BriefReport<T>::RequestedDetails, on the other hand, is replaced with
+// FinalReport::Details computed by the second run of the analysis.
+
 /// Description of a gadget kind that can be detected. Intended to be
-/// statically allocated to be attached to reports by reference.
+/// statically allocated and attached to reports by reference.
 class GadgetKind {
   const char *Description;
 
 public:
+  /// Wraps a description string which must be a string literal.
   GadgetKind(const char *Description) : Description(Description) {}
 
   StringRef getDescription() const { return Description; }
 };
 
-/// Base report located at some instruction, without any additional information.
-struct Report {
+/// Basic diagnostic information, which is kept unchanged since it is collected
+/// on the first run of the analysis.
+struct Diagnostic {
   MCInstReference Location;
 
-  Report(MCInstReference Location) : Location(Location) {}
-  virtual ~Report() {}
+  Diagnostic(MCInstReference Location) : Location(Location) {}
+  virtual ~Diagnostic() {}
 
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
@@ -221,27 +246,27 @@ struct Report {
                       StringRef IssueKind) const;
 };
 
-struct GadgetReport : public Report {
+struct GadgetDiagnostic : public Diagnostic {
   // The particular kind of gadget that is detected.
   const GadgetKind &Kind;
 
-  GadgetReport(const GadgetKind &Kind, MCInstReference Location)
-      : Report(Location), Kind(Kind) {}
+  GadgetDiagnostic(const GadgetKind &Kind, MCInstReference Location)
+      : Diagnostic(Location), Kind(Kind) {}
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
 };
 
 /// Report with a free-form message attached.
-struct GenericReport : public Report {
+struct GenericDiagnostic : public Diagnostic {
   std::string Text;
-  GenericReport(MCInstReference Location, StringRef Text)
-      : Report(Location), Text(Text) {}
+  GenericDiagnostic(MCInstReference Location, StringRef Text)
+      : Diagnostic(Location), Text(Text) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;
 };
 
 /// An information about an issue collected on the slower, detailed,
-/// run of an analysis.
+/// run of the analysis.
 class ExtraInfo {
 public:
   virtual void print(raw_ostream &OS, const MCInstReference Location) const = 0;
@@ -260,35 +285,34 @@ public:
 
 /// A brief version of a report that can be further augmented with the details.
 ///
-/// It is common for a particular type of gadget detector to be tied to some
-/// specific kind of analysis. If an issue is returned by that detector, it may
-/// be further augmented with the detailed info in an analysis-specific way,
-/// or just be left as-is (f.e. if a free-form warning was reported).
+/// A half-baked report produced on the first run of the analysis. An extra,
+/// analysis-specific information may be requested to be collected on the
+/// second run.
 template <typename T> struct BriefReport {
-  BriefReport(std::shared_ptr<Report> Issue,
+  BriefReport(std::shared_ptr<Diagnostic> Issue,
               const std::optional<T> RequestedDetails)
       : Issue(Issue), RequestedDetails(RequestedDetails) {}
 
-  std::shared_ptr<Report> Issue;
+  std::shared_ptr<Diagnostic> Issue;
   std::optional<T> RequestedDetails;
 };
 
-/// A detailed version of a report.
-struct DetailedReport {
-  DetailedReport(std::shared_ptr<Report> Issue,
-                 std::shared_ptr<ExtraInfo> Details)
+/// A final version of the report.
+struct FinalReport {
+  FinalReport(std::shared_ptr<Diagnostic> Issue,
+              std::shared_ptr<ExtraInfo> Details)
       : Issue(Issue), Details(Details) {}
 
-  std::shared_ptr<Report> Issue;
+  std::shared_ptr<Diagnostic> Issue;
   std::shared_ptr<ExtraInfo> Details;
 };
 
 struct FunctionAnalysisResult {
-  std::vector<DetailedReport> Diagnostics;
+  std::vector<FinalReport> Diagnostics;
 };
 
 /// A helper class storing per-function context to be instantiated by Analysis.
-class FunctionAnalysis {
+class FunctionAnalysisContext {
   BinaryContext &BC;
   BinaryFunction &BF;
   MCPlusBuilder::AllocatorIdTy AllocatorId;
@@ -304,8 +328,9 @@ class FunctionAnalysis {
   void handleSimpleReports(SmallVector<BriefReport<MCPhysReg>> &Reports);
 
 public:
-  FunctionAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId,
-                   bool PacRetGadgetsOnly)
+  FunctionAnalysisContext(BinaryFunction &BF,
+                          MCPlusBuilder::AllocatorIdTy AllocatorId,
+                          bool PacRetGadgetsOnly)
       : BC(BF.getBinaryContext()), BF(BF), AllocatorId(AllocatorId),
         PacRetGadgetsOnly(PacRetGadgetsOnly) {}
 
