@@ -860,7 +860,8 @@ class DebugCommunication(object):
         args_dict["enableAutoVariableSummaries"] = enableAutoVariableSummaries
         args_dict["enableSyntheticChildDebugging"] = enableSyntheticChildDebugging
         args_dict["displayExtendedBacktrace"] = displayExtendedBacktrace
-        args_dict["commandEscapePrefix"] = commandEscapePrefix
+        if commandEscapePrefix:
+            args_dict["commandEscapePrefix"] = commandEscapePrefix
         command_dict = {"command": "launch", "type": "request", "arguments": args_dict}
         response = self.send_recv(command_dict)
 
