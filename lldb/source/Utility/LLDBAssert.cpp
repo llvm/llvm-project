@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Core/Telemetry.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Signals.h"
@@ -51,11 +52,14 @@ void _lldb_assert(bool expression, const char *expr_text, const char *func,
     std::string buffer;
     llvm::raw_string_ostream backtrace(buffer);
     llvm::sys::PrintStackTrace(backtrace);
-
+    std::string extra_detail;
+    TelemetryManager *manager = TelemetryManager::GetInstance();
+    if (manager->GetConfig()->EnableTelemetry)
+      extra_detail = ". Telemetry-SessionId:" + manager->GetSessionId();
     (*g_lldb_assert_callback.load())(
         llvm::formatv(
-            "Assertion failed: ({0}), function {1}, file {2}, line {3}",
-            expr_text, func, file, line)
+            "Assertion failed: ({0}), function {1}, file {2}, line {3}{4}",
+            expr_text, func, file, line, extra_detail)
             .str(),
         buffer,
         "Please file a bug report against lldb and include the backtrace, the "

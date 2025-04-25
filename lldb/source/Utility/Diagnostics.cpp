@@ -70,6 +70,9 @@ bool Diagnostics::Dump(raw_ostream &stream) {
 bool Diagnostics::Dump(raw_ostream &stream, const FileSpec &dir) {
   stream << "LLDB diagnostics will be written to " << dir.GetPath() << "\n";
   stream << "Please include the directory content when filing a bug report\n";
+  TelemetryManager *manager = TelemetryManager::GetInstance();
+  if (manager->GetConfig()->EnableTelemetry)
+    stream << "Telemetry-SessionId: " << manager->GetSessionid() << "\n";
 
   if (Error error = Create(dir)) {
     stream << toString(std::move(error)) << '\n';

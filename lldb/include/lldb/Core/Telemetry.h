@@ -219,6 +219,8 @@ public:
 
   virtual llvm::StringRef GetInstanceName() const = 0;
 
+  llvm::StringRef GetSessionId() const;
+
   static TelemetryManager *GetInstance();
 
 protected:
