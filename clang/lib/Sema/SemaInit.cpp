@@ -6497,12 +6497,15 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
 }
 
 static const FieldDecl *getConstField(const RecordDecl *RD) {
+  assert(!isa<CXXRecordDecl>(RD) && "Only expect to call this in C mode");
   for (const FieldDecl *FD : RD->fields()) {
     QualType QT = FD->getType();
     if (QT.isConstQualified())
       return FD;
-    if (const auto *RD = QT->getAsRecordDecl())
-      return getConstField(RD);
+    if (const auto *RD = QT->getAsRecordDecl()) {
+      if (const FieldDecl *FD = getConstField(RD))
+        return FD;
+    }
   }
   return nullptr;
 }

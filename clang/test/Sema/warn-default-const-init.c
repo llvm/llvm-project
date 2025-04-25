@@ -13,6 +13,8 @@ struct T { struct S s; };              // cxx-note {{default constructor of 'T' 
 struct U { struct S s; const int j; };
 struct V { int i; const struct A a; }; // unsafe-note {{member 'a' declared 'const' here}} \
                                           cxx-note {{default constructor of 'V' is implicitly deleted because field 'a' of const-qualified type 'const struct A' would not be initialized}}
+struct W { struct A a; const int j; }; // unsafe-note {{member 'j' declared 'const' here}} \
+                                          cxx-note {{default constructor of 'W' is implicitly deleted because field 'j' of const-qualified type 'const int' would not be initialized}}
 
 void f() {
   struct S s1; // unsafe-warning {{default initialization of an object of type 'struct S' with const member leaves the object uninitialized and is incompatible with C++}} \
@@ -33,6 +35,12 @@ void x() {
                   cxx-error {{call to implicitly-deleted default constructor of 'struct V'}}
   struct V v2 = { 0 };
   struct V v3 = { 0, { 0 } };
+}
+void y() {
+  struct W w1; // unsafe-warning {{default initialization of an object of type 'struct W' with const member leaves the object uninitialized and is incompatible with C++}} \
+                  cxx-error {{call to implicitly-deleted default constructor of 'struct W'}}
+  struct W w2 = { 0 };
+  struct W w3 = { { 0 }, 0 };
 }
 
 // Test a tentative definition which does eventually get an initializer.
