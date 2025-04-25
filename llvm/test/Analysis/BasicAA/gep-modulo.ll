@@ -396,7 +396,7 @@ declare void @llvm.assume(i1)
 
 define i64 @mul_may_overflow_var_nonzero_minabsvarindex_two_index(i64 %arg, ptr %arg1) {
 ; CHECK-LABEL:  Function: mul_may_overflow_var_nonzero_minabsvarindex_two_index
-; CHECK-LABEL:  NoAlias:      i64* %getelementptr, i64* %getelementptr2
+; CHECK-LABEL:  MayAlias:      i64* %getelementptr, i64* %getelementptr2
 bb:
   %xor = xor i64 %arg, -9223372036854775808
   %getelementptr = getelementptr i64, ptr %arg1, i64 %xor
