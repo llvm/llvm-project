@@ -85,9 +85,9 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:    Regions: [<mlir.{{.+}}.Region object at {{.+}}>]
     # CHECK:     Blocks: [<mlir.{{.+}}.Block object at {{.+}}>]
     # CHECK: Operations: [<mlir.{{.+}}.FuncOp object at {{.+}}>]
-    print("   Regions:", [*op.regions])
-    print("    Blocks:", [*op.regions[-1]])
-    print("Operations:", [*op.regions[-1].blocks[-1]])
+    print("   Regions:", list(op.regions))
+    print("    Blocks:", list(op.regions[-1]))
+    print("Operations:", list(op.regions[-1].blocks[-1]))
 
     # Make sure the iterator uses offsets and the resulting list is empty.
     # CHECK: []
