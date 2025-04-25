@@ -119,8 +119,7 @@ void DisassembleRequestHandler::operator()(
 
   std::string flavor_string;
   const auto target_triple = llvm::StringRef(dap.target.GetTriple());
-  // this handles both 32 and 64bit x86 architecture.
-  // this logic is also duplicated in
+  // This handles both 32 and 64bit x86 architecture. The logic is duplicated in
   // `CommandObjectDisassemble::CommandOptions::OptionParsingStarting`
   if (target_triple.starts_with("x86")) {
     const lldb::SBStructuredData flavor =
