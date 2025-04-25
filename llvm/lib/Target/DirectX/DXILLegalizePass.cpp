@@ -147,20 +147,20 @@ static void fixI8UseChain(Instruction &I,
   if (auto *Cast = dyn_cast<CastInst>(&I)) {
     if (!Cast->getSrcTy()->isIntegerTy(8))
       return;
-    
+
     ToRemove.push_back(Cast);
-    auto* Replacement =ReplacedValues[Cast->getOperand(0)];
+    auto *Replacement = ReplacedValues[Cast->getOperand(0)];
     if (Cast->getType() == Replacement->getType()) {
       Cast->replaceAllUsesWith(Replacement);
       return;
     }
-    Value* AdjustedCast = nullptr;
+    Value *AdjustedCast = nullptr;
     if (Cast->getOpcode() == Instruction::ZExt)
       AdjustedCast = Builder.CreateZExtOrTrunc(Replacement, Cast->getType());
     if (Cast->getOpcode() == Instruction::SExt)
       AdjustedCast = Builder.CreateSExtOrTrunc(Replacement, Cast->getType());
-  
-    if(AdjustedCast)
+
+    if (AdjustedCast)
       Cast->replaceAllUsesWith(AdjustedCast);
   }
 }
@@ -195,8 +195,7 @@ static void upcastI8AllocasAndUses(Instruction &I,
 
   // Replace alloca
   IRBuilder<> Builder(AI);
-  auto *NewAlloca =
-      Builder.CreateAlloca(SmallestType);
+  auto *NewAlloca = Builder.CreateAlloca(SmallestType);
   ReplacedValues[AI] = NewAlloca;
   ToRemove.push_back(AI);
 }
