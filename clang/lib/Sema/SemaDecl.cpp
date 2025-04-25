@@ -6145,9 +6145,8 @@ void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
   }
   // Diagnose use of C++ keywords in C as being incompatible with C++.
   if (!getLangOpts().CPlusPlus &&
-/*      !Diags.isIgnored(diag::warn_identifier_is_cpp_keyword,
+      !Diags.isIgnored(diag::warn_identifier_is_cpp_keyword,
                        D->getLocation()) &&
-*/
       isKeywordInCPlusPlus(*this, D->getIdentifier()))
     Diag(D->getLocation(), diag::warn_identifier_is_cpp_keyword) << D;
 }

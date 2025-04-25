@@ -444,17 +444,12 @@ public:
   }
   bool isCPlusPlusOperatorKeyword() const { return IsCPPOperatorKeyword; }
 
-  /// Return true if this identifier uses a keyword token and is a keyword in
-  /// the specified language.
+  /// Return true if this token is a keyword in the specified language.
   bool isKeyword(const LangOptions &LangOpts) const;
 
-  /// Return true if this identifier uses a keyword token and is a C++ keyword
-  /// in the specified language.
+  /// Return true if this token is a C++ keyword in the specified
+  /// language.
   bool isCPlusPlusKeyword(const LangOptions &LangOpts) const;
-
-  /// Returns true if the name of this identifier matches a keyword given the
-  /// specified language options.
-  bool isNameKeyword(const LangOptions &LangOpts) const;
 
   /// Get and set FETokenInfo. The language front-end is allowed to associate
   /// arbitrary metadata with this token.

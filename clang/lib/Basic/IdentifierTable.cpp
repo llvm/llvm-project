@@ -343,34 +343,10 @@ static KeywordStatus getTokenKwStatus(const LangOptions &LangOpts,
   }
 }
 
-static KeywordStatus getNameKwStatus(const LangOptions &LangOpts,
-                                     StringRef Name) {
-  return llvm::StringSwitch<KeywordStatus>(Name)
-#define KEYWORD(NAME, FLAGS) .Case(#NAME, getKeywordStatus(LangOpts, FLAGS))
-#define CXX_KEYWORD_OPERATOR(NAME, TOK) .Case(#NAME, KS_Enabled)
-#include "clang/Basic/TokenKinds.def"
-      .Default(KS_Disabled);
-}
-
 /// Returns true if the identifier represents a keyword in the
 /// specified language.
 bool IdentifierInfo::isKeyword(const LangOptions &LangOpts) const {
   switch (getTokenKwStatus(LangOpts, getTokenID())) {
-  case KS_Enabled:
-  case KS_Extension:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool IdentifierInfo::isNameKeyword(const LangOptions &LangOpts) const {
-  // This differs from IdentifierInfo::isCPlusPlusKeyword(). That function
-  // tests if the identifier is a keyword token in C++ mode and then isn't a
-  // keyword token in C modes. In our case, if it was a keyword, we wouldn't
-  // have gotten the identifier for it anyway, so that function will always
-  // return false for us. Instead, check against the identifier name directly.
-  switch (getNameKwStatus(LangOpts, getName())) {
   case KS_Enabled:
   case KS_Extension:
     return true;
