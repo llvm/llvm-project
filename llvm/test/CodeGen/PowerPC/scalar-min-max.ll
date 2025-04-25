@@ -37,7 +37,7 @@ entry:
   ret float %cond
 }
 
-define dso_local double @testdmax(double %a, double %b) local_unnamed_addr {
+define double @testdmax(double %a, double %b) local_unnamed_addr {
 ; CHECK-LABEL: testdmax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xsmaxdp f1, f1, f2
@@ -188,4 +188,244 @@ entry:
   %cmp = fcmp nnan ninf olt double %a, %b
   %cond = select i1 %cmp, double %a, double %b
   ret double %cond
+}
+
+define float @testfminnum(float %a, float %b) {
+; CHECK-LABEL: testfminnum:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsmindp f1, f1, f2
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testfminnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfminnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call float @llvm.minnum.f32(float %a, float %b)
+  ret float %0
+}
+
+define float @testfmaxnum(float %a, float %b) {
+; CHECK-LABEL: testfmaxnum:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsmaxdp f1, f1, f2
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testfmaxnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfmaxnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call float @llvm.maxnum.f32(float %a, float %b)
+  ret float %0
+}
+
+define float @testfcanonicalize(float %a) {
+; CHECK-LABEL: testfcanonicalize:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsmaxdp f1, f1, f1
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testfcanonicalize:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfcanonicalize:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %canonicalize = tail call float @llvm.canonicalize.f32(float %a)
+  ret float %canonicalize
+}
+
+define double @testdminnum(double %a, double %b) {
+; CHECK-LABEL: testdminnum:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsmindp f1, f1, f2
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testdminnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdminnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call double @llvm.minnum.f64(double %a, double %b)
+  ret double %0
+}
+
+define double @testdmaxnum(double %a, double %b) {
+; CHECK-LABEL: testdmaxnum:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsmaxdp f1, f1, f2
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testdmaxnum:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdmaxnum:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call double @llvm.maxnum.f64(double %a, double %b)
+  ret double %0
+}
+
+define double @testdcanonicalize(double %a) {
+; CHECK-LABEL: testdcanonicalize:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xsmaxdp f1, f1, f1
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testdcanonicalize:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdcanonicalize:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f1
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %canonicalize = tail call double @llvm.canonicalize.f64(double %a)
+  ret double %canonicalize
+}
+
+define <4 x float> @testfminnum_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: testfminnum_v4f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvminsp vs34, vs34, vs35
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testfminnum_v4f32:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvminsp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfminnum_v4f32:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvminsp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <4 x float> @llvm.minnum.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %0
+}
+
+define <4 x float> @testfmaxnum_v4f32(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: testfmaxnum_v4f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvmaxsp vs34, vs34, vs35
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testfmaxnum_v4f32:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxsp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfmaxnum_v4f32:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxsp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
+  ret <4 x float> %0
+}
+
+define <4 x float> @testfcanonicalize_v4f32(<4 x float> %a) {
+; CHECK-LABEL: testfcanonicalize_v4f32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvmaxsp vs34, vs34, vs34
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testfcanonicalize_v4f32:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxsp vs34, vs34, vs34
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testfcanonicalize_v4f32:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxsp vs34, vs34, vs34
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %a)
+  ret <4 x float> %0
+}
+
+define <2 x double> @testdminnum_v2f64(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: testdminnum_v2f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvmindp vs34, vs34, vs35
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testdminnum_v2f64:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmindp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdminnum_v2f64:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmindp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <2 x double> @llvm.minnum.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %0
+}
+
+define <2 x double> @testdmaxnum_v2f64(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: testdmaxnum_v2f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvmaxdp vs34, vs34, vs35
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testdmaxnum_v2f64:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxdp vs34, vs34, vs35
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdmaxnum_v2f64:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxdp vs34, vs34, vs35
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
+  ret <2 x double> %0
+}
+
+define <2 x double> @testdcanonicalize_v2f64(<2 x double> %a) {
+; CHECK-LABEL: testdcanonicalize_v2f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvmaxdp vs34, vs34, vs34
+; CHECK-NEXT:    blr
+;
+; NO-FAST-P9-LABEL: testdcanonicalize_v2f64:
+; NO-FAST-P9:       # %bb.0: # %entry
+; NO-FAST-P9-NEXT:    xvmaxdp vs34, vs34, vs34
+; NO-FAST-P9-NEXT:    blr
+;
+; NO-FAST-P8-LABEL: testdcanonicalize_v2f64:
+; NO-FAST-P8:       # %bb.0: # %entry
+; NO-FAST-P8-NEXT:    xvmaxdp vs34, vs34, vs34
+; NO-FAST-P8-NEXT:    blr
+entry:
+  %0 = tail call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %a)
+  ret <2 x double> %0
 }

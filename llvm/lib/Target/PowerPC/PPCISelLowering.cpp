@@ -773,14 +773,12 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::FSHR, MVT::i32, Custom);
 
   if (Subtarget.hasVSX()) {
-    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXNUM_IEEE, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNUM_IEEE, MVT::f64, Legal);
-    setOperationAction(ISD::FMINNUM_IEEE, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f64, Legal);
+    setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
 
   if (Subtarget.hasAltivec()) {
@@ -815,6 +813,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       if (Subtarget.hasVSX()) {
         setOperationAction(ISD::FMAXNUM, VT, Legal);
         setOperationAction(ISD::FMINNUM, VT, Legal);
+        setOperationAction(ISD::FCANONICALIZE, VT, Legal);
       }
 
       // Vector instructions introduced in P8
