@@ -3,8 +3,8 @@
 
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes X64,SDAG-X64
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes X64,GISEL-X64
-; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes I686,SDAG-I686
-; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes I686,GISEL-I686
+; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel=0 | FileCheck %s --check-prefixes X86,SDAG-X86
+; RUN: llc < %s -mtriple=i686-- -mattr=+x87,-sse,-sse2 -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes X86,GISEL-X86
 
 define i8 @test_float_to_int8(float %input) nounwind {
 ; X64-LABEL: test_float_to_int8:
@@ -20,20 +20,20 @@ define i8 @test_float_to_int8(float %input) nounwind {
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_float_to_int8:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    flds {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_float_to_int8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi float %input to i8
     ret i8 %conv
@@ -53,20 +53,20 @@ define i8 @test_longdouble_to_int8(x86_fp80 %input) nounwind {
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_longdouble_to_int8:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    fldt {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_longdouble_to_int8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi x86_fp80 %input to i8
     ret i8 %conv
@@ -86,20 +86,20 @@ define i16 @test_float_to_int16(float %input) nounwind {
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_float_to_int16:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    flds {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_float_to_int16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi float %input to i16
     ret i16 %conv
@@ -119,20 +119,20 @@ define i16 @test_longdouble_to_int16(x86_fp80 %input) nounwind {
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_longdouble_to_int16:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    fldt {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_longdouble_to_int16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi x86_fp80 %input to i16
     ret i16 %conv
@@ -152,20 +152,20 @@ define i32 @test_float_to_int32(float %input) nounwind {
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_float_to_int32:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    flds {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw (%esp)
-; I686-NEXT:    movzwl (%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistpl {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw (%esp)
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_float_to_int32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    flds {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw (%esp)
+; X86-NEXT:    movzwl (%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi float %input to i32
     ret i32 %conv
@@ -185,20 +185,20 @@ define i32 @test_longdouble_to_int32(x86_fp80 %input) nounwind {
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_longdouble_to_int32:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    fldt {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw (%esp)
-; I686-NEXT:    movzwl (%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistpl {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw (%esp)
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_longdouble_to_int32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw (%esp)
+; X86-NEXT:    movzwl (%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi x86_fp80 %input to i32
     ret i32 %conv
@@ -218,25 +218,25 @@ define i64 @test_float_to_int64(float %input) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_float_to_int64:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    pushl %ebp
-; I686-NEXT:    movl %esp, %ebp
-; I686-NEXT:    andl $-8, %esp
-; I686-NEXT:    subl $16, %esp
-; I686-NEXT:    flds 8(%ebp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistpll {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I686-NEXT:    movl %ebp, %esp
-; I686-NEXT:    popl %ebp
-; I686-NEXT:    retl
+; X86-LABEL: test_float_to_int64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    flds 8(%ebp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi float %input to i64
     ret i64 %conv
@@ -256,25 +256,25 @@ define i64 @test_longdouble_to_int64(x86_fp80 %input) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_longdouble_to_int64:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    pushl %ebp
-; I686-NEXT:    movl %esp, %ebp
-; I686-NEXT:    andl $-8, %esp
-; I686-NEXT:    subl $16, %esp
-; I686-NEXT:    fldt 8(%ebp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistpll {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I686-NEXT:    movl %ebp, %esp
-; I686-NEXT:    popl %ebp
-; I686-NEXT:    retl
+; X86-LABEL: test_longdouble_to_int64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    fldt 8(%ebp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi x86_fp80 %input to i64
     ret i64 %conv
@@ -294,20 +294,20 @@ define i8 @test_double_to_int8(double %input) nounwind {
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_double_to_int8:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    fldl {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_double_to_int8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi double %input to i8
     ret i8 %conv
@@ -327,20 +327,20 @@ define i16 @test_double_to_int16(double %input) nounwind {
 ; X64-NEXT:    movzwl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_double_to_int16:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    fldl {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistps {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_double_to_int16:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistps {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi double %input to i16
     ret i16 %conv
@@ -360,20 +360,20 @@ define i32 @test_double_to_int32(double %input) nounwind {
 ; X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_double_to_int32:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    subl $8, %esp
-; I686-NEXT:    fldl {{[0-9]+}}(%esp)
-; I686-NEXT:    fnstcw (%esp)
-; I686-NEXT:    movzwl (%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistpl {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw (%esp)
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    addl $8, %esp
-; I686-NEXT:    retl
+; X86-LABEL: test_double_to_int32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; X86-NEXT:    fnstcw (%esp)
+; X86-NEXT:    movzwl (%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpl {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw (%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi double %input to i32
     ret i32 %conv
@@ -393,31 +393,31 @@ define i64 @test_double_to_int64(double %input) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
-; I686-LABEL: test_double_to_int64:
-; I686:       # %bb.0: # %entry
-; I686-NEXT:    pushl %ebp
-; I686-NEXT:    movl %esp, %ebp
-; I686-NEXT:    andl $-8, %esp
-; I686-NEXT:    subl $16, %esp
-; I686-NEXT:    fldl 8(%ebp)
-; I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    orl $3072, %eax # imm = 0xC00
-; I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    fistpll {{[0-9]+}}(%esp)
-; I686-NEXT:    fldcw {{[0-9]+}}(%esp)
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; I686-NEXT:    movl %ebp, %esp
-; I686-NEXT:    popl %ebp
-; I686-NEXT:    retl
+; X86-LABEL: test_double_to_int64:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    fldl 8(%ebp)
+; X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $3072, %eax # imm = 0xC00
+; X86-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    fistpll {{[0-9]+}}(%esp)
+; X86-NEXT:    fldcw {{[0-9]+}}(%esp)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
 entry:
     %conv = fptosi double %input to i64
     ret i64 %conv
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GISEL-I686: {{.*}}
+; GISEL-X86: {{.*}}
 ; GISEL-X64: {{.*}}
-; SDAG-I686: {{.*}}
+; SDAG-X86: {{.*}}
 ; SDAG-X64: {{.*}}
