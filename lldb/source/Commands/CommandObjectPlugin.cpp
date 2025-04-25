@@ -165,6 +165,7 @@ protected:
       return;
     }
     llvm::StringRef pattern = argc ? command[0].ref() : "";
+    result.SetStatus(eReturnStatusSuccessFinishResult);
 
     int num_matching = ActOnMatchingPlugins(
         pattern, [&](const PluginNamespace &plugin_namespace,
@@ -177,9 +178,8 @@ protected:
           }
         });
 
-    if (num_matching == 0) {
+    if (num_matching == 0)
       result.AppendErrorWithFormat("Found no matching plugins");
-    }
   }
 };
 
@@ -201,12 +201,12 @@ protected:
       return;
     }
     llvm::StringRef pattern = argc ? command[0].ref() : "";
+    result.SetStatus(eReturnStatusSuccessFinishResult);
 
     int num_matching = SetEnableOnMatchingPlugins(pattern, result, true);
 
-    if (num_matching == 0) {
+    if (num_matching == 0)
       result.AppendErrorWithFormat("Found no matching plugins to enable");
-    }
   }
 };
 
@@ -228,6 +228,7 @@ protected:
       return;
     }
     llvm::StringRef pattern = argc ? command[0].ref() : "";
+    result.SetStatus(eReturnStatusSuccessFinishResult);
 
     int num_matching = SetEnableOnMatchingPlugins(pattern, result, false);
 
