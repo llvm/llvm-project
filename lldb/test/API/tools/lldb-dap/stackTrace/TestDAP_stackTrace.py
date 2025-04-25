@@ -2,7 +2,6 @@
 Test lldb-dap stackTrace request
 """
 
-
 import os
 
 import lldbdap_testcase
@@ -217,3 +216,30 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         frame = self.get_stackFrames()[0]
         self.assertEqual(frame["name"], "recurse(x=1)")
+
+    @skipIfWindows
+    def test_StackFrameFormat(self):
+        """
+        Test the StackFrameFormat.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.c"
+
+        self.set_source_breakpoints(source, [line_number(source, "recurse end")])
+
+        self.continue_to_next_stop()
+        frame = self.get_stackFrames(format={"parameters": True})[0]
+        self.assertEqual(frame["name"], "recurse(x=1)")
+
+        frame = self.get_stackFrames(format={"parameterNames": True})[0]
+        self.assertEqual(frame["name"], "recurse(x=1)")
+
+        frame = self.get_stackFrames(format={"parameterValues": True})[0]
+        self.assertEqual(frame["name"], "recurse(x=1)")
+
+        frame = self.get_stackFrames(format={"parameters": False, "line": True})[0]
+        self.assertEqual(frame["name"], "main.c:6:5 recurse")
+
+        frame = self.get_stackFrames(format={"parameters": False, "module": True})[0]
+        self.assertEqual(frame["name"], "a.out recurse")
