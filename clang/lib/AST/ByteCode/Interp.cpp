@@ -634,32 +634,35 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                           AccessKinds AK) {
   assert(Ptr.isLive());
 
-  // FIXME: This check here might be kinda expensive. Maybe it would be better
-  // to have another field in InlineDescriptor for this?
-  if (!Ptr.isBlockPointer())
-    return true;
-
-  QualType PtrType = Ptr.getType();
-  if (!PtrType.isVolatileQualified())
+  if (!Ptr.isVolatile())
     return true;
 
   if (!S.getLangOpts().CPlusPlus)
     return Invalid(S, OpPC);
 
+  // The reason why Ptr is volatile might be further up the hierarchy.
+  // Find that pointer.
+  Pointer P = Ptr;
+  while (!P.isRoot()) {
+    if (P.getType().isVolatileQualified())
+      break;
+    P = P.getBase();
+  }
+
   const NamedDecl *ND = nullptr;
   int DiagKind;
   SourceLocation Loc;
-  if (const auto *F = Ptr.getField()) {
+  if (const auto *F = P.getField()) {
     DiagKind = 2;
     Loc = F->getLocation();
     ND = F;
-  } else if (auto *VD = Ptr.getFieldDesc()->asValueDecl()) {
+  } else if (auto *VD = P.getFieldDesc()->asValueDecl()) {
     DiagKind = 1;
     Loc = VD->getLocation();
     ND = VD;
   } else {
     DiagKind = 0;
-    if (const auto *E = Ptr.getFieldDesc()->asExpr())
+    if (const auto *E = P.getFieldDesc()->asExpr())
       Loc = E->getExprLoc();
   }
 

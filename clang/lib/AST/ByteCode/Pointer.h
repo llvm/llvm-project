@@ -577,6 +577,13 @@ public:
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
 
+  /// Checks if an object or a subfield is volatile.
+  bool isVolatile() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
+
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const {
     if (isBlockPointer()) {
