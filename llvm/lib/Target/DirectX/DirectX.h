@@ -35,6 +35,12 @@ void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 /// Pass to expand intrinsic operations that lack DXIL opCodes
 ModulePass *createDXILIntrinsicExpansionLegacyPass();
 
+/// Initializer for DXIL CBuffer Access Pass
+void initializeDXILCBufferAccessLegacyPass(PassRegistry &);
+
+/// Pass to translate loads in the cbuffer address space to intrinsics
+ModulePass *createDXILCBufferAccessLegacyPass();
+
 /// Initializer for DXIL Data Scalarization Pass
 void initializeDXILDataScalarizationLegacyPass(PassRegistry &);
 
@@ -46,6 +52,12 @@ void initializeDXILFlattenArraysLegacyPass(PassRegistry &);
 
 /// Pass to flatten arrays into a one dimensional DXIL legal form
 ModulePass *createDXILFlattenArraysLegacyPass();
+
+/// Initializer for DXIL Forward Handle Accesses Pass
+void initializeDXILForwardHandleAccessesLegacyPass(PassRegistry &);
+
+/// Pass to eliminate redundant stores and loads from handle globals.
+FunctionPass *createDXILForwardHandleAccessesLegacyPass();
 
 /// Initializer DXIL legalizationPass
 void initializeDXILLegalizeLegacyPass(PassRegistry &);

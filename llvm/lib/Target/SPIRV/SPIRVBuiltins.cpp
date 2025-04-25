@@ -1058,6 +1058,24 @@ static bool buildBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+/// Helper function for building Intel's OpBitwiseFunctionINTEL instruction.
+static bool buildTernaryBitwiseFunctionINTELInst(
+    const SPIRV::IncomingCall *Call, unsigned Opcode,
+    MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
+
+  return true;
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -1143,9 +1161,15 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (Call->isSpirvOp()) {
-    if (GroupBuiltin->NoGroupOperation)
+    if (GroupBuiltin->NoGroupOperation) {
+      SmallVector<uint32_t, 1> ImmArgs;
+      if (GroupBuiltin->Opcode ==
+              SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL &&
+          Call->Arguments.size() > 4)
+        ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[4], MRI));
       return buildOpFromWrapper(MIRBuilder, GroupBuiltin->Opcode, Call,
-                                GR->getSPIRVTypeID(Call->ReturnType));
+                                GR->getSPIRVTypeID(Call->ReturnType), ImmArgs);
+    }
 
     // Group Operation is a literal
     Register GroupOpReg = Call->Arguments[1];
@@ -2264,6 +2288,18 @@ static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool
+generateTernaryBitwiseFunctionINTELInst(const SPIRV::IncomingCall *Call,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return buildTernaryBitwiseFunctionINTELInst(Call, Opcode, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2845,6 +2881,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::TernaryBitwiseINTEL:
+    return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }

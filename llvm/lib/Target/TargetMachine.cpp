@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -44,6 +45,13 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       O0WantsFastISel(false), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+Expected<std::unique_ptr<MCStreamer>>
+TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
+                                raw_pwrite_stream *DwoOut,
+                                CodeGenFileType FileType, MCContext &Ctx) {
+  return nullptr;
+}
 
 bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
   if (getTargetTriple().getArch() != Triple::x86_64)

@@ -256,7 +256,7 @@ struct ExampleTypeInterfaceTraits {
   struct ExternalModel : public FallbackModel<ConcreteModel> {
     unsigned exampleInterfaceHook(Type type) const override {
       // Default implementation can be provided here.
-      return type.cast<ConcreteType>().callSomeTypeSpecificMethod();
+      return cast<ConcreteType>(type).callSomeTypeSpecificMethod();
     }
   };
 };

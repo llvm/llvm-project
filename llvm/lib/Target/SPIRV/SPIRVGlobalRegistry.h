@@ -466,6 +466,15 @@ private:
                                          Constant *CA, unsigned BitWidth,
                                          unsigned ElemCnt);
 
+  // Returns a pointer to a SPIR-V pointer type with the given base type and
+  // storage class. It is the responsibility of the caller to make sure the
+  // decorations on the base type are valid for the given storage class. For
+  // example, it has the correct offset and stride decorations.
+  SPIRVType *
+  getOrCreateSPIRVPointerTypeInternal(SPIRVType *BaseType,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRV::StorageClass::StorageClass SC);
+
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
                             SPIRVType *SpvType, bool EmitIR,
@@ -540,12 +549,30 @@ public:
                                        unsigned NumElements, MachineInstr &I,
                                        const SPIRVInstrInfo &TII);
 
-  SPIRVType *getOrCreateSPIRVPointerType(
-      SPIRVType *BaseType, MachineIRBuilder &MIRBuilder,
-      SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
-  SPIRVType *getOrCreateSPIRVPointerType(
-      SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
-      SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
+  // Returns a pointer to a SPIR-V pointer type with the given base type and
+  // storage class. The base type will be translated to a SPIR-V type, and the
+  // appropriate layout decorations will be added to the base type.
+  SPIRVType *getOrCreateSPIRVPointerType(const Type *BaseType,
+                                         MachineIRBuilder &MIRBuilder,
+                                         SPIRV::StorageClass::StorageClass SC);
+  SPIRVType *getOrCreateSPIRVPointerType(const Type *BaseType, MachineInstr &I,
+                                         SPIRV::StorageClass::StorageClass SC);
+
+  // Returns a pointer to a SPIR-V pointer type with the given base type and
+  // storage class. It is the responsibility of the caller to make sure the
+  // decorations on the base type are valid for the given storage class. For
+  // example, it has the correct offset and stride decorations.
+  SPIRVType *getOrCreateSPIRVPointerType(SPIRVType *BaseType,
+                                         MachineIRBuilder &MIRBuilder,
+                                         SPIRV::StorageClass::StorageClass SC);
+
+  // Returns a pointer to a SPIR-V pointer type that is the same as `PtrType`
+  // except the stroage class has been changed to `SC`. It is the responsibility
+  // of the caller to be sure that the original and new storage class have the
+  // same layout requirements.
+  SPIRVType *changePointerStorageClass(SPIRVType *PtrType,
+                                       SPIRV::StorageClass::StorageClass SC,
+                                       MachineInstr &I);
 
   SPIRVType *getOrCreateVulkanBufferType(MachineIRBuilder &MIRBuilder,
                                          Type *ElemType,

@@ -710,6 +710,27 @@ gpu.module @test_module {
     %shfld, %predd = gpu.shuffle down %arg0, %arg1, %arg2 : f32
     func.return %shfl, %shfli, %shfld : f32, f32, f32
   }
+
+  // CHECK-LABEL: func @gpu_shuffle_vec
+  //  CHECK-SAME: (%[[ARG:.*]]: vector<4xf16>, %{{.*}}: i32, %{{.*}}: i32)
+  func.func @gpu_shuffle_vec(%arg0: vector<4xf16>, %arg1: i32, %arg2: i32) -> vector<4xf16> {
+    // CHECK: %[[CAST1:.*]] = llvm.bitcast %[[ARG]] : vector<4xf16> to vector<2xi32>
+    // CHECK: %[[IDX0:.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[ELEM0:.*]] = llvm.extractelement %13[%[[IDX0]] : i32] : vector<2xi32>
+    // CHECK: %[[IDX1:.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: %[[ELEM1:.*]] = llvm.extractelement %13[%[[IDX1]] : i32] : vector<2xi32>
+    // CHECK: %[[PERM0:.*]] = rocdl.ds_bpermute %{{.*}}, %[[ELEM0]] : (i32, i32) -> i32
+    // CHECK: %[[PERM1:.*]] = rocdl.ds_bpermute %{{.*}}, %[[ELEM1]] : (i32, i32) -> i32
+    // CHECK: %[[V0:.*]] = llvm.mlir.poison : vector<2xi32>
+    // CHECK: %[[IDX0:.*]] = llvm.mlir.constant(0 : i32) : i32
+    // CHECK: %[[V1:.*]] = llvm.insertelement %[[PERM0]], %[[V0]][%[[IDX0]] : i32] : vector<2xi32>
+    // CHECK: %[[IDX1:.*]] = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: %[[V2:.*]] = llvm.insertelement %[[PERM1]], %[[V1]][%[[IDX1]] : i32] : vector<2xi32>
+    // CHECK: %[[RES:.*]] = llvm.bitcast %[[V2]] : vector<2xi32> to vector<4xf16>
+    // CHECK: llvm.return %[[RES]] : vector<4xf16>
+    %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : vector<4xf16>
+    func.return %shfl : vector<4xf16>
+  }
 }
 
 // -----
