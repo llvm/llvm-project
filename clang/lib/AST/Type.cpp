@@ -2817,6 +2817,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType->isIncompleteType())
     return false;
 
+  if (CanonicalType.hasAddressDiscriminatedPointerAuth())
+    return false;
+
   // As an extension, Clang treats vector types as Scalar types.
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
@@ -2829,7 +2832,7 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
         return ClassDecl->isTriviallyCopyable();
       }
     }
-    return true;
+    return !RT->getDecl()->isNonTrivialToPrimitiveCopy();
   }
   // No other types can match.
   return false;
@@ -2967,6 +2970,8 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
   case Qualifiers::OCL_Weak:
     return PCK_ARCWeak;
   default:
+    if (hasAddressDiscriminatedPointerAuth())
+      return PCK_PtrAuth;
     return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
   }
 }
