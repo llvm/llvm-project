@@ -1156,6 +1156,7 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
+  bool MaybeIncludeGuard = false;
   if (IncludeGuard == IG_IfNdefed &&
       IncludeGuardToken->TokenText == FormatTok->TokenText) {
     IncludeGuard = IG_Defined;
@@ -1166,6 +1167,7 @@ void UnwrappedLineParser::parsePPDefine() {
         break;
       }
     }
+    MaybeIncludeGuard = IncludeGuard == IG_Defined;
   }
 
   // In the context of a define, even keywords should be treated as normal
@@ -1176,6 +1178,11 @@ void UnwrappedLineParser::parsePPDefine() {
   FormatTok->Tok.setKind(tok::identifier);
   FormatTok->Tok.setIdentifierInfo(Keywords.kw_internal_ident_after_define);
   nextToken();
+
+  // IncludeGuard can't have a non-empty macro definition.
+  if (MaybeIncludeGuard && !eof())
+    IncludeGuard = IG_Rejected;
+
   if (FormatTok->Tok.getKind() == tok::l_paren &&
       !FormatTok->hasWhitespaceBefore()) {
     parseParens();
