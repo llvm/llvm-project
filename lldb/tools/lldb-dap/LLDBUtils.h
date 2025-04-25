@@ -51,12 +51,16 @@ namespace lldb_dap {
 ///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
 ///     each command is executed verbatim.
 ///
+/// \param[in] echo_commands
+///     If \b true, the command are echoed to the stream.
+///
 /// \return
 ///     \b true, unless a command prefixed with \b ! fails and parsing of
 ///     command directives is enabled.
 bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives);
+                     llvm::raw_ostream &strm, bool parse_command_directives,
+                     bool echo_commands);
 
 /// Run a list of LLDB commands in the LLDB command interpreter.
 ///
@@ -81,18 +85,17 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 ///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
 ///     each command is executed verbatim.
 ///
+/// \param[in] echo_commands
+///     If \b true, the command are echoed to the stream.
+///
 /// \return
 ///     A std::string that contains the prefix and all commands and
 ///     command output.
 std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
-                            bool parse_command_directives = true);
-
-/// Similar to the method above, but without parsing command directives.
-std::string
-RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                        const llvm::ArrayRef<std::string> &commands);
+                            bool parse_command_directives = true,
+                            bool echo_commands = false);
 
 /// Check if a thread has a stop reason.
 ///
