@@ -116,7 +116,7 @@ private:
   std::shared_ptr<Preprocessor>           PP;
   IntrusiveRefCntPtr<ASTContext>          Ctx;
   std::shared_ptr<TargetOptions>          TargetOpts;
-  std::shared_ptr<HeaderSearchOptions>    HSOpts;
+  std::unique_ptr<HeaderSearchOptions> HSOpts;
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure = false;
@@ -699,7 +699,7 @@ public:
                   WhatToLoad ToLoad,
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
-                  std::shared_ptr<HeaderSearchOptions> HSOpts,
+                  const HeaderSearchOptions &HSOpts,
                   std::shared_ptr<LangOptions> LangOpts = nullptr,
                   bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
