@@ -9716,12 +9716,9 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     // Use ri.vinsert.v.x if available.
     if (Subtarget.hasVendorXRivosVisni() && VecVT.isInteger() &&
         isValidVisniInsertExtractIndex(Idx)) {
-      unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
-      if (VecVT.isFixedLengthVector() && isa<ConstantSDNode>(Idx) &&
-          Idx->getAsZExtVal() + 1 == VecVT.getVectorNumElements())
-        Policy = RISCVVType::TAIL_AGNOSTIC;
+      // Tail policy applies to elements past VLMAX (by assumption Idx < VLMAX)
       SDValue PolicyOp =
-          DAG.getTargetConstant(Policy, DL, Subtarget.getXLenVT());
+          DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
       Vec = DAG.getNode(RISCVISD::RI_VINSERT_VL, DL, ContainerVT, Vec, Val, Idx,
                         VL, PolicyOp);
       if (AlignedIdx)

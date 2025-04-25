@@ -90,7 +90,7 @@ define <32 x i32> @insertelt_v32i32_4(<32 x i32> %a, i32 %y) {
 ; VISNI-LABEL: insertelt_v32i32_4:
 ; VISNI:       # %bb.0:
 ; VISNI-NEXT:    li a1, 32
-; VISNI-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
+; VISNI-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v8, a0, 4
 ; VISNI-NEXT:    ret
   %b = insertelement <32 x i32> %a, i32 %y, i32 4
@@ -416,7 +416,7 @@ define <16 x i8> @insertelt_v16i8(<16 x i8> %a, i8 %y) {
 ;
 ; VISNI-LABEL: insertelt_v16i8:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 16, e8, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v8, a0, 14
 ; VISNI-NEXT:    ret
   %b = insertelement <16 x i8> %a, i8 %y, i32 14
@@ -845,7 +845,7 @@ define <16 x i32> @insertelt_c1_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_ra
 ;
 ; VISNI-LABEL: insertelt_c1_v16xi32_exact:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v8, a0, 1
 ; VISNI-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 1
@@ -862,7 +862,7 @@ define <16 x i32> @insertelt_c2_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_ra
 ;
 ; VISNI-LABEL: insertelt_c2_v16xi32_exact:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v8, a0, 2
 ; VISNI-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 2
@@ -879,7 +879,7 @@ define <16 x i32> @insertelt_c3_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_ra
 ;
 ; VISNI-LABEL: insertelt_c3_v16xi32_exact:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v8, a0, 3
 ; VISNI-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 3
@@ -912,7 +912,7 @@ define <16 x i32> @insertelt_c13_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_r
 ;
 ; VISNI-LABEL: insertelt_c13_v16xi32_exact:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v11, a0, 1
 ; VISNI-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 13
@@ -929,7 +929,7 @@ define <16 x i32> @insertelt_c14_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_r
 ;
 ; VISNI-LABEL: insertelt_c14_v16xi32_exact:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v11, a0, 2
 ; VISNI-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 14
@@ -946,7 +946,7 @@ define <16 x i32> @insertelt_c15_v16xi32_exact(<16 x i32> %vin, i32 %a) vscale_r
 ;
 ; VISNI-LABEL: insertelt_c15_v16xi32_exact:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 16, e32, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 16, e32, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v11, a0, 3
 ; VISNI-NEXT:    ret
   %v = insertelement <16 x i32> %vin, i32 %a, i32 15
@@ -995,7 +995,7 @@ define <8 x i64> @insertelt_c5_v8xi64_exact(<8 x i64> %vin, i64 %a) vscale_range
 ;
 ; VISNI-LABEL: insertelt_c5_v8xi64_exact:
 ; VISNI:       # %bb.0:
-; VISNI-NEXT:    vsetivli zero, 8, e64, m1, tu, ma
+; VISNI-NEXT:    vsetivli zero, 8, e64, m1, ta, ma
 ; VISNI-NEXT:    ri.vinsert.v.x v10, a0, 1
 ; VISNI-NEXT:    ret
   %v = insertelement <8 x i64> %vin, i64 %a, i32 5
