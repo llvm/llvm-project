@@ -14299,6 +14299,9 @@ static SDValue widenAbs(SDNode *Extend, SelectionDAG &DAG) {
 // This is a special case for the 128-bit vector types. Intention is to remove
 // the zext and replace it with a bitcast the wider type. While lowering
 // the bitcast is removed and extra commutation due to zext is avoided.
+// For example:
+// zext v4i16 ( v4i8 build_vector (x, y, z, w)) -> bitcast v4i16 ( v8i8
+// build_vector (x, 0, y, 0, z, w, 0)
 static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
 
   assert(Extend->getOpcode() == ISD::ZERO_EXTEND && "Expected zero extend.");
@@ -14308,6 +14311,13 @@ static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
   SDValue BV = Extend->getOperand(0);
   if (BV.getOpcode() != ISD::BUILD_VECTOR || !BV.hasOneUse())
     return SDValue();
+
+  if (any_of(BV->op_values(), [](SDValue Op) { return Op.isUndef(); })) {
+    // If the build vector has undef elements, we cannot widen it.
+    // The widening would create a vector with more undef elements, which
+    // is not valid.
+    return SDValue();
+  }
 
   SDLoc dl(BV);
   EVT VT = BV.getValueType();
@@ -14344,11 +14354,6 @@ static SDValue widenBuildVec(SDNode *Extend, SelectionDAG &DAG) {
       // new build vector to the type of the zext.
       SDValue NewBVBitcast = DAG.getBitcast(ExtendVT, NewBV);
       DAG.ReplaceAllUsesOfValueWith(SDValue(Extend, 0), NewBVBitcast);
-      LLVM_DEBUG(
-          dbgs() << DAG.getMachineFunction().getFunction().getName()
-                 << " - Widening buildvector and replace zext with bitcast\n";
-          BV.dump(); Extend->dump(); dbgs() << " to \n";
-          NewBV.getNode()->dump(); NewBVBitcast->dump(););
       return NewBV;
     }
   }
