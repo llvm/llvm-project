@@ -66,11 +66,6 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
                                DominatorTree &DT, LoopInfo &LI) {
   assert(Inst && "Instruction to be sunk is null");
   assert(SuccToSinkTo && "Candidate sink target is null");
-  // The current location of Inst dominates all uses, thus it must dominate
-  // SuccToSinkTo, which is on the IDom chain between the nearest common
-  // dominator to all uses and the current location.
-  assert(DT.dominates(Inst->getParent(), SuccToSinkTo) &&
-	 "SuccToSinkTo must be dominated by current Inst location!");
 
   // It's never legal to sink an instruction into an EH-pad block.
   if (SuccToSinkTo->isEHPad())
@@ -163,6 +158,12 @@ static bool SinkInstruction(Instruction *Inst,
   LLVM_DEBUG(dbgs() << "Sink" << *Inst << " (";
              Inst->getParent()->printAsOperand(dbgs(), false); dbgs() << " -> ";
              SuccToSinkTo->printAsOperand(dbgs(), false); dbgs() << ")\n");
+
+  // The current location of Inst dominates all uses, thus it must dominate
+  // SuccToSinkTo, which is on the IDom chain between the nearest common
+  // dominator to all uses and the current location.
+  assert(DT.dominates(BB, SuccToSinkTo) &&
+         "SuccToSinkTo must be dominated by current Inst location!");
 
   // Move the instruction.
   Inst->moveBefore(SuccToSinkTo->getFirstInsertionPt());
