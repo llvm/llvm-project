@@ -113,6 +113,12 @@ New checks
   pointer and store it as class members without handle the copy and move
   constructors and the assignments.
 
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
@@ -124,12 +130,6 @@ New checks
 
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
-
-- New :doc:`bugprone-invalid-enum-default-initialization
-  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
-
-  Detect default initialization (to 0) of variables with ``enum`` type where
-  the enum has no enumerator with value of 0.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

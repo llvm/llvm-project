@@ -13,7 +13,7 @@
 
 namespace clang::tidy::bugprone {
 
-/// Detect default initialization (to 0) of variables with `enum` type where
+/// Detects default initialization (to 0) of variables with `enum` type where
 /// the enum has no enumerator with value of 0.
 ///
 /// For the user-facing documentation see:
