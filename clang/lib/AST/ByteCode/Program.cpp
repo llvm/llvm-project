@@ -166,11 +166,11 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
 
   Descriptor *Desc;
   if (std::optional<PrimType> T = Ctx.classify(QT))
-    Desc = createDescriptor(D, *T, nullptr, std::nullopt, /*IsTemporary=*/true,
-                            /*IsMutable=*/false);
+    Desc = createDescriptor(D, *T, /*SourceTy=*/nullptr, std::nullopt,
+                            /*IsConst=*/QT.isConstQualified());
   else
     Desc = createDescriptor(D, QT.getTypePtr(), std::nullopt,
-                            /*IsTemporary=*/true, /*IsMutable=*/false);
+                            /*IsConst=*/QT.isConstQualified());
   if (!Desc)
     Desc = allocateDescriptor(D);
 
@@ -431,7 +431,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (isa<IncompleteArrayType>(ArrayType) ||
         isa<VariableArrayType>(ArrayType)) {
       if (std::optional<PrimType> T = Ctx.classify(ElemTy)) {
-        return allocateDescriptor(D, *T, MDSize, IsTemporary,
+        return allocateDescriptor(D, *T, MDSize, IsConst, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
         const Descriptor *Desc = createDescriptor(

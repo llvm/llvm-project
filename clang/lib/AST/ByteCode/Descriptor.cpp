@@ -358,13 +358,13 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
 
 /// Primitive unknown-size arrays.
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
-                       bool IsTemporary, UnknownSize)
+                       bool IsTemporary, bool IsConst, UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
       MDSize(MD.value_or(0)),
-      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)), IsConst(true),
-      IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
-      CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)),
-      MoveFn(getMoveArrayPrim(Type)) {
+      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)),
+      IsConst(IsConst), IsMutable(false), IsTemporary(IsTemporary),
+      IsArray(true), CtorFn(getCtorArrayPrim(Type)),
+      DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
   assert(Source && "Missing source");
 }
 
