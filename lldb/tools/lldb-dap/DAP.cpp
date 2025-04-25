@@ -28,6 +28,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -499,6 +500,10 @@ ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
   return exc_bp;
 }
 
+lldb::SBThread DAP::GetLLDBThread(lldb::tid_t tid) {
+  return target.GetProcess().GetThreadByID(tid);
+}
+
 lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
   auto tid = GetInteger<int64_t>(arguments, "threadId")
                  .value_or(LLDB_INVALID_THREAD_ID);
@@ -589,8 +594,9 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,
                           llvm::ArrayRef<std::string> commands) {
   bool required_command_failed = false;
-  std::string output =
-      ::RunLLDBCommands(debugger, prefix, commands, required_command_failed);
+  std::string output = ::RunLLDBCommands(
+      debugger, prefix, commands, required_command_failed,
+      /*parse_command_directives*/ true, /*echo_commands*/ true);
   SendOutput(OutputType::Console, output);
   return !required_command_failed;
 }

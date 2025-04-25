@@ -96,6 +96,7 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("noble", Distro::UbuntuNoble)
                     .Case("oracular", Distro::UbuntuOracular)
                     .Case("plucky", Distro::UbuntuPlucky)
+                    .Case("questing", Distro::UbuntuQuesting)
                     .Default(Distro::UnknownDistro);
   return Version;
 }

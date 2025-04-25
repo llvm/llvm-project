@@ -11104,9 +11104,8 @@ Overview:
 
 The '``alloca``' instruction allocates memory on the stack frame of the
 currently executing function, to be automatically released when this
-function returns to its caller.  If the address space is not explicitly
-specified, the object is allocated in the alloca address space from the
-:ref:`datalayout string<langref_datalayout>`.
+function returns to its caller. If the address space is not explicitly
+specified, the default address space 0 is used.
 
 Arguments:
 """"""""""
@@ -11148,7 +11147,10 @@ which way the stack grows) is not specified.
 
 Note that '``alloca``' outside of the alloca address space from the
 :ref:`datalayout string<langref_datalayout>` is meaningful only if the
-target has assigned it a semantics.
+target has assigned it a semantics. For targets that specify a non-zero alloca
+address space in the :ref:`datalayout string<langref_datalayout>`, the alloca
+address space needs to be explicitly specified in the instruction if it is to be
+used.
 
 If the returned pointer is used by :ref:`llvm.lifetime.start <int_lifestart>`,
 the returned object is initially dead.
@@ -12878,7 +12880,10 @@ class <t_firstclass>` type.
    :ref:`fast-math flags <fastmath>`. These are optimization hints to enable
    otherwise unsafe floating-point optimizations. Fast-math flags are only valid
    for selects that return :ref:`supported floating-point types
-   <fastmath_return_types>`.
+   <fastmath_return_types>`. Note that the presence of value which would otherwise result
+   in poison does not cause the result to be poison if the value is on the non-selected arm.
+   If :ref:`fast-math flags <fastmath>` are present, they are only applied to the result,
+   not both arms.
 
 Semantics:
 """"""""""
@@ -12898,7 +12903,9 @@ Example:
 
 .. code-block:: llvm
 
-      %X = select i1 true, i8 17, i8 42          ; yields i8:17
+      %X = select i1 true, i8 17, i8 42                   ; yields i8:17
+      %Y = select nnan i1 true, float 0.0, float NaN      ; yields float:0.0
+      %Z = select nnan i1 false, float 0.0, float NaN     ; yields float:poison
 
 
 .. _i_freeze:

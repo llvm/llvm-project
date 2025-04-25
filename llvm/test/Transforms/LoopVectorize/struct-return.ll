@@ -215,7 +215,7 @@ define void @scalarized_predicated_struct_return(ptr %a) {
 ; CHECK-LABEL: define void @scalarized_predicated_struct_return
 ; CHECK:  vector.body:
 ; CHECK:  pred.store.if:
-; CHECK:     tail call { i64, i64 } @bar_i64(i64 %5)
+; CHECK:     tail call { i64, i64 } @bar_i64(i64 {{.+}})
 entry:
   br label %for.body
 

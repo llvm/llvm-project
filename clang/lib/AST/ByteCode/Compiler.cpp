@@ -210,6 +210,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   switch (CE->getCastKind()) {
   case CK_LValueToRValue: {
+    if (SubExpr->getType().isVolatileQualified())
+      return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
+
     std::optional<PrimType> SubExprT = classify(SubExpr->getType());
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
@@ -361,8 +364,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
         Desc = P.createDescriptor(SubExpr, *T);
       else
         Desc = P.createDescriptor(SubExpr, PointeeType.getTypePtr(),
-                                  std::nullopt, true, false,
-                                  /*IsMutable=*/false, nullptr);
+                                  std::nullopt, /*IsConst=*/true);
     }
 
     uint64_t Val = Ctx.getASTContext().getTargetNullPointerValue(CE->getType());
@@ -414,8 +416,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       Desc = nullptr;
     else
       Desc = P.createDescriptor(CE, PtrType->getPointeeType().getTypePtr(),
-                                Descriptor::InlineDescMD, true, false,
-                                /*IsMutable=*/false, nullptr);
+                                Descriptor::InlineDescMD, /*IsConst=*/true);
 
     if (!this->emitGetIntPtr(T, Desc, CE))
       return false;
@@ -2990,6 +2991,8 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     if (PointeeToT && PointeeFromT) {
       if (isIntegralType(*PointeeFromT) && isIntegralType(*PointeeToT))
         Fatal = false;
+    } else {
+      Fatal = SubExpr->getType().getTypePtr() != E->getType().getTypePtr();
     }
 
     if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
@@ -3395,14 +3398,13 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         Desc = nullptr; // We're not going to use it in this case.
       else
         Desc = P.createDescriptor(E, *ElemT, /*SourceTy=*/nullptr,
-                                  Descriptor::InlineDescMD,
-                                  /*IsConst=*/false, /*IsTemporary=*/false,
-                                  /*IsMutable=*/false);
+                                  Descriptor::InlineDescMD);
     } else {
       Desc = P.createDescriptor(
           E, ElementType.getTypePtr(),
           E->isArray() ? std::nullopt : Descriptor::InlineDescMD,
-          /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false, Init);
+          /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
+          /*IsVolatile=*/false, Init);
     }
   }
 
@@ -4350,7 +4352,7 @@ Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
 
   Descriptor *D = P.createDescriptor(
       Src, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
-      IsTemporary, /*IsMutable=*/false, Init);
+      IsTemporary, /*IsMutable=*/false, /*IsVolatile=*/false, Init);
   if (!D)
     return std::nullopt;
   D->IsConstexprUnknown = IsConstexprUnknown;
@@ -4372,7 +4374,7 @@ std::optional<unsigned> Compiler<Emitter>::allocateTemporary(const Expr *E) {
 
   Descriptor *D = P.createDescriptor(
       E, Ty.getTypePtr(), Descriptor::InlineDescMD, Ty.isConstQualified(),
-      /*IsTemporary=*/true, /*IsMutable=*/false, /*Init=*/nullptr);
+      /*IsTemporary=*/true);
 
   if (!D)
     return std::nullopt;

@@ -375,3 +375,25 @@ TargetFeaturesAttr TargetFeaturesAttr::featuresAt(Operation *op) {
   return parentFunction.getOperation()->getAttrOfType<TargetFeaturesAttr>(
       getAttributeName());
 }
+
+LogicalResult
+ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       LLVM::ModFlagBehavior flagBehavior, StringAttr key,
+                       Attribute value) {
+  if (key == LLVMDialect::getModuleFlagKeyCGProfileName()) {
+    auto arrayAttr = dyn_cast<ArrayAttr>(value);
+    if ((!arrayAttr) || (!llvm::all_of(arrayAttr, [](Attribute attr) {
+          return isa<ModuleFlagCGProfileEntryAttr>(attr);
+        })))
+      return emitError()
+             << "'CG Profile' key expects an array of '#llvm.cgprofile_entry'";
+    return success();
+  }
+
+  if (isa<IntegerAttr, StringAttr>(value))
+    return success();
+
+  return emitError() << "only integer and string values are currently "
+                        "supported for unknown key '"
+                     << key << "'";
+}
