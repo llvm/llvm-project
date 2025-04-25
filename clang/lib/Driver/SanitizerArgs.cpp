@@ -849,12 +849,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       D.Diag(clang::diag::err_drv_argument_not_allowed_with)
           << "-fsanitize-minimal-runtime"
           << lastArgumentForMask(D, Args, IncompatibleMask);
-
-    SanitizerMask NonTrappingCfi = Kinds & SanitizerKind::CFI & ~TrappingKinds;
-    if (NonTrappingCfi && DiagnoseErrors)
-      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-          << "-fsanitize-minimal-runtime"
-          << "-fsanitize-trap=cfi";
   }
 
   for (const auto *Arg : Args.filtered(
