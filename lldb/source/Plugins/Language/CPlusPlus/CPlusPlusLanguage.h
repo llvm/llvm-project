@@ -136,8 +136,13 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "this"; }
 
+  const FormatEntity::Entry *GetFunctionNameFormat() const override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+private:
+  static void DebuggerInitialize(Debugger &);
 };
 
 } // namespace lldb_private
