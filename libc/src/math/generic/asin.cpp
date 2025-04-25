@@ -96,7 +96,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
     // Recalculate mod 1/64.
     idx = static_cast<unsigned>(fputil::nearest_integer(x_sq.hi * 0x1.0p6));
 
-    // Get x^2 - idx/21 exactly.  When FMA is available, double-double
+    // Get x^2 - idx/64 exactly.  When FMA is available, double-double
     // multiplication will be correct for all rounding modes.  Otherwise we use
     // Float128 directly.
     Float128 x_f128(x);
