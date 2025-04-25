@@ -664,7 +664,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
   addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandFpPass(&TM));
+  addPass(ExpandFpPass(&TM, getOptLevel()));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);

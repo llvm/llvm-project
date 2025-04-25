@@ -1103,11 +1103,23 @@ public:
 };
 } // namespace
 
+ExpandFpPass::ExpandFpPass(const TargetMachine *TM, CodeGenOptLevel OptLevel)
+    : TM(TM), OptLevel(OptLevel) {};
+
+void ExpandFpPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<ExpandFpPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  OS << "opt-level=" << (int)OptLevel;
+  OS << '>';
+}
+
 PreservedAnalyses ExpandFpPass::run(Function &F, FunctionAnalysisManager &FAM) {
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
   auto &TLI = *STI->getTargetLowering();
   AssumptionCache *AC = nullptr;
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (OptLevel != CodeGenOptLevel::None)
     AC = &FAM.getResult<AssumptionAnalysis>(F);
   return runImpl(F, TLI, AC) ? PreservedAnalyses::none()
                              : PreservedAnalyses::all();
