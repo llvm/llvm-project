@@ -1947,6 +1947,11 @@ def atomic_load_azext_16 : PatFrags<(ops node:$op),
                                     [(atomic_load_aext_16 node:$op),
                                      (atomic_load_zext_16 node:$op)]>;
 
+// Atomic load which zeroes or anyextends the high bits.
+def atomic_load_azext_32 : PatFrags<(ops node:$op),
+                                    [(atomic_load_aext_32 node:$op),
+                                     (atomic_load_zext_32 node:$op)]>;
+
 // Atomic load which sign extends or anyextends the high bits.
 def atomic_load_asext_8 : PatFrags<(ops node:$op),
                                    [(atomic_load_aext_8 node:$op),
