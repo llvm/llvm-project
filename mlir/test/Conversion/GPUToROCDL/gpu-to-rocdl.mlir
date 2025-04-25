@@ -11,7 +11,7 @@ gpu.module @test_module {
   func.func @gpu_index_ops()
       -> (index, index, index, index, index, index,
           index, index, index, index, index, index,
-          index, index) {
+          index, index, index) {
     // CHECK32-NOT: = llvm.sext %{{.*}} : i32 to i64
 
     // CHECK: rocdl.workitem.id.x : i32
@@ -63,12 +63,16 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %subgroupSize = gpu.subgroup_size : index
 
+    // CHECK: = rocdl.wavefrontsize upper_bound 64 : i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %subgroupSize2 = gpu.subgroup_size upper_bound 64 : index
+
     func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
                %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ,
-               %laneId, %subgroupSize
+               %laneId, %subgroupSize, %subgroupSize2
         : index, index, index, index, index, index,
           index, index, index, index, index, index,
-          index, index
+          index, index, index
   }
 }
 
