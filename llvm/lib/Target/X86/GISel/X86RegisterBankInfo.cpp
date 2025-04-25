@@ -404,6 +404,7 @@ X86RegisterBankInfo::getInstrAlternativeMappings(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_IMPLICIT_DEF: {
     // we going to try to map 32/64/80 bit to PMI_FP32/PMI_FP64/PMI_FP80
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);

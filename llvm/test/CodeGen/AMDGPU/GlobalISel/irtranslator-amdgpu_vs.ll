@@ -7,7 +7,7 @@ define amdgpu_vs void @test_f32_inreg(float inreg %arg0) {
   ; CHECK-NEXT:   liveins: $sgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float poison, float poison, float poison, i1 false, i1 false) #0
@@ -20,7 +20,7 @@ define amdgpu_vs void @test_f32(float %arg0) {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float poison, float poison, float poison, i1 false, i1 false) #0
@@ -50,7 +50,7 @@ define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, ptr addrspace(4) 
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr4
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p4) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[MV]](p4) :: (volatile invariant load (s32) from %ir.arg1, addrspace 4)
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -81,7 +81,7 @@ define amdgpu_vs <{ i32, i32 }> @ret_struct(i32 inreg %arg0, i32 inreg %arg1) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_POISON
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
   ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)

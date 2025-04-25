@@ -812,6 +812,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     return true;
   }
   case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON:
     return selectImplicitDef(MI, MIB);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(MI, MIB);
@@ -1030,7 +1031,8 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI) const {
 
 bool RISCVInstructionSelector::selectImplicitDef(MachineInstr &MI,
                                                  MachineIRBuilder &MIB) const {
-  assert(MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
+  assert(MI.getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+         MI.getOpcode() == TargetOpcode::G_POISON);
 
   const Register DstReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(

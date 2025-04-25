@@ -901,7 +901,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({S32, S64, S16})
     .clampScalar(0, S16, S64);
 
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_POISON, G_FREEZE})
       .legalIf(isRegisterClassType(ST, 0))
       // s1 and s16 are special cases because they have legal operations on
       // them, but don't really occupy registers in the normal way.

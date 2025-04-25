@@ -428,7 +428,8 @@ struct ImplicitDefMatch {
   bool match(const MachineRegisterInfo &MRI, Register Reg) {
     MachineInstr *TmpMI;
     if (mi_match(Reg, MRI, m_MInstr(TmpMI)))
-      return TmpMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF;
+      return TmpMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+             TmpMI->getOpcode() == TargetOpcode::G_POISON;
     return false;
   }
 };

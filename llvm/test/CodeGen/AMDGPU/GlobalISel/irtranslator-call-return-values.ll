@@ -167,7 +167,7 @@ define amdgpu_kernel void @test_call_external_i1_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i1_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -214,7 +214,7 @@ define amdgpu_kernel void @test_call_external_i1_func_void() #0 {
 define amdgpu_gfx void @test_gfx_call_external_i1_func_void() #0 {
   ; GCN-LABEL: name: test_gfx_call_external_i1_func_void
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_gfx_i1_func_void
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -245,7 +245,7 @@ define amdgpu_kernel void @test_call_external_i1_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i1_zeroext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -307,7 +307,7 @@ define amdgpu_kernel void @test_call_external_i1_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i1_signext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -369,7 +369,7 @@ define amdgpu_kernel void @test_call_external_i8_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i8_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -417,7 +417,7 @@ define amdgpu_kernel void @test_call_external_i8_func_void() #0 {
 define amdgpu_gfx void @test_gfx_call_external_i8_func_void() #0 {
   ; GCN-LABEL: name: test_gfx_call_external_i8_func_void
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_gfx_i8_func_void
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -449,7 +449,7 @@ define amdgpu_kernel void @test_call_external_i8_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i8_zeroext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -511,7 +511,7 @@ define amdgpu_kernel void @test_call_external_i8_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i8_signext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -573,7 +573,7 @@ define amdgpu_kernel void @test_call_external_i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -632,7 +632,7 @@ define amdgpu_kernel void @test_call_external_i16_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i16_zeroext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -694,7 +694,7 @@ define amdgpu_kernel void @test_call_external_i16_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i16_signext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -756,7 +756,7 @@ define amdgpu_kernel void @test_call_external_i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -802,7 +802,7 @@ define amdgpu_kernel void @test_call_external_i32_func_void() #0 {
 define amdgpu_gfx void @test_gfx_call_external_i32_func_void() #0 {
   ; GCN-LABEL: name: test_gfx_call_external_i32_func_void
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_gfx_i32_func_void
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -832,7 +832,7 @@ define amdgpu_kernel void @test_call_external_i48_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i48_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -893,7 +893,7 @@ define amdgpu_kernel void @test_call_external_i48_zeroext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i48_zeroext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -956,7 +956,7 @@ define amdgpu_kernel void @test_call_external_i48_signext_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i48_signext_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1019,7 +1019,7 @@ define amdgpu_kernel void @test_call_external_i64_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i64_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1079,7 +1079,7 @@ define amdgpu_kernel void @test_call_external_p1_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_p1_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1139,7 +1139,7 @@ define amdgpu_kernel void @test_call_external_v2p1_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v2p1_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1203,7 +1203,7 @@ define amdgpu_kernel void @test_call_external_p3_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_p3_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1261,7 +1261,7 @@ define amdgpu_kernel void @test_call_external_v2p3_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p3) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v2p3_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1321,7 +1321,7 @@ define amdgpu_kernel void @test_call_external_f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_f16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1380,7 +1380,7 @@ define amdgpu_kernel void @test_call_external_f32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_f32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1438,7 +1438,7 @@ define amdgpu_kernel void @test_call_external_f64_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_f64_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1498,7 +1498,7 @@ define amdgpu_kernel void @test_call_external_v2f64_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v2f64_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1562,7 +1562,7 @@ define amdgpu_kernel void @test_call_external_v2i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v2i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1622,7 +1622,7 @@ define amdgpu_kernel void @test_call_external_v3i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v3i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1683,7 +1683,7 @@ define amdgpu_kernel void @test_call_external_v4i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v4i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1745,7 +1745,7 @@ define amdgpu_kernel void @test_call_external_v5i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v5i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1808,7 +1808,7 @@ define amdgpu_kernel void @test_call_external_v8i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v8i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1874,7 +1874,7 @@ define amdgpu_kernel void @test_call_external_v16i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v16i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1948,7 +1948,7 @@ define amdgpu_kernel void @test_call_external_v32i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v32i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2038,7 +2038,7 @@ define amdgpu_kernel void @test_call_external_v2i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v2i16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2096,7 +2096,7 @@ define amdgpu_kernel void @test_call_external_v3i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v3i16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2158,7 +2158,7 @@ define amdgpu_kernel void @test_call_external_v4i16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v4i16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2218,7 +2218,7 @@ define amdgpu_kernel void @test_call_external_v2f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v2f16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2276,7 +2276,7 @@ define amdgpu_kernel void @test_call_external_v3f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v3f16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2338,7 +2338,7 @@ define amdgpu_kernel void @test_call_external_v4f16_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v4f16_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2398,7 +2398,7 @@ define amdgpu_kernel void @test_call_external_v3f32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v3f32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2459,7 +2459,7 @@ define amdgpu_kernel void @test_call_external_v5f32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v5f32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2523,7 +2523,7 @@ define amdgpu_kernel void @test_call_external_i32_i64_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i32_i64_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2576,7 +2576,7 @@ define amdgpu_kernel void @test_call_external_i32_i64_func_void() #0 {
 define amdgpu_gfx void @test_gfx_call_external_i32_i64_func_void() #0 {
   ; GCN-LABEL: name: test_gfx_call_external_i32_i64_func_void
   ; GCN: bb.1 (%ir-block.0):
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_gfx_i32_i64_func_void
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
@@ -2613,7 +2613,7 @@ define amdgpu_kernel void @test_call_external_a2i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_a2i32_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2676,7 +2676,7 @@ define amdgpu_kernel void @test_call_external_a5i8_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_a5i8_func_void
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2761,7 +2761,7 @@ define amdgpu_kernel void @test_call_external_v32i32_i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v32i32_i32_func_void
@@ -2828,7 +2828,7 @@ define amdgpu_kernel void @test_call_external_i32_v32i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i32_v32i32_func_void
@@ -2895,7 +2895,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_void() #0 {
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_v33i32_func_void
@@ -2955,7 +2955,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sgpr_64 = COPY $sgpr6_sgpr7
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
   ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p1) from %ir.p.kernarg.offset1, align 16, addrspace 4)
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8

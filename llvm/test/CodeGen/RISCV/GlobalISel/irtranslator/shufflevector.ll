@@ -7,7 +7,7 @@
 define <vscale x 1 x i1> @shufflevector_nxv1i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i1_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s1>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -16,7 +16,7 @@ define <vscale x 1 x i1> @shufflevector_nxv1i1_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i1_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s1>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -77,7 +77,7 @@ define <vscale x 1 x i1> @shufflevector_nxv1i1_2(<vscale x 1 x i1> %a) {
 define <vscale x 2 x i1> @shufflevector_nxv2i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i1_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s1>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -86,7 +86,7 @@ define <vscale x 2 x i1> @shufflevector_nxv2i1_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i1_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s1>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -147,7 +147,7 @@ define <vscale x 2 x i1> @shufflevector_nxv2i1_2(<vscale x 2 x i1> %a) {
 define <vscale x 4 x i1> @shufflevector_nxv4i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i1_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s1>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -156,7 +156,7 @@ define <vscale x 4 x i1> @shufflevector_nxv4i1_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i1_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s1>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -217,7 +217,7 @@ define <vscale x 4 x i1> @shufflevector_nxv4i1_2(<vscale x 4 x i1> %a) {
 define <vscale x 8 x i1> @shufflevector_nxv8i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i1_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s1>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -226,7 +226,7 @@ define <vscale x 8 x i1> @shufflevector_nxv8i1_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i1_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s1>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -287,7 +287,7 @@ define <vscale x 8 x i1> @shufflevector_nxv8i1_2(<vscale x 8 x i1> %a) {
 define <vscale x 16 x i1> @shufflevector_nxv16i1_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i1_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s1>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -296,7 +296,7 @@ define <vscale x 16 x i1> @shufflevector_nxv16i1_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i1_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s1) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s1>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s1>) = G_SPLAT_VECTOR [[EVEC]](s1)
@@ -357,7 +357,7 @@ define <vscale x 16 x i1> @shufflevector_nxv16i1_2(<vscale x 16 x i1> %a) {
 define <vscale x 1 x i8> @shufflevector_nxv1i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i8_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s8>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -366,7 +366,7 @@ define <vscale x 1 x i8> @shufflevector_nxv1i8_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i8_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s8>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s8>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -427,7 +427,7 @@ define <vscale x 1 x i8> @shufflevector_nxv1i8_2(<vscale x 1 x i8> %a) {
 define <vscale x 2 x i8> @shufflevector_nxv2i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i8_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s8>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -436,7 +436,7 @@ define <vscale x 2 x i8> @shufflevector_nxv2i8_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i8_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s8>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s8>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -497,7 +497,7 @@ define <vscale x 2 x i8> @shufflevector_nxv2i8_2(<vscale x 2 x i8> %a) {
 define <vscale x 4 x i8> @shufflevector_nxv4i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i8_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s8>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -506,7 +506,7 @@ define <vscale x 4 x i8> @shufflevector_nxv4i8_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i8_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s8>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s8>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -567,7 +567,7 @@ define <vscale x 4 x i8> @shufflevector_nxv4i8_2(<vscale x 4 x i8> %a) {
 define <vscale x 8 x i8> @shufflevector_nxv8i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i8_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s8>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -576,7 +576,7 @@ define <vscale x 8 x i8> @shufflevector_nxv8i8_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i8_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s8>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s8>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -637,7 +637,7 @@ define <vscale x 8 x i8> @shufflevector_nxv8i8_2(<vscale x 8 x i8> %a) {
 define <vscale x 16 x i8> @shufflevector_nxv16i8_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i8_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s8>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -646,7 +646,7 @@ define <vscale x 16 x i8> @shufflevector_nxv16i8_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i8_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s8>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s8) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s8>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR [[EVEC]](s8)
@@ -707,7 +707,7 @@ define <vscale x 16 x i8> @shufflevector_nxv16i8_2(<vscale x 16 x i8> %a) {
 define <vscale x 1 x i16> @shufflevector_nxv1i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i16_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s16>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -716,7 +716,7 @@ define <vscale x 1 x i16> @shufflevector_nxv1i16_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i16_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s16>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s16>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -777,7 +777,7 @@ define <vscale x 1 x i16> @shufflevector_nxv1i16_2(<vscale x 1 x i16> %a) {
 define <vscale x 2 x i16> @shufflevector_nxv2i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i16_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s16>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -786,7 +786,7 @@ define <vscale x 2 x i16> @shufflevector_nxv2i16_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i16_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s16>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s16>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -847,7 +847,7 @@ define <vscale x 2 x i16> @shufflevector_nxv2i16_2(<vscale x 2 x i16> %a) {
 define <vscale x 4 x i16> @shufflevector_nxv4i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i16_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s16>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -856,7 +856,7 @@ define <vscale x 4 x i16> @shufflevector_nxv4i16_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i16_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s16>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s16>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -917,7 +917,7 @@ define <vscale x 4 x i16> @shufflevector_nxv4i16_2(<vscale x 4 x i16> %a) {
 define <vscale x 8 x i16> @shufflevector_nxv8i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i16_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s16>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -926,7 +926,7 @@ define <vscale x 8 x i16> @shufflevector_nxv8i16_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i16_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s16>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s16>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -987,7 +987,7 @@ define <vscale x 8 x i16> @shufflevector_nxv8i16_2(<vscale x 8 x i16> %a) {
 define <vscale x 16 x i16> @shufflevector_nxv16i16_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i16_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s16>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -996,7 +996,7 @@ define <vscale x 16 x i16> @shufflevector_nxv16i16_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i16_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s16>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s16) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s16>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SPLAT_VECTOR [[EVEC]](s16)
@@ -1057,7 +1057,7 @@ define <vscale x 16 x i16> @shufflevector_nxv16i16_2(<vscale x 16 x i16> %a) {
 define <vscale x 1 x i32> @shufflevector_nxv1i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i32_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s32>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1066,7 +1066,7 @@ define <vscale x 1 x i32> @shufflevector_nxv1i32_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i32_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s32>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s32>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1127,7 +1127,7 @@ define <vscale x 1 x i32> @shufflevector_nxv1i32_2(<vscale x 1 x i32> %a) {
 define <vscale x 2 x i32> @shufflevector_nxv2i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i32_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s32>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1136,7 +1136,7 @@ define <vscale x 2 x i32> @shufflevector_nxv2i32_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i32_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s32>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s32>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1197,7 +1197,7 @@ define <vscale x 2 x i32> @shufflevector_nxv2i32_2(<vscale x 2 x i32> %a) {
 define <vscale x 4 x i32> @shufflevector_nxv4i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i32_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s32>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1206,7 +1206,7 @@ define <vscale x 4 x i32> @shufflevector_nxv4i32_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i32_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s32>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s32>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1267,7 +1267,7 @@ define <vscale x 4 x i32> @shufflevector_nxv4i32_2(<vscale x 4 x i32> %a) {
 define <vscale x 8 x i32> @shufflevector_nxv8i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i32_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s32>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1276,7 +1276,7 @@ define <vscale x 8 x i32> @shufflevector_nxv8i32_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i32_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s32>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s32>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1337,7 +1337,7 @@ define <vscale x 8 x i32> @shufflevector_nxv8i32_2(<vscale x 8 x i32> %a) {
 define <vscale x 16 x i32> @shufflevector_nxv16i32_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i32_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s32>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1346,7 +1346,7 @@ define <vscale x 16 x i32> @shufflevector_nxv16i32_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i32_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s32>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s32>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SPLAT_VECTOR [[EVEC]](s32)
@@ -1407,7 +1407,7 @@ define <vscale x 16 x i32> @shufflevector_nxv16i32_2(<vscale x 16 x i32> %a) {
 define <vscale x 1 x i64> @shufflevector_nxv1i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv1i64_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s64>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1416,7 +1416,7 @@ define <vscale x 1 x i64> @shufflevector_nxv1i64_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv1i64_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x s64>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x s64>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1477,7 +1477,7 @@ define <vscale x 1 x i64> @shufflevector_nxv1i64_2(<vscale x 1 x i64> %a) {
 define <vscale x 2 x i64> @shufflevector_nxv2i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv2i64_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s64>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1486,7 +1486,7 @@ define <vscale x 2 x i64> @shufflevector_nxv2i64_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv2i64_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 2 x s64>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 2 x s64>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1547,7 +1547,7 @@ define <vscale x 2 x i64> @shufflevector_nxv2i64_2(<vscale x 2 x i64> %a) {
 define <vscale x 4 x i64> @shufflevector_nxv4i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv4i64_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s64>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1556,7 +1556,7 @@ define <vscale x 4 x i64> @shufflevector_nxv4i64_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv4i64_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 4 x s64>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 4 x s64>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1617,7 +1617,7 @@ define <vscale x 4 x i64> @shufflevector_nxv4i64_2(<vscale x 4 x i64> %a) {
 define <vscale x 8 x i64> @shufflevector_nxv8i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv8i64_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s64>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1626,7 +1626,7 @@ define <vscale x 8 x i64> @shufflevector_nxv8i64_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv8i64_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 8 x s64>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 8 x s64>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1687,7 +1687,7 @@ define <vscale x 8 x i64> @shufflevector_nxv8i64_2(<vscale x 8 x i64> %a) {
 define <vscale x 16 x i64> @shufflevector_nxv16i64_0() {
   ; RV32-LABEL: name: shufflevector_nxv16i64_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s64>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1698,7 +1698,7 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv16i64_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 16 x s64>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 16 x s64>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_SPLAT_VECTOR [[EVEC]](s64)
@@ -1773,7 +1773,7 @@ define <vscale x 16 x i64> @shufflevector_nxv16i64_2(<vscale x 16 x i64> %a) {
 define <vscale x 1 x ptr> @shufflevector_nxv1p0_0() {
   ; RV32-LABEL: name: shufflevector_nxv1p0_0
   ; RV32: bb.1 (%ir-block.0):
-  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x p0>) = G_IMPLICIT_DEF
+  ; RV32-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x p0>) = G_POISON
   ; RV32-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; RV32-NEXT:   [[EVEC:%[0-9]+]]:_(p0) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x p0>), [[C]](s32)
   ; RV32-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x p0>) = G_SPLAT_VECTOR [[EVEC]](p0)
@@ -1782,7 +1782,7 @@ define <vscale x 1 x ptr> @shufflevector_nxv1p0_0() {
   ;
   ; RV64-LABEL: name: shufflevector_nxv1p0_0
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x p0>) = G_IMPLICIT_DEF
+  ; RV64-NEXT:   [[DEF:%[0-9]+]]:_(<vscale x 1 x p0>) = G_POISON
   ; RV64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; RV64-NEXT:   [[EVEC:%[0-9]+]]:_(p0) = G_EXTRACT_VECTOR_ELT [[DEF]](<vscale x 1 x p0>), [[C]](s64)
   ; RV64-NEXT:   [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 1 x p0>) = G_SPLAT_VECTOR [[EVEC]](p0)

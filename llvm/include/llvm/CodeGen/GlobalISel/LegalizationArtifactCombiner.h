@@ -382,8 +382,14 @@ public:
     assert(Opcode == TargetOpcode::G_ANYEXT || Opcode == TargetOpcode::G_ZEXT ||
            Opcode == TargetOpcode::G_SEXT);
 
-    if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
-                                           MI.getOperand(1).getReg(), MRI)) {
+    // FIXME: Two opcodes should be checked with one call instead.
+    MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
+                                       MI.getOperand(1).getReg(), MRI);
+    if (!DefMI) {
+      DefMI =
+          getOpcodeDef(TargetOpcode::G_POISON, MI.getOperand(1).getReg(), MRI);
+    }
+    if (DefMI) {
       Builder.setInstr(MI);
       Register DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
@@ -391,6 +397,8 @@ public:
       if (Opcode == TargetOpcode::G_ANYEXT) {
         // G_ANYEXT (G_IMPLICIT_DEF) -> G_IMPLICIT_DEF
         if (!isInstLegal({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
+          return false;
+        if (!isInstLegal({TargetOpcode::G_POISON, {DstTy}}))
           return false;
         LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI);
         auto Impl = Builder.buildUndef(DstTy);
@@ -951,8 +959,10 @@ public:
           if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
             return false;
         } else if (!AllowUndef ||
-                   MRI.getVRegDef(MI.getSourceReg(i))->getOpcode() !=
-                       TargetOpcode::G_IMPLICIT_DEF)
+                   (MRI.getVRegDef(MI.getSourceReg(i))->getOpcode() !=
+                        TargetOpcode::G_IMPLICIT_DEF &&
+                    MRI.getVRegDef(MI.getSourceReg(i))->getOpcode() !=
+                        TargetOpcode::G_POISON))
           return false;
       }
       return true;

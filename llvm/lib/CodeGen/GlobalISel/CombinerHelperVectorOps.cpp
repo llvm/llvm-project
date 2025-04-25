@@ -79,7 +79,8 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
   // Fold extractVectorElement(Vector, TOOLARGE) -> undef
   if (IndexC && VectorTy.isFixedVector() &&
       IndexC->uge(VectorTy.getNumElements()) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
+      (isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}) ||
+       isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {DstTy}}))) {
     // For fixed-length vectors, it's invalid to extract out-of-range elements.
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
     return true;
@@ -301,7 +302,8 @@ bool CombinerHelper::matchExtractVectorElementWithShuffleVector(
   LLT DstTy = MRI.getType(Dst);
 
   if (SrcIdx < 0 &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
+      (isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}) ||
+       isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {DstTy}}))) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
     return true;
   }
@@ -354,7 +356,8 @@ bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
       getIConstantVRegValWithLookThrough(Index, MRI);
 
   if (MaybeIndex && MaybeIndex->Value.uge(DstTy.getNumElements()) &&
-      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
+      (isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}) ||
+       isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {DstTy}}))) {
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
     return true;
   }

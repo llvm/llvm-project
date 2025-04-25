@@ -330,6 +330,7 @@ bool CombinerHelper::matchCombineConcatVectors(
       for (const MachineOperand &BuildVecMO : Def->uses())
         Ops.push_back(BuildVecMO.getReg());
       break;
+    case TargetOpcode::G_POISON:
     case TargetOpcode::G_IMPLICIT_DEF: {
       LLT OpType = MRI.getType(Reg);
       // Keep one undef value for all the undef operands.
@@ -454,7 +455,8 @@ bool CombinerHelper::matchCombineShuffleConcat(
           return false;
       }
       if (!isLegalOrBeforeLegalizer(
-              {TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}))
+              {TargetOpcode::G_IMPLICIT_DEF, {ConcatSrcTy}}) &&
+          !isLegalOrBeforeLegalizer({TargetOpcode::G_POISON, {ConcatSrcTy}}))
         return false;
       Ops.push_back(0);
     } else if (Mask[i] % ConcatSrcNumElt == 0) {
@@ -2305,7 +2307,8 @@ bool CombinerHelper::matchCombineUnmergeUndef(
       B.buildUndef(DstReg);
     }
   };
-  return isa<GImplicitDef>(MRI.getVRegDef(SrcReg));
+  return isa<GImplicitDef>(MRI.getVRegDef(SrcReg)) ||
+         isa<GPoison>(MRI.getVRegDef(SrcReg));
 }
 
 bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(
@@ -2731,15 +2734,31 @@ void CombinerHelper::applyCombineTruncOfShift(
 
 bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) const {
   return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
+    // FIXME: Two opcodes should be checked with one call instead.
     return MO.isReg() &&
-           getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
+           (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI) ||
+            getOpcodeDef(TargetOpcode::G_POISON, MO.getReg(), MRI));
+  });
+}
+
+bool CombinerHelper::matchAnyExplicitUseIsPoison(MachineInstr &MI) const {
+  return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
+    return MO.isReg() && getOpcodeDef(TargetOpcode::G_POISON, MO.getReg(), MRI);
   });
 }
 
 bool CombinerHelper::matchAllExplicitUsesAreUndef(MachineInstr &MI) const {
   return all_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return !MO.isReg() ||
-           getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
+           getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI) ||
+           getOpcodeDef(TargetOpcode::G_POISON, MO.getReg(), MRI);
+  });
+}
+
+bool CombinerHelper::matchAllExplicitUsesArePoison(MachineInstr &MI) const {
+  return all_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
+    return !MO.isReg() ||
+           getOpcodeDef(TargetOpcode::G_POISON, MO.getReg(), MRI);
   });
 }
 
@@ -2752,13 +2771,20 @@ bool CombinerHelper::matchUndefShuffleVectorMask(MachineInstr &MI) const {
 bool CombinerHelper::matchUndefStore(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_STORE);
   return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(0).getReg(),
-                      MRI);
+                      MRI) ||
+         getOpcodeDef(TargetOpcode::G_POISON, MI.getOperand(0).getReg(), MRI);
+}
+
+bool CombinerHelper::matchPoisonStore(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE);
+  return getOpcodeDef(TargetOpcode::G_POISON, MI.getOperand(0).getReg(), MRI);
 }
 
 bool CombinerHelper::matchUndefSelectCmp(MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_SELECT);
   return getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MI.getOperand(1).getReg(),
-                      MRI);
+                      MRI) ||
+         getOpcodeDef(TargetOpcode::G_POISON, MI.getOperand(1).getReg(), MRI);
 }
 
 bool CombinerHelper::matchInsertExtractVecEltOutOfBounds(
@@ -2991,7 +3017,14 @@ bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI,
                                          unsigned OpIdx) const {
   MachineOperand &MO = MI.getOperand(OpIdx);
   return MO.isReg() &&
-         getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
+         (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI) ||
+          getOpcodeDef(TargetOpcode::G_POISON, MO.getReg(), MRI));
+}
+
+bool CombinerHelper::matchOperandIsPoison(MachineInstr &MI,
+                                          unsigned OpIdx) const {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+  return MO.isReg() && getOpcodeDef(TargetOpcode::G_POISON, MO.getReg(), MRI);
 }
 
 bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
@@ -3030,6 +3063,12 @@ void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI,
 void CombinerHelper::replaceInstWithUndef(MachineInstr &MI) const {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.buildUndef(MI.getOperand(0));
+  MI.eraseFromParent();
+}
+
+void CombinerHelper::replaceInstWithPoison(MachineInstr &MI) const {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.buildPoison(MI.getOperand(0));
   MI.eraseFromParent();
 }
 
@@ -3097,6 +3136,7 @@ bool CombinerHelper::matchCombineInsertVecElts(
   // If we didn't end in a G_IMPLICIT_DEF and the source is not fully
   // overwritten, bail out.
   return TmpInst->getOpcode() == TargetOpcode::G_IMPLICIT_DEF ||
+         TmpInst->getOpcode() == TargetOpcode::G_POISON ||
          all_of(MatchInfo, [](Register Reg) { return !!Reg; });
 }
 
@@ -3467,12 +3507,13 @@ bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
   if (I < 2)
     return false;
 
-  // Check the remaining source elements are only G_IMPLICIT_DEF
+  // Check the remaining source elements are only G_IMPLICIT_DEF or G_POISON
   for (; I < NumOperands; ++I) {
     auto SrcMI = MRI.getVRegDef(BuildMI->getSourceReg(I));
     auto SrcMIOpc = SrcMI->getOpcode();
 
-    if (SrcMIOpc != TargetOpcode::G_IMPLICIT_DEF)
+    if (SrcMIOpc != TargetOpcode::G_IMPLICIT_DEF &&
+        SrcMIOpc != TargetOpcode::G_POISON)
       return false;
   }
 
@@ -7927,10 +7968,12 @@ bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,
   auto &Shuffle = cast<GShuffleVector>(MI);
   // If any of the two inputs is already undef, don't check the mask again to
   // prevent infinite loop
-  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc1Reg(), MRI))
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc1Reg(), MRI) ||
+      getOpcodeDef(TargetOpcode::G_POISON, Shuffle.getSrc1Reg(), MRI))
     return false;
 
-  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc2Reg(), MRI))
+  if (getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, Shuffle.getSrc2Reg(), MRI) ||
+      getOpcodeDef(TargetOpcode::G_POISON, Shuffle.getSrc2Reg(), MRI))
     return false;
 
   const LLT DstTy = MRI.getType(Shuffle.getReg(0));

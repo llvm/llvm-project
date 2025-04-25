@@ -266,9 +266,10 @@ bool matchDupFromInsertVectorElt(int Lane, MachineInstr &MI,
                              MI.getOperand(1).getReg(), MRI);
   if (!InsMI)
     return false;
-  // Match the undef vector operand.
+  // Match the undef/poison vector operand.
   if (!getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, InsMI->getOperand(1).getReg(),
-                    MRI))
+                    MRI) &&
+      !getOpcodeDef(TargetOpcode::G_POISON, InsMI->getOperand(1).getReg(), MRI))
     return false;
 
   // Match the index constant 0.

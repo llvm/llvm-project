@@ -222,7 +222,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       all(typeInSet(0, allPtrsScalarsAndVectors),
           typeInSet(1, allPtrsScalarsAndVectors)));
 
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).alwaysLegal();
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_POISON, G_FREEZE})
+      .alwaysLegal();
 
   getActionDefinitionsBuilder({G_STACKSAVE, G_STACKRESTORE}).alwaysLegal();
 

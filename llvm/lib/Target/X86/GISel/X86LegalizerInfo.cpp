@@ -82,7 +82,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // todo: AVX512 bool vector predicate types
 
   // implicit/constants
-  getActionDefinitionsBuilder(G_IMPLICIT_DEF)
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_POISON})
       .legalIf([=](const LegalityQuery &Query) -> bool {
         // 32/64-bits needs support for s64/s128 to handle cases:
         // s64 = EXTEND (G_IMPLICIT_DEF s32) -> s64 = G_IMPLICIT_DEF

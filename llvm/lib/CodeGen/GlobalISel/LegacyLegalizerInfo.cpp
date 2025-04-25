@@ -83,6 +83,8 @@ LegacyLegalizerInfo::LegacyLegalizerInfo() {
   setLegalizeScalarToDifferentSizeStrategy(
       TargetOpcode::G_IMPLICIT_DEF, 0, narrowToSmallerAndUnsupportedIfTooSmall);
   setLegalizeScalarToDifferentSizeStrategy(
+      TargetOpcode::G_POISON, 0, narrowToSmallerAndUnsupportedIfTooSmall);
+  setLegalizeScalarToDifferentSizeStrategy(
       TargetOpcode::G_ADD, 0, widenToLargerTypesAndNarrowToLargest);
   setLegalizeScalarToDifferentSizeStrategy(
       TargetOpcode::G_OR, 0, widenToLargerTypesAndNarrowToLargest);

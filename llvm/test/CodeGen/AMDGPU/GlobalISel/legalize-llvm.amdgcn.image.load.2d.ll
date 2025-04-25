@@ -122,7 +122,7 @@ define amdgpu_ps float @image_load_tfe_f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
@@ -152,7 +152,7 @@ define amdgpu_ps <2 x float> @image_load_tfe_v2f32(<8 x i32> inreg %rsrc, i32 %s
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<3 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 3, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<2 x s32>), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<3 x s32>)
@@ -183,7 +183,7 @@ define amdgpu_ps <3 x float> @image_load_tfe_v3f32(<8 x i32> inreg %rsrc, i32 %s
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<3 x s32>), align 16, addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
@@ -215,7 +215,7 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32(<8 x i32> inreg %rsrc, i32 %s
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<5 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 15, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<4 x s32>), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<5 x s32>)
@@ -480,7 +480,7 @@ define amdgpu_ps float @image_load_tfe_f32_dmask_0000(<8 x i32> inreg %rsrc, i32
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
@@ -510,7 +510,7 @@ define amdgpu_ps <2 x float> @image_load_tfe_v2f32_dmask_1000(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
@@ -542,7 +542,7 @@ define amdgpu_ps <2 x float> @image_load_tfe_v2f32_dmask_0000(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
@@ -574,7 +574,7 @@ define amdgpu_ps <3 x float> @image_load_tfe_v3f32_dmask_1100(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<3 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 3, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<2 x s32>), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<3 x s32>)
@@ -607,7 +607,7 @@ define amdgpu_ps <3 x float> @image_load_tfe_v3f32_dmask_1000(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
@@ -640,7 +640,7 @@ define amdgpu_ps <3 x float> @image_load_tfe_v3f32_dmask_0000(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
@@ -673,7 +673,7 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_1110(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<3 x s32>), align 16, addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<4 x s32>)
@@ -707,7 +707,7 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_1100(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<3 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 3, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (<2 x s32>), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<3 x s32>)
@@ -741,7 +741,7 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_1000(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)
@@ -775,7 +775,7 @@ define amdgpu_ps <4 x float> @image_load_tfe_v4f32_dmask_0000(<8 x i32> inreg %r
   ; GCN-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_POISON
   ; GCN-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; GCN-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD:%[0-9]+]]:_(<2 x s32>) = G_AMDGPU_INTRIN_IMAGE_LOAD intrinsic(@llvm.amdgcn.image.load.2d), 1, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 1, 0, 0 :: (dereferenceable load (s32), addrspace 8)
   ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD]](<2 x s32>)

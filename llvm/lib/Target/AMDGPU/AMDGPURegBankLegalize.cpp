@@ -316,7 +316,7 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     }
 
     if ((Opc == AMDGPU::G_CONSTANT || Opc == AMDGPU::G_FCONSTANT ||
-         Opc == AMDGPU::G_IMPLICIT_DEF)) {
+         Opc == AMDGPU::G_IMPLICIT_DEF || Opc == AMDGPU::G_POISON)) {
       Register Dst = MI->getOperand(0).getReg();
       // Non S1 types are trivially accepted.
       if (MRI.getType(Dst) != LLT::scalar(1)) {
