@@ -33,6 +33,10 @@ public:
   virtual std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) = 0;
 
+  // TODO: Abstract away timestamps with isUpToDate() and markUpToDate().
+  // TODO: Consider exposing a "validation lock" API to prevent multiple clients
+  // concurrently noticing an out-of-date module file and validating its inputs.
+
   /// Returns the timestamp denoting the last time inputs of the module file
   /// were validated.
   virtual std::time_t getModuleTimestamp(StringRef ModuleFilename) = 0;
