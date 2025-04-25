@@ -215,8 +215,6 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     case gpu::ShuffleMode::IDX:
       dstLane = adaptor.getOffset();
       break;
-    default:
-      return failure();
     }
     Value isActiveSrcLane = rewriter.create<LLVM::ICmpOp>(
         loc, LLVM::ICmpPredicate::slt, dstLane, widthOrZeroIfOutside);
