@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks -std=c++20 %s
 
 #if __cplusplus >= 202000l
-// expected-note@-6{{format string was constant-evaluated}}
+// expected-note@-6{{format string computed from non-literal expression}}
 // ^^^ there will be a <scratch space> SourceLocation caused by the
 // test_constexpr_string test, that -verify treats as if it showed up at
 // line 1 of this file.

@@ -6492,7 +6492,7 @@ EvaluateStringAndCreateLiteral(Sema &S, const Expr *E, const StringLiteral *&SL,
   if (SER->getStringLiteral(SL, Offset))
     return SLCER_Evaluated;
 
-  // Otherwise, lop that string into a scratch buffer, create a string literal
+  // Otherwise, plop that string into a scratch buffer, create a string literal
   // and then go with that.
   std::unique_ptr<llvm::MemoryBuffer> MemBuf;
   {

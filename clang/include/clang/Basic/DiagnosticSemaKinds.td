@@ -10355,7 +10355,7 @@ def warn_format_bool_as_character : Warning<
   InGroup<Format>;
 def note_format_string_defined : Note<"format string is defined here">;
 def note_format_string_evaluated_to : Note<
-  "format string resolved to a constant string">;
+  "format string computed from non-literal expression">;
 def note_format_fix_specifier : Note<"did you mean to use '%0'?">;
 def note_printf_c_str: Note<"did you mean to call the %0 method?">;
 def note_format_security_fixit: Note<

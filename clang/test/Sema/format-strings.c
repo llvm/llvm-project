@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
 
-// expected-note@-5{{format string was constant-evaluated}}
+// expected-note@-5{{format string computed from non-literal expression}}
 // ^^^ there will be a <scratch space> SourceLocation caused by the
 // test_consteval_init_array test, that -verify treats as if it showed up at
 // line 1 of this file.
