@@ -145,8 +145,14 @@ RootSignatureParser::parseDescriptorTableClause() {
   Clause.Reg = Params->Reg.value();
 
   // Fill in optional values
+  if (Params->NumDescriptors.has_value())
+    Clause.NumDescriptors = Params->NumDescriptors.value();
+
   if (Params->Space.has_value())
     Clause.Space = Params->Space.value();
+
+  if (Params->Offset.has_value())
+    Clause.Offset = Params->Offset.value();
 
   if (Params->Flags.has_value())
     Clause.Flags = Params->Flags.value();
@@ -182,6 +188,29 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       Params.Reg = Reg;
     }
 
+    // `numDescriptors` `=` POS_INT | unbounded
+    if (tryConsumeExpectedToken(TokenKind::kw_numDescriptors)) {
+      if (Params.NumDescriptors.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      std::optional<uint32_t> NumDescriptors;
+      if (tryConsumeExpectedToken(TokenKind::en_unbounded))
+        NumDescriptors = NumDescriptorsUnbounded;
+      else {
+        NumDescriptors = parseUIntParam();
+        if (!NumDescriptors.has_value())
+          return std::nullopt;
+      }
+
+      Params.NumDescriptors = NumDescriptors;
+    }
+
     // `space` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_space)) {
       if (Params.Space.has_value()) {
@@ -197,6 +226,29 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
       if (!Space.has_value())
         return std::nullopt;
       Params.Space = Space;
+    }
+
+    // `offset` `=` POS_INT | DESCRIPTOR_RANGE_OFFSET_APPEND
+    if (tryConsumeExpectedToken(TokenKind::kw_offset)) {
+      if (Params.Offset.has_value()) {
+        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+            << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      std::optional<uint32_t> Offset;
+      if (tryConsumeExpectedToken(TokenKind::en_DescriptorRangeOffsetAppend))
+        Offset = DescriptorTableOffsetAppend;
+      else {
+        Offset = parseUIntParam();
+        if (!Offset.has_value())
+          return std::nullopt;
+      }
+
+      Params.Offset = Offset;
     }
 
     // `flags` `=` DESCRIPTOR_RANGE_FLAGS

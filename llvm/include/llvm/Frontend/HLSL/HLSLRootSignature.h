@@ -60,12 +60,16 @@ struct DescriptorTable {
   uint32_t NumClauses = 0; // The number of clauses in the table
 };
 
+static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
+static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
 // Models DTClause : CBV | SRV | UAV | Sampler, by collecting like parameters
 using ClauseType = llvm::dxil::ResourceClass;
 struct DescriptorTableClause {
   ClauseType Type;
   Register Reg;
+  uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
+  uint32_t Offset = DescriptorTableOffsetAppend;
   DescriptorRangeFlags Flags;
 
   void setDefaultFlags() {
