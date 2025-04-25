@@ -30,8 +30,6 @@ define void @test() "hlsl.export" {
 ; DXC: - Name:            SFI0
 ; DXC-NEXT:     Size:            8
 ; DXC-NEXT:     Flags:
-; DXC-NOT:   {{[A-Za-z]+: +true}}
-; DXC:              UAVsAtEveryStage:         true
-; DXC-NOT:   {{[A-Za-z]+: +true}}
+; DXC:       UAVsAtEveryStage:         true
 ; DXC:       NextUnusedBit:   false
 ; DXC: ...
