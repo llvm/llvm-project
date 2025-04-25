@@ -170,6 +170,9 @@ public:
 
   void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
+  // C++ related functions.
+  void emitDeclContext(const DeclContext *dc);
+
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);

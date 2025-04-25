@@ -621,6 +621,20 @@ CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *vd, bool isConstant) {
   return getCIRLinkageForDeclarator(vd, linkage, isConstant);
 }
 
+void CIRGenModule::emitDeclContext(const DeclContext *dc) {
+  for (Decl *decl : dc->decls()) {
+    // Unlike other DeclContexts, the contents of an ObjCImplDecl at TU scope
+    // are themselves considered "top-level", so EmitTopLevelDecl on an
+    // ObjCImplDecl does not recursively visit them. We need to do that in
+    // case they're nested inside another construct (LinkageSpecDecl /
+    // ExportDecl) that does stop them from being considered "top-level".
+    if (auto *oid = dyn_cast<ObjCImplDecl>(decl))
+      errorNYI(oid->getSourceRange(), "emitDeclConext: ObjCImplDecl");
+
+    emitTopLevelDecl(decl);
+  }
+}
+
 // Emit code for a single top level declaration.
 void CIRGenModule::emitTopLevelDecl(Decl *decl) {
 
@@ -654,11 +668,17 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
 
+  case Decl::UsingDirective: // using namespace X; [C++]
   case Decl::Typedef:
   case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
   case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
+
+  // C++ Decls
+  case Decl::Namespace:
+    emitDeclContext(cast<NamespaceDecl>(decl));
     break;
   }
 }
