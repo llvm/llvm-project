@@ -161,6 +161,26 @@ class DXILPrepareModule : public ModulePass {
                          Builder.getPtrTy(PtrTy->getAddressSpace())));
   }
 
+  static llvm::SmallVector<unsigned> getCompatibleInstructionMDs(Module &M) {
+    llvm::SmallVector<unsigned, 16> ret = {
+        M.getMDKindID("dx.nonuniform"),
+        M.getMDKindID("dx.controlflow.hints"),
+        M.getMDKindID("dx.precise"),
+        LLVMContext::MD_prof,
+        LLVMContext::MD_fpmath,
+        LLVMContext::MD_range,
+        LLVMContext::MD_tbaa_struct,
+        LLVMContext::MD_invariant_load,
+        LLVMContext::MD_alias_scope,
+        LLVMContext::MD_noalias,
+        LLVMContext::MD_nontemporal,
+        LLVMContext::MD_nonnull,
+        LLVMContext::MD_dereferenceable,
+        LLVMContext::MD_dereferenceable_or_null};
+
+    return ret;
+  }
+
 public:
   bool runOnModule(Module &M) override {
     PointerTypeMap PointerTypes = PointerTypeAnalysis::run(M);
@@ -176,6 +196,10 @@ public:
     VersionTuple ValVer = MetadataInfo.ValidatorVersion;
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
+    // construct whitelist of valid metadata node kinds
+    llvm::SmallVector<unsigned> DXILCompatibleMDs =
+        getCompatibleInstructionMDs(M);
+
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
       F.removeRetAttrs(AttrMask);
@@ -190,23 +214,6 @@ public:
         IRBuilder<> Builder(&BB);
         for (auto &I : make_early_inc_range(BB)) {
 
-          // TODO: Audit this list - is it enough? Too much?
-          static unsigned DXILCompatibleMDs[] = {
-              LLVMContext::MD_dbg,
-              LLVMContext::MD_tbaa,
-              LLVMContext::MD_prof,
-              LLVMContext::MD_fpmath,
-              LLVMContext::MD_range,
-              LLVMContext::MD_tbaa_struct,
-              LLVMContext::MD_invariant_load,
-              LLVMContext::MD_alias_scope,
-              LLVMContext::MD_noalias,
-              LLVMContext::MD_nontemporal,
-              LLVMContext::MD_mem_parallel_loop_access,
-              LLVMContext::MD_nonnull,
-              LLVMContext::MD_dereferenceable,
-              LLVMContext::MD_dereferenceable_or_null,
-          };
           I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
 
           if (I.getOpcode() == Instruction::FNeg) {

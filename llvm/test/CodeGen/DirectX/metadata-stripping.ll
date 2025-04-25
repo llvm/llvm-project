@@ -17,41 +17,18 @@ target triple = "dxilv1.0-unknown-shadermodel6.0-compute"
 
 ; Function Attrs: noinline nounwind memory(readwrite, inaccessiblemem: none)
 define void @main() local_unnamed_addr #0 {
-entry:
-  %_ZL1X_h.i.i3 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 0, i32 0, i1 false) #1
-  %0 = call i32 @dx.op.threadId.i32(i32 93, i32 0) #2
-  %1 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %_ZL1X_h.i.i3, i32 %0, i32 0) #1
-  %2 = extractvalue %dx.types.ResRet.i32 %1, 0
-  %cmp.i1.not = icmp eq i32 %2, 0
-  br i1 %cmp.i1.not, label %_Z4mainDv3_j.exit, label %for.body.i.lr.ph
+entry:  
+  %cmp.i1.not = icmp eq i32 1, 0
+  br i1 %cmp.i1.not, label %_Z4mainDv3_j.exit, label %for.body.i
 
-for.body.i.lr.ph:                                 ; preds = %entry
-  %_ZL3Out_h.i.i5 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 1, i32 0, i32 0, i1 false) #1
-  %_ZL2In_h.i.i4 = call %dx.types.Handle @dx.op.createHandle(i32 57, i8 0, i32 1, i32 1, i1 false) #1
-  %3 = call %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32 68, %dx.types.Handle %_ZL2In_h.i.i4, i32 %0, i32 0) #1
-  %4 = extractvalue %dx.types.ResRet.f32 %3, 0
-  %5 = extractvalue %dx.types.ResRet.f32 %3, 1
-  %6 = extractvalue %dx.types.ResRet.f32 %3, 2
-  %7 = extractvalue %dx.types.ResRet.f32 %3, 3
-  br label %for.body.i
-
-for.body.i:                                       ; preds = %for.body.i.lr.ph, %for.body.i
-  %I.0.i2 = phi i32 [ 0, %for.body.i.lr.ph ], [ %inc.i, %for.body.i ]
-  call void @dx.op.bufferStore.f32(i32 69, %dx.types.Handle %_ZL3Out_h.i.i5, i32 %0, i32 0, float %4, float %5, float %6, float %7, i8 15)
-  %inc.i = add nuw i32 %I.0.i2, 1
-  %8 = call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle %_ZL1X_h.i.i3, i32 %0, i32 0) #1
-  %9 = extractvalue %dx.types.ResRet.i32 %8, 0
-  ; CHECK: %cmp.i = icmp ult i32 %inc.i, %9
-  ; CHECK-NEXT: br i1 %cmp.i, label %for.body.i, label %_Z4mainDv3_j.exit
-  %cmp.i = icmp ult i32 %inc.i, %9
+for.body.i:                                       ; preds = %entry
+  %cmp.i = icmp ult i32 1, 2
   br i1 %cmp.i, label %for.body.i, label %_Z4mainDv3_j.exit, !llvm.loop !16
 
 _Z4mainDv3_j.exit:                                ; preds = %for.body.i, %entry
   ret void
 
 ; uselistorder directives
-  uselistorder %dx.types.Handle %_ZL1X_h.i.i3, { 1, 0 }
-  uselistorder i32 %0, { 3, 0, 1, 2 }
   uselistorder label %for.body.i, { 1, 0 }
   }
 
@@ -66,12 +43,6 @@ declare %dx.types.ResRet.f32 @dx.op.bufferLoad.f32(i32, %dx.types.Handle, i32, i
 declare void @dx.op.bufferStore.f32(i32, %dx.types.Handle, i32, i32, float, float, float, float, i8)
 
 ; uselistorder directives
-uselistorder i32 57, { 1, 0, 2 }
-uselistorder i32 0, { 3, 0, 10, 1, 5, 6, 9, 2, 4, 7, 8 }
-uselistorder i1 false, { 1, 0, 2 }
-uselistorder i32 68, { 2, 0, 1 }
-uselistorder i32 1, { 2, 0, 1 }
-uselistorder ptr @dx.op.createHandle, { 2, 0, 1 }
 
 attributes #0 = { noinline nounwind memory(readwrite, inaccessiblemem: none) }
 attributes #1 = { memory(read) }
