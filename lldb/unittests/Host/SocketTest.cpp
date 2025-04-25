@@ -351,7 +351,7 @@ TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
 
   // Skip the test if the $TMPDIR is too long to hold a domain socket.
   if (name.size() > 107u)
-    return;
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
 
   DomainSocket socket(true);
   Status error = socket.Listen(name, /*backlog=*/10);
@@ -376,7 +376,7 @@ TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
 
   // Skip the test if the $TMPDIR is too long to hold a domain socket.
   if (name.size() > 107u)
-    return;
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
 
   AbstractSocket socket;
   Status error = socket.Listen(name, /*backlog=*/10);
