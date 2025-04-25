@@ -349,6 +349,10 @@ TEST_F(SocketTest, DomainSocketFromBoundNativeSocket) {
   ASSERT_FALSE(EC);
   llvm::sys::path::append(name, "test");
 
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (name.size() > 107u)
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
+
   DomainSocket socket(true);
   Status error = socket.Listen(name, /*backlog=*/10);
   ASSERT_THAT_ERROR(error.takeError(), llvm::Succeeded());
@@ -369,6 +373,10 @@ TEST_F(SocketTest, AbstractSocketFromBoundNativeSocket) {
   llvm::sys::fs::createUniquePath("AbstractSocketFromBoundNativeSocket", name,
                                   true);
   llvm::sys::path::append(name, "test");
+
+  // Skip the test if the $TMPDIR is too long to hold a domain socket.
+  if (name.size() > 107u)
+    GTEST_SKIP() << "$TMPDIR is too long to hold a domain socket";
 
   AbstractSocket socket;
   Status error = socket.Listen(name, /*backlog=*/10);
