@@ -971,8 +971,9 @@ lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
     }
     std::this_thread::sleep_for(std::chrono::microseconds(250));
   }
-  error.SetErrorStringWithFormat("process failed to stop within %lld seconds",
-                                 seconds.count());
+  error.SetErrorStringWithFormat("process failed to stop within %" PRId64
+                                 " seconds",
+                                 static_cast<uint64_t>(seconds.count()));
   return error;
 }
 
