@@ -781,6 +781,30 @@ fp16_fml_fallthrough:
   if (FPUKind == llvm::ARM::FK_FPV5_D16 || FPUKind == llvm::ARM::FK_FPV5_SP_D16)
     Features.push_back("-mve.fp");
 
+  // If SIMD has been disabled and the selected FPU support NEON, then features
+  // that rely on NEON Instructions should also be disabled. Cases where NEON
+  // needs activating to support another feature is handled below with the
+  // crypto feature.
+  bool HasSimd = false;
+  const auto ItSimd =
+  llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
+    return F.contains("neon");
+  });
+  const bool FoundSimd = ItSimd != Features.rend();
+  const bool FPUSupportsNeon =
+    (llvm::ARM::FPUNames[FPUKind].NeonSupport == llvm::ARM::NeonSupportLevel::Neon) ||
+    (llvm::ARM::FPUNames[FPUKind].NeonSupport == llvm::ARM::NeonSupportLevel::Crypto);
+  if(FoundSimd)
+  HasSimd = ItSimd->take_front() == "+";
+  if(!HasSimd && FPUSupportsNeon) {
+    Features.push_back("-sha2");
+    Features.push_back("-aes");
+    Features.push_back("-crypto");
+    Features.push_back("-dotprod");
+    Features.push_back("-bf16");
+    Features.push_back("-imm8");
+  }
+
   // For Arch >= ARMv8.0 && A or R profile:  crypto = sha2 + aes
   // Rather than replace within the feature vector, determine whether each
   // algorithm is enabled and append this to the end of the vector.
@@ -791,6 +815,9 @@ fp16_fml_fallthrough:
   // FIXME: this needs reimplementation after the TargetParser rewrite
   bool HasSHA2 = false;
   bool HasAES = false;
+  bool HasBF16 = false;
+  bool HasDotprod = false;
+  bool HasI8MM = false;
   const auto ItCrypto =
       llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
         return F.contains("crypto");
@@ -803,12 +830,28 @@ fp16_fml_fallthrough:
       llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
         return F.contains("crypto") || F.contains("aes");
       });
-  const bool FoundSHA2 = ItSHA2 != Features.rend();
-  const bool FoundAES = ItAES != Features.rend();
-  if (FoundSHA2)
+  const auto ItBF16 =
+      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
+        return F.contains("bf16");
+      });
+  const auto ItDotprod =
+      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
+        return F.contains("dotprod");
+      });
+  const auto ItI8MM =
+      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
+        return F.contains("i8mm");
+      });
+  if (ItSHA2 != Features.rend())
     HasSHA2 = ItSHA2->take_front() == "+";
-  if (FoundAES)
+  if (ItAES != Features.rend())
     HasAES = ItAES->take_front() == "+";
+  if (ItBF16 != Features.rend())
+    HasBF16 = ItBF16->take_front() == "+";
+  if (ItDotprod != Features.rend())
+    HasDotprod = ItDotprod->take_front() == "+";
+  if (ItI8MM != Features.rend())
+    HasI8MM = ItI8MM->take_front() == "+";
   if (ItCrypto != Features.rend()) {
     if (HasSHA2 && HasAES)
       Features.push_back("+crypto");
@@ -823,6 +866,11 @@ fp16_fml_fallthrough:
     else
       Features.push_back("-aes");
   }
+  // If any of these features are enabled, NEON should also be enabled.
+  if (HasAES || HasSHA2 || HasBF16 || HasDotprod || HasI8MM)
+    Features.push_back("+neon");
+
+  
 
   if (HasSHA2 || HasAES) {
     StringRef ArchSuffix = arm::getLLVMArchSuffixForARM(

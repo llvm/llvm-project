@@ -601,6 +601,8 @@ Arm and AArch64 Support
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
   also now printed when the ``--print-supported-extensions`` option is used.
+- NEON is correctly enabled when using features that depend on NEON , and disables all features that depend on
+  NEON when using ``+nosimd``.
 
 -  Support for __ptrauth type qualifier has been added.
 
