@@ -46,7 +46,7 @@ protected:
   }
 
   void checkExpectedSpaceAndFreeRanges(
-      DXILResourceBindingsInfo::RegisterSpace &RegSpace, uint32_t ExpSpace,
+      DXILResourceBindingInfo::RegisterSpace &RegSpace, uint32_t ExpSpace,
       ArrayRef<uint32_t> ExpValues) {
     EXPECT_EQ(RegSpace.Space, ExpSpace);
     EXPECT_EQ(RegSpace.FreeRanges.size() * 2, ExpValues.size());
@@ -75,14 +75,14 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
 
   auto M = parseAsm(Assembly);
 
-  DXILResourceBindingsInfo &DRBI =
+  DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
   EXPECT_EQ(false, DRBI.containsImplicitBinding());
   EXPECT_EQ(false, DRBI.containsOverlappingBinding());
 
   // check that UAV has exactly one gap
-  DXILResourceBindingsInfo::BindingSpaces &UAVSpaces =
+  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 1u);
@@ -92,7 +92,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   // check that other kinds of register spaces are all available
   for (auto RC :
        {ResourceClass::SRV, ResourceClass::CBuffer, ResourceClass::Sampler}) {
-    DXILResourceBindingsInfo::BindingSpaces &Spaces = DRBI.getBindingSpaces(RC);
+    DXILResourceBindingInfo::BindingSpaces &Spaces = DRBI.getBindingSpaces(RC);
     EXPECT_EQ(Spaces.ResClass, RC);
     EXPECT_EQ(Spaces.Spaces.size(), 1u);
     checkExpectedSpaceAndFreeRanges(Spaces.Spaces[0], 0, {0, UINT32_MAX});
@@ -132,19 +132,19 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
 
   auto M = parseAsm(Assembly);
 
-  DXILResourceBindingsInfo &DRBI =
+  DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
   EXPECT_EQ(false, DRBI.containsImplicitBinding());
   EXPECT_EQ(false, DRBI.containsOverlappingBinding());
 
-  DXILResourceBindingsInfo::BindingSpaces &SRVSpaces =
+  DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.ResClass, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 1u);
   checkExpectedSpaceAndFreeRanges(SRVSpaces.Spaces[0], 0, {6, UINT32_MAX});
 
-  DXILResourceBindingsInfo::BindingSpaces &UAVSpaces =
+  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 2u);
@@ -153,7 +153,7 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   checkExpectedSpaceAndFreeRanges(UAVSpaces.Spaces[1], 20,
                                   {0, 9, 15, UINT32_MAX});
 
-  DXILResourceBindingsInfo::BindingSpaces &CBufferSpaces =
+  DXILResourceBindingInfo::BindingSpaces &CBufferSpaces =
       DRBI.getBindingSpaces(ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.ResClass, ResourceClass::CBuffer);
   EXPECT_EQ(CBufferSpaces.Spaces.size(), 1u);
@@ -188,13 +188,13 @@ declare void @a.func(target("dx.RawBuffer", float, 0, 0) %handle)
 
   auto M = parseAsm(Assembly);
 
-  DXILResourceBindingsInfo &DRBI =
+  DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
   EXPECT_EQ(false, DRBI.containsImplicitBinding());
   EXPECT_EQ(true, DRBI.containsOverlappingBinding());
 
-  DXILResourceBindingsInfo::BindingSpaces &SRVSpaces =
+  DXILResourceBindingInfo::BindingSpaces &SRVSpaces =
       DRBI.getBindingSpaces(ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.ResClass, ResourceClass::SRV);
   EXPECT_EQ(SRVSpaces.Spaces.size(), 2u);
@@ -228,13 +228,13 @@ declare void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handle)
 
   auto M = parseAsm(Assembly);
 
-  DXILResourceBindingsInfo &DRBI =
+  DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
 
   EXPECT_EQ(false, DRBI.containsImplicitBinding());
   EXPECT_EQ(false, DRBI.containsOverlappingBinding());
 
-  DXILResourceBindingsInfo::BindingSpaces &UAVSpaces =
+  DXILResourceBindingInfo::BindingSpaces &UAVSpaces =
       DRBI.getBindingSpaces(ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.ResClass, ResourceClass::UAV);
   EXPECT_EQ(UAVSpaces.Spaces.size(), 3u);
@@ -260,7 +260,7 @@ declare void @a.func(target("dx.TypedBuffer", float, 1, 0, 0) %handle)
 
   auto M = parseAsm(Assembly);
 
-  DXILResourceBindingsInfo &DRBI =
+  DXILResourceBindingInfo &DRBI =
       MAM->getResult<DXILResourceBindingAnalysis>(*M);
   EXPECT_EQ(true, DRBI.containsImplicitBinding());
 }

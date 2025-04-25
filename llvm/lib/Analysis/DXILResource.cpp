@@ -883,7 +883,7 @@ SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
 
 //===----------------------------------------------------------------------===//
 
-void DXILResourceBindingsInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
+void DXILResourceBindingInfo::populate(Module &M, DXILResourceTypeMap &DRTM) {
   struct Binding {
     ResourceClass ResClass;
     uint32_t Space;
@@ -1007,9 +1007,9 @@ DXILResourceMap DXILResourceAnalysis::run(Module &M,
   return Data;
 }
 
-DXILResourceBindingsInfo
+DXILResourceBindingInfo
 DXILResourceBindingAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
-  DXILResourceBindingsInfo Data;
+  DXILResourceBindingInfo Data;
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
   Data.populate(M, DRTM);
   return Data;

@@ -591,7 +591,7 @@ ModulePass *createDXILResourceWrapperPassPass();
 
 //===----------------------------------------------------------------------===//
 
-// DXILResourceBindingsInfo stores the results of DXILResourceBindingAnalysis
+// DXILResourceBindingInfo stores the results of DXILResourceBindingAnalysis
 // which analyses all llvm.dx.resource.handlefrombinding calls in the module
 // and puts together lists of used virtual register spaces and available
 // virtual register slot ranges for each binding type.
@@ -618,7 +618,7 @@ ModulePass *createDXILResourceWrapperPassPass();
 //   }
 // }
 //
-class DXILResourceBindingsInfo {
+class DXILResourceBindingInfo {
 public:
   struct BindingRange {
     uint32_t LowerBound;
@@ -653,7 +653,7 @@ private:
   void populate(Module &M, DXILResourceTypeMap &DRTM);
 
 public:
-  DXILResourceBindingsInfo()
+  DXILResourceBindingInfo()
       : SRVSpaces(dxil::ResourceClass::SRV),
         UAVSpaces(dxil::ResourceClass::UAV),
         CBufferSpaces(dxil::ResourceClass::CBuffer),
@@ -686,9 +686,9 @@ class DXILResourceBindingAnalysis
   static AnalysisKey Key;
 
 public:
-  using Result = DXILResourceBindingsInfo;
+  using Result = DXILResourceBindingInfo;
 
-  DXILResourceBindingsInfo run(Module &M, ModuleAnalysisManager &AM);
+  DXILResourceBindingInfo run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // namespace llvm
