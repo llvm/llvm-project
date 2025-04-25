@@ -3,6 +3,7 @@ add_clang_unittest(SemaTests
   CodeCompleteTest.cpp
   HeuristicResolverTest.cpp
   GslOwnerPointerInference.cpp
+  ParseHLSLRootSignatureTest.cpp
   SemaLookupTest.cpp
   SemaNoloadLookupTest.cpp
   CLANG_LIBS
@@ -10,6 +11,7 @@ add_clang_unittest(SemaTests
   clangASTMatchers
   clangBasic
   clangFrontend
+  clangLex
   clangParse
   clangSema
   clangSerialization

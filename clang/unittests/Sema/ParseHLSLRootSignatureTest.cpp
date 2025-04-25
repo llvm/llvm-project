@@ -21,7 +21,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 
 #include "clang/Lex/LexHLSLRootSignature.h"
-#include "clang/Parse/ParseHLSLRootSignature.h"
+#include "clang/Sema/ParseHLSLRootSignature.h"
 #include "gtest/gtest.h"
 
 using namespace clang;

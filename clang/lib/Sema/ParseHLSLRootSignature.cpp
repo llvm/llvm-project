@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Parse/ParseHLSLRootSignature.h"
+#include "clang/Sema/ParseHLSLRootSignature.h"
 
 #include "clang/Lex/LiteralSupport.h"
 
