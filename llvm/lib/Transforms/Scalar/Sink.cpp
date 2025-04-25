@@ -66,6 +66,11 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
                                DominatorTree &DT, LoopInfo &LI) {
   assert(Inst && "Instruction to be sunk is null");
   assert(SuccToSinkTo && "Candidate sink target is null");
+  // The current location of Inst dominates all uses, thus it must dominate
+  // SuccToSinkTo, which is on the IDom chain between the nearest common
+  // dominator to all uses and the current location.
+  assert(DT.dominates(Inst->getParent(), SuccToSinkTo) &&
+	 "SuccToSinkTo must be dominated by current Inst location!");
 
   // It's never legal to sink an instruction into an EH-pad block.
   if (SuccToSinkTo->isEHPad())
@@ -81,12 +86,6 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
     if (Inst->mayReadFromMemory() &&
         !Inst->hasMetadata(LLVMContext::MD_invariant_load))
       return false;
-
-    // The current location of Inst dominates all uses, thus it must dominate
-    // SuccToSinkTo, which is on the IDom chain between the nearest common
-    // dominator to all uses and the current location.
-    assert(DT.dominates(Inst->getParent(), SuccToSinkTo) &&
-           "SuccToSinkTo must be dominated by current Inst location!");
 
     // Don't sink instructions into a loop.
     Loop *succ = LI.getLoopFor(SuccToSinkTo);
@@ -145,10 +144,6 @@ static bool SinkInstruction(Instruction *Inst,
       SuccToSinkTo = DT.findNearestCommonDominator(SuccToSinkTo, UseBlock);
     else
       SuccToSinkTo = UseBlock;
-    // The current basic block dominates all uses, thus it must dominate
-    // SuccToSinkTo, the nearest common dominator of all uses.
-    assert(DT.dominates(BB, SuccToSinkTo) &&
-           "SuccToSinkTo must be dominated by current basic block!");
   }
 
   if (SuccToSinkTo) {
