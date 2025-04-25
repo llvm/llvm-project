@@ -118,9 +118,8 @@ static void EventThreadFunction(DAP &dap) {
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
   dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
-  dap.debugger.GetBroadcaster().AddListener(
-      listener, lldb::SBDebugger::eBroadcastBitError |
-                    lldb::SBDebugger::eBroadcastBitWarning);
+  dap.debugger.GetBroadcaster().AddListener(listener, eBroadcastBitError |
+                                                          eBroadcastBitWarning);
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
