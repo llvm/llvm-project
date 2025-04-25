@@ -287,7 +287,7 @@ static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
       .setMIFlag(MachineInstr::FrameSetup);
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS))
       .addReg(RISCV::X9, RegState::Define)
-      .addImm(RISCVSysReg::lookupSysRegByName("MEPC")->Encoding)
+      .addImm(RISCVSysReg::mepc)
       .addReg(RISCV::X0)
       .setMIFlag(MachineInstr::FrameSetup);
 
