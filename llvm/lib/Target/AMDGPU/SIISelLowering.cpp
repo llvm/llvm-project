@@ -4513,41 +4513,9 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
 MachineBasicBlock *
 SITargetLowering::splitKillBlock(MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
-  MachineBasicBlock *SplitBB = BB->splitAt(MI, false /*UpdateLiveIns*/);
+  MachineBasicBlock *SplitBB = BB->splitAt(MI, true /*UpdateLiveIns*/);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
-
-  // Check if SCC register is used in the successor block
-  bool IsSCCUsedInSuccessor = false;
-  for (const MachineInstr &SuccMI : *SplitBB) {
-    // Check for uses of SCC in the instruction's operands
-    for (const MachineOperand &MO : SuccMI.operands()) {
-      if (MO.isReg() && MO.getReg() == AMDGPU::SCC && !MO.isDef()) {
-        IsSCCUsedInSuccessor = true;
-        break;
-      }
-    }
-
-    // Also check for implicit uses of SCC
-    if(!IsSCCUsedInSuccessor){
-      const MCInstrDesc &Desc = SuccMI.getDesc();
-      if (Desc.hasImplicitUseOfPhysReg(AMDGPU::SCC)) {
-        IsSCCUsedInSuccessor = true;
-        break;
-      }
-    }
-    
-    if (IsSCCUsedInSuccessor)
-      break;
-  }
-
-  // Add SCC as implicit def and live-in SCC if used in successor
-  if (IsSCCUsedInSuccessor) {
-    MI.addOperand(
-        MachineOperand::CreateReg(AMDGPU::SCC, true, true, false, false));
-    SplitBB->addLiveIn(AMDGPU::SCC);
-  }
-
   return SplitBB;
 }
 
