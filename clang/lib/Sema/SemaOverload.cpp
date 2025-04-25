@@ -8022,8 +8022,9 @@ bool Sema::CheckNonDependentConversions(
     FunctionTemplateDecl *FunctionTemplate, ArrayRef<QualType> ParamTypes,
     ArrayRef<Expr *> Args, OverloadCandidateSet &CandidateSet,
     ConversionSequenceList &Conversions, bool SuppressUserConversions,
-    bool NonInstOnly, CXXRecordDecl *ActingContext, QualType ObjectType,
-    Expr::Classification ObjectClassification, OverloadCandidateParamOrder PO) {
+    bool SkipUserDefinedConversions, CXXRecordDecl *ActingContext,
+    QualType ObjectType, Expr::Classification ObjectClassification,
+    OverloadCandidateParamOrder PO) {
   // FIXME: The cases in which we allow explicit conversions for constructor
   // arguments never consider calling a constructor template. It's not clear
   // that is correct.
@@ -8034,8 +8035,9 @@ bool Sema::CheckNonDependentConversions(
   bool HasThisConversion = Method && !isa<CXXConstructorDecl>(Method);
   unsigned ThisConversions = HasThisConversion ? 1 : 0;
 
-  Conversions =
-      CandidateSet.allocateConversionSequences(ThisConversions + Args.size());
+  Conversions = Conversions.empty() ? CandidateSet.allocateConversionSequences(
+                                          ThisConversions + Args.size())
+                                    : Conversions;
 
   // Overload resolution is always an unevaluated context.
   EnterExpressionEvaluationContext Unevaluated(
@@ -8059,11 +8061,11 @@ bool Sema::CheckNonDependentConversions(
     }
   }
 
-  // A heuristic & speculative workaround for bug
-  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99599 that manifests after
-  // CWG2369.
-  auto ConversionMightInduceInstantiation = [&](QualType ParmType,
-                                                QualType ArgType) {
+  // A speculative workaround for self-dependent constraint bugs that manifest
+  // after CWG2369.
+  // FIXME: Add references to the standard once P3606 is adopted.
+  auto MaybeInvolveUserDefinedConversion = [&](QualType ParmType,
+                                               QualType ArgType) {
     ParmType = ParmType.getNonReferenceType();
     ArgType = ArgType.getNonReferenceType();
     bool PointerConv = ParmType->isPointerType() && ArgType->isPointerType();
@@ -8072,37 +8074,29 @@ bool Sema::CheckNonDependentConversions(
       ArgType = ArgType->getPointeeType();
     }
 
-    auto IsInstantiation = [&](QualType T) {
-      if (auto *RT = T->getAs<RecordType>()) {
-        if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-          if (auto *ClassTemplateSpec =
-                  dyn_cast<ClassTemplateSpecializationDecl>(RD))
-            return ClassTemplateSpec->getSpecializationKind() == TSK_Undeclared;
-          if (RD->getInstantiatedFromMemberClass())
-            return RD->getMemberSpecializationInfo()
-                       ->getTemplateSpecializationKind() !=
-                   TemplateSpecializationKind::TSK_ExplicitSpecialization;
-        }
-      }
-      return false;
-    };
-    if (IsInstantiation(ParmType) || IsInstantiation(ArgType))
-      return true;
-
-    if (PointerConv || CompareReferenceRelationship(SourceLocation(), ParmType,
-                                                    ArgType) == Ref_Related)
-      return false;
-
     if (auto *RT = ParmType->getAs<RecordType>())
       if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
-          RD && RD->hasDefinition() && !RD->isAggregate())
-        return false;
+          RD && RD->hasDefinition()) {
+        if (llvm::any_of(LookupConstructors(RD), [](NamedDecl *ND) {
+              auto Info = getConstructorInfo(ND);
+              if (!Info)
+                return false;
+              CXXConstructorDecl *Ctor = Info.Constructor;
+              /// isConvertingConstructor takes copy/move constructors into
+              /// account!
+              return !Ctor->isCopyOrMoveConstructor() &&
+                     Ctor->isConvertingConstructor(
+                         /*AllowExplicit=*/true);
+            }))
+          return true;
+      }
 
     if (auto *RT = ArgType->getAs<RecordType>())
       if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
           RD && RD->hasDefinition() &&
-          !RD->getVisibleConversionFunctions().empty())
+          !RD->getVisibleConversionFunctions().empty()) {
         return true;
+      }
 
     return false;
   };
@@ -8127,8 +8121,10 @@ bool Sema::CheckNonDependentConversions(
         // For members, 'this' got ConvIdx = 0 previously.
         ConvIdx = ThisConversions + I;
       }
-      if (NonInstOnly &&
-          ConversionMightInduceInstantiation(ParamType, Args[I]->getType()))
+      if (Conversions[ConvIdx].isInitialized())
+        continue;
+      if (SkipUserDefinedConversions &&
+          MaybeInvolveUserDefinedConversion(ParamType, Args[I]->getType()))
         continue;
       Conversions[ConvIdx]
         = TryCopyInitialization(*this, Args[I], ParamType,
