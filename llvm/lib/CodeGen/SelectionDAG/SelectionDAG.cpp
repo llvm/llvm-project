@@ -5852,10 +5852,20 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, const APInt &DemandedElts,
   }
 }
 
-bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
+bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op,
+                                         FPClassTest FPClassArg) const {
   assert(Op.getValueType().isFloatingPoint() &&
          "Floating point type expected");
 
+  FPClassArg &= fcZero;
+  assert(FPClassArg != fcNone && "FPClassArg of isKnownNeverZeroFloat should "
+                                 "be one of fcZero/fcNegZero/fcPosZero");
+  if (Op->getOpcode() == ISD::AssertNoFPClass) {
+    FPClassTest NoFPClass =
+        static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+    if ((NoFPClass & FPClassArg) == FPClassArg)
+      return true;
+  }
   // If the value is a constant, we can obviously see if it is a zero or not.
   return ISD::matchUnaryFpPredicate(
       Op, [](ConstantFPSDNode *C) { return !C->isZero(); });

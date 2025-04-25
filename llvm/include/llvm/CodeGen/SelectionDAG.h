@@ -2169,8 +2169,9 @@ public:
   }
 
   /// Test whether the given floating point SDValue is known to never be
-  /// positive or negative zero.
-  bool isKnownNeverZeroFloat(SDValue Op) const;
+  /// positive (FPClass is fcPosZero) or negative zero (FPClass is fcNegZero) or
+  /// any zero (FPClass is fcZero).
+  bool isKnownNeverZeroFloat(SDValue Op, FPClassTest FPClass = fcZero) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
