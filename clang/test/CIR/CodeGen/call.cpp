@@ -5,8 +5,8 @@ void f2() {
   f1();
 }
 
-// CHECK-LABEL: cir.func @f2
-// CHECK:         cir.call @f1() : () -> ()
+// CHECK-LABEL: cir.func @_Z2f1v
+// CHECK:         cir.call @_Z2f1v() : () -> ()
 
 int f3();
 int f4() {
@@ -14,6 +14,6 @@ int f4() {
   return x;
 }
 
-// CHECK-LABEL: cir.func @f4() -> !s32i
-// CHECK:         %[[#x:]] = cir.call @f3() : () -> !s32i
+// CHECK-LABEL: cir.func @_Z2f4v() -> !s32i
+// CHECK:         %[[#x:]] = cir.call @_Z2f3v() : () -> !s32i
 // CHECK-NEXT:    cir.store %[[#x]], %{{.+}} : !s32i, !cir.ptr<!s32i>
