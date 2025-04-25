@@ -2,6 +2,7 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -target-feature +wavefrontsize32 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-GFX1250
 
+typedef float  v16f  __attribute__((ext_vector_type(16)));
 typedef float  v8f   __attribute__((ext_vector_type(8)));
 typedef float  v2f   __attribute__((ext_vector_type(2)));
 typedef half   v8h   __attribute__((ext_vector_type(8)));
@@ -300,6 +301,17 @@ void test_amdgcn_wmma_f32_16x16x128_bf8_fp8(global v8f* out, v16i a, v16i b, v8f
 void test_amdgcn_wmma_f32_16x16x128_bf8_bf8(global v8f* out, v16i a, v16i b, v8f c)
 {
   *out = __builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8(a, b, 0, c, false, true);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_wmma_f32_wmma_f32_32x16x128_f4(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <16 x float> @llvm.amdgcn.wmma.f32.32x16x128.f4.v16f32.v16i32.v8i32(<16 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], i16 0, <16 x float> [[C:%.*]])
+// CHECK-GFX1250-NEXT:    store <16 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 64, !tbaa [[TBAA4]]
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_wmma_f32_wmma_f32_32x16x128_f4(global v16f* out, v16i a, v8i b, v16f c)
+{
+  *out = __builtin_amdgcn_wmma_f32_32x16x128_f4(a, b, 0, c);
 }
 
 // CHECK-GFX1250-LABEL: @test_amdgcn_swmmac_f32_16x16x64_bf16(

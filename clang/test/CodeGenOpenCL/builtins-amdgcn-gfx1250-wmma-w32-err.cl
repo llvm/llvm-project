@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1250 -verify -emit-llvm -o - %s
 
+typedef float  v16f  __attribute__((ext_vector_type(16)));
 typedef float  v8f   __attribute__((ext_vector_type(8)));
 typedef float  v2f   __attribute__((ext_vector_type(2)));
 typedef half   v8h   __attribute__((ext_vector_type(8)));
@@ -222,6 +223,11 @@ void test_amdgcn_wmma_f32_16x16x128_bf8_bf8(global v8f* out, v16i a, v16i b, v8f
   *out = __builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8(a, b, mod, c, false, false); // expected-error {{'__builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8' must be a constant integer}}
   *out = __builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8(a, b, 0, c, mod, false); // expected-error {{'__builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8' must be a constant integer}}
   *out = __builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8(a, b, 0, c, false, mod); // expected-error {{'__builtin_amdgcn_wmma_f32_16x16x128_bf8_bf8' must be a constant integer}}
+}
+
+void test_amdgcn_wmma_f32_wmma_f32_32x16x128_f4(global v16f* out, v16i a, v8i b, v16f c, int mod)
+{
+  *out = __builtin_amdgcn_wmma_f32_32x16x128_f4(a, b, mod, c); // expected-error {{'__builtin_amdgcn_wmma_f32_32x16x128_f4' must be a constant integer}}
 }
 
 void test_amdgcn_swmmac_f32_16x16x64_bf16(global v8f* out, v16bf16 a, v32bf16 b, v8f c, int index, int mod)
