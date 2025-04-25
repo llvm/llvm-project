@@ -1,4 +1,4 @@
-; RUN: llvm-dis < %s.bc | FileCheck %s 
+; RUN: llvm-dis < %S/Inputs/coro-retcon-frame-auto-upgrade-test.ll.bc 2>&1 | FileCheck %s 
 
 ; ModuleID = '../llvm-project/llvm/test/Transforms/Coroutines/coro-retcon-frame-auto-upgrade.bc'
 ; CHECK: source_filename = "../llvm-project/llvm/test/Transforms/Coroutines/coro-retcon-frame-auto-upgrade.ll"
