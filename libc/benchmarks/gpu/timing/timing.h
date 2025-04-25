@@ -15,6 +15,8 @@
 #include "amdgpu/timing.h"
 #elif defined(LIBC_TARGET_ARCH_IS_NVPTX)
 #include "nvptx/timing.h"
+#elif defined(LIBC_TARGET_ARCH_IS_SPIRV)
+#include "spirv64/timing.h"
 #else
 #error "unsupported platform"
 #endif
