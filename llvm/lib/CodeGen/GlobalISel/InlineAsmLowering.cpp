@@ -213,17 +213,6 @@ static bool buildAnyextOrCopy(Register Dst, Register Src,
   return true;
 }
 
-static bool reportInlineAsmConstraintError(const CallBase &Call,
-                                           const GISelAsmOperandInfo &Info,
-                                           Twine Msg) {
-  LLVMContext &Ctx = Call.getContext();
-  Ctx.diagnose(DiagnosticInfoInlineAsm(
-      Call, "invalid constraint '" + Info.ConstraintCode + "': " + Msg));
-  // TODO(?): Allow selection to continue by recovering/leaving the gMIR in a
-  // good state, like the DAG does.
-  return false;
-}
-
 bool InlineAsmLowering::lowerInlineAsm(
     MachineIRBuilder &MIRBuilder, const CallBase &Call,
     std::function<ArrayRef<Register>(const Value &Val)> GetOrCreateVRegs)
@@ -243,6 +232,16 @@ bool InlineAsmLowering::lowerInlineAsm(
   TargetLowering::AsmOperandInfoVector TargetConstraints =
       TLI->ParseConstraints(DL, TRI, Call);
 
+  const auto ConstraintError = [&](const GISelAsmOperandInfo &Info, Twine Msg) {
+    LLVMContext &Ctx = MIRBuilder.getContext();
+    Ctx.diagnose(DiagnosticInfoInlineAsm(
+        Call, "invalid constraint '" + Info.ConstraintCode + "' in '" +
+                  MF.getName() + "': " + Msg));
+    // TODO: Recover if fallback isn't used. Otherwise let the fallback to DAG
+    // kick in.
+    return false;
+  };
+
   ExtraFlags ExtraInfo(Call);
   unsigned ArgNo = 0; // ArgNo - The argument of the CallInst.
   unsigned ResNo = 0; // ResNo - The result number of the next output.
@@ -255,8 +254,8 @@ bool InlineAsmLowering::lowerInlineAsm(
       OpInfo.CallOperandVal = const_cast<Value *>(Call.getArgOperand(ArgNo));
 
       if (isa<BasicBlock>(OpInfo.CallOperandVal)) {
-        return reportInlineAsmConstraintError(
-            Call, OpInfo, "basic block input operands not supported yet");
+        return ConstraintError(OpInfo,
+                               "basic block input operands not supported yet");
       }
 
       Type *OpTy = OpInfo.CallOperandVal->getType();
@@ -270,8 +269,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       // FIXME: Support aggregate input operands
       if (!OpTy->isSingleValueType()) {
-        return reportInlineAsmConstraintError(
-            Call, OpInfo, "aggregate input operands not supported yet");
+        return ConstraintError(OpInfo,
+                               "aggregate input operands not supported yet");
       }
 
       OpInfo.ConstraintVT =
@@ -355,8 +354,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Find a register that we can use.
         if (OpInfo.Regs.empty()) {
-          return reportInlineAsmConstraintError(
-              Call, OpInfo, "couldn't allocate output register for constraint");
+          return ConstraintError(
+              OpInfo, "could not allocate output register for constraint");
         }
 
         // Add information to the INLINEASM instruction to know that this
@@ -399,14 +398,13 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         const InlineAsm::Flag MatchedOperandFlag(Inst->getOperand(InstFlagIdx).getImm());
         if (MatchedOperandFlag.isMemKind()) {
-          return reportInlineAsmConstraintError(
-              Call, OpInfo,
+          return ConstraintError(
+              OpInfo,
               "matching input constraint to mem operand not supported; this "
               "should be target specific");
         }
         if (!MatchedOperandFlag.isRegDefKind() && !MatchedOperandFlag.isRegDefEarlyClobberKind()) {
-          return reportInlineAsmConstraintError(Call, OpInfo,
-                                                "unknown matching constraint");
+          return ConstraintError(OpInfo, "unknown matching constraint");
         }
 
         // We want to tie input to register in next operand.
@@ -436,8 +434,8 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       if (OpInfo.ConstraintType == TargetLowering::C_Other &&
           OpInfo.isIndirect) {
-        return reportInlineAsmConstraintError(
-            Call, OpInfo,
+        return ConstraintError(
+            OpInfo,
             "indirect input operands with unknown constraint not supported "
             "yet");
       }
@@ -449,8 +447,7 @@ bool InlineAsmLowering::lowerInlineAsm(
         if (!lowerAsmOperandForConstraint(OpInfo.CallOperandVal,
                                           OpInfo.ConstraintCode, Ops,
                                           MIRBuilder)) {
-          return reportInlineAsmConstraintError(Call, OpInfo,
-                                                "unsupported constraint");
+          return ConstraintError(OpInfo, "unsupported constraint");
         }
 
         assert(Ops.size() > 0 &&
@@ -467,9 +464,8 @@ bool InlineAsmLowering::lowerInlineAsm(
       if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
 
         if (!OpInfo.isIndirect) {
-          return reportInlineAsmConstraintError(
-              Call, OpInfo,
-              "indirect memory input operands are not supported yet");
+          return ConstraintError(
+              OpInfo, "indirect memory input operands are not supported yet");
         }
 
         assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
@@ -493,15 +489,15 @@ bool InlineAsmLowering::lowerInlineAsm(
              "Unknown constraint type!");
 
       if (OpInfo.isIndirect) {
-        return reportInlineAsmConstraintError(
-            Call, OpInfo, "indirect register inputs are not supported yet");
+        return ConstraintError(
+            OpInfo, "indirect register inputs are not supported yet");
       }
 
       // Copy the input into the appropriate registers.
       if (OpInfo.Regs.empty()) {
-        return reportInlineAsmConstraintError(
-            Call, OpInfo,
-            "couldn't allocate input register for register constraint");
+        return ConstraintError(
+            OpInfo,
+            "could not allocate input register for register constraint");
       }
 
       unsigned NumRegs = OpInfo.Regs.size();
@@ -511,8 +507,8 @@ bool InlineAsmLowering::lowerInlineAsm(
              "source registers");
 
       if (NumRegs > 1) {
-        return reportInlineAsmConstraintError(
-            Call, OpInfo,
+        return ConstraintError(
+            OpInfo,
             "input operands with multiple input registers are not supported "
             "yet");
       }
