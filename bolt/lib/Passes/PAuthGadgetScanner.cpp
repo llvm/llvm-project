@@ -406,8 +406,9 @@ protected:
       const MCInst *FirstCheckerInst;
       std::tie(CheckedReg, FirstCheckerInst) = CheckerSequenceInfo.at(&Point);
 
-      // FirstCheckerInst should belong to the same basic block, meaning
-      // it was deterministically processed a few steps before this instruction.
+      // FirstCheckerInst should belong to the same basic block (see the
+      // assertion in DataflowSrcSafetyAnalysis::run()), meaning it was
+      // deterministically processed a few steps before this instruction.
       const SrcState &StateBeforeChecker =
           getStateBefore(*FirstCheckerInst).get();
       if (StateBeforeChecker.SafeToDerefRegs[CheckedReg])
@@ -566,15 +567,19 @@ public:
   void run() override {
     for (BinaryBasicBlock &BB : Func) {
       if (auto CheckerInfo = BC.MIB->getAuthCheckedReg(BB)) {
-        MCInst *LastInstOfChecker = BB.getLastNonPseudoInstr();
+        MCPhysReg CheckedReg = CheckerInfo->first;
+        MCInst &FirstInst = *CheckerInfo->second;
+        MCInst &LastInst = *BB.getLastNonPseudoInstr();
         LLVM_DEBUG({
           dbgs() << "Found pointer checking sequence in " << BB.getName()
                  << ":\n";
-          traceReg(BC, "Checked register", CheckerInfo->first);
-          traceInst(BC, "First instruction", *CheckerInfo->second);
-          traceInst(BC, "Last instruction", *LastInstOfChecker);
+          traceReg(BC, "Checked register", CheckedReg);
+          traceInst(BC, "First instruction", FirstInst);
+          traceInst(BC, "Last instruction", LastInst);
         });
-        CheckerSequenceInfo[LastInstOfChecker] = *CheckerInfo;
+        assert(llvm::any_of(BB, [&](MCInst &I) { return &I == &FirstInst; }) &&
+               "Data-flow analysis expects the checker not to cross BBs");
+        CheckerSequenceInfo[&LastInst] = *CheckerInfo;
       }
     }
     DFParent::run();
