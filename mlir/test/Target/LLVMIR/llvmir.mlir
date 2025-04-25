@@ -2883,6 +2883,33 @@ llvm.func @to()
 
 // -----
 
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+                       #llvm.profile_summary<format = "InstrProf", total_count = 263646, max_count = 86427,
+                         max_internal_count = 86427, max_function_count = 4691,
+                         num_counts = 3712, num_functions = 796,
+                         is_partial_profile = 0 : i64,
+                         partial_profile_ratio = 0.000000e+00 : f64,
+                         detailed_summary = [
+                           #llvm.profile_summary_detailed<cut_off = 10000, min_count = 86427, num_counts = 1>,
+                           #llvm.profile_summary_detailed<cut_off = 100000, min_count = 86427, num_counts = 1>
+                  ]>>]
+
+// CHECK: !llvm.module.flags = !{!0, !15}
+
+// CHECK: !0 = !{i32 1, !"ProfileSummary", !1}
+// CHECK: !1 = !{!2, !3, !4, !5, !6, !7, !8, !9, !10, !11}
+// CHECK: !2 = !{!"ProfileFormat", !"InstrProf"}
+// CHECK: !3 = !{!"TotalCount", i64 263646}
+// CHECK: !4 = !{!"MaxCount", i64 86427}
+// CHECK: !5 = !{!"MaxInternalCount", i64 86427}
+// CHECK: !6 = !{!"MaxFunctionCount", i64 4691}
+// CHECK: !7 = !{!"NumCounts", i64 3712}
+// CHECK: !8 = !{!"NumFunctions", i64 796}
+// CHECK: !9 = !{!"IsPartialProfile", i64 0}
+// CHECK: !10 = !{!"PartialProfileRatio", double 0.000000e+00}
+
+// -----
+
 module attributes {llvm.dependent_libraries = ["foo", "bar"]} {}
 
 // CHECK: !llvm.dependent-libraries =  !{![[#LIBFOO:]], ![[#LIBBAR:]]}

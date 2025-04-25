@@ -1800,6 +1800,13 @@ module {
 
 // -----
 
+module {
+  // expected-error@below {{'ProfileSummary' key expects a '#llvm.profile_summary' attribute}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "ProfileSummary", 3 : i64>]
+}
+
+// -----
+
 llvm.func @t0() -> !llvm.ptr {
   %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
   llvm.blocktag <id = 1>
