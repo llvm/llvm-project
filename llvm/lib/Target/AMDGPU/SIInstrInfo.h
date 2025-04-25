@@ -1614,6 +1614,11 @@ bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
                                    Register VReg,
                                    const MachineInstr &DefMI);
 
+/// \brief Find the metadata operand that carries the indexing and access-type
+/// mask. Return the pair of uint32_t. Return {0, 0} if no such metadata
+/// operand.
+std::pair<uint32_t, uint32_t> getVGPRIndexingMetaInfo(const MachineInstr &MI);
+
 namespace AMDGPU {
 
   LLVM_READONLY

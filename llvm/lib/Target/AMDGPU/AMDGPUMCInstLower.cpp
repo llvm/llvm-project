@@ -287,6 +287,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
     EmitToStreamer(*OutStreamer, OutInst);
+    if (MIA)
+      MIA->updateState(OutInst, 0);
     return;
   }
 
@@ -394,6 +396,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
+    if (MIA)
+      MIA->updateState(TmpInst, 0);
 
 #ifdef EXPENSIVE_CHECKS
     // Check getInstSizeInBytes on explicitly specified CPUs (it cannot

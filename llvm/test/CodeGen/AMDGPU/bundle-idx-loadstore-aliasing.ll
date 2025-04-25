@@ -31,12 +31,12 @@ define dso_local amdgpu_kernel void @_Z26test_amdgcn_alias_analysisv() local_unn
 ; GCN-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 5
 ; GCN-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GCN-NEXT:    v_mov_b32_e32 v1, v82
+; GCN-NEXT:    v_mov_b32_e32 v1, g1[82]
 ; GCN-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GCN-NEXT:    s_mov_b32 s0, exec_lo
 ; GCN-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GCN-NEXT:    v_mov_b32_e32 v81, v2
-; GCN-NEXT:    v_mov_b32_e32 v82, v3
+; GCN-NEXT:    v_mov_b32_e32 g1[81], v2
+; GCN-NEXT:    v_mov_b32_e32 g1[82], v3
 ; GCN-NEXT:  .LBB0_3: ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v0
@@ -52,7 +52,7 @@ define dso_local amdgpu_kernel void @_Z26test_amdgcn_alias_analysisv() local_unn
 ; GCN-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GCN-NEXT:    s_mov_b32 s0, exec_lo
 ; GCN-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GCN-NEXT:    v_add_nc_u32_e64 v1, v82, v1
+; GCN-NEXT:    v_add_nc_u32_e64 v1, g1[82], v1
 ; GCN-NEXT:  .LBB0_5: ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
@@ -61,7 +61,7 @@ define dso_local amdgpu_kernel void @_Z26test_amdgcn_alias_analysisv() local_unn
 ; GCN-NEXT:    s_and_saveexec_b32 vcc_lo, vcc_lo
 ; GCN-NEXT:    s_lshr_b32 s0, s0, 2
 ; GCN-NEXT:    s_set_gpr_idx_u32 idx1, s0
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
+; GCN-NEXT:    v_mov_b32_e32 g1[0], v1
 ; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, vcc_lo
 ; GCN-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_5

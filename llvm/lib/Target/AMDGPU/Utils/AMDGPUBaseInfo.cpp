@@ -995,9 +995,14 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
-    if (getVGPREncodingMSBs(OpXRegs[CompOprIdx], MRI) !=
-        getVGPREncodingMSBs(OpYRegs[CompOprIdx], MRI))
-      return CompOprIdx;
+    // Skip MSB check if it is src2 yet one of component-inst is not VOP3.
+    if (CompOprIdx != Component::SRC2 ||
+        (CompInfo[ComponentIndex::X].isVOP3() &&
+         CompInfo[ComponentIndex::X].isVOP3())) {
+      if (getVGPREncodingMSBs(OpXRegs[CompOprIdx], MRI) !=
+          getVGPREncodingMSBs(OpYRegs[CompOprIdx], MRI))
+        return CompOprIdx;
+    }
 
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
       continue;

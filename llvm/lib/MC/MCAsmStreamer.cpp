@@ -114,6 +114,8 @@ public:
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
 
+  MCInstPrinter *getInstPrinterPtr() override { return InstPrinter.get(); }
+
   inline void EmitEOL() {
     // Dump Explicit Comments here.
     emitExplicitComments();

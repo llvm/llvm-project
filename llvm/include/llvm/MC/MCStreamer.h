@@ -312,6 +312,9 @@ public:
   // parse time.
   virtual MCAssembler *getAssemblerPtr() { return nullptr; }
 
+  // MCAsmStreamer has an MCInstPrinter.
+  virtual MCInstPrinter *getInstPrinterPtr() { return nullptr; }
+
   void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
   bool getUseAssemblerInfoForParsing() { return UseAssemblerInfoForParsing; }
 

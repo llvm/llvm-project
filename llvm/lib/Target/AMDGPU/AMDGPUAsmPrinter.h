@@ -26,6 +26,7 @@ class AMDGPUTargetStreamer;
 class MCCodeEmitter;
 class MCOperand;
 class MCResourceInfo;
+class MCInstrAnalysis;
 
 namespace AMDGPU {
 struct MCKernelDescriptor;
@@ -47,6 +48,7 @@ private:
   SIProgramInfo CurrentProgramInfo;
 
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
+  std::unique_ptr<MCInstrAnalysis> MIA;
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
