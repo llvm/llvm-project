@@ -197,6 +197,8 @@ void func(int private); // expected-warning {{identifier 'private' conflicts wit
 // diagnosed as a keyword.
 int module;
 int import;
+int override;
+int final;
 
 // We do not diagnose use of C++ keywords when used as a macro name because
 // that does not conflict with C++ (the macros will be replaced before the
