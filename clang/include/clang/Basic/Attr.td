@@ -2000,6 +2000,16 @@ def TrivialABI : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def ValueType : InheritableAttr {
+  // This attribute does not have a C [[]] spelling because it requires the
+  // CPlusPlus language option.
+  let Spellings = [Clang<"value_type", 0>];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [TrivialABIDocs];
+  let LangOpts = [CPlusPlus];
+  let SimpleHandler = 1;
+}
+
 def MaxFieldAlignment : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];

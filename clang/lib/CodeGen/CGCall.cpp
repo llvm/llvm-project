@@ -2826,9 +2826,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addByValAttr(getTypes().ConvertTypeForMem(ParamType));
 
       auto *Decl = ParamType->getAsRecordDecl();
-      if (CodeGenOpts.PassByValueIsNoAlias && Decl &&
-          Decl->getArgPassingRestrictions() ==
-              RecordArgPassingKind::CanPassInRegs)
+      if (Decl && ((CodeGenOpts.PassByValueIsNoAlias &&
+                    Decl->getArgPassingRestrictions() ==
+                        RecordArgPassingKind::CanPassInRegs) ||
+                   Decl->hasAttr<ValueTypeAttr>()))
         // When calling the function, the pointer passed in will be the only
         // reference to the underlying object. Mark it accordingly.
         Attrs.addAttribute(llvm::Attribute::NoAlias);
