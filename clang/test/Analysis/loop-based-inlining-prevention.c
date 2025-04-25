@@ -1,6 +1,28 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify=expected,default %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config legacy-inlining-prevention=false -verify=expected,disabled %s
 
+// This file tests some heuristics in the engine that put functions on a
+// "do not inline" list if their analyisis reaches the `analyzer-max-loop`
+// limit (by default 4 iterations) in a loop. This was almost surely intended
+// as memoization optimization for the "retry without inlining" fallback (if we
+// had to retry once, next time don't even try inlining), but aggressively
+// oversteps the "natural" scope: reaching 4 iterations on _one particular_
+// execution path does not imply that each path would need "retry without
+// inlining" especially if a different call receives different arguments.
+//
+// This heuristic significantly affects the scope/depth of the analysis (and
+// therefore the execution time) because without this limitation on the
+// inlining significantly more entry points would be able to exhaust their
+// `max-nodes` quota. (Trivial thin wrappers around big complex functions are
+// common in many projects.)
+//
+// Unfortunately, this arbitrary heuristic strongly relies on the current loop
+// handling model and its many limitations, so improvements in loop handling
+// can cause surprising slowdowns by reducing the "do not inline" blacklist.
+// In the tests "FIXME-BUT-NEEDED" comments mark "problematic" (aka buggy)
+// analyzer behavior which cannot be fixed without also improving the
+// heuristics for (not) inlining large functions.
+
 int getNum(void); // Get an opaque number.
 
 void clang_analyzer_dump(int arg);
@@ -28,7 +50,7 @@ int outer_simple(void) {
 int inner_fixed_loop_1(int callIdx) {
   int i;
   clang_analyzer_dump(callIdx); // expected-warning {{1 S32}}
-  for (i = 0; i < 10; i++);
+  for (i = 0; i < 10; i++); // FIXME-BUT-NEEDED: This stops the analysis.
   clang_analyzer_dump(callIdx); // no-warning
   return 42;
 }
@@ -36,6 +58,8 @@ int inner_fixed_loop_1(int callIdx) {
 int outer_fixed_loop_1(void) {
   int x = inner_fixed_loop_1(1);
   int y = inner_fixed_loop_1(2);
+
+ // FIXME-BUT-NEEDED: The analysis doesn't reach this zero division.
   return 53 / (x - y); // no-warning
 }
 
@@ -47,10 +71,10 @@ int outer_fixed_loop_1(void) {
 // able to inline the inner function.
 
 int inner_fixed_loop_2(int callIdx) {
-  // Identical copy of inner_fixed_loop_1
+  // Identical copy of inner_fixed_loop_1.
   int i;
   clang_analyzer_dump(callIdx); // expected-warning {{2 S32}}
-  for (i = 0; i < 10; i++);
+  for (i = 0; i < 10; i++); // FIXME-BUT-NEEDED: This stops the analysis.
   clang_analyzer_dump(callIdx); // no-warning
   return 42;
 }
@@ -73,6 +97,7 @@ int inner_parametrized_loop_1(int count) {
   clang_analyzer_dump(count); // expected-warning {{2 S32}}
                               // expected-warning@-1 {{10 S32}}
   for (i = 0; i < count; i++);
+      // FIXME-BUT-NEEDED: This loop stops the analysis when count >=4.
   clang_analyzer_dump(count); // expected-warning {{2 S32}}
   return 42;
 }
@@ -80,6 +105,8 @@ int inner_parametrized_loop_1(int count) {
 int outer_parametrized_loop_1(void) {
   int x = inner_parametrized_loop_1(2);
   int y = inner_parametrized_loop_1(10);
+
+ // FIXME-BUT-NEEDED: The analysis doesn't reach this zero division.
   return 53 / (x - y); // no-warning
 }
 
@@ -88,9 +115,11 @@ int outer_parametrized_loop_1(void) {
 // second call isn't inlined (although it could be fully evaluated).
 
 int inner_parametrized_loop_2(int count) {
+  // Identical copy of inner_parametrized_loop_1.
   int i;
   clang_analyzer_dump(count); // expected-warning {{10 S32}}
   for (i = 0; i < count; i++);
+      // FIXME-BUT-NEEDED: This loop stops the analysis when count >=4.
   clang_analyzer_dump(count); // no-warning
   return 42;
 }
@@ -98,6 +127,8 @@ int inner_parametrized_loop_2(int count) {
 int outer_parametrized_loop_2(void) {
   int y = inner_parametrized_loop_2(10);
   int x = inner_parametrized_loop_2(2);
+
+ // FIXME-BUT-NEEDED: The analysis doesn't reach this zero division.
   return 53 / (x - y); // no-warning
 }
 
