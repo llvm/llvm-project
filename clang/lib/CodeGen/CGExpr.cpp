@@ -4274,6 +4274,24 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   return Address(eltPtr, CGF.ConvertTypeForMem(eltType), eltAlign);
 }
 
+namespace {
+
+/// StructFieldAccess is a simple visitor class to grab the first l-value to
+/// r-value cast Expr.
+struct StructFieldAccess
+    : public ConstStmtVisitor<StructFieldAccess, const Expr *> {
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+};
+
+} // end anonymous namespace
+
 /// The offset of a field from the beginning of the record.
 static bool getFieldOffsetInBits(CodeGenFunction &CGF, const RecordDecl *RD,
                                  const FieldDecl *Field, int64_t &Offset) {
@@ -4342,6 +4360,11 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
   const auto *ME = dyn_cast<MemberExpr>(E->IgnoreImpCasts());
   if (!ME || !ME->getMemberDecl()->getType()->isCountAttributedType())
     return;
+
+  if (!Addr.isValid()) {
+    LValue LV = EmitCheckedLValue(E, TCK_MemberAccess);
+    Addr = LV.getAddress();
+  }
 
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
@@ -4527,28 +4550,14 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  E->getBase());
 
     if (SanOpts.has(SanitizerKind::ArrayBounds)) {
-      const Expr *Base = E->getBase();
-      while (true) {
-        if (const auto *CE = dyn_cast<CastExpr>(Base)) {
-          if (CE->getCastKind() == CK_LValueToRValue)
-            break;
-          Base = CE->getSubExpr();
-        } else if (const auto *PE = dyn_cast<ParenExpr>(Base)) {
-          Base = PE->getSubExpr();
-        } else {
-          break;
-        }
-      }
+      StructFieldAccess Visitor;
+      const Expr *Base = Visitor.Visit(E->getBase());
 
-      if (const auto *CE = dyn_cast<CastExpr>(Base);
+      if (const auto *CE = dyn_cast_if_present<CastExpr>(Base);
           CE && CE->getCastKind() == CK_LValueToRValue)
-        if (const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr());
-            ME && ME->getMemberDecl()->getType()->isCountAttributedType()) {
-          LValue LV = EmitCheckedLValue(Base, TCK_MemberAccess);
-          EmitCountedByBoundsChecking(CE->getSubExpr(), Idx, LV.getAddress(),
-                                      E->getIdx()->getType(), ptrType, Accessed,
-                                      /*FlexibleArray=*/false);
-        }
+        EmitCountedByBoundsChecking(CE, Idx, Address::invalid(),
+                                    E->getIdx()->getType(), ptrType, Accessed,
+                                    /*FlexibleArray=*/false);
     }
   }
 
