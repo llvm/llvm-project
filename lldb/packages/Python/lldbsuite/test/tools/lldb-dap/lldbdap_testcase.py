@@ -453,7 +453,8 @@ class DAPTestCaseBase(TestBase):
 
         if not (response and response["success"]):
             self.assertTrue(
-                response["success"], "launch failed (%s)" % (response["message"])
+                response["success"],
+                "launch failed (%s)" % (response["body"]["error"]["format"]),
             )
         return response
 
