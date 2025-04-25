@@ -91,10 +91,7 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
   // don't hoist code that uses another basicblock address, as it's likely to
   // lead to unexpected behavior, like cross-function jumps
   SmallPtrSet<User const *, 16> Visited;
-  SmallVector<User const *, 16> ToVisit;
-
-  for (Instruction const &Inst : BB)
-    ToVisit.push_back(&Inst);
+  SmallVector<User const *, 16> ToVisit(llvm::make_pointer_range(BB));
 
   while (!ToVisit.empty()) {
     User const *Curr = ToVisit.pop_back_val();

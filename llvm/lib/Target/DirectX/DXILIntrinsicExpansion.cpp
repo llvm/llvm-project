@@ -65,12 +65,27 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
+  case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     return true;
   }
   return false;
 }
+
+static Value *expandUsubSat(CallInst *Orig) {
+  Value *A = Orig->getArgOperand(0);
+  Value *B = Orig->getArgOperand(1);
+  Type *Ty = A->getType();
+
+  IRBuilder<> Builder(Orig);
+
+  Value *Cmp = Builder.CreateICmpULT(A, B, "usub.cmp");
+  Value *Sub = Builder.CreateSub(A, B, "usub.sub");
+  Value *Zero = ConstantInt::get(Ty, 0);
+  return Builder.CreateSelect(Cmp, Zero, Sub, "usub.sat");
+}
+
 static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   assert(IntrinsicId == Intrinsic::vector_reduce_add ||
          IntrinsicId == Intrinsic::vector_reduce_fadd);
@@ -170,7 +185,8 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
   assert(ATy->getScalarType()->isFloatingPointTy());
 
   Intrinsic::ID DotIntrinsic = Intrinsic::dx_dot4;
-  switch (AVec->getNumElements()) {
+  int NumElts = AVec->getNumElements();
+  switch (NumElts) {
   case 2:
     DotIntrinsic = Intrinsic::dx_dot2;
     break;
@@ -186,8 +202,14 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
         /* gen_crash_diag=*/false);
     return nullptr;
   }
-  return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic,
-                                 ArrayRef<Value *>{A, B}, nullptr, "dot");
+
+  SmallVector<Value *> Args;
+  for (int I = 0; I < NumElts; ++I)
+    Args.push_back(Builder.CreateExtractElement(A, Builder.getInt32(I)));
+  for (int I = 0; I < NumElts; ++I)
+    Args.push_back(Builder.CreateExtractElement(B, Builder.getInt32(I)));
+  return Builder.CreateIntrinsic(ATy->getScalarType(), DotIntrinsic, Args,
+                                 nullptr, "dot");
 }
 
 // Create the appropriate DXIL float dot intrinsic for the operands of Orig
@@ -585,6 +607,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
+    break;
+  case Intrinsic::usub_sat:
+    Result = expandUsubSat(Orig);
     break;
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:

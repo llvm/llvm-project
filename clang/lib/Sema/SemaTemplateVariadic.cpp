@@ -14,6 +14,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
@@ -755,7 +756,7 @@ bool Sema::CheckParameterPacksForExpansion(
     bool &RetainExpansion, UnsignedOrNone &NumExpansions) {
   ShouldExpand = true;
   RetainExpansion = false;
-  std::pair<IdentifierInfo *, SourceLocation> FirstPack;
+  IdentifierLoc FirstPack;
   bool HaveFirstPack = false;
   UnsignedOrNone NumPartialExpansions = std::nullopt;
   SourceLocation PartiallySubstitutedPackLoc;
@@ -867,8 +868,7 @@ bool Sema::CheckParameterPacksForExpansion(
       // This is the first pack we've seen for which we have an argument.
       // Record it.
       NumExpansions = NewPackSize;
-      FirstPack.first = Name;
-      FirstPack.second = ParmPack.second;
+      FirstPack = IdentifierLoc(ParmPack.second, Name);
       HaveFirstPack = true;
       continue;
     }
@@ -905,9 +905,9 @@ bool Sema::CheckParameterPacksForExpansion(
       //   the same number of arguments specified.
       if (HaveFirstPack)
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict)
-            << FirstPack.first << Name << *NumExpansions
+            << FirstPack.getIdentifierInfo() << Name << *NumExpansions
             << (LeastNewPackSize != NewPackSize) << LeastNewPackSize
-            << SourceRange(FirstPack.second) << SourceRange(ParmPack.second);
+            << SourceRange(FirstPack.getLoc()) << SourceRange(ParmPack.second);
       else
         Diag(EllipsisLoc, diag::err_pack_expansion_length_conflict_multilevel)
             << Name << *NumExpansions << (LeastNewPackSize != NewPackSize)

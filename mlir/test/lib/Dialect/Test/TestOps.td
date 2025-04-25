@@ -424,6 +424,52 @@ def : Pat<(OpWithEnum ConstantEnumCase<TestEnumAttr, "first">:$value,
                       ConstantAttr<I32Attr, "1">)>;
 
 //===----------------------------------------------------------------------===//
+// Test Enum Properties
+//===----------------------------------------------------------------------===//
+
+// Define the enum property.
+def TestEnumProp : EnumProp<TestEnum>;
+// Define an op that contains the enum property.
+def OpWithEnumProp : TEST_Op<"op_with_enum_prop"> {
+  let arguments = (ins TestEnumProp:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestEnumPropAttrForm : EnumPropWithAttrForm<TestEnum, TestEnumAttr>;
+def OpWithEnumPropAttrForm : TEST_Op<"op_with_enum_prop_attr_form"> {
+  let arguments = (ins TestEnumPropAttrForm:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestEnumPropAttrFormAlways : EnumPropWithAttrForm<TestEnum, TestEnumAttr> {
+  let storeInCustomAttribute = 1;
+}
+def OpWithEnumPropAttrFormAlways : TEST_Op<"op_with_enum_prop_attr_form_always"> {
+  let arguments = (ins TestEnumPropAttrFormAlways:$value);
+  let assemblyFormat = "prop-dict attr-dict";
+}
+
+def TestBitEnumProp : EnumProp<TestBitEnum> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithTestBitEnum : TEST_Op<"op_with_bit_enum_prop"> {
+  let arguments = (ins
+    TestBitEnumProp:$value1,
+    TestBitEnumProp:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict `:` `(``)`";
+}
+
+def TestBitEnumPropNamed : NamedEnumProp<TestBitEnum, "bit_enum"> {
+  let defaultValue = TestBitEnum.cppType # "::Read";
+}
+def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
+  let arguments = (ins
+    TestBitEnumPropNamed:$value1,
+    TestBitEnumPropNamed:$value2);
+  let assemblyFormat = "$value1 ($value2^)? attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
 

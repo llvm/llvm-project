@@ -57,6 +57,7 @@ class SCEV;
 class Type;
 class VPBasicBlock;
 class VPBuilder;
+class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
 class VPLane;
@@ -302,6 +303,13 @@ public:
 
   /// Remove all the successors of this block.
   void clearSuccessors() { Successors.clear(); }
+
+  /// Swap predecessors of the block. The block must have exactly 2
+  /// predecessors.
+  void swapPredecessors() {
+    assert(Predecessors.size() == 2 && "must have 2 predecessors to swap");
+    std::swap(Predecessors[0], Predecessors[1]);
+  }
 
   /// Swap successors of the block. The block must have exactly 2 successors.
   // TODO: This should be part of introducing conditional branch recipes rather
@@ -710,6 +718,7 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenCallSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionSC ||
@@ -755,33 +764,33 @@ public:
     }
   }
 
-  /// Set the IR flags for \p I.
-  void setFlags(Instruction *I) const {
+  /// Apply the IR flags to \p I.
+  void applyFlags(Instruction &I) const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
-      I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
-      I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      I.setHasNoUnsignedWrap(WrapFlags.HasNUW);
+      I.setHasNoSignedWrap(WrapFlags.HasNSW);
       break;
     case OperationType::DisjointOp:
-      cast<PossiblyDisjointInst>(I)->setIsDisjoint(DisjointFlags.IsDisjoint);
+      cast<PossiblyDisjointInst>(&I)->setIsDisjoint(DisjointFlags.IsDisjoint);
       break;
     case OperationType::PossiblyExactOp:
-      I->setIsExact(ExactFlags.IsExact);
+      I.setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
-      cast<GetElementPtrInst>(I)->setNoWrapFlags(GEPFlags);
+      cast<GetElementPtrInst>(&I)->setNoWrapFlags(GEPFlags);
       break;
     case OperationType::FPMathOp:
-      I->setHasAllowReassoc(FMFs.AllowReassoc);
-      I->setHasNoNaNs(FMFs.NoNaNs);
-      I->setHasNoInfs(FMFs.NoInfs);
-      I->setHasNoSignedZeros(FMFs.NoSignedZeros);
-      I->setHasAllowReciprocal(FMFs.AllowReciprocal);
-      I->setHasAllowContract(FMFs.AllowContract);
-      I->setHasApproxFunc(FMFs.ApproxFunc);
+      I.setHasAllowReassoc(FMFs.AllowReassoc);
+      I.setHasNoNaNs(FMFs.NoNaNs);
+      I.setHasNoInfs(FMFs.NoInfs);
+      I.setHasNoSignedZeros(FMFs.NoSignedZeros);
+      I.setHasAllowReciprocal(FMFs.AllowReciprocal);
+      I.setHasAllowContract(FMFs.AllowContract);
+      I.setHasApproxFunc(FMFs.ApproxFunc);
       break;
     case OperationType::NonNegOp:
-      I->setNonNeg(NonNegFlags.NonNeg);
+      I.setNonNeg(NonNegFlags.NonNeg);
       break;
     case OperationType::Cmp:
     case OperationType::Other:
@@ -869,10 +878,14 @@ public:
     Broadcast,
     ComputeFindLastIVResult,
     ComputeReductionResult,
-    // Takes the VPValue to extract from as first operand and the lane or part
-    // to extract as second operand, counting from the end starting with 1 for
-    // last. The second operand must be a positive constant and <= VF.
-    ExtractFromEnd,
+    // Extracts the last lane from its operand if it is a vector, or the last
+    // part if scalar. In the latter case, the recipe will be removed during
+    // unrolling.
+    ExtractLastElement,
+    // Extracts the second-to-last lane from its operand or the second-to-last
+    // part if it is scalar. In the latter case, the recipe will be removed
+    // during unrolling.
+    ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
@@ -883,6 +896,13 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
+
+    // The opcodes below are used for VPInstructionWithType.
+    //
+    /// Scale the first operand (vector step) by the second operand
+    /// (scalar-step).  Casts both operands to the result type if needed.
+    WideIVStep,
+
   };
 
 private:
@@ -1040,11 +1060,19 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
+  VPInstructionWithType(unsigned Opcode,
+                        std::initializer_list<VPValue *> Operands,
+                        Type *ResultTy, FastMathFlags FMFs, DebugLoc DL = {},
+                        const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, FMFs, DL, Name), ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
-    return R->isScalarCast();
+    if (R->isScalarCast())
+      return true;
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
   }
 
   static inline bool classof(const VPUser *R) {
@@ -1137,10 +1165,10 @@ public:
     return true;
   }
 
-  /// Update the recipes single operand to the last lane of the operand using \p
-  /// Builder. Must only be used for single operand VPIRInstructions wrapping a
-  /// PHINode.
-  void extractLastLaneOfOperand(VPBuilder &Builder);
+  /// Update the recipes first operand to the last lane of the operand using \p
+  /// Builder. Must only be used for VPIRInstructions with at least one operand
+  /// wrapping a PHINode.
+  void extractLastLaneOfFirstOperand(VPBuilder &Builder);
 };
 
 /// An overlay for VPIRInstructions wrapping PHI nodes enabling convenient use
@@ -1166,18 +1194,33 @@ struct VPIRPhi : public VPIRInstruction {
 #endif
 };
 
+/// Helper to manage IR metadata for recipes. It filters out metadata that
+/// cannot be propagated.
+class VPIRMetadata {
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+
+protected:
+  VPIRMetadata() {}
+  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+
+public:
+  /// Add all metadata to \p I.
+  void applyMetadata(Instruction &I) const;
+};
+
 /// VPWidenRecipe is a recipe for producing a widened instruction using the
 /// opcode and operands of the recipe. This recipe covers most of the
 /// traditional vectorization cases where each recipe transforms into a
 /// vectorized version of itself.
-class VPWidenRecipe : public VPRecipeWithIRFlags {
+class VPWidenRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   unsigned Opcode;
 
 protected:
   template <typename IterT>
   VPWidenRecipe(unsigned VPDefOpcode, Instruction &I,
                 iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), Opcode(I.getOpcode()) {}
+      : VPRecipeWithIRFlags(VPDefOpcode, Operands, I), VPIRMetadata(I),
+        Opcode(I.getOpcode()) {}
 
 public:
   template <typename IterT>
@@ -1212,7 +1255,7 @@ public:
 };
 
 /// VPWidenCastRecipe is a recipe to create vector cast instructions.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags {
+class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// Cast instruction opcode.
   Instruction::CastOps Opcode;
 
@@ -1222,15 +1265,15 @@ class VPWidenCastRecipe : public VPRecipeWithIRFlags {
 public:
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
                     CastInst &UI)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), Opcode(Opcode),
-        ResultTy(ResultTy) {
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), VPIRMetadata(UI),
+        Opcode(Opcode), ResultTy(ResultTy) {
     assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), Opcode(Opcode),
-        ResultTy(ResultTy) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), VPIRMetadata(),
+        Opcode(Opcode), ResultTy(ResultTy) {}
 
   ~VPWidenCastRecipe() override = default;
 
@@ -1264,7 +1307,7 @@ public:
 };
 
 /// A recipe for widening vector intrinsics.
-class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags {
+class VPWidenIntrinsicRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// ID of the vector intrinsic to widen.
   Intrinsic::ID VectorIntrinsicID;
 
@@ -1285,7 +1328,7 @@ public:
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, CI),
-        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
+        VPIRMetadata(CI), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty),
         MayReadFromMemory(CI.mayReadFromMemory()),
         MayWriteToMemory(CI.mayWriteToMemory()),
         MayHaveSideEffects(CI.mayHaveSideEffects()) {}
@@ -1294,12 +1337,12 @@ public:
                          ArrayRef<VPValue *> CallArguments, Type *Ty,
                          DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenIntrinsicSC, CallArguments, DL),
-        VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
+        VPIRMetadata(), VectorIntrinsicID(VectorIntrinsicID), ResultTy(Ty) {
     LLVMContext &Ctx = Ty->getContext();
     AttributeSet Attrs = Intrinsic::getFnAttributes(Ctx, VectorIntrinsicID);
     MemoryEffects ME = Attrs.getMemoryEffects();
-    MayReadFromMemory = ME.onlyWritesMemory();
-    MayWriteToMemory = ME.onlyReadsMemory();
+    MayReadFromMemory = !ME.onlyWritesMemory();
+    MayWriteToMemory = !ME.onlyReadsMemory();
     MayHaveSideEffects = MayWriteToMemory ||
                          !Attrs.hasAttribute(Attribute::NoUnwind) ||
                          !Attrs.hasAttribute(Attribute::WillReturn);
@@ -1350,7 +1393,7 @@ public:
 };
 
 /// A recipe for widening Call instructions using library calls.
-class VPWidenCallRecipe : public VPRecipeWithIRFlags {
+class VPWidenCallRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   /// Variant stores a pointer to the chosen function. There is a 1:1 mapping
   /// between a given VF and the chosen vectorized variant, so there will be a
   /// different VPlan for each VF with a valid variant.
@@ -1361,7 +1404,7 @@ public:
                     ArrayRef<VPValue *> CallArguments, DebugLoc DL = {})
       : VPRecipeWithIRFlags(VPDef::VPWidenCallSC, CallArguments,
                             *cast<Instruction>(UV)),
-        Variant(Variant) {
+        VPIRMetadata(*cast<Instruction>(UV)), Variant(Variant) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
@@ -1447,10 +1490,11 @@ public:
 };
 
 /// A recipe for widening select instructions.
-struct VPWidenSelectRecipe : public VPRecipeWithIRFlags {
+struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
   template <typename IterT>
   VPWidenSelectRecipe(SelectInst &I, iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenSelectSC, Operands, I),
+        VPIRMetadata(I) {}
 
   ~VPWidenSelectRecipe() override = default;
 
@@ -2047,6 +2091,9 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+  /// Get the factor that the VF of this recipe's output should be scaled by.
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2077,17 +2124,21 @@ public:
 /// scalar value.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
+  /// The divisor by which the VF of this recipe's output should be divided
+  /// during execution.
+  unsigned VFScaleFactor;
 
 public:
   VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1)
+                           VPValue *Op1, unsigned VFScaleFactor)
       : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
-                                 ReductionInst) {}
+                                 VFScaleFactor, ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
+                           unsigned VFScaleFactor,
                            Instruction *ReductionInst = nullptr)
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
-        Opcode(Opcode) {
+        Opcode(Opcode), VFScaleFactor(VFScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getOperand(1)->getDefiningRecipe();
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
@@ -2098,7 +2149,7 @@ public:
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getUnderlyingInstr());
+                                        VFScaleFactor, getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
@@ -2112,6 +2163,9 @@ public:
 
   /// Get the binary op's opcode.
   unsigned getOpcode() const { return Opcode; }
+
+  /// Get the factor that the VF of this recipe's output should be scaled by.
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2568,7 +2622,7 @@ public:
 
 /// A common base class for widening memory operations. An optional mask can be
 /// provided as the last operand.
-class VPWidenMemoryRecipe : public VPRecipeBase {
+class VPWidenMemoryRecipe : public VPRecipeBase, public VPIRMetadata {
 protected:
   Instruction &Ingredient;
 
@@ -2592,8 +2646,8 @@ protected:
   VPWidenMemoryRecipe(const char unsigned SC, Instruction &I,
                       std::initializer_list<VPValue *> Operands,
                       bool Consecutive, bool Reverse, DebugLoc DL)
-      : VPRecipeBase(SC, Operands, DL), Ingredient(I), Consecutive(Consecutive),
-        Reverse(Reverse) {
+      : VPRecipeBase(SC, Operands, DL), VPIRMetadata(I), Ingredient(I),
+        Consecutive(Consecutive), Reverse(Reverse) {
     assert((Consecutive || !Reverse) && "Reverse implies consecutive");
   }
 
@@ -3789,6 +3843,13 @@ public:
   /// via the other early exit).
   bool hasEarlyExit() const {
     return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+  }
+
+  /// Returns true if the scalar tail may execute after the vector loop. Note
+  /// that this relies on unneeded branches to the scalar tail loop being
+  /// removed.
+  bool hasScalarTail() const {
+    return getScalarPreheader()->getNumPredecessors() != 0;
   }
 };
 

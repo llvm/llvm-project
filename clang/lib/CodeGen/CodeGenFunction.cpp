@@ -3197,9 +3197,7 @@ void CodeGenFunction::emitAlignmentAssumptionCheck(
     llvm::Constant *StaticData[] = {EmitCheckSourceLocation(Loc),
                                     EmitCheckSourceLocation(SecondaryLoc),
                                     EmitCheckTypeDescriptor(Ty)};
-    llvm::Value *DynamicData[] = {EmitCheckValue(Ptr),
-                                  EmitCheckValue(Alignment),
-                                  EmitCheckValue(OffsetValue)};
+    llvm::Value *DynamicData[] = {Ptr, Alignment, OffsetValue};
     EmitCheck({std::make_pair(TheCheck, SanitizerKind::SO_Alignment)},
               SanitizerHandler::AlignmentAssumption, StaticData, DynamicData);
   }

@@ -164,7 +164,7 @@ public:
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
-    const clang::Decl *calleeDecl;
+    [[maybe_unused]] const clang::Decl *calleeDecl;
 
   public:
     AbstractCallee() : calleeDecl(nullptr) {}
@@ -268,6 +268,12 @@ public:
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
     return LValue::makeAddr(addr, ty, baseInfo);
   }
+
+  /// Get an appropriate 'undef' rvalue for the given type.
+  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
+  /// void types so it just returns RValue::get(nullptr) but it'll need
+  /// addressed later.
+  RValue getUndefRValue(clang::QualType ty);
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
@@ -417,6 +423,10 @@ private:
                               clang::CharUnits alignment);
 
 public:
+  Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
+                                 llvm::StringRef fieldName,
+                                 unsigned fieldIndex);
+
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment,
                          bool insertIntoFnEntryBlock,
@@ -451,11 +461,12 @@ public:
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
-                  const CIRGenCallee &callee, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  cir::CIRCallOpInterface *callOp, mlir::Location loc);
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
-                  const clang::CallExpr *e);
-  RValue emitCallExpr(const clang::CallExpr *e);
+                  const clang::CallExpr *e, ReturnValueSlot returnValue);
+  RValue emitCallExpr(const clang::CallExpr *e,
+                      ReturnValueSlot returnValue = ReturnValueSlot());
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
@@ -544,6 +555,9 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitMemberExpr(const MemberExpr *e);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
@@ -579,6 +593,8 @@ public:
   /// is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
+  mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
+
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
@@ -593,6 +609,11 @@ public:
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
+  /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
+  /// nonnull, if 1\p LHS is marked _Nonnull.
+  void emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                            clang::SourceLocation loc);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------
@@ -605,10 +626,9 @@ public:
   //===--------------------------------------------------------------------===//
 private:
   template <typename Op>
-  mlir::LogicalResult
-  emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
-                SourceLocation dirLoc,
-                llvm::ArrayRef<const OpenACCClause *> clauses);
+  Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+                   SourceLocation dirLoc,
+                   llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>

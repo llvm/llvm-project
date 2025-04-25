@@ -172,6 +172,14 @@ public:
           new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
     return createInstruction(Opcode, Operands, DL, Name);
   }
+  VPInstruction *createNaryOp(unsigned Opcode,
+                              std::initializer_list<VPValue *> Operands,
+                              Type *ResultTy,
+                              std::optional<FastMathFlags> FMFs = {},
+                              DebugLoc DL = {}, const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstructionWithType(
+        Opcode, Operands, ResultTy, FMFs.value_or(FastMathFlags()), DL, Name));
+  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -535,13 +543,13 @@ private:
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
-                        const VectorizationFactor &B) const;
+                        const VectorizationFactor &B, bool HasTail) const;
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B,
-                        const unsigned MaxTripCount) const;
+                        const unsigned MaxTripCount, bool HasTail) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

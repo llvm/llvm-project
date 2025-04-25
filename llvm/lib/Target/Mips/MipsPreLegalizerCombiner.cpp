@@ -56,7 +56,6 @@ public:
   }
 
   bool tryCombineAll(MachineInstr &MI) const override {
-
     switch (MI.getOpcode()) {
     default:
       return false;
@@ -110,9 +109,8 @@ void MipsPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MipsPreLegalizerCombiner::MipsPreLegalizerCombiner() : MachineFunctionPass(ID) {
-  initializeMipsPreLegalizerCombinerPass(*PassRegistry::getPassRegistry());
-}
+MipsPreLegalizerCombiner::MipsPreLegalizerCombiner()
+    : MachineFunctionPass(ID) {}
 
 bool MipsPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasProperty(
@@ -141,8 +139,6 @@ INITIALIZE_PASS_END(MipsPreLegalizerCombiner, DEBUG_TYPE,
                     "Combine Mips machine instrs before legalization", false,
                     false)
 
-namespace llvm {
-FunctionPass *createMipsPreLegalizeCombiner() {
+FunctionPass *llvm::createMipsPreLegalizeCombiner() {
   return new MipsPreLegalizerCombiner();
 }
-} // end namespace llvm

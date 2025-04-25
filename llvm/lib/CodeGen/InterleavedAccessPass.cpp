@@ -780,8 +780,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask = getMask(WideMask, Factor,
-                          cast<VectorType>(DeinterleaveValues[0]->getType()));
+    Value *Mask = getMask(WideMask, Factor);
     if (!Mask)
       return false;
 
@@ -832,8 +831,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
       return false;
 
     Value *WideMask = VPStore->getOperand(2);
-    Value *Mask = getMask(WideMask, Factor,
-                          cast<VectorType>(InterleaveValues[0]->getType()));
+    Value *Mask = getMask(WideMask, Factor);
     if (!Mask)
       return false;
 

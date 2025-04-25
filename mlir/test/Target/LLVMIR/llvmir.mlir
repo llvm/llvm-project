@@ -2649,6 +2649,19 @@ llvm.func @always_inline_call() {
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: alwaysinline
 
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @inline_hint_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @inline_hint_call() {
+  llvm.call @f() {inline_hint} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: inlinehint
 
 // -----
 
@@ -2796,11 +2809,11 @@ llvm.func @call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
 // -----
 
 module {
-  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>,
-                     #llvm.mlir.module_flag<min, "PIC Level", 2>,
-                     #llvm.mlir.module_flag<max, "PIE Level", 2>,
-                     #llvm.mlir.module_flag<max, "uwtable", 2>,
-                     #llvm.mlir.module_flag<max, "frame-pointer", 1>]
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4 : i32>,
+                     #llvm.mlir.module_flag<min, "PIC Level", 2 : i32>,
+                     #llvm.mlir.module_flag<max, "PIE Level", 2 : i32>,
+                     #llvm.mlir.module_flag<max, "uwtable", 2 : i32>,
+                     #llvm.mlir.module_flag<max, "frame-pointer", 1 : i32>]
 }
 
 // CHECK: !llvm.module.flags = !{![[#WCHAR:]], ![[#PIC:]], ![[#PIE:]], ![[#UWTABLE:]], ![[#FrameP:]], ![[#DBG:]]}
@@ -2817,10 +2830,29 @@ module {
 // Verifies that the debug info version is not added twice, if it's already present initially.
 
 module {
-  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version", 3>]
+  llvm.module_flags [#llvm.mlir.module_flag<warning, "Debug Info Version", 3 : i32>]
 }
 
 // CHECK: !llvm.module.flags = !{![[#DBG:]]}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+
+// -----
+
+llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+  #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
+  #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+  #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
+]>]
+llvm.func @from(i32)
+llvm.func @to()
+
+// CHECK: !llvm.module.flags = !{![[#CGPROF:]], ![[#DBG:]]}
+
+// CHECK: ![[#CGPROF]] = !{i32 5, !"CG Profile", ![[#LIST:]]}
+// CHECK: ![[#LIST]] = distinct !{![[#ENTRY_A:]], ![[#ENTRY_B:]], ![[#ENTRY_C:]]}
+// CHECK: ![[#ENTRY_A]] = !{ptr @from, ptr @to, i64 222}
+// CHECK: ![[#ENTRY_B]] = !{ptr @from, ptr @from, i64 222}
+// CHECK: ![[#ENTRY_C]] = !{ptr @to, ptr @from, i64 222}
 // CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
 
 // -----

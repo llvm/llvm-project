@@ -141,7 +141,7 @@ static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
     }
     return false;
   }
-  uses.insert(uses.end(), opUses.begin(), opUses.end());
+  llvm::append_range(uses, opUses);
   return true;
 }
 
@@ -150,7 +150,7 @@ void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp) {
   parentOp->walk([&](memref::AllocOp op) {
     std::vector<Operation *> candidates;
     if (resultIsNotRead(op, candidates)) {
-      opToErase.insert(opToErase.end(), candidates.begin(), candidates.end());
+      llvm::append_range(opToErase, candidates);
       opToErase.push_back(op.getOperation());
     }
   });

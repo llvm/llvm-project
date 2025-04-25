@@ -1126,7 +1126,8 @@ static void analyzeExitPHIsForOutputUses(
     // outside of the single PHINode we should not skip over it.
     for (unsigned Idx : IncomingVals) {
       Value *V = PN.getIncomingValue(Idx);
-      if (outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
+      if (!isa<Constant>(V) &&
+          outputHasNonPHI(V, Idx, PN, PotentialExitsFromRegion, RegionBlocks)) {
         OutputsWithNonPhiUses.insert(V);
         OutputsReplacedByPHINode.erase(V);
         continue;
@@ -1153,9 +1154,9 @@ using PHINodeData = std::pair<ArgLocWithBBCanon, CanonList>;
 /// \param PND - The data to hash.
 /// \returns The hash code of \p PND.
 static hash_code encodePHINodeData(PHINodeData &PND) {
-  return llvm::hash_combine(
-      llvm::hash_value(PND.first.first), llvm::hash_value(PND.first.second),
-      llvm::hash_combine_range(PND.second.begin(), PND.second.end()));
+  return llvm::hash_combine(llvm::hash_value(PND.first.first),
+                            llvm::hash_value(PND.first.second),
+                            llvm::hash_combine_range(PND.second));
 }
 
 /// Create a special GVN for PHINodes that will be used outside of
