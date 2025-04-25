@@ -213,3 +213,27 @@ struct T {
   int decltype;         // expected-warning {{identifier 'decltype' conflicts with a C++ keyword}}
 };
 #endif // __cplusplus
+
+// Check alternative operator names.
+int and;      // expected-warning {{identifier 'and' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int and_eq;   // expected-warning {{identifier 'and_eq' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int bitand;   // expected-warning {{identifier 'bitand' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int bitor;    // expected-warning {{identifier 'bitor' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int compl;    // expected-warning {{identifier 'compl' conflicts with a C++ keyword}} \
+                 cxx-error {{expected a class name after '~' to name a destructor}}
+int not;      // expected-warning {{identifier 'not' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int not_eq;   // expected-warning {{identifier 'not_eq' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int or;       // expected-warning {{identifier 'or' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int or_eq;    // expected-warning {{identifier 'or_eq' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int xor;      // expected-warning {{identifier 'xor' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}
+int xor_eq;   // expected-warning {{identifier 'xor_eq' conflicts with a C++ keyword}} \
+                 cxx-error {{expected unqualified-id}}

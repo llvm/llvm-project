@@ -347,6 +347,7 @@ static KeywordStatus getNameKwStatus(const LangOptions &LangOpts,
                                      StringRef Name) {
   return llvm::StringSwitch<KeywordStatus>(Name)
 #define KEYWORD(NAME, FLAGS) .Case(#NAME, getKeywordStatus(LangOpts, FLAGS))
+#define CXX_KEYWORD_OPERATOR(NAME, TOK) .Case(#NAME, KS_Enabled)
 #include "clang/Basic/TokenKinds.def"
       .Default(KS_Disabled);
 }
