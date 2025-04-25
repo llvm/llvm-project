@@ -2954,6 +2954,16 @@ LogicalResult acc::InitOp::verify() {
   return success();
 }
 
+void acc::InitOp::addDeviceType(MLIRContext *context,
+                                mlir::acc::DeviceType deviceType) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (getDeviceTypesAttr())
+    llvm::copy(getDeviceTypesAttr(), std::back_inserter(deviceTypes));
+
+  deviceTypes.push_back(acc::DeviceTypeAttr::get(context, deviceType));
+  setDeviceTypesAttr(mlir::ArrayAttr::get(context, deviceTypes));
+}
+
 //===----------------------------------------------------------------------===//
 // ShutdownOp
 //===----------------------------------------------------------------------===//
@@ -2964,6 +2974,16 @@ LogicalResult acc::ShutdownOp::verify() {
     if (isComputeOperation(currOp))
       return emitOpError("cannot be nested in a compute operation");
   return success();
+}
+
+void acc::ShutdownOp::addDeviceType(MLIRContext *context,
+                                    mlir::acc::DeviceType deviceType) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (getDeviceTypesAttr())
+    llvm::copy(getDeviceTypesAttr(), std::back_inserter(deviceTypes));
+
+  deviceTypes.push_back(acc::DeviceTypeAttr::get(context, deviceType));
+  setDeviceTypesAttr(mlir::ArrayAttr::get(context, deviceTypes));
 }
 
 //===----------------------------------------------------------------------===//
