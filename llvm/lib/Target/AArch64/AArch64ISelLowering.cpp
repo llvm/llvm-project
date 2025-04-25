@@ -8980,9 +8980,9 @@ static unsigned getSMCondition(const SMECallAttrs &CallAttrs) {
   if (!CallAttrs.caller().hasStreamingCompatibleInterface() ||
       CallAttrs.caller().hasStreamingBody())
     return AArch64SME::Always;
-  if (CallAttrs.calleeOrCallsite().hasNonStreamingInterface())
+  if (CallAttrs.callee().hasNonStreamingInterface())
     return AArch64SME::IfCallerIsStreaming;
-  if (CallAttrs.calleeOrCallsite().hasStreamingInterface())
+  if (CallAttrs.callee().hasStreamingInterface())
     return AArch64SME::IfCallerIsNonStreaming;
 
   llvm_unreachable("Unsupported attributes");
@@ -9159,7 +9159,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       return DescribeCallsite(R) << " sets up a lazy save for ZA";
     });
   } else if (RequiresSaveAllZA) {
-    assert(!CallAttrs.calleeOrCallsite().hasSharedZAInterface() &&
+    assert(!CallAttrs.callee().hasSharedZAInterface() &&
            "Cannot share state that may not exist");
     Chain = emitSMEStateSaveRestore(*this, DAG, FuncInfo, DL, Chain,
                                     /*IsSave=*/true);
@@ -9485,9 +9485,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       InGlue = Chain.getValue(1);
     }
 
-    SDValue NewChain = changeStreamingMode(
-        DAG, DL, CallAttrs.calleeOrCallsite().hasStreamingInterface(), Chain,
-        InGlue, getSMCondition(CallAttrs), PStateSM);
+    SDValue NewChain =
+        changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
+                            Chain, InGlue, getSMCondition(CallAttrs), PStateSM);
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -9666,8 +9666,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (RequiresSMChange) {
     assert(PStateSM && "Expected a PStateSM to be set");
     Result = changeStreamingMode(
-        DAG, DL, !CallAttrs.calleeOrCallsite().hasStreamingInterface(), Result,
-        InGlue, getSMCondition(CallAttrs), PStateSM);
+        DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
+        getSMCondition(CallAttrs), PStateSM);
 
     if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
       InGlue = Result.getValue(1);
