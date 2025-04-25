@@ -380,11 +380,11 @@ public:
     return getPointerSpec(AS).BitWidth;
   }
 
+  /// The size of an address in for the given AS. This is usually the same size
+  /// as the index width but in same cases (e.g. AMDGPU buffer fat pointers with
+  /// 48-bit addresses and 32-bit offsets), the address size can be larger than
+  /// the valid range of indexing.
   unsigned getPointerAddressSizeInBits(unsigned AS) const {
-    // Currently, this returns the same value as getIndexSizeInBits() as this
-    // is correct for all currently known LLVM targets. If another target is
-    // added that has pointer size != pointer range != GEP index width, we can
-    // add a new datalayout field for pointer integral range.
     return getPointerSpec(AS).AddressBitWidth;
   }
 

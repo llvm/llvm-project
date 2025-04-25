@@ -152,6 +152,7 @@ bool DataLayout::PointerSpec::operator==(const PointerSpec &Other) const {
   return AddrSpace == Other.AddrSpace && BitWidth == Other.BitWidth &&
          ABIAlign == Other.ABIAlign && PrefAlign == Other.PrefAlign &&
          IndexBitWidth == Other.IndexBitWidth &&
+         AddressBitWidth == Other.AddressBitWidth &&
          IsNonIntegral == Other.IsNonIntegral;
 }
 
@@ -414,8 +415,9 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
   assert(Spec.front() == 'p');
   Spec.drop_front().split(Components, ':');
 
-  if (Components.size() < 3 || Components.size() > 5)
-    return createSpecFormatError("p[<n>]:<size>:<abi>[:<pref>[:<idx>]]");
+  if (Components.size() < 3 || Components.size() > 6)
+    return createSpecFormatError(
+        "p[<n>]:<size>:<abi>[:<pref>[:<idx>[:<addr>]]]");
 
   // Address space. Optional, defaults to 0.
   unsigned AddrSpace = 0;
@@ -454,9 +456,9 @@ Error DataLayout::parsePointerSpec(StringRef Spec) {
     return createStringError(
         "index size cannot be larger than the pointer size");
 
-  unsigned AddressBitWidth = BitWidth;
-  if (Components.size() > 4)
-    if (Error Err = parseSize(Components[4], AddressBitWidth, "address size"))
+  unsigned AddressBitWidth = IndexBitWidth;
+  if (Components.size() > 5)
+    if (Error Err = parseSize(Components[5], AddressBitWidth, "address size"))
       return Err;
 
   if (AddressBitWidth > BitWidth)

@@ -3144,10 +3144,9 @@ as follows:
     default index size is equal to the pointer size.
     The fifth parameter ``<addr>`` specifies the width of addresses in this
     address space. If not specified, the default address size is equal to the
-    index size. The address size may be wider than either the index or pointer
-    size as it could be a value relative to a base address. For example AMDGPU
-    buffer fat pointers use a 48-bit address range, but only allow for 32 bits
-    of indexing.
+    index size. The address size may be wider than the index size as it could be
+    calculated relative to a base address. For example AMDGPU buffer fat
+    pointers use a 48-bit address range, but only allow for 32 bits of indexing.
     All sizes are in bits.
     The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
