@@ -238,25 +238,11 @@ public:
   void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
     lastDeviceTypeClause = &clause;
     if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp>) {
-      llvm::SmallVector<mlir::Attribute> deviceTypes;
-      std::optional<mlir::ArrayAttr> existingDeviceTypes =
-          operation.getDeviceTypes();
-
-      // Ensure we keep the existing ones, and in the correct 'new' order.
-      if (existingDeviceTypes) {
-        for (mlir::Attribute attr : *existingDeviceTypes)
-          deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-              builder.getContext(),
-              cast<mlir::acc::DeviceTypeAttr>(attr).getValue()));
-      }
-
-      for (const DeviceTypeArgument &arg : clause.getArchitectures()) {
-        deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-            builder.getContext(), decodeDeviceType(arg.getIdentifierInfo())));
-      }
-      operation.removeDeviceTypesAttr();
-      operation.setDeviceTypesAttr(
-          mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
+      llvm::for_each(
+          clause.getArchitectures(), [this](const DeviceTypeArgument &arg) {
+            operation.addDeviceType(builder.getContext(),
+                                    decodeDeviceType(arg.getIdentifierInfo()));
+          });
     } else if constexpr (isOneOfTypes<OpTy, SetOp>) {
       assert(!operation.getDeviceTypeAttr() && "already have device-type?");
       assert(clause.getArchitectures().size() <= 1);
