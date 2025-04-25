@@ -1103,7 +1103,8 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
     }
     symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
   } else {
-    llvm::errs() << "Couldnot add routine info to symbol: " << symbol.name() << "\n";
+    llvm::errs() << "Couldnot add routine info to symbol: " << symbol.name()
+                 << "\n";
   }
 }
 

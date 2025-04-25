@@ -143,7 +143,8 @@ public:
   const std::variant<std::string, SymbolRef> *bindName() const {
     return bindName_.has_value() ? &*bindName_ : nullptr;
   }
-  const std::optional<std::variant<std::string, SymbolRef>> &bindNameOpt() const {
+  const std::optional<std::variant<std::string, SymbolRef>> &
+  bindNameOpt() const {
     return bindName_;
   }
   void set_bindName(std::string &&name) { bindName_.emplace(std::move(name)); }
@@ -153,6 +154,7 @@ public:
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const OpenACCRoutineDeviceTypeInfo &);
+
 private:
   bool isSeq_{false};
   bool isVector_{false};
