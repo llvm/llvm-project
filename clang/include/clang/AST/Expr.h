@@ -3535,8 +3535,7 @@ class CompoundLiteralExpr : public Expr {
   llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfoAndScope;
   Stmt *Init;
 
-  /// Value of constant literals with static storage duration. Used only for
-  /// constant folding as CompoundLiteralExpr is not an ICE.
+  /// Value of constant literals with static storage duration.
   mutable APValue *StaticValue = nullptr;
 
 public:
@@ -3569,11 +3568,8 @@ public:
   }
 
   bool hasStaticStorage() const { return isFileScope() && isGLValue(); }
-  APValue *getOrCreateStaticValue(ASTContext &Ctx) const;
-  APValue &getStaticValue() const {
-    assert(StaticValue);
-    return *StaticValue;
-  }
+  APValue &getOrCreateStaticValue(ASTContext &Ctx) const;
+  APValue &getStaticValue() const;
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     // FIXME: Init should never be null.
