@@ -40,6 +40,7 @@ const char *const KindTemplateAlias = "TemplateAlias";
 const char *const KindTemplatePack = "TemplatePack";
 const char *const KindUndefined = "Undefined";
 const char *const KindUnion = "Union";
+const char *const KindModule = "Module";
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -50,6 +51,8 @@ const char *LVScope::kind() const {
   const char *Kind = KindUndefined;
   if (getIsArray())
     Kind = KindArray;
+  else if (getIsModule())
+    Kind = KindModule;
   else if (getIsBlock())
     Kind = KindBlock;
   else if (getIsCallSite())
@@ -101,7 +104,8 @@ LVScopeDispatch LVScope::Dispatch = {
     {LVScopeKind::IsTemplateAlias, &LVScope::getIsTemplateAlias},
     {LVScopeKind::IsTemplatePack, &LVScope::getIsTemplatePack},
     {LVScopeKind::IsTryBlock, &LVScope::getIsTryBlock},
-    {LVScopeKind::IsUnion, &LVScope::getIsUnion}};
+    {LVScopeKind::IsUnion, &LVScope::getIsUnion},
+    {LVScopeKind::IsModule, &LVScope::getIsModule}};
 
 void LVScope::addToChildren(LVElement *Element) {
   if (!Children)
@@ -2114,5 +2118,17 @@ bool LVScopeTemplatePack::equals(const LVScope *Scope) const {
 }
 
 void LVScopeTemplatePack::printExtra(raw_ostream &OS, bool Full) const {
+  OS << formattedKind(kind()) << " " << formattedName(getName()) << "\n";
+}
+
+//===----------------------------------------------------------------------===//
+// DWARF module (DW_TAG_module).
+//===----------------------------------------------------------------------===//
+bool LVScopeModule::equals(const LVScope *Scope) const {
+  // For lexical blocks, LVScope::equals() compares the parent scope.
+  return LVScope::equals(Scope) && (Scope->getName() == getName());
+}
+
+void LVScopeModule::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << "\n";
 }

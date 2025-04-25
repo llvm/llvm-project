@@ -57,6 +57,7 @@ enum class LVScopeKind {
   IsTemplatePack,
   IsTryBlock,
   IsUnion,
+  IsModule,
   LastEntry
 };
 using LVScopeKindSet = std::set<LVScopeKind>;
@@ -184,6 +185,7 @@ public:
   KIND(LVScopeKind, IsTemplatePack);
   KIND_1(LVScopeKind, IsTryBlock, IsBlock);
   KIND_1(LVScopeKind, IsUnion, IsAggregate);
+  KIND_3(LVScopeKind, IsModule, CanHaveRanges, CanHaveLines, TransformName);
 
   PROPERTY(Property, HasDiscriminator);
   PROPERTY(Property, CanHaveRanges);
@@ -831,6 +833,23 @@ public:
   LVScopeTemplatePack(const LVScopeTemplatePack &) = delete;
   LVScopeTemplatePack &operator=(const LVScopeTemplatePack &) = delete;
   ~LVScopeTemplatePack() = default;
+
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
+  void printExtra(raw_ostream &OS, bool Full = true) const override;
+};
+
+// Class to represent a DWARF Module.
+class LVScopeModule final : public LVScope {
+public:
+  LVScopeModule() : LVScope() {
+    setIsModule();
+    setIsLexicalBlock();
+  }
+  LVScopeModule(const LVScopeModule &) = delete;
+  LVScopeModule &operator=(const LVScopeModule &) = delete;
+  ~LVScopeModule() = default;
 
   // Returns true if current scope is logically equal to the given 'Scope'.
   bool equals(const LVScope *Scope) const override;
