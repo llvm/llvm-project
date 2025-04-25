@@ -47,7 +47,7 @@ void OptionValueFileColonLine::DumpValue(const ExecutionContext *exe_ctx,
 }
 
 llvm::json::Value
-OptionValueFileColonLine::ToJSON(const ExecutionContext *exe_ctx) {
+OptionValueFileColonLine::ToJSON(const ExecutionContext *exe_ctx) const {
   StreamString stream;
   if (m_file_spec)
     stream << '"' << m_file_spec.GetPath().c_str() << '"';
