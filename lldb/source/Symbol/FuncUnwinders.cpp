@@ -537,39 +537,3 @@ FuncUnwinders::GetUnwindAssemblyProfiler(Target &target) {
   }
   return assembly_profiler_sp;
 }
-
-Address FuncUnwinders::GetLSDAAddress(Target &target) {
-  Address lsda_addr;
-
-  std::shared_ptr<const UnwindPlan> unwind_plan_sp =
-      GetEHFrameUnwindPlan(target);
-  if (unwind_plan_sp.get() == nullptr) {
-    unwind_plan_sp = GetCompactUnwindUnwindPlan(target);
-  }
-  if (unwind_plan_sp.get() == nullptr) {
-    unwind_plan_sp = GetObjectFileUnwindPlan(target);
-  }
-  if (unwind_plan_sp.get() && unwind_plan_sp->GetLSDAAddress().IsValid()) {
-    lsda_addr = unwind_plan_sp->GetLSDAAddress();
-  }
-  return lsda_addr;
-}
-
-Address FuncUnwinders::GetPersonalityRoutinePtrAddress(Target &target) {
-  Address personality_addr;
-
-  std::shared_ptr<const UnwindPlan> unwind_plan_sp =
-      GetEHFrameUnwindPlan(target);
-  if (unwind_plan_sp.get() == nullptr) {
-    unwind_plan_sp = GetCompactUnwindUnwindPlan(target);
-  }
-  if (unwind_plan_sp.get() == nullptr) {
-    unwind_plan_sp = GetObjectFileUnwindPlan(target);
-  }
-  if (unwind_plan_sp.get() &&
-      unwind_plan_sp->GetPersonalityFunctionPtr().IsValid()) {
-    personality_addr = unwind_plan_sp->GetPersonalityFunctionPtr();
-  }
-
-  return personality_addr;
-}

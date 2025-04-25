@@ -45,8 +45,7 @@ inline bool isUniformAfterVectorization(const VPValue *VPV) {
     return true;
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
     return Rep->isUniform();
-  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPScalarCastRecipe,
-          VPBlendRecipe>(VPV))
+  if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(),
                   isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))

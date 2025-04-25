@@ -52,6 +52,9 @@
 #include "lldb/Host/windows/PosixApi.h"
 #endif
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/ObjC/ObjCLanguage.h"
+
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
@@ -639,30 +642,29 @@ Module::LookupInfo::LookupInfo(ConstString name,
                                FunctionNameType name_type_mask,
                                LanguageType language)
     : m_name(name), m_lookup_name(name), m_language(language) {
-  llvm::StringRef basename;
+  std::optional<ConstString> basename;
 
   std::vector<Language *> languages;
-  auto collect_language_plugins = [&languages](Language *lang) {
-    languages.push_back(lang);
-    return true;
-  };
+  {
+    std::vector<LanguageType> lang_types;
+    if (language != eLanguageTypeUnknown)
+      lang_types.push_back(language);
+    else
+      lang_types = {eLanguageTypeObjC, eLanguageTypeC_plus_plus};
+
+    for (LanguageType lang_type : lang_types) {
+      if (Language *lang = Language::FindPlugin(lang_type))
+        languages.push_back(lang);
+    }
+  }
 
   if (name_type_mask & eFunctionNameTypeAuto) {
-    if (language == eLanguageTypeUnknown) {
-      Language::ForEach(collect_language_plugins);
-      for (Language *lang : languages) {
-        auto info = lang->GetFunctionNameInfo(name);
-        if (info.first != eFunctionNameTypeNone) {
-          m_name_type_mask |= info.first;
+    for (Language *lang : languages) {
+      auto info = lang->GetFunctionNameInfo(name);
+      if (info.first != eFunctionNameTypeNone) {
+        m_name_type_mask |= info.first;
+        if (!basename && info.second)
           basename = info.second;
-          break;
-        }
-      }
-    } else {
-      if (auto *lang = Language::FindPlugin(language)) {
-        auto info = lang->GetFunctionNameInfo(name);
-        m_name_type_mask = info.first;
-        basename = info.second;
       }
     }
 
@@ -674,38 +676,34 @@ Module::LookupInfo::LookupInfo(ConstString name,
 
   } else {
     m_name_type_mask = name_type_mask;
-    if (language == eLanguageTypeUnknown) {
-      Language::ForEach(collect_language_plugins);
-      for (Language *lang : languages) {
-        auto info = lang->GetFunctionNameInfo(name);
-        if (info.first & m_name_type_mask) {
-          m_name_type_mask &= info.first;
-          basename = info.second;
-          break;
-        }
+    for (Language *lang : languages) {
+      auto info = lang->GetFunctionNameInfo(name);
+      if (info.first & m_name_type_mask) {
+        // If the user asked for FunctionNameTypes that aren't possible,
+        // then filter those out. (e.g. asking for Selectors on
+        // C++ symbols, or even if the symbol given can't be a selector in
+        // ObjC)
+        m_name_type_mask &= info.first;
+        basename = info.second;
+        break;
       }
-    } else {
-      if (auto *lang = Language::FindPlugin(language)) {
-        auto info = lang->GetFunctionNameInfo(name);
-        if (info.first & m_name_type_mask) {
-          // If the user asked for FunctionNameTypes that aren't possible,
-          // then filter those out. (e.g. asking for Selectors on
-          // C++ symbols, or even if the symbol given can't be a selector in
-          // ObjC)
-          m_name_type_mask &= info.first;
-          basename = info.second;
-        }
+      // Still try and get a basename in case someone specifies a name type mask
+      // of eFunctionNameTypeFull and a name like "A::func"
+      if (name_type_mask & eFunctionNameTypeFull &&
+          info.first != eFunctionNameTypeNone && !basename && info.second) {
+        basename = info.second;
+        break;
       }
     }
   }
 
-  if (!basename.empty()) {
+  if (basename) {
     // The name supplied was incomplete for lookup purposes. For example, in C++
     // we may have gotten something like "a::count". In this case, we want to do
     // a lookup on the basename "count" and then make sure any matching results
     // contain "a::count" so that it would match "b::a::count" and "a::count".
     // This is why we set match_name_after_lookup to true.
-    m_lookup_name.SetString(basename);
+    m_lookup_name.SetString(*basename);
     m_match_name_after_lookup = true;
   }
 }
@@ -999,7 +997,7 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
 
 Symtab *Module::GetSymtab(bool can_create) {
   if (SymbolFile *symbols = GetSymbolFile(can_create))
-    return symbols->GetSymtab();
+    return symbols->GetSymtab(can_create);
   return nullptr;
 }
 

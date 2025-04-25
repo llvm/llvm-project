@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-compute \
-// RUN:   -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -finclude-default-header -triple dxil-pc-shadermodel6.3-compute -fnative-half-type -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 // CHECK: %__cblayout_CBScalars = type <{ float, double, half, i64, i32, i16, i32, i64 }>
 // CHECK: %__cblayout_CBVectors = type <{ <3 x float>, <3 x double>, <2 x half>, <3 x i64>, <4 x i32>, <3 x i16>, <3 x i64> }>

@@ -157,6 +157,34 @@ private:
   const PrintMode Mode;
 };
 
+/// Utility that propagates counter values to each basic block and to each edge
+/// when a basic block has more than one outgoing edge, using an adaptation of
+/// PGOUseFunc::populateCounters.
+// FIXME(mtrofin): look into factoring the code to share one implementation.
+class ProfileAnnotatorImpl;
+class ProfileAnnotator {
+  std::unique_ptr<ProfileAnnotatorImpl> PImpl;
+
+public:
+  ProfileAnnotator(const Function &F, ArrayRef<uint64_t> RawCounters);
+  uint64_t getBBCount(const BasicBlock &BB) const;
+
+  // Finds the true and false counts for the given select instruction. Returns
+  // false if the select doesn't have instrumentation or if the count of the
+  // parent BB is 0.
+  bool getSelectInstrProfile(SelectInst &SI, uint64_t &TrueCount,
+                             uint64_t &FalseCount) const;
+  // Clears Profile and populates it with the edge weights, in the same order as
+  // they need to appear in the MD_prof metadata. Also computes the max of those
+  // weights an returns it in MaxCount. Returs false if:
+  //   - the BB has less than 2 successors
+  //   - the counts are 0
+  bool getOutgoingBranchWeights(BasicBlock &BB,
+                                SmallVectorImpl<uint64_t> &Profile,
+                                uint64_t &MaxCount) const;
+  ~ProfileAnnotator();
+};
+
 /// Assign a GUID to functions as metadata. GUID calculation takes linkage into
 /// account, which may change especially through and after thinlto. By
 /// pre-computing and assigning as metadata, this mechanism is resilient to such
