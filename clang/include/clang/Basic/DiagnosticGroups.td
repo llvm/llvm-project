@@ -155,7 +155,7 @@ def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
 
-def CppKeywordInC : DiagGroup<"identifier-is-c++-keyword">;
+def CppKeywordInC : DiagGroup<"c++-keyword">;
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, CppKeywordInC]>;
 def ExternCCompat : DiagGroup<"extern-c-compat">;

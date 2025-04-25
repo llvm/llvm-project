@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Widentifier-is-c++-keyword %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wc++-keyword %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wc++-compat %s
 // RUN: %clang_cc1 -fsyntax-only -verify=good %s
 // RUN: %clang_cc1 -fsyntax-only -verify=cxx -x c++ -std=c++2c %s
