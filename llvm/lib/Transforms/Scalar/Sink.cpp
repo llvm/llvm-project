@@ -82,10 +82,11 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
         !Inst->hasMetadata(LLVMContext::MD_invariant_load))
       return false;
 
-    // We don't want to sink across a critical edge if we don't dominate the
-    // successor. We could be introducing calculations to new code paths.
-    if (!DT.dominates(Inst->getParent(), SuccToSinkTo))
-      return false;
+    // The current location of Inst dominates all uses, thus it must dominate
+    // SuccToSinkTo, which is on the IDom chain between the nearest common
+    // dominator to all uses and the current location.
+    assert(DT.dominates(Inst->getParent(), SuccToSinkTo) &&
+           "SuccToSinkTo must be dominated by current Inst location!");
 
     // Don't sink instructions into a loop.
     Loop *succ = LI.getLoopFor(SuccToSinkTo);
@@ -144,9 +145,10 @@ static bool SinkInstruction(Instruction *Inst,
       SuccToSinkTo = DT.findNearestCommonDominator(SuccToSinkTo, UseBlock);
     else
       SuccToSinkTo = UseBlock;
-    // The current basic block needs to dominate the candidate.
-    if (!DT.dominates(BB, SuccToSinkTo))
-      return false;
+    // The current basic block dominates all uses, thus it must dominate
+    // SuccToSinkTo, the nearest common dominator of all uses.
+    assert(DT.dominates(BB, SuccToSinkTo) &&
+           "SuccToSinkTo must be dominated by current basic block!");
   }
 
   if (SuccToSinkTo) {
