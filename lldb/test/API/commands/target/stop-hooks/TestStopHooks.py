@@ -55,7 +55,7 @@ class TestStopHooks(TestBase):
     def after_expr_test(self):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        interp.HandleCommand("target stop-hook add -o 'expr g_var++'", result)
+        interp.HandleCommand("target stop-hook add -o 'expr g_var++' -F false", result)
         self.assertTrue(result.Succeeded(), "Set the target stop hook")
 
         (target, process, thread, first_bkpt) = lldbutil.run_to_source_breakpoint(
@@ -109,3 +109,4 @@ class TestStopHooks(TestBase):
         self.expect(
             "target stop-hook list", substrs=["expr g_var++", "thread backtrace"]
         )
+        

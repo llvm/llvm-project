@@ -1369,6 +1369,12 @@ public:
     }
 
     bool GetAutoContinue() const { return m_auto_continue; }
+    
+    void SetRunAtFirstStop(bool at_first_stop) {
+      m_at_first_stop = at_first_stop;
+    }
+    
+    bool GetRunAtFirstStop() const { return m_at_first_stop; }
 
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
     virtual void GetSubclassDescription(Stream &s,
@@ -1380,6 +1386,7 @@ public:
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
     bool m_active = true;
     bool m_auto_continue = false;
+    bool m_at_first_stop = true;
 
     StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
   };
@@ -1446,7 +1453,9 @@ public:
 
   // Runs the stop hooks that have been registered for this target.
   // Returns true if the stop hooks cause the target to resume.
-  bool RunStopHooks();
+  // Pass at_initial_stop if this is the stop where lldb gains
+  // control over the process for the first time.
+  bool RunStopHooks(bool at_initial_stop = false);
 
   size_t GetStopHookSize();
 

@@ -1050,8 +1050,13 @@ let Command = "target stop hook add" in {
     Arg<"FunctionName">, Desc<"Set the function name within which the stop hook"
     " will be run.">, Completion<"Symbol">;
   def target_stop_hook_add_auto_continue : Option<"auto-continue", "G">,
-    Arg<"Boolean">, Desc<"The breakpoint will auto-continue after running its"
+    Arg<"Boolean">, Desc<"The stop-hook will auto-continue after running its"
     " commands.">;
+  def target_stop_hook_add_at_first_stop : Option<"at-first-stop", "F">,
+    Arg<"Boolean">, Desc<"Whether the stop-hook will trigger when lldb first "
+    "gains control of the process.  For a process launch, this first stop "
+    "may happen very early on - before the loader has run.  You might not want "
+    "some stop-hooks to run then.  Defaults to true.">;
 }
 
 let Command = "thread backtrace" in {
