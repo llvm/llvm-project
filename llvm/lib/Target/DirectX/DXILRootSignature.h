@@ -24,11 +24,7 @@
 namespace llvm {
 namespace dxil {
 
-enum class RootSignatureElementKind {
-  Error = 0,
-  RootFlags = 1,
-  RootConstants = 2
-};
+enum class RootSignatureElementKind { Error = 0, RootFlags = 1 };
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   friend AnalysisInfoMixin<RootSignatureAnalysis>;
   static AnalysisKey Key;

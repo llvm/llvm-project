@@ -634,7 +634,7 @@ bool DataAggregator::doSample(BinaryFunction &OrigFunc, uint64_t Address,
                               uint64_t Count) {
   BinaryFunction *ParentFunc = getBATParentFunction(OrigFunc);
   BinaryFunction &Func = ParentFunc ? *ParentFunc : OrigFunc;
-  if (ParentFunc || (BAT && !BAT->isBATFunction(OrigFunc.getAddress())))
+  if (ParentFunc)
     NumColdSamples += Count;
 
   auto I = NamesToSamples.find(Func.getOneName());
@@ -756,12 +756,11 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     BinaryFunction *ParentFunc = getBATParentFunction(*Func);
-    if (IsFrom &&
-        (ParentFunc || (BAT && !BAT->isBATFunction(Func->getAddress()))))
-      NumColdSamples += Count;
-
     if (!ParentFunc)
       return std::pair{Func, IsRetOrCallCont};
+
+    if (IsFrom)
+      NumColdSamples += Count;
 
     return std::pair{ParentFunc, IsRetOrCallCont};
   };
@@ -1423,8 +1422,9 @@ std::error_code DataAggregator::printLBRHeatMap() {
   return std::error_code();
 }
 
-void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
-                                    bool NeedsSkylakeFix) {
+uint64_t DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
+                                        bool NeedsSkylakeFix) {
+  uint64_t NumTraces{0};
   // LBRs are stored in reverse execution order. NextLBR refers to the next
   // executed branch record.
   const LBREntry *NextLBR = nullptr;
@@ -1487,83 +1487,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
   }
-}
-
-void DataAggregator::printColdSamplesDiagnostic() const {
-  if (NumColdSamples > 0) {
-    const float ColdSamples = NumColdSamples * 100.0f / NumTotalSamples;
-    outs() << "PERF2BOLT: " << NumColdSamples
-           << format(" (%.1f%%)", ColdSamples)
-           << " samples recorded in cold regions of split functions.\n";
-    if (ColdSamples > 5.0f)
-      outs()
-          << "WARNING: The BOLT-processed binary where samples were collected "
-             "likely used bad data or your service observed a large shift in "
-             "profile. You may want to audit this\n";
-  }
-}
-
-void DataAggregator::printLongRangeTracesDiagnostic() const {
-  outs() << "PERF2BOLT: out of range traces involving unknown regions: "
-         << NumLongRangeTraces;
-  if (NumTraces > 0)
-    outs() << format(" (%.1f%%)", NumLongRangeTraces * 100.0f / NumTraces);
-  outs() << "\n";
-}
-
-static float printColoredPct(uint64_t Numerator, uint64_t Denominator, float T1,
-                             float T2) {
-  if (Denominator == 0) {
-    outs() << "\n";
-    return 0;
-  }
-  float Percent = Numerator * 100.0f / Denominator;
-  outs() << " (";
-  if (outs().has_colors()) {
-    if (Percent > T2)
-      outs().changeColor(raw_ostream::RED);
-    else if (Percent > T1)
-      outs().changeColor(raw_ostream::YELLOW);
-    else
-      outs().changeColor(raw_ostream::GREEN);
-  }
-  outs() << format("%.1f%%", Percent);
-  if (outs().has_colors())
-    outs().resetColor();
-  outs() << ")\n";
-  return Percent;
-}
-
-void DataAggregator::printBranchSamplesDiagnostics() const {
-  outs() << "PERF2BOLT: traces mismatching disassembled function contents: "
-         << NumInvalidTraces;
-  if (printColoredPct(NumInvalidTraces, NumTraces, 5, 10) > 10)
-    outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
-              "binary is probably not the same binary used during profiling "
-              "collection. The generated data may be ineffective for improving "
-              "performance\n\n";
-  printLongRangeTracesDiagnostic();
-  printColdSamplesDiagnostic();
-}
-
-void DataAggregator::printBasicSamplesDiagnostics(
-    uint64_t OutOfRangeSamples) const {
-  outs() << "PERF2BOLT: out of range samples recorded in unknown regions: "
-         << OutOfRangeSamples;
-  if (printColoredPct(OutOfRangeSamples, NumTotalSamples, 40, 60) > 80)
-    outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
-              "binary is probably not the same binary used during profiling "
-              "collection. The generated data may be ineffective for improving "
-              "performance\n\n";
-  printColdSamplesDiagnostic();
-}
-
-void DataAggregator::printBranchStacksDiagnostics(
-    uint64_t IgnoredSamples) const {
-  outs() << "PERF2BOLT: ignored samples: " << IgnoredSamples;
-  if (printColoredPct(IgnoredSamples, NumTotalSamples, 20, 50) > 50)
-    errs() << "PERF2BOLT-WARNING: less than 50% of all recorded samples "
-              "were attributed to the input binary\n";
+  return NumTraces;
 }
 
 std::error_code DataAggregator::parseBranchEvents() {
@@ -1571,9 +1495,11 @@ std::error_code DataAggregator::parseBranchEvents() {
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
+  uint64_t NumTotalSamples = 0;
   uint64_t NumEntries = 0;
   uint64_t NumSamples = 0;
   uint64_t NumSamplesNoLBR = 0;
+  uint64_t NumTraces = 0;
   bool NeedsSkylakeFix = false;
 
   while (hasData() && NumTotalSamples < opts::MaxSamples) {
@@ -1600,13 +1526,29 @@ std::error_code DataAggregator::parseBranchEvents() {
       NeedsSkylakeFix = true;
     }
 
-    parseLBRSample(Sample, NeedsSkylakeFix);
+    NumTraces += parseLBRSample(Sample, NeedsSkylakeFix);
   }
 
   for (const Trace &Trace : llvm::make_first_range(BranchLBRs))
     for (const uint64_t Addr : {Trace.From, Trace.To})
       if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Addr))
         BF->setHasProfileAvailable();
+
+  auto printColored = [](raw_ostream &OS, float Percent, float T1, float T2) {
+    OS << " (";
+    if (OS.has_colors()) {
+      if (Percent > T2)
+        OS.changeColor(raw_ostream::RED);
+      else if (Percent > T1)
+        OS.changeColor(raw_ostream::YELLOW);
+      else
+        OS.changeColor(raw_ostream::GREEN);
+    }
+    OS << format("%.1f%%", Percent);
+    if (OS.has_colors())
+      OS.resetColor();
+    OS << ")";
+  };
 
   outs() << "PERF2BOLT: read " << NumSamples << " samples and " << NumEntries
          << " LBR entries\n";
@@ -1619,10 +1561,47 @@ std::error_code DataAggregator::parseBranchEvents() {
                 "in no-LBR mode with -nl (the performance improvement in -nl "
                 "mode may be limited)\n";
     } else {
-      printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
+      const uint64_t IgnoredSamples = NumTotalSamples - NumSamples;
+      const float PercentIgnored = 100.0f * IgnoredSamples / NumTotalSamples;
+      outs() << "PERF2BOLT: " << IgnoredSamples << " samples";
+      printColored(outs(), PercentIgnored, 20, 50);
+      outs() << " were ignored\n";
+      if (PercentIgnored > 50.0f)
+        errs() << "PERF2BOLT-WARNING: less than 50% of all recorded samples "
+                  "were attributed to the input binary\n";
     }
   }
-  printBranchSamplesDiagnostics();
+  outs() << "PERF2BOLT: traces mismatching disassembled function contents: "
+         << NumInvalidTraces;
+  float Perc = 0.0f;
+  if (NumTraces > 0) {
+    Perc = NumInvalidTraces * 100.0f / NumTraces;
+    printColored(outs(), Perc, 5, 10);
+  }
+  outs() << "\n";
+  if (Perc > 10.0f)
+    outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
+              "binary is probably not the same binary used during profiling "
+              "collection. The generated data may be ineffective for improving "
+              "performance.\n\n";
+
+  outs() << "PERF2BOLT: out of range traces involving unknown regions: "
+         << NumLongRangeTraces;
+  if (NumTraces > 0)
+    outs() << format(" (%.1f%%)", NumLongRangeTraces * 100.0f / NumTraces);
+  outs() << "\n";
+
+  if (NumColdSamples > 0) {
+    const float ColdSamples = NumColdSamples * 100.0f / NumTotalSamples;
+    outs() << "PERF2BOLT: " << NumColdSamples
+           << format(" (%.1f%%)", ColdSamples)
+           << " samples recorded in cold regions of split functions.\n";
+    if (ColdSamples > 5.0f)
+      outs()
+          << "WARNING: The BOLT-processed binary where samples were collected "
+             "likely used bad data or your service observed a large shift in "
+             "profile. You may want to audit this.\n";
+  }
 
   return std::error_code();
 }
@@ -1679,10 +1658,11 @@ void DataAggregator::processBasicEvents() {
   NamedRegionTimer T("processBasic", "Processing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   uint64_t OutOfRangeSamples = 0;
+  uint64_t NumSamples = 0;
   for (auto &Sample : BasicSamples) {
     const uint64_t PC = Sample.first;
     const uint64_t HitCount = Sample.second;
-    NumTotalSamples += HitCount;
+    NumSamples += HitCount;
     BinaryFunction *Func = getBinaryFunctionContainingAddress(PC);
     if (!Func) {
       OutOfRangeSamples += HitCount;
@@ -1691,9 +1671,33 @@ void DataAggregator::processBasicEvents() {
 
     doSample(*Func, PC, HitCount);
   }
-  outs() << "PERF2BOLT: read " << NumTotalSamples << " samples\n";
+  outs() << "PERF2BOLT: read " << NumSamples << " samples\n";
 
-  printBasicSamplesDiagnostics(OutOfRangeSamples);
+  outs() << "PERF2BOLT: out of range samples recorded in unknown regions: "
+         << OutOfRangeSamples;
+  float Perc = 0.0f;
+  if (NumSamples > 0) {
+    outs() << " (";
+    Perc = OutOfRangeSamples * 100.0f / NumSamples;
+    if (outs().has_colors()) {
+      if (Perc > 60.0f)
+        outs().changeColor(raw_ostream::RED);
+      else if (Perc > 40.0f)
+        outs().changeColor(raw_ostream::YELLOW);
+      else
+        outs().changeColor(raw_ostream::GREEN);
+    }
+    outs() << format("%.1f%%", Perc);
+    if (outs().has_colors())
+      outs().resetColor();
+    outs() << ")";
+  }
+  outs() << "\n";
+  if (Perc > 80.0f)
+    outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
+              "binary is probably not the same binary used during profiling "
+              "collection. The generated data may be ineffective for improving "
+              "performance.\n\n";
 }
 
 std::error_code DataAggregator::parseMemEvents() {
@@ -1771,13 +1775,13 @@ void DataAggregator::processPreAggregated() {
   NamedRegionTimer T("processAggregated", "Processing aggregated branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
+  uint64_t NumTraces = 0;
   for (const AggregatedLBREntry &AggrEntry : AggregatedLBRs) {
     switch (AggrEntry.EntryType) {
     case AggregatedLBREntry::BRANCH:
     case AggregatedLBREntry::TRACE:
       doBranch(AggrEntry.From.Offset, AggrEntry.To.Offset, AggrEntry.Count,
                AggrEntry.Mispreds);
-      NumTotalSamples += AggrEntry.Count;
       break;
     case AggregatedLBREntry::FT:
     case AggregatedLBREntry::FT_EXTERNAL_ORIGIN: {
@@ -1795,7 +1799,37 @@ void DataAggregator::processPreAggregated() {
 
   outs() << "PERF2BOLT: read " << AggregatedLBRs.size()
          << " aggregated LBR entries\n";
-  printBranchSamplesDiagnostics();
+  outs() << "PERF2BOLT: traces mismatching disassembled function contents: "
+         << NumInvalidTraces;
+  float Perc = 0.0f;
+  if (NumTraces > 0) {
+    outs() << " (";
+    Perc = NumInvalidTraces * 100.0f / NumTraces;
+    if (outs().has_colors()) {
+      if (Perc > 10.0f)
+        outs().changeColor(raw_ostream::RED);
+      else if (Perc > 5.0f)
+        outs().changeColor(raw_ostream::YELLOW);
+      else
+        outs().changeColor(raw_ostream::GREEN);
+    }
+    outs() << format("%.1f%%", Perc);
+    if (outs().has_colors())
+      outs().resetColor();
+    outs() << ")";
+  }
+  outs() << "\n";
+  if (Perc > 10.0f)
+    outs() << "\n !! WARNING !! This high mismatch ratio indicates the input "
+              "binary is probably not the same binary used during profiling "
+              "collection. The generated data may be ineffective for improving "
+              "performance.\n\n";
+
+  outs() << "PERF2BOLT: Out of range traces involving unknown regions: "
+         << NumLongRangeTraces;
+  if (NumTraces > 0)
+    outs() << format(" (%.1f%%)", NumLongRangeTraces * 100.0f / NumTraces);
+  outs() << "\n";
 }
 
 std::optional<int32_t> DataAggregator::parseCommExecEvent() {
