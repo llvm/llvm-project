@@ -310,7 +310,7 @@ LIBC_INLINE static float log_eval_f(float x) {
   // p1 * 2^(-7) <= m_x < (p1 + 1) * 2^(-7).
   int p1 = static_cast<int>(xbits.get_mantissa() >> (FPBits::FRACTION_LEN - 7));
 
-  // Set bits to (1 + (mx - p1*2^(-7))
+  // Set bits to (1 + (mx - p1*2^(-7)))
   xbits.set_uintval(xbits.uintval() & (FPBits::FRACTION_MASK >> 7));
   xbits.set_biased_exponent(FPBits::EXP_BIAS);
   // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
