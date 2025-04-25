@@ -164,6 +164,20 @@ if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
     "https://compiler-rt.llvm.org/ for building the runtimes.")
 endif()
 
+if ("offload" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=offload is deprecated now, and will "
+    "become a fatal error in the LLVM 21 release.  Please use "
+    "-DLLVM_ENABLE_RUNTIMES=offload or see the instructions at "
+    "https://openmp.llvm.org/ for building the runtimes.")
+endif()
+
+if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(WARNING "Using LLVM_ENABLE_PROJECTS=openmp is deprecated now, and will "
+    "become a fatal error in the LLVM 21 release.  Please use "
+    "-DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
+    "https://openmp.llvm.org/ for building the runtimes.")
+endif()
+
 if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
   if (NOT "flang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(FATAL_ERROR "Flang is not enabled, but is required for the Flang-RT runtime")
