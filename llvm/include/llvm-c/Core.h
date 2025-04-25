@@ -2402,9 +2402,8 @@ LLVMValueRef LLVMConstArray2(LLVMTypeRef ElementTy, LLVMValueRef *ConstantVals,
  * Create a ConstantDataArray from raw values.
  *
  * ElementTy must be one of i8, i16, i32, i64, half, bfloat, float, or double.
- * Data points to a contiguous buffer of raw values with the appropriate
- * endianness. The element count is inferred from the element type and the data
- * size in bytes.
+ * Data points to a contiguous buffer of raw values in the host endianness. The
+ * element count is inferred from the element type and the data size in bytes.
  *
  * @see llvm::ConstantDataArray::getRaw()
  */
