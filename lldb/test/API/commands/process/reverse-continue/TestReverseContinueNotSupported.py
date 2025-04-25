@@ -11,7 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestReverseContinueNotSupported(TestBase):
-    @skipIfWindows
     def test_reverse_continue_not_supported(self):
         target = self.connect()
 
@@ -26,7 +25,9 @@ class TestReverseContinueNotSupported(TestBase):
         self.expect(
             "process continue --reverse",
             error=True,
-            substrs=["target does not support reverse-continue"],
+            # This error is "<plugin name> does not support...". The plugin name changes
+            # between platforms.
+            substrs=["does not support reverse execution of processes"],
         )
 
     def test_reverse_continue_forward_and_reverse(self):
