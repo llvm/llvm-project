@@ -682,8 +682,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__copysign_negative_select_pinf_rh
 define nofpclass(pinf pnorm psub pzero) float @ret_nofpclass_nopositives_copysign(float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_nofpclass_nopositives_copysign
 ; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %copysign = call float @llvm.copysign.f32(float %x, float %unknown.sign)
@@ -694,8 +693,7 @@ define nofpclass(pinf pnorm psub pzero) float @ret_nofpclass_nopositives_copysig
 define nofpclass(pinf pnorm psub pzero) float @ret_nofpclass_nopositives_copysign_nnan_flag(float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_nofpclass_nopositives_copysign_nnan_flag
 ; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = fneg nnan float [[TMP1]]
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nnan float @llvm.copysign.f32(float [[X]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %copysign = call nnan float @llvm.copysign.f32(float %x, float %unknown.sign)
@@ -718,7 +716,7 @@ define nofpclass(nan pinf pnorm psub pzero) float @ret_nofpclass_nopositives_non
 define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_nonegatives_copysign(float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_nofpclass_nonegatives_copysign
 ; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %copysign = call float @llvm.copysign.f32(float %x, float %unknown.sign)
@@ -729,7 +727,7 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_nonegatives_copysig
 define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_nonegatives_copysign_nnan_flag(float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_nofpclass_nonegatives_copysign_nnan_flag
 ; CHECK-SAME: (float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nnan float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nnan float @llvm.copysign.f32(float [[X]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %copysign = call nnan float @llvm.copysign.f32(float %x, float %unknown.sign)
@@ -763,7 +761,7 @@ define nofpclass(pinf pnorm psub pzero) float @ret_nofpclass_nopositives__copysi
 define nofpclass(inf nnorm nsub nzero) float @ret_nofpclass_no_negatives_noinf__copysign_unknown_select_pinf_rhs(i1 %cond, float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @ret_nofpclass_no_negatives_noinf__copysign_unknown_select_pinf_rhs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
@@ -775,8 +773,7 @@ define nofpclass(inf nnorm nsub nzero) float @ret_nofpclass_no_negatives_noinf__
 define nofpclass(inf pnorm psub pzero) float @ret_nofpclass_no_positives_noinf__copysign_unknown_select_pinf_rhs(i1 %cond, float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(inf pzero psub pnorm) float @ret_nofpclass_no_positives_noinf__copysign_unknown_select_pinf_rhs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[X]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
@@ -788,8 +785,8 @@ define nofpclass(inf pnorm psub pzero) float @ret_nofpclass_no_positives_noinf__
 define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_no_negatives__copysign_unknown_select_pinf_rhs(i1 %cond, float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_nofpclass_no_negatives__copysign_unknown_select_pinf_rhs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = select i1 [[COND]], float [[TMP1]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[SELECT]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
@@ -801,9 +798,8 @@ define nofpclass(ninf nnorm nsub nzero) float @ret_nofpclass_no_negatives__copys
 define nofpclass(pinf pnorm psub pzero) float @ret_nofpclass_no_positives__copysign_unknown_select_pinf_rhs(i1 %cond, float %x, float %unknown.sign) {
 ; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @ret_nofpclass_no_positives__copysign_unknown_select_pinf_rhs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], float [[UNKNOWN_SIGN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[DOTNEG:%.*]] = fneg float [[TMP1]]
-; CHECK-NEXT:    [[COPYSIGN:%.*]] = select i1 [[COND]], float [[DOTNEG]], float 0xFFF0000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[SELECT]], float [[UNKNOWN_SIGN]])
 ; CHECK-NEXT:    ret float [[COPYSIGN]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000

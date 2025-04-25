@@ -2013,13 +2013,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
       if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
         return I;
 
-      if ((DemandedMask & fcPositive) == fcNone) {
+      if ((DemandedMask & fcNegative) == DemandedMask) {
         // Roundabout way of replacing with fneg(fabs)
         I->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
-      if ((DemandedMask & fcNegative) == fcNone) {
+      if ((DemandedMask & fcPositive) == DemandedMask) {
         // Roundabout way of replacing with fabs
         I->setOperand(1, ConstantFP::getZero(VTy));
         return I;
