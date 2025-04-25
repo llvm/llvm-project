@@ -162,7 +162,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     omp::ClauseCancellationConstructType cancelledDirective =
         op.getCancelDirective();
     if (cancelledDirective != omp::ClauseCancellationConstructType::Parallel)
-      result = todo("cancel directive");
+      result = todo("cancel directive construct type not yet supported");
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
     if (!op.getDependVars().empty() || op.getDependKinds())
@@ -1591,15 +1591,13 @@ cleanupPrivateVars(llvm::IRBuilderBase &builder,
 static bool constructIsCancellable(Operation *op) {
   // omp.cancel must be "closely nested" so it will be visible and not inside of
   // funcion calls. This is enforced by the verifier.
-  bool containsCancel = false;
-  op->walk([&containsCancel](Operation *child) {
-    if (mlir::isa<omp::CancelOp>(child)) {
-      containsCancel = true;
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-  return containsCancel;
+  return op
+      ->walk([](Operation *child) {
+        if (mlir::isa<omp::CancelOp>(child))
+          return WalkResult::interrupt();
+        return WalkResult::advance();
+      })
+      .wasInterrupted();
 }
 
 static LogicalResult

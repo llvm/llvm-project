@@ -31,7 +31,7 @@ llvm.func @cancel_wsloop(%lb : i32, %ub : i32, %step: i32) {
   omp.wsloop {
     // expected-error@below {{LLVM Translation failed for operation: omp.loop_nest}}
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive in omp.cancel operation}}
+      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
       // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
       omp.cancel cancellation_construct_type(loop)
       omp.yield
@@ -46,7 +46,7 @@ llvm.func @cancel_sections() {
   // expected-error@below {{LLVM Translation failed for operation: omp.sections}}
   omp.sections {
     omp.section {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive in omp.cancel operation}}
+      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
       // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
       omp.cancel cancellation_construct_type(sections)
       omp.terminator
@@ -63,7 +63,7 @@ llvm.func @cancel_taskgroup() {
   omp.taskgroup {
     // expected-error@below {{LLVM Translation failed for operation: omp.task}}
     omp.task {
-      // expected-error@below {{not yet implemented: Unhandled clause cancel directive in omp.cancel operation}}
+      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
       // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
       omp.cancel cancellation_construct_type(taskgroup)
       omp.terminator
