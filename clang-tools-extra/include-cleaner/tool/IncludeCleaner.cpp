@@ -92,7 +92,8 @@ cl::opt<bool> Edit{
 };
 cl::opt<bool> Insert{
     "insert",
-    cl::desc("Allow header insertions (deprecated. Use -disable-insert instead)"),
+    cl::desc(
+        "Allow header insertions (deprecated. Use -disable-insert instead)"),
     cl::init(true),
     cl::cat(IncludeCleaner),
 };
@@ -196,17 +197,19 @@ private:
                 getCompilerInstance().getPreprocessor(), HeaderFilter);
 
     if (!Insert) {
-      llvm::errs() << "`-insert=0` is deprecated in favor of `-disable-insert`. "
-                      "The old flag was confusing since it suggested that inserts "
-                      "were disabled by default, when they were actually enabled. "
-                      "See https://github.com/llvm/llvm-project/issues/132983\n";
+      llvm::errs()
+          << "[WARNING] -insert is deprecated in favor of `-disable-insert`. "
+             "The old flag was confusing since it suggested that inserts "
+             "were disabled by default, when they were actually enabled. "
+             "See https://github.com/llvm/llvm-project/issues/132983\n";
     }
 
     if (!Remove) {
-      llvm::errs() << "`-remove=0` is deprecated in favor of `-disable-remove`. "
-                      "The old flag was confusing since it suggested that removes "
-                      "were disabled by default, when they were actually enabled. "
-                      "See https://github.com/llvm/llvm-project/issues/132983\n";
+      llvm::errs()
+          << "[WARNING] -remove is deprecated in favor of `-disable-remove`. "
+             "The old flag was confusing since it suggested that removes "
+             "were disabled by default, when they were actually enabled. "
+             "See https://github.com/llvm/llvm-project/issues/132983\n";
     }
 
     if (!Insert || DisableInsert)
