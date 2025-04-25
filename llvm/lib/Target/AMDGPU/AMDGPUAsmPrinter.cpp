@@ -1268,10 +1268,12 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   unsigned LDSAlignShift;
 #if LLPC_BUILD_NPI
-  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize327680)) {
+  if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize327680) ||
+      STM.getFeatureBits().test(FeatureAddressableLocalMemorySize196608)) {
     // LDS is allocated in 256 dword blocks.
     LDSAlignShift = 10;
-  } else if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
+  } else if (STM.getFeatureBits().test(
+                 FeatureAddressableLocalMemorySize163840)) {
 #else /* LLPC_BUILD_NPI */
   if (STM.getFeatureBits().test(FeatureAddressableLocalMemorySize163840)) {
 #endif /* LLPC_BUILD_NPI */

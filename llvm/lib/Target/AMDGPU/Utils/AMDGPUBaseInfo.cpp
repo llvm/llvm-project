@@ -4090,8 +4090,10 @@ bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
 #if LLPC_BUILD_NPI
-  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ? 256
-                                                                        : 128;
+  return ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize327680) ||
+                 ST.hasFeature(AMDGPU::FeatureAddressableLocalMemorySize196608)
+             ? 256
+             : 128;
 }
 
 bool isPackedFP32Inst(unsigned Opc) {
