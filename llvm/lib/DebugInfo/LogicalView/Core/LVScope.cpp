@@ -330,13 +330,16 @@ void LVScope::addMissingElements(LVScope *Reference) {
       Symbol->setIsOptimized();
       Symbol->setReference(Reference);
 
-      // The symbol can be a constant, parameter or variable.
+      // The symbol can be a constant, parameter, variable or unspecified
+      // parameters (i.e. `...`).
       if (Reference->getIsConstant())
         Symbol->setIsConstant();
       else if (Reference->getIsParameter())
         Symbol->setIsParameter();
       else if (Reference->getIsVariable())
         Symbol->setIsVariable();
+      else if (Reference->getIsUnspecified())
+        Symbol->setIsUnspecified();
       else
         llvm_unreachable("Invalid symbol kind.");
     }
