@@ -364,7 +364,8 @@ cl::list<LVScopeKind> cmdline::SelectScopes(
         clEnumValN(LVScopeKind::IsTemplatePack, "TemplatePack",
                    "Template pack."),
         clEnumValN(LVScopeKind::IsTryBlock, "TryBlock", "Exception try block."),
-        clEnumValN(LVScopeKind::IsUnion, "Union", "Union.")));
+        clEnumValN(LVScopeKind::IsUnion, "Union", "Union."),
+        clEnumValN(LVScopeKind::IsModule, "Module", "Module.")));
 
 // --select-symbols=<value>[,<value>,...]
 cl::list<LVSymbolKind> cmdline::SelectSymbols(
