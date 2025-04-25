@@ -1,7 +1,7 @@
 ; Make sure we don't break on non-callee uses of funtions with a
 ; non-void return type.
 
-; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=values-to-return --test FileCheck --test-arg --check-prefix=INTERESTING --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=instructions-to-return --test FileCheck --test-arg --check-prefix=INTERESTING --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefix=RESULT %s < %t
 
 ; INTERESTING-LABEL: @interesting(
