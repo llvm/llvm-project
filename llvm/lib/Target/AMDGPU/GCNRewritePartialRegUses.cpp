@@ -28,7 +28,6 @@
 /// calculation and creates more possibilities for the code unaware of lanemasks
 //===----------------------------------------------------------------------===//
 
-#include "GCNRewritePartialRegUses.h"
 #include "AMDGPU.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
@@ -45,7 +44,25 @@ using namespace llvm;
 
 namespace {
 
-class GCNRewritePartialRegUsesImpl {
+class GCNRewritePartialRegUses : public MachineFunctionPass {
+public:
+  static char ID;
+  GCNRewritePartialRegUses() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "Rewrite Partial Register Uses";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+private:
   MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   const TargetInstrInfo *TII;
@@ -138,36 +155,13 @@ class GCNRewritePartialRegUsesImpl {
   /// Cache for getAllocatableAndAlignedRegClassMask method:
   ///   AlignNumBits -> Class bitmask.
   mutable SmallDenseMap<unsigned, BitVector> AllocatableAndAlignedRegClassMasks;
-
-public:
-  GCNRewritePartialRegUsesImpl(LiveIntervals *LS) : LIS(LS) {}
-  bool run(MachineFunction &MF);
-};
-
-class GCNRewritePartialRegUsesLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-  GCNRewritePartialRegUsesLegacy() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "Rewrite Partial Register Uses";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreserved<SlotIndexesWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
 } // end anonymous namespace
 
 // TODO: move this to the tablegen and use binary search by Offset.
-unsigned GCNRewritePartialRegUsesImpl::getSubReg(unsigned Offset,
-                                                 unsigned Size) const {
+unsigned GCNRewritePartialRegUses::getSubReg(unsigned Offset,
+                                             unsigned Size) const {
   const auto [I, Inserted] = SubRegs.try_emplace({Offset, Size}, 0);
   if (Inserted) {
     for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx < E; ++Idx) {
@@ -181,14 +175,15 @@ unsigned GCNRewritePartialRegUsesImpl::getSubReg(unsigned Offset,
   return I->second;
 }
 
-unsigned GCNRewritePartialRegUsesImpl::shiftSubReg(unsigned SubReg,
-                                                   unsigned RShift) const {
+unsigned GCNRewritePartialRegUses::shiftSubReg(unsigned SubReg,
+                                               unsigned RShift) const {
   unsigned Offset = TRI->getSubRegIdxOffset(SubReg) - RShift;
   return getSubReg(Offset, TRI->getSubRegIdxSize(SubReg));
 }
 
-const uint32_t *GCNRewritePartialRegUsesImpl::getSuperRegClassMask(
-    const TargetRegisterClass *RC, unsigned SubRegIdx) const {
+const uint32_t *
+GCNRewritePartialRegUses::getSuperRegClassMask(const TargetRegisterClass *RC,
+                                               unsigned SubRegIdx) const {
   const auto [I, Inserted] =
       SuperRegMasks.try_emplace({RC, SubRegIdx}, nullptr);
   if (Inserted) {
@@ -202,8 +197,7 @@ const uint32_t *GCNRewritePartialRegUsesImpl::getSuperRegClassMask(
   return I->second;
 }
 
-const BitVector &
-GCNRewritePartialRegUsesImpl::getAllocatableAndAlignedRegClassMask(
+const BitVector &GCNRewritePartialRegUses::getAllocatableAndAlignedRegClassMask(
     unsigned AlignNumBits) const {
   const auto [I, Inserted] =
       AllocatableAndAlignedRegClassMasks.try_emplace(AlignNumBits);
@@ -220,7 +214,7 @@ GCNRewritePartialRegUsesImpl::getAllocatableAndAlignedRegClassMask(
 }
 
 const TargetRegisterClass *
-GCNRewritePartialRegUsesImpl::getRegClassWithShiftedSubregs(
+GCNRewritePartialRegUses::getRegClassWithShiftedSubregs(
     const TargetRegisterClass *RC, unsigned RShift, unsigned RegNumBits,
     unsigned CoverSubregIdx, SubRegMap &SubRegs) const {
 
@@ -295,8 +289,8 @@ GCNRewritePartialRegUsesImpl::getRegClassWithShiftedSubregs(
 }
 
 const TargetRegisterClass *
-GCNRewritePartialRegUsesImpl::getMinSizeReg(const TargetRegisterClass *RC,
-                                            SubRegMap &SubRegs) const {
+GCNRewritePartialRegUses::getMinSizeReg(const TargetRegisterClass *RC,
+                                        SubRegMap &SubRegs) const {
   unsigned CoverSubreg = AMDGPU::NoSubRegister;
   unsigned Offset = std::numeric_limits<unsigned>::max();
   unsigned End = 0;
@@ -349,8 +343,9 @@ GCNRewritePartialRegUsesImpl::getMinSizeReg(const TargetRegisterClass *RC,
 
 // Only the subrange's lanemasks of the original interval need to be modified.
 // Subrange for a covering subreg becomes the main range.
-void GCNRewritePartialRegUsesImpl::updateLiveIntervals(
-    Register OldReg, Register NewReg, SubRegMap &SubRegs) const {
+void GCNRewritePartialRegUses::updateLiveIntervals(Register OldReg,
+                                                   Register NewReg,
+                                                   SubRegMap &SubRegs) const {
   if (!LIS->hasInterval(OldReg))
     return;
 
@@ -405,13 +400,13 @@ void GCNRewritePartialRegUsesImpl::updateLiveIntervals(
 }
 
 const TargetRegisterClass *
-GCNRewritePartialRegUsesImpl::getOperandRegClass(MachineOperand &MO) const {
+GCNRewritePartialRegUses::getOperandRegClass(MachineOperand &MO) const {
   MachineInstr *MI = MO.getParent();
   return TII->getRegClass(TII->get(MI->getOpcode()), MI->getOperandNo(&MO), TRI,
                           *MI->getParent()->getParent());
 }
 
-bool GCNRewritePartialRegUsesImpl::rewriteReg(Register Reg) const {
+bool GCNRewritePartialRegUses::rewriteReg(Register Reg) const {
   auto Range = MRI->reg_nodbg_operands(Reg);
   if (Range.empty() || any_of(Range, [](MachineOperand &MO) {
         return MO.getSubReg() == AMDGPU::NoSubRegister; // Whole reg used. [1]
@@ -481,10 +476,12 @@ bool GCNRewritePartialRegUsesImpl::rewriteReg(Register Reg) const {
   return true;
 }
 
-bool GCNRewritePartialRegUsesImpl::run(MachineFunction &MF) {
+bool GCNRewritePartialRegUses::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   TII = MF.getSubtarget().getInstrInfo();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   bool Changed = false;
   for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
     Changed |= rewriteReg(Register::index2VirtReg(I));
@@ -492,33 +489,11 @@ bool GCNRewritePartialRegUsesImpl::run(MachineFunction &MF) {
   return Changed;
 }
 
-bool GCNRewritePartialRegUsesLegacy::runOnMachineFunction(MachineFunction &MF) {
-  LiveIntervalsWrapperPass *LISWrapper =
-      getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  GCNRewritePartialRegUsesImpl Impl(LIS);
-  return Impl.run(MF);
-}
+char GCNRewritePartialRegUses::ID;
 
-PreservedAnalyses
-GCNRewritePartialRegUsesPass::run(MachineFunction &MF,
-                                  MachineFunctionAnalysisManager &MFAM) {
-  auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
-  if (!GCNRewritePartialRegUsesImpl(LIS).run(MF))
-    return PreservedAnalyses::all();
+char &llvm::GCNRewritePartialRegUsesID = GCNRewritePartialRegUses::ID;
 
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<LiveIntervalsAnalysis>();
-  PA.preserve<SlotIndexesAnalysis>();
-  return PA;
-}
-
-char GCNRewritePartialRegUsesLegacy::ID;
-
-char &llvm::GCNRewritePartialRegUsesID = GCNRewritePartialRegUsesLegacy::ID;
-
-INITIALIZE_PASS_BEGIN(GCNRewritePartialRegUsesLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(GCNRewritePartialRegUses, DEBUG_TYPE,
                       "Rewrite Partial Register Uses", false, false)
-INITIALIZE_PASS_END(GCNRewritePartialRegUsesLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_END(GCNRewritePartialRegUses, DEBUG_TYPE,
                     "Rewrite Partial Register Uses", false, false)

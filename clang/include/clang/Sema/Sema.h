@@ -232,7 +232,8 @@ void threadSafetyCleanup(BeforeSet *Cache);
 
 // FIXME: No way to easily map from TemplateTypeParmTypes to
 // TemplateTypeParmDecls, so we have this horrible PointerUnion.
-typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *>,
+typedef std::pair<llvm::PointerUnion<const TemplateTypeParmType *, NamedDecl *,
+                                     ResolvedUnexpandedPackExpr *>,
                   SourceLocation>
     UnexpandedParameterPack;
 
@@ -1348,12 +1349,6 @@ public:
                                     unsigned DiagID, bool ForceCheck = false,
                                     bool ForceUnprivileged = false);
 
-  AccessResult CheckBaseClassAccess(
-      SourceLocation AccessLoc, CXXRecordDecl *Base, CXXRecordDecl *Derived,
-      const CXXBasePath &Path, unsigned DiagID,
-      llvm::function_ref<void(PartialDiagnostic &PD)> SetupPDiag,
-      bool ForceCheck = false, bool ForceUnprivileged = false);
-
   /// Checks access to all the declarations in the given result set.
   void CheckLookupAccess(const LookupResult &R);
 
@@ -1914,23 +1909,7 @@ public:
   /// '\#pragma clang attribute push' directives to the given declaration.
   void AddPragmaAttributes(Scope *S, Decl *D);
 
-  using InstantiationContextDiagFuncRef =
-      llvm::function_ref<void(SourceLocation, PartialDiagnostic)>;
-  auto getDefaultDiagFunc() {
-    return [this](SourceLocation Loc, PartialDiagnostic PD) {
-      // This bypasses a lot of the filters in the diag engine, as it's
-      // to be used to attach notes to diagnostics which have already
-      // been filtered through.
-      DiagnosticBuilder Builder(Diags.Report(Loc, PD.getDiagID()));
-      PD.Emit(Builder);
-    };
-  }
-
-  void PrintPragmaAttributeInstantiationPoint(
-      InstantiationContextDiagFuncRef DiagFunc);
-  void PrintPragmaAttributeInstantiationPoint() {
-    PrintPragmaAttributeInstantiationPoint(getDefaultDiagFunc());
-  }
+  void PrintPragmaAttributeInstantiationPoint();
 
   void DiagnoseUnterminatedPragmaAttribute();
 
@@ -2183,7 +2162,6 @@ public:
     FAPK_Fixed,    // values to format are fixed (no C-style variadic arguments)
     FAPK_Variadic, // values to format are passed as variadic arguments
     FAPK_VAList,   // values to format are passed in a va_list
-    FAPK_Elsewhere, // values to format are not passed to this function
   };
 
   // Used to grab the relevant information from a FormatAttr and a
@@ -2194,15 +2172,12 @@ public:
     FormatArgumentPassingKind ArgPassingKind;
   };
 
-  /// Given a function and its FormatAttr or FormatMatchesAttr info, attempts to
-  /// populate the FomatStringInfo parameter with the attribute's correct
-  /// format_idx and firstDataArg. Returns true when the format fits the
-  /// function and the FormatStringInfo has been populated.
-  static bool getFormatStringInfo(const Decl *Function, unsigned FormatIdx,
-                                  unsigned FirstArg, FormatStringInfo *FSI);
-  static bool getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
-                                  bool IsCXXMember, bool IsVariadic,
-                                  FormatStringInfo *FSI);
+  /// Given a FunctionDecl's FormatAttr, attempts to populate the
+  /// FomatStringInfo parameter with the FormatAttr's correct format_idx and
+  /// firstDataArg. Returns true when the format fits the function and the
+  /// FormatStringInfo has been populated.
+  static bool getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
+                                  bool IsVariadic, FormatStringInfo *FSI);
 
   // Used by C++ template instantiation.
   ExprResult BuiltinShuffleVector(CallExpr *TheCall);
@@ -2225,10 +2200,7 @@ public:
     FST_Syslog,
     FST_Unknown
   };
-  static StringRef GetFormatStringTypeName(FormatStringType FST);
-  static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
-  static FormatStringType GetFormatStringType(const FormatMatchesAttr *Format);
 
   bool FormatStringHasSArg(const StringLiteral *FExpr);
 
@@ -2359,18 +2331,9 @@ public:
   bool CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
                          const FunctionProtoType *Proto);
 
-  enum class EltwiseBuiltinArgTyRestriction {
-    None,
-    FloatTy,
-    IntegerTy,
-    SignedIntOrFloatTy,
-  };
-
   /// \param FPOnly restricts the arguments to floating-point types.
-  std::optional<QualType>
-  BuiltinVectorMath(CallExpr *TheCall,
-                    EltwiseBuiltinArgTyRestriction ArgTyRestr =
-                        EltwiseBuiltinArgTyRestriction::None);
+  std::optional<QualType> BuiltinVectorMath(CallExpr *TheCall,
+                                            bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
@@ -2383,25 +2346,6 @@ public:
                  const Expr *ThisArg, ArrayRef<const Expr *> Args,
                  bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
                  VariadicCallType CallType);
-
-  /// Verify that two format strings (as understood by attribute(format) and
-  /// attribute(format_matches) are compatible. If they are incompatible,
-  /// diagnostics are emitted with the assumption that \c
-  /// AuthoritativeFormatString is correct and
-  /// \c TestedFormatString is wrong. If \c FunctionCallArg is provided,
-  /// diagnostics will point to it and a note will refer to \c
-  /// TestedFormatString or \c AuthoritativeFormatString as appropriate.
-  bool
-  CheckFormatStringsCompatible(FormatStringType FST,
-                               const StringLiteral *AuthoritativeFormatString,
-                               const StringLiteral *TestedFormatString,
-                               const Expr *FunctionCallArg = nullptr);
-
-  /// Verify that one format string (as understood by attribute(format)) is
-  /// self-consistent; for instance, that it doesn't have multiple positional
-  /// arguments referring to the same argument in incompatible ways. Diagnose
-  /// if it isn't.
-  bool ValidateFormatString(FormatStringType FST, const StringLiteral *Str);
 
   /// \brief Enforce the bounds of a TCB
   /// CheckTCBEnforcement - Enforces that every function in a named TCB only
@@ -2474,13 +2418,9 @@ public:
                                bool *ICContext = nullptr,
                                bool IsListInit = false);
 
-  bool
-  BuiltinElementwiseTernaryMath(CallExpr *TheCall,
-                                EltwiseBuiltinArgTyRestriction ArgTyRestr =
-                                    EltwiseBuiltinArgTyRestriction::FloatTy);
-  bool PrepareBuiltinElementwiseMathOneArgCall(
-      CallExpr *TheCall, EltwiseBuiltinArgTyRestriction ArgTyRestr =
-                             EltwiseBuiltinArgTyRestriction::None);
+  bool BuiltinElementwiseTernaryMath(CallExpr *TheCall,
+                                     bool CheckForFloatArgs = true);
+  bool PrepareBuiltinElementwiseMathOneArgCall(CallExpr *TheCall);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
@@ -2518,9 +2458,9 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
-  /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
-  /// or '__builtin_c23_va_start' for validity. Emit an error and return true
-  /// on failure; return false on success.
+  /// Check the arguments to '__builtin_va_start' or '__builtin_ms_va_start'
+  /// for validity.  Emit an error and return true on failure; return false
+  /// on success.
   bool BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool BuiltinVAStartARMMicrosoft(CallExpr *Call);
 
@@ -2589,9 +2529,7 @@ private:
                                  AtomicExpr::AtomicOp Op);
 
   /// \param FPOnly restricts the arguments to floating-point types.
-  bool BuiltinElementwiseMath(CallExpr *TheCall,
-                              EltwiseBuiltinArgTyRestriction ArgTyRestr =
-                                  EltwiseBuiltinArgTyRestriction::None);
+  bool BuiltinElementwiseMath(CallExpr *TheCall, bool FPOnly = false);
   bool PrepareBuiltinReduceMathOneArgCall(CallExpr *TheCall);
 
   bool BuiltinNonDeterministicValue(CallExpr *TheCall);
@@ -2624,17 +2562,11 @@ private:
                             VariadicCallType CallType, SourceLocation Loc,
                             SourceRange Range,
                             llvm::SmallBitVector &CheckedVarArgs);
-  bool CheckFormatString(const FormatMatchesAttr *Format,
-                         ArrayRef<const Expr *> Args, bool IsCXXMember,
-                         VariadicCallType CallType, SourceLocation Loc,
-                         SourceRange Range,
-                         llvm::SmallBitVector &CheckedVarArgs);
   bool CheckFormatArguments(ArrayRef<const Expr *> Args,
-                            FormatArgumentPassingKind FAPK,
-                            const StringLiteral *ReferenceFormatString,
-                            unsigned format_idx, unsigned firstDataArg,
-                            FormatStringType Type, VariadicCallType CallType,
-                            SourceLocation Loc, SourceRange range,
+                            FormatArgumentPassingKind FAPK, unsigned format_idx,
+                            unsigned firstDataArg, FormatStringType Type,
+                            VariadicCallType CallType, SourceLocation Loc,
+                            SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
 
   void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
@@ -3189,13 +3121,6 @@ public:
 
   DeclGroupPtrTy ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType = nullptr);
 
-  enum class DiagCtorKind { None, Implicit, Typename };
-  /// Returns the TypeDeclType for the given type declaration,
-  /// as ASTContext::getTypeDeclType would, but
-  /// performs the required semantic checks for name lookup of said entity.
-  QualType getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
-                           TypeDecl *TD, SourceLocation NameLoc);
-
   /// If the identifier refers to a type name within this scope,
   /// return the declaration of that type.
   ///
@@ -3744,7 +3669,6 @@ public:
   /// cause problems if the variable is mutable, its initialization is
   /// effectful, or its address is taken.
   bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *Dcl);
-  void DiagnoseUniqueObjectDuplication(const VarDecl *Dcl);
 
   /// AddInitializerToDecl - Adds the initializer Init to the
   /// declaration dcl. If DirectInit is true, this is C++ direct
@@ -4029,7 +3953,7 @@ public:
   /// Perform ODR-like check for C/ObjC when merging tag types from modules.
   /// Differently from C++, actually parse the body and reject / error out
   /// in case of a structural mismatch.
-  bool ActOnDuplicateDefinition(Scope *S, Decl *Prev, SkipBodyInfo &SkipBody);
+  bool ActOnDuplicateDefinition(Decl *Prev, SkipBodyInfo &SkipBody);
 
   typedef void *SkippedDefinitionContext;
 
@@ -4152,12 +4076,6 @@ public:
   /// diagnostics as appropriate. If there was an error, set New to be invalid.
   void MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
                             LookupResult &OldDecls);
-
-  /// CleanupMergedEnum - We have just merged the decl 'New' by making another
-  /// definition visible.
-  /// This method performs any necessary cleanup on the parser state to discard
-  /// child nodes from newly parsed decl we are retiring.
-  void CleanupMergedEnum(Scope *S, Decl *New);
 
   /// MergeFunctionDecl - We just parsed a function 'New' from
   /// declarator D which has the same name and scope as a previous
@@ -4426,11 +4344,11 @@ public:
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
 
+private:
   /// Function or variable declarations to be checked for whether the deferred
   /// diagnostics should be emitted.
   llvm::SmallSetVector<Decl *, 4> DeclsToCheckForDeferredDiags;
 
-private:
   /// Map of current shadowing declarations to shadowed declarations. Warn if
   /// it looks like the user is trying to modify the shadowing declaration.
   llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
@@ -4642,11 +4560,6 @@ public:
   FormatAttr *mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
                               IdentifierInfo *Format, int FormatIdx,
                               int FirstArg);
-  FormatMatchesAttr *mergeFormatMatchesAttr(Decl *D,
-                                            const AttributeCommonInfo &CI,
-                                            IdentifierInfo *Format,
-                                            int FormatIdx,
-                                            StringLiteral *FormatStr);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
@@ -4796,10 +4709,10 @@ public:
   ///
   /// \returns true if IdxExpr is a valid index.
   template <typename AttrInfo>
-  bool checkFunctionOrMethodParameterIndex(
-      const Decl *D, const AttrInfo &AI, unsigned AttrArgNum,
-      const Expr *IdxExpr, ParamIdx &Idx, bool CanIndexImplicitThis = false,
-      bool CanIndexVariadicArguments = false) {
+  bool checkFunctionOrMethodParameterIndex(const Decl *D, const AttrInfo &AI,
+                                           unsigned AttrArgNum,
+                                           const Expr *IdxExpr, ParamIdx &Idx,
+                                           bool CanIndexImplicitThis = false) {
     assert(isFunctionOrMethodOrBlockForAttrSubject(D));
 
     // In C++ the implicit 'this' function parameter also counts.
@@ -4820,8 +4733,7 @@ public:
     }
 
     unsigned IdxSource = IdxInt->getLimitedValue(UINT_MAX);
-    if (IdxSource < 1 ||
-        ((!IV || !CanIndexVariadicArguments) && IdxSource > NumParams)) {
+    if (IdxSource < 1 || (!IV && IdxSource > NumParams)) {
       Diag(getAttrLoc(AI), diag::err_attribute_argument_out_of_bounds)
           << &AI << AttrArgNum << IdxExpr->getSourceRange();
       return false;
@@ -5473,8 +5385,7 @@ public:
   /// destructor is referenced.
   void MarkVirtualBaseDestructorsReferenced(
       SourceLocation Location, CXXRecordDecl *ClassDecl,
-      llvm::SmallPtrSetImpl<const CXXRecordDecl *> *DirectVirtualBases =
-          nullptr);
+      llvm::SmallPtrSetImpl<const RecordType *> *DirectVirtualBases = nullptr);
 
   /// Do semantic checks to allow the complete destructor variant to be emitted
   /// when the destructor is defined in another translation unit. In the Itanium
@@ -5607,15 +5518,9 @@ public:
   void ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *Method);
   void ActOnFinishDelayedMemberInitializers(Decl *Record);
 
-  enum class StringEvaluationContext { StaticAssert = 0, Asm = 1 };
-
-  bool EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
-                        StringEvaluationContext EvalContext,
-                        bool ErrorOnInvalidMessage);
-  bool EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
-                        StringEvaluationContext EvalContext,
-                        bool ErrorOnInvalidMessage);
-
+  bool EvaluateStaticAssertMessageAsString(Expr *Message, std::string &Result,
+                                           ASTContext &Ctx,
+                                           bool ErrorOnInvalidMessage);
   Decl *ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                      Expr *AssertExpr, Expr *AssertMessageExpr,
                                      SourceLocation RParenLoc);
@@ -5776,11 +5681,10 @@ public:
 
   /// Determine whether the type \p Derived is a C++ class that is
   /// derived from the type \p Base.
-  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
-                     CXXRecordDecl *Base, CXXBasePaths &Paths);
-  bool IsDerivedFrom(SourceLocation Loc, CXXRecordDecl *Derived,
-                     CXXRecordDecl *Base);
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base);
+
+  /// Determine whether the type \p Derived is a C++ class that is
+  /// derived from the type \p Base.
   bool IsDerivedFrom(SourceLocation Loc, QualType Derived, QualType Base,
                      CXXBasePaths &Paths);
 
@@ -6124,8 +6028,7 @@ public:
                                          RecordDecl *ClassDecl,
                                          const IdentifierInfo *Name);
 
-  std::optional<unsigned int> GetDecompositionElementCount(QualType DecompType,
-                                                           SourceLocation Loc);
+  unsigned GetDecompositionElementCount(QualType DecompType);
   void CheckCompleteDecompositionDeclaration(DecompositionDecl *DD);
 
   /// Stack containing information needed when in C++2a an 'auto' is encountered
@@ -10064,24 +9967,15 @@ public:
                                  bool InOverloadResolution,
                                  QualType &ConvertedType);
 
-  enum class MemberPointerConversionResult {
-    Success,
-    DifferentPointee,
-    NotDerived,
-    Ambiguous,
-    Virtual,
-    Inaccessible
-  };
-  enum class MemberPointerConversionDirection : bool { Downcast, Upcast };
   /// CheckMemberPointerConversion - Check the member pointer conversion from
   /// the expression From to the type ToType. This routine checks for ambiguous
   /// or virtual or inaccessible base-to-derived member pointer conversions for
-  /// which IsMemberPointerConversion has already returned true. It produces a
-  // diagnostic if there was an error.
-  MemberPointerConversionResult CheckMemberPointerConversion(
-      QualType FromType, const MemberPointerType *ToPtrType, CastKind &Kind,
-      CXXCastPath &BasePath, SourceLocation CheckLoc, SourceRange OpRange,
-      bool IgnoreBaseAccess, MemberPointerConversionDirection Direction);
+  /// which IsMemberPointerConversion has already returned true. It returns true
+  /// and produces a diagnostic if there was an error, or returns false
+  /// otherwise.
+  bool CheckMemberPointerConversion(Expr *From, QualType ToType, CastKind &Kind,
+                                    CXXCastPath &BasePath,
+                                    bool IgnoreBaseAccess);
 
   /// IsQualificationConversion - Determines whether the conversion from
   /// an rvalue of type FromType to ToType is a qualification conversion
@@ -10572,8 +10466,7 @@ public:
   /// returned.
   FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
       OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
-      TemplateSpecCandidateSet *FailedTSC = nullptr,
-      bool ForTypeDeduction = false);
+      TemplateSpecCandidateSet *FailedTSC = nullptr);
 
   // Resolve and fix an overloaded expression that can be resolved
   // because it identifies a single function template specialization.
@@ -10793,6 +10686,11 @@ public:
   StmtResult ActOnDeclStmt(DeclGroupPtrTy Decl, SourceLocation StartLoc,
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
+
+  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
+  /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
+  /// value has been discarded.
+  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
 
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
@@ -11074,7 +10972,6 @@ private:
   ///@{
 
 public:
-  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
@@ -11285,11 +11182,13 @@ public:
 
   /// Determine whether we would be unable to instantiate this template (because
   /// it either has no definition, or is in the process of being instantiated).
-  bool DiagnoseUninstantiableTemplate(
-      SourceLocation PointOfInstantiation, NamedDecl *Instantiation,
-      bool InstantiatedFromMember, const NamedDecl *Pattern,
-      const NamedDecl *PatternDef, TemplateSpecializationKind TSK,
-      bool Complain = true, bool *Unreachable = nullptr);
+  bool DiagnoseUninstantiableTemplate(SourceLocation PointOfInstantiation,
+                                      NamedDecl *Instantiation,
+                                      bool InstantiatedFromMember,
+                                      const NamedDecl *Pattern,
+                                      const NamedDecl *PatternDef,
+                                      TemplateSpecializationKind TSK,
+                                      bool Complain = true);
 
   /// DiagnoseTemplateParameterShadow - Produce a diagnostic complaining
   /// that the template parameter 'PrevDecl' is being shadowed by a new
@@ -11397,16 +11296,14 @@ public:
 
   /// The context in which we are checking a template parameter list.
   enum TemplateParamListContext {
-    // For this context, Class, Variable, TypeAlias, and non-pack Template
-    // Template Parameters are treated uniformly.
-    TPC_Other,
-
+    TPC_ClassTemplate,
+    TPC_VarTemplate,
     TPC_FunctionTemplate,
     TPC_ClassTemplateMember,
     TPC_FriendClassTemplate,
     TPC_FriendFunctionTemplate,
     TPC_FriendFunctionTemplateDefinition,
-    TPC_TemplateTemplateParameterPack,
+    TPC_TypeAliasTemplate
   };
 
   /// Checks the validity of a template parameter list, possibly
@@ -12621,10 +12518,6 @@ public:
   void MarkUsedTemplateParameters(const TemplateArgumentList &TemplateArgs,
                                   bool OnlyDeduced, unsigned Depth,
                                   llvm::SmallBitVector &Used);
-
-  void MarkUsedTemplateParameters(ArrayRef<TemplateArgument> TemplateArgs,
-                                  unsigned Depth, llvm::SmallBitVector &Used);
-
   void
   MarkDeducedTemplateParameters(const FunctionTemplateDecl *FunctionTemplate,
                                 llvm::SmallBitVector &Deduced) {
@@ -12670,8 +12563,7 @@ public:
   FunctionTemplateDecl *getMoreSpecializedTemplate(
       FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
       TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false,
-      bool PartialOverloading = false);
+      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false);
 
   /// Retrieve the most specialized of the given function template
   /// specializations.
@@ -13371,22 +13263,18 @@ public:
   void pushCodeSynthesisContext(CodeSynthesisContext Ctx);
   void popCodeSynthesisContext();
 
-  void PrintContextStack(InstantiationContextDiagFuncRef DiagFunc) {
+  void PrintContextStack() {
     if (!CodeSynthesisContexts.empty() &&
         CodeSynthesisContexts.size() != LastEmittedCodeSynthesisContextDepth) {
-      PrintInstantiationStack(DiagFunc);
+      PrintInstantiationStack();
       LastEmittedCodeSynthesisContextDepth = CodeSynthesisContexts.size();
     }
     if (PragmaAttributeCurrentTargetDecl)
-      PrintPragmaAttributeInstantiationPoint(DiagFunc);
+      PrintPragmaAttributeInstantiationPoint();
   }
-  void PrintContextStack() { PrintContextStack(getDefaultDiagFunc()); }
   /// Prints the current instantiation stack through a series of
   /// notes.
-  void PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc);
-  void PrintInstantiationStack() {
-    PrintInstantiationStack(getDefaultDiagFunc());
-  }
+  void PrintInstantiationStack();
 
   /// Determines whether we are currently in a context where
   /// template argument substitution failures are not considered
@@ -13482,10 +13370,6 @@ public:
                             bool ForCallExpr = false);
   ExprResult SubstExpr(Expr *E,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
-  /// Substitute an expression as if it is a address-of-operand, which makes it
-  /// act like a CXXIdExpression rather than an attempt to call.
-  ExprResult SubstCXXIdExpr(Expr *E,
-                            const MultiLevelTemplateArgumentList &TemplateArgs);
 
   // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
   // to disable constraint evaluation, then restore the state.
@@ -13707,16 +13591,12 @@ public:
 
   class LocalEagerInstantiationScope {
   public:
-    LocalEagerInstantiationScope(Sema &S, bool AtEndOfTU)
-        : S(S), AtEndOfTU(AtEndOfTU) {
+    LocalEagerInstantiationScope(Sema &S) : S(S) {
       SavedPendingLocalImplicitInstantiations.swap(
           S.PendingLocalImplicitInstantiations);
     }
 
-    void perform() {
-      S.PerformPendingInstantiations(/*LocalOnly=*/true,
-                                     /*AtEndOfTU=*/AtEndOfTU);
-    }
+    void perform() { S.PerformPendingInstantiations(/*LocalOnly=*/true); }
 
     ~LocalEagerInstantiationScope() {
       assert(S.PendingLocalImplicitInstantiations.empty() &&
@@ -13727,7 +13607,6 @@ public:
 
   private:
     Sema &S;
-    bool AtEndOfTU;
     std::deque<PendingImplicitInstantiation>
         SavedPendingLocalImplicitInstantiations;
   };
@@ -13750,8 +13629,8 @@ public:
 
   class GlobalEagerInstantiationScope {
   public:
-    GlobalEagerInstantiationScope(Sema &S, bool Enabled, bool AtEndOfTU)
-        : S(S), Enabled(Enabled), AtEndOfTU(AtEndOfTU) {
+    GlobalEagerInstantiationScope(Sema &S, bool Enabled)
+        : S(S), Enabled(Enabled) {
       if (!Enabled)
         return;
 
@@ -13765,8 +13644,7 @@ public:
     void perform() {
       if (Enabled) {
         S.DefineUsedVTables();
-        S.PerformPendingInstantiations(/*LocalOnly=*/false,
-                                       /*AtEndOfTU=*/AtEndOfTU);
+        S.PerformPendingInstantiations();
       }
     }
 
@@ -13781,8 +13659,7 @@ public:
       S.SavedVTableUses.pop_back();
 
       // Restore the set of pending implicit instantiations.
-      if ((S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) &&
-          AtEndOfTU) {
+      if (S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) {
         assert(S.PendingInstantiations.empty() &&
                "PendingInstantiations should be empty before it is discarded.");
         S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
@@ -13801,7 +13678,6 @@ public:
   private:
     Sema &S;
     bool Enabled;
-    bool AtEndOfTU;
   };
 
   ExplicitSpecifier instantiateExplicitSpecifier(
@@ -13987,8 +13863,7 @@ public:
 
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.
-  void PerformPendingInstantiations(bool LocalOnly = false,
-                                    bool AtEndOfTU = true);
+  void PerformPendingInstantiations(bool LocalOnly = false);
 
   TemplateParameterList *
   SubstTemplateParams(TemplateParameterList *Params, DeclContext *Owner,
@@ -14661,8 +14536,7 @@ public:
                                 bool First = true);
 
   const NormalizedConstraint *getNormalizedAssociatedConstraints(
-      const NamedDecl *ConstrainedDecl,
-      ArrayRef<const Expr *> AssociatedConstraints);
+      NamedDecl *ConstrainedDecl, ArrayRef<const Expr *> AssociatedConstraints);
 
   /// \brief Check whether the given declaration's associated constraints are
   /// at least as constrained than another declaration's according to the
@@ -14672,30 +14546,28 @@ public:
   /// at least constrained than D2, and false otherwise.
   ///
   /// \returns true if an error occurred, false otherwise.
-  bool IsAtLeastAsConstrained(const NamedDecl *D1,
-                              MutableArrayRef<const Expr *> AC1,
-                              const NamedDecl *D2,
-                              MutableArrayRef<const Expr *> AC2, bool &Result);
+  bool IsAtLeastAsConstrained(NamedDecl *D1, MutableArrayRef<const Expr *> AC1,
+                              NamedDecl *D2, MutableArrayRef<const Expr *> AC2,
+                              bool &Result);
 
   /// If D1 was not at least as constrained as D2, but would've been if a pair
   /// of atomic constraints involved had been declared in a concept and not
   /// repeated in two separate places in code.
   /// \returns true if such a diagnostic was emitted, false otherwise.
   bool MaybeEmitAmbiguousAtomicConstraintsDiagnostic(
-      const NamedDecl *D1, ArrayRef<const Expr *> AC1, const NamedDecl *D2,
+      NamedDecl *D1, ArrayRef<const Expr *> AC1, NamedDecl *D2,
       ArrayRef<const Expr *> AC2);
 
 private:
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in
   /// fact subsume the second's.
-  llvm::DenseMap<std::pair<const NamedDecl *, const NamedDecl *>, bool>
-      SubsumptionCache;
+  llvm::DenseMap<std::pair<NamedDecl *, NamedDecl *>, bool> SubsumptionCache;
   /// Caches the normalized associated constraints of declarations (concepts or
   /// constrained declarations). If an error occurred while normalizing the
   /// associated constraints of the template or concept, nullptr will be cached
   /// here.
-  llvm::DenseMap<const NamedDecl *, NormalizedConstraint *> NormalizationCache;
+  llvm::DenseMap<NamedDecl *, NormalizedConstraint *> NormalizationCache;
 
   llvm::ContextualFoldingSet<ConstraintSatisfaction, const ASTContext &>
       SatisfactionCache;
@@ -14893,9 +14765,8 @@ public:
   ///
   /// \returns a member pointer type, if successful, or a NULL type if there was
   /// an error.
-  QualType BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
-                                  CXXRecordDecl *Cls, SourceLocation Loc,
-                                  DeclarationName Entity);
+  QualType BuildMemberPointerType(QualType T, QualType Class,
+                                  SourceLocation Loc, DeclarationName Entity);
 
   /// Build a block pointer type.
   ///
@@ -15369,13 +15240,6 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value);
-
-inline const StreamingDiagnostic &
-operator<<(const StreamingDiagnostic &DB, Sema::StringEvaluationContext Ctx) {
-  DB << llvm::to_underlying(Ctx);
-  return DB;
-}
-
 } // end namespace clang
 
 #endif

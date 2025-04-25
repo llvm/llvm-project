@@ -31,7 +31,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Threading.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Regex.h"
+#include <atomic>
 #include <optional>
 
 using namespace mlir;

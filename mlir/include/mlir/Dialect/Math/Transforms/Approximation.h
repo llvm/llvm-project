@@ -23,14 +23,6 @@ public:
                                 PatternRewriter &rewriter) const final;
 };
 
-struct ErfcPolynomialApproximation : public OpRewritePattern<math::ErfcOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(math::ErfcOp op,
-                                PatternRewriter &rewriter) const final;
-};
-
 } // namespace math
 } // namespace mlir
 

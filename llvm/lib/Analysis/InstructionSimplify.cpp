@@ -43,7 +43,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/KnownFPClass.h"
 #include <algorithm>
 #include <optional>
 using namespace llvm;
@@ -2789,8 +2788,7 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
       struct CustomCaptureTracker : public CaptureTracker {
         bool Captured = false;
         void tooManyUses() override { Captured = true; }
-        Action captured(const Use *U, UseCaptureInfo CI) override {
-          // TODO(captures): Use UseCaptureInfo.
+        bool captured(const Use *U) override {
           if (auto *ICmp = dyn_cast<ICmpInst>(U->getUser())) {
             // Comparison against value stored in global variable. Given the
             // pointer does not escape, its value cannot be guessed and stored
@@ -2798,11 +2796,11 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
             unsigned OtherIdx = 1 - U->getOperandNo();
             auto *LI = dyn_cast<LoadInst>(ICmp->getOperand(OtherIdx));
             if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
-              return Continue;
+              return false;
           }
 
           Captured = true;
-          return Stop;
+          return true;
         }
       };
       CustomCaptureTracker Tracker;
@@ -3033,9 +3031,7 @@ enum class MonotonicType { GreaterEq, LowerEq };
 
 /// Get values V_i such that V uge V_i (GreaterEq) or V ule V_i (LowerEq).
 static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
-                                       MonotonicType Type,
-                                       const SimplifyQuery &Q,
-                                       unsigned Depth = 0) {
+                                       MonotonicType Type, unsigned Depth = 0) {
   if (!Res.insert(V).second)
     return;
 
@@ -3051,31 +3047,24 @@ static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
   if (Type == MonotonicType::GreaterEq) {
     if (match(I, m_Or(m_Value(X), m_Value(Y))) ||
         match(I, m_Intrinsic<Intrinsic::uadd_sat>(m_Value(X), m_Value(Y)))) {
-      getUnsignedMonotonicValues(Res, X, Type, Q, Depth);
-      getUnsignedMonotonicValues(Res, Y, Type, Q, Depth);
-    }
-    // X * Y >= X --> true
-    if (match(I, m_NUWMul(m_Value(X), m_Value(Y)))) {
-      if (isKnownNonZero(X, Q))
-        getUnsignedMonotonicValues(Res, Y, Type, Q, Depth);
-      if (isKnownNonZero(Y, Q))
-        getUnsignedMonotonicValues(Res, X, Type, Q, Depth);
+      getUnsignedMonotonicValues(Res, X, Type, Depth);
+      getUnsignedMonotonicValues(Res, Y, Type, Depth);
     }
   } else {
     assert(Type == MonotonicType::LowerEq);
     switch (I->getOpcode()) {
     case Instruction::And:
-      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Q, Depth);
-      getUnsignedMonotonicValues(Res, I->getOperand(1), Type, Q, Depth);
+      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Depth);
+      getUnsignedMonotonicValues(Res, I->getOperand(1), Type, Depth);
       break;
     case Instruction::URem:
     case Instruction::UDiv:
     case Instruction::LShr:
-      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Q, Depth);
+      getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Depth);
       break;
     case Instruction::Call:
       if (match(I, m_Intrinsic<Intrinsic::usub_sat>(m_Value(X))))
-        getUnsignedMonotonicValues(Res, X, Type, Q, Depth);
+        getUnsignedMonotonicValues(Res, X, Type, Depth);
       break;
     default:
       break;
@@ -3084,8 +3073,7 @@ static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
 }
 
 static Value *simplifyICmpUsingMonotonicValues(CmpPredicate Pred, Value *LHS,
-                                               Value *RHS,
-                                               const SimplifyQuery &Q) {
+                                               Value *RHS) {
   if (Pred != ICmpInst::ICMP_UGE && Pred != ICmpInst::ICMP_ULT)
     return nullptr;
 
@@ -3093,8 +3081,8 @@ static Value *simplifyICmpUsingMonotonicValues(CmpPredicate Pred, Value *LHS,
   // GreaterValues and LowerValues are the same, it follows that LHS uge RHS.
   SmallPtrSet<Value *, 4> GreaterValues;
   SmallPtrSet<Value *, 4> LowerValues;
-  getUnsignedMonotonicValues(GreaterValues, LHS, MonotonicType::GreaterEq, Q);
-  getUnsignedMonotonicValues(LowerValues, RHS, MonotonicType::LowerEq, Q);
+  getUnsignedMonotonicValues(GreaterValues, LHS, MonotonicType::GreaterEq);
+  getUnsignedMonotonicValues(LowerValues, RHS, MonotonicType::LowerEq);
   for (Value *GV : GreaterValues)
     if (LowerValues.contains(GV))
       return ConstantInt::getBool(getCompareTy(LHS),
@@ -4010,10 +3998,10 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
           ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
     return V;
 
-  if (Value *V = simplifyICmpUsingMonotonicValues(Pred, LHS, RHS, Q))
+  if (Value *V = simplifyICmpUsingMonotonicValues(Pred, LHS, RHS))
     return V;
   if (Value *V = simplifyICmpUsingMonotonicValues(
-          ICmpInst::getSwappedPredicate(Pred), RHS, LHS, Q))
+          ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
     return V;
 
   if (Value *V = simplifyICmpWithDominatingAssume(Pred, LHS, RHS, Q))

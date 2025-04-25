@@ -14,9 +14,12 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include <cassert>
+#include <cstdint>
 #include <map>
 #include <queue>
 #include <set>
+#include <utility>
 
 namespace llvm {
 

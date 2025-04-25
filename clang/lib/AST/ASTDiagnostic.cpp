@@ -461,9 +461,8 @@ void clang::FormatASTNodeDiagnosticArgument(
     }
     case DiagnosticsEngine::ak_nestednamespec: {
       NestedNameSpecifier *NNS = reinterpret_cast<NestedNameSpecifier*>(Val);
-      NNS->print(OS, Context.getPrintingPolicy(),
-                 /*ResolveTemplateArguments=*/false,
-                 /*PrintFinalScopeResOp=*/false);
+      NNS->print(OS, Context.getPrintingPolicy());
+      NeedQuotes = false;
       break;
     }
     case DiagnosticsEngine::ak_declcontext: {

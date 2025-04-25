@@ -20,7 +20,6 @@ int throwsAndCallsRethrower() noexcept {
     } catch(...) {
         rethrower();
     }
-    return 1;
 }
 
 int throwsAndCallsCallsRethrower() noexcept {
@@ -30,7 +29,6 @@ int throwsAndCallsCallsRethrower() noexcept {
     } catch(...) {
         callsRethrower();
     }
-    return 1;
 }
 
 void rethrowerNoexcept() noexcept {

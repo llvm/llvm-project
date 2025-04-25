@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,15 +33,14 @@ STATISTIC(NumRemovedForward, "Number of DBG_VALUEs removed (forward scan)");
 
 namespace {
 
-struct RemoveRedundantDebugValuesImpl {
-  bool reduceDbgValues(MachineFunction &MF);
-};
-
-class RemoveRedundantDebugValuesLegacy : public MachineFunctionPass {
+class RemoveRedundantDebugValues : public MachineFunctionPass {
 public:
   static char ID;
 
-  RemoveRedundantDebugValuesLegacy();
+  RemoveRedundantDebugValues();
+
+  bool reduceDbgValues(MachineFunction &MF);
+
   /// Remove redundant debug value MIs for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -58,18 +56,17 @@ public:
 //            Implementation
 //===----------------------------------------------------------------------===//
 
-char RemoveRedundantDebugValuesLegacy::ID = 0;
+char RemoveRedundantDebugValues::ID = 0;
 
-char &llvm::RemoveRedundantDebugValuesID = RemoveRedundantDebugValuesLegacy::ID;
+char &llvm::RemoveRedundantDebugValuesID = RemoveRedundantDebugValues::ID;
 
-INITIALIZE_PASS(RemoveRedundantDebugValuesLegacy, DEBUG_TYPE,
+INITIALIZE_PASS(RemoveRedundantDebugValues, DEBUG_TYPE,
                 "Remove Redundant DEBUG_VALUE analysis", false, false)
 
 /// Default construct and initialize the pass.
-RemoveRedundantDebugValuesLegacy::RemoveRedundantDebugValuesLegacy()
+RemoveRedundantDebugValues::RemoveRedundantDebugValues()
     : MachineFunctionPass(ID) {
-  initializeRemoveRedundantDebugValuesLegacyPass(
-      *PassRegistry::getPassRegistry());
+  initializeRemoveRedundantDebugValuesPass(*PassRegistry::getPassRegistry());
 }
 
 // This analysis aims to remove redundant DBG_VALUEs by going forward
@@ -202,7 +199,7 @@ static bool reduceDbgValsBackwardScan(MachineBasicBlock &MBB) {
   return !DbgValsToBeRemoved.empty();
 }
 
-bool RemoveRedundantDebugValuesImpl::reduceDbgValues(MachineFunction &MF) {
+bool RemoveRedundantDebugValues::reduceDbgValues(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "\nDebug Value Reduction\n");
 
   bool Changed = false;
@@ -215,32 +212,16 @@ bool RemoveRedundantDebugValuesImpl::reduceDbgValues(MachineFunction &MF) {
   return Changed;
 }
 
-bool RemoveRedundantDebugValuesLegacy::runOnMachineFunction(
-    MachineFunction &MF) {
-  // Skip functions without debugging information or functions from NoDebug
-  // compilation units.
-  if (!MF.getFunction().getSubprogram() ||
-      (MF.getFunction().getSubprogram()->getUnit()->getEmissionKind() ==
-       DICompileUnit::NoDebug))
+bool RemoveRedundantDebugValues::runOnMachineFunction(MachineFunction &MF) {
+  // Skip functions without debugging information.
+  if (!MF.getFunction().getSubprogram())
     return false;
 
-  return RemoveRedundantDebugValuesImpl().reduceDbgValues(MF);
-}
+  // Skip functions from NoDebug compilation units.
+  if (MF.getFunction().getSubprogram()->getUnit()->getEmissionKind() ==
+      DICompileUnit::NoDebug)
+    return false;
 
-PreservedAnalyses
-RemoveRedundantDebugValuesPass::run(MachineFunction &MF,
-                                    MachineFunctionAnalysisManager &MFAM) {
-  // Skip functions without debugging information or functions from NoDebug
-  // compilation units.
-  if (!MF.getFunction().getSubprogram() ||
-      (MF.getFunction().getSubprogram()->getUnit()->getEmissionKind() ==
-       DICompileUnit::NoDebug))
-    return PreservedAnalyses::all();
-
-  if (!RemoveRedundantDebugValuesImpl().reduceDbgValues(MF))
-    return PreservedAnalyses::all();
-
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  bool Changed = reduceDbgValues(MF);
+  return Changed;
 }

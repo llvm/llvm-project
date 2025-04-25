@@ -7,10 +7,7 @@ static_library("AArch64") {
     "//llvm/lib/Support",
     "//llvm/lib/Target/AArch64/MCTargetDesc",
   ]
-  sources = [
-    "AArch64MCPlusBuilder.cpp",
-    "AArch64MCSymbolizer.cpp",
-  ]
+  sources = [ "AArch64MCPlusBuilder.cpp" ]
 
   # This target reaches into the internal headers of LLVM's AArch64 library.
   # That target doesn't expect that, so it doesn't use public_deps for

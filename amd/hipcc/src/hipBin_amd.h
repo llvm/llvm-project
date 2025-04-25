@@ -51,7 +51,7 @@ class HipBinAmd : public HipBinBase {
 
  public:
   HipBinAmd();
-  ~HipBinAmd() override = default;
+  virtual ~HipBinAmd() = default;
   virtual bool detectPlatform();
   virtual void constructCompilerPath();
   virtual const string& getCompilerPath() const;

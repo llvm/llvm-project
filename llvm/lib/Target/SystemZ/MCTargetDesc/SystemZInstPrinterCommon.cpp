@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZInstPrinterCommon.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegister.h"
@@ -169,11 +168,11 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
   if ((unsigned)OpNum + 1 < MI->getNumOperands()) {
     const MCOperand &MO = MI->getOperand(OpNum + 1);
     const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
-    switch (getSpecifier(&refExp)) {
-    case SystemZMCExpr::VK_TLSGD:
+    switch (refExp.getKind()) {
+    case MCSymbolRefExpr::VK_TLSGD:
       O << ":tls_gdcall:";
       break;
-    case SystemZMCExpr::VK_TLSLDM:
+    case MCSymbolRefExpr::VK_TLSLDM:
       O << ":tls_ldcall:";
       break;
     default:

@@ -66,17 +66,10 @@ protected:
       consumeError(DLOrErr.takeError());
       GTEST_SKIP();
     }
-
-    auto PageSize = sys::Process::getPageSize();
-    if (!PageSize) {
-      consumeError(PageSize.takeError());
-      GTEST_SKIP();
-    }
-
     ES = std::make_unique<ExecutionSession>(std::move(*EPC));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
+        *ES, std::make_unique<InProcessMemoryManager>(16384));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
 
     auto TM = JTMB->createTargetMachine();
@@ -165,7 +158,7 @@ TEST_F(ReOptimizeLayerTest, BasicReOptimization) {
 
   ThreadSafeContext Ctx(std::make_unique<LLVMContext>());
   auto M = std::make_unique<Module>("<main>", *Ctx.getContext());
-  M->setTargetTriple(Triple(sys::getProcessTriple()));
+  M->setTargetTriple(sys::getProcessTriple());
 
   (void)createRetFunction(M.get(), "main", 42);
 

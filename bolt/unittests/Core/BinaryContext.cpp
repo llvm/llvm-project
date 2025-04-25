@@ -27,15 +27,12 @@ struct BinaryContextTester : public testing::TestWithParam<Triple::ArchType> {
 
 protected:
   void initalizeLLVM() {
-#define BOLT_TARGET(target)                                                    \
-  LLVMInitialize##target##TargetInfo();                                        \
-  LLVMInitialize##target##TargetMC();                                          \
-  LLVMInitialize##target##AsmParser();                                         \
-  LLVMInitialize##target##Disassembler();                                      \
-  LLVMInitialize##target##Target();                                            \
-  LLVMInitialize##target##AsmPrinter();
-
-#include "bolt/Core/TargetConfig.def"
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmParsers();
+    llvm::InitializeAllDisassemblers();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllAsmPrinters();
   }
 
   void prepareElf() {
@@ -96,13 +93,12 @@ TEST_P(BinaryContextTester, FlushPendingRelocCALL26) {
       DataSize, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
-  BS.addPendingRelocation(
-      Relocation{8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0});
+  BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_CALL26, 0, 0, true);
   MCSymbol *RelSymbol2 = BC->getOrCreateGlobalSymbol(16, "Func2");
   ASSERT_TRUE(RelSymbol2);
-  BS.addPendingRelocation(
-      Relocation{12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0});
+  BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_CALL26, 0, 0, true);
 
+  std::error_code EC;
   SmallVector<char> Vect(DataSize);
   raw_svector_ostream OS(Vect);
 
@@ -138,13 +134,12 @@ TEST_P(BinaryContextTester, FlushPendingRelocJUMP26) {
       (uint8_t *)Data, Size, 4);
   MCSymbol *RelSymbol1 = BC->getOrCreateGlobalSymbol(4, "Func1");
   ASSERT_TRUE(RelSymbol1);
-  BS.addPendingRelocation(
-      Relocation{8, RelSymbol1, ELF::R_AARCH64_JUMP26, 0, 0});
+  BS.addRelocation(8, RelSymbol1, ELF::R_AARCH64_JUMP26, 0, 0, true);
   MCSymbol *RelSymbol2 = BC->getOrCreateGlobalSymbol(16, "Func2");
   ASSERT_TRUE(RelSymbol2);
-  BS.addPendingRelocation(
-      Relocation{12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0});
+  BS.addRelocation(12, RelSymbol2, ELF::R_AARCH64_JUMP26, 0, 0, true);
 
+  std::error_code EC;
   SmallVector<char> Vect(Size);
   raw_svector_ostream OS(Vect);
 

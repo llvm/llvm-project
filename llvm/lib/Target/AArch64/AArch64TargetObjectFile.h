@@ -21,7 +21,7 @@ class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {
 
 public:
   AArch64_ELFTargetObjectFile() {
-    PLTRelativeSpecifier = MCSymbolRefExpr::VK_PLT;
+    PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
     SupportIndirectSymViaGOTPCRel = true;
   }
 
@@ -39,12 +39,6 @@ public:
   void emitPersonalityValueImpl(MCStreamer &Streamer, const DataLayout &DL,
                                 const MCSymbol *Sym,
                                 const MachineModuleInfo *MMI) const override;
-
-  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
-                                      const TargetMachine &TM) const override;
-
-  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
-                                    const TargetMachine &TM) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.

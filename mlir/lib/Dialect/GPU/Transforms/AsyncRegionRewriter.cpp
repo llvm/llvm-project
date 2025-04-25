@@ -347,3 +347,7 @@ void GpuAsyncRegionPass::runOnOperation() {
   // Makes each !gpu.async.token returned from async.execute op have single use.
   getOperation().getRegion().walk(SingleTokenUseCallback());
 }
+
+std::unique_ptr<OperationPass<func::FuncOp>> mlir::createGpuAsyncRegionPass() {
+  return std::make_unique<GpuAsyncRegionPass>();
+}

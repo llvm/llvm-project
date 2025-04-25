@@ -71,8 +71,8 @@ For example:
 .. code-block:: c++
 
    void f(Foo foo) {
-     if (foo.take().has_value()) {
-       use(*foo.take()); // unsafe: it is unclear whether `foo.take()` has a value.
+     if (foo.opt().has_value()) {
+       use(*foo.opt()); // unsafe: it is unclear whether `foo.opt()` has a value.
      }
    }
 
@@ -81,11 +81,10 @@ Exception: accessor methods
 
 The check assumes *accessor* methods of a class are stable, with a heuristic to
 determine which methods are accessors. Specifically, parameter-free ``const``
-methods and smart pointer-like APIs (non ``const`` overloads of ``*`` when
-there is a parallel ``const`` overload) are treated as accessors. Note that
-this is not guaranteed to be safe -- but, it is widely used (safely) in
-practice. Calls to non ``const`` methods are assumed to modify the state of
-the object and affect the stability of earlier accessor calls.
+methods are treated as accessors. Note that this is not guaranteed to be safe
+-- but, it is widely used (safely) in practice, and so we have chosen to treat
+it as generally safe. Calls to non ``const`` methods are assumed to modify
+the state of the object and affect the stability of earlier accessor calls.
 
 Rely on invariants of uncommon APIs
 -----------------------------------
@@ -192,15 +191,14 @@ paths that lead to an access. For example:
 Stabilize function results
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Function results are not assumed to be stable across calls, except for
-const accessor methods. For more complex accessors (non-const, or depend on
-multiple params) it is best to store the result of the function call in a
-local variable and use that variable to access the value. For example:
+Since function results are not assumed to be stable across calls, it is best to
+store the result of the function call in a local variable and use that variable
+to access the value. For example:
 
 .. code-block:: c++
 
    void f(Foo foo) {
-     if (const auto& foo_opt = foo.take(); foo_opt.has_value()) {
+     if (const auto& foo_opt = foo.opt(); foo_opt.has_value()) {
        use(*foo_opt);
      }
    }

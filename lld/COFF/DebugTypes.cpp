@@ -1187,7 +1187,8 @@ void TypeMerger::mergeTypesWithGHash() {
 
   // Build a global map of from function ID to function type.
   for (TpiSource *source : ctx.tpiSourceList) {
-    funcIdToType.insert_range(source->funcIdToType);
+    for (auto idToType : source->funcIdToType)
+      funcIdToType.insert(idToType);
     source->funcIdToType.clear();
   }
 

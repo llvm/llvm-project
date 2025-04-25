@@ -70,7 +70,8 @@ Error COFFReader::readSections(Object &Obj) const {
       return E;
     S.setContentsRef(Contents);
     ArrayRef<coff_relocation> Relocs = COFFObj.getRelocations(Sec);
-    llvm::append_range(S.Relocs, Relocs);
+    for (const coff_relocation &R : Relocs)
+      S.Relocs.push_back(R);
     if (Expected<StringRef> NameOrErr = COFFObj.getSectionName(Sec))
       S.Name = *NameOrErr;
     else

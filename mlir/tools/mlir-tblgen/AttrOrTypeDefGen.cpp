@@ -444,7 +444,6 @@ void DefGen::emitInterfaceMethods() {
 
 //===----------------------------------------------------------------------===//
 // Builder Emission
-//===----------------------------------------------------------------------===//
 
 SmallVector<MethodParameter>
 DefGen::getBuilderParams(std::initializer_list<MethodParameter> prefix) const {
@@ -547,13 +546,13 @@ void DefGen::emitCheckedCustomBuilder(const AttrOrTypeBuilder &builder) {
 
 //===----------------------------------------------------------------------===//
 // Interface Method Emission
-//===----------------------------------------------------------------------===//
 
 void DefGen::emitTraitMethods(const InterfaceTrait &trait) {
   // Get the set of methods that should always be declared.
   auto alwaysDeclaredMethods = trait.getAlwaysDeclaredMethods();
   StringSet<> alwaysDeclared;
-  alwaysDeclared.insert_range(alwaysDeclaredMethods);
+  alwaysDeclared.insert(alwaysDeclaredMethods.begin(),
+                        alwaysDeclaredMethods.end());
 
   Interface iface = trait.getInterface(); // causes strange bugs if elided
   for (auto &method : iface.getMethods()) {
@@ -579,7 +578,6 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
 
 //===----------------------------------------------------------------------===//
 // Storage Class Emission
-//===----------------------------------------------------------------------===//
 
 void DefGen::emitStorageConstructor() {
   Constructor *ctor =
@@ -1082,7 +1080,6 @@ bool {0}(::mlir::Type type) {
 
 //===----------------------------------------------------------------------===//
 // AttrDef
-//===----------------------------------------------------------------------===//
 
 static llvm::cl::OptionCategory attrdefGenCat("Options for -gen-attrdef-*");
 static llvm::cl::opt<std::string>
@@ -1105,7 +1102,6 @@ static mlir::GenRegistration
 
 //===----------------------------------------------------------------------===//
 // TypeDef
-//===----------------------------------------------------------------------===//
 
 static llvm::cl::OptionCategory typedefGenCat("Options for -gen-typedef-*");
 static llvm::cl::opt<std::string>

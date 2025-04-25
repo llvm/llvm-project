@@ -521,8 +521,9 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   Value ptr = genSubscript(env, builder, t, args);
   if (llvm::isa<TensorType>(ptr.getType())) {
     assert(env.options().sparseEmitStrategy ==
-           SparseEmitStrategy::kSparseIterator);
-    return builder.create<ExtractValOp>(loc, ptr, llvm::getSingleElement(args));
+               SparseEmitStrategy::kSparseIterator &&
+           args.size() == 1);
+    return builder.create<ExtractValOp>(loc, ptr, args.front());
   }
   return builder.create<memref::LoadOp>(loc, ptr, args);
 }

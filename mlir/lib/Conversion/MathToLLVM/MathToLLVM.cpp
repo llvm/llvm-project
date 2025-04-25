@@ -18,8 +18,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 
-#include "llvm/ADT/FloatingPointMode.h"
-
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -288,40 +286,6 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
   }
 };
 
-struct IsNaNOpLowering : public ConvertOpToLLVMPattern<math::IsNaNOp> {
-  using ConvertOpToLLVMPattern<math::IsNaNOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(math::IsNaNOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
-      return failure();
-
-    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
-        op, op.getType(), adaptor.getOperand(), llvm::fcNan);
-    return success();
-  }
-};
-
-struct IsFiniteOpLowering : public ConvertOpToLLVMPattern<math::IsFiniteOp> {
-  using ConvertOpToLLVMPattern<math::IsFiniteOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(math::IsFiniteOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto operandType = adaptor.getOperand().getType();
-
-    if (!operandType || !LLVM::isCompatibleType(operandType))
-      return failure();
-
-    rewriter.replaceOpWithNewOp<LLVM::IsFPClass>(
-        op, op.getType(), adaptor.getOperand(), llvm::fcFinite);
-    return success();
-  }
-};
-
 struct ConvertMathToLLVMPass
     : public impl::ConvertMathToLLVMPassBase<ConvertMathToLLVMPass> {
   using Base::Base;
@@ -340,13 +304,11 @@ struct ConvertMathToLLVMPass
 
 void mlir::populateMathToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool approximateLog1p, PatternBenefit benefit) {
+    bool approximateLog1p) {
   if (approximateLog1p)
-    patterns.add<Log1pOpLowering>(converter, benefit);
+    patterns.add<Log1pOpLowering>(converter);
   // clang-format off
   patterns.add<
-    IsNaNOpLowering,
-    IsFiniteOpLowering,
     AbsFOpLowering,
     AbsIOpLowering,
     CeilOpLowering,
@@ -375,7 +337,7 @@ void mlir::populateMathToLLVMConversionPatterns(
     FTruncOpLowering,
     TanOpLowering,
     TanhOpLowering
-  >(converter, benefit);
+  >(converter);
   // clang-format on
 }
 

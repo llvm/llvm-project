@@ -36,7 +36,7 @@ class LegalizationArtifactCombiner {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
-  GISelValueTracking *VT;
+  GISelKnownBits *KB;
 
   static bool isArtifactCast(unsigned Opc) {
     switch (Opc) {
@@ -53,8 +53,8 @@ class LegalizationArtifactCombiner {
 public:
   LegalizationArtifactCombiner(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                                const LegalizerInfo &LI,
-                               GISelValueTracking *VT = nullptr)
-      : Builder(B), MRI(MRI), LI(LI), VT(VT) {}
+                               GISelKnownBits *KB = nullptr)
+      : Builder(B), MRI(MRI), LI(LI), KB(KB) {}
 
   bool tryCombineAnyExt(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts,
@@ -151,7 +151,7 @@ public:
       // OptLevel results in significant compile-time and O0 code-size
       // improvements. Inserting unnecessary instructions between boolean defs
       // and uses hinders a lot of folding during ISel.
-      if (VT && (VT->getKnownZeroes(AndSrc) | ExtMaskVal).isAllOnes()) {
+      if (KB && (KB->getKnownZeroes(AndSrc) | ExtMaskVal).isAllOnes()) {
         replaceRegOrBuildCopy(DstReg, AndSrc, MRI, Builder, UpdatedDefs,
                               Observer);
       } else {
@@ -214,7 +214,7 @@ public:
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
       // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
       // tryCombineZExt. Refer to the comment in tryCombineZExt for rationale.
-      if (VT && VT->computeNumSignBits(TruncSrc) >
+      if (KB && KB->computeNumSignBits(TruncSrc) >
                     DstTy.getScalarSizeInBits() - SizeInBits)
         replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
                               Observer);

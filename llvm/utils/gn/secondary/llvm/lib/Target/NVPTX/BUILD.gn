@@ -34,7 +34,6 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXAssignValidGlobalNames.cpp",
     "NVPTXAtomicLower.cpp",
     "NVPTXCtorDtorLowering.cpp",
-    "NVPTXForwardParams.cpp",
     "NVPTXFrameLowering.cpp",
     "NVPTXGenericToNVVM.cpp",
     "NVPTXISelDAGToDAG.cpp",

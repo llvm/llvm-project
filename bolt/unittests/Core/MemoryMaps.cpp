@@ -38,15 +38,12 @@ struct MemoryMapsTester : public testing::TestWithParam<Triple::ArchType> {
 
 protected:
   void initalizeLLVM() {
-#define BOLT_TARGET(target)                                                    \
-  LLVMInitialize##target##TargetInfo();                                        \
-  LLVMInitialize##target##TargetMC();                                          \
-  LLVMInitialize##target##AsmParser();                                         \
-  LLVMInitialize##target##Disassembler();                                      \
-  LLVMInitialize##target##Target();                                            \
-  LLVMInitialize##target##AsmPrinter();
-
-#include "bolt/Core/TargetConfig.def"
+    llvm::InitializeAllTargetInfos();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmParsers();
+    llvm::InitializeAllDisassemblers();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllAsmPrinters();
   }
 
   void prepareElf() {

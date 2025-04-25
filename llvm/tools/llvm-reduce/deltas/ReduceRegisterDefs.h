@@ -17,7 +17,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceRegisterDefsMIRDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceRegisterDefsMIRDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

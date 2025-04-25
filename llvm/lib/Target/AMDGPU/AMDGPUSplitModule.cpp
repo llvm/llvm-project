@@ -569,7 +569,7 @@ void SplitGraph::buildGraph(CallGraph &CG) {
         LLVM_DEBUG(dbgs() << "    indirect call found\n");
         FnsWithIndirectCalls.push_back(&Fn);
       } else if (!KnownCallees.empty())
-        DirectCallees.insert_range(KnownCallees);
+        DirectCallees.insert(KnownCallees.begin(), KnownCallees.end());
     }
 
     Node &N = getNode(Cache, Fn);
@@ -1016,12 +1016,12 @@ void RecursiveSearchSplitting::setupWorkList() {
     });
   }
 
-  for (const auto &Node : NodeEC) {
-    if (!Node.isLeader())
+  for (auto I = NodeEC.begin(), E = NodeEC.end(); I != E; ++I) {
+    if (!I->isLeader())
       continue;
 
     BitVector Cluster = SG.createNodesBitVector();
-    for (auto MI = NodeEC.member_begin(Node); MI != NodeEC.member_end(); ++MI) {
+    for (auto MI = NodeEC.member_begin(I); MI != NodeEC.member_end(); ++MI) {
       const SplitGraph::Node &N = SG.getNode(*MI);
       if (N.isGraphEntryPoint())
         N.getDependencies(Cluster);
@@ -1545,27 +1545,32 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
                       << "'\n");
 
     while (true) {
-      llvm::LockFileManager Lock(LockFilePath.str());
-      bool Owned;
-      if (Error Err = Lock.tryLock().moveInto(Owned)) {
-        consumeError(std::move(Err));
+      llvm::LockFileManager Locked(LockFilePath.str());
+      switch (Locked) {
+      case LockFileManager::LFS_Error:
         LLVM_DEBUG(
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
-      } else if (!Owned) {
-        switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
-        case WaitForUnlockResult::Success:
+        Locked.unsafeRemoveLockFile();
+        break;
+      case LockFileManager::LFS_Owned:
+        break;
+      case LockFileManager::LFS_Shared: {
+        switch (Locked.waitForUnlock()) {
+        case LockFileManager::Res_Success:
           break;
-        case WaitForUnlockResult::OwnerDied:
+        case LockFileManager::Res_OwnerDied:
           continue; // try again to get the lock.
-        case WaitForUnlockResult::Timeout:
+        case LockFileManager::Res_Timeout:
           LLVM_DEBUG(
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Lock.unsafeMaybeUnlock();
+          Locked.unsafeRemoveLockFile();
           break; // give up
         }
+        break;
+      }
       }
 
       splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);

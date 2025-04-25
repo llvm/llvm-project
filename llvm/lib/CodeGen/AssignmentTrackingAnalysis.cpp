@@ -342,7 +342,8 @@ static bool shouldCoalesceFragments(Function &F) {
   // has not been explicitly set and instruction-referencing is turned on.
   switch (CoalesceAdjacentFragmentsOpt) {
   case cl::boolOrDefault::BOU_UNSET:
-    return debuginfoShouldUseDebugInstrRef(F.getParent()->getTargetTriple());
+    return debuginfoShouldUseDebugInstrRef(
+        Triple(F.getParent()->getTargetTriple()));
   case cl::boolOrDefault::BOU_TRUE:
     return true;
   case cl::boolOrDefault::BOU_FALSE:
@@ -599,12 +600,12 @@ class MemLocFragmentFill {
         break;
     }
 
+    auto CurrentLiveInEntry = LiveIn.find(&BB);
     // If there's no LiveIn entry for the block yet, add it.
-    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB);
-    if (Inserted) {
+    if (CurrentLiveInEntry == LiveIn.end()) {
       LLVM_DEBUG(dbgs() << "change=true (first) on meet on " << BB.getName()
                         << "\n");
-      CurrentLiveInEntry->second = std::move(BBLiveIn);
+      LiveIn[&BB] = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -2053,17 +2054,17 @@ bool AssignmentTrackingLowering::join(
   // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
   if (VisitedPreds.size() == 1) {
     const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
+    auto CurrentLiveInEntry = LiveIn.find(&BB);
 
     // Check if there isn't an entry, or there is but the LiveIn set has
     // changed (expensive check).
-    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB, PredLiveOut);
-    if (Inserted)
-      return /*Changed*/ true;
-    if (PredLiveOut != CurrentLiveInEntry->second) {
+    if (CurrentLiveInEntry == LiveIn.end())
+      LiveIn.insert(std::make_pair(&BB, PredLiveOut));
+    else if (PredLiveOut != CurrentLiveInEntry->second)
       CurrentLiveInEntry->second = PredLiveOut;
-      return /*Changed*/ true;
-    }
-    return /*Changed*/ false;
+    else
+      return /*Changed*/ false;
+    return /*Changed*/ true;
   }
 
   // More than one pred. Join LiveOuts of blocks 1 and 2.
@@ -2612,13 +2613,13 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
         NumDefsScanned++;
         DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
                           std::nullopt, Loc.DL.getInlinedAt());
-        auto [VMI, Inserted] = VariableMap.try_emplace(Key);
+        auto VMI = VariableMap.find(Key);
 
         // Update the map if we found a new value/expression describing the
         // variable, or if the variable wasn't mapped already.
-        if (Inserted || VMI->second.first != Loc.Values ||
+        if (VMI == VariableMap.end() || VMI->second.first != Loc.Values ||
             VMI->second.second != Loc.Expr) {
-          VMI->second = {Loc.Values, Loc.Expr};
+          VariableMap[Key] = {Loc.Values, Loc.Expr};
           NewDefs.push_back(Loc);
           continue;
         }

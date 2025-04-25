@@ -76,11 +76,10 @@ IRMaterializationUnit::IRMaterializationUnit(
 
       // Otherwise we just need a normal linker mangling.
       auto MangledName = Mangle(G.getName());
-      auto &Flags = SymbolFlags[MangledName];
-      Flags = JITSymbolFlags::fromGlobalValue(G);
+      SymbolFlags[MangledName] = JITSymbolFlags::fromGlobalValue(G);
       if (G.getComdat() &&
           G.getComdat()->getSelectionKind() != Comdat::NoDeduplicate)
-        Flags |= JITSymbolFlags::Weak;
+        SymbolFlags[MangledName] |= JITSymbolFlags::Weak;
       SymbolToDefinition[MangledName] = &G;
     }
 

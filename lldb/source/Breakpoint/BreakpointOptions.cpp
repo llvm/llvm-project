@@ -620,8 +620,10 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
 
       // Rig up the results secondary output stream to the debugger's, so the
       // output will come out synchronously if the debugger is set up that way.
-      result.SetImmediateOutputStream(debugger.GetAsyncOutputStream());
-      result.SetImmediateErrorStream(debugger.GetAsyncErrorStream());
+      StreamSP output_stream(debugger.GetAsyncOutputStream());
+      StreamSP error_stream(debugger.GetAsyncErrorStream());
+      result.SetImmediateOutputStream(output_stream);
+      result.SetImmediateErrorStream(error_stream);
 
       CommandInterpreterRunOptions options;
       options.SetStopOnContinue(true);

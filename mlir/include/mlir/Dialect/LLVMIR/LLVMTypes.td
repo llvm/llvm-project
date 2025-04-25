@@ -25,8 +25,7 @@ class LLVMType<string typeName, string typeMnemonic, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def LLVMArrayType : LLVMType<"LLVMArray", "array", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-                                ["getTypeSize", "getPreferredAlignment"]>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getTypeSize"]>,
     DeclareTypeInterfaceMethods<DestructurableTypeInterface>]> {
   let summary = "LLVM array type";
   let description = [{
@@ -125,7 +124,7 @@ def LLVMFunctionType : LLVMType<"LLVMFunction", "func"> {
 def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
   MutableType,
   DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
-    ["areCompatible", "verifyEntries", "getPreferredAlignment"]>,
+    ["areCompatible", "verifyEntries"]>,
   DeclareTypeInterfaceMethods<DestructurableTypeInterface,
     ["getSubelementIndexMap", "getTypeAtIndex"]>
 ]> {
@@ -258,8 +257,7 @@ def LLVMStructType : LLVMType<"LLVMStruct", "struct", [
 
 def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "getIndexBitwidth", "areCompatible", "verifyEntries",
-      "getPreferredAlignment"]>]> {
+      "getIndexBitwidth", "areCompatible", "verifyEntries"]>]> {
   let summary = "LLVM pointer type";
   let description = [{
     The `!llvm.ptr` type is an LLVM pointer type. This type typically represents

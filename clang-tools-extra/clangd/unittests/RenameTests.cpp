@@ -214,7 +214,7 @@ TEST(RenameTest, WithinFileRename) {
         template<typename T>
         class Foo {
         public:
-          static T [[f^oo]]() { return T(); }
+          static T [[f^oo]]() {}
         };
 
         void bar() {
@@ -225,7 +225,7 @@ TEST(RenameTest, WithinFileRename) {
         template<typename T>
         class Foo {
         public:
-          T [[f^oo]]() { return T(); }
+          T [[f^oo]]() {}
         };
 
         void bar() {
@@ -827,7 +827,7 @@ TEST(RenameTest, WithinFileRename) {
 
       // Issue 170: Rename symbol introduced by UsingDecl
       R"cpp(
-        namespace ns { void [[f^oo]](); }
+        namespace ns { void [[f^oo]](); } 
 
         using ns::[[f^oo]];
 
@@ -1270,39 +1270,6 @@ TEST(RenameTest, Renameable) {
        "conflict", !HeaderFile, "Conflict"},
 
       {R"cpp(
-        struct conflict {};
-        enum v^ar {};
-      )cpp",
-       "conflict", !HeaderFile, "conflict"},
-
-      {R"cpp(
-        struct conflict {};
-        int [[v^ar]];
-      )cpp",
-       nullptr, !HeaderFile, "conflict"},
-
-      {R"cpp(
-        enum conflict {};
-        int [[v^ar]];
-      )cpp",
-       nullptr, !HeaderFile, "conflict"},
-
-      {R"cpp(
-        void func(int conflict) {
-          struct [[t^ag]] {};
-        }
-      )cpp",
-       nullptr, !HeaderFile, "conflict"},
-
-      {R"cpp(
-        void func(void) {
-          struct conflict {};
-          int [[v^ar]];
-        }
-      )cpp",
-       nullptr, !HeaderFile, "conflict"},
-
-      {R"cpp(
         void func(int);
         void [[o^therFunc]](double);
       )cpp",
@@ -1340,7 +1307,7 @@ TEST(RenameTest, Renameable) {
        "no symbol", false},
 
       {R"cpp(// FIXME we probably want to rename both overloads here,
-             // but renaming currently assumes there's only a
+             // but renaming currently assumes there's only a 
              // single canonical declaration.
         namespace ns { int foo(int); char foo(char); }
         using ns::^foo;
@@ -1809,7 +1776,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           void [[foo]]() override {};
         };
 
-        void func(Base* b, Derived1* d1,
+        void func(Base* b, Derived1* d1, 
                   Derived2* d2, NotDerived* nd) {
           b->[[foo]]();
           d1->[[foo]]();
@@ -2223,9 +2190,9 @@ TEST(CrossFileRenameTests, adjustRenameRanges) {
   for (const auto &T : Tests) {
     SCOPED_TRACE(T.DraftCode);
     Annotations Draft(T.DraftCode);
-    auto ActualRanges = adjustRenameRanges(
-        Draft.code(), RenameSymbolName(ArrayRef<std::string>{"x"}),
-        Annotations(T.IndexedCode).ranges(), LangOpts);
+    auto ActualRanges = adjustRenameRanges(Draft.code(), "x",
+                                           Annotations(T.IndexedCode).ranges(),
+                                           LangOpts, std::nullopt);
     if (!ActualRanges)
        EXPECT_THAT(Draft.ranges(), testing::IsEmpty());
     else

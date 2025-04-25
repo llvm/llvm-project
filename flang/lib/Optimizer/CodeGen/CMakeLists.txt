@@ -4,7 +4,6 @@ add_flang_library(FIRCodeGen
   CodeGen.cpp
   CodeGenOpenMP.cpp
   FIROpPatterns.cpp
-  LowerRepackArrays.cpp
   PreCGRewrite.cpp
   TBAABuilder.cpp
   Target.cpp

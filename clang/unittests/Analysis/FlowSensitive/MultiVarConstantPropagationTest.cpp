@@ -167,8 +167,8 @@ public:
                         ? ValueLattice(R.Val.getInt().getExtValue())
                         : ValueLattice::top();
       } else {
-        // An uninitialized variable holds *some* value, but we don't know what
-        // it is (it is implementation defined), so we set it to top.
+        // An unitialized variable holds *some* value, but we don't know what it
+        // is (it is implementation defined), so we set it to top.
         Vars[Var] = ValueLattice::top();
       }
     } else if (Nodes.getNodeAs<clang::Expr>(kJustAssignment)) {

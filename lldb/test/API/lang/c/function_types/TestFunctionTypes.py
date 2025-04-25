@@ -54,7 +54,7 @@ class FunctionTypesTestCase(TestBase):
         )
 
         if self.platformIsDarwin():
-            regexps = [r"lib.*\.dylib`printf"]
+            regexps = ["lib.*\.dylib`printf"]
         else:
             regexps = ["printf"]
         self.expect(

@@ -83,9 +83,8 @@ li x12, 0x80000000
 # CHECK-ALIAS: li a2, -1
 li x12, 0xFFFFFFFF
 
-# CHECK-ASM-NOALIAS: addi a0, zero, %lo(1193046)
-# CHECK-OBJ-NOALIAS: addi a0, zero, 1110
-# CHECK-ASM: addi a0, zero, %lo(1193046)
+# CHECK-INST: addi a0, zero, 1110
+# CHECK-ALIAS: li a0, 1110
 li a0, %lo(0x123456)
 
 # CHECK-OBJ-NOALIAS: addi a0, zero, 0
@@ -255,7 +254,7 @@ sext.b x10, x11
 sext.h x10, x11
 
 # CHECK-INST: andi a0, a1, 255
-# CHECK-ALIAS: zext.b a0, a1
+# CHECK-ALIAS: andi a0, a1, 255
 zext.b x10, x11
 
 # CHECK-EXPAND: slli a0, a1, 16

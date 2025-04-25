@@ -80,12 +80,13 @@ HeaderFileInfo::getControllingMacro(ExternalPreprocessorSource *External) {
 
 ExternalHeaderFileInfoSource::~ExternalHeaderFileInfoSource() = default;
 
-HeaderSearch::HeaderSearch(const HeaderSearchOptions &HSOpts,
+HeaderSearch::HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
                            SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                            const LangOptions &LangOpts,
                            const TargetInfo *Target)
-    : HSOpts(HSOpts), Diags(Diags), FileMgr(SourceMgr.getFileManager()),
-      FrameworkMap(64), ModMap(SourceMgr, Diags, LangOpts, Target, *this) {}
+    : HSOpts(std::move(HSOpts)), Diags(Diags),
+      FileMgr(SourceMgr.getFileManager()), FrameworkMap(64),
+      ModMap(SourceMgr, Diags, LangOpts, Target, *this) {}
 
 void HeaderSearch::PrintStats() {
   llvm::errs() << "\n*** HeaderSearch Stats:\n"
@@ -128,7 +129,7 @@ void HeaderSearch::AddSearchPath(const DirectoryLookup &dir, bool isAngled) {
 }
 
 std::vector<bool> HeaderSearch::computeUserEntryUsage() const {
-  std::vector<bool> UserEntryUsage(HSOpts.UserEntries.size());
+  std::vector<bool> UserEntryUsage(HSOpts->UserEntries.size());
   for (unsigned I = 0, E = SearchDirsUsage.size(); I < E; ++I) {
     // Check whether this DirectoryLookup has been successfully used.
     if (SearchDirsUsage[I]) {
@@ -148,17 +149,11 @@ std::vector<bool> HeaderSearch::collectVFSUsageAndClear() const {
 
   llvm::vfs::FileSystem &RootFS = FileMgr.getVirtualFileSystem();
   // TODO: This only works if the `RedirectingFileSystem`s were all created by
-  //       `createVFSFromOverlayFiles`. But at least exclude the ones with null
-  //       OverlayFileDir.
+  //       `createVFSFromOverlayFiles`.
   RootFS.visit([&](llvm::vfs::FileSystem &FS) {
     if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FS)) {
-      // Skip a `RedirectingFileSystem` with null OverlayFileDir which indicates
-      // that they aren't created by createVFSFromOverlayFiles from the overlays
-      // in HeaderSearchOption::VFSOverlayFiles.
-      if (!RFS->getOverlayFileDir().empty()) {
-        VFSUsage.push_back(RFS->hasBeenUsed());
-        RFS->clearHasBeenUsed();
-      }
+      VFSUsage.push_back(RFS->hasBeenUsed());
+      RFS->clearHasBeenUsed();
     }
   });
   assert(VFSUsage.size() == getHeaderSearchOpts().VFSOverlayFiles.size() &&
@@ -210,16 +205,16 @@ std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
 std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
                                                     bool FileMapOnly) {
   // First check the module name to pcm file map.
-  auto i(HSOpts.PrebuiltModuleFiles.find(ModuleName));
-  if (i != HSOpts.PrebuiltModuleFiles.end())
+  auto i(HSOpts->PrebuiltModuleFiles.find(ModuleName));
+  if (i != HSOpts->PrebuiltModuleFiles.end())
     return i->second;
 
-  if (FileMapOnly || HSOpts.PrebuiltModulePaths.empty())
+  if (FileMapOnly || HSOpts->PrebuiltModulePaths.empty())
     return {};
 
   // Then go through each prebuilt module directory and try to find the pcm
   // file.
-  for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
+  for (const std::string &Dir : HSOpts->PrebuiltModulePaths) {
     SmallString<256> Result(Dir);
     llvm::sys::fs::make_absolute(Result);
     if (ModuleName.contains(':'))
@@ -243,8 +238,8 @@ std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
       getModuleMap().getModuleMapFileForUniquing(Module);
   StringRef ModuleName = Module->Name;
   StringRef ModuleMapPath = ModuleMap->getName();
-  StringRef ModuleCacheHash = HSOpts.DisableModuleHash ? "" : getModuleHash();
-  for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
+  StringRef ModuleCacheHash = HSOpts->DisableModuleHash ? "" : getModuleHash();
+  for (const std::string &Dir : HSOpts->PrebuiltModulePaths) {
     SmallString<256> CachePath(Dir);
     llvm::sys::fs::make_absolute(CachePath);
     llvm::sys::path::append(CachePath, ModuleCacheHash);
@@ -272,7 +267,7 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
 
   SmallString<256> Result(CachePath);
 
-  if (HSOpts.DisableModuleHash) {
+  if (HSOpts->DisableModuleHash) {
     llvm::sys::path::append(Result, ModuleName + ".pcm");
   } else {
     // Construct the name <ModuleName>-<hash of ModuleMapPath>.pcm which should
@@ -300,7 +295,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName,
                                    bool AllowExtraModuleMapSearch) {
   // Look in the module map to determine if there is a module by this name.
   Module *Module = ModMap.findModule(ModuleName);
-  if (Module || !AllowSearch || !HSOpts.ImplicitModuleMaps)
+  if (Module || !AllowSearch || !HSOpts->ImplicitModuleMaps)
     return Module;
 
   StringRef SearchName = ModuleName;
@@ -381,7 +376,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
         break;
     }
 
-    if (HSOpts.AllowModuleMapSubdirectorySearch) {
+    if (HSOpts->AllowModuleMapSubdirectorySearch) {
       // If we've already performed the exhaustive search for module maps in
       // this search directory, don't do it again.
       if (Dir.haveSearchedAllModuleMaps())
@@ -769,7 +764,7 @@ void HeaderSearch::noteLookupUsage(unsigned HitIdx, SourceLocation Loc) {
   auto UserEntryIdxIt = SearchDirToHSEntry.find(HitIdx);
   if (UserEntryIdxIt != SearchDirToHSEntry.end())
     Diags.Report(Loc, diag::remark_pp_search_path_usage)
-        << HSOpts.UserEntries[UserEntryIdxIt->second].Path;
+        << HSOpts->UserEntries[UserEntryIdxIt->second].Path;
 }
 
 void HeaderSearch::setTarget(const TargetInfo &Target) {
@@ -1556,7 +1551,7 @@ StringRef HeaderSearch::getIncludeNameForHeader(const FileEntry *File) const {
 bool HeaderSearch::hasModuleMap(StringRef FileName,
                                 const DirectoryEntry *Root,
                                 bool IsSystem) {
-  if (!HSOpts.ImplicitModuleMaps)
+  if (!HSOpts->ImplicitModuleMaps)
     return false;
 
   SmallVector<const DirectoryEntry *, 2> FixUpDirectories;
@@ -1782,7 +1777,7 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   if (!AddResult.second)
     return AddResult.first->second ? LMM_AlreadyLoaded : LMM_InvalidModuleMap;
 
-  if (ModMap.loadModuleMapFile(File, IsSystem, Dir, ID, Offset)) {
+  if (ModMap.parseModuleMapFile(File, IsSystem, Dir, ID, Offset)) {
     LoadedModuleMaps[File] = false;
     return LMM_InvalidModuleMap;
   }
@@ -1790,7 +1785,7 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   // Try to load a corresponding private module map.
   if (OptionalFileEntryRef PMMFile =
           getPrivateModuleMap(File, FileMgr, Diags)) {
-    if (ModMap.loadModuleMapFile(*PMMFile, IsSystem, Dir)) {
+    if (ModMap.parseModuleMapFile(*PMMFile, IsSystem, Dir)) {
       LoadedModuleMaps[File] = false;
       return LMM_InvalidModuleMap;
     }
@@ -1802,7 +1797,7 @@ HeaderSearch::loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
 
 OptionalFileEntryRef
 HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
-  if (!HSOpts.ImplicitModuleMaps)
+  if (!HSOpts->ImplicitModuleMaps)
     return std::nullopt;
   // For frameworks, the preferred spelling is Modules/module.modulemap, but
   // module.map at the framework root is also accepted.
@@ -1840,7 +1835,7 @@ Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
   switch (loadModuleMapFile(Dir, IsSystem, /*IsFramework*/true)) {
   case LMM_InvalidModuleMap:
     // Try to infer a module map from the framework directory.
-    if (HSOpts.ImplicitModuleMaps)
+    if (HSOpts->ImplicitModuleMaps)
       ModMap.inferFrameworkModule(Dir, IsSystem, /*Parent=*/nullptr);
     break;
 
@@ -1890,7 +1885,7 @@ HeaderSearch::loadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
 void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
   Modules.clear();
 
-  if (HSOpts.ImplicitModuleMaps) {
+  if (HSOpts->ImplicitModuleMaps) {
     // Load module maps for each of the header search directories.
     for (DirectoryLookup &DL : search_dir_range()) {
       bool IsSystem = DL.isSystemHeaderDirectory();
@@ -1937,7 +1932,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
 }
 
 void HeaderSearch::loadTopLevelSystemModules() {
-  if (!HSOpts.ImplicitModuleMaps)
+  if (!HSOpts->ImplicitModuleMaps)
     return;
 
   // Load module maps for each of the header search directories.
@@ -1953,7 +1948,7 @@ void HeaderSearch::loadTopLevelSystemModules() {
 }
 
 void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
-  assert(HSOpts.ImplicitModuleMaps &&
+  assert(HSOpts->ImplicitModuleMaps &&
          "Should not be loading subdirectory module maps");
 
   if (SearchDir.haveSearchedAllModuleMaps())

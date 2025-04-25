@@ -883,7 +883,6 @@ td_library(
     srcs = [],
     includes = ["../include"],
     deps = [
-        "//mlir:NVGPUOpsTdFiles",
         "//mlir:NVGPUTdFiles",
         "//mlir:OpBaseTdFiles",
     ],

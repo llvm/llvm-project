@@ -2203,16 +2203,8 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    ExprResult Expr = [&] {
-      EnterExpressionEvaluationContext Eval(
-          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-          /*LambdaContextDecl=*/nullptr,
-          /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
-          /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
-      // Parse the expression.
-      return ParseExpression(); // expression
-    }();
-
+    // Parse the expression.
+    ExprResult Expr = ParseExpression(); // expression
     if (Expr.isInvalid())
       return Sema::ConditionError();
 

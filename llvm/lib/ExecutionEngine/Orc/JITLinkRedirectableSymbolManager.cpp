@@ -47,10 +47,7 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
     Ptr.setScope(jitlink::Scope::Hidden);
     auto &Stub = PtrJumpStubCreator(*G, StubsSection, Ptr);
     Stub.setName(Name);
-    Stub.setScope(Def.getFlags().isExported() ? jitlink::Scope::Default
-                                              : jitlink::Scope::Hidden);
-    Stub.setLinkage(!Def.getFlags().isWeak() ? jitlink::Linkage::Strong
-                                             : jitlink::Linkage::Weak);
+    Stub.setScope(jitlink::Scope::Default);
     NewSymbols[std::move(PtrName)] = JITSymbolFlags();
   }
 

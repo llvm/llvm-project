@@ -167,7 +167,7 @@ private:
   void parseAccessSpecifier();
   bool parseEnum();
   bool parseStructLike();
-  bool parseRequires(bool SeenEqual);
+  bool parseRequires();
   void parseRequiresClause(FormatToken *RequiresToken);
   void parseRequiresExpression(FormatToken *RequiresToken);
   void parseConstraintExpression();
@@ -298,11 +298,8 @@ private:
   // Since the next token might already be in a new unwrapped line, we need to
   // store the comments belonging to that token.
   SmallVector<FormatToken *, 1> CommentsBeforeNextToken;
-
   FormatToken *FormatTok = nullptr;
-
-  // Has just finished parsing a preprocessor line.
-  bool AtEndOfPPLine;
+  bool MustBreakBeforeNextToken;
 
   // The parsed lines. Only added to through \c CurrentLines.
   SmallVector<UnwrappedLine, 8> Lines;

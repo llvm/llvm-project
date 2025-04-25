@@ -42,7 +42,8 @@ DenseSet<StringRef> getAssumptions(const Attribute &A) {
   SmallVector<StringRef, 8> Strings;
   A.getValueAsString().split(Strings, ",");
 
-  Assumptions.insert_range(Strings);
+  for (StringRef Str : Strings)
+    Assumptions.insert(Str);
   return Assumptions;
 }
 

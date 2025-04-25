@@ -131,7 +131,7 @@ bool llvm::applyDebugifyMetadata(
     // Helper that inserts a dbg.value before \p InsertBefore, copying the
     // location (and possibly the type, if it's non-void) from \p TemplateInst.
     auto insertDbgVal = [&](Instruction &TemplateInst,
-                            BasicBlock::iterator InsertPt) {
+                            Instruction *InsertBefore) {
       std::string Name = utostr(NextVar++);
       Value *V = &TemplateInst;
       if (TemplateInst.getType()->isVoidTy())
@@ -155,11 +155,11 @@ bool llvm::applyDebugifyMetadata(
             ExprBuilder.append<DIOp::ZExt>(IntegerType::get(Ctx, *DISize));
         }
         DIB.insertDbgValueIntrinsic(V, LocalVar, ExprBuilder.intoExpression(),
-                                    Loc, InsertPt);
+                                    Loc, InsertBefore);
         return;
       }
       DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
-                                  InsertPt);
+                                  InsertBefore);
     };
 
     for (BasicBlock &BB : F) {
@@ -183,9 +183,7 @@ bool llvm::applyDebugifyMetadata(
       // are made.
       BasicBlock::iterator InsertPt = BB.getFirstInsertionPt();
       assert(InsertPt != BB.end() && "Expected to find an insertion point");
-
-      // Insert after existing debug values to preserve order.
-      InsertPt.setHeadBit(false);
+      Instruction *InsertBefore = &*InsertPt;
 
       // Attach debug values.
       for (Instruction *I = &*BB.begin(); I != LastInst; I = I->getNextNode()) {
@@ -196,9 +194,9 @@ bool llvm::applyDebugifyMetadata(
         // Phis and EH pads must be grouped at the beginning of the block.
         // Only advance the insertion point when we finish visiting these.
         if (!isa<PHINode>(I) && !I->isEHPad())
-          InsertPt = std::next(I->getIterator());
+          InsertBefore = I->getNextNode();
 
-        insertDbgVal(*I, InsertPt);
+        insertDbgVal(*I, InsertBefore);
         InsertedDbgVal = true;
       }
     }
@@ -209,7 +207,7 @@ bool llvm::applyDebugifyMetadata(
     // those tests, and this helps with that.)
     if (DebugifyLevel == Level::LocationsAndVariables && !InsertedDbgVal) {
       auto *Term = findTerminatingInstruction(F.getEntryBlock());
-      insertDbgVal(*Term, Term->getIterator());
+      insertDbgVal(*Term, Term);
     }
     if (ApplyToMF)
       ApplyToMF(DIB, F);
@@ -236,27 +234,30 @@ bool llvm::applyDebugifyMetadata(
   return true;
 }
 
-static bool applyDebugify(Function &F, enum DebugifyMode Mode,
-                          DebugInfoPerPass *DebugInfoBeforePass,
-                          StringRef NameOfWrappedPass = "") {
+static bool
+applyDebugify(Function &F,
+              enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
+              DebugInfoPerPass *DebugInfoBeforePass = nullptr,
+              StringRef NameOfWrappedPass = "") {
   Module &M = *F.getParent();
   auto FuncIt = F.getIterator();
   if (Mode == DebugifyMode::SyntheticDebugInfo)
     return applyDebugifyMetadata(M, make_range(FuncIt, std::next(FuncIt)),
                                  "FunctionDebugify: ", /*ApplyToMF*/ nullptr);
-  assert(DebugInfoBeforePass && "Missing debug info metadata");
+  assert(DebugInfoBeforePass);
   return collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                                   "FunctionDebugify (original debuginfo)",
                                   NameOfWrappedPass);
 }
 
-static bool applyDebugify(Module &M, enum DebugifyMode Mode,
-                          DebugInfoPerPass *DebugInfoBeforePass,
-                          StringRef NameOfWrappedPass = "") {
+static bool
+applyDebugify(Module &M,
+              enum DebugifyMode Mode = DebugifyMode::SyntheticDebugInfo,
+              DebugInfoPerPass *DebugInfoBeforePass = nullptr,
+              StringRef NameOfWrappedPass = "") {
   if (Mode == DebugifyMode::SyntheticDebugInfo)
     return applyDebugifyMetadata(M, M.functions(),
                                  "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
-  assert(DebugInfoBeforePass && "Missing debug info metadata");
   return collectDebugInfoMetadata(M, M.functions(), *DebugInfoBeforePass,
                                   "ModuleDebugify (original debuginfo)",
                                   NameOfWrappedPass);

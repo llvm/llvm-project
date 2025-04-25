@@ -18,10 +18,12 @@
 namespace mlir {
 class TypeConverter;
 
-#define GEN_PASS_DECL_TOSATOTENSORPASS
+#define GEN_PASS_DECL_TOSATOTENSOR
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace tosa {
+
+std::unique_ptr<Pass> createTosaToTensor();
 
 void populateTosaToTensorConversionPatterns(const TypeConverter &converter,
                                             RewritePatternSet *patterns);

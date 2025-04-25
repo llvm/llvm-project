@@ -44,7 +44,7 @@
 using namespace llvm;
 
 /// Query value using AddLinkageNamesToDeclCallOriginsForTuning.
-static cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
+cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
     "add-linkage-names-to-declaration-call-origins", cl::Hidden,
     cl::desc("Add DW_AT_linkage_name to function declaration DIEs "
              "referenced by DW_AT_call_origin attributes. Enabled by default "
@@ -1359,7 +1359,7 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   // should be emitted for subprograms in this CU.
   if (!includeMinimalInlineScopes() && !Scope->getInlinedAt()) {
     auto &LocalDecls = DD->getLocalDeclsForScope(Scope->getScopeNode());
-    DeferredLocalDecls.insert_range(LocalDecls);
+    DeferredLocalDecls.insert(LocalDecls.begin(), LocalDecls.end());
   }
 
   // Emit inner lexical scopes.
@@ -1976,9 +1976,8 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);
-    const auto &DIEs = getAbstractScopeDIEs();
-    if (auto It = DIEs.find(SPScope); It != DIEs.end())
-      return It->second;
+    if (getAbstractScopeDIEs().count(SPScope))
+      return getAbstractScopeDIEs()[SPScope];
   }
   return DwarfUnit::getOrCreateContextDIE(Context);
 }

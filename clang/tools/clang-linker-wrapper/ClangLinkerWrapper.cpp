@@ -483,6 +483,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
+  StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
   SmallVector<StringRef, 16> CmdArgs{
       *ClangPath,
       "--no-default-config",
@@ -495,11 +496,10 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
 
-  // AMDGPU is always in LTO mode currently.
-  if (Triple.isAMDGPU())
-    CmdArgs.push_back("-flto");
+  CmdArgs.push_back(Args.MakeArgString("-" + OptLevel));
 
   // Forward all of the `--offload-opt` and similar options to the device.
+  CmdArgs.push_back("-flto");
   for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
     CmdArgs.append(
         {"-Xlinker",
@@ -512,7 +512,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
-  if (!Triple.isGPU()) {
+  if (!Triple.isAMDGPU() && !Triple.isNVPTX() && !Triple.isSPIRV()) {
     CmdArgs.push_back("-Wl,-Bsymbolic");
     CmdArgs.push_back("-shared");
     ArgStringList LinkerArgs;
@@ -548,11 +548,28 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     CmdArgs.append({"-Xlinker", Args.MakeArgString(
                                     "-mllvm=" + StringRef(Arg->getValue()))});
 
+  if (Args.hasArg(OPT_debug))
+    CmdArgs.push_back("-g");
+
+  if (SaveTemps)
+    CmdArgs.push_back("-save-temps");
+
   if (SaveTemps && linkerSupportsLTO(Args))
     CmdArgs.push_back("-Wl,--save-temps");
 
   if (Args.hasArg(OPT_embed_bitcode))
     CmdArgs.push_back("-Wl,--lto-emit-llvm");
+
+  if (Verbose)
+    CmdArgs.push_back("-v");
+
+  if (!CudaBinaryPath.empty())
+    CmdArgs.push_back(Args.MakeArgString("--cuda-path=" + CudaBinaryPath));
+
+  for (StringRef Arg : Args.getAllArgValues(OPT_ptxas_arg))
+    llvm::copy(
+        SmallVector<StringRef>({"-Xcuda-ptxas", Args.MakeArgString(Arg)}),
+        std::back_inserter(CmdArgs));
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -603,11 +620,9 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
 
   StringRef Prefix =
       sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
-  SmallString<128> Filename;
-  (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
-      .toVector(Filename);
-  llvm::replace(Filename, ':', '-');
-  auto TempFileOrErr = createOutputFile(Filename, "o");
+
+  auto TempFileOrErr = createOutputFile(
+      Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch(), "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -633,7 +648,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
     return createStringError(Msg);
 
   auto Options =
-      codegen::InitTargetOptionsFromCodeGenFlags(M.getTargetTriple());
+      codegen::InitTargetOptionsFromCodeGenFlags(Triple(M.getTargetTriple()));
   StringRef CPU = "";
   StringRef Features = "";
   std::unique_ptr<TargetMachine> TM(
@@ -656,7 +671,7 @@ Expected<StringRef> compileModule(Module &M, OffloadKind Kind) {
   auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
 
   legacy::PassManager CodeGenPasses;
-  TargetLibraryInfoImpl TLII(M.getTargetTriple());
+  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
@@ -680,8 +695,8 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 
   LLVMContext Context;
   Module M("offload.wrapper.module", Context);
-  M.setTargetTriple(Triple(
-      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple())));
+  M.setTargetTriple(
+      Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
 
   switch (Kind) {
   case OFK_OpenMP:
@@ -1066,9 +1081,8 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
       if (Sym.isFormatSpecific() || !Sym.isGlobal())
         continue;
 
-      auto It = Syms.find(Sym.getName());
-      bool NewSymbol = It == Syms.end();
-      auto OldSym = NewSymbol ? Sym_None : It->second;
+      bool NewSymbol = Syms.count(Sym.getName()) == 0;
+      auto OldSym = NewSymbol ? Sym_None : Syms[Sym.getName()];
 
       // We will extract if it defines a currenlty undefined non-weak
       // symbol.
@@ -1099,7 +1113,7 @@ Expected<bool> getSymbolsFromBitcode(MemoryBufferRef Buffer, OffloadKind Kind,
 
   // If the file gets extracted we update the table with the new symbols.
   if (ShouldExtract)
-    Syms.insert_range(TmpSyms);
+    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
 
   return ShouldExtract;
 }
@@ -1154,7 +1168,7 @@ Expected<bool> getSymbolsFromObject(const ObjectFile &Obj, OffloadKind Kind,
 
   // If the file gets extracted we update the table with the new symbols.
   if (ShouldExtract)
-    Syms.insert_range(TmpSyms);
+    Syms.insert(std::begin(TmpSyms), std::end(TmpSyms));
 
   return ShouldExtract;
 }

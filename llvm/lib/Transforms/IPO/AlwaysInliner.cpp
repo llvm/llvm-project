@@ -126,7 +126,7 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
     initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
-  /// Main run interface method.
+  /// Main run interface method.  We override here to avoid calling skipSCC().
   bool runOnModule(Module &M) override {
 
     auto &PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();

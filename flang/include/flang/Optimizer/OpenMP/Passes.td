@@ -60,7 +60,7 @@ def GlobalFilteringPass : Pass<"omp-global-filtering"> {
   ];
 }
 
-def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::func::FuncOp"> {
+def DoConcurrentConversionPass : Pass<"fopenmp-do-concurrent-conversion", "mlir::func::FuncOp"> {
   let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
 
   let description = [{ This is an experimental pass to map `DO CONCURRENT` loops
@@ -69,7 +69,7 @@ def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::fun
      For now the following is supported:
        - Mapping simple loops to `parallel do`.
 
-     Still TODO:
+     Still to TODO:
        - More extensive testing.
   }];
 
@@ -79,7 +79,7 @@ def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::fun
     Option<"mapTo", "map-to",
            "flangomp::DoConcurrentMappingKind",
            /*default=*/"flangomp::DoConcurrentMappingKind::DCMK_None",
-           "Try to map `do concurrent` loops to OpenMP [none|host|device]",
+           "Try to map `do concurrent` loops to OpenMP (on host or device)",
            [{::llvm::cl::values(
                clEnumValN(flangomp::DoConcurrentMappingKind::DCMK_None,
                           "none", "Do not lower `do concurrent` to OpenMP"),

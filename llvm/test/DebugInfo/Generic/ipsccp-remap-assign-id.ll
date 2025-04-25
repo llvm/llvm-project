@@ -1,4 +1,5 @@
 ; RUN: opt -passes=ipsccp -funcspec-for-literal-constant=false %s -S -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes=ipsccp -funcspec-for-literal-constant=false %s -S -o - | FileCheck %s
 
 ;; Check the dbg.assign DIAssignID operand gets remapped after cloning.
 

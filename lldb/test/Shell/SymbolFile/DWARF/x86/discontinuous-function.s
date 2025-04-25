@@ -16,32 +16,22 @@ image lookup -v -n foo
 # CHECK-LABEL: image lookup -v -n foo
 # CHECK: 1 match found in {{.*}}
 # CHECK: Summary: input.o`foo
-# CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000f)[0x0000000000000015-0x000000000000001d)
+# CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000e)[0x0000000000000014-0x000000000000001c)
 
 image lookup -v --regex -n '^foo$'
 # CHECK-LABEL: image lookup -v --regex -n '^foo$'
 # CHECK: 1 match found in {{.*}}
 # CHECK: Summary: input.o`foo
-# CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000f)[0x0000000000000015-0x000000000000001d)
+# CHECK: Function: id = {{.*}}, name = "foo", ranges = [0x0000000000000000-0x000000000000000e)[0x0000000000000014-0x000000000000001c)
 
 expr -- &foo
 # CHECK-LABEL: expr -- &foo
 # CHECK: (void (*)()) $0 = 0x0000000000000007
 
-breakpoint set --name foo --skip-prologue false
-# CHECK-LABEL: breakpoint set --name foo --skip-prologue false
-# CHECK: Breakpoint 1: where = input.o`foo at -:1, address = 0x0000000000000007
-
-breakpoint set --name foo --skip-prologue true
-# CHECK-LABEL: breakpoint set --name foo --skip-prologue true
-# CHECK: Breakpoint 2: where = input.o`foo + 1 at -:2, address = 0x0000000000000008
-
 #--- input.s
         .text
 
-        .file   0 "." "-"
 foo.__part.1:
-        .loc    0 10
         .cfi_startproc
         callq   bar
         jmp     foo.__part.3
@@ -51,10 +41,7 @@ foo.__part.1:
 
         .type   foo,@function
 foo:
-        .loc    0 1
         .cfi_startproc
-        nop
-        .loc    0 2 prologue_end
         cmpl    $0, %edi
         je      foo.__part.2
         jmp     foo.__part.1
@@ -64,7 +51,6 @@ foo:
 
 bar:
         .cfi_startproc
-        .loc    0 100
         movl    $47, %eax
         retq
         .cfi_endproc
@@ -72,7 +58,6 @@ bar:
         .size   bar, .Lbar_end-bar
 
 foo.__part.2:
-        .loc    0 20
         .cfi_startproc
         callq   baz
         jmp     foo.__part.3
@@ -81,7 +66,6 @@ foo.__part.2:
         .cfi_endproc
 
 foo.__part.3:
-        .loc    0 30
         .cfi_startproc
         retq
 .Lfoo.__part.3_end:
@@ -102,8 +86,6 @@ foo.__part.3:
         .byte   85                              # DW_AT_ranges
         .byte   35                              # DW_FORM_rnglistx
         .byte   116                             # DW_AT_rnglists_base
-        .byte   23                              # DW_FORM_sec_offset
-        .byte   16                              # DW_AT_stmt_list
         .byte   23                              # DW_FORM_sec_offset
         .byte   0                               # EOM(1)
         .byte   0                               # EOM(2)
@@ -145,7 +127,6 @@ foo.__part.3:
         .quad   0                               # DW_AT_low_pc
         .byte   1                               # DW_AT_ranges
         .long   .Lrnglists_table_base0          # DW_AT_rnglists_base
-        .long   .Lline_table_start0             # DW_AT_stmt_list
         .byte   2                               # Abbrev [2] DW_TAG_subprogram
         .quad   bar                             # DW_AT_low_pc
         .quad   .Lbar_end                       # DW_AT_high_pc
@@ -202,5 +183,3 @@ foo.__part.3:
 .Ldebug_list_header_end0:
 
         .section        ".note.GNU-stack","",@progbits
-        .section        .debug_line,"",@progbits
-.Lline_table_start0:

@@ -47,17 +47,11 @@ const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     validate(BB);
 #endif
 
-  auto [It, Inserted] = FirstSpecialInsts.try_emplace(BB);
-  if (Inserted) {
-    for (const auto &I : *BB) {
-      NumInstScanned++;
-      if (isSpecialInstruction(&I)) {
-        It->second = &I;
-        break;
-      }
-    }
+  if (!FirstSpecialInsts.contains(BB)) {
+    fill(BB);
+    assert(FirstSpecialInsts.contains(BB) && "Must be!");
   }
-  return It->second;
+  return FirstSpecialInsts[BB];
 }
 
 bool InstructionPrecedenceTracking::hasSpecialInstructions(
@@ -70,6 +64,20 @@ bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
   const Instruction *MaybeFirstSpecial =
       getFirstSpecialInstruction(Insn->getParent());
   return MaybeFirstSpecial && MaybeFirstSpecial->comesBefore(Insn);
+}
+
+void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
+  FirstSpecialInsts.erase(BB);
+  for (const auto &I : *BB) {
+    NumInstScanned++;
+    if (isSpecialInstruction(&I)) {
+      FirstSpecialInsts[BB] = &I;
+      return;
+    }
+  }
+
+  // Mark this block as having no special instructions.
+  FirstSpecialInsts[BB] = nullptr;
 }
 
 #ifndef NDEBUG

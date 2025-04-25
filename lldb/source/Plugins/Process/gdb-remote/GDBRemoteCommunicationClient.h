@@ -338,10 +338,6 @@ public:
 
   bool GetMultiprocessSupported();
 
-  bool GetReverseContinueSupported();
-
-  bool GetReverseStepSupported();
-
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -572,8 +568,6 @@ protected:
   LazyBool m_supports_qSaveCore = eLazyBoolCalculate;
   LazyBool m_uses_native_signals = eLazyBoolCalculate;
   std::optional<xPacketState> m_x_packet_state;
-  LazyBool m_supports_reverse_continue = eLazyBoolCalculate;
-  LazyBool m_supports_reverse_step = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

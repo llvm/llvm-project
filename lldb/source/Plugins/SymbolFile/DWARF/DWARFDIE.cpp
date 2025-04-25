@@ -622,12 +622,12 @@ std::optional<uint64_t> DWARFDIE::getLanguage() const {
 }
 
 DWARFDIE DWARFDIE::resolveReferencedType(dw_attr_t attr) const {
-  return GetReferencedDIE(attr).resolveTypeUnitReference();
+  return GetReferencedDIE(attr);
 }
 
 DWARFDIE DWARFDIE::resolveReferencedType(DWARFFormValue v) const {
   if (IsValid())
-    return v.Reference().resolveTypeUnitReference();
+    return v.Reference();
   return {};
 }
 

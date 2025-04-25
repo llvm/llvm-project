@@ -47,7 +47,7 @@ struct ModHeader {
 
 static std::optional<SourceName> GetSubmoduleParent(const parser::Program &);
 static void CollectSymbols(
-    const Scope &, SymbolVector &, SymbolVector &, SourceOrderedSymbolSet &);
+    const Scope &, SymbolVector &, SymbolVector &, UnorderedSymbolSet &);
 static void PutPassName(llvm::raw_ostream &, const std::optional<SourceName> &);
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &,
     const parser::Expr *);
@@ -348,7 +348,7 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
     uses_ << DEREF(sMod->symbol()).name() << ",only:";
     if (rename != s->name()) {
       uses_ << rename << "=>";
-      renamings.emplace(&s->GetUltimate(), rename);
+      renamings.emplace(&*s, rename);
     }
     uses_ << s->name() << '\n';
     useExtraAttrs_ << "private::" << rename << '\n';
@@ -363,7 +363,7 @@ void ModFileWriter::PutSymbols(
   auto &renamings{context_.moduleFileOutputRenamings()};
   auto previousRenamings{std::move(renamings)};
   PrepareRenamings(scope);
-  SourceOrderedSymbolSet modules;
+  UnorderedSymbolSet modules;
   CollectSymbols(scope, sorted, uses, modules);
   // Write module files for dependencies first so that their
   // hashes are known.
@@ -836,10 +836,22 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
+static inline SourceName NameInModuleFile(const Symbol &symbol) {
+  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+    if (use->symbol().attrs().test(Attr::PRIVATE)) {
+      // Avoid the use in sorting of names created to access private
+      // specific procedures as a result of generic resolution;
+      // they're not in the cooked source.
+      return use->symbol().name();
+    }
+  }
+  return symbol.name();
+}
+
 // Collect the symbols of this scope sorted by their original order, not name.
 // Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(const Scope &scope, SymbolVector &sorted,
-    SymbolVector &uses, SourceOrderedSymbolSet &modules) {
+    SymbolVector &uses, UnorderedSymbolSet &modules) {
   SymbolVector namelist, generics;
   auto symbols{scope.GetSymbols()};
   std::size_t commonSize{scope.commonBlocks().size()};
@@ -870,8 +882,13 @@ void CollectSymbols(const Scope &scope, SymbolVector &sorted,
       sorted.push_back(symbol);
     }
   }
-  std::sort(sorted.begin(), sorted.end(), SymbolSourcePositionCompare{});
-  std::sort(generics.begin(), generics.end(), SymbolSourcePositionCompare{});
+  // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
+  // location of a symbol's name is the first "real" use.
+  auto sorter{[](SymbolRef x, SymbolRef y) {
+    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
+  }};
+  std::sort(sorted.begin(), sorted.end(), sorter);
+  std::sort(generics.begin(), generics.end(), sorter);
   sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
@@ -978,9 +995,11 @@ void ModFileWriter::PutObjectEntity(
         << ") " << symbol.name() << '\n';
   }
   if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
-    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
-      if (pointer == symbol) {
-        os << "pointer(" << symbol.name() << "," << pointee << ")\n";
+    if (!symbol.owner().crayPointers().empty()) {
+      for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
+        if (pointer == symbol) {
+          os << "pointer(" << symbol.name() << "," << pointee << ")\n";
+        }
       }
     }
   }
@@ -1544,10 +1563,6 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     Scope &hermeticScope{topScope.MakeScope(Scope::Kind::Global)};
     context_.set_currentHermeticModuleFileScope(&hermeticScope);
     ResolveNames(context_, hermeticModules, hermeticScope);
-    for (auto &[_, ref] : hermeticScope) {
-      CHECK(ref->has<ModuleDetails>());
-      ref->set(Symbol::Flag::ModFile);
-    }
   }
   GetModuleDependences(context_.moduleDependences(), sourceFile->content());
   ResolveNames(context_, parseTree, topScope);
@@ -1722,17 +1737,6 @@ void SubprogramSymbolCollector::DoSymbol(
   }
   if (!scope.IsDerivedType()) {
     need_.push_back(symbol);
-  }
-  if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointer)) {
-    for (const auto &[pointee, pointer] : symbol.owner().crayPointers()) {
-      if (&*pointer == &symbol) {
-        auto iter{symbol.owner().find(pointee)};
-        CHECK(iter != symbol.owner().end());
-        DoSymbol(*iter->second);
-      }
-    }
-  } else if (symbol.test(Fortran::semantics::Symbol::Flag::CrayPointee)) {
-    DoSymbol(GetCrayPointer(symbol));
   }
 }
 

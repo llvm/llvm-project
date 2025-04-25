@@ -788,11 +788,7 @@ static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
   // First emphasis of [expr.await]p2: must be a potentially evaluated context.
   // That is, 'co_await' and 'co_yield' cannot appear in subexpressions of
   // \c sizeof.
-  const auto ExprContext = S.currentEvaluationContext().ExprContext;
-  const bool BadContext =
-      S.isUnevaluatedContext() ||
-      ExprContext != Sema::ExpressionEvaluationContextRecord::EK_Other;
-  if (BadContext) {
+  if (S.isUnevaluatedContext()) {
     S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
     return false;
   }
@@ -802,6 +798,7 @@ static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
     S.Diag(Loc, diag::err_coroutine_within_handler) << Keyword;
     return false;
   }
+
   return true;
 }
 
@@ -1178,10 +1175,6 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   // extension wouldn't be meaningful in coroutines.
   for (AddrLabelExpr *ALE : Fn->AddrLabels)
     Diag(ALE->getBeginLoc(), diag::err_coro_invalid_addr_of_label);
-
-  // Coroutines always return a handle, so they can't be [[noreturn]].
-  if (FD->isNoReturn())
-    Diag(FD->getLocation(), diag::warn_noreturn_coroutine) << FD;
 
   CoroutineStmtBuilder Builder(*this, *FD, *Fn, Body);
   if (Builder.isInvalid() || !Builder.buildStatements())

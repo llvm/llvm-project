@@ -215,13 +215,13 @@ namespace {
 /// ```
 ///    %flattened_a = vector.shape_cast %a
 ///    %flattened_b = vector.shape_cast %b
-///    %flattened_d = vector.matrix_multiply %flattened_a, %flattened_b
+///    %flattened_d = vector.matmul %flattened_a, %flattened_b
 ///    %d = vector.shape_cast %%flattened_d
 ///    %e = add %c, %d
 /// ```
-/// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
+/// `vector.matmul` later lowers to `llvm.matrix.multiply`.
 //
-/// This only kicks in when vectorContractLowering is set to Matmul and
+/// This only kicks in when VectorTransformsOptions is set to OuterProduct and
 /// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToMatmulOpLowering
     : public vector::MaskableOpRewritePattern<vector::ContractionOp> {
@@ -236,11 +236,11 @@ public:
   }
 
   ContractionOpToMatmulOpLowering(
-      vector::VectorContractLowering vectorContractLowering,
+      vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       FilterConstraintType constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorContractLowering(vectorContractLowering),
+        vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
   FailureOr<Value>
@@ -249,7 +249,7 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorContractLowering vectorContractLowering;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
 };
 
@@ -266,7 +266,7 @@ private:
 ///    %cK = vector.outerproduct %atRowK, %bRowK, %cK-1
 /// ```
 ///
-/// This only kicks in when vectorContractLowering is set to OuterProduct and
+/// This only kicks in when VectorTransformsOptions is set to OuterProduct and
 /// the vector.contract op is a row-major matrix multiply.
 class ContractionOpToOuterProductOpLowering
     : public MaskableOpRewritePattern<vector::ContractionOp> {
@@ -281,11 +281,11 @@ public:
   }
 
   ContractionOpToOuterProductOpLowering(
-      vector::VectorContractLowering vectorContractLowering,
+      vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       FilterConstraintType constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorContractLowering(vectorContractLowering),
+        vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
   FailureOr<Value>
@@ -294,7 +294,7 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorContractLowering vectorContractLowering;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
 };
 
@@ -329,11 +329,11 @@ public:
   }
 
   ContractionOpToDotLowering(
-      vector::VectorContractLowering vectorContractLowering,
+      vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       const FilterConstraintType &constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorContractLowering(vectorContractLowering), filter(defaultFilter) {}
+        vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
   FailureOr<Value>
   matchAndRewriteMaskableOp(vector::ContractionOp op, MaskingOpInterface maskOp,
@@ -341,7 +341,7 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorContractLowering vectorContractLowering;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
 };
 
@@ -370,12 +370,11 @@ public:
     return success();
   }
 
-  ContractionOpLowering(
-      vector::VectorContractLowering vectorContractLoweringOption,
-      MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = defaultFilter)
+  ContractionOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
+                        MLIRContext *context, PatternBenefit benefit = 1,
+                        FilterConstraintType constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorContractLoweringOption(vectorContractLoweringOption),
+        vectorTransformOptions(vectorTransformOptions),
         filter(std::move(constraint)) {}
 
   FailureOr<Value>
@@ -384,7 +383,7 @@ public:
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorContractLowering vectorContractLoweringOption;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
   // Lower one parallel dimension.
   FailureOr<Value> lowerParallel(PatternRewriter &rewriter,
@@ -636,13 +635,14 @@ private:
 ///    %cK = vector.outerproduct %atRowK, %bRowK, %cK-1
 /// ```
 ///
-/// This only kicks in when vectorContractLowering is set to OuterProduct but
+/// This only kicks in when VectorTransformsOptions is set to OuterProduct but
 /// otherwise supports any layout permutation of the matrix-multiply.
 FailureOr<Value>
 ContractionOpToOuterProductOpLowering::matchAndRewriteMaskableOp(
     vector::ContractionOp op, MaskingOpInterface maskOp,
     PatternRewriter &rewriter) const {
-  if (vectorContractLowering != vector::VectorContractLowering::OuterProduct)
+  if (vectorTransformOptions.vectorContractLowering !=
+      vector::VectorContractLowering::OuterProduct)
     return failure();
 
   if (failed(filter(op)))
@@ -672,7 +672,8 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
   if (failed(filter(op)))
     return failure();
 
-  if (vectorContractLowering != vector::VectorContractLowering::Dot)
+  if (vectorTransformOptions.vectorContractLowering !=
+      vector::VectorContractLowering::Dot)
     return failure();
 
   auto iteratorTypes = op.getIteratorTypes().getValue();
@@ -757,28 +758,19 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
   Value res = rewriter.create<arith::ConstantOp>(loc, dstType,
                                                  rewriter.getZeroAttr(dstType));
   bool isInt = isa<IntegerType>(dstType.getElementType());
-  llvm::SmallVector<Value> extractedCols;
-  extractedCols.reserve(dstColumns);
   for (unsigned r = 0; r < dstRows; ++r) {
-    Value rowLhs = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
+    Value a = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
     for (unsigned c = 0; c < dstColumns; ++c) {
-      // Extract each respective row and column of the LHS and RHS once to
-      // avoid having duplicate SSA values pointing to the same rows/columns.
-      if (r == 0) {
-        Value colRhs =
-            rank == 1 ? rhs
-                      : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
-        extractedCols.push_back(colRhs);
-      }
-      Value extractedColRhs = extractedCols[c];
-      Value product =
-          createMul(op.getLoc(), rowLhs, extractedColRhs, isInt, rewriter);
-      Value sum = rewriter.create<vector::ReductionOp>(
-          op.getLoc(), vector::CombiningKind::ADD, product);
+      Value b = rank == 1
+                    ? rhs
+                    : rewriter.create<vector::ExtractOp>(op.getLoc(), rhs, c);
+      Value m = createMul(op.getLoc(), a, b, isInt, rewriter);
+      Value reduced = rewriter.create<vector::ReductionOp>(
+          op.getLoc(), vector::CombiningKind::ADD, m);
 
       SmallVector<int64_t, 2> pos = rank == 1 ? SmallVector<int64_t, 2>{r}
                                               : SmallVector<int64_t, 2>{r, c};
-      res = rewriter.create<vector::InsertOp>(op.getLoc(), sum, res, pos);
+      res = rewriter.create<vector::InsertOp>(op.getLoc(), reduced, res, pos);
     }
   }
   if (auto acc = op.getAcc())
@@ -797,11 +789,11 @@ struct ContractOpToElementwise
     return success();
   }
   ContractOpToElementwise(
-      vector::VectorContractLowering vectorContractLowering,
+      vector::VectorTransformsOptions vectorTransformOptions,
       MLIRContext *context, PatternBenefit benefit = 1,
       const FilterConstraintType &constraint = defaultFilter)
       : MaskableOpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorContractLowering(vectorContractLowering), filter(defaultFilter) {}
+        vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
 
   FailureOr<Value>
   matchAndRewriteMaskableOp(vector::ContractionOp contractOp,
@@ -814,7 +806,8 @@ struct ContractOpToElementwise
     if (failed(filter(contractOp)))
       return failure();
 
-    if (vectorContractLowering != vector::VectorContractLowering::ParallelArith)
+    if (vectorTransformOptions.vectorContractLowering !=
+        vector::VectorContractLowering::ParallelArith)
       return failure();
 
     ArrayRef<int64_t> lhsShape = contractOp.getLhsType().getShape();
@@ -905,7 +898,7 @@ struct ContractOpToElementwise
 
 private:
   /// Options to control the vector patterns.
-  vector::VectorContractLowering vectorContractLowering;
+  vector::VectorTransformsOptions vectorTransformOptions;
   FilterConstraintType filter;
 };
 
@@ -920,7 +913,7 @@ private:
 /// until a pure contraction is reached (no free/batch dimensions),
 /// which is replaced by a dot-product.
 ///
-/// This only kicks in when either vectorContractLoweringOption is set
+/// This only kicks in when either VectorTransformsOptions is set
 /// to DOT or when other contraction patterns fail.
 //
 // TODO: break down into transpose/reshape/cast ops
@@ -948,25 +941,25 @@ FailureOr<Value> ContractionOpLowering::matchAndRewriteMaskableOp(
   // TODO: implement benefits, cost models.
   MLIRContext *ctx = op.getContext();
 
-  ContractionOpToMatmulOpLowering pat1(vectorContractLoweringOption, ctx);
+  ContractionOpToMatmulOpLowering pat1(vectorTransformOptions, ctx);
   FailureOr<Value> newVal1 =
       pat1.matchAndRewriteMaskableOp(op, maskOp, rewriter);
   if (!failed(newVal1))
     return newVal1;
 
-  ContractionOpToOuterProductOpLowering pat2(vectorContractLoweringOption, ctx);
+  ContractionOpToOuterProductOpLowering pat2(vectorTransformOptions, ctx);
   FailureOr<Value> newVal2 =
       pat2.matchAndRewriteMaskableOp(op, maskOp, rewriter);
   if (!failed(newVal2))
     return newVal2;
 
-  ContractionOpToDotLowering pat3(vectorContractLoweringOption, ctx);
+  ContractionOpToDotLowering pat3(vectorTransformOptions, ctx);
   FailureOr<Value> newVal3 =
       pat3.matchAndRewriteMaskableOp(op, maskOp, rewriter);
   if (!failed(newVal3))
     return newVal3;
 
-  ContractOpToElementwise pat4(vectorContractLoweringOption, ctx);
+  ContractOpToElementwise pat4(vectorTransformOptions, ctx);
   FailureOr<Value> newVal4 =
       pat4.matchAndRewriteMaskableOp(op, maskOp, rewriter);
   if (!failed(newVal4))
@@ -1280,14 +1273,14 @@ public:
 ///    %mtb = maybe_transpose
 ///    %flattened_a = vector.shape_cast %mta
 ///    %flattened_b = vector.shape_cast %mtb
-///    %flattened_d = vector.matrix_multiply %flattened_a, %flattened_b
+///    %flattened_d = vector.matmul %flattened_a, %flattened_b
 ///    %mtd = vector.shape_cast %flattened_d
 ///    %d = maybe_untranspose %mtd
 ///    %e = add %c, %d
 /// ```
-/// `vector.matrix_multiply` later lowers to `llvm.matrix.multiply`.
+/// `vector.matmul` later lowers to `llvm.matrix.multiply`.
 //
-/// This only kicks in when vectorContractLowering is set to `Matmul`.
+/// This only kicks in when VectorTransformsOptions is set to `Matmul`.
 /// vector.transpose operations are inserted if the vector.contract op is not a
 /// row-major matrix multiply.
 ///
@@ -1299,7 +1292,8 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
   if (maskOp)
     return failure();
 
-  if (vectorContractLowering != vector::VectorContractLowering::Matmul)
+  if (vectorTransformOptions.vectorContractLowering !=
+      vector::VectorContractLowering::Matmul)
     return failure();
   if (failed(filter(op)))
     return failure();
@@ -1388,14 +1382,13 @@ FailureOr<Value> ContractionOpToMatmulOpLowering::matchAndRewriteMaskableOp(
 } // namespace
 
 void mlir::vector::populateVectorContractLoweringPatterns(
-    RewritePatternSet &patterns,
-    VectorContractLowering vectorContractLoweringOption, PatternBenefit benefit,
-    bool disableOuterProductLowering) {
+    RewritePatternSet &patterns, VectorTransformsOptions options,
+    PatternBenefit benefit, bool disableOuterProductLowering) {
   if (!disableOuterProductLowering)
     patterns.add<OuterProductOpLowering>(patterns.getContext(), benefit);
   patterns.add<ContractionOpLowering, ContractionOpToMatmulOpLowering,
                ContractionOpToOuterProductOpLowering>(
-      vectorContractLoweringOption, patterns.getContext(), benefit);
+      options, patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateVectorOuterProductLoweringPatterns(

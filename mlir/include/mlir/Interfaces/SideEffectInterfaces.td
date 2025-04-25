@@ -45,7 +45,6 @@ class MemoryEffects<list<MemoryEffect> effects = []>
 
 //===----------------------------------------------------------------------===//
 // Effects
-//===----------------------------------------------------------------------===//
 
 // The following effect indicates that the operation allocates from some
 // resource. An 'allocate' effect implies only allocation of the resource, and

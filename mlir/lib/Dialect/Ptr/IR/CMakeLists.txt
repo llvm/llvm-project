@@ -7,8 +7,7 @@ add_mlir_dialect_library(
   DEPENDS
   MLIRPtrOpsAttributesIncGen
   MLIRPtrOpsIncGen
-  MLIRPtrOpsEnumsGen
-  MLIRPtrMemorySpaceInterfacesIncGen
+
   LINK_LIBS
   PUBLIC
   MLIRIR

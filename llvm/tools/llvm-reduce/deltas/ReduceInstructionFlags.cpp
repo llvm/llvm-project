@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInstructionFlags.h"
+#include "Delta.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -18,8 +19,7 @@
 
 using namespace llvm;
 
-void llvm::reduceInstructionFlagsDeltaPass(Oracle &O,
-                                           ReducerWorkItem &WorkItem) {
+static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
   // Keep this in sync with computeIRComplexityScoreImpl().
   for (Function &F : WorkItem.getModule()) {
     for (Instruction &I : instructions(F)) {
@@ -82,4 +82,8 @@ void llvm::reduceInstructionFlagsDeltaPass(Oracle &O,
       }
     }
   }
+}
+
+void llvm::reduceInstructionFlagsDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceFlagsInModule, "Reducing Instruction Flags");
 }

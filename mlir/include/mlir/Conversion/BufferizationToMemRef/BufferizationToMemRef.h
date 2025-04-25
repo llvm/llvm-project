@@ -15,9 +15,10 @@
 namespace mlir {
 class ModuleOp;
 
-#define GEN_PASS_DECL_CONVERTBUFFERIZATIONTOMEMREFPASS
+#define GEN_PASS_DECL_CONVERTBUFFERIZATIONTOMEMREF
 #include "mlir/Conversion/Passes.h.inc"
 
+std::unique_ptr<Pass> createBufferizationToMemRefPass();
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_BUFFERIZATIONTOMEMREF_BUFFERIZATIONTOMEMREF_H

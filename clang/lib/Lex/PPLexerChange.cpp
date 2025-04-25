@@ -754,10 +754,9 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
   // Switch to this submodule as the current submodule.
   CurSubmoduleState = &State;
 
-  // This module is visible to itself, but exports should not be made visible
-  // until they are imported.
+  // This module is visible to itself.
   if (FirstTime)
-    makeModuleVisible(M, ImportLoc, /*IncludeExports=*/false);
+    makeModuleVisible(M, ImportLoc);
 }
 
 bool Preprocessor::needModuleMacros() const {

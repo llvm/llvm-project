@@ -51,8 +51,8 @@ class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
 class FrontendAction;
+class InMemoryModuleCache;
 class Module;
-class ModuleCache;
 class Preprocessor;
 class Sema;
 class SourceManager;
@@ -97,7 +97,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -209,7 +209,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      ModuleCache *ModCache = nullptr);
+      InMemoryModuleCache *SharedModuleCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -746,8 +746,9 @@ public:
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot,
       DisableValidationForModuleKind DisableValidation,
-      bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
-      ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
+      bool AllowPCHWithCompilerErrors, Preprocessor &PP,
+      InMemoryModuleCache &ModuleCache, ASTContext &Context,
+      const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
@@ -895,7 +896,7 @@ public:
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
-  ModuleCache &getModuleCache() const { return *ModCache; }
+  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
 };
 
 } // end namespace clang

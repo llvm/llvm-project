@@ -163,8 +163,7 @@ Options
     Semicolon-separated list of containers without their template parameters
     and some ``emplace``-like method of the container. Example:
     ``vector::emplace_back``. Those methods will be checked for improper use and
-    the check will report when a temporary is unnecessarily created. All STL
-    containers with such member functions are supported by default.
+    the check will report when a temporary is unnecessarily created.
 
 Example
 ^^^^^^^

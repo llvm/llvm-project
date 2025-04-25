@@ -376,11 +376,10 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
   int RetIdx = RetTy->isVoidTy() ? 0 : 1;
   for (Argument &Arg : F.args()) {
-    auto It = OutArgIndexes.find(Arg.getArgNo());
-    if (It == OutArgIndexes.end())
+    if (!OutArgIndexes.count(Arg.getArgNo()))
       continue;
 
-    Type *EltTy = It->second;
+    Type *EltTy = OutArgIndexes[Arg.getArgNo()];
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 

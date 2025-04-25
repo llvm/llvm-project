@@ -70,7 +70,7 @@ class FileManager;
 class FrontendAction;
 class HeaderSearch;
 class InputKind;
-class ModuleCache;
+class InMemoryModuleCache;
 class PCHContainerOperations;
 class PCHContainerReader;
 class Preprocessor;
@@ -110,7 +110,7 @@ private:
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
   std::shared_ptr<Preprocessor>           PP;
@@ -139,9 +139,6 @@ private:
   /// Optional owned invocation, just used to make the invocation used in
   /// LoadFromCommandLine available.
   std::shared_ptr<CompilerInvocation> Invocation;
-  /// Optional owned invocation, just used to make the invocation used in
-  /// Parse available.
-  std::shared_ptr<CompilerInvocation> CCInvocation;
 
   /// Fake module loader: the AST unit doesn't need to load any modules.
   TrivialModuleLoader ModuleLoader;

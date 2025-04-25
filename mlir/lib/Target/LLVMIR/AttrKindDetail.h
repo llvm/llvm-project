@@ -35,8 +35,6 @@ getAttrKindToNameMapping() {
        LLVMDialect::getDereferenceableAttrName()},
       {llvm::Attribute::AttrKind::DereferenceableOrNull,
        LLVMDialect::getDereferenceableOrNullAttrName()},
-      {llvm::Attribute::AttrKind::ElementType,
-       LLVMDialect::getElementTypeAttrName()},
       {llvm::Attribute::AttrKind::InAlloca, LLVMDialect::getInAllocaAttrName()},
       {llvm::Attribute::AttrKind::InReg, LLVMDialect::getInRegAttrName()},
       {llvm::Attribute::AttrKind::Nest, LLVMDialect::getNestAttrName()},

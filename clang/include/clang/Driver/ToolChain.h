@@ -524,9 +524,6 @@ public:
                                     StringRef Component,
                                     FileType Type = ToolChain::FT_Static) const;
 
-  // Returns Triple without the OSs version.
-  llvm::Triple getTripleWithoutOSVersion() const;
-
   // Returns the target specific runtime path if it exists.
   std::optional<std::string> getRuntimePath() const;
 
@@ -845,7 +842,7 @@ public:
         return llvm::Triple("nvptx-nvidia-cuda");
       if (TT.getArch() == llvm::Triple::nvptx64)
         return llvm::Triple("nvptx64-nvidia-cuda");
-      if (TT.isAMDGCN())
+      if (TT.getArch() == llvm::Triple::amdgcn)
         return llvm::Triple("amdgcn-amd-amdhsa");
     }
     return TT;

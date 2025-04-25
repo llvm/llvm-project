@@ -849,20 +849,21 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
 
   // Coordinate building the global index file with other processes that might
   // try to do the same.
-  llvm::LockFileManager Lock(IndexPath);
-  bool Owned;
-  if (llvm::Error Err = Lock.tryLock().moveInto(Owned)) {
-    llvm::consumeError(std::move(Err));
+  llvm::LockFileManager Locked(IndexPath);
+  switch (Locked) {
+  case llvm::LockFileManager::LFS_Error:
     return llvm::createStringError(std::errc::io_error, "LFS error");
-  }
-  if (!Owned) {
+
+  case llvm::LockFileManager::LFS_Owned:
+    // We're responsible for building the index ourselves. Do so below.
+    break;
+
+  case llvm::LockFileManager::LFS_Shared:
     // Someone else is responsible for building the index. We don't care
     // when they finish, so we're done.
     return llvm::createStringError(std::errc::device_or_resource_busy,
                                    "someone else is building the index");
   }
-
-  // We're responsible for building the index ourselves.
 
   // The module index builder.
   GlobalModuleIndexBuilder Builder(FileMgr, PCHContainerRdr);

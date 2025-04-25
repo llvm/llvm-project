@@ -826,23 +826,13 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
 std::error_code
 SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
                                        SampleProfileMap &Profiles) {
-  if (FuncsToUse.empty())
-    return sampleprof_error::success;
-
   Data = ProfileSecRange.first;
   End = ProfileSecRange.second;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
-  DenseSet<FunctionSamples *> ProfilesToReadMetadata;
-  for (auto FName : FuncsToUse) {
-    auto I = Profiles.find(FName);
-    if (I != Profiles.end())
-      ProfilesToReadMetadata.insert(&I->second);
-  }
 
-  if (std::error_code EC =
-          readFuncMetadata(ProfileHasAttribute, ProfilesToReadMetadata))
+  if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, Profiles))
     return EC;
   return sampleprof_error::success;
 }
@@ -1310,12 +1300,14 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata(
-    bool ProfileHasAttribute, DenseSet<FunctionSamples *> &Profiles) {
+std::error_code
+SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
+                                                   SampleProfileMap &Profiles) {
   if (FuncMetadataIndex.empty())
     return sampleprof_error::success;
 
-  for (auto *FProfile : Profiles) {
+  for (auto &I : Profiles) {
+    FunctionSamples *FProfile = &I.second;
     auto R = FuncMetadataIndex.find(FProfile->getContext().getHashCode());
     if (R == FuncMetadataIndex.end())
       continue;

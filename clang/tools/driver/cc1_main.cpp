@@ -111,10 +111,9 @@ static void ensureSufficientStack() {}
 
 /// Print supported cpus of the given target.
 static int PrintSupportedCPUs(std::string TargetStr) {
-  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(Triple, Error);
+      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -123,16 +122,15 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(Triple, "", "+cpuhelp", Options,
+      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options,
                                      std::nullopt));
   return 0;
 }
 
 static int PrintSupportedExtensions(std::string TargetStr) {
-  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(Triple, Error);
+      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -140,7 +138,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
+      TheTarget->createTargetMachine(TargetStr, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
@@ -167,10 +165,9 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 }
 
 static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
-  llvm::Triple Triple(TargetOpts.Triple);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(Triple, Error);
+      llvm::TargetRegistry::lookupTarget(TargetOpts.Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -182,8 +179,7 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   llvm::TargetOptions BackendOptions;
   std::string FeaturesStr = llvm::join(TargetOpts.FeaturesAsWritten, ",");
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
-                                     BackendOptions, std::nullopt));
+      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU, FeaturesStr, BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
 

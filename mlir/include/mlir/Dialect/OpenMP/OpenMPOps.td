@@ -146,24 +146,13 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
       return region.empty() ? nullptr : region.getArgument(0);
     }
 
-    /// Returns true if the init region might read from the mold argument
-    bool initReadsFromMold() {
-      BlockArgument moldArg = getInitMoldArg();
-      return moldArg && !moldArg.use_empty();
-    }
-
-    /// Returns true if any region of this privatizer might read from the mold
-    /// argument
-    bool readsFromMold() {
-      return initReadsFromMold() || !getCopyRegion().empty();
-    }
-
     /// needsMap returns true if the value being privatized should additionally
     /// be mapped to the target region using a MapInfoOp. This is most common
     /// when an allocatable is privatized. In such cases, the descriptor is used
     /// in privatization and needs to be mapped on to the device.
     bool needsMap() {
-      return initReadsFromMold();
+      BlockArgument moldArg = getInitMoldArg();
+      return moldArg ? !moldArg.use_empty() : false;
     }
 
     /// Get the type for arguments to nested regions. This should
@@ -236,7 +225,7 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 // 2.7 teams Construct
 //===----------------------------------------------------------------------===//
 def TeamsOp : OpenMP_Op<"teams", traits = [
-    AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
+    AttrSizedOperandSegments, RecursiveMemoryEffects
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
     OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
@@ -284,8 +273,8 @@ def SectionOp : OpenMP_Op<"section", traits = [
     // Override BlockArgOpenMPOpInterface methods based on the parent
     // omp.sections operation. Only forward-declare here because SectionsOp is
     // not completely defined at this point.
-    OperandRange getPrivateVars();
-    OperandRange getReductionVars();
+    unsigned numPrivateBlockArgs();
+    unsigned numReductionBlockArgs();
   }] # clausesExtraClassDeclaration;
   let assemblyFormat = "$region attr-dict";
 }
@@ -664,7 +653,7 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
     will be executed in parallel by threads in the current context. These
     iterations are spread across threads that already exist in the enclosing
     region.
-
+    
     The body region can only contain a single block which must contain a single
     operation. This operation must be another compatible loop wrapper or an
     `omp.loop_nest`.
@@ -751,9 +740,11 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
-    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
-    OpenMP_NogroupClause, OpenMP_NumTasksClause, OpenMP_PriorityClause,
-    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_UntiedClause
+    OpenMP_IfClause, OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,
+    OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
+    OpenMP_PriorityClause, OpenMP_PrivateClause,
+    OpenMP_ReductionClauseSkip<extraClassDeclaration = true>,
+    OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "taskloop construct";
   let description = [{
@@ -819,6 +810,14 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }];
 
   let extraClassDeclaration = [{
+    /// Returns the reduction variables
+    SmallVector<Value> getAllReductionVars();
+
+    // Define BlockArgOpenMPOpInterface methods here because they are not
+    // inherited from the respective clauses.
+    unsigned numInReductionBlockArgs() { return getInReductionVars().size(); }
+    unsigned numReductionBlockArgs() { return getReductionVars().size(); }
+
     void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
   }] # clausesExtraClassDeclaration;
 
@@ -891,6 +890,17 @@ def FlushOp : OpenMP_Op<"flush", clauses = [
 
   // Override inherited assembly format to include `varList`.
   let assemblyFormat = "( `(` $varList^ `:` type($varList) `)` )? attr-dict";
+
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      return getOperation()->getNumOperands();
+    }
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      return getOperand(i);
+    }
+  }] # clausesExtraClassDeclaration;
 }
 
 //===----------------------------------------------------------------------===//
@@ -990,19 +1000,30 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
     ) attr-dict
   }];
 
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      return getNumOperands();
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      return getOperands()[i];
+    }
+  }];
+
   let hasVerifier = 1;
 }
 
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
-                       UI64Attr:$map_type,
-                       VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
                        OptionalAttr<IndexListArrayAttr>:$members_index,
                        Variadic<OpenMP_MapBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
-                       OptionalAttr<FlatSymbolRefAttr>:$mapper_id,
+                       OptionalAttr<UI64Attr>:$map_type,
+                       OptionalAttr<VariableCaptureKindAttr>:$map_capture_type,
                        OptionalAttr<StrAttr>:$name,
                        DefaultValuedAttr<BoolAttr, "false">:$partial_map);
   let results = (outs OpenMP_PointerLikeType:$omp_ptr);
@@ -1038,11 +1059,6 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     Description of arguments:
     - `var_ptr`: The address of variable to copy.
     - `var_type`: The type of the variable to copy.
-    - 'map_type': OpenMP map type for this map capture, for example: from, to and
-       always. It's a bitfield composed of the OpenMP runtime flags stored in
-       OpenMPOffloadMappingFlags.
-    - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
-       this can affect how the variable is lowered.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
     - `members`: Used to indicate mapped child members for the current MapInfoOp,
@@ -1057,8 +1073,11 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
        is the inner-most dimension.
-    - 'mapper_id': OpenMP mapper map type modifier for this map capture. It's used to
-       specify a user defined mapper to be used for mapping.
+    - 'map_type': OpenMP map type for this map capture, for example: from, to and
+       always. It's a bitfield composed of the OpenMP runtime flags stored in
+       OpenMPOffloadMappingFlags.
+    - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
+       this can affect how the variable is lowered.
     - `name`: Holds the name of variable as specified in user clause (including bounds).
     - `partial_map`: The record type being mapped will not be mapped in its entirety,
        it may be used however, in a mapping to bind it's mapped components together.
@@ -1066,17 +1085,26 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     `var_ptr` `(` $var_ptr `:` type($var_ptr) `,` $var_type `)`
-    `map_clauses` `(` custom<MapClause>($map_type) `)`
-    `capture` `(` custom<CaptureType>($map_capture_type) `)`
     oilist(
         `var_ptr_ptr` `(` $var_ptr_ptr `:` type($var_ptr_ptr) `)`
-      | `mapper` `(` $mapper_id `)`
+      | `map_clauses` `(` custom<MapClause>($map_type) `)`
+      | `capture` `(` custom<CaptureType>($map_capture_type) `)`
       | `members` `(` $members `:` custom<MembersIndex>($members_index) `:` type($members) `)`
       | `bounds` `(` $bounds `)`
     ) `->` type($omp_ptr) attr-dict
   }];
 
-  let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      return getNumOperands();
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      return getOperands()[i];
+    }
+  }];
 }
 
 //===---------------------------------------------------------------------===//
@@ -1107,14 +1135,6 @@ def TargetDataOp: OpenMP_Op<"target_data", traits = [
   let builders = [
     OpBuilder<(ins CArg<"const TargetDataOperands &">:$clauses)>
   ];
-
-  let extraClassDeclaration = [{
-    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
-    // associated entry block arguments in this operation.
-    unsigned numMapBlockArgs() {
-      return 0;
-    }
-  }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
     custom<UseDeviceAddrUseDevicePtrRegion>(
@@ -1150,14 +1170,6 @@ def TargetEnterDataOp: OpenMP_Op<"target_enter_data", traits = [
     OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataOperands &">:$clauses)>
   ];
 
-  let extraClassDeclaration = [{
-    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
-    // associated entry block arguments in this operation.
-    unsigned numMapBlockArgs() {
-      return 0;
-    }
-  }] # clausesExtraClassDeclaration;
-
   let hasVerifier = 1;
 }
 
@@ -1185,14 +1197,6 @@ def TargetExitDataOp: OpenMP_Op<"target_exit_data", traits = [
   let builders = [
     OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataOperands &">:$clauses)>
   ];
-
-  let extraClassDeclaration = [{
-    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
-    // associated entry block arguments in this operation.
-    unsigned numMapBlockArgs() {
-      return 0;
-    }
-  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1229,14 +1233,6 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
   let builders = [
     OpBuilder<(ins CArg<"const TargetEnterExitUpdateDataOperands &">:$clauses)>
   ];
-
-  let extraClassDeclaration = [{
-    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
-    // associated entry block arguments in this operation.
-    unsigned numMapBlockArgs() {
-      return 0;
-    }
-  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1281,6 +1277,8 @@ def TargetOp : OpenMP_Op<"target", traits = [
   ];
 
   let extraClassDeclaration = [{
+    unsigned numMapBlockArgs() { return getMapVars().size(); }
+
     mlir::Value getMappedValueForPrivateVar(unsigned privVarIdx) {
       std::optional<DenseI64ArrayAttr> privateMapIdices = getPrivateMapsAttr();
 
@@ -1309,17 +1307,12 @@ def TargetOp : OpenMP_Op<"target", traits = [
 
     /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
     /// contents of the target region.
-    ///
-    /// \param capturedOp result of a still valid (no modifications made to any
-    /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
-    static llvm::omp::OMPTgtExecModeFlags
-    getKernelExecFlags(Operation *capturedOp);
+    llvm::omp::OMPTgtExecModeFlags getKernelExecFlags();
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
-    custom<TargetOpRegion>(
-        $region, $has_device_addr_vars, type($has_device_addr_vars),
-        $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
+    custom<HostEvalInReductionMapPrivateRegion>(
+        $region, $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
         type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
         $map_vars, type($map_vars), $private_vars, type($private_vars),
         $private_syms, $private_maps) attr-dict
@@ -1482,6 +1475,21 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", traits = [
     clausesOptAssemblyFormat #
     ") `:` type($v) `,` type($x) `,` $element_type attr-dict";
 
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(getX() && "expected 'x' operand");
+      assert(getV() && "expected 'v' operand");
+      return 2;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i < 2 && "invalid index position for an operand");
+      return i == 0 ? getX() : getV();
+    }
+  }] # clausesExtraClassDeclaration;
+
   let hasVerifier = 1;
 }
 
@@ -1506,6 +1514,21 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write", traits = [
   // Override clause-based assemblyFormat.
   let assemblyFormat = "$x `=` $expr" # clausesReqAssemblyFormat # " oilist(" #
     clausesOptAssemblyFormat # ") `:` type($x) `,` type($expr) attr-dict";
+
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(getX() && "expected address operand");
+      assert(getExpr() && "expected value operand");
+      return 2;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i < 2 && "invalid index position for an operand");
+      return i == 0 ? getX() : getExpr();
+    }
+  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1550,6 +1573,20 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update", traits = [
   // Override clause-based assemblyFormat.
   let assemblyFormat = clausesAssemblyFormat #
     "$x `:` type($x) $region attr-dict";
+
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(getX() && "expected 'x' operand");
+      return 1;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i == 0 && "invalid index position for an operand");
+      return getX();
+    }
+  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -1638,6 +1675,19 @@ def ThreadprivateOp : OpenMP_Op<"threadprivate",
   let assemblyFormat = [{
     $sym_addr `:` type($sym_addr) `->` type($tls_addr) attr-dict
   }];
+  let extraClassDeclaration = [{
+    /// The number of variable operands.
+    unsigned getNumVariableOperands() {
+      assert(getSymAddr() && "expected one variable operand");
+      return 1;
+    }
+
+    /// The i-th variable operand passed.
+    Value getVariableOperand(unsigned i) {
+      assert(i == 0 && "invalid index position for an operand");
+      return getSymAddr();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1695,70 +1745,6 @@ def ScanOp : OpenMP_Op<"scan", [
   let builders = [
     OpBuilder<(ins CArg<"const ScanOperands &">:$clauses)>
   ];
-
-  let hasVerifier = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// 2.19.7.3 Declare Mapper Directive
-//===----------------------------------------------------------------------===//
-def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
-    IsolatedFromAbove,
-    RecipeInterface,
-    SingleBlock,
-    Symbol
-  ]> {
-  let summary = "declare mapper directive";
-  let description = [{
-    The declare mapper directive declares a user-defined mapper for a given
-    type, and defines a mapper-identifier that can be used in a map clause.
-  }] # clausesDescription;
-
-  let arguments = (ins  SymbolNameAttr:$sym_name,
-                        TypeAttr:$type);
-
-  let regions = (region AnyRegion:$body);
-
-  let assemblyFormat = "$sym_name `:` $type $body attr-dict";
-
-  let extraClassDeclaration = [{
-    /// Get DeclareMapperInfoOp.
-    DeclareMapperInfoOp getDeclareMapperInfo(){
-      return cast<DeclareMapperInfoOp>(getRegion().getBlocks().front().getTerminator());
-    }
-
-    /// Get SymVal block argument
-    BlockArgument getSymVal(){
-      return getRegion().getArgument(0);
-    }
-  }];
-
-  let hasRegionVerifier = 1;
-}
-
-def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
-    HasParent<"DeclareMapperOp">,
-    Terminator
-  ], clauses = [
-    OpenMP_MapClause
-  ]> {
-  let summary = "declare mapper info";
-  let description = [{
-    This Op is used to capture the map information related to it's
-    parent DeclareMapperOp.
-  }] # clausesDescription;
-
-  let builders = [
-    OpBuilder<(ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>
-  ];
-
-  let extraClassDeclaration = [{
-    // Override BlockArgOpenMPOpInterface method because `map` clauses have no
-    // associated entry block arguments in this operation.
-    unsigned numMapBlockArgs() {
-      return 0;
-    }
-  }] # clausesExtraClassDeclaration;
 
   let hasVerifier = 1;
 }
@@ -1875,7 +1861,7 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
   ], singleRegion = 1> {
   let summary = "masked construct";
   let description = [{
-    Masked construct allows to specify a structured block to be executed by a subset of
+    Masked construct allows to specify a structured block to be executed by a subset of 
     threads of the current team.
   }] # clausesDescription;
 

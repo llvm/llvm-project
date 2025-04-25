@@ -76,7 +76,7 @@ Register XtensaInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 }
 
 /// Adjust SP by Amount bytes.
-void XtensaInstrInfo::adjustStackPtr(MCRegister SP, int64_t Amount,
+void XtensaInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator I) const {
   DebugLoc DL = I != MBB.end() ? I->getDebugLoc() : DebugLoc();
@@ -88,31 +88,27 @@ void XtensaInstrInfo::adjustStackPtr(MCRegister SP, int64_t Amount,
   const TargetRegisterClass *RC = &Xtensa::ARRegClass;
 
   // create virtual reg to store immediate
-  MCRegister Reg = RegInfo.createVirtualRegister(RC);
+  unsigned Reg = RegInfo.createVirtualRegister(RC);
 
   if (isInt<8>(Amount)) { // addi sp, sp, amount
     BuildMI(MBB, I, DL, get(Xtensa::ADDI), Reg).addReg(SP).addImm(Amount);
   } else { // Expand immediate that doesn't fit in 8-bit.
-    MCRegister Reg1;
+    unsigned Reg1;
     loadImmediate(MBB, I, &Reg1, Amount);
     BuildMI(MBB, I, DL, get(Xtensa::ADD), Reg)
         .addReg(SP)
         .addReg(Reg1, RegState::Kill);
   }
 
-  if (STI.isWindowedABI()) {
-    BuildMI(MBB, I, DL, get(Xtensa::MOVSP), SP).addReg(Reg, RegState::Kill);
-  } else {
-    BuildMI(MBB, I, DL, get(Xtensa::OR), SP)
-        .addReg(Reg, RegState::Kill)
-        .addReg(Reg, RegState::Kill);
-  }
+  BuildMI(MBB, I, DL, get(Xtensa::OR), SP)
+      .addReg(Reg, RegState::Kill)
+      .addReg(Reg, RegState::Kill);
 }
 
 void XtensaInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator MBBI,
-                                  const DebugLoc &DL, Register DestReg,
-                                  Register SrcReg, bool KillSrc,
+                                  const DebugLoc &DL, MCRegister DestReg,
+                                  MCRegister SrcReg, bool KillSrc,
                                   bool RenamableDest, bool RenamableSrc) const {
   // The MOV instruction is not present in core ISA,
   // so use OR instruction.
@@ -160,7 +156,7 @@ void XtensaInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
 
 void XtensaInstrInfo::loadImmediate(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI,
-                                    MCRegister *Reg, int64_t Value) const {
+                                    unsigned *Reg, int64_t Value) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC = &Xtensa::ARRegClass;

@@ -181,7 +181,7 @@ class TwoAddressInstructionImpl {
   void processCopy(MachineInstr *MI);
 
   using TiedPairList = SmallVector<std::pair<unsigned, unsigned>, 4>;
-  using TiedOperandMap = SmallDenseMap<Register, TiedPairList>;
+  using TiedOperandMap = SmallDenseMap<unsigned, TiedPairList>;
 
   bool collectTiedOperands(MachineInstr *MI, TiedOperandMap&);
   void processTiedPairs(MachineInstr *MI, TiedPairList&, unsigned &Dist);
@@ -624,7 +624,7 @@ void TwoAddressInstructionImpl::removeClobberedSrcRegMap(MachineInstr *MI) {
 // Returns true if Reg is equal or aliased to at least one register in Set.
 bool TwoAddressInstructionImpl::regOverlapsSet(
     const SmallVectorImpl<Register> &Set, Register Reg) const {
-  for (Register R : Set)
+  for (unsigned R : Set)
     if (TRI->regsOverlap(R, Reg))
       return true;
 
@@ -854,10 +854,10 @@ void TwoAddressInstructionImpl::scanUses(Register DstReg) {
   }
 
   if (!VirtRegPairs.empty()) {
-    Register ToReg = VirtRegPairs.back();
+    unsigned ToReg = VirtRegPairs.back();
     VirtRegPairs.pop_back();
     while (!VirtRegPairs.empty()) {
-      Register FromReg = VirtRegPairs.pop_back_val();
+      unsigned FromReg = VirtRegPairs.pop_back_val();
       bool isNew = DstRegMap.insert(std::make_pair(FromReg, ToReg)).second;
       if (!isNew)
         assert(DstRegMap[FromReg] == ToReg &&"Can't map to two dst registers!");
@@ -1562,7 +1562,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
 
   bool RemovedKillFlag = false;
   bool AllUsesCopied = true;
-  Register LastCopiedReg;
+  unsigned LastCopiedReg = 0;
   SlotIndex LastCopyIdx;
   Register RegB = 0;
   unsigned SubRegB = 0;

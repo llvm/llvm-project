@@ -28,19 +28,11 @@ struct GenerateRuntimeVerificationPass
 } // namespace
 
 void GenerateRuntimeVerificationPass::runOnOperation() {
-  // The implementation of the RuntimeVerifiableOpInterface may create ops that
-  // can be verified. We don't want to generate verification for IR that
-  // performs verification, so gather all runtime-verifiable ops first.
-  SmallVector<RuntimeVerifiableOpInterface> ops;
   getOperation()->walk([&](RuntimeVerifiableOpInterface verifiableOp) {
-    ops.push_back(verifiableOp);
-  });
-
-  OpBuilder builder(getOperation()->getContext());
-  for (RuntimeVerifiableOpInterface verifiableOp : ops) {
+    OpBuilder builder(getOperation()->getContext());
     builder.setInsertionPoint(verifiableOp);
     verifiableOp.generateRuntimeVerification(builder, verifiableOp.getLoc());
-  };
+  });
 }
 
 std::unique_ptr<Pass> mlir::createGenerateRuntimeVerificationPass() {

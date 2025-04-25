@@ -12,7 +12,6 @@ static_library("objcxx") {
     "Host.mm",
     "HostInfoMacOSX.mm",
     "HostThreadMacOSX.mm",
-    "MemoryMonitorMacOSX.mm",
   ]
   frameworks = [
     "Foundation.framework",

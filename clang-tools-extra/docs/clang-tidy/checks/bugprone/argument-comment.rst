@@ -24,19 +24,18 @@ Options
 
 .. option:: StrictMode
 
-   When `false`, the check will ignore leading and trailing
+   When `false` (default value), the check will ignore leading and trailing
    underscores and case when comparing names -- otherwise they are taken into
-   account. Default is `false`.
+   account.
 
 .. option:: IgnoreSingleArgument
 
-   When `true`, the check will ignore the single argument. Default is `false`.
+   When `true`, the check will ignore the single argument.
 
 .. option:: CommentBoolLiterals
 
    When `true`, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the boolean literal argument.
-   Default is `false`.
 
 Before:
 
@@ -56,9 +55,8 @@ After:
 
 .. option:: CommentIntegerLiterals
 
-   When `true`, the check will add argument comments in the format
+   When true, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the integer literal argument.
-   Default is `false`.
 
 Before:
 
@@ -78,9 +76,8 @@ After:
 
 .. option:: CommentFloatLiterals
 
-   When `true`, the check will add argument comments in the format
+   When true, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the float/double literal argument.
-   Default is `false`.
 
 Before:
 
@@ -100,9 +97,8 @@ After:
 
 .. option:: CommentStringLiterals
 
-   When `true`, the check will add argument comments in the format
+   When true, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the string literal argument.
-   Default is `false`.
 
 Before:
 
@@ -126,9 +122,8 @@ After:
 
 .. option:: CommentCharacterLiterals
 
-   When `true`, the check will add argument comments in the format
+   When true, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the character literal argument.
-   Default is `false`.
 
 Before:
 
@@ -148,9 +143,8 @@ After:
 
 .. option:: CommentUserDefinedLiterals
 
-   When `true`, the check will add argument comments in the format
+   When true, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the user defined literal argument.
-   Default is `false`.
 
 Before:
 
@@ -174,9 +168,8 @@ After:
 
 .. option:: CommentNullPtrs
 
-   When `true`, the check will add argument comments in the format
+   When true, the check will add argument comments in the format
    ``/*ParameterName=*/`` right before the nullptr literal argument.
-   Default is `false`.
 
 Before:
 

@@ -12,7 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "SIOptimizeExecMaskingPreRA.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -26,7 +25,7 @@ using namespace llvm;
 
 namespace {
 
-class SIOptimizeExecMaskingPreRA {
+class SIOptimizeExecMaskingPreRA : public MachineFunctionPass {
 private:
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
@@ -44,17 +43,10 @@ private:
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
-  SIOptimizeExecMaskingPreRA(LiveIntervals *LIS) : LIS(LIS) {}
-  bool run(MachineFunction &MF);
-};
-
-class SIOptimizeExecMaskingPreRALegacy : public MachineFunctionPass {
-public:
   static char ID;
 
-  SIOptimizeExecMaskingPreRALegacy() : MachineFunctionPass(ID) {
-    initializeSIOptimizeExecMaskingPreRALegacyPass(
-        *PassRegistry::getPassRegistry());
+  SIOptimizeExecMaskingPreRA() : MachineFunctionPass(ID) {
+    initializeSIOptimizeExecMaskingPreRAPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -72,18 +64,18 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SIOptimizeExecMaskingPreRALegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SIOptimizeExecMaskingPreRA, DEBUG_TYPE,
                       "SI optimize exec mask operations pre-RA", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_END(SIOptimizeExecMaskingPreRALegacy, DEBUG_TYPE,
+INITIALIZE_PASS_END(SIOptimizeExecMaskingPreRA, DEBUG_TYPE,
                     "SI optimize exec mask operations pre-RA", false, false)
 
-char SIOptimizeExecMaskingPreRALegacy::ID = 0;
+char SIOptimizeExecMaskingPreRA::ID = 0;
 
-char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRALegacy::ID;
+char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRA::ID;
 
 FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
-  return new SIOptimizeExecMaskingPreRALegacy();
+  return new SIOptimizeExecMaskingPreRA();
 }
 
 // See if there is a def between \p AndIdx and \p SelIdx that needs to live
@@ -348,28 +340,15 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   return true;
 }
 
-PreservedAnalyses
-SIOptimizeExecMaskingPreRAPass::run(MachineFunction &MF,
-                                    MachineFunctionAnalysisManager &MFAM) {
-  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  SIOptimizeExecMaskingPreRA(&LIS).run(MF);
-  return PreservedAnalyses::all();
-}
-
-bool SIOptimizeExecMaskingPreRALegacy::runOnMachineFunction(
-    MachineFunction &MF) {
+bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  return SIOptimizeExecMaskingPreRA(LIS).run(MF);
-}
-
-bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TRI = ST.getRegisterInfo();
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   const bool Wave32 = ST.isWave32();
   AndOpc = Wave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;

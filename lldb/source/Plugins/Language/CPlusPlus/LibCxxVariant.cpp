@@ -97,13 +97,10 @@ LibcxxVariantGetIndexValidity(ValueObjectSP &impl_sp) {
   // the byte size.
   CompilerType index_type = index_sp->GetCompilerType();
 
-  llvm::Expected<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
-  if (!index_type_bytes) {
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), index_type_bytes.takeError(),
-                    "{0}");
-    if (!index_type_bytes)
-      return LibcxxVariantIndexValidity::Invalid;
-  }
+  std::optional<uint64_t> index_type_bytes = index_type.GetByteSize(nullptr);
+  if (!index_type_bytes)
+    return LibcxxVariantIndexValidity::Invalid;
+
   uint64_t npos_value = VariantNposValue(*index_type_bytes);
   uint64_t index_value = index_sp->GetValueAsUnsigned(0);
 
@@ -206,6 +203,7 @@ public:
     return formatters::ExtractIndexFromString(name.GetCString());
   }
 
+  bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
   ValueObjectSP GetChildAtIndex(uint32_t idx) override;

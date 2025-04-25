@@ -34,7 +34,7 @@ enum {
   HistOpcWidth = 40,
 };
 
-static cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
+cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
 
 // To reduce generated source code size.
 static cl::opt<bool> OmitComments("omit-comments",

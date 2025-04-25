@@ -542,7 +542,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
 
-  // GFX94* specific registers
+  // GFX940 specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
@@ -552,7 +552,6 @@ enum Id { // HwRegCode, (6) [5:0]
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
-  OFFSET_ME_ID = 8, // in HW_ID2
 };
 
 enum ModeRegisterMasks : uint32_t {

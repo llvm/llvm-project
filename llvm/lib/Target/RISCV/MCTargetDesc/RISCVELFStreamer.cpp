@@ -47,16 +47,14 @@ RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
   return static_cast<RISCVELFStreamer &>(Streamer);
 }
 
-void RISCVTargetELFStreamer::emitDirectiveOptionExact() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionNoExact() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionPIC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoPIC() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPop() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionPush() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
-void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionRVC() {}
 void RISCVTargetELFStreamer::emitDirectiveOptionNoRVC() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionRelax() {}
+void RISCVTargetELFStreamer::emitDirectiveOptionNoRelax() {}
 
 void RISCVTargetELFStreamer::emitAttribute(unsigned Attribute, unsigned Value) {
   getStreamer().setAttributeItem(Attribute, Value, /*OverwriteExisting=*/true);
@@ -188,10 +186,13 @@ void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   MCELFStreamer::emitValueImpl(Value, Size, Loc);
 }
 
-MCStreamer *llvm::createRISCVELFStreamer(const Triple &, MCContext &C,
-                                         std::unique_ptr<MCAsmBackend> &&MAB,
-                                         std::unique_ptr<MCObjectWriter> &&MOW,
-                                         std::unique_ptr<MCCodeEmitter> &&MCE) {
-  return new RISCVELFStreamer(C, std::move(MAB), std::move(MOW),
-                              std::move(MCE));
+namespace llvm {
+MCELFStreamer *createRISCVELFStreamer(MCContext &C,
+                                      std::unique_ptr<MCAsmBackend> MAB,
+                                      std::unique_ptr<MCObjectWriter> MOW,
+                                      std::unique_ptr<MCCodeEmitter> MCE) {
+  RISCVELFStreamer *S =
+      new RISCVELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE));
+  return S;
 }
+} // namespace llvm

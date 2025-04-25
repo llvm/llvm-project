@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILPrettyPrinter.h"
+#include "DXILResourceAnalysis.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DXILResource.h"
@@ -22,7 +23,7 @@ using namespace llvm;
 static StringRef getRCName(dxil::ResourceClass RC) {
   switch (RC) {
   case dxil::ResourceClass::SRV:
-    return "texture";
+    return "SRV";
   case dxil::ResourceClass::UAV:
     return "UAV";
   case dxil::ResourceClass::CBuffer:
@@ -163,9 +164,6 @@ struct FormatResourceDimension
     case dxil::ResourceKind::TypedBuffer:
       OS << "buf";
       break;
-    case dxil::ResourceKind::CBuffer:
-      OS << "NA";
-      break;
     case dxil::ResourceKind::RTAccelerationStructure:
       // TODO: dxc would print "ras" here. Can/should this happen?
       llvm_unreachable("RTAccelerationStructure printing is not implemented");
@@ -221,7 +219,8 @@ struct FormatBindingSize
 } // namespace
 
 static void prettyPrintResources(raw_ostream &OS, const DXILBindingMap &DBM,
-                                 DXILResourceTypeMap &DRTM) {
+                                 DXILResourceTypeMap &DRTM,
+                                 const dxil::Resources &MDResources) {
   // Column widths are arbitrary but match the widths DXC uses.
   OS << ";\n; Resource Bindings:\n;\n";
   OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,9}\n", "Name",
@@ -235,6 +234,11 @@ static void prettyPrintResources(raw_ostream &OS, const DXILBindingMap &DBM,
     const dxil::ResourceTypeInfo &RTI = DRTM[RBI.getHandleTy()];
 
     dxil::ResourceClass RC = RTI.getResourceClass();
+    assert((RC != dxil::ResourceClass::CBuffer || !MDResources.hasCBuffers()) &&
+           "Old and new cbuffer representations can't coexist");
+    assert((RC != dxil::ResourceClass::UAV || !MDResources.hasUAVs()) &&
+           "Old and new UAV representations can't coexist");
+
     StringRef Name(RBI.getName());
     StringRef Type(getRCName(RC));
     StringRef Format(getFormatName(RTI));
@@ -245,6 +249,12 @@ static void prettyPrintResources(raw_ostream &OS, const DXILBindingMap &DBM,
     OS << formatv("; {0,-30} {1,10} {2,7} {3,11} {4,7} {5,14} {6,9}\n", Name,
                   Type, Format, Dim, ID, Bind, Count);
   }
+
+  if (MDResources.hasCBuffers())
+    MDResources.printCBuffers(OS);
+  if (MDResources.hasUAVs())
+    MDResources.printUAVs(OS);
+
   OS << ";\n";
 }
 
@@ -252,7 +262,8 @@ PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
                                              ModuleAnalysisManager &MAM) {
   const DXILBindingMap &DBM = MAM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
-  prettyPrintResources(OS, DBM, DRTM);
+  const dxil::Resources &MDResources = MAM.getResult<DXILResourceMDAnalysis>(M);
+  prettyPrintResources(OS, DBM, DRTM, MDResources);
   return PreservedAnalyses::all();
 }
 
@@ -279,6 +290,7 @@ public:
     AU.setPreservesAll();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
+    AU.addRequired<DXILResourceMDWrapper>();
   }
 };
 } // namespace
@@ -288,6 +300,7 @@ INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                       "DXIL Metadata Pretty Printer", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceBindingWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DXILResourceMDWrapper)
 INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                     "DXIL Metadata Pretty Printer", true, true)
 
@@ -296,7 +309,8 @@ bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
       getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  prettyPrintResources(OS, DBM, DRTM);
+  dxil::Resources &Res = getAnalysis<DXILResourceMDWrapper>().getDXILResource();
+  prettyPrintResources(OS, DBM, DRTM, Res);
   return false;
 }
 

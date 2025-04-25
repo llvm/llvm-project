@@ -30,7 +30,7 @@ static msgpack::DocNode getNode(msgpack::DocNode DN, msgpack::Type Type,
 void DelayedMCExprs::assignDocNode(msgpack::DocNode &DN, msgpack::Type Type,
                                    const MCExpr *ExprValue) {
   MCValue Res;
-  if (ExprValue->evaluateAsRelocatable(Res, nullptr)) {
+  if (ExprValue->evaluateAsRelocatable(Res, nullptr, nullptr)) {
     if (Res.isAbsolute()) {
       DN = getNode(DN, Type, Res);
       return;
@@ -45,7 +45,8 @@ bool DelayedMCExprs::resolveDelayedExpressions() {
     Expr DE = DelayedExprs.front();
     MCValue Res;
 
-    if (!DE.ExprValue->evaluateAsRelocatable(Res, nullptr) || !Res.isAbsolute())
+    if (!DE.ExprValue->evaluateAsRelocatable(Res, nullptr, nullptr) ||
+        !Res.isAbsolute())
       return false;
 
     DelayedExprs.pop_front();

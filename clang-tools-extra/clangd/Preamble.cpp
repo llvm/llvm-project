@@ -627,8 +627,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
+    case diag::warn_cxx98_compat_no_newline_eof:
+    case diag::ext_no_newline_eof:
       // If the preamble doesn't span the whole file, drop the no newline at
-      // eof warning.
+      // eof warnings.
       return Bounds.Size != ContentsBuffer->getBufferSize()
                  ? DiagnosticsEngine::Level::Ignored
                  : DiagLevel;
@@ -671,6 +673,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // Reset references to ref-counted-ptrs before executing the callbacks, to
   // prevent resetting them concurrently.
   PreambleDiagsEngine.reset();
+  CI.DiagnosticOpts.reset();
 
   // When building the AST for the main file, we do want the function
   // bodies.

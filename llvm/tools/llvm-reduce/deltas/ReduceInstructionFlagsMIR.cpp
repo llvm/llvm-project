@@ -14,11 +14,9 @@
 #include "ReduceInstructionFlagsMIR.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-
 using namespace llvm;
 
-void llvm::reduceInstructionFlagsMIRDeltaPass(Oracle &O,
-                                              ReducerWorkItem &WorkItem) {
+static void removeFlagsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F)) {
       for (MachineBasicBlock &MBB : *MF) {
@@ -30,4 +28,8 @@ void llvm::reduceInstructionFlagsMIRDeltaPass(Oracle &O,
       }
     }
   }
+}
+
+void llvm::reduceInstructionFlagsMIRDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, removeFlagsFromModule, "Reducing Instruction Flags");
 }

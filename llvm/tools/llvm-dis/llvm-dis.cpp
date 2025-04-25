@@ -96,7 +96,9 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+
+extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
 
 namespace {
 
@@ -185,6 +187,10 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&DisCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
+  // Load bitcode into the new debug info format by default.
+  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
+    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
+
   if (InputFilenames.size() < 1) {
     InputFilenames.push_back("-");
   } else if (InputFilenames.size() > 1 && !OutputFilename.empty()) {
@@ -270,8 +276,8 @@ int main(int argc, char **argv) {
       // All that llvm-dis does is write the assembly to a file.
       if (!DontPrint) {
         if (M) {
-          M->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
-          if (UseNewDbgInfoFormat)
+          M->setIsNewDbgInfoFormat(WriteNewDbgInfoFormat);
+          if (WriteNewDbgInfoFormat)
             M->removeDebugIntrinsicDeclarations();
           M->print(Out->os(), Annotator.get(), PreserveAssemblyUseListOrder);
         }

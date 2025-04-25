@@ -821,8 +821,7 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
   // if mask is a logical scalar, we can check its value before the main loop
   // and either ignore the fact it is there or exit early.
   if (maskRank == 0) {
-    mlir::Type i1Type = builder.getI1Type();
-    mlir::Type logical = maskElemType;
+    mlir::Type logical = builder.getI1Type();
     mlir::IndexType idxTy = builder.getIndexType();
 
     fir::SequenceType::Shape singleElement(1, 1);
@@ -835,9 +834,8 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
     mlir::Value condAddr =
         builder.create<fir::CoordinateOp>(loc, logicalRefTy, array, indx);
     mlir::Value cond = builder.create<fir::LoadOp>(loc, condAddr);
-    mlir::Value condI1 = builder.create<fir::ConvertOp>(loc, i1Type, cond);
 
-    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, condI1,
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cond,
                                                /*withElseRegion=*/true);
 
     builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
@@ -1279,7 +1277,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
   fir::KindMapping kindMap = fir::getKindMapping(module);
   module.walk([&](mlir::Operation *op) {
     if (auto call = mlir::dyn_cast<fir::CallOp>(op)) {
-      if (cuf::isCUDADeviceContext(op))
+      if (cuf::isInCUDADeviceContext(op))
         return;
       if (mlir::SymbolRefAttr callee = call.getCalleeAttr()) {
         mlir::StringRef funcName = callee.getLeafReference().getValue();

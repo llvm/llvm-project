@@ -66,24 +66,6 @@ struct specificval_ty {
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
 
-/// Stores a reference to the VPValue *, not the VPValue * itself,
-/// thus can be used in commutative matchers.
-struct deferredval_ty {
-  VPValue *const &Val;
-
-  deferredval_ty(VPValue *const &V) : Val(V) {}
-
-  bool match(VPValue *const V) const { return V == Val; }
-};
-
-/// Like m_Specific(), but works if the specific value to match is determined
-/// as part of the same match() expression. For example:
-/// m_Mul(m_VPValue(X), m_Specific(X)) is incorrect, because m_Specific() will
-/// bind X before the pattern match starts.
-/// m_Mul(m_VPValue(X), m_Deferred(X)) is correct, and will check against
-/// whichever value m_VPValue(X) populated.
-inline deferredval_ty m_Deferred(VPValue *const &V) { return V; }
-
 /// Match a specified integer value or vector of all elements of that
 /// value. \p BitWidth optionally specifies the bitwidth the matched constant
 /// must have. If it is 0, the matched constant can have any bitwidth.
@@ -173,6 +155,14 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
+    if (!(std::is_same_v<VPWidenEVLRecipe, RecipeTys> || ...) &&
+        isa<VPWidenEVLRecipe>(R)) {
+      // Don't match VPWidenEVLRecipe if it is not explicitly part of RecipeTys.
+      // Otherwise we might match it unexpectedly when trying to match
+      // VPWidenRecipe, of which VPWidenEVLRecipe is a subclass of.
+      return false;
+    }
+
     assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
            "recipe with matched opcode the expected number of operands");
 
@@ -234,16 +224,6 @@ using BinaryVPInstruction_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, /*Commutative*/ false,
                        VPInstruction>;
 
-template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode,
-          bool Commutative, typename... RecipeTys>
-using TernaryRecipe_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>,
-                                         Opcode, Commutative, RecipeTys...>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
-using TernaryVPInstruction_match =
-    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, Opcode, /*Commutative*/ false,
-                        VPInstruction>;
-
 template <typename Op0_t, typename Op1_t, unsigned Opcode,
           bool Commutative = false>
 using AllBinaryRecipe_match =
@@ -262,13 +242,6 @@ m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
   return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
 }
 
-template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t>
-inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
-m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(
-      {Op0, Op1, Op2});
-}
-
 template <typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, VPInstruction::Not>
 m_Not(const Op0_t &Op0) {
@@ -279,12 +252,6 @@ template <typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, VPInstruction::BranchOnCond>
 m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
-}
-
-template <typename Op0_t>
-inline UnaryVPInstruction_match<Op0_t, VPInstruction::Broadcast>
-m_Broadcast(const Op0_t &Op0) {
-  return m_VPInstruction<VPInstruction::Broadcast>(Op0);
 }
 
 template <typename Op0_t, typename Op1_t>

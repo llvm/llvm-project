@@ -63,7 +63,7 @@ BoltProfile("b",
   cl::aliasopt(InputDataFilename),
   cl::cat(BoltCategory));
 
-static cl::opt<std::string>
+cl::opt<std::string>
     LogFile("log-file",
             cl::desc("redirect journaling to a file instead of stdout/stderr"),
             cl::Hidden, cl::cat(BoltCategory));
@@ -173,6 +173,16 @@ void boltMode(int argc, char **argv) {
   }
 }
 
+static std::string GetExecutablePath(const char *Argv0) {
+  SmallString<256> ExecutablePath(Argv0);
+  // Do a PATH lookup if Argv0 isn't a valid path.
+  if (!llvm::sys::fs::exists(ExecutablePath))
+    if (llvm::ErrorOr<std::string> P =
+            llvm::sys::findProgramByName(ExecutablePath))
+      ExecutablePath = *P;
+  return std::string(ExecutablePath);
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -180,18 +190,16 @@ int main(int argc, char **argv) {
 
   llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
-  std::string ToolPath = llvm::sys::fs::getMainExecutable(argv[0], nullptr);
+  std::string ToolPath = GetExecutablePath(argv[0]);
 
   // Initialize targets and assembly printers/parsers.
-#define BOLT_TARGET(target)                                                    \
-  LLVMInitialize##target##TargetInfo();                                        \
-  LLVMInitialize##target##TargetMC();                                          \
-  LLVMInitialize##target##AsmParser();                                         \
-  LLVMInitialize##target##Disassembler();                                      \
-  LLVMInitialize##target##Target();                                            \
-  LLVMInitialize##target##AsmPrinter();
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllDisassemblers();
 
-#include "bolt/Core/TargetConfig.def"
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllAsmPrinters();
 
   ToolName = argv[0];
 

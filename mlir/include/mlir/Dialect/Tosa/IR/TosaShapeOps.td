@@ -30,10 +30,6 @@ def TosaShapeOperator : NativeOpTrait<"TosaShapeOperator"> {
 
 class Tosa_ShapeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator, Pure])> {
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
-  ];
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -57,27 +53,23 @@ class Tosa_ElementwiseShapeOp<string mnemonic, list<Trait> traits = []>
 // Operator: ConstShape
 //===----------------------------------------------------------------------===//
 def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
-  let summary = "Constant Shape operator.";
+  let summary = "Constant Shape op.";
 
   let description = [{
-    A node containing a constant shape.
+    A node containing constant data for use as the input to an shape operation. May
+    hold data only in index data type.
 
     Example:
 
     ```mlir
     // Generic form
-    %out = "tosa.const_shape"() {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
+    %out = "tosa.const_shape"() {value = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
     ```
   }];
 
-  let arguments = (ins IndexElementsAttr:$values);
+  let arguments = (ins IndexElementsAttr : $value);
 
-  let results = (outs Tosa_Shape:$output);
-
-  list<Availability> availability = [
-    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[]>,
-  ];
+  let results = (outs Tosa_Shape : $output);
 
   let hasVerifier = 1;
 }

@@ -163,7 +163,8 @@ protected:
   bool m_is_internal;
 
 public:
-  typedef LockingAdaptedIterable<std::recursive_mutex, bp_collection>
+  typedef LockingAdaptedIterable<bp_collection, lldb::BreakpointSP,
+                                 list_adapter, std::recursive_mutex>
       BreakpointIterable;
   BreakpointIterable Breakpoints() {
     return BreakpointIterable(m_breakpoints, GetMutex());

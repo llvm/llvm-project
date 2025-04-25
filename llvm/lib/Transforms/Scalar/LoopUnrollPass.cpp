@@ -1513,9 +1513,9 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   Loop *ParentL = L.getParentLoop();
   SmallPtrSet<Loop *, 4> OldLoops;
   if (ParentL)
-    OldLoops.insert_range(*ParentL);
+    OldLoops.insert(ParentL->begin(), ParentL->end());
   else
-    OldLoops.insert_range(AR.LI);
+    OldLoops.insert(AR.LI.begin(), AR.LI.end());
 
   std::string LoopName = std::string(L.getName());
 

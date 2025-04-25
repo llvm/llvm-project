@@ -173,10 +173,6 @@ private:
 
 protected:
   SmallVector<SymbolReference> getBases(const CXXRecordDecl *Decl) {
-    if (!Decl->isCompleteDefinition()) {
-      return {};
-    }
-
     // FIXME: store AccessSpecifier given by inheritance
     SmallVector<SymbolReference> Bases;
     for (const auto &BaseSpecifier : Decl->bases()) {

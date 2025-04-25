@@ -39,7 +39,8 @@ public:
   ~WatchpointList();
 
   typedef std::list<lldb::WatchpointSP> wp_collection;
-  typedef LockingAdaptedIterable<std::recursive_mutex, wp_collection>
+  typedef LockingAdaptedIterable<wp_collection, lldb::WatchpointSP,
+                                 vector_adapter, std::recursive_mutex>
       WatchpointIterable;
 
   /// Add a Watchpoint to the list.

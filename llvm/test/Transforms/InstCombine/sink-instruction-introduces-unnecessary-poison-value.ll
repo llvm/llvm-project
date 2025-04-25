@@ -1,4 +1,5 @@
 ; RUN: opt -passes=instcombine -S -o - < %s | FileCheck %s
+; RUN: opt -passes=instcombine -S -o - < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; When the 'int Four = Two;' is sunk into the 'case 0:' block,
 ; the debug value for 'Three' is set incorrectly to 'poison'.

@@ -77,7 +77,7 @@ LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
-Preprocessor::Preprocessor(std::shared_ptr<const PreprocessorOptions> PPOpts,
+Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                            DiagnosticsEngine &diags, const LangOptions &opts,
                            SourceManager &SM, HeaderSearch &Headers,
                            ModuleLoader &TheModuleLoader,
@@ -1331,10 +1331,9 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   return true;
 }
 
-void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
-                                     bool IncludeExports) {
+void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, IncludeExports, [](Module *) {},
+      M, Loc, [](Module *) {},
       [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.

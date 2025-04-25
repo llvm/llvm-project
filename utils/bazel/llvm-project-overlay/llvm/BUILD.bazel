@@ -1029,15 +1029,6 @@ cc_library(
 )
 
 cc_library(
-    name = "Telemetry",
-    srcs = glob(["lib/Telemetry/*.cpp"]),
-    hdrs = glob(["include/llvm/Telemetry/*.h"]),
-    copts = llvm_copts,
-    includes = ["include"],
-    deps = [":Support"],
-)
-
-cc_library(
     name = "TextAPI",
     srcs = glob(
         [
@@ -1884,7 +1875,6 @@ cc_library(
         ":BitReader",
         ":BitWriter",
         ":Core",
-        ":Demangle",
         ":FrontendOpenMP",
         ":IRPrinter",
         ":IRReader",
@@ -5117,11 +5107,6 @@ llvm_driver_cc_binary(
     deps = [":llvm-ml-lib"],
 )
 
-binary_alias(
-    name = "llvm-ml64",
-    binary = ":llvm-ml",
-)
-
 cc_binary(
     name = "llvm-modextract",
     srcs = glob([
@@ -5582,12 +5567,6 @@ binary_alias(
     binary = ":llvm-readobj",
 )
 
-# Workaround inability to put `.def` files into `srcs`.
-cc_library(
-    name = "llvm-reduce-defs-lib",
-    textual_hdrs = glob(["tools/llvm-reduce/*.def"]),
-)
-
 cc_binary(
     name = "llvm-reduce",
     srcs = glob([
@@ -5615,7 +5594,6 @@ cc_binary(
         ":TargetParser",
         ":TransformUtils",
         ":config",
-        ":llvm-reduce-defs-lib",
     ],
 )
 
@@ -5941,7 +5919,6 @@ py_binary(
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir.py",
         "utils/mlgo-utils/mlgo/corpus/extract_ir_lib.py",
-        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )
@@ -5952,7 +5929,6 @@ py_binary(
         "utils/mlgo-utils/mlgo/__init__.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus.py",
         "utils/mlgo-utils/mlgo/corpus/combine_training_corpus_lib.py",
-        "utils/mlgo-utils/mlgo/corpus/flags.py",
     ],
     imports = ["utils/mlgo-utils"],
 )

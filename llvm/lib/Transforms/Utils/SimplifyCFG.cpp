@@ -74,7 +74,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -120,13 +119,11 @@ static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
 
-static cl::opt<bool> HoistLoadsWithCondFaulting(
-    "simplifycfg-hoist-loads-with-cond-faulting", cl::Hidden, cl::init(true),
-    cl::desc("Hoist loads if the target supports conditional faulting"));
-
-static cl::opt<bool> HoistStoresWithCondFaulting(
-    "simplifycfg-hoist-stores-with-cond-faulting", cl::Hidden, cl::init(true),
-    cl::desc("Hoist stores if the target supports conditional faulting"));
+static cl::opt<bool> HoistLoadsStoresWithCondFaulting(
+    "simplifycfg-hoist-loads-stores-with-cond-faulting", cl::Hidden,
+    cl::init(true),
+    cl::desc("Hoist loads/stores if the target supports "
+             "conditional faulting"));
 
 static cl::opt<unsigned> HoistLoadsStoresWithCondFaultingThreshold(
     "hoist-loads-stores-with-cond-faulting-threshold", cl::Hidden, cl::init(6),
@@ -424,11 +421,11 @@ static InstructionCost computeSpeculationCost(const User *I,
 /// After this function returns, Cost is increased by the cost of
 /// V plus its non-dominating operands.  If that cost is greater than
 /// Budget, false is returned and Cost is undefined.
-static bool dominatesMergePoint(
-    Value *V, BasicBlock *BB, Instruction *InsertPt,
-    SmallPtrSetImpl<Instruction *> &AggressiveInsts, InstructionCost &Cost,
-    InstructionCost Budget, const TargetTransformInfo &TTI, AssumptionCache *AC,
-    SmallPtrSetImpl<Instruction *> &ZeroCostInstructions, unsigned Depth = 0) {
+static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
+                                SmallPtrSetImpl<Instruction *> &AggressiveInsts,
+                                InstructionCost &Cost, InstructionCost Budget,
+                                const TargetTransformInfo &TTI,
+                                AssumptionCache *AC, unsigned Depth = 0) {
   // It is possible to hit a zero-cost cycle (phi/gep instructions for example),
   // so limit the recursion depth.
   // TODO: While this recursion limit does prevent pathological behavior, it
@@ -466,17 +463,7 @@ static bool dominatesMergePoint(
   if (!isSafeToSpeculativelyExecute(I, InsertPt, AC))
     return false;
 
-  // Overflow arithmetic instruction plus extract value are usually generated
-  // when a division is being replaced. But, in this case, the zero check may
-  // still be kept in the code. In that case it would be worth to hoist these
-  // two instruction out of the basic block. Let's treat this pattern as one
-  // single cheap instruction here!
-  WithOverflowInst *OverflowInst;
-  if (match(I, m_ExtractValue<1>(m_OneUse(m_WithOverflowInst(OverflowInst))))) {
-    ZeroCostInstructions.insert(OverflowInst);
-    Cost += 1;
-  } else if (!ZeroCostInstructions.contains(I))
-    Cost += computeSpeculationCost(I, TTI);
+  Cost += computeSpeculationCost(I, TTI);
 
   // Allow exactly one instruction to be speculated regardless of its cost
   // (as long as it is safe to do so).
@@ -493,7 +480,7 @@ static bool dominatesMergePoint(
   // not take us over the cost threshold.
   for (Use &Op : I->operands())
     if (!dominatesMergePoint(Op, BB, InsertPt, AggressiveInsts, Cost, Budget,
-                             TTI, AC, ZeroCostInstructions, Depth + 1))
+                             TTI, AC, Depth + 1))
       return false;
   // Okay, it's safe to do this!  Remember this instruction.
   AggressiveInsts.insert(I);
@@ -1684,22 +1671,22 @@ static bool areIdenticalUpToCommutativity(const Instruction *I1,
 static void hoistConditionalLoadsStores(
     BranchInst *BI,
     SmallVectorImpl<Instruction *> &SpeculatedConditionalLoadsStores,
-    std::optional<bool> Invert, Instruction *Sel) {
+    std::optional<bool> Invert) {
   auto &Context = BI->getParent()->getContext();
   auto *VCondTy = FixedVectorType::get(Type::getInt1Ty(Context), 1);
   auto *Cond = BI->getOperand(0);
   // Construct the condition if needed.
   BasicBlock *BB = BI->getParent();
+  IRBuilder<> Builder(
+      Invert.has_value() ? SpeculatedConditionalLoadsStores.back() : BI);
   Value *Mask = nullptr;
   Value *MaskFalse = nullptr;
   Value *MaskTrue = nullptr;
   if (Invert.has_value()) {
-    IRBuilder<> Builder(Sel ? Sel : SpeculatedConditionalLoadsStores.back());
     Mask = Builder.CreateBitCast(
         *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
         VCondTy);
   } else {
-    IRBuilder<> Builder(BI);
     MaskFalse = Builder.CreateBitCast(
         Builder.CreateXor(Cond, ConstantInt::getTrue(Context)), VCondTy);
     MaskTrue = Builder.CreateBitCast(Cond, VCondTy);
@@ -1725,20 +1712,13 @@ static void hoistConditionalLoadsStores(
       PHINode *PN = nullptr;
       Value *PassThru = nullptr;
       if (Invert.has_value())
-        for (User *U : I->users()) {
+        for (User *U : I->users())
           if ((PN = dyn_cast<PHINode>(U))) {
             PassThru = Builder.CreateBitCast(
                 PeekThroughBitcasts(PN->getIncomingValueForBlock(BB)),
                 FixedVectorType::get(Ty, 1));
-          } else if (auto *Ins = cast<Instruction>(U);
-                     Sel && Ins->getParent() == BB) {
-            // This happens when store or/and a speculative instruction between
-            // load and store were hoisted to the BB. Make sure the masked load
-            // inserted before its use.
-            // We assume there's one of such use.
-            Builder.SetInsertPoint(Ins);
+            break;
           }
-        }
       MaskedLoadStore = Builder.CreateMaskedLoad(
           FixedVectorType::get(Ty, 1), Op0, LI->getAlign(), Mask, PassThru);
       Value *NewLoadStore = Builder.CreateBitCast(MaskedLoadStore, Ty);
@@ -1777,23 +1757,92 @@ static void hoistConditionalLoadsStores(
 static bool isSafeCheapLoadStore(const Instruction *I,
                                  const TargetTransformInfo &TTI) {
   // Not handle volatile or atomic.
-  bool IsStore = false;
   if (auto *L = dyn_cast<LoadInst>(I)) {
-    if (!L->isSimple() || !HoistLoadsWithCondFaulting)
+    if (!L->isSimple())
       return false;
   } else if (auto *S = dyn_cast<StoreInst>(I)) {
-    if (!S->isSimple() || !HoistStoresWithCondFaulting)
+    if (!S->isSimple())
       return false;
-    IsStore = true;
   } else
     return false;
 
   // llvm.masked.load/store use i32 for alignment while load/store use i64.
   // That's why we have the alignment limitation.
   // FIXME: Update the prototype of the intrinsics?
-  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I), IsStore) &&
+  return TTI.hasConditionalLoadStoreForType(getLoadStoreType(I)) &&
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
+
+namespace {
+
+// LockstepReverseIterator - Iterates through instructions
+// in a set of blocks in reverse order from the first non-terminator.
+// For example (assume all blocks have size n):
+//   LockstepReverseIterator I([B1, B2, B3]);
+//   *I-- = [B1[n], B2[n], B3[n]];
+//   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
+//   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
+//   ...
+class LockstepReverseIterator {
+  ArrayRef<BasicBlock *> Blocks;
+  SmallVector<Instruction *, 4> Insts;
+  bool Fail;
+
+public:
+  LockstepReverseIterator(ArrayRef<BasicBlock *> Blocks) : Blocks(Blocks) {
+    reset();
+  }
+
+  void reset() {
+    Fail = false;
+    Insts.clear();
+    for (auto *BB : Blocks) {
+      Instruction *Inst = BB->getTerminator();
+      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+        Inst = Inst->getPrevNode();
+      if (!Inst) {
+        // Block wasn't big enough.
+        Fail = true;
+        return;
+      }
+      Insts.push_back(Inst);
+    }
+  }
+
+  bool isValid() const { return !Fail; }
+
+  void operator--() {
+    if (Fail)
+      return;
+    for (auto *&Inst : Insts) {
+      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+        Inst = Inst->getPrevNode();
+      // Already at beginning of block.
+      if (!Inst) {
+        Fail = true;
+        return;
+      }
+    }
+  }
+
+  void operator++() {
+    if (Fail)
+      return;
+    for (auto *&Inst : Insts) {
+      for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
+        Inst = Inst->getNextNode();
+      // Already at end of block.
+      if (!Inst) {
+        Fail = true;
+        return;
+      }
+    }
+  }
+
+  ArrayRef<Instruction *> operator*() const { return Insts; }
+};
+
+} // end anonymous namespace
 
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If AllInstsEqOnly is
@@ -1846,7 +1895,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     if (!AllSame)
       return false;
     if (AllSame) {
-      LockstepReverseIterator<true> LRI(Succs);
+      LockstepReverseIterator LRI(Succs);
       while (LRI.isValid()) {
         Instruction *I0 = (*LRI)[0];
         if (any_of(*LRI, [I0](Instruction *I) {
@@ -2450,12 +2499,12 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
 
   int ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
-  LockstepReverseIterator<true> LRI(UnconditionalPreds);
+  LockstepReverseIterator LRI(UnconditionalPreds);
   while (LRI.isValid() &&
          canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
                       << "\n");
-    InstructionsToSink.insert_range(*LRI);
+    InstructionsToSink.insert((*LRI).begin(), (*LRI).end());
     ++ScanIdx;
     --LRI;
   }
@@ -2480,7 +2529,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
-    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
+    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
       unsigned NumPHIInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
@@ -2525,7 +2574,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
             dbgs() << "SINK: stopping here, too many PHIs would be created!\n");
         break;
       }
-      InstructionsProfitableToSink.insert_range(*LRI);
+      InstructionsProfitableToSink.insert((*LRI).begin(), (*LRI).end());
       --LRI;
       ++Idx;
     }
@@ -2721,7 +2770,7 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
 
     // In the normal destination, the incoming values for these two `invoke`s
     // must be compatible.
-    SmallPtrSet<Value *, 16> EquivalenceSet(llvm::from_range, Invokes);
+    SmallPtrSet<Value *, 16> EquivalenceSet(Invokes.begin(), Invokes.end());
     if (!incomingValuesAreCompatible(
             NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
             &EquivalenceSet))
@@ -3057,7 +3106,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
-            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false) &&
+            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
+                                  /*StoreCaptures=*/true) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -3223,7 +3273,8 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   SmallVector<Instruction *, 4> SpeculatedDbgIntrinsics;
 
   unsigned SpeculatedInstructions = 0;
-  bool HoistLoadsStores = Options.HoistLoadsStoresWithCondFaulting;
+  bool HoistLoadsStores = HoistLoadsStoresWithCondFaulting &&
+                          Options.HoistLoadsStoresWithCondFaulting;
   SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
@@ -3318,7 +3369,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // If we get here, we can hoist the instruction and if-convert.
   LLVM_DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
 
-  Instruction *Sel = nullptr;
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
@@ -3329,7 +3379,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
       std::swap(TrueV, FalseV);
     Value *S = Builder.CreateSelect(
         BrCond, TrueV, FalseV, "spec.store.select", BI);
-    Sel = cast<Instruction>(S);
     SpeculatedStore->setOperand(0, S);
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
@@ -3391,7 +3440,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // In "RemoveDIs" non-instr debug-info mode, drop DbgVariableRecords attached
   // to these instructions, in the same way that dbg.value intrinsics are
   // dropped at the end of this block.
-  for (auto &It : *ThenBB)
+  for (auto &It : make_range(ThenBB->begin(), ThenBB->end()))
     for (DbgRecord &DR : make_early_inc_range(It.getDbgRecordRange()))
       // Drop all records except assign-kind DbgVariableRecords (dbg.assign
       // equivalent).
@@ -3402,8 +3451,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
              std::prev(ThenBB->end()));
 
   if (!SpeculatedConditionalLoadsStores.empty())
-    hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert,
-                                Sel);
+    hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert);
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
@@ -3748,7 +3796,6 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // instructions.  While we are at it, keep track of the instructions
   // that need to be moved to the dominating block.
   SmallPtrSet<Instruction *, 4> AggressiveInsts;
-  SmallPtrSet<Instruction *, 2> ZeroCostInstructions;
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
@@ -3766,11 +3813,9 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     }
 
     if (!dominatesMergePoint(PN->getIncomingValue(0), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC,
-                             ZeroCostInstructions) ||
+                             AggressiveInsts, Cost, Budget, TTI, AC) ||
         !dominatesMergePoint(PN->getIncomingValue(1), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC,
-                             ZeroCostInstructions))
+                             AggressiveInsts, Cost, Budget, TTI, AC))
       return Changed;
   }
 
@@ -5859,10 +5904,9 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   for (const auto &Case : SI->cases()) {
     auto *Successor = Case.getCaseSuccessor();
     if (DTU) {
-      auto [It, Inserted] = NumPerSuccessorCases.try_emplace(Successor);
-      if (Inserted)
+      if (!NumPerSuccessorCases.count(Successor))
         UniqueSuccessors.push_back(Successor);
-      ++It->second;
+      ++NumPerSuccessorCases[Successor];
     }
     const APInt &CaseVal = Case.getCaseValue()->getValue();
     if (Known.Zero.intersects(CaseVal) || !Known.One.isSubsetOf(CaseVal) ||
@@ -6909,10 +6953,9 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     for (const auto &I : Results) {
       PHINode *PHI = I.first;
       Constant *Value = I.second;
-      auto [It, Inserted] = ResultLists.try_emplace(PHI);
-      if (Inserted)
+      if (!ResultLists.count(PHI))
         PHIs.push_back(PHI);
-      It->second.push_back(std::make_pair(CaseVal, Value));
+      ResultLists[PHI].push_back(std::make_pair(CaseVal, Value));
     }
   }
 
@@ -7568,10 +7611,10 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   // SwitchSuccWrapper.
   PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
-    auto &IVs =
-        PhiPredIVs.try_emplace(Phi, Phi->getNumIncomingValues()).first->second;
+    PhiPredIVs[Phi] =
+        SmallDenseMap<BasicBlock *, Value *, 8>(Phi->getNumIncomingValues());
     for (auto &IV : Phi->incoming_values())
-      IVs.insert({Phi->getIncomingBlock(IV), IV.get()});
+      PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
   }
 
   // Build a set such that if the SwitchSuccWrapper exists in the set and
@@ -8031,7 +8074,8 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
           hoistCommonCodeFromSuccessors(BI, !Options.HoistCommonInsts))
         return requestResimplify();
 
-      if (BI && Options.HoistLoadsStoresWithCondFaulting &&
+      if (BI && HoistLoadsStoresWithCondFaulting &&
+          Options.HoistLoadsStoresWithCondFaulting &&
           isProfitableToSpeculate(BI, std::nullopt, TTI)) {
         SmallVector<Instruction *, 2> SpeculatedConditionalLoadsStores;
         auto CanSpeculateConditionalLoadsStores = [&]() {
@@ -8054,7 +8098,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
         if (CanSpeculateConditionalLoadsStores()) {
           hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores,
-                                      std::nullopt, nullptr);
+                                      std::nullopt);
           return requestResimplify();
         }
       }

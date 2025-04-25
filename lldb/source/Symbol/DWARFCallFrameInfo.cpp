@@ -623,13 +623,15 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
   uint32_t code_align = cie->code_align;
   int32_t data_align = cie->data_align;
 
-  unwind_plan.SetPlanValidAddressRanges({range});
-  UnwindPlan::Row row = cie->initial_row;
+  unwind_plan.SetPlanValidAddressRange(range);
+  UnwindPlan::Row *cie_initial_row = new UnwindPlan::Row;
+  *cie_initial_row = cie->initial_row;
+  UnwindPlan::RowSP row(cie_initial_row);
 
   unwind_plan.SetRegisterKind(GetRegisterKind());
   unwind_plan.SetReturnAddressRegister(cie->return_addr_reg_num);
 
-  std::vector<UnwindPlan::Row> stack;
+  std::vector<UnwindPlan::RowSP> stack;
 
   UnwindPlan::Row::AbstractRegisterLocation reg_location;
   while (m_cfi_data.ValidOffset(offset) && offset < end_offset) {
@@ -638,7 +640,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
     uint8_t extended_opcode = inst & 0x3F;
 
     if (!HandleCommonDwarfOpcode(primary_opcode, extended_opcode, data_align,
-                                 offset, row)) {
+                                 offset, *row)) {
       if (primary_opcode) {
         switch (primary_opcode) {
         case DW_CFA_advance_loc: // (Row Creation Instruction)
@@ -649,7 +651,10 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // adding (delta * code_align). All other values in the new row are
           // initially identical to the current row.
           unwind_plan.AppendRow(row);
-          row.SlideOffset(extended_opcode * code_align);
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *row.get();
+          row.reset(newrow);
+          row->SlideOffset(extended_opcode * code_align);
           break;
         }
 
@@ -667,11 +672,11 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           if (unwind_plan.IsValidRowIndex(0) &&
               unwind_plan.GetRowAtIndex(0)->GetRegisterInfo(reg_num,
                                                             reg_location))
-            row.SetRegisterInfo(reg_num, reg_location);
+            row->SetRegisterInfo(reg_num, reg_location);
           else {
             // If the register was not set in the first row, remove the
             // register info to keep the unmodified value from the caller.
-            row.RemoveRegisterInfo(reg_num);
+            row->RemoveRegisterInfo(reg_num);
           }
           break;
         }
@@ -686,8 +691,11 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // are initially identical to the current row. The new location value
           // should always be greater than the current one.
           unwind_plan.AppendRow(row);
-          row.SetOffset(m_cfi_data.GetAddress(&offset) -
-                        startaddr.GetFileAddress());
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *row.get();
+          row.reset(newrow);
+          row->SetOffset(m_cfi_data.GetAddress(&offset) -
+                         startaddr.GetFileAddress());
           break;
         }
 
@@ -697,7 +705,10 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // This instruction is identical to DW_CFA_advance_loc except for the
           // encoding and size of the delta argument.
           unwind_plan.AppendRow(row);
-          row.SlideOffset(m_cfi_data.GetU8(&offset) * code_align);
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *row.get();
+          row.reset(newrow);
+          row->SlideOffset(m_cfi_data.GetU8(&offset) * code_align);
           break;
         }
 
@@ -707,7 +718,10 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // This instruction is identical to DW_CFA_advance_loc except for the
           // encoding and size of the delta argument.
           unwind_plan.AppendRow(row);
-          row.SlideOffset(m_cfi_data.GetU16(&offset) * code_align);
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *row.get();
+          row.reset(newrow);
+          row->SlideOffset(m_cfi_data.GetU16(&offset) * code_align);
           break;
         }
 
@@ -717,7 +731,10 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // This instruction is identical to DW_CFA_advance_loc except for the
           // encoding and size of the delta argument.
           unwind_plan.AppendRow(row);
-          row.SlideOffset(m_cfi_data.GetU32(&offset) * code_align);
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *row.get();
+          row.reset(newrow);
+          row->SlideOffset(m_cfi_data.GetU32(&offset) * code_align);
           break;
         }
 
@@ -730,7 +747,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           if (unwind_plan.IsValidRowIndex(0) &&
               unwind_plan.GetRowAtIndex(0)->GetRegisterInfo(reg_num,
                                                             reg_location))
-            row.SetRegisterInfo(reg_num, reg_location);
+            row->SetRegisterInfo(reg_num, reg_location);
           break;
         }
 
@@ -744,6 +761,9 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
           // useful for compilers that move epilogue code into the body of a
           // function.)
           stack.push_back(row);
+          UnwindPlan::Row *newrow = new UnwindPlan::Row;
+          *newrow = *row.get();
+          row.reset(newrow);
           break;
         }
 
@@ -765,10 +785,10 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
                      __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
             break;
           }
-          lldb::addr_t offset = row.GetOffset();
-          row = std::move(stack.back());
+          lldb::addr_t offset = row->GetOffset();
+          row = stack.back();
           stack.pop_back();
-          row.SetOffset(offset);
+          row->SetOffset(offset);
           break;
         }
 

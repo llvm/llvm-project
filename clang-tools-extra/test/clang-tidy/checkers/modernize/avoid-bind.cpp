@@ -46,7 +46,7 @@ struct D {
   operator bool() const { return true; }
 
   void MemberFunction(int x) {}
-  int MemberFunctionWithReturn(int x) { return 0; }
+  int MemberFunctionWithReturn(int x) {}
 
   static D *create();
 };
@@ -342,7 +342,7 @@ void testCapturedSubexpressions() {
 
 struct E {
   void MemberFunction(int x) {}
-  int MemberFunctionWithReturn(int x) { return 0; }
+  int MemberFunctionWithReturn(int x) {}
   int operator()(int x, int y) const { return x + y; }
 
   void testMemberFunctions() {

@@ -19,37 +19,31 @@ namespace llvm {
 class AVRMCExpr : public MCTargetExpr {
 public:
   /// Specifies the type of an expression.
-  enum Specifier {
-    VK_None,
+  enum VariantKind {
+    VK_AVR_None = 0,
 
-    VK_AVR_NONE = MCSymbolRefExpr::FirstTargetSpecifier,
+    VK_AVR_HI8,  ///< Corresponds to `hi8()`.
+    VK_AVR_LO8,  ///< Corresponds to `lo8()`.
+    VK_AVR_HH8,  ///< Corresponds to `hlo8() and hh8()`.
+    VK_AVR_HHI8, ///< Corresponds to `hhi8()`.
 
-    VK_HI8,  ///< Corresponds to `hi8()`.
-    VK_LO8,  ///< Corresponds to `lo8()`.
-    VK_HH8,  ///< Corresponds to `hlo8() and hh8()`.
-    VK_HHI8, ///< Corresponds to `hhi8()`.
+    VK_AVR_PM,     ///< Corresponds to `pm()`, reference to program memory.
+    VK_AVR_PM_LO8, ///< Corresponds to `pm_lo8()`.
+    VK_AVR_PM_HI8, ///< Corresponds to `pm_hi8()`.
+    VK_AVR_PM_HH8, ///< Corresponds to `pm_hh8()`.
 
-    VK_PM,     ///< Corresponds to `pm()`, reference to program memory.
-    VK_PM_LO8, ///< Corresponds to `pm_lo8()`.
-    VK_PM_HI8, ///< Corresponds to `pm_hi8()`.
-    VK_PM_HH8, ///< Corresponds to `pm_hh8()`.
-
-    VK_LO8_GS, ///< Corresponds to `lo8(gs())`.
-    VK_HI8_GS, ///< Corresponds to `hi8(gs())`.
-    VK_GS,     ///< Corresponds to `gs()`.
-
-    VK_DIFF8,
-    VK_DIFF16,
-    VK_DIFF32,
+    VK_AVR_LO8_GS, ///< Corresponds to `lo8(gs())`.
+    VK_AVR_HI8_GS, ///< Corresponds to `hi8(gs())`.
+    VK_AVR_GS,     ///< Corresponds to `gs()`.
   };
 
 public:
   /// Creates an AVR machine code expression.
-  static const AVRMCExpr *create(Specifier S, const MCExpr *Expr,
+  static const AVRMCExpr *create(VariantKind Kind, const MCExpr *Expr,
                                  bool isNegated, MCContext &Ctx);
 
   /// Gets the type of the expression.
-  Specifier getSpecifier() const { return specifier; }
+  VariantKind getKind() const { return Kind; }
   /// Gets the name of the expression.
   const char *getName() const;
   const MCExpr *getSubExpr() const { return SubExpr; }
@@ -62,31 +56,34 @@ public:
   void setNegated(bool negated = true) { Negated = negated; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
+                                 const MCFixup *Fixup) const override;
+
   void visitUsedExpr(MCStreamer &streamer) const override;
 
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
   }
 
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
+
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
 
 public:
-  static Specifier parseSpecifier(StringRef Name);
+  static VariantKind getKindByName(StringRef Name);
 
 private:
   int64_t evaluateAsInt64(int64_t Value) const;
 
-  const Specifier specifier;
+  const VariantKind Kind;
   const MCExpr *SubExpr;
   bool Negated;
 
 private:
-  explicit AVRMCExpr(Specifier S, const MCExpr *Expr, bool Negated)
-      : specifier(S), SubExpr(Expr), Negated(Negated) {}
+  explicit AVRMCExpr(VariantKind Kind, const MCExpr *Expr, bool Negated)
+      : Kind(Kind), SubExpr(Expr), Negated(Negated) {}
   ~AVRMCExpr() = default;
 };
 

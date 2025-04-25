@@ -361,25 +361,25 @@ void ASTStmtWriter::VisitGCCAsmStmt(GCCAsmStmt *S) {
   VisitAsmStmt(S);
   Record.push_back(S->getNumLabels());
   Record.AddSourceLocation(S->getRParenLoc());
-  Record.AddStmt(S->getAsmStringExpr());
+  Record.AddStmt(S->getAsmString());
 
   // Outputs
   for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {
     Record.AddIdentifierRef(S->getOutputIdentifier(I));
-    Record.AddStmt(S->getOutputConstraintExpr(I));
+    Record.AddStmt(S->getOutputConstraintLiteral(I));
     Record.AddStmt(S->getOutputExpr(I));
   }
 
   // Inputs
   for (unsigned I = 0, N = S->getNumInputs(); I != N; ++I) {
     Record.AddIdentifierRef(S->getInputIdentifier(I));
-    Record.AddStmt(S->getInputConstraintExpr(I));
+    Record.AddStmt(S->getInputConstraintLiteral(I));
     Record.AddStmt(S->getInputExpr(I));
   }
 
   // Clobbers
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
-    Record.AddStmt(S->getClobberExpr(I));
+    Record.AddStmt(S->getClobberStringLiteral(I));
 
   // Labels
   for (unsigned I = 0, N = S->getNumLabels(); I != N; ++I) {
@@ -1335,15 +1335,11 @@ void ASTStmtWriter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 
 void ASTStmtWriter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   VisitExpr(E);
-  bool HasFPFeatures = E->hasStoredFPFeatures();
-  CurrentPackingBits.addBit(HasFPFeatures);
   Record.AddSourceLocation(E->getBuiltinLoc());
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddTypeSourceInfo(E->getTypeSourceInfo());
   Record.AddStmt(E->getSrcExpr());
   Code = serialization::EXPR_CONVERT_VECTOR;
-  if (HasFPFeatures)
-    Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 }
 
 void ASTStmtWriter::VisitBlockExpr(BlockExpr *E) {
@@ -2140,15 +2136,9 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 
 void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
-  Record.push_back(E->TypeTraitExprBits.IsBooleanTypeTrait);
   Record.push_back(E->TypeTraitExprBits.NumArgs);
   Record.push_back(E->TypeTraitExprBits.Kind); // FIXME: Stable encoding
-
-  if (E->TypeTraitExprBits.IsBooleanTypeTrait)
-    Record.push_back(E->TypeTraitExprBits.Value);
-  else
-    Record.AddAPValue(E->getAPValue());
-
+  Record.push_back(E->TypeTraitExprBits.Value);
   Record.AddSourceRange(E->getSourceRange());
   for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
     Record.AddTypeSourceInfo(E->getArg(I));
@@ -2218,6 +2208,16 @@ void ASTStmtWriter::VisitPackIndexingExpr(PackIndexingExpr *E) {
   for (Expr *Sub : E->getExpressions())
     Record.AddStmt(Sub);
   Code = serialization::EXPR_PACK_INDEXING;
+}
+
+void ASTStmtWriter::VisitResolvedUnexpandedPackExpr(
+    ResolvedUnexpandedPackExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumExprs());
+  Record.AddSourceLocation(E->getBeginLoc());
+  for (Expr *Sub : E->getExprs())
+    Record.AddStmt(Sub);
+  Code = serialization::EXPR_RESOLVED_UNEXPANDED_PACK;
 }
 
 void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
@@ -3021,18 +3021,6 @@ void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   Record.AddStmt(S->getAssociatedStmt());
 
   Code = serialization::STMT_OPENACC_ATOMIC_CONSTRUCT;
-}
-
-void ASTStmtWriter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
-  VisitStmt(S);
-  Record.push_back(S->getVarList().size());
-  VisitOpenACCConstructStmt(S);
-  Record.AddSourceRange(S->ParensLoc);
-  Record.AddSourceLocation(S->ReadOnlyLoc);
-
-  for (Expr *E : S->getVarList())
-    Record.AddStmt(E);
-  Code = serialization::STMT_OPENACC_CACHE_CONSTRUCT;
 }
 
 //===----------------------------------------------------------------------===//

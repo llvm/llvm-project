@@ -223,7 +223,6 @@ FailureOr<std::vector<FormatElement *>> FormatParser::parse() {
 
 //===----------------------------------------------------------------------===//
 // Element Parsing
-//===----------------------------------------------------------------------===//
 
 FailureOr<FormatElement *> FormatParser::parseElement(Context ctx) {
   if (curToken.is(FormatToken::literal))

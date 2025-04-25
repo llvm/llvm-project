@@ -887,8 +887,7 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   unsigned SrcScalarBits = Src->getScalarSizeInBits();
 
   if (!Src->isVectorTy()) {
-    if (Dst->isVectorTy())
-      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+    assert (!Dst->isVectorTy());
 
     if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP) {
       if (Src->isIntegerTy(128))

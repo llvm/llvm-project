@@ -292,9 +292,10 @@ private:
 class PrecompilePreambleConsumer : public PCHGenerator {
 public:
   PrecompilePreambleConsumer(PrecompilePreambleAction &Action, Preprocessor &PP,
-                             ModuleCache &ModCache, StringRef isysroot,
+                             InMemoryModuleCache &ModuleCache,
+                             StringRef isysroot,
                              std::shared_ptr<PCHBuffer> Buffer)
-      : PCHGenerator(PP, ModCache, "", isysroot, std::move(Buffer),
+      : PCHGenerator(PP, ModuleCache, "", isysroot, std::move(Buffer),
                      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
         Action(Action) {}

@@ -46,19 +46,17 @@ attributes #1 = { noinline }
 !2 = !{i64 4000}
 
 ;--- profile.yaml
-Contexts:
-  - Guid: 4000
-    TotalRootEntryCount: 10
-    Counters: [10]
-    Callsites:  -
-                  - Guid: 3000
-                    Counters: [10]
-                    Callsites: -
-                                - Guid: 1000
-                                  Counters: [10]
-                -
-                  - Guid: 3000
-                    Counters: [10]
-                    Callsites: -
-                                - Guid: 9000
-                                  Counters: [10]
+- Guid: 4000
+  Counters: [10]
+  Callsites:  -
+                - Guid: 3000
+                  Counters: [10]
+                  Callsites: -
+                              - Guid: 1000
+                                Counters: [10]
+              -
+                - Guid: 3000
+                  Counters: [10]
+                  Callsites: -
+                              - Guid: 9000
+                                Counters: [10]

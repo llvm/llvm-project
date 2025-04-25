@@ -135,9 +135,6 @@ FLAGS_ENUM(LaunchFlags){
 /// Thread Run Modes.
 enum RunMode { eOnlyThisThread, eAllThreads, eOnlyDuringStepping };
 
-/// Execution directions
-enum RunDirection { eRunForward, eRunReverse };
-
 /// Byte ordering definitions.
 enum ByteOrder {
   eByteOrderInvalid = 0,
@@ -257,9 +254,6 @@ enum StopReason {
   eStopReasonVFork,
   eStopReasonVForkDone,
   eStopReasonInterrupt, ///< Thread requested interrupt
-  // Indicates that execution stopped because the debugger backend relies
-  // on recorded data and we reached the end of that data.
-  eStopReasonHistoryBoundary,
 };
 
 /// Command Return Status Types.
@@ -1362,9 +1356,9 @@ enum DebuggerBroadcastBit {
   eBroadcastBitWarning = (1 << 1),
   eBroadcastBitError = (1 << 2),
   eBroadcastSymbolChange = (1 << 3),
-  eBroadcastBitProgressCategory = (1 << 4), ///< Deprecated
+  eBroadcastBitProgressCategory = (1 << 4),
   eBroadcastBitExternalProgress = (1 << 5),
-  eBroadcastBitExternalProgressCategory = (1 << 6), ///< Deprecated
+  eBroadcastBitExternalProgressCategory = (1 << 6),
 };
 
 /// Used for expressing severity in logs and diagnostics.

@@ -495,7 +495,7 @@ public:
   /// Add a LOH directive of this @p Kind and this @p Args.
   void addLOHDirective(MCLOHType Kind, MILOHArgs Args) {
     LOHContainerSet.push_back(MILOHDirective(Kind, Args));
-    LOHRelated.insert_range(Args);
+    LOHRelated.insert(Args.begin(), Args.end());
   }
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {

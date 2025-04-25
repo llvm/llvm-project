@@ -659,7 +659,6 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
 
     IDecl->setSuperClass(SuperClassTInfo);
     IDecl->setEndOfDefinitionLoc(SuperClassTInfo->getTypeLoc().getEndLoc());
-    getASTContext().addObjCSubClass(IDecl->getSuperClass(), IDecl);
   }
 }
 
@@ -2129,12 +2128,6 @@ SemaObjC::ActOnFinishObjCImplementation(Decl *ObjCImpDecl,
   }
 
   DeclsInGroup.push_back(ObjCImpDecl);
-
-  // Reset the cached layout if there are any ivars added to
-  // the implementation.
-  if (auto *ImplD = dyn_cast<ObjCImplementationDecl>(ObjCImpDecl))
-    if (!ImplD->ivar_empty())
-      getASTContext().ResetObjCLayout(ImplD->getClassInterface());
 
   return SemaRef.BuildDeclaratorGroup(DeclsInGroup);
 }

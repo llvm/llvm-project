@@ -17,10 +17,8 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
-#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
@@ -55,10 +53,9 @@ IdentifierInfo *Parser::getSEHExceptKeyword() {
 
 Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
     : PP(pp), PreferredType(pp.isCodeCompletionEnabled()), Actions(actions),
-      Diags(PP.getDiagnostics()), StackHandler(Diags),
-      GreaterThanIsOperator(true), ColonIsSacred(false),
-      InMessageExpression(false), TemplateParameterDepth(0),
-      ParsingInObjCContainer(false) {
+      Diags(PP.getDiagnostics()), GreaterThanIsOperator(true),
+      ColonIsSacred(false), InMessageExpression(false),
+      TemplateParameterDepth(0), ParsingInObjCContainer(false) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
   Tok.startToken();
   Tok.setKind(tok::eof);
@@ -867,11 +864,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     AccessSpecifier AS = AS_none;
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
   }
-  case tok::annot_pragma_openacc: {
-    AccessSpecifier AS = AS_none;
-    return ParseOpenACCDirectiveDecl(AS, Attrs, DeclSpec::TST_unspecified,
-                                     /*TagDecl=*/nullptr);
-  }
+  case tok::annot_pragma_openacc:
+    return ParseOpenACCDirectiveDecl();
   case tok::annot_pragma_ms_pointers_to_members:
     HandlePragmaMSPointersToMembers();
     return nullptr;
@@ -1674,40 +1668,28 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 ///         string-literal
 ///
 ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
+  if (!isTokenStringLiteral()) {
+    Diag(Tok, diag::err_expected_string_literal)
+      << /*Source='in...'*/0 << "'asm'";
+    return ExprError();
+  }
 
-  ExprResult AsmString;
-  if (isTokenStringLiteral()) {
-    AsmString = ParseStringLiteralExpression();
-    if (AsmString.isInvalid())
-      return AsmString;
-
+  ExprResult AsmString(ParseStringLiteralExpression());
+  if (!AsmString.isInvalid()) {
     const auto *SL = cast<StringLiteral>(AsmString.get());
     if (!SL->isOrdinary()) {
       Diag(Tok, diag::err_asm_operand_wide_string_literal)
-          << SL->isWide() << SL->getSourceRange();
+        << SL->isWide()
+        << SL->getSourceRange();
       return ExprError();
     }
-  } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
-             Tok.is(tok::l_paren)) {
-    ParenParseOption ExprType = SimpleExpr;
-    SourceLocation RParenLoc;
-    ParsedType CastTy;
-
-    EnterExpressionEvaluationContext ConstantEvaluated(
-        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-    AsmString = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
-                                     CastTy, RParenLoc);
-    if (!AsmString.isInvalid())
-      AsmString = Actions.ActOnConstantExpression(AsmString);
-
-    if (AsmString.isInvalid())
+    if (ForAsmLabel && SL->getString().empty()) {
+      Diag(Tok, diag::err_asm_operand_wide_string_literal)
+          << 2 /* an empty */ << SL->getSourceRange();
       return ExprError();
-  } else {
-    Diag(Tok, diag::err_asm_expected_string) << /*and expression=*/(
-        (getLangOpts().CPlusPlus11 && !ForAsmLabel) ? 0 : 1);
+    }
   }
-
-  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel);
+  return AsmString;
 }
 
 /// ParseSimpleAsm

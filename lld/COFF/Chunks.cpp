@@ -1070,19 +1070,15 @@ void MergeChunk::writeTo(uint8_t *buf) const {
 }
 
 // MinGW specific.
-size_t AbsolutePointerChunk::getSize() const {
-  return symtab.ctx.config.wordsize;
-}
+size_t AbsolutePointerChunk::getSize() const { return ctx.config.wordsize; }
 
 void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
-  if (symtab.ctx.config.is64()) {
+  if (ctx.config.is64()) {
     write64le(buf, value);
   } else {
     write32le(buf, value);
   }
 }
-
-MachineTypes AbsolutePointerChunk::getMachine() const { return symtab.machine; }
 
 void ECExportThunkChunk::writeTo(uint8_t *buf) const {
   memcpy(buf, ECExportThunkCode, sizeof(ECExportThunkCode));

@@ -249,7 +249,6 @@ bool MemRefDependenceGraph::init() {
   // the memref.
   DenseMap<Value, SetVector<unsigned>> memrefAccesses;
 
-  // Create graph nodes.
   DenseMap<Operation *, unsigned> forToNodeMap;
   for (Operation &op : block) {
     if (auto forOp = dyn_cast<AffineForOp>(op)) {
@@ -282,8 +281,9 @@ bool MemRefDependenceGraph::init() {
       // Create graph node for top-level op unless it is known to be
       // memory-effect free. This covers all unknown/unregistered ops,
       // non-affine ops with memory effects, and region-holding ops with a
-      // well-defined control flow. During the fusion validity checks, edges
-      // to/from these ops get looked at.
+      // well-defined control flow. During the fusion validity checks, we look
+      // for non-affine ops on the path from source to destination, at which
+      // point we check which memrefs if any are used in the region.
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
         return false;
@@ -300,7 +300,11 @@ bool MemRefDependenceGraph::init() {
     // interface.
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "Created " << nodes.size() << " nodes\n");
+  for (auto &idAndNode : nodes) {
+    LLVM_DEBUG(llvm::dbgs() << "Create node " << idAndNode.first << " for:\n"
+                            << *(idAndNode.second.op) << "\n");
+    (void)idAndNode;
+  }
 
   // Add dependence edges between nodes which produce SSA values and their
   // users. Load ops can be considered as the ones producing SSA values.
@@ -1069,9 +1073,9 @@ unsigned MemRefRegion::getRank() const {
 }
 
 std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
-    SmallVectorImpl<int64_t> *shape, SmallVectorImpl<AffineMap> *lbs) const {
+    SmallVectorImpl<int64_t> *shape, std::vector<SmallVector<int64_t, 4>> *lbs,
+    SmallVectorImpl<int64_t> *lbDivisors) const {
   auto memRefType = cast<MemRefType>(memref.getType());
-  MLIRContext *context = memref.getContext();
   unsigned rank = memRefType.getRank();
   if (shape)
     shape->reserve(rank);
@@ -1083,7 +1087,7 @@ std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
   // over-approximation from projection or union bounding box. We may not add
   // this on the region itself since they might just be redundant constraints
   // that will need non-trivials means to eliminate.
-  FlatLinearValueConstraints cstWithShapeBounds(cst);
+  FlatAffineValueConstraints cstWithShapeBounds(cst);
   for (unsigned r = 0; r < rank; r++) {
     cstWithShapeBounds.addBound(BoundType::LB, r, 0);
     int64_t dimSize = memRefType.getDimSize(r);
@@ -1092,34 +1096,39 @@ std::optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
     cstWithShapeBounds.addBound(BoundType::UB, r, dimSize - 1);
   }
 
-  // Find a constant upper bound on the extent of this memref region along
-  // each dimension.
+  // Find a constant upper bound on the extent of this memref region along each
+  // dimension.
   int64_t numElements = 1;
   int64_t diffConstant;
+  int64_t lbDivisor;
   for (unsigned d = 0; d < rank; d++) {
-    AffineMap lb;
+    SmallVector<int64_t, 4> lb;
     std::optional<int64_t> diff =
-        cstWithShapeBounds.getConstantBoundOnDimSize(context, d, &lb);
+        cstWithShapeBounds.getConstantBoundOnDimSize64(d, &lb, &lbDivisor);
     if (diff.has_value()) {
       diffConstant = *diff;
-      assert(diffConstant >= 0 && "dim size bound cannot be negative");
+      assert(diffConstant >= 0 && "Dim size bound can't be negative");
+      assert(lbDivisor > 0);
     } else {
       // If no constant bound is found, then it can always be bound by the
       // memref's dim size if the latter has a constant size along this dim.
       auto dimSize = memRefType.getDimSize(d);
-      if (ShapedType::isDynamic(dimSize))
+      if (dimSize == ShapedType::kDynamic)
         return std::nullopt;
       diffConstant = dimSize;
       // Lower bound becomes 0.
-      lb = AffineMap::get(/*dimCount=*/0, cstWithShapeBounds.getNumSymbolVars(),
-                          /*result=*/getAffineConstantExpr(0, context));
+      lb.resize(cstWithShapeBounds.getNumSymbolVars() + 1, 0);
+      lbDivisor = 1;
     }
     numElements *= diffConstant;
-    // Populate outputs if available.
-    if (lbs)
+    if (lbs) {
       lbs->push_back(lb);
-    if (shape)
+      assert(lbDivisors && "both lbs and lbDivisor or none");
+      lbDivisors->push_back(lbDivisor);
+    }
+    if (shape) {
       shape->push_back(diffConstant);
+    }
   }
   return numElements;
 }
@@ -1167,8 +1176,7 @@ LogicalResult MemRefRegion::unionBoundingBox(const MemRefRegion &other) {
 // (dma_start, dma_wait).
 LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
                                     const ComputationSliceState *sliceState,
-                                    bool addMemRefDimBounds, bool dropLocalVars,
-                                    bool dropOuterIvs) {
+                                    bool addMemRefDimBounds) {
   assert((isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) &&
          "affine read/write op expected");
 
@@ -1251,8 +1259,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   if (sliceState != nullptr) {
     // Add dim and symbol slice operands.
     for (auto operand : sliceState->lbOperands[0]) {
-      if (failed(cst.addInductionVarOrTerminalSymbol(operand)))
-        return failure();
+      cst.addInductionVarOrTerminalSymbol(operand);
     }
     // Add upper/lower bounds from 'sliceState' to 'cst'.
     LogicalResult ret =
@@ -1283,25 +1290,15 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   enclosingIVs.resize(loopDepth);
   SmallVector<Value, 4> vars;
   cst.getValues(cst.getNumDimVars(), cst.getNumDimAndSymbolVars(), &vars);
-  for (auto en : llvm::enumerate(vars)) {
-    if ((isAffineInductionVar(en.value())) &&
-        !llvm::is_contained(enclosingIVs, en.value())) {
-      if (dropOuterIvs) {
-        cst.projectOut(en.value());
-      } else {
-        unsigned varPosition;
-        cst.findVar(en.value(), &varPosition);
-        auto varKind = cst.getVarKindAt(varPosition);
-        varPosition -= cst.getNumDimVars();
-        cst.convertToLocal(varKind, varPosition, varPosition + 1);
-      }
+  for (Value var : vars) {
+    if ((isAffineInductionVar(var)) && !llvm::is_contained(enclosingIVs, var)) {
+      cst.projectOut(var);
     }
   }
 
   // Project out any local variables (these would have been added for any
-  // mod/divs) if specified.
-  if (dropLocalVars)
-    cst.projectOut(cst.getNumDimAndSymbolVars(), cst.getNumLocalVars());
+  // mod/divs).
+  cst.projectOut(cst.getNumDimAndSymbolVars(), cst.getNumLocalVars());
 
   // Constant fold any symbolic variables.
   cst.constantFoldVarRange(/*pos=*/cst.getNumDimVars(),
@@ -1559,9 +1556,9 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolVars() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (Operation *i : opsA) {
+  for (auto *i : opsA) {
     MemRefAccess srcAccess(i);
-    for (Operation *j : opsB) {
+    for (auto *j : opsB) {
       MemRefAccess dstAccess(j);
       if (srcAccess.memref != dstAccess.memref)
         continue;
@@ -1590,7 +1587,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
 
       // Compute slice bounds for 'srcAccess' and 'dstAccess'.
       ComputationSliceState tmpSliceState;
-      mlir::affine::getComputationSliceState(i, j, dependenceConstraints,
+      mlir::affine::getComputationSliceState(i, j, &dependenceConstraints,
                                              loopDepth, isBackwardSlice,
                                              &tmpSliceState);
 
@@ -1649,10 +1646,8 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   }
 
   // Empty union.
-  if (sliceUnionCst.getNumDimAndSymbolVars() == 0) {
-    LLVM_DEBUG(llvm::dbgs() << "empty slice union - unexpected\n");
+  if (sliceUnionCst.getNumDimAndSymbolVars() == 0)
     return SliceComputationResult::GenericFailure;
-  }
 
   // Gather loops surrounding ops from loop nest where slice will be inserted.
   SmallVector<Operation *, 4> ops;
@@ -1691,8 +1686,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   sliceUnion->ivs.clear();
   sliceUnionCst.getValues(0, numSliceLoopIVs, &sliceUnion->ivs);
 
-  // Set loop nest insertion point to block start at 'loopDepth' for forward
-  // slices, while at the end for backward slices.
+  // Set loop nest insertion point to block start at 'loopDepth'.
   sliceUnion->insertPoint =
       isBackwardSlice
           ? surroundingLoops[loopDepth - 1].getBody()->begin()
@@ -1791,7 +1785,7 @@ const char *const kSliceFusionBarrierAttrName = "slice_fusion_barrier";
 // the other loop nest's IVs, symbols and constants (using 'isBackwardsSlice').
 void mlir::affine::getComputationSliceState(
     Operation *depSourceOp, Operation *depSinkOp,
-    const FlatAffineValueConstraints &dependenceConstraints, unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints, unsigned loopDepth,
     bool isBackwardSlice, ComputationSliceState *sliceState) {
   // Get loop nest surrounding src operation.
   SmallVector<AffineForOp, 4> srcLoopIVs;
@@ -1810,28 +1804,30 @@ void mlir::affine::getComputationSliceState(
   unsigned pos = isBackwardSlice ? numSrcLoopIVs + loopDepth : loopDepth;
   unsigned num =
       isBackwardSlice ? numDstLoopIVs - loopDepth : numSrcLoopIVs - loopDepth;
-  FlatAffineValueConstraints sliceCst(dependenceConstraints);
-  sliceCst.projectOut(pos, num);
+  dependenceConstraints->projectOut(pos, num);
 
   // Add slice loop IV values to 'sliceState'.
   unsigned offset = isBackwardSlice ? 0 : loopDepth;
   unsigned numSliceLoopIVs = isBackwardSlice ? numSrcLoopIVs : numDstLoopIVs;
-  sliceCst.getValues(offset, offset + numSliceLoopIVs, &sliceState->ivs);
+  dependenceConstraints->getValues(offset, offset + numSliceLoopIVs,
+                                   &sliceState->ivs);
 
   // Set up lower/upper bound affine maps for the slice.
   sliceState->lbs.resize(numSliceLoopIVs, AffineMap());
   sliceState->ubs.resize(numSliceLoopIVs, AffineMap());
 
   // Get bounds for slice IVs in terms of other IVs, symbols, and constants.
-  sliceCst.getSliceBounds(offset, numSliceLoopIVs, depSourceOp->getContext(),
-                          &sliceState->lbs, &sliceState->ubs);
+  dependenceConstraints->getSliceBounds(offset, numSliceLoopIVs,
+                                        depSourceOp->getContext(),
+                                        &sliceState->lbs, &sliceState->ubs);
 
   // Set up bound operands for the slice's lower and upper bounds.
   SmallVector<Value, 4> sliceBoundOperands;
-  unsigned numDimsAndSymbols = sliceCst.getNumDimAndSymbolVars();
+  unsigned numDimsAndSymbols = dependenceConstraints->getNumDimAndSymbolVars();
   for (unsigned i = 0; i < numDimsAndSymbols; ++i) {
-    if (i < offset || i >= offset + numSliceLoopIVs)
-      sliceBoundOperands.push_back(sliceCst.getValue(i));
+    if (i < offset || i >= offset + numSliceLoopIVs) {
+      sliceBoundOperands.push_back(dependenceConstraints->getValue(i));
+    }
   }
 
   // Give each bound its own copy of 'sliceBoundOperands' for subsequent
@@ -1988,8 +1984,6 @@ unsigned mlir::affine::getNestingDepth(Operation *op) {
   while ((currOp = currOp->getParentOp())) {
     if (isa<AffineForOp>(currOp))
       depth++;
-    if (auto parOp = dyn_cast<AffineParallelOp>(currOp))
-      depth += parOp.getNumDims();
   }
   return depth;
 }
@@ -2007,7 +2001,9 @@ bool MemRefAccess::operator==(const MemRefAccess &rhs) const {
   AffineValueMap diff, thisMap, rhsMap;
   getAccessMap(&thisMap);
   rhs.getAccessMap(&rhsMap);
-  return thisMap == rhsMap;
+  AffineValueMap::difference(thisMap, rhsMap, &diff);
+  return llvm::all_of(diff.getAffineMap().getResults(),
+                      [](AffineExpr e) { return e == 0; });
 }
 
 void mlir::affine::getAffineIVs(Operation &op, SmallVectorImpl<Value> &ivs) {
@@ -2061,18 +2057,16 @@ static std::optional<int64_t> getMemoryFootprintBytes(Block &block,
     if (failed(
             region->compute(opInst,
                             /*loopDepth=*/getNestingDepth(&*block.begin())))) {
-      LLVM_DEBUG(opInst->emitError("error obtaining memory region"));
-      return failure();
+      return opInst->emitError("error obtaining memory region\n");
     }
 
     auto [it, inserted] = regions.try_emplace(region->memref);
     if (inserted) {
       it->second = std::move(region);
     } else if (failed(it->second->unionBoundingBox(*region))) {
-      LLVM_DEBUG(opInst->emitWarning(
+      return opInst->emitWarning(
           "getMemoryFootprintBytes: unable to perform a union on a memory "
-          "region"));
-      return failure();
+          "region");
     }
     return WalkResult::advance();
   });
@@ -2309,8 +2303,8 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
 
 Block *mlir::affine::findInnermostCommonBlockInScope(Operation *a,
                                                      Operation *b) {
-  Region *aScope = getAffineAnalysisScope(a);
-  Region *bScope = getAffineAnalysisScope(b);
+  Region *aScope = mlir::affine::getAffineScope(a);
+  Region *bScope = mlir::affine::getAffineScope(b);
   if (aScope != bScope)
     return nullptr;
 

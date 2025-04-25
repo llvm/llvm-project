@@ -12,12 +12,12 @@
 #ifndef FORTRAN_LOWER_CLAUSEPROCESSOR_H
 #define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
-#include "ClauseFinder.h"
+
 #include "ReductionProcessor.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/OpenMP/Utils.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -72,9 +72,8 @@ public:
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
-      lower::StatementContext &stmtCtx,
       mlir::omp::HasDeviceAddrClauseOps &result,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processHint(mlir::omp::HintClauseOps &result) const;
   bool processInclusive(mlir::Location currentLocation,
                         mlir::omp::InclusiveClauseOps &result) const;
@@ -104,8 +103,7 @@ public:
   bool processCopyin() const;
   bool processCopyprivate(mlir::Location currentLocation,
                           mlir::omp::CopyprivateClauseOps &result) const;
-  bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
-                     mlir::omp::DependClauseOps &result) const;
+  bool processDepend(mlir::omp::DependClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
@@ -151,6 +149,10 @@ public:
 private:
   using ClauseIterator = List<Clause>::const_iterator;
 
+  /// Utility to find a clause within a range in the clause list.
+  template <typename T>
+  static ClauseIterator findClause(ClauseIterator begin, ClauseIterator end);
+
   /// Return the first instance of the given clause found in the clause list or
   /// `nullptr` if not present. If more than one instance is expected, use
   /// `findRepeatableClause` instead.
@@ -174,8 +176,7 @@ private:
       llvm::omp::OpenMPOffloadMappingFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-      llvm::StringRef mapperIdNameRef = "") const;
+      llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
@@ -199,16 +200,44 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
 }
 
 template <typename T>
+ClauseProcessor::ClauseIterator
+ClauseProcessor::findClause(ClauseIterator begin, ClauseIterator end) {
+  for (ClauseIterator it = begin; it != end; ++it) {
+    if (std::get_if<T>(&it->u))
+      return it;
+  }
+
+  return end;
+}
+
+template <typename T>
 const T *
 ClauseProcessor::findUniqueClause(const parser::CharBlock **source) const {
-  return ClauseFinder::findUniqueClause<T>(clauses, source);
+  ClauseIterator it = findClause<T>(clauses.begin(), clauses.end());
+  if (it != clauses.end()) {
+    if (source)
+      *source = &it->source;
+    return &std::get<T>(it->u);
+  }
+  return nullptr;
 }
 
 template <typename T>
 bool ClauseProcessor::findRepeatableClause(
     std::function<void(const T &, const parser::CharBlock &source)> callbackFn)
     const {
-  return ClauseFinder::findRepeatableClause<T>(clauses, callbackFn);
+  bool found = false;
+  ClauseIterator nextIt, endIt = clauses.end();
+  for (ClauseIterator it = clauses.begin(); it != endIt; it = nextIt) {
+    nextIt = findClause<T>(it, endIt);
+
+    if (nextIt != endIt) {
+      callbackFn(std::get<T>(nextIt->u), nextIt->source);
+      found = true;
+      ++nextIt;
+    }
+  }
+  return found;
 }
 
 template <typename T>

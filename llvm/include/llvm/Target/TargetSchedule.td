@@ -321,13 +321,9 @@ class SchedWriteRes<list<ProcResourceKind> resources> : SchedWrite,
 // Define values common to ReadAdvance and SchedReadAdvance.
 //
 // SchedModel ties these resources to a processor.
-class ProcReadAdvance<int cycles, list<SchedWrite> writes = [],
-                      list<int> tunables = []> {
-  assert !le(!size(tunables), !size(writes)),
-         "cannot have more `tunables' than `writes'";
+class ProcReadAdvance<int cycles, list<SchedWrite> writes = []> {
   int Cycles = cycles;
   list<SchedWrite> ValidWrites = writes;
-  list<int> CycleTunables = tunables;
   // Allow a processor to mark some scheduling classes as unsupported
   // for stronger verification.
   bit Unsupported = false;
@@ -344,17 +340,15 @@ class ProcReadAdvance<int cycles, list<SchedWrite> writes = [],
 // indicate operands that are always read this number of Cycles later
 // than a normal register read, allowing the read's parent instruction
 // to issue earlier relative to the writer.
-class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = [],
-                  list<int> tunables = []>
-  : ProcReadAdvance<cycles, writes, tunables> {
+class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = []>
+  : ProcReadAdvance<cycles, writes> {
   SchedRead ReadType = read;
 }
 
 // Directly associate a new SchedRead type with a delay and optional
 // pipeline bypass. For use with InstRW or ItinRW.
-class SchedReadAdvance<int cycles, list<SchedWrite> writes = [],
-                       list<int> tunables = []>
-  : SchedRead, ProcReadAdvance<cycles, writes, tunables>;
+class SchedReadAdvance<int cycles, list<SchedWrite> writes = []> : SchedRead,
+  ProcReadAdvance<cycles, writes>;
 
 // Define SchedRead defaults. Reads seldom need special treatment.
 def ReadDefault : SchedRead;

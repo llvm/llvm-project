@@ -73,36 +73,41 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
 }
 
-// Helper to validate value shape of LoadNd and StoreNd ops.
-static LogicalResult
-isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
-                 ArrayRef<int64_t> adjustedTdescShape,
-                 function_ref<InFlightDiagnostic()> emitError) {
-  auto sgMap = tdescTy.getSGMapAttr();
-  auto valueShape = valueTy.getShape();
-  // sg_map not present means IR is in SIMD mode. In this case value shape must
-  // match adjusted tensor descriptor shape.
+// Validations for nd instruction arguments is successful if any of these are
+// true:
+// - tensor descriptor and the output vector shapes exactly match.
+// - tensor descriptor has a sg_map attribute and the distributed vector shape
+//   matches the tensor descriptor shape when scaled using sg_map factors on
+//   each dimension.
+static bool isArgShapesValid(ArrayRef<int64_t> descShape,
+                             ArrayRef<int64_t> valShape, SGMapAttr sgMap) {
+  // Equal shapes with no distribution - no further verification needed.
+  if (descShape == valShape && !sgMap)
+    return true;
+
+  // Unknown distribution - cannot perform operation on partial shape.
   if (!sgMap)
-    return valueShape == adjustedTdescShape
-               ? success()
-               : emitError()
-                     << "Value shape " << makeString(valueShape)
-                     << " is not consistent with tensor descriptor " << tdescTy;
+    return false;
 
-  // sg_map present means IR is in SIMT mode. In this case sg_map determines the
-  // value shape.
-  auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
-  assert(succeeded(expectedValueShapeOrFailure) &&
-         "Failed to compute distributed vector shape for "
-         "tensor descriptor ");
+  // Invalid rank or mixed rank usage.
+  size_t descRank = descShape.size();
+  if (descRank > 2 || valShape.size() != descRank)
+    return false;
 
-  return valueTy == expectedValueShapeOrFailure.value()
-             ? success()
-             : emitError()
-                   << "Result shape " << makeString(valueShape)
-                   << " is not consistent with distributed vector shape "
-                   << makeString(expectedValueShapeOrFailure.value().getShape())
-                   << " for tensor descriptor " << tdescTy;
+  // For 1D, SG map is guaranteed to be unit size in the outer dimension.
+  // Only take the distribution over the innermost dimension for validation.
+  ArrayRef<uint32_t> wiLayout = sgMap.getWiLayout();
+  SmallVector<uint32_t> mapLayout(wiLayout.begin(), wiLayout.end());
+  if (descRank == 1)
+    mapLayout = {wiLayout.back()};
+
+  for (const auto &[factor, dim, expected] :
+       llvm::zip_equal(mapLayout, valShape, descShape)) {
+    if (factor * dim != expected)
+      return false;
+  }
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -275,8 +280,7 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto array_len = tdescTy.getArrayLength();
-  // adjusted tensor descriptor shape tracks the expected shape of the result.
-  auto adjustedTdescShape = getShapeOf(tdescTy);
+  auto tdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
 
   if (getTranspose()) {
@@ -288,7 +292,7 @@ LogicalResult LoadNdOp::verify() {
     });
 
     if (valid)
-      transpose(trans, adjustedTdescShape);
+      transpose(trans, tdescShape);
     else
       mlir::emitWarning(getLoc()) << "Invalid transpose attr. It is ignored.";
   }
@@ -297,8 +301,8 @@ LogicalResult LoadNdOp::verify() {
     if (tdescTy.getRank() == 2) {
       const int axis = 0;
       auto vnni_factor = valueShape.back();
-      adjustedTdescShape[axis] /= vnni_factor;
-      adjustedTdescShape.push_back(vnni_factor);
+      tdescShape[axis] /= vnni_factor;
+      tdescShape.push_back(vnni_factor);
     } else {
       mlir::emitWarning(getLoc())
           << "Invalid Packed Attr. It is ignored (available for 2D "
@@ -307,12 +311,17 @@ LogicalResult LoadNdOp::verify() {
   }
 
   if (array_len > 1) {
-    auto it = adjustedTdescShape.begin();
-    adjustedTdescShape.insert(it, array_len);
+    auto it = tdescShape.begin();
+    tdescShape.insert(it, array_len);
   }
+  auto sgMap = tdescTy.getSGMapAttr();
 
-  return isArgShapesValid(tdescTy, valueTy, adjustedTdescShape,
-                          [&]() { return emitOpError(); });
+  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
+    return emitOpError() << "Result shape doesn't match TensorDesc shape."
+                         << "The expected shape is " << makeString(tdescShape)
+                         << ". But the given shape is "
+                         << makeString(valueShape) << ".\n";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -342,9 +351,14 @@ LogicalResult StoreNdOp::verify() {
 
   auto tdescShape = getShapeOf(dstTy);
   auto valueShape = getShapeOf(valTy);
+  auto sgMap = dstTy.getSGMapAttr();
 
-  return isArgShapesValid(dstTy, valTy, tdescShape,
-                          [&]() { return emitOpError(); });
+  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
+    return emitOpError() << "Result shape doesn't match TensorDesc shape."
+                         << "The expected shape is " << makeString(tdescShape)
+                         << ". But the given shape is "
+                         << makeString(valueShape) << ".\n";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -464,9 +478,6 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
-  if (!valueTy)
-    return emitOpError("Expecting a vector type result.\n");
-
   if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
@@ -498,8 +509,25 @@ LogicalResult LoadGatherOp::verify() {
     transpose({1, 0}, tdescShape);
   }
 
-  return isArgShapesValid(tdescTy, valueTy, tdescShape,
-                          [&]() { return emitOpError(); });
+  if (auto sgMap = tdescTy.getSGMapAttr()) {
+    auto valueVecTy = cast<VectorType>(valueTy);
+    const int32_t wiData =
+        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
+    // All represent the same concept: a number of row elements to store.
+    if (valueVecTy.getNumElements() != wiData ||
+        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
+      return emitOpError("Chunk size, vector size and wi_data must match.");
+    }
+    // Work-item's slice (i.e., vector shape to load) is [1] or [1, chunk_size].
+    tdescShape[tdescTy.getRank() - 1] = 1;
+  }
+
+  if (valueShape != tdescShape)
+    return emitOpError("Unexpected result shape")
+           << "(Expected shape: " << makeString(tdescShape)
+           << ", Given shape: " << makeString(valueShape) << ").\n";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -521,10 +549,6 @@ LogicalResult StoreScatterOp::verify() {
 
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
-
-  if (!valueTy)
-    return emitOpError("Expecting a vector type for the value.\n");
-
   auto maskShape = getShapeOf(maskTy);
   auto tdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
@@ -537,8 +561,25 @@ LogicalResult StoreScatterOp::verify() {
     transpose({1, 0}, tdescShape);
   }
 
-  return isArgShapesValid(tdescTy, valueTy, tdescShape,
-                          [&]() { return emitOpError(); });
+  if (auto sgMap = tdescTy.getSGMapAttr()) {
+    auto valueVecTy = cast<VectorType>(valueTy);
+    const int32_t wiData =
+        sgMap.getWiData()[0] > 1 ? sgMap.getWiData()[0] : sgMap.getWiData()[1];
+    // All represent the same concept: a number of row elements to store.
+    if (valueVecTy.getNumElements() != wiData ||
+        valueVecTy.getNumElements() != tdescTy.getChunkSize()) {
+      return emitOpError("Chunk size, vector size and wi_data must match.");
+    }
+    // Work-item's slice (i.e., vector to store) is [1] or [1, chunk_size].
+    tdescShape[tdescTy.getRank() - 1] = 1;
+  }
+
+  if (valueShape != tdescShape)
+    return emitOpError("Unexpected value shape")
+           << "(Expected shape: " << makeString(tdescShape)
+           << ", Given shape: " << makeString(valueShape) << ").\n";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -569,61 +610,20 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult DpasOp::verify() {
   int64_t lhsRank = getLhsType().getRank();
   int64_t rhsRank = getRhsType().getRank();
-  int64_t resultRank = getResultType().getRank();
+
+  if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3))
+    return emitOpError("expecting lhs to be a 2D vector, and rhs to be either "
+                       "2D or 3D (packed) vector.");
+
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
-  auto resultShape = getResultType().getShape();
-
-  auto sgMapA = getSgMapAAttr();
-  auto sgMapB = getSgMapBAttr();
-  auto sgMapC = getSgMapCAttr();
-
-  // If sg_maps are not present, then the operation is in SIMD mode.
-  if (!sgMapA && !sgMapB && !sgMapC) {
-    if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resultRank != 2)
-      return emitOpError(
-          "expecting lhs and result to be a 2D vector, and rhs to be either "
-          "2D or 3D (packed) vector.");
-    auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-    if (bK != lhsShape[1])
-      return emitOpError("K-dimension mismatch.");
-    if (lhsShape[0] != resultShape[0])
-      return emitOpError("M-dimension mismatch.");
-    if (rhsShape[1] != resultShape[1])
-      return emitOpError("N-dimension mismatch.");
-    return success();
-  }
-  // Otherwise, in SIMT mode we expect sg_map attributes for all operands and
-  // result of DPAS operation.
-  if (!sgMapA || !sgMapB || !sgMapC)
-    return emitOpError("sg_map attributes for all operands and outputs are "
-                       "expected in SIMT xegpu::Dpas operation");
-
-  // In SIMT mode, All data fragments must be 2D
-  if (lhsRank != 2 || rhsRank != 2 || resultRank != 2)
-    return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
-
-  auto wiLayoutA = sgMapA.getWiLayout();
-  auto wiLayoutB = sgMapB.getWiLayout();
-  auto wiLayoutC = sgMapC.getWiLayout();
-  // Obtain the expanded shapes of the operands and result using wi_layout.
-  // NOTE: For B, get rid of the packed dimension for the expanded shape.
-  SmallVector<int64_t> expandedShapeA = {lhsShape[0] * wiLayoutA[0],
-                                         lhsShape[1] * wiLayoutA[1]};
-  SmallVector<int64_t> expandedShapeB = {
-      rhsShape[0] * rhsShape[1] * wiLayoutB[0], 1 * wiLayoutB[1]};
-  SmallVector<int64_t> expandedShapeC = {resultShape[0] * wiLayoutC[0],
-                                         resultShape[1] * wiLayoutC[1]};
-  auto bK = expandedShapeB[0];
-  if (bK != expandedShapeA[1])
+  auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
+  if (bK != lhsShape[1])
     return emitOpError("K-dimension mismatch.");
-  if (expandedShapeA[0] != expandedShapeC[0])
-    return emitOpError("M-dimension mismatch.");
-  if (expandedShapeB[1] != expandedShapeC[1])
-    return emitOpError("N-dimension mismatch.");
 
   return success();
 }
+
 } // namespace xegpu
 } // namespace mlir
 

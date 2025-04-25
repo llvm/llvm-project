@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s readability-const-return-type %t -- -- -Wno-error=return-type
+// RUN: %check_clang_tidy -std=c++14-or-later %s readability-const-return-type %t
 
 //  p# = positive test
 //  n# = negative test

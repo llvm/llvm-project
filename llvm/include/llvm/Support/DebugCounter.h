@@ -162,9 +162,8 @@ public:
 protected:
   unsigned addCounter(const std::string &Name, const std::string &Desc) {
     unsigned Result = RegisteredCounters.insert(Name);
-    auto &C = Counters[Result];
-    C = {};
-    C.Desc = Desc;
+    Counters[Result] = {};
+    Counters[Result].Desc = Desc;
     return Result;
   }
   // Struct to store counter info.

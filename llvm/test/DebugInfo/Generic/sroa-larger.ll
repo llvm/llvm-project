@@ -1,4 +1,5 @@
 ; RUN: opt -passes='sroa' -S -o - %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -passes='sroa' -S -o - %s | FileCheck %s
 ; Generated from clang -c  -O2 -g -target x86_64-pc-windows-msvc
 ; struct A {
 ;   int _Myval2;

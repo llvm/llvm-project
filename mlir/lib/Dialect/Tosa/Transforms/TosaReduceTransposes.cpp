@@ -367,7 +367,9 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     TransposeOp transposeOp, const DenseMap<Value, Value> &valuesMap,
     IRRewriter &rewriter, ArrayRef<int32_t> hoistedPerms) {
-  if (!areInvolutionTransposes(hoistedPerms, transposeOp.getPerms()))
+  SmallVector<int32_t> perms;
+  if (failed(transposeOp.getConstantPerms(perms)) ||
+      !areInvolutionTransposes(hoistedPerms, perms))
     return std::nullopt;
   return transposeOp.getInput1();
 }
@@ -399,8 +401,8 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 
   // Do not insert a TransposeOp, instead we fold the reshape and its attribute.
   llvm::SmallVector<int64_t> newShape;
-  if (!tosa::getConstShapeValues(reshapeOp.getShape().getDefiningOp(),
-                                 newShape)) {
+  if (!tosa::getConstShapeValue(reshapeOp.getShape().getDefiningOp(),
+                                newShape)) {
     // this mean shape is not constant
     return std::nullopt;
   }
@@ -418,7 +420,7 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
 std::optional<Value> TosaReduceTransposes::buildMappedToValue(
     ConstOp constOp, const DenseMap<Value, Value> &valuesMap,
     IRRewriter &rewriter, ArrayRef<int32_t> hoistedPerms) {
-  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constOp.getValues());
+  auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(constOp.getValue());
   if (!denseAttr)
     return std::nullopt;
   auto maybeNewDenseAttr = transposeDenseAttribute(denseAttr, hoistedPerms);
@@ -504,11 +506,14 @@ bool TosaReduceTransposes::dependenciesAreValid(
       // replaced.
       Operation *user = use.getOwner();
       if (auto otherTranspose = llvm::dyn_cast<TransposeOp>(user)) {
+        SmallVector<int32_t> otherPerms;
+
         // Can later think about cases where transpose -> transpose
         // or reshape -> transpose, where the transposes are not necessarily
         // the same perms as the hoisted, if implementing a more general
         // transform. These could be permitted.
-        if (!llvm::equal(perms, otherTranspose.getPerms()))
+        if (failed(otherTranspose.getConstantPerms(otherPerms)) ||
+            !llvm::equal(perms, otherPerms))
           return false;
       } else if (userNotContainedInValidTransposeDependencies(
                      user, validTransposes, transposeInfo)) {
@@ -602,8 +607,9 @@ void TosaReduceTransposes::runOnOperation() {
         !llvm::isa<RankedTensorType>(output.getType()))
       return;
 
-    llvm::for_each(transposeOp.getPerms(),
-                   [&perms](const auto i) { perms.emplace_back(i); });
+    // No transformation when transpose permutation non-constant.
+    if (failed(transposeOp.getConstantPerms(perms)))
+      return;
 
     // We let --canonicalize deal with identity transpose.
     if (llvm::equal(llvm::seq<int32_t>(0, perms.size()), perms))

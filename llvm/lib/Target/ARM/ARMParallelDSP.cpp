@@ -300,8 +300,7 @@ bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
   if (!Ld0 || !Ld1)
     return false;
 
-  auto It = LoadPairs.find(Ld0);
-  if (It == LoadPairs.end() || It->second != Ld1)
+  if (!LoadPairs.count(Ld0) || LoadPairs[Ld0] != Ld1)
     return false;
 
   LLVM_DEBUG(dbgs() << "Loads are sequential and valid:\n";
@@ -383,8 +382,8 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
     LoadInst *Dominator = BaseFirst ? Base : Offset;
     LoadInst *Dominated = BaseFirst ? Offset : Base;
 
-    if (auto It = RAWDeps.find(Dominated); It != RAWDeps.end()) {
-      InstSet &WritesBefore = It->second;
+    if (RAWDeps.count(Dominated)) {
+      InstSet &WritesBefore = RAWDeps[Dominated];
 
       for (auto *Before : WritesBefore) {
         // We can't move the second load backward, past a write, to merge
@@ -534,7 +533,7 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
 
       InsertParallelMACs(R);
       Changed = true;
-      AllAdds.insert_range(R.getAdds());
+      AllAdds.insert(R.getAdds().begin(), R.getAdds().end());
       LLVM_DEBUG(dbgs() << "BB after inserting parallel MACs:\n" << BB);
     }
   }
@@ -715,14 +714,10 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     MulCandidate *RHSMul = Pair.second;
     LoadInst *BaseLHS = LHSMul->getBaseLoad();
     LoadInst *BaseRHS = RHSMul->getBaseLoad();
-    auto LIt = WideLoads.find(BaseLHS);
-    LoadInst *WideLHS = LIt != WideLoads.end()
-                            ? LIt->second->getLoad()
-                            : CreateWideLoad(LHSMul->VecLd, Ty);
-    auto RIt = WideLoads.find(BaseRHS);
-    LoadInst *WideRHS = RIt != WideLoads.end()
-                            ? RIt->second->getLoad()
-                            : CreateWideLoad(RHSMul->VecLd, Ty);
+    LoadInst *WideLHS = WideLoads.count(BaseLHS) ?
+      WideLoads[BaseLHS]->getLoad() : CreateWideLoad(LHSMul->VecLd, Ty);
+    LoadInst *WideRHS = WideLoads.count(BaseRHS) ?
+      WideLoads[BaseRHS]->getLoad() : CreateWideLoad(RHSMul->VecLd, Ty);
 
     Instruction *InsertAfter = GetInsertPoint(WideLHS, WideRHS);
     InsertAfter = GetInsertPoint(InsertAfter, Acc);

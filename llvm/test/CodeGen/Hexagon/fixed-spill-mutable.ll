@@ -12,11 +12,10 @@
 ; The problem is that the load will execute before the store, clobbering the
 ; pair r17:16.
 ;
-
-; Validate that store executes before load.
+; Check that the store and the load are not in the same packet.
 ; CHECK: memd{{.*}} = r17:16
+; CHECK: }
 ; CHECK: r17:16 = memd
-; CHECK: } :mem_noshuf
 ; CHECK-LABEL: LBB0_1:
 
 target triple = "hexagon"

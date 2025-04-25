@@ -79,7 +79,7 @@ public:
   void addAlternativeAliasBases(
       llvm::DenseMap<llvm::AssertingVH<llvm::Value>,
                      llvm::AssertingVH<llvm::Value>> &NewMap) {
-    AlternativeAliasBases.insert_range(NewMap);
+    AlternativeAliasBases.insert(NewMap.begin(), NewMap.end());
   }
 
   /// Delete the set of alternative alias bases

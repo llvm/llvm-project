@@ -114,26 +114,6 @@ Comgr supports an environment variable to help locate LLVM:
   installation, which is currently used to locate the clang resource directory
   and clang binary path, allowing for additional optimizations.
 
-Comgr utilizes a cache to preserve the results of compilations between executions.
-The cache's status (enabled/disabled), storage location for its results,
-and eviction policy can be manipulated through specific environment variables.
-If an issue arises during cache initialization, the execution will proceed with
-the cache turned off.
-
-By default, the cache is enabled.
-
-* `AMD_COMGR_CACHE`: When unset or set to a value different than "0", the cache is enabled.
-  Disabled when set to "0".
-* `AMD_COMGR_CACHE_DIR`: If assigned a non-empty value, that value is used as
-  the path for cache storage. If the variable is unset or set to an empty string `""`,
-  it is directed to "$XDG_CACHE_HOME/comgr" (which defaults to
-  "$USER/.cache/comgr" on Linux, and "%LOCALAPPDATA%\cache\comgr"
-  on Microsoft Windows).
-* `AMD_COMGR_CACHE_POLICY`: If assigned a value, the string is interpreted and
-  applied to the cache pruning policy. The cache is pruned only upon program
-  termination. The string format aligns with [Clang's ThinLTO cache pruning policy](https://clang.llvm.org/docs/ThinLTO.html#cache-pruning).
-  The default policy is set as: "prune_interval=1h:prune_expiration=0h:cache_size=75%:cache_size_bytes=30g:cache_size_files=0".
-
 Comgr also supports some environment variables to aid in debugging. These
 include:
 
@@ -142,8 +122,6 @@ include:
   the current working directory, but are instead left in a platform-specific
   temporary directory (typically `/tmp` on Linux and `C:\Temp` or the path
   found in the `TEMP` environment variable on Windows).
-* `AMD_COMGR_SAVE_LLVM_TEMPS`: If this is set, Comgr forwards `--save-temps=obj`
-  to Clang Driver invocations.
 * `AMD_COMGR_REDIRECT_LOGS`: If this is not set, or is set to "0", logs are
   returned to the caller as normal. If this is set to "stdout"/"-" or "stderr",
   logs are instead redirected to the standard output or error stream,

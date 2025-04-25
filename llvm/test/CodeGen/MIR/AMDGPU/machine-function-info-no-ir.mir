@@ -54,7 +54,6 @@
 # FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT:  hasInitWholeWave: false
 # FULL-NEXT:  wholeWaveCF: true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -161,7 +160,6 @@ body:             |
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: wholeWaveCF: true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -239,7 +237,6 @@ body:             |
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: wholeWaveCF: true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -318,7 +315,6 @@ body:             |
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
 # FULL-NEXT: wholeWaveCF: true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:

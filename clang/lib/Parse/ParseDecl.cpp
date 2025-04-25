@@ -2076,9 +2076,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     ProhibitAttributes(DeclSpecAttrs);
     return ParseNamespace(Context, DeclEnd);
   case tok::kw_using: {
-    takeAndConcatenateAttrs(DeclAttrs, std::move(DeclSpecAttrs));
+    ParsedAttributes Attrs(AttrFactory);
+    takeAndConcatenateAttrs(DeclAttrs, DeclSpecAttrs, Attrs);
     return ParseUsingDirectiveOrDeclaration(Context, ParsedTemplateInfo(),
-                                            DeclEnd, DeclAttrs);
+                                            DeclEnd, Attrs);
   }
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
@@ -4410,10 +4411,6 @@ void Parser::ParseDeclarationSpecifiers(
         DiagID = diag::err_openclcxx_virtual_function;
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
         isInvalid = true;
-      } else if (getLangOpts().HLSL) {
-        DiagID = diag::err_hlsl_virtual_function;
-        PrevSpec = Tok.getIdentifierInfo()->getNameStart();
-        isInvalid = true;
       } else {
         isInvalid = DS.setFunctionSpecVirtual(Loc, PrevSpec, DiagID);
       }
@@ -5173,9 +5170,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     }
 
     if (Tok.is(tok::annot_pragma_openacc)) {
-      AccessSpecifier AS = AS_none;
-      ParsedAttributes Attrs(AttrFactory);
-      ParseOpenACCDirectiveDecl(AS, Attrs, TagType, TagDecl);
+      ParseOpenACCDirectiveDecl();
       continue;
     }
 
@@ -5657,7 +5652,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
     ParseEnumBody(StartLoc, D);
     if (SkipBody.CheckSameAsPrevious &&
-        !Actions.ActOnDuplicateDefinition(getCurScope(), TagDecl, SkipBody)) {
+        !Actions.ActOnDuplicateDefinition(TagDecl, SkipBody)) {
       DS.SetTypeSpecError();
       return;
     }
@@ -6029,7 +6024,7 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
   if (!R.isUsable())
-    R = Actions.ActOnNullStmt(Tok.getLocation());
+    return nullptr;
 
   Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 

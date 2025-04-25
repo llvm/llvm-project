@@ -44,7 +44,10 @@ static cl::list<SPIRV::Capability::Capability>
 // Use sets instead of cl::list to check "if contains" condition
 struct AvoidCapabilitiesSet {
   SmallSet<SPIRV::Capability::Capability, 4> S;
-  AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
+  AvoidCapabilitiesSet() {
+    for (auto Cap : AvoidCapabilities)
+      S.insert(Cap);
+  }
 };
 
 char llvm::SPIRVModuleAnalysis::ID = 0;
@@ -210,7 +213,8 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
   if (ST->isOpenCLEnv()) {
     // TODO: check if it's required by default.
     MAI.ExtInstSetMap[static_cast<unsigned>(
-        SPIRV::InstructionSet::OpenCL_std)] = MAI.getNextIDRegister();
+        SPIRV::InstructionSet::OpenCL_std)] =
+        Register::index2VirtReg(MAI.getNextID());
   }
 }
 
@@ -302,8 +306,7 @@ void SPIRVModuleAnalysis::visitFunPtrUse(
   } while (OpDefMI && (OpDefMI->getOpcode() == SPIRV::OpFunction ||
                        OpDefMI->getOpcode() == SPIRV::OpFunctionParameter));
   // associate the function pointer with the newly assigned global number
-  MCRegister GlobalFunDefReg =
-      MAI.getRegisterAlias(FunDefMF, OpFunDef->getReg());
+  Register GlobalFunDefReg = MAI.getRegisterAlias(FunDefMF, OpFunDef->getReg());
   assert(GlobalFunDefReg.isValid() &&
          "Function definition must refer to a global register");
   MAI.setRegisterAlias(MF, OpReg, GlobalFunDefReg);
@@ -316,6 +319,7 @@ void SPIRVModuleAnalysis::visitDecl(
     std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
     const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
+  DenseSet<Register> Deps;
 
   // Process each operand of the instruction to resolve dependencies
   for (const MachineOperand &MO : MI.operands()) {
@@ -350,29 +354,14 @@ void SPIRVModuleAnalysis::visitDecl(
         "No unique definition is found for the virtual register");
   }
 
-  MCRegister GReg;
+  Register GReg;
   bool IsFunDef = false;
   if (TII->isSpecConstantInstr(MI)) {
-    GReg = MAI.getNextIDRegister();
+    GReg = Register::index2VirtReg(MAI.getNextID());
     MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
   } else if (Opcode == SPIRV::OpFunction ||
              Opcode == SPIRV::OpFunctionParameter) {
     GReg = handleFunctionOrParameter(MF, MI, GlobalToGReg, IsFunDef);
-  } else if (Opcode == SPIRV::OpTypeStruct ||
-             Opcode == SPIRV::OpConstantComposite) {
-    GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
-    const MachineInstr *NextInstr = MI.getNextNode();
-    while (NextInstr &&
-           ((Opcode == SPIRV::OpTypeStruct &&
-             NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) ||
-            (Opcode == SPIRV::OpConstantComposite &&
-             NextInstr->getOpcode() ==
-                 SPIRV::OpConstantCompositeContinuedINTEL))) {
-      MCRegister Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
-      MAI.setRegisterAlias(MF, NextInstr->getOperand(0).getReg(), Tmp);
-      MAI.setSkipEmission(NextInstr);
-      NextInstr = NextInstr->getNextNode();
-    }
   } else if (TII->isTypeDeclInstr(MI) || TII->isConstantInstr(MI) ||
              TII->isInlineAsmDefInstr(MI)) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
@@ -391,7 +380,7 @@ void SPIRVModuleAnalysis::visitDecl(
     MAI.setSkipEmission(&MI);
 }
 
-MCRegister SPIRVModuleAnalysis::handleFunctionOrParameter(
+Register SPIRVModuleAnalysis::handleFunctionOrParameter(
     const MachineFunction *MF, const MachineInstr &MI,
     std::map<const Value *, unsigned> &GlobalToGReg, bool &IsFunDef) {
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
@@ -401,40 +390,40 @@ MCRegister SPIRVModuleAnalysis::handleFunctionOrParameter(
     F = dyn_cast<Argument>(GObj)->getParent();
   assert(F && "Expected a reference to a function or an argument");
   IsFunDef = !F->isDeclaration();
-  auto [It, Inserted] = GlobalToGReg.try_emplace(GObj);
-  if (!Inserted)
+  auto It = GlobalToGReg.find(GObj);
+  if (It != GlobalToGReg.end())
     return It->second;
-  MCRegister GReg = MAI.getNextIDRegister();
-  It->second = GReg;
+  Register GReg = Register::index2VirtReg(MAI.getNextID());
+  GlobalToGReg[GObj] = GReg;
   if (!IsFunDef)
     MAI.MS[SPIRV::MB_ExtFuncDecls].push_back(&MI);
   return GReg;
 }
 
-MCRegister
+Register
 SPIRVModuleAnalysis::handleTypeDeclOrConstant(const MachineInstr &MI,
                                               InstrGRegsMap &SignatureToGReg) {
   InstrSignature MISign = instrToSignature(MI, MAI, false);
-  auto [It, Inserted] = SignatureToGReg.try_emplace(MISign);
-  if (!Inserted)
+  auto It = SignatureToGReg.find(MISign);
+  if (It != SignatureToGReg.end())
     return It->second;
-  MCRegister GReg = MAI.getNextIDRegister();
-  It->second = GReg;
+  Register GReg = Register::index2VirtReg(MAI.getNextID());
+  SignatureToGReg[MISign] = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
   return GReg;
 }
 
-MCRegister SPIRVModuleAnalysis::handleVariable(
+Register SPIRVModuleAnalysis::handleVariable(
     const MachineFunction *MF, const MachineInstr &MI,
     std::map<const Value *, unsigned> &GlobalToGReg) {
   MAI.GlobalVarList.push_back(&MI);
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
   assert(GObj && "Unregistered global definition");
-  auto [It, Inserted] = GlobalToGReg.try_emplace(GObj);
-  if (!Inserted)
+  auto It = GlobalToGReg.find(GObj);
+  if (It != GlobalToGReg.end())
     return It->second;
-  MCRegister GReg = MAI.getNextIDRegister();
-  It->second = GReg;
+  Register GReg = Register::index2VirtReg(MAI.getNextID());
+  GlobalToGReg[GObj] = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
   return GReg;
 }
@@ -509,7 +498,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   } else if (MI.getOpcode() == SPIRV::OpFunction) {
     // Record all internal OpFunction declarations.
     Register Reg = MI.defs().begin()->getReg();
-    MCRegister GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
+    Register GlobalReg = MAI.getRegisterAlias(MI.getMF(), Reg);
     assert(GlobalReg.isValid());
     MAI.FuncMap[F] = GlobalReg;
   }
@@ -568,8 +557,6 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
-        } else if (TII->isAliasingInstr(MI)) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &*F);
@@ -603,15 +590,14 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
           Register Reg = Op.getReg();
           if (MAI.hasRegisterAlias(MF, Reg))
             continue;
-          MCRegister NewReg = MAI.getNextIDRegister();
+          Register NewReg = Register::index2VirtReg(MAI.getNextID());
           MAI.setRegisterAlias(MF, Reg, NewReg);
         }
         if (MI.getOpcode() != SPIRV::OpExtInst)
           continue;
         auto Set = MI.getOperand(2).getImm();
-        auto [It, Inserted] = MAI.ExtInstSetMap.try_emplace(Set);
-        if (Inserted)
-          It->second = MAI.getNextIDRegister();
+        if (!MAI.ExtInstSetMap.contains(Set))
+          MAI.ExtInstSetMap[Set] = Register::index2VirtReg(MAI.getNextID());
       }
     }
   }
@@ -890,9 +876,6 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
   } else if (Dec == SPIRV::Decoration::NonUniformEXT) {
     Reqs.addRequirements(SPIRV::Capability::ShaderNonUniformEXT);
-  } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
-    Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
-    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
   }
 }
 
@@ -1256,13 +1239,6 @@ void addInstrRequirements(const MachineInstr &MI,
             SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
     }
-    break;
-  }
-  case SPIRV::OpAliasDomainDeclINTEL:
-  case SPIRV::OpAliasScopeDeclINTEL:
-  case SPIRV::OpAliasScopeListDeclINTEL: {
-    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing);
-    Reqs.addCapability(SPIRV::Capability::MemoryAccessAliasingINTEL);
     break;
   }
   case SPIRV::OpBitReverse:
@@ -1701,17 +1677,6 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(
         SPIRV::Capability::CooperativeMatrixInvocationInstructionsINTEL);
     break;
-  case SPIRV::OpConvertHandleToImageINTEL:
-  case SPIRV::OpConvertHandleToSamplerINTEL:
-  case SPIRV::OpConvertHandleToSampledImageINTEL:
-    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bindless_images))
-      report_fatal_error("OpConvertHandleTo[Image/Sampler/SampledImage]INTEL "
-                         "instructions require the following SPIR-V extension: "
-                         "SPV_INTEL_bindless_images",
-                         false);
-    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bindless_images);
-    Reqs.addCapability(SPIRV::Capability::BindlessImagesINTEL);
-    break;
   case SPIRV::OpKill: {
     Reqs.addCapability(SPIRV::Capability::Shader);
   } break;
@@ -1737,12 +1702,7 @@ void addInstrRequirements(const MachineInstr &MI,
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
         ImageReg, const_cast<MachineFunction *>(MI.getMF()));
-    // OpImageRead and OpImageWrite can use Unknown Image Formats
-    // when the Kernel capability is declared. In the OpenCL environment we are
-    // not allowed to produce
-    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
-    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
-    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
+    if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageReadWithoutFormat);
     break;
   }
@@ -1750,26 +1710,8 @@ void addInstrRequirements(const MachineInstr &MI,
     Register ImageReg = MI.getOperand(0).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
         ImageReg, const_cast<MachineFunction *>(MI.getMF()));
-    // OpImageRead and OpImageWrite can use Unknown Image Formats
-    // when the Kernel capability is declared. In the OpenCL environment we are
-    // not allowed to produce
-    // StorageImageReadWithoutFormat/StorageImageWriteWithoutFormat, see
-    // https://github.com/KhronosGroup/SPIRV-Headers/issues/487
-    if (isImageTypeWithUnknownFormat(TypeDef) && !ST.isOpenCLEnv())
+    if (isImageTypeWithUnknownFormat(TypeDef))
       Reqs.addCapability(SPIRV::Capability::StorageImageWriteWithoutFormat);
-    break;
-  }
-  case SPIRV::OpTypeStructContinuedINTEL:
-  case SPIRV::OpConstantCompositeContinuedINTEL:
-  case SPIRV::OpSpecConstantCompositeContinuedINTEL:
-  case SPIRV::OpCompositeConstructContinuedINTEL: {
-    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_long_composites))
-      report_fatal_error(
-          "Continued instructions require the "
-          "following SPIR-V extension: SPV_INTEL_long_composites",
-          false);
-    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_long_composites);
-    Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
 
@@ -1953,7 +1895,7 @@ static void addMBBNames(const Module &M, const SPIRVInstrInfo &TII,
       Register Reg = MRI.createGenericVirtualRegister(LLT::scalar(64));
       MRI.setRegClass(Reg, &SPIRV::IDRegClass);
       buildOpName(Reg, MBB.getName(), *std::prev(MBB.end()), TII);
-      MCRegister GlobalReg = MAI.getOrCreateMBBRegister(MBB);
+      Register GlobalReg = MAI.getOrCreateMBBRegister(MBB);
       MAI.setRegisterAlias(MF, Reg, GlobalReg);
     }
   }
@@ -2007,7 +1949,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
-  collectReqs(M, MAI, MMI, *ST);
   collectDeclarations(M);
 
   // Number rest of registers from N+1 onwards.

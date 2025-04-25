@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/locale_macros.h"
+#include "include/llvm-libc-macros/locale-macros.h"
 #include "src/locale/localeconv.h"
+
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcLocale, DefaultLocale) {

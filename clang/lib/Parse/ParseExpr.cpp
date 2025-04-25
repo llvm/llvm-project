@@ -904,8 +904,6 @@ ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
 /// [GNU]   '__alignof' '(' type-name ')'
 /// [C11]   '_Alignof' '(' type-name ')'
 /// [C++11] 'alignof' '(' type-id ')'
-/// [C2y]   '_Countof' unary-expression
-/// [C2y]   '_Countof' '(' type-name ')'
 /// [GNU]   '&&' identifier
 /// [C++11] 'noexcept' '(' expression ')' [C++11 5.3.7]
 /// [C++]   new-expression
@@ -1546,7 +1544,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
   case tok::kw___builtin_omp_required_simd_align:
   case tok::kw___builtin_vectorelements:
-  case tok::kw__Countof:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     AllowSuffix = false;
@@ -2239,8 +2236,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
               RunSignatureHelp();
             LHS = ExprError();
-          } else if (!HasError && HasTrailingComma) {
-            Diag(Tok, diag::err_expected_expression);
           } else if (LHS.isInvalid()) {
             for (auto &E : ArgExprs)
               Actions.CorrectDelayedTyposInExpr(E);
@@ -2466,7 +2461,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
                        tok::kw___datasizeof, tok::kw___alignof, tok::kw_alignof,
                        tok::kw__Alignof, tok::kw_vec_step,
                        tok::kw___builtin_omp_required_simd_align,
-                       tok::kw___builtin_vectorelements, tok::kw__Countof) &&
+                       tok::kw___builtin_vectorelements) &&
          "Not a typeof/sizeof/alignof/vec_step expression!");
 
   ExprResult Operand;
@@ -2513,9 +2508,9 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // is not going to help when the nesting is too deep. In this corner case
     // we continue to parse with sufficient stack space to avoid crashing.
     if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
-                      tok::kw_alignof, tok::kw__Alignof, tok::kw__Countof) &&
+                      tok::kw_alignof, tok::kw__Alignof) &&
         Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
-                    tok::kw_alignof, tok::kw__Alignof, tok::kw__Countof))
+                    tok::kw_alignof, tok::kw__Alignof))
       Actions.runWithSufficientStackSpace(Tok.getLocation(), [&] {
         Operand = ParseCastExpression(UnaryExprOnly);
       });
@@ -2597,14 +2592,12 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
 /// [GNU]   '__alignof' '(' type-name ')'
 /// [C11]   '_Alignof' '(' type-name ')'
 /// [C++11] 'alignof' '(' type-id ')'
-/// [C2y]   '_Countof' unary-expression
-/// [C2y]   '_Countof' '(' type-name ')'
 /// \endverbatim
 ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
                      tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
                      tok::kw___builtin_omp_required_simd_align,
-                     tok::kw___builtin_vectorelements, tok::kw__Countof) &&
+                     tok::kw___builtin_vectorelements) &&
          "Not a sizeof/alignof/vec_step expression!");
   Token OpTok = Tok;
   ConsumeToken();
@@ -2661,8 +2654,6 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     Diag(OpTok, diag::warn_cxx98_compat_alignof);
   else if (getLangOpts().C23 && OpTok.is(tok::kw_alignof))
     Diag(OpTok, diag::warn_c23_compat_keyword) << OpTok.getName();
-  else if (getLangOpts().C2y && OpTok.is(tok::kw__Countof))
-    Diag(OpTok, diag::warn_c2y_compat_keyword) << OpTok.getName();
 
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated,
@@ -2696,12 +2687,6 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     break;
   case tok::kw___builtin_vectorelements:
     ExprKind = UETT_VectorElements;
-    break;
-  case tok::kw__Countof:
-    ExprKind = UETT_CountOf;
-    assert(!getLangOpts().CPlusPlus && "_Countof in C++ mode?");
-    if (!getLangOpts().C2y)
-      Diag(OpTok, diag::ext_c2y_feature) << OpTok.getName();
     break;
   default:
     break;

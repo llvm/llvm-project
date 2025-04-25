@@ -16,9 +16,6 @@
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
 
-// ADDITIONAL_COMPILE_FLAGS: -DFR_THOU_SEP=%{LOCALE_CONV_FR_FR_UTF_8_THOUSANDS_SEP}
-// ADDITIONAL_COMPILE_FLAGS: -DFR_DEC_POINT=%{LOCALE_CONV_FR_FR_UTF_8_DECIMAL_POINT}
-
 // <chrono>
 
 // template<class Rep, class Period = ratio<1>> class duration;
@@ -36,7 +33,6 @@
 #include <sstream>
 
 #include "make_string.h"
-#include "locale_helpers.h"
 #include "platform_support.h" // locale name macros
 #include "test_macros.h"
 
@@ -92,11 +88,21 @@ static void test_values() {
     assert(stream_fr_FR_locale<CharT>(1'000.123456s) == SV("1 000,1235s"));
 #endif
   } else {
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    assert(stream_fr_FR_locale<CharT>(-1'000'000s) == L"-1" FR_THOU_SEP "000" FR_THOU_SEP "000s");
-    assert(stream_fr_FR_locale<CharT>(1'000'000s) == L"1" FR_THOU_SEP "000" FR_THOU_SEP "000s");
-    assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == L"-1" FR_THOU_SEP "000" FR_DEC_POINT "1235s");
-    assert(stream_fr_FR_locale<CharT>(1'000.123456s) == L"1" FR_THOU_SEP "000" FR_DEC_POINT "1235s");
+#ifdef _WIN32
+    assert(stream_fr_FR_locale<CharT>(-1'000'000s) == SV("-1\u00A0000\u00A0000s"));
+    assert(stream_fr_FR_locale<CharT>(1'000'000s) == SV("1\u00A0000\u00A0000s"));
+    assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == SV("-1\u00A0000,1235s"));
+    assert(stream_fr_FR_locale<CharT>(1'000.123456s) == SV("1\u00A0000,1235s"));
+#elif defined(__APPLE__)
+    assert(stream_fr_FR_locale<CharT>(-1'000'000s) == SV("-1000000s"));
+    assert(stream_fr_FR_locale<CharT>(1'000'000s) == SV("1000000s"));
+    assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == SV("-1000,1235s"));
+    assert(stream_fr_FR_locale<CharT>(1'000.123456s) == SV("1000,1235s"));
+#else
+    assert(stream_fr_FR_locale<CharT>(-1'000'000s) == SV("-1\u202f000\u202f000s"));
+    assert(stream_fr_FR_locale<CharT>(1'000'000s) == SV("1\u202f000\u202f000s"));
+    assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == SV("-1\u202f000,1235s"));
+    assert(stream_fr_FR_locale<CharT>(1'000.123456s) == SV("1\u202f000,1235s"));
 #endif
   }
 

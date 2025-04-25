@@ -27,9 +27,7 @@
 
 #define DEBUG_TYPE "spirv-nonsemantic-debug-info"
 
-using namespace llvm;
-
-namespace {
+namespace llvm {
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
@@ -42,7 +40,9 @@ private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
 };
-} // anonymous namespace
+} // namespace llvm
+
+using namespace llvm;
 
 INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
                 "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
@@ -158,9 +158,9 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                 // pointed on from other DI types
                 // DerivedType->getBaseType is null when pointer
                 // is representing a void type
-                if (auto *BT = dyn_cast_or_null<DIBasicType>(
-                        DerivedType->getBaseType()))
-                  BasicTypes.insert(BT);
+                if (DerivedType->getBaseType())
+                  BasicTypes.insert(
+                      cast<DIBasicType>(DerivedType->getBaseType()));
               }
             }
           }
@@ -193,8 +193,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     };
 
     const SPIRVType *VoidTy =
-        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
-                                 SPIRV::AccessQualifier::ReadWrite, false);
+        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder);
 
     const auto EmitDIInstruction =
         [&](SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
@@ -218,8 +217,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         };
 
     const SPIRVType *I32Ty =
-        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
-                                 SPIRV::AccessQualifier::ReadWrite, false);
+        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder);
 
     const Register DwarfVersionReg =
         GR->buildConstantInt(DwarfVersion, MIRBuilder, I32Ty, false);
@@ -330,7 +328,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         // If the Pointer is representing a void type it's getBaseType
         // is a nullptr
         const auto *MaybeNestedBasicType =
-            dyn_cast_or_null<DIBasicType>(PointerDerivedType->getBaseType());
+            cast_or_null<DIBasicType>(PointerDerivedType->getBaseType());
         if (MaybeNestedBasicType) {
           for (const auto &BasicTypeRegPair : BasicTypeRegPairs) {
             const auto &[DefinedBasicType, BasicTypeReg] = BasicTypeRegPair;

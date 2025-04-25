@@ -470,12 +470,11 @@ private:
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
     bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
-    bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
+    bool isCudaDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
     bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                             !alloc.type.IsPolymorphic() &&
                             !alloc.hasCoarraySpec() && !useAllocateRuntime &&
                             !box.isPointer();
-    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
 
     if (inlineAllocation &&
         ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
@@ -489,7 +488,7 @@ private:
 
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
-    genAllocateObjectInit(box, allocatorIdx);
+    genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray: allocation of a coarray object");
     if (alloc.type.IsPolymorphic())
@@ -550,16 +549,14 @@ private:
       TODO(loc, "derived type length parameters in allocate");
   }
 
-  void genAllocateObjectInit(const fir::MutableBoxValue &box,
-                             unsigned allocatorIdx) {
+  void genAllocateObjectInit(const fir::MutableBoxValue &box) {
     if (box.isPointer()) {
       // For pointers, the descriptor may still be uninitialized (see Fortran
       // 2018 19.5.2.2). The allocation runtime needs to be given a descriptor
       // with initialized rank, types and attributes. Initialize the descriptor
       // here to ensure these constraints are fulfilled.
       mlir::Value nullPointer = fir::factory::createUnallocatedBox(
-          builder, loc, box.getBoxTy(), box.nonDeferredLenParams(),
-          /*typeSourceBox=*/{}, allocatorIdx);
+          builder, loc, box.getBoxTy(), box.nonDeferredLenParams());
       builder.create<fir::StoreOp>(loc, nullPointer, box.getAddr());
     } else {
       assert(box.isAllocatable() && "must be an allocatable");
@@ -615,12 +612,11 @@ private:
 
   void genSourceMoldAllocation(const Allocation &alloc,
                                const fir::MutableBoxValue &box, bool isSource) {
-    unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
-
+    ;
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
-    genAllocateObjectInit(box, allocatorIdx);
+    genAllocateObjectInit(box);
     if (alloc.hasCoarraySpec())
       TODO(loc, "coarray: allocation of a coarray object");
     // Set length of the allocate object if it has. Otherwise, get the length
@@ -862,7 +858,7 @@ genDeallocate(fir::FirOpBuilder &builder,
               mlir::Value declaredTypeDesc = {},
               const Fortran::semantics::Symbol *symbol = nullptr) {
   bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
-  bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
+  bool isCudaDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
   bool inlineDeallocation =
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&

@@ -1217,11 +1217,10 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 
   // Lazily initialize the module map.
   if (!m_header_search_up) {
-    m_header_search_opts_up = std::make_unique<clang::HeaderSearchOptions>();
+    auto HSOpts = std::make_shared<clang::HeaderSearchOptions>();
     m_header_search_up = std::make_unique<clang::HeaderSearch>(
-        *m_header_search_opts_up, *m_source_manager_up,
-        *m_diagnostics_engine_up, *m_language_options_up,
-        m_target_info_up.get());
+        HSOpts, *m_source_manager_up, *m_diagnostics_engine_up,
+        *m_language_options_up, m_target_info_up.get());
     m_module_map_up = std::make_unique<clang::ModuleMap>(
         *m_source_manager_up, *m_diagnostics_engine_up, *m_language_options_up,
         m_target_info_up.get(), *m_header_search_up);
@@ -1312,18 +1311,10 @@ CompilerType TypeSystemClang::CreateRecordType(
 }
 
 namespace {
-/// Returns the type of the template argument iff the given TemplateArgument
-/// should be represented as an NonTypeTemplateParmDecl in the AST. Returns
-/// a null QualType otherwise.
-QualType GetValueParamType(const clang::TemplateArgument &argument) {
-  switch (argument.getKind()) {
-  case TemplateArgument::Integral:
-    return argument.getIntegralType();
-  case TemplateArgument::StructuralValue:
-    return argument.getStructuralValueType();
-  default:
-    return {};
-  }
+/// Returns true iff the given TemplateArgument should be represented as an
+/// NonTypeTemplateParmDecl in the AST.
+bool IsValueParam(const clang::TemplateArgument &argument) {
+  return argument.getKind() == TemplateArgument::Integral;
 }
 
 void AddAccessSpecifierDecl(clang::CXXRecordDecl *cxx_record_decl,
@@ -1370,8 +1361,8 @@ static TemplateParameterList *CreateTemplateParameterList(
     if (name && name[0])
       identifier_info = &ast.Idents.get(name);
     TemplateArgument const &targ = args[i];
-    QualType template_param_type = GetValueParamType(targ);
-    if (!template_param_type.isNull()) {
+    if (IsValueParam(targ)) {
+      QualType template_param_type = targ.getIntegralType();
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
           identifier_info, template_param_type, parameter_pack,
@@ -1389,11 +1380,10 @@ static TemplateParameterList *CreateTemplateParameterList(
       identifier_info = &ast.Idents.get(template_param_infos.GetPackName());
     const bool parameter_pack_true = true;
 
-    QualType template_param_type =
-        !template_param_infos.GetParameterPack().IsEmpty()
-            ? GetValueParamType(template_param_infos.GetParameterPack().Front())
-            : QualType();
-    if (!template_param_type.isNull()) {
+    if (!template_param_infos.GetParameterPack().IsEmpty() &&
+        IsValueParam(template_param_infos.GetParameterPack().Front())) {
+      QualType template_param_type =
+          template_param_infos.GetParameterPack().Front().getIntegralType();
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
           ast, decl_context, SourceLocation(), SourceLocation(), depth,
           num_template_params, identifier_info, template_param_type,
@@ -1468,12 +1458,10 @@ static bool TemplateParameterAllowsValue(NamedDecl *param,
   } else if (auto *type_param =
                  llvm::dyn_cast<NonTypeTemplateParmDecl>(param)) {
     // Compare the argument kind, i.e. ensure that <typename> != <int>.
-    QualType value_param_type = GetValueParamType(value);
-    if (value_param_type.isNull())
+    if (!IsValueParam(value))
       return false;
-
     // Compare the integral type, i.e. ensure that <int> != <char>.
-    if (type_param->getType() != value_param_type)
+    if (type_param->getType() != value.getIntegralType())
       return false;
   } else {
     // There is no way to create other parameter decls at the moment, so we
@@ -2773,8 +2761,8 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     // is a member.
     if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
       auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
-      if (auto *RD = MPT->getMostRecentCXXRecordDecl())
-        GetCompleteRecordType(ast, QualType(RD->getTypeForDecl(), 0),
+      if (MPT->getClass()->isRecordType())
+        GetCompleteRecordType(ast, clang::QualType(MPT->getClass(), 0),
                               allow_completion);
 
       return !qual_type.getTypePtr()->isIncompleteType();
@@ -4770,7 +4758,7 @@ TypeSystemClang::GetFloatTypeSemantics(size_t byte_size) {
   return llvm::APFloatBase::Bogus();
 }
 
-llvm::Expected<uint64_t>
+std::optional<uint64_t>
 TypeSystemClang::GetObjCBitSize(QualType qual_type,
                                 ExecutionContextScope *exe_scope) {
   assert(qual_type->isObjCObjectOrInterfaceType());
@@ -4803,14 +4791,11 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
          getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy);
 }
 
-llvm::Expected<uint64_t>
+std::optional<uint64_t>
 TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
                             ExecutionContextScope *exe_scope) {
-  const bool base_name_only = true;
   if (!GetCompleteType(type))
-    return llvm::createStringError(
-        "could not complete type %s",
-        GetTypeName(type, base_name_only).AsCString(""));
+    return std::nullopt;
 
   clang::QualType qual_type(GetCanonicalQualType(type));
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -4836,9 +4821,7 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
       return bit_size;
   }
 
-  return llvm::createStringError(
-      "could not get size of type %s",
-      GetTypeName(type, base_name_only).AsCString(""));
+  return std::nullopt;
 }
 
 std::optional<size_t>
@@ -6307,14 +6290,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
             child_byte_offset = bit_offset / 8;
             CompilerType base_class_clang_type = GetType(base_class->getType());
             child_name = base_class_clang_type.GetTypeName().AsCString("");
-            auto size_or_err =
+            std::optional<uint64_t> size =
                 base_class_clang_type.GetBitSize(get_exe_scope());
-            if (!size_or_err)
-              return llvm::joinErrors(
-                  llvm::createStringError("no size info for base class"),
-                  size_or_err.takeError());
+            if (!size)
+              return llvm::createStringError("no size info for base class");
 
-            uint64_t base_class_clang_type_bit_size = *size_or_err;
+            uint64_t base_class_clang_type_bit_size = *size;
 
             // Base classes bit sizes should be a multiple of 8 bits in size
             assert(base_class_clang_type_bit_size % 8 == 0);
@@ -6342,13 +6323,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           // alignment (field_type_info.second) from the AST context.
           CompilerType field_clang_type = GetType(field->getType());
           assert(field_idx < record_layout.getFieldCount());
-          auto size_or_err = field_clang_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return llvm::joinErrors(
-                llvm::createStringError("no size info for field"),
-                size_or_err.takeError());
+          std::optional<uint64_t> size =
+              field_clang_type.GetByteSize(get_exe_scope());
+          if (!size)
+            return llvm::createStringError("no size info for field");
 
-          child_byte_size = *size_or_err;
+          child_byte_size = *size;
           const uint32_t child_bit_size = child_byte_size * 8;
 
           // Figure out the field offset within the current struct/union/class
@@ -6518,12 +6498,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
         // We have a pointer to an simple type
         if (idx == 0 && pointee_clang_type.GetCompleteType()) {
-          auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = 0;
-          return pointee_clang_type;
+          if (std::optional<uint64_t> size =
+                  pointee_clang_type.GetByteSize(get_exe_scope())) {
+            child_byte_size = *size;
+            child_byte_offset = 0;
+            return pointee_clang_type;
+          }
         }
       }
     }
@@ -6541,12 +6521,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
                      static_cast<uint64_t>(idx));
           child_name.assign(element_name);
-          auto size_or_err = element_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-          return element_type;
+          if (std::optional<uint64_t> size =
+                  element_type.GetByteSize(get_exe_scope())) {
+            child_byte_size = *size;
+            child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+            return element_type;
+          }
         }
       }
     }
@@ -6560,12 +6540,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
         CompilerType element_type = GetType(array->getElementType());
         if (element_type.GetCompleteType()) {
           child_name = std::string(llvm::formatv("[{0}]", idx));
-          auto size_or_err = element_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-          return element_type;
+          if (std::optional<uint64_t> size =
+                  element_type.GetByteSize(get_exe_scope())) {
+            child_byte_size = *size;
+            child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+            return element_type;
+          }
         }
       }
     }
@@ -6599,12 +6579,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
       // We have a pointer to an simple type
       if (idx == 0) {
-        auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
-        if (!size_or_err)
-          return size_or_err.takeError();
-        child_byte_size = *size_or_err;
-        child_byte_offset = 0;
-        return pointee_clang_type;
+        if (std::optional<uint64_t> size =
+                pointee_clang_type.GetByteSize(get_exe_scope())) {
+          child_byte_size = *size;
+          child_byte_offset = 0;
+          return pointee_clang_type;
+        }
       }
     }
     break;
@@ -6637,12 +6617,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
         // We have a pointer to an simple type
         if (idx == 0) {
-          auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
-          if (!size_or_err)
-            return size_or_err.takeError();
-          child_byte_size = *size_or_err;
-          child_byte_offset = 0;
-          return pointee_clang_type;
+          if (std::optional<uint64_t> size =
+                  pointee_clang_type.GetByteSize(get_exe_scope())) {
+            child_byte_size = *size;
+            child_byte_offset = 0;
+            return pointee_clang_type;
+          }
         }
       }
     }
@@ -7371,27 +7351,10 @@ TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
     return std::nullopt;
 
   const auto *arg = GetNthTemplateArgument(template_decl, idx, expand_pack);
-  if (!arg)
+  if (!arg || arg->getKind() != clang::TemplateArgument::Integral)
     return std::nullopt;
 
-  switch (arg->getKind()) {
-  case clang::TemplateArgument::Integral:
-    return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
-  case clang::TemplateArgument::StructuralValue: {
-    clang::APValue value = arg->getAsStructuralValue();
-    CompilerType type = GetType(arg->getStructuralValueType());
-
-    if (value.isFloat())
-      return {{value.getFloat(), type}};
-
-    if (value.isInt())
-      return {{value.getInt(), type}};
-
-    return std::nullopt;
-  }
-  default:
-    return std::nullopt;
-  }
+  return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
 }
 
 CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
@@ -8511,22 +8474,29 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   if (enum_decl->isCompleteDefinition())
     return true;
 
+  clang::ASTContext &ast = lldb_ast->getASTContext();
+
+  /// TODO This really needs to be fixed.
+
   QualType integer_type(enum_decl->getIntegerType());
   if (!integer_type.isNull()) {
-    clang::ASTContext &ast = lldb_ast->getASTContext();
-
+    unsigned NumPositiveBits = 1;
     unsigned NumNegativeBits = 0;
-    unsigned NumPositiveBits = 0;
-    ast.computeEnumBits(enum_decl->enumerators(), NumNegativeBits,
-                        NumPositiveBits);
 
-    clang::QualType BestPromotionType;
-    clang::QualType BestType;
-    ast.computeBestEnumTypes(/*IsPacked=*/false, NumNegativeBits,
-                             NumPositiveBits, BestType, BestPromotionType);
+    clang::QualType promotion_qual_type;
+    // If the enum integer type is less than an integer in bit width,
+    // then we must promote it to an integer size.
+    if (ast.getTypeSize(enum_decl->getIntegerType()) <
+        ast.getTypeSize(ast.IntTy)) {
+      if (enum_decl->getIntegerType()->isSignedIntegerType())
+        promotion_qual_type = ast.IntTy;
+      else
+        promotion_qual_type = ast.UnsignedIntTy;
+    } else
+      promotion_qual_type = enum_decl->getIntegerType();
 
     enum_decl->completeDefinition(enum_decl->getIntegerType(),
-                                  BestPromotionType, NumPositiveBits,
+                                  promotion_qual_type, NumPositiveBits,
                                   NumNegativeBits);
   }
   return true;
@@ -8612,8 +8582,7 @@ TypeSystemClang::CreateMemberPointerType(const CompilerType &type,
       return CompilerType();
     return ast->GetType(ast->getASTContext().getMemberPointerType(
         ClangUtil::GetQualType(pointee_type),
-        /*Qualifier=*/nullptr,
-        ClangUtil::GetQualType(type)->getAsCXXRecordDecl()));
+        ClangUtil::GetQualType(type).getTypePtr()));
   }
   return CompilerType();
 }

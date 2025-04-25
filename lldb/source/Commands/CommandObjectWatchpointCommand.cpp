@@ -14,13 +14,11 @@
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Target.h"
-#include "lldb/lldb-forward.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -172,13 +170,11 @@ are no syntax errors may indicate that a function was declared but never called.
   Options *GetOptions() override { return &m_options; }
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    if (interactive) {
-      if (lldb::LockableStreamFileSP output_sp =
-              io_handler.GetOutputStreamFileSP()) {
-        LockedStreamFile locked_stream = output_sp->Lock();
-        locked_stream.PutCString(
-            "Enter your debugger command(s).  Type 'DONE' to end.\n");
-      }
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+    if (output_sp && interactive) {
+      output_sp->PutCString(
+          "Enter your debugger command(s).  Type 'DONE' to end.\n");
+      output_sp->Flush();
     }
   }
 
@@ -252,8 +248,10 @@ are no syntax errors may indicate that a function was declared but never called.
         // Rig up the results secondary output stream to the debugger's, so the
         // output will come out synchronously if the debugger is set up that
         // way.
-        result.SetImmediateOutputStream(debugger.GetAsyncOutputStream());
-        result.SetImmediateErrorStream(debugger.GetAsyncErrorStream());
+        StreamSP output_stream(debugger.GetAsyncOutputStream());
+        StreamSP error_stream(debugger.GetAsyncErrorStream());
+        result.SetImmediateOutputStream(output_stream);
+        result.SetImmediateErrorStream(error_stream);
 
         CommandInterpreterRunOptions options;
         options.SetStopOnContinue(true);

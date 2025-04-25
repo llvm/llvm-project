@@ -342,7 +342,6 @@ def fastfail : F<"fastfail">;
 def kernel : F<"kernel">;
 def pdbcompress : F<"pdbcompress">;
 def emitpogophaseinfo : F<"emitpogophaseinfo">;
-def noexp : F<"noexp">;
 
 def delay : P_priv<"delay">;
 def errorreport : P_priv<"errorreport">;

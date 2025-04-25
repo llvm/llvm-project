@@ -36,9 +36,8 @@ function(_get_common_test_compile_options output_var c_test flags)
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")
     endif()
-    list(APPEND compile_options "-Wconversion")
-    # FIXME: convert to -Wsign-conversion
-    list(APPEND compile_options "-Wno-sign-conversion")
+    # list(APPEND compile_options "-Wconversion")
+    # list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
     list(APPEND compile_options "-Wwrite-strings")
     # Silence this warning because _Complex is a part of C99.
@@ -643,7 +642,7 @@ function(add_libc_hermetic test_name)
   cmake_parse_arguments(
     "HERMETIC_TEST"
     "IS_GPU_BENCHMARK" # Optional arguments
-    "SUITE;CXX_STANDARD" # Single value arguments
+    "SUITE" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
@@ -720,14 +719,10 @@ function(add_libc_hermetic test_name)
     ${HERMETIC_TEST_SRCS}
     ${HERMETIC_TEST_HDRS}
   )
-
-  if(NOT HERMETIC_TEST_CXX_STANDARD)
-    set(HERMETIC_TEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
-  endif()
   set_target_properties(${fq_build_target_name}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      CXX_STANDARD ${HERMETIC_TEST_CXX_STANDARD}
+      #OUTPUT_NAME ${fq_target_name}
   )
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
@@ -756,6 +751,7 @@ function(add_libc_hermetic test_name)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
+      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")

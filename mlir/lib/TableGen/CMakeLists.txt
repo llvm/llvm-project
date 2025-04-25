@@ -20,7 +20,6 @@ llvm_add_library(MLIRTableGen STATIC
   CodeGenHelpers.cpp
   Constraint.cpp
   Dialect.cpp
-  EnumInfo.cpp
   Format.cpp
   GenInfo.cpp
   Interfaces.cpp

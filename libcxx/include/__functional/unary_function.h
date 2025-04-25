@@ -36,10 +36,11 @@ struct __unary_function_keep_layout_base {
 };
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION)
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
 template <class _Arg, class _Result>
 using __unary_function _LIBCPP_NODEBUG = unary_function<_Arg, _Result>;
-_LIBCPP_SUPPRESS_DEPRECATED_POP
+_LIBCPP_DIAGNOSTIC_POP
 #else
 template <class _Arg, class _Result>
 using __unary_function _LIBCPP_NODEBUG = __unary_function_keep_layout_base<_Arg, _Result>;

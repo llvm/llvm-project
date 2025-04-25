@@ -827,7 +827,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   //
   // i.e., point the instruction at the vreg, and patch it up later in
   // MachineFunction::finalizeDebugInstrRefs.
-  auto AddVRegOp = [&](Register VReg) {
+  auto AddVRegOp = [&](unsigned VReg) {
     MOs.push_back(MachineOperand::CreateReg(
         /* Reg */ VReg, /* isDef */ false, /* isImp */ false,
         /* isKill */ false, /* isDead */ false,
@@ -840,7 +840,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
 
     // Try to find both the defined register and the instruction defining it.
     MachineInstr *DefMI = nullptr;
-    Register VReg;
+    unsigned VReg;
 
     if (DbgOperand.getKind() == SDDbgOperand::VREG) {
       VReg = DbgOperand.getVReg();
@@ -1239,7 +1239,8 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Add rounding control registers as implicit def for function call.
   if (II.isCall() && MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
     ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
-    llvm::append_range(UsedRegs, RCRegs);
+    for (MCPhysReg Reg : RCRegs)
+      UsedRegs.push_back(Reg);
   }
 
   // Finally mark unused registers as dead.

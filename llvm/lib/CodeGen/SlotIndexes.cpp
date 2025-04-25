@@ -212,7 +212,6 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   IndexList::iterator ListI = endIdx.listEntry()->getIterator();
   MachineBasicBlock::iterator MBBI = End;
   bool pastStart = false;
-  bool OldIndexesRemoved = false;
   while (ListI != ListB || MBBI != Begin || (includeStart && !pastStart)) {
     assert(ListI->getIndex() >= startIdx.getIndex() &&
            (includeStart || !pastStart) &&
@@ -221,8 +220,6 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
     MachineInstr *SlotMI = ListI->getInstr();
     MachineInstr *MI = (MBBI != MBB->end() && !pastStart) ? &*MBBI : nullptr;
     bool MBBIAtBegin = MBBI == Begin && (!includeStart || pastStart);
-    bool MIIndexNotFound = MI && !mi2iMap.contains(MI);
-    bool SlotMIRemoved = false;
 
     if (SlotMI == MI && !MBBIAtBegin) {
       --ListI;
@@ -230,31 +227,25 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
         --MBBI;
       else
         pastStart = true;
-    } else if (MIIndexNotFound || OldIndexesRemoved) {
+    } else if (MI && !mi2iMap.contains(MI)) {
       if (MBBI != Begin)
         --MBBI;
       else
         pastStart = true;
     } else {
-      // We ran through all the indexes on the interval
-      //   -> The only thing left is to go through all the
-      //   remaining MBB instructions and update their indexes
-      if (ListI == ListB)
-        OldIndexesRemoved = true;
-      else
-        --ListI;
-      if (SlotMI) {
+      --ListI;
+      if (SlotMI)
         removeMachineInstrFromMaps(*SlotMI);
-        SlotMIRemoved = true;
-      }
     }
+  }
 
-    MachineInstr *InstrToInsert = SlotMIRemoved ? SlotMI : MI;
-
-    // Insert instruction back into the maps after passing it/removing the index
-    if ((MIIndexNotFound || SlotMIRemoved) && InstrToInsert->getParent() &&
-        !InstrToInsert->isDebugOrPseudoInstr())
-      insertMachineInstrInMaps(*InstrToInsert);
+  // In theory this could be combined with the previous loop, but it is tricky
+  // to update the IndexList while we are iterating it.
+  for (MachineBasicBlock::iterator I = End; I != Begin;) {
+    --I;
+    MachineInstr &MI = *I;
+    if (!MI.isDebugOrPseudoInstr() && !mi2iMap.contains(&MI))
+      insertMachineInstrInMaps(MI);
   }
 }
 

@@ -86,9 +86,7 @@ void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
   // TODO: We should have a single to_nvvm_type_converter.
   llvmTypeConverter.addConversion(
       [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
-  // Set higher benefit, so patterns will run before generic LLVM lowering.
-  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns,
-                                      getBenefit());
+  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns);
 }
 
 LogicalResult
@@ -426,7 +424,8 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
          "requires statically sized, normalized forall op");
   SmallVector<int64_t> tmpMappingSizes = numParallelIterations.value();
   SetVector<Attribute> forallMappingAttrs;
-  forallMappingAttrs.insert_range(forallOp.getMapping()->getValue());
+  forallMappingAttrs.insert(forallOp.getMapping()->getValue().begin(),
+                            forallOp.getMapping()->getValue().end());
   auto comparator = [](Attribute a, Attribute b) -> bool {
     return cast<DeviceMappingAttrInterface>(a).getMappingId() <
            cast<DeviceMappingAttrInterface>(b).getMappingId();

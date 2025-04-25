@@ -165,6 +165,7 @@ struct HasMembers {
   // expected-error@+1{{OpenACC variable in 'use_device' clause is not a valid variable name or array name}}
 #pragma acc host_data use_device(this->Member)
   ;
+  // expected-error@+1{{OpenACC variable in 'use_device' clause is not a valid variable name or array name}}
 #pragma acc host_data use_device(Member)
   ;
   }

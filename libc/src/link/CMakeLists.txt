@@ -1,7 +1,0 @@
-add_entrypoint_object(
-  dl_iterate_phdr
-  SRCS
-    dl_iterate_phdr.cpp
-  HDRS
-    dl_iterate_phdr.h
-)

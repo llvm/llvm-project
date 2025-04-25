@@ -435,7 +435,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
       removeInstrumentation(F);
   });
   auto &CtxProf = MAM.getResult<CtxProfAnalysis>(M);
-  if (CtxProf.contexts().empty())
+  if (!CtxProf)
     return PreservedAnalyses::none();
 
   const auto FlattenedProfile = CtxProf.flatten();

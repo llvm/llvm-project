@@ -306,7 +306,7 @@ struct OperandsSignature {
     for (unsigned i = 0, e = Operands.size(); i != e; ++i) {
       OS << LS;
       if (Operands[i].isReg()) {
-        OS << "Register Op" << i;
+        OS << "unsigned Op" << i;
       } else if (Operands[i].isImm()) {
         OS << "uint64_t imm" << i;
       } else if (Operands[i].isFP()) {
@@ -684,10 +684,10 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       OS << "  }\n";
     }
   }
-  // Return Register() if all of the possibilities had predicates but none
+  // Return 0 if all of the possibilities had predicates but none
   // were satisfied.
   if (!OneHadNoPredicate)
-    OS << "  return Register();\n";
+    OS << "  return 0;\n";
   OS << "}\n";
   OS << "\n";
 }
@@ -714,7 +714,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
             MVT::SimpleValueType RetVT = RI.first;
             const PredMap &PM = RI.second;
 
-            OS << "Register fastEmit_" << getLegalCName(Opcode) << "_"
+            OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
                << getLegalCName(std::string(getEnumName(VT))) << "_"
                << getLegalCName(std::string(getEnumName(RetVT))) << "_";
             Operands.PrintManglingSuffix(OS, ImmediatePredicates);
@@ -727,7 +727,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
           }
 
           // Emit one function for the type that demultiplexes on return type.
-          OS << "Register fastEmit_" << getLegalCName(Opcode) << "_"
+          OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
              << getLegalCName(std::string(getEnumName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
@@ -746,11 +746,11 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
             Operands.PrintArguments(OS);
             OS << ");\n";
           }
-          OS << "  default: return Register();\n}\n}\n\n";
+          OS << "  default: return 0;\n}\n}\n\n";
 
         } else {
           // Non-variadic return type.
-          OS << "Register fastEmit_" << getLegalCName(Opcode) << "_"
+          OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
              << getLegalCName(std::string(getEnumName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
@@ -760,7 +760,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
           OS << ") {\n";
 
           OS << "  if (RetVT.SimpleTy != " << getEnumName(RM.begin()->first)
-             << ")\n    return Register();\n";
+             << ")\n    return 0;\n";
 
           const PredMap &PM = RM.begin()->second;
 
@@ -769,7 +769,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       }
 
       // Emit one function for the opcode that demultiplexes based on the type.
-      OS << "Register fastEmit_" << getLegalCName(Opcode) << "_";
+      OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_";
       Operands.PrintManglingSuffix(OS, ImmediatePredicates);
       OS << "(MVT VT, MVT RetVT";
       if (!Operands.empty())
@@ -789,7 +789,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
         Operands.PrintArguments(OS);
         OS << ");\n";
       }
-      OS << "  default: return Register();\n";
+      OS << "  default: return 0;\n";
       OS << "  }\n";
       OS << "}\n";
       OS << "\n";
@@ -800,7 +800,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
 
     // Emit one function for the operand signature that demultiplexes based
     // on opcode and type.
-    OS << "Register fastEmit_";
+    OS << "unsigned fastEmit_";
     Operands.PrintManglingSuffix(OS, ImmediatePredicates);
     OS << "(MVT VT, MVT RetVT, unsigned Opcode";
     if (!Operands.empty())
@@ -828,7 +828,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       for (unsigned i = 0, e = MI->second.size(); i != e; ++i) {
         OS << "  if (";
         MI->second[i].emitImmediatePredicate(OS, ImmediatePredicates);
-        OS << ")\n    if (Register Reg = fastEmit_";
+        OS << ")\n    if (unsigned Reg = fastEmit_";
         MI->second[i].PrintManglingSuffix(OS, ImmediatePredicates);
         OS << "(VT, RetVT, Opcode";
         if (!MI->second[i].empty())
@@ -854,7 +854,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       Operands.PrintArguments(OS);
       OS << ");\n";
     }
-    OS << "  default: return Register();\n";
+    OS << "  default: return 0;\n";
     OS << "  }\n";
     OS << "}\n";
     OS << "\n";

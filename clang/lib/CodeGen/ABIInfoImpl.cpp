@@ -21,10 +21,9 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
     // Records with non-trivial destructors/copy-constructors should not be
     // passed by value.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI()))
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                     RAA == CGCXXABI::RAA_DirectInMemory);
+      return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
 
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+    return getNaturalAlignIndirect(Ty);
   }
 
   // Treat an enum type as its underlying type.
@@ -37,7 +36,7 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
         Context.getTypeSize(Context.getTargetInfo().hasInt128Type()
                                 ? Context.Int128Ty
                                 : Context.LongLongTy))
-      return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(Ty);
 
   return (isPromotableIntegerTypeForABI(Ty)
               ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
@@ -49,7 +48,7 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (isAggregateTypeForABI(RetTy))
-    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+    return getNaturalAlignIndirect(RetTy);
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
@@ -60,8 +59,7 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
         getContext().getTypeSize(getContext().getTargetInfo().hasInt128Type()
                                      ? getContext().Int128Ty
                                      : getContext().LongLongTy))
-      return getNaturalAlignIndirect(RetTy,
-                                     getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy);
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
@@ -128,8 +126,7 @@ bool CodeGen::classifyReturnType(const CGCXXABI &CXXABI, CGFunctionInfo &FI,
   if (const auto *RT = Ty->getAs<RecordType>())
     if (!isa<CXXRecordDecl>(RT->getDecl()) &&
         !RT->getDecl()->canPassInRegisters()) {
-      FI.getReturnInfo() = Info.getNaturalAlignIndirect(
-          Ty, Info.getDataLayout().getAllocaAddrSpace());
+      FI.getReturnInfo() = Info.getNaturalAlignIndirect(Ty);
       return true;
     }
 
@@ -395,7 +392,7 @@ Address CodeGen::EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr,
     CharUnits TyAlignForABI = TyInfo.Align;
 
     llvm::Type *ElementTy = CGF.ConvertTypeForMem(Ty);
-    llvm::Type *BaseTy = llvm::PointerType::getUnqual(CGF.getLLVMContext());
+    llvm::Type *BaseTy = llvm::PointerType::getUnqual(ElementTy);
     llvm::Value *Addr =
         CGF.Builder.CreateVAArg(VAListAddr.emitRawPointer(CGF), BaseTy);
     return Address(Addr, ElementTy, TyAlignForABI);

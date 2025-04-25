@@ -2,7 +2,6 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -24,28 +23,13 @@ using ast_matchers::pointerType;
 using ast_matchers::referenceType;
 using ast_matchers::returns;
 
-CanQualType getLikeReturnType(QualType RT) {
-  if (!RT.isNull() && RT->isPointerType()) {
-    return RT->getPointeeType()
-        ->getCanonicalTypeUnqualified()
-        .getUnqualifiedType();
-  }
-  return {};
-}
-
-CanQualType valueLikeReturnType(QualType RT) {
-  if (!RT.isNull() && RT->isReferenceType()) {
-    return RT.getNonReferenceType()
-        ->getCanonicalTypeUnqualified()
-        .getUnqualifiedType();
-  }
-  return {};
-}
-
-CanQualType pointerLikeReturnType(const CXXRecordDecl &RD) {
+bool hasSmartPointerClassShape(const CXXRecordDecl &RD, bool &HasGet,
+                               bool &HasValue) {
   // We may want to cache this search, but in current profiles it hasn't shown
   // up as a hot spot (possibly because there aren't many hits, relatively).
-  CanQualType StarReturnType, ArrowReturnType;
+  bool HasArrow = false;
+  bool HasStar = false;
+  CanQualType StarReturnType, ArrowReturnType, GetReturnType, ValueReturnType;
   for (const auto *MD : RD.methods()) {
     // We only consider methods that are const and have zero parameters.
     // It may be that there is a non-const overload for the method, but
@@ -54,35 +38,55 @@ CanQualType pointerLikeReturnType(const CXXRecordDecl &RD) {
       continue;
     switch (MD->getOverloadedOperator()) {
     case OO_Star:
-      StarReturnType = valueLikeReturnType(MD->getReturnType());
+      if (MD->getReturnType()->isReferenceType()) {
+        HasStar = true;
+        StarReturnType = MD->getReturnType()
+                             .getNonReferenceType()
+                             ->getCanonicalTypeUnqualified()
+                             .getUnqualifiedType();
+      }
       break;
     case OO_Arrow:
-      ArrowReturnType = getLikeReturnType(MD->getReturnType());
+      if (MD->getReturnType()->isPointerType()) {
+        HasArrow = true;
+        ArrowReturnType = MD->getReturnType()
+                              ->getPointeeType()
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
+      }
       break;
+    case OO_None: {
+      IdentifierInfo *II = MD->getIdentifier();
+      if (II == nullptr)
+        continue;
+      if (II->isStr("get")) {
+        if (MD->getReturnType()->isPointerType()) {
+          HasGet = true;
+          GetReturnType = MD->getReturnType()
+                              ->getPointeeType()
+                              ->getCanonicalTypeUnqualified()
+                              .getUnqualifiedType();
+        }
+      } else if (II->isStr("value")) {
+        if (MD->getReturnType()->isReferenceType()) {
+          HasValue = true;
+          ValueReturnType = MD->getReturnType()
+                                .getNonReferenceType()
+                                ->getCanonicalTypeUnqualified()
+                                .getUnqualifiedType();
+        }
+      }
+    } break;
     default:
       break;
     }
   }
-  if (!StarReturnType.isNull() && !ArrowReturnType.isNull() &&
-      StarReturnType == ArrowReturnType)
-    return StarReturnType;
 
-  return {};
-}
-
-QualType findReturnType(const CXXRecordDecl &RD, StringRef MethodName) {
-  for (const auto *MD : RD.methods()) {
-    // We only consider methods that are const and have zero parameters.
-    // It may be that there is a non-const overload for the method, but
-    // there should at least be a const overload as well.
-    if (!MD->isConst() || MD->getNumParams() != 0 ||
-        MD->getOverloadedOperator() != OO_None)
-      continue;
-    clang::IdentifierInfo *II = MD->getIdentifier();
-    if (II && II->isStr(MethodName))
-      return MD->getReturnType();
-  }
-  return {};
+  if (!HasStar || !HasArrow || StarReturnType != ArrowReturnType)
+    return false;
+  HasGet = HasGet && (GetReturnType == StarReturnType);
+  HasValue = HasValue && (ValueReturnType == StarReturnType);
+  return true;
 }
 
 } // namespace
@@ -92,37 +96,28 @@ QualType findReturnType(const CXXRecordDecl &RD, StringRef MethodName) {
 // its own anonymous namespace instead of in clang::dataflow.
 namespace {
 
-using clang::dataflow::findReturnType;
-using clang::dataflow::getLikeReturnType;
-using clang::dataflow::pointerLikeReturnType;
-using clang::dataflow::valueLikeReturnType;
-
-AST_MATCHER_P(clang::CXXRecordDecl, smartPointerClassWithGetLike,
-              clang::StringRef, MethodName) {
-  auto RT = pointerLikeReturnType(Node);
-  if (RT.isNull())
-    return false;
-  return getLikeReturnType(findReturnType(Node, MethodName)) == RT;
+AST_MATCHER(clang::CXXRecordDecl, smartPointerClassWithGet) {
+  bool HasGet = false;
+  bool HasValue = false;
+  bool HasStarAndArrow =
+      clang::dataflow::hasSmartPointerClassShape(Node, HasGet, HasValue);
+  return HasStarAndArrow && HasGet;
 }
 
-AST_MATCHER_P(clang::CXXRecordDecl, smartPointerClassWithValueLike,
-              clang::StringRef, MethodName) {
-  auto RT = pointerLikeReturnType(Node);
-  if (RT.isNull())
-    return false;
-  return valueLikeReturnType(findReturnType(Node, MethodName)) == RT;
+AST_MATCHER(clang::CXXRecordDecl, smartPointerClassWithValue) {
+  bool HasGet = false;
+  bool HasValue = false;
+  bool HasStarAndArrow =
+      clang::dataflow::hasSmartPointerClassShape(Node, HasGet, HasValue);
+  return HasStarAndArrow && HasValue;
 }
 
 AST_MATCHER(clang::CXXRecordDecl, smartPointerClassWithGetOrValue) {
-  auto RT = pointerLikeReturnType(Node);
-  if (RT.isNull())
-    return false;
-  return getLikeReturnType(findReturnType(Node, "get")) == RT ||
-         valueLikeReturnType(findReturnType(Node, "value")) == RT;
-}
-
-AST_MATCHER(clang::CXXRecordDecl, pointerClass) {
-  return !pointerLikeReturnType(Node).isNull();
+  bool HasGet = false;
+  bool HasValue = false;
+  bool HasStarAndArrow =
+      clang::dataflow::hasSmartPointerClassShape(Node, HasGet, HasValue);
+  return HasStarAndArrow && (HasGet || HasValue);
 }
 
 } // namespace
@@ -145,35 +140,16 @@ ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
 
-ast_matchers::StatementMatcher isPointerLikeOperatorStar() {
-  return cxxOperatorCallExpr(
-      hasOverloadedOperatorName("*"),
-      callee(cxxMethodDecl(parameterCountIs(0),
-                           returns(hasCanonicalType(referenceType())),
-                           ofClass(pointerClass()))));
-}
-
-ast_matchers::StatementMatcher isPointerLikeOperatorArrow() {
-  return cxxOperatorCallExpr(
-      hasOverloadedOperatorName("->"),
-      callee(cxxMethodDecl(parameterCountIs(0),
-                           returns(hasCanonicalType(pointerType())),
-                           ofClass(pointerClass()))));
-}
-
-ast_matchers::StatementMatcher
-isSmartPointerLikeValueMethodCall(clang::StringRef MethodName) {
+ast_matchers::StatementMatcher isSmartPointerLikeValueMethodCall() {
   return cxxMemberCallExpr(callee(cxxMethodDecl(
       parameterCountIs(0), returns(hasCanonicalType(referenceType())),
-      hasName(MethodName),
-      ofClass(smartPointerClassWithValueLike(MethodName)))));
+      hasName("value"), ofClass(smartPointerClassWithValue()))));
 }
 
-ast_matchers::StatementMatcher
-isSmartPointerLikeGetMethodCall(clang::StringRef MethodName) {
+ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall() {
   return cxxMemberCallExpr(callee(cxxMethodDecl(
       parameterCountIs(0), returns(hasCanonicalType(pointerType())),
-      hasName(MethodName), ofClass(smartPointerClassWithGetLike(MethodName)))));
+      hasName("get"), ofClass(smartPointerClassWithGet()))));
 }
 
 const FunctionDecl *

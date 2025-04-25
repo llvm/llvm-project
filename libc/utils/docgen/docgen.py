@@ -57,7 +57,6 @@ def check_api(header: Header, api: Dict):
         "c-definition",
         "in-latest-posix",
         "removed-in-posix-2008",
-        "removed-in-posix-2024",
     ]
 
     # Validate macros
@@ -140,10 +139,6 @@ def print_functions_rst(header: Header, functions: Dict):
         elif "removed-in-posix-2008" in functions[name]:
             print(
                 f"    - `removed in POSIX.1-2008 <https://pubs.opengroup.org/onlinepubs/007904875/functions/{name}.html>`__"
-            )
-        elif "removed-in-posix-2024" in functions[name]:
-            print(
-                f"    - `removed in POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9699919799.2018edition/functions/{name}.html>`__"
             )
         else:
             print("    -")

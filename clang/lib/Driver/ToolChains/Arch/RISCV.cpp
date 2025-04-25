@@ -318,15 +318,14 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
     if (MABI.equals_insensitive("ilp32e"))
       return "rv32e";
-    if (MABI.equals_insensitive("lp64e"))
+    else if (MABI.equals_insensitive("lp64e"))
       return "rv64e";
-    if (MABI.starts_with_insensitive("ilp32"))
+    else if (MABI.starts_with_insensitive("ilp32"))
       return "rv32imafdc";
-    if (MABI.starts_with_insensitive("lp64")) {
+    else if (MABI.starts_with_insensitive("lp64")) {
       if (Triple.isAndroid())
         return "rv64imafdcv_zba_zbb_zbs";
-      if (Triple.isOSFuchsia())
-        return "rva22u64_v";
+
       return "rv64imafdc";
     }
   }
@@ -339,16 +338,16 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   if (Triple.isRISCV32()) {
     if (Triple.getOS() == llvm::Triple::UnknownOS)
       return "rv32imac";
-    return "rv32imafdc";
+    else
+      return "rv32imafdc";
+  } else {
+    if (Triple.getOS() == llvm::Triple::UnknownOS)
+      return "rv64imac";
+    else if (Triple.isAndroid())
+      return "rv64imafdcv_zba_zbb_zbs";
+    else
+      return "rv64imafdc";
   }
-
-  if (Triple.getOS() == llvm::Triple::UnknownOS)
-    return "rv64imac";
-  if (Triple.isAndroid())
-    return "rv64imafdcv_zba_zbb_zbs";
-  if (Triple.isOSFuchsia())
-    return "rva22u64_v";
-  return "rv64imafdc";
 }
 
 std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,

@@ -6,7 +6,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/Support/BLAKE3.h"
@@ -42,16 +41,6 @@ constexpr uint64_t MaximumSupportedVersion = Version3;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
-
-inline llvm::StringRef getMemprofOptionsSymbolDarwinLinkageName() {
-  return "___memprof_default_options_str";
-}
-
-inline llvm::StringRef getMemprofOptionsSymbolName() {
-  // Darwin linkage names are prefixed with an extra "_". See
-  // DataLayout::getGlobalPrefix().
-  return getMemprofOptionsSymbolDarwinLinkageName().drop_front();
-}
 
 enum class Meta : uint64_t {
   Start = 0,
@@ -342,28 +331,6 @@ using CallStackId = uint64_t;
 // A type representing the index into the call stack array.
 using LinearCallStackId = uint32_t;
 
-// Holds call site information with indexed frame contents.
-struct IndexedCallSiteInfo {
-  // The call stack ID for this call site
-  CallStackId CSId = 0;
-  // The GUIDs of the callees at this call site
-  SmallVector<GlobalValue::GUID, 1> CalleeGuids;
-
-  IndexedCallSiteInfo() = default;
-  IndexedCallSiteInfo(CallStackId CSId) : CSId(CSId) {}
-  IndexedCallSiteInfo(CallStackId CSId,
-                      SmallVector<GlobalValue::GUID, 1> CalleeGuids)
-      : CSId(CSId), CalleeGuids(std::move(CalleeGuids)) {}
-
-  bool operator==(const IndexedCallSiteInfo &Other) const {
-    return CSId == Other.CSId && CalleeGuids == Other.CalleeGuids;
-  }
-
-  bool operator!=(const IndexedCallSiteInfo &Other) const {
-    return !operator==(Other);
-  }
-};
-
 // Holds allocation information in a space efficient format where frames are
 // represented using unique identifiers.
 struct IndexedAllocationInfo {
@@ -432,7 +399,7 @@ struct IndexedMemProfRecord {
   // list of inline locations in bottom-up order i.e. from leaf to root. The
   // inline location list may include additional entries, users should pick
   // the last entry in the list with the same function GUID.
-  llvm::SmallVector<IndexedCallSiteInfo> CallSites;
+  llvm::SmallVector<CallStackId> CallSiteIds;
 
   void clear() { *this = IndexedMemProfRecord(); }
 
@@ -449,7 +416,7 @@ struct IndexedMemProfRecord {
     if (Other.AllocSites != AllocSites)
       return false;
 
-    if (Other.CallSites != CallSites)
+    if (Other.CallSiteIds != CallSiteIds)
       return false;
     return true;
   }
@@ -477,29 +444,6 @@ struct IndexedMemProfRecord {
   static GlobalValue::GUID getGUID(const StringRef FunctionName);
 };
 
-// Holds call site information with frame contents inline.
-struct CallSiteInfo {
-  // The frames in the call stack
-  std::vector<Frame> Frames;
-
-  // The GUIDs of the callees at this call site
-  SmallVector<GlobalValue::GUID, 1> CalleeGuids;
-
-  CallSiteInfo() = default;
-  CallSiteInfo(std::vector<Frame> Frames) : Frames(std::move(Frames)) {}
-  CallSiteInfo(std::vector<Frame> Frames,
-               SmallVector<GlobalValue::GUID, 1> CalleeGuids)
-      : Frames(std::move(Frames)), CalleeGuids(std::move(CalleeGuids)) {}
-
-  bool operator==(const CallSiteInfo &Other) const {
-    return Frames == Other.Frames && CalleeGuids == Other.CalleeGuids;
-  }
-
-  bool operator!=(const CallSiteInfo &Other) const {
-    return !operator==(Other);
-  }
-};
-
 // Holds the memprof profile information for a function. The internal
 // representation stores frame contents inline. This representation should
 // be used for small amount of temporary, in memory instances.
@@ -507,7 +451,7 @@ struct MemProfRecord {
   // Same as IndexedMemProfRecord::AllocSites with frame contents inline.
   llvm::SmallVector<AllocationInfo> AllocSites;
   // Same as IndexedMemProfRecord::CallSites with frame contents inline.
-  llvm::SmallVector<CallSiteInfo> CallSites;
+  llvm::SmallVector<std::vector<Frame>> CallSites;
 
   MemProfRecord() = default;
 
@@ -521,8 +465,8 @@ struct MemProfRecord {
 
     if (!CallSites.empty()) {
       OS << "    CallSites:\n";
-      for (const CallSiteInfo &CS : CallSites) {
-        for (const Frame &F : CS.Frames) {
+      for (const std::vector<Frame> &Frames : CallSites) {
+        for (const Frame &F : Frames) {
           OS << "    -\n";
           F.printYAML(OS);
         }

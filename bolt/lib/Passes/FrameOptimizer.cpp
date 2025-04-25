@@ -43,7 +43,7 @@ FrameOptimization("frame-opt",
   cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
-static cl::opt<bool> RemoveStores(
+cl::opt<bool> RemoveStores(
     "frame-opt-rm-stores", cl::init(FOP_NONE),
     cl::desc("apply additional analysis to remove stores (experimental)"),
     cl::cat(BoltOptCategory));

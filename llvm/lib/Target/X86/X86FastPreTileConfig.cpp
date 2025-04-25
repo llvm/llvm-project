@@ -362,8 +362,7 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
     MachineBasicBlock::iterator InsertPos;
     if (TileDefMI->isPHI()) {
       InsertPos = TileDefMI->getParent()->getFirstNonPHI();
-      if (auto It = VisitedPHIs.find(TileDefMI);
-          It != VisitedPHIs.end()) { // circular phi reference
+      if (VisitedPHIs.count(TileDefMI)) { // circular phi reference
         //        def t1
         //       /       \
         //  def t2       t3 = phi(t1, t4) <--
@@ -373,9 +372,9 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
         // For each (row, column and stack address) append phi incoming value.
         // Create r3 = phi(r1, r4)
         // Create r4 = phi(r2, r3)
-        Register InRowReg = It->second.Row;
-        Register InColReg = It->second.Col;
-        Register InStackAddrReg = It->second.StackAddr;
+        Register InRowReg = VisitedPHIs[TileDefMI].Row;
+        Register InColReg = VisitedPHIs[TileDefMI].Col;
+        Register InStackAddrReg = VisitedPHIs[TileDefMI].StackAddr;
         RowPHI.addReg(InRowReg).addMBB(InMBB);
         ColPHI.addReg(InColReg).addMBB(InMBB);
         AddrPHI.addReg(InStackAddrReg).addMBB(InMBB);

@@ -1,0 +1,50 @@
+
+AOMP=${AOMP:-/usr/lib/aomp}
+AOMP_GPU=${AOMP_GPU:-gfx908}
+export LD_LIBRARY_PATH=$AOMP/lib
+
+echo $AOMP/bin/clang -O3 -fopenmp --offload-arch=$AOMP_GPU hostexec_test.c -o hostexec_test
+$AOMP/bin/clang -O3 -fopenmp --offload-arch=$AOMP_GPU hostexec_test.c -o hostexec_test
+echo 
+echo ===== Running ./hostexec_test with offloading =====
+echo LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=MANDATORY ./hostexec_test
+LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=MANDATORY ./hostexec_test
+echo
+echo ===== Running ./hostexec_test with offloading disabled =====
+echo LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=DISABLED ./hostexec_test
+LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=DISABLED ./hostexec_test
+
+echo 
+echo $AOMP/bin/clang -O3 -fopenmp --offload-arch=$AOMP_GPU variant.c -o variant
+$AOMP/bin/clang -O3 -fopenmp --offload-arch=$AOMP_GPU variant.c -o variant
+echo 
+echo ===== Running ./variant with offloading =====
+echo LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=MANDATORY ./variant
+LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=MANDATORY ./variant
+echo
+echo ===== Running ./variant with offloading disabled =====
+echo LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=DISABLED ./variant
+LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=DISABLED ./variant
+
+echo
+# try to find openmpi
+MPI=~/local/openmpi
+[ ! -d $MPI ] && MPI=/opt/openmpi-4.1.5
+[ ! -d $MPI ] && MPI=/opt/openmpi-4.1.4
+[ ! -d $MPI ] && MPI=/usr/local/openmpi
+[ ! -d $MPI ] && MPI=/usr/lib/openmpi
+[ ! -d $MPI ] && MPI=/usr/lib/x86_64-linux-gnu/openmpi
+[ ! -d $MPI ] && exit 
+echo OMPI_CC=$AOMP/bin/clang++ $MPI/bin/mpicc -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$AOMP_GPU mpi-in-target-region.cpp -I. -o mpi-in-target-region
+OMPI_CC=$AOMP/bin/clang++ $MPI/bin/mpicc -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$AOMP_GPU mpi-in-target-region.cpp -I. -o mpi-in-target-region
+echo
+echo ===== Running ./mpi-in-target-region with offloading =====
+echo LIBOMPTARGET_KERNEL_TRACE=1 OMP_TARGET_OFFLOAD=MANDATORY ./variant
+echo LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MPI/lib:/usr/lib/x86_64-linux-gnu: $MPI/bin/mpirun -np 2 --mca btl_openib_warn_no_device_params_found 0 ./mpi-in-target-region
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MPI/lib:/usr/lib/x86_64-linux-gnu: $MPI/bin/mpirun -np 2 --mca btl_openib_warn_no_device_params_found 0 ./mpi-in-target-region
+
+echo
+echo cleanup 
+rm ./variant
+rm ./hostexec_test
+rm ./mpi-in-target-region

@@ -67,10 +67,8 @@ void PhiValues::processPhi(const PHINode *Phi,
       }
       // If the phi did not become part of a component then this phi and that
       // phi are part of the same component, so adjust the depth number.
-      if (!ReachableMap.count(OpDepthNumber)) {
-        unsigned &Depth = DepthMap[Phi];
-        Depth = std::min(Depth, OpDepthNumber);
-      }
+      if (!ReachableMap.count(OpDepthNumber))
+        DepthMap[Phi] = std::min(DepthMap[Phi], OpDepthNumber);
     } else {
       TrackedValues.insert(PhiValuesCallbackVH(PhiOp, this));
     }
@@ -100,7 +98,7 @@ void PhiValues::processPhi(const PHINode *Phi,
           if (OpDepthNumber != RootDepthNumber) {
             auto It = ReachableMap.find(OpDepthNumber);
             if (It != ReachableMap.end())
-              Reachable.insert_range(It->second);
+              Reachable.insert(It->second.begin(), It->second.end());
           }
         } else
           Reachable.insert(Op);

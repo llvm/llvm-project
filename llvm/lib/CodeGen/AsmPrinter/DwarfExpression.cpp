@@ -109,7 +109,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       return true;
     }
     // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
-    int64_t Reg = TRI.getDwarfRegNumForVirtReg(MachineReg, false);
+    int64_t Reg = TRI.getDwarfRegNum(MachineReg, false);
     if (Reg > 0) {
       DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
       return true;
@@ -951,7 +951,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
 
   if (Entry.isLocation()) {
     assert(DwarfRegs.empty() && "unconsumed registers?");
-    if (!TRI || !addMachineReg(*TRI, Entry.getLoc().getReg())) {
+    if (!addMachineReg(*TRI, Entry.getLoc().getReg())) {
       DwarfRegs.clear();
       return std::nullopt;
     }
@@ -968,19 +968,8 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     SubRegOffset /= 8;
     SubRegSize /= 8;
 
-    auto focusThreadIfRequired = [this](int64_t DwarfRegNo) {
-      // FIXME: This should be represented in the DIExpression.
-      if (auto LaneSize = TRI->getDwarfRegLaneSize(DwarfRegNo, false)) {
-        emitUserOp(dwarf::DW_OP_LLVM_USER_push_lane);
-        emitConstu(*LaneSize);
-        emitOp(dwarf::DW_OP_mul);
-        emitUserOp(dwarf::DW_OP_LLVM_USER_offset);
-      }
-    };
-
     if (Regs.size() == 1) {
       addReg(Regs[0].DwarfRegNo, Regs[0].Comment);
-      focusThreadIfRequired(Regs[0].DwarfRegNo);
 
       if (SubRegOffset) {
         emitUserOp(dwarf::DW_OP_LLVM_USER_offset_uconst);
@@ -1002,13 +991,13 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
     if (IsFragment)
       emitOp(dwarf::DW_OP_lit0);
 
+    unsigned RegSize = 0;
     for (auto &Reg : Regs) {
       if (Reg.SubRegSize % 8)
         return std::nullopt;
-      if (Reg.DwarfRegNo >= 0) {
+      RegSize += Reg.SubRegSize;
+      if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
-        focusThreadIfRequired(Regs[0].DwarfRegNo);
-      }
       emitOp(dwarf::DW_OP_piece);
       emitUnsigned(Reg.SubRegSize / 8);
     }

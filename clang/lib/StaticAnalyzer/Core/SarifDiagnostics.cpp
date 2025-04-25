@@ -23,7 +23,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
-#include <memory>
 
 using namespace llvm;
 using namespace clang;
@@ -61,8 +60,8 @@ void ento::createSarifDiagnosticConsumer(
   if (Output.empty())
     return;
 
-  C.push_back(std::make_unique<SarifDiagnostics>(Output, PP.getLangOpts(),
-                                                 PP.getSourceManager()));
+  C.push_back(
+      new SarifDiagnostics(Output, PP.getLangOpts(), PP.getSourceManager()));
   createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
                                           CTU, MacroExpansions);
 }

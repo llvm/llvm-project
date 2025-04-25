@@ -1,5 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  ${BOLT_TARGETS_TO_BUILD}
+  ${LLVM_TARGETS_TO_BUILD}
   MC
   Object
   Support

@@ -91,18 +91,12 @@ void MismatchedIteratorChecker::checkPreCall(const CallEvent &Call,
                     InstCall->getCXXThisVal().getAsRegion());
       }
     } else if (isInsertCall(Func)) {
-      if (Call.getNumArgs() == 2 &&
-          isIteratorType(Call.getArgExpr(0)->getType()) &&
-          isIteratorType(Call.getArgExpr(1)->getType())) {
-        verifyMatch(C, Call.getArgSVal(0), Call.getArgSVal(1));
-      } else {
-        verifyMatch(C, Call.getArgSVal(0),
-                    InstCall->getCXXThisVal().getAsRegion());
-        if (Call.getNumArgs() == 3 &&
-            isIteratorType(Call.getArgExpr(1)->getType()) &&
-            isIteratorType(Call.getArgExpr(2)->getType())) {
-          verifyMatch(C, Call.getArgSVal(1), Call.getArgSVal(2));
-        }
+      verifyMatch(C, Call.getArgSVal(0),
+                  InstCall->getCXXThisVal().getAsRegion());
+      if (Call.getNumArgs() == 3 &&
+          isIteratorType(Call.getArgExpr(1)->getType()) &&
+          isIteratorType(Call.getArgExpr(2)->getType())) {
+        verifyMatch(C, Call.getArgSVal(1), Call.getArgSVal(2));
       }
     } else if (isEmplaceCall(Func)) {
       verifyMatch(C, Call.getArgSVal(0),

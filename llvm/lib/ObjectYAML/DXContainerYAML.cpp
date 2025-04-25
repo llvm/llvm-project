@@ -29,7 +29,7 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
+DXContainerYAML::RootSignatureDesc::RootSignatureDesc(
     const object::DirectX::RootSignature &Data)
     : Version(Data.getVersion()), NumParameters(Data.getNumParameters()),
       RootParametersOffset(Data.getRootParametersOffset()),
@@ -41,7 +41,7 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
+uint32_t DXContainerYAML::RootSignatureDesc::getEncodedFlags() {
   uint64_t Flag = 0;
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
   if (Val)                                                                     \
@@ -209,8 +209,8 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
   IO.mapRequired("Parameters", S.Parameters);
 }
 
-void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
-    IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
+void MappingTraits<DXContainerYAML::RootSignatureDesc>::mapping(
+    IO &IO, DXContainerYAML::RootSignatureDesc &S) {
   IO.mapRequired("Version", S.Version);
   IO.mapRequired("NumParameters", S.NumParameters);
   IO.mapRequired("RootParametersOffset", S.RootParametersOffset);

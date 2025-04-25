@@ -90,9 +90,8 @@ define <vscale x 2 x i64> @vwmul_vv_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, <vsc
 ; CHECK-LABEL: vwmul_vv_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vwmul.vv v8, v11, v10
+; CHECK-NEXT:    vwmul.vv v10, v8, v9
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 2 x i32> %va to <vscale x 2 x i64>
   %vd = sext <vscale x 2 x i32> %vb to <vscale x 2 x i64>
@@ -104,9 +103,8 @@ define <vscale x 2 x i64> @vwmulu_vv_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, <vs
 ; CHECK-LABEL: vwmulu_vv_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vwmulu.vv v8, v11, v10
+; CHECK-NEXT:    vwmulu.vv v10, v8, v9
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 2 x i32> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i32> %vb to <vscale x 2 x i64>
@@ -118,9 +116,8 @@ define <vscale x 2 x i64> @vwmulsu_vv_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, <v
 ; CHECK-LABEL: vwmulsu_vv_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v9
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vwmulsu.vv v8, v11, v10
+; CHECK-NEXT:    vwmulsu.vv v10, v8, v9
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 2 x i32> %va to <vscale x 2 x i64>
   %vd = zext <vscale x 2 x i32> %vb to <vscale x 2 x i64>
@@ -132,8 +129,8 @@ define <vscale x 2 x i64> @vwmul_vx_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, i32 
 ; CHECK-LABEL: vwmul_vx_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vwmul.vx v8, v10, a0
+; CHECK-NEXT:    vwmul.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
@@ -147,8 +144,8 @@ define <vscale x 2 x i64> @vwmulu_vx_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, i32
 ; CHECK-LABEL: vwmulu_vx_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vwmulu.vx v8, v10, a0
+; CHECK-NEXT:    vwmulu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
@@ -162,8 +159,8 @@ define <vscale x 2 x i64> @vwmulsu_vx_nxv2i64_nxv2i32(<vscale x 2 x i32> %va, i3
 ; CHECK-LABEL: vwmulsu_vx_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vwmulsu.vx v8, v10, a0
+; CHECK-NEXT:    vwmulsu.vx v10, v8, a0
+; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
@@ -177,9 +174,8 @@ define <vscale x 4 x i64> @vwmul_vv_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, <vsc
 ; CHECK-LABEL: vwmul_vv_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v10
-; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vwmul.vv v8, v14, v12
+; CHECK-NEXT:    vwmul.vv v12, v8, v10
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 4 x i32> %va to <vscale x 4 x i64>
   %vd = sext <vscale x 4 x i32> %vb to <vscale x 4 x i64>
@@ -191,9 +187,8 @@ define <vscale x 4 x i64> @vwmulu_vv_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, <vs
 ; CHECK-LABEL: vwmulu_vv_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v10
-; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vwmulu.vv v8, v14, v12
+; CHECK-NEXT:    vwmulu.vv v12, v8, v10
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 4 x i32> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i32> %vb to <vscale x 4 x i64>
@@ -205,9 +200,8 @@ define <vscale x 4 x i64> @vwmulsu_vv_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, <v
 ; CHECK-LABEL: vwmulsu_vv_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v10
-; CHECK-NEXT:    vmv2r.v v14, v8
-; CHECK-NEXT:    vwmulsu.vv v8, v14, v12
+; CHECK-NEXT:    vwmulsu.vv v12, v8, v10
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 4 x i32> %va to <vscale x 4 x i64>
   %vd = zext <vscale x 4 x i32> %vb to <vscale x 4 x i64>
@@ -219,8 +213,8 @@ define <vscale x 4 x i64> @vwmul_vx_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, i32 
 ; CHECK-LABEL: vwmul_vx_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vwmul.vx v8, v12, a0
+; CHECK-NEXT:    vwmul.vx v12, v8, a0
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -234,8 +228,8 @@ define <vscale x 4 x i64> @vwmulu_vx_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, i32
 ; CHECK-LABEL: vwmulu_vx_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vwmulu.vx v8, v12, a0
+; CHECK-NEXT:    vwmulu.vx v12, v8, a0
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -249,8 +243,8 @@ define <vscale x 4 x i64> @vwmulsu_vx_nxv4i64_nxv4i32(<vscale x 4 x i32> %va, i3
 ; CHECK-LABEL: vwmulsu_vx_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vmv2r.v v12, v8
-; CHECK-NEXT:    vwmulsu.vx v8, v12, a0
+; CHECK-NEXT:    vwmulsu.vx v12, v8, a0
+; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -264,9 +258,8 @@ define <vscale x 8 x i64> @vwmul_vv_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, <vsc
 ; CHECK-LABEL: vwmul_vv_nxv8i64_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vmv4r.v v20, v8
-; CHECK-NEXT:    vwmul.vv v8, v20, v16
+; CHECK-NEXT:    vwmul.vv v16, v8, v12
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 8 x i32> %va to <vscale x 8 x i64>
   %vd = sext <vscale x 8 x i32> %vb to <vscale x 8 x i64>
@@ -278,9 +271,8 @@ define <vscale x 8 x i64> @vwmulu_vv_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, <vs
 ; CHECK-LABEL: vwmulu_vv_nxv8i64_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vmv4r.v v20, v8
-; CHECK-NEXT:    vwmulu.vv v8, v20, v16
+; CHECK-NEXT:    vwmulu.vv v16, v8, v12
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 8 x i32> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i32> %vb to <vscale x 8 x i64>
@@ -292,9 +284,8 @@ define <vscale x 8 x i64> @vwmulsu_vv_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, <v
 ; CHECK-LABEL: vwmulsu_vv_nxv8i64_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vmv4r.v v20, v8
-; CHECK-NEXT:    vwmulsu.vv v8, v20, v16
+; CHECK-NEXT:    vwmulsu.vv v16, v8, v12
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 8 x i32> %va to <vscale x 8 x i64>
   %vd = zext <vscale x 8 x i32> %vb to <vscale x 8 x i64>
@@ -306,8 +297,8 @@ define <vscale x 8 x i64> @vwmul_vx_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, i32 
 ; CHECK-LABEL: vwmul_vx_nxv8i64_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v8
-; CHECK-NEXT:    vwmul.vx v8, v16, a0
+; CHECK-NEXT:    vwmul.vx v16, v8, a0
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
@@ -321,8 +312,8 @@ define <vscale x 8 x i64> @vwmulu_vx_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, i32
 ; CHECK-LABEL: vwmulu_vx_nxv8i64_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v8
-; CHECK-NEXT:    vwmulu.vx v8, v16, a0
+; CHECK-NEXT:    vwmulu.vx v16, v8, a0
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
@@ -336,8 +327,8 @@ define <vscale x 8 x i64> @vwmulsu_vx_nxv8i64_nxv8i32(<vscale x 8 x i32> %va, i3
 ; CHECK-LABEL: vwmulsu_vx_nxv8i64_nxv8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vmv4r.v v16, v8
-; CHECK-NEXT:    vwmulsu.vx v8, v16, a0
+; CHECK-NEXT:    vwmulsu.vx v16, v8, a0
+; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> undef, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer

@@ -303,7 +303,8 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
     }
 
     Visited.insert(MBB);
-    llvm::append_range(Worklist, MBB->predecessors());
+    for (auto *Pred : MBB->predecessors())
+      Worklist.push_back(Pred);
   }
   return LoopStart;
 }

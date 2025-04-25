@@ -57,7 +57,6 @@ struct PatchLocation {
 
 using RngListAttributesTy = SmallVector<PatchLocation>;
 using LocListAttributesTy = SmallVector<PatchLocation>;
-using StmtSeqListAttributesTy = SmallVector<PatchLocation>;
 
 /// Stores all information relating to a compile unit, be it in its original
 /// instance in the object file to its brand new cloned and generated DIE tree.
@@ -176,12 +175,6 @@ public:
     return LocationAttributes;
   }
 
-  // Provide access to the list of DW_AT_LLVM_stmt_sequence attributes that may
-  // need to be patched.
-  const StmtSeqListAttributesTy &getStmtSeqListAttributes() const {
-    return StmtSeqListAttributes;
-  }
-
   /// Mark every DIE in this unit as kept. This function also
   /// marks variables as InDebugMap so that they appear in the
   /// reconstructed accelerator tables.
@@ -216,10 +209,6 @@ public:
   /// Keep track of a location attribute pointing to a location list in the
   /// debug_loc section.
   void noteLocationAttribute(PatchLocation Attr);
-
-  // Record that the given DW_AT_LLVM_stmt_sequence attribute may need to be
-  // patched later.
-  void noteStmtSeqListAttribute(PatchLocation Attr);
 
   /// Add a name accelerator entry for \a Die with \a Name.
   void addNamespaceAccelerator(const DIE *Die, DwarfStringPoolEntryRef Name);
@@ -319,12 +308,6 @@ private:
   /// function's address or to be applied to address operands of
   /// location expression.
   LocListAttributesTy LocationAttributes;
-
-  // List of DW_AT_LLVM_stmt_sequence attributes that may need to be patched
-  // after the dwarf linker rewrites the line table. During line table rewrite
-  // the line table format might change, so we have to patch any offsets that
-  // reference its contents.
-  StmtSeqListAttributesTy StmtSeqListAttributes;
 
   /// Accelerator entries for the unit, both for the pub*
   /// sections and the apple* ones.

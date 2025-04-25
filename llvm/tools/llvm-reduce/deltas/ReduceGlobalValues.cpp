@@ -38,10 +38,10 @@ static bool shouldReduceThreadLocal(GlobalValue &GV) {
 }
 
 static bool shouldReduceLinkage(GlobalValue &GV) {
-  return !GV.hasExternalLinkage() && !GV.hasAppendingLinkage();
+  return !GV.hasExternalLinkage();
 }
 
-void llvm::reduceGlobalValuesDeltaPass(Oracle &O, ReducerWorkItem &Program) {
+static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {
   for (auto &GV : Program.getModule().global_values()) {
     if (shouldReduceDSOLocal(GV) && !O.shouldKeep())
       GV.setDSOLocal(false);
@@ -64,14 +64,9 @@ void llvm::reduceGlobalValuesDeltaPass(Oracle &O, ReducerWorkItem &Program) {
       if (IsImplicitDSOLocal)
         GV.setDSOLocal(false);
     }
-
-    // TODO: Should this go in a separate reduction?
-    if (auto *GVar = dyn_cast<GlobalVariable>(&GV)) {
-      if (GVar->isExternallyInitialized() && !O.shouldKeep())
-        GVar->setExternallyInitialized(false);
-
-      if (GVar->getCodeModel() && !O.shouldKeep())
-        GVar->clearCodeModel();
-    }
   }
+}
+
+void llvm::reduceGlobalValuesDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceGVs, "Reducing GlobalValues");
 }

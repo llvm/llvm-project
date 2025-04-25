@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/MipsFixupKinds.h"
-#include "MCTargetDesc/MipsMCExpr.h"
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -162,22 +161,6 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
 
-  switch (Target.getRefKind()) {
-  case MipsMCExpr::MEK_DTPREL:
-  case MipsMCExpr::MEK_DTPREL_HI:
-  case MipsMCExpr::MEK_DTPREL_LO:
-  case MipsMCExpr::MEK_TLSLDM:
-  case MipsMCExpr::MEK_TLSGD:
-  case MipsMCExpr::MEK_GOTTPREL:
-  case MipsMCExpr::MEK_TPREL_HI:
-  case MipsMCExpr::MEK_TPREL_LO:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
-    break;
-  default:
-    break;
-  }
-
   switch (Kind) {
   case FK_NONE:
     return ELF::R_MIPS_NONE;
@@ -235,15 +218,15 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   switch (Kind) {
-  case Mips::fixup_Mips_DTPREL32:
+  case FK_DTPRel_4:
     return ELF::R_MIPS_TLS_DTPREL32;
-  case Mips::fixup_Mips_DTPREL64:
+  case FK_DTPRel_8:
     return ELF::R_MIPS_TLS_DTPREL64;
-  case Mips::fixup_Mips_TPREL32:
+  case FK_TPRel_4:
     return ELF::R_MIPS_TLS_TPREL32;
-  case Mips::fixup_Mips_TPREL64:
+  case FK_TPRel_8:
     return ELF::R_MIPS_TLS_TPREL64;
-  case Mips::fixup_Mips_GPREL32:
+  case FK_GPRel_4:
     return setRTypes(ELF::R_MIPS_GPREL32,
                      is64Bit() ? ELF::R_MIPS_64 : ELF::R_MIPS_NONE,
                      ELF::R_MIPS_NONE);
@@ -345,8 +328,7 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_JALR;
   }
 
-  Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
-  return ELF::R_MIPS_NONE;
+  llvm_unreachable("invalid fixup kind!");
 }
 
 /// Sort relocation table entries by offset except where another order is

@@ -15,7 +15,6 @@
 #include <__charconv/tables.h>
 #include <__charconv/to_chars_base_10.h>
 #include <__config>
-#include <__memory/addressof.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_unsigned.h>
 #include <cstdint>
@@ -143,7 +142,7 @@ __mul_overflowed(unsigned short __a, _Tp __b, unsigned short& __r) {
 template <typename _Tp>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool __mul_overflowed(_Tp __a, _Tp __b, _Tp& __r) {
   static_assert(is_unsigned<_Tp>::value, "");
-  return __builtin_mul_overflow(__a, __b, std::addressof(__r));
+  return __builtin_mul_overflow(__a, __b, &__r);
 }
 
 template <typename _Tp, typename _Up>

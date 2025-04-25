@@ -25,7 +25,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_OPTIMIZEALLOCATIONLIVENESSPASS
+#define GEN_PASS_DEF_OPTIMIZEALLOCATIONLIVENESS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -89,7 +89,7 @@ static bool hasMemoryAllocEffect(MemoryEffectOpInterface memEffectOp) {
 }
 
 struct OptimizeAllocationLiveness
-    : public bufferization::impl::OptimizeAllocationLivenessPassBase<
+    : public bufferization::impl::OptimizeAllocationLivenessBase<
           OptimizeAllocationLiveness> {
 public:
   OptimizeAllocationLiveness() = default;
@@ -150,3 +150,12 @@ public:
 };
 
 } // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// OptimizeAllocatinliveness construction
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass>
+mlir::bufferization::createOptimizeAllocationLivenessPass() {
+  return std::make_unique<OptimizeAllocationLiveness>();
+}

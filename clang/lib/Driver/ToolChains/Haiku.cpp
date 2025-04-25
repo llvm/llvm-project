@@ -10,7 +10,6 @@
 #include "CommonArgs.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang::driver;
@@ -101,7 +100,6 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   D.getLTOMode() == LTOK_Thin);
   }
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
@@ -126,9 +124,6 @@ void haiku::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
     }
-
-    if (NeedsSanitizerDeps)
-      linkSanitizerRuntimeDeps(ToolChain, Args, CmdArgs);
 
     CmdArgs.push_back("-lgcc");
 
@@ -286,11 +281,3 @@ void Haiku::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 Tool *Haiku::buildLinker() const { return new tools::haiku::Linker(*this); }
 
 bool Haiku::HasNativeLLVMSupport() const { return true; }
-
-SanitizerMask Haiku::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
-
-  Res |= SanitizerKind::Address;
-
-  return Res;
-}

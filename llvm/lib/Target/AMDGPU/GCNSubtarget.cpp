@@ -142,7 +142,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.isAMDGCN() && AddressableLocalMemorySize == 0)
+  if (TT.getArch() == Triple::amdgcn && AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
   LocalMemorySize = AddressableLocalMemorySize;
@@ -429,10 +429,10 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
+  if (F.hasFnAttribute("amdgpu-num-sgpr")) {
+    unsigned Requested =
+        F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
 
-  if (Requested != MaxNumSGPRs) {
     // Make sure requested value does not violate subtarget's specifications.
     if (Requested && (Requested <= ReservedNumSGPRs))
       Requested = 0;
@@ -511,9 +511,10 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
-  if (Requested != MaxNumVGPRs) {
+  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
+    unsigned Requested =
+        F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
+
     if (hasGFX90AInsts())
       Requested *= 2;
 

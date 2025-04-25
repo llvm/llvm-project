@@ -284,17 +284,6 @@ def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
 def TuneCarmel : SubtargetFeature<"carmel", "ARMProcFamily", "Carmel",
                                   "Nvidia Carmel processors">;
 
-def TuneOlympus : SubtargetFeature<"olympus", "ARMProcFamily", "Olympus",
-                                   "NVIDIA Olympus processors", [
-                                   FeatureALULSLFast,
-                                   FeatureCmpBccFusion,
-                                   FeatureEnableSelectOptimize,
-                                   FeatureFuseAES,
-                                   FeatureFuseAdrpAdd,
-                                   FeaturePostRAScheduler,
-                                   FeaturePredictableSelectIsExpensive,
-                                   FeatureUseFixedOverScalableIfEqualCost]>;
-
 // Note that cyclone does not fuse AES instructions, but newer apple chips do
 // perform the fusion and cyclone is used by default when targetting apple OSes.
 def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
@@ -883,15 +872,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
                                      FeatureFullFP16, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM,
                                      FeatureFPARMv8];
-  list<SubtargetFeature> Olympus = [HasV9_2aOps, FeatureBRBE, FeatureCCIDX,
-                                    FeatureCHK, FeatureETE, FeatureFAMINMAX,
-                                    FeatureFP16FML, FeatureFP8DOT2,
-                                    FeatureFP8DOT4, FeatureFP8FMA, FeatureFPAC,
-                                    FeatureLS64, FeatureLUT, FeatureMEC,
-                                    FeatureMTE, FeaturePerfMon, FeatureRandGen,
-                                    FeatureSPE, FeatureSPE_EEF, FeatureSSBS,
-                                    FeatureSVEBitPerm, FeatureSVE2SHA3,
-                                    FeatureSVE2SM4, FeatureSVEAES];
   list<SubtargetFeature> AppleA7  = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON,FeaturePerfMon];
   list<SubtargetFeature> AppleA10 = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -1015,7 +995,7 @@ def ProcessorFeatures {
                                        FeatureCCIDX,
                                        FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureDotProd,
                                        FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS, FeatureLSE,
-                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC];
+                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> NeoverseV3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
@@ -1079,6 +1059,7 @@ def ProcessorFeatures {
                                      FeatureJS, FeatureLSE, FeaturePAuth, FeatureRAS, FeatureRCPC,
                                      FeatureCCIDX,
                                      FeatureRDM];
+
   list<SubtargetFeature> Oryon = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                      FeatureRandGen,
                                      FeaturePAuth, FeatureSM4, FeatureSHA2,
@@ -1087,7 +1068,6 @@ def ProcessorFeatures {
                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureSSBS, FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
-  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVE2SM4, FeatureSVEAES, FeatureSVE2SHA3]);
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1171,8 +1151,6 @@ def : ProcessorModel<"cortex-x4", NeoverseV2Model, ProcessorFeatures.X4,
                      [TuneX4]>;
 def : ProcessorModel<"cortex-x925", NeoverseV2Model, ProcessorFeatures.X925,
                      [TuneX925]>;
-def : ProcessorModel<"grace", NeoverseV2Model, ProcessorFeatures.Grace,
-                     [TuneNeoverseV2]>;
 def : ProcessorModel<"neoverse-e1", CortexA53Model,
                      ProcessorFeatures.NeoverseE1, [TuneNeoverseE1]>;
 def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
@@ -1188,6 +1166,7 @@ def : ProcessorModel<"neoverse-v1", NeoverseV1Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
 def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
+def : ProcessorAlias<"grace", "neoverse-v2">;
 def : ProcessorModel<"neoverse-v3", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV2Model,
@@ -1245,9 +1224,6 @@ def : ProcessorAlias<"apple-s5", "apple-a12">;
 
 def : ProcessorModel<"apple-a13", CycloneModel, ProcessorFeatures.AppleA13,
                      [TuneAppleA13]>;
-def : ProcessorAlias<"apple-s6", "apple-a13">;
-def : ProcessorAlias<"apple-s7", "apple-a13">;
-def : ProcessorAlias<"apple-s8", "apple-a13">;
 
 def : ProcessorModel<"apple-a14", CycloneModel, ProcessorFeatures.AppleA14,
                      [TuneAppleA14]>;
@@ -1260,15 +1236,12 @@ def : ProcessorAlias<"apple-m2", "apple-a15">;
 def : ProcessorModel<"apple-a16", CycloneModel, ProcessorFeatures.AppleA16,
                      [TuneAppleA16]>;
 def : ProcessorAlias<"apple-m3", "apple-a16">;
-def : ProcessorAlias<"apple-s9", "apple-a16">;
-def : ProcessorAlias<"apple-s10", "apple-a16">;
 
 def : ProcessorModel<"apple-a17", CycloneModel, ProcessorFeatures.AppleA17,
                      [TuneAppleA17]>;
 
 def : ProcessorModel<"apple-m4", CycloneModel, ProcessorFeatures.AppleM4,
                      [TuneAppleM4]>;
-def : ProcessorAlias<"apple-a18", "apple-m4">;
 
 // Alias for the latest Apple processor model supported by LLVM.
 def : ProcessorAlias<"apple-latest", "apple-m4">;
@@ -1285,10 +1258,6 @@ def : ProcessorModel<"fujitsu-monaka", A64FXModel, ProcessorFeatures.MONAKA,
 // Nvidia Carmel
 def : ProcessorModel<"carmel", NoSchedModel, ProcessorFeatures.Carmel,
                      [TuneCarmel]>;
-
-// NVIDIA Olympus
-def : ProcessorModel<"olympus", NeoverseV2Model, ProcessorFeatures.Olympus,
-                     [TuneOlympus]>;
 
 // Ampere Computing
 def : ProcessorModel<"ampere1", Ampere1Model, ProcessorFeatures.Ampere1,

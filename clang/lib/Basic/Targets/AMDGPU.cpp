@@ -248,6 +248,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   HasLegalHalfType = true;
   HasFloat16 = true;
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
+  AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -268,12 +269,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   TargetInfo::adjust(Diags, Opts);
   // ToDo: There are still a few places using default address space as private
-  // address space in OpenCL, which needs to be cleaned up, then the references
-  // to OpenCL can be removed from the following line.
-  setAddressSpaceMap((Opts.OpenCL && !Opts.OpenCLGenericAddressSpace) ||
+  // address space in OpenCL, which needs to be cleaned up, then Opts.OpenCL
+  // can be removed from the following line.
+  setAddressSpaceMap(/*DefaultIsPrivate=*/Opts.OpenCL ||
                      !isAMDGCN(getTriple()));
-
-  AtomicOpts = AtomicOptions(Opts);
 }
 
 llvm::SmallVector<Builtin::InfosShard>
@@ -331,7 +330,7 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
     }
   }
 
-  if (Opts.AtomicIgnoreDenormalMode)
+  if (AllowAMDGPUUnsafeFPAtomics)
     Builder.defineMacro("__AMDGCN_UNSAFE_FP_ATOMICS__");
 
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be

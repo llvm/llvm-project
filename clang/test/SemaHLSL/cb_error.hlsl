@@ -47,15 +47,3 @@ tbuffer B {
   // expected-error@+1 {{unknown type name 'flaot'}}
   flaot f;
 }
-
-// None of these should produce an error!
-cbuffer EmptyCBuffer {}
-
-cbuffer EmptyDeclCBuffer {
-  ;
-}
-
-cbuffer EmptyDecl2CBuffer {
-  ;
-  int X;
-}

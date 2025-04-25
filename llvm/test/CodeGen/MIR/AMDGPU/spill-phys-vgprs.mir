@@ -1,7 +1,8 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa --start-before=si-lower-sgpr-spills --stop-after=prologepilog -o - %s | FileCheck %s
 
 # CHECK: csr_sgpr_spill
-# CHECK-NOT: spillPhysVGPRs
+# CHECK: spillPhysVGPRs
+# CHECK-NEXT: - '$vgpr0'
 ---
 name: csr_sgpr_spill
 tracksRegLiveness: true

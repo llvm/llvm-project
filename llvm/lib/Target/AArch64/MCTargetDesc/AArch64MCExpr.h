@@ -23,7 +23,7 @@ namespace llvm {
 
 class AArch64MCExpr : public MCTargetExpr {
 public:
-  enum Specifier : uint16_t {
+  enum VariantKind {
     // clang-format off
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
@@ -126,25 +126,25 @@ public:
 
 private:
   const MCExpr *Expr;
-  const Specifier specifier;
+  const VariantKind Kind;
 
 protected:
-  explicit AArch64MCExpr(const MCExpr *Expr, Specifier S)
-      : Expr(Expr), specifier(S) {}
+  explicit AArch64MCExpr(const MCExpr *Expr, VariantKind Kind)
+    : Expr(Expr), Kind(Kind) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const AArch64MCExpr *create(const MCExpr *Expr, Specifier,
-                                     MCContext &Ctx);
+  static const AArch64MCExpr *create(const MCExpr *Expr, VariantKind Kind,
+                                   MCContext &Ctx);
 
   /// @}
   /// @name Accessors
   /// @{
 
   /// Get the kind of this expression.
-  Specifier getSpecifier() const { return specifier; }
+  VariantKind getKind() const { return Kind; }
 
   /// Get the expression this modifier applies to.
   const MCExpr *getSubExpr() const { return Expr; }
@@ -153,21 +153,21 @@ public:
   /// @name VariantKind information extractors.
   /// @{
 
-  static Specifier getSymbolLoc(Specifier S) {
-    return static_cast<Specifier>(S & VK_SymLocBits);
+  static VariantKind getSymbolLoc(VariantKind Kind) {
+    return static_cast<VariantKind>(Kind & VK_SymLocBits);
   }
 
-  static Specifier getAddressFrag(Specifier S) {
-    return static_cast<Specifier>(S & VK_AddressFragBits);
+  static VariantKind getAddressFrag(VariantKind Kind) {
+    return static_cast<VariantKind>(Kind & VK_AddressFragBits);
   }
 
-  static bool isNotChecked(Specifier S) { return S & VK_NC; }
+  static bool isNotChecked(VariantKind Kind) { return Kind & VK_NC; }
 
   /// @}
 
-  /// Return the string representation of the ELF relocation specifier
+  /// Convert the variant kind into an ELF-appropriate modifier
   /// (e.g. ":got:", ":lo12:").
-  StringRef getSpecifierName() const;
+  StringRef getVariantKindName() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
@@ -175,8 +175,11 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
+                                 const MCFixup *Fixup) const override;
+
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
+
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
@@ -198,7 +201,7 @@ public:
 
   AArch64PACKey::ID getKey() const { return Key; }
   uint16_t getDiscriminator() const { return Discriminator; }
-  bool hasAddressDiversity() const { return getSpecifier() == VK_AUTHADDR; }
+  bool hasAddressDiversity() const { return getKind() == VK_AUTHADDR; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
@@ -206,12 +209,15 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
+                                 const MCFixup *Fixup) const override;
+
   static bool classof(const MCExpr *E) {
     return isa<AArch64MCExpr>(E) && classof(cast<AArch64MCExpr>(E));
   }
 
   static bool classof(const AArch64MCExpr *E) {
-    return E->getSpecifier() == VK_AUTH || E->getSpecifier() == VK_AUTHADDR;
+    return E->getKind() == VK_AUTH || E->getKind() == VK_AUTHADDR;
   }
 };
 } // end namespace llvm

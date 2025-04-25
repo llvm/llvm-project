@@ -397,10 +397,9 @@ static void splitCallSite(CallBase &CB,
         continue;
       PHINode *NewPN = PHINode::Create(CurrentI->getType(), Preds.size());
       NewPN->setDebugLoc(CurrentI->getDebugLoc());
-      for (auto &Mapping : ValueToValueMaps) {
-        Value *V = Mapping[CurrentI];
-        NewPN->addIncoming(V, cast<Instruction>(V)->getParent());
-      }
+      for (auto &Mapping : ValueToValueMaps)
+        NewPN->addIncoming(Mapping[CurrentI],
+                           cast<Instruction>(Mapping[CurrentI])->getParent());
       NewPN->insertBefore(*TailBB, TailBB->begin());
       CurrentI->replaceAllUsesWith(NewPN);
     }

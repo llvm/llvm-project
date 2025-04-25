@@ -203,35 +203,27 @@ void InstrumentationRuntimeLibrary::link(
   if (BC.isMachO())
     return;
 
-  std::optional<BOLTLinker::SymbolInfo> FiniSymInfo =
-      Linker.lookupSymbolInfo("__bolt_instr_fini");
-  if (!FiniSymInfo) {
+  RuntimeFiniAddress = Linker.lookupSymbol("__bolt_instr_fini").value_or(0);
+  if (!RuntimeFiniAddress) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_fini: "
            << LibPath << "\n";
     exit(1);
   }
-  RuntimeFiniAddress = FiniSymInfo->Address;
-
-  std::optional<BOLTLinker::SymbolInfo> StartSymInfo =
-      Linker.lookupSymbolInfo("__bolt_instr_start");
-  if (!StartSymInfo) {
+  RuntimeStartAddress = Linker.lookupSymbol("__bolt_instr_start").value_or(0);
+  if (!RuntimeStartAddress) {
     errs() << "BOLT-ERROR: instrumentation library does not define "
               "__bolt_instr_start: "
            << LibPath << "\n";
     exit(1);
   }
-  RuntimeStartAddress = StartSymInfo->Address;
-
   outs() << "BOLT-INFO: output linked against instrumentation runtime "
             "library, lib entry point is 0x"
-         << Twine::utohexstr(RuntimeStartAddress) << "\n";
-
-  std::optional<BOLTLinker::SymbolInfo> ClearSymInfo =
-      Linker.lookupSymbolInfo("__bolt_instr_clear_counters");
-  const uint64_t ClearSymAddress = ClearSymInfo ? ClearSymInfo->Address : 0;
+         << Twine::utohexstr(RuntimeFiniAddress) << "\n";
   outs() << "BOLT-INFO: clear procedure is 0x"
-         << Twine::utohexstr(ClearSymAddress) << "\n";
+         << Twine::utohexstr(
+                Linker.lookupSymbol("__bolt_instr_clear_counters").value_or(0))
+         << "\n";
 
   emitTablesAsELFNote(BC);
 }

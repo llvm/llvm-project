@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
+#include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/lldb-public.h"
+
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
@@ -16,7 +20,6 @@
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
-#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSourceManager.h"
 #include "lldb/API/SBStream.h"
@@ -55,14 +58,11 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Instrumentation.h"
-#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
-#include "lldb/lldb-public.h"
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -2438,12 +2438,4 @@ lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
     error.SetErrorString("missing target");
   }
   return SBTrace();
-}
-
-lldb::SBMutex SBTarget::GetAPIMutex() const {
-  LLDB_INSTRUMENT_VA(this);
-
-  if (TargetSP target_sp = GetSP())
-    return lldb::SBMutex(target_sp);
-  return lldb::SBMutex();
 }

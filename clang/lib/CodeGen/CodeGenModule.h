@@ -374,26 +374,7 @@ public:
     NxNoRedVar,
     NxMultRedVar,
     NxUnsupportedRedExpr,
-    NxUnsupportedXteamRedThreadLimit,
-    NxUnsupportedPseudoObject,
-    NxNotRedVarInBinOpRHS,
-    NxNotAddOpInBinOpRHs,
-    NxRhsOfAssignNotBinOpOrCall,
-    NxBinOpNotAddAssignOrAssign,
-    NxNotBinOpOrCallButAccessesRedVar,
-    NxNotArgScalarEval,
-    NxReductionOpNotBinAssign,
-    NxReductionOpRhsNotBinOrCond,
-    NxReductionOpRhsNotMinMaxSum,
-    NxNotBuiltinByNameInHostCompile,
-    NxNotBuiltinByNameInDeviceCompile,
-    NxPOExprCountNotOne,
-    NxPOSemanticExprNotCall,
-    NxChildOfCallIsNull,
-    NxMultiDeviceMinMaxNotSupported,
-    NxFastReductionMinMaxNotSupported,
-    NxScanMinMaxNotSupported,
-    NxAmbiguousRedKind
+    NxUnsupportedXteamRedThreadLimit
   };
 
   using Stmt2StmtMap = llvm::DenseMap<const Stmt *, const Stmt *>;
@@ -412,22 +393,13 @@ public:
   /// Map construct statement to corresponding metadata for a NoLoop kernel.
   using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopKernelInfo>;
 
-  /// Xteam reduction operators supported today.
-  enum XteamRedOpKind {
-    XR_OP_unknown = 0,
-    // Valid values must be power of 2.
-    XR_OP_add = 1,
-    XR_OP_min = 2,
-    XR_OP_max = 4
-  };
-
   /// Map a reduction variable to the corresponding metadata. The metadata
   /// contains
   // the reduction expression, the coorresponding Xteam local aggregator var,
   // and the start arg position in the offloading function signature.
   struct XteamRedVarInfo {
     XteamRedVarInfo(const Expr *E, Address A, size_t Pos)
-        : RedVarExpr(E), RedVarAddr(A), ArgPos(Pos), Opcode(XR_OP_unknown) {}
+        : RedVarExpr{E}, RedVarAddr{A}, ArgPos{Pos} {}
     XteamRedVarInfo() = delete;
 
     /// Reduction variable expression, populated during initial analysis
@@ -438,8 +410,6 @@ public:
     /// signature, populated during signature generation. Used for device
     /// codegen only.
     size_t ArgPos;
-    /// Reduction operator type: currently one of add, min, and max.
-    XteamRedOpKind Opcode;
   };
 
   using XteamRedVarMap = llvm::DenseMap<const VarDecl *, XteamRedVarInfo>;
@@ -459,9 +429,6 @@ public:
     llvm::Value *NumTeams;
     /// Number of threads in a block, populated during device codegen.
     int BlockSize;
-    /// A mask of the reduction operators found in this kernel, populated
-    /// according to XteamRedOpKind.
-    uint8_t OpKindsFound;
     /// Nested directives, generated during analysis in both host/device
     /// codegen.
     OptKernelNestDirectives XteamNestDirs;
@@ -473,15 +440,6 @@ public:
     bool IsFast;
   };
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
-
-  struct XteamRedCollectionInfo {
-    XteamRedCollectionInfo(XteamRedVarMap VarMap, XteamRedVarVecTy VarVec,
-                           uint8_t Ops)
-        : RedVarMap(VarMap), RedVarVector(VarVec), OpKindsFound(Ops) {}
-    XteamRedVarMap RedVarMap;
-    XteamRedVarVecTy RedVarVector;
-    uint8_t OpKindsFound;
-  };
 
   /// Metadata for multi-device kernel codegen
   struct MultiDeviceBoundsInfo {
@@ -711,9 +669,6 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
-  /// To remember which types did require a vector deleting dtor.
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
-
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -862,8 +817,6 @@ private:
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
-  AtomicOptions AtomicOpts;
-
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                 const HeaderSearchOptions &headersearchopts,
@@ -881,12 +834,6 @@ public:
 
   /// Finalize LLVM code generation.
   void Release();
-
-  /// Get the current Atomic options.
-  AtomicOptions getAtomicOpts() { return AtomicOpts; }
-
-  /// Set the current Atomic options.
-  void setAtomicOpts(AtomicOptions AO) { AtomicOpts = AO; }
 
   /// Return true if we should emit location information for expressions.
   bool getExpressionLocationsEnabled() const;
@@ -1265,8 +1212,9 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
-    return (ForEH || getLangOpts().RTTI) &&
-           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
+    return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
+           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
+             (getTriple().isNVPTX() || getTriple().isAMDGPU()));
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1734,7 +1682,6 @@ public:
   void EmitGlobal(GlobalDecl D);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
-  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -1759,13 +1706,6 @@ public:
   /// Emit a code for declare mapper construct.
   void EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
                             CodeGenFunction *CGF = nullptr);
-
-  // Emit code for the OpenACC Declare declaration.
-  void EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
-                          CodeGenFunction *CGF = nullptr);
-  // Emit code for the OpenACC Routine declaration.
-  void EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
-                          CodeGenFunction *CGF = nullptr);
 
   /// Emit a code for requires directive.
   /// \param D Requires declaration
@@ -2122,7 +2062,7 @@ public:
                             Address AggVarAddr) {
     assert(isXteamRedKernel(S));
     XteamRedVarMap &RVM = getXteamRedVarMap(S);
-    assert(RVM.find(VD) != RVM.end() && "Expected reduction variable in map");
+    assert(RVM.find(VD) != RVM.end());
     RVM.find(VD)->second.RedVarExpr = RVE;
     RVM.find(VD)->second.RedVarAddr = AggVarAddr;
     // Another API is used to set ArgPos
@@ -2131,25 +2071,6 @@ public:
   void updateXteamRedVarArgPos(XteamRedVarInfo *RVInfo, size_t ArgP) {
     assert(RVInfo);
     RVInfo->ArgPos = ArgP;
-  }
-
-  void updateXteamRedVarOpcode(const CallExpr *Call, const VarDecl *VD,
-                               XteamRedVarMap *RedMap) {
-    XteamRedOpKind Opcode;
-    std::string CallName = Call->getDirectCallee()->getNameInfo().getAsString();
-    if (isOptKernelAMDGCNMax(CallName))
-      Opcode = XR_OP_max;
-    else if (isOptKernelAMDGCNMin(CallName))
-      Opcode = XR_OP_min;
-    else
-      llvm_unreachable("Expected either min or max");
-    updateXteamRedVarOpcode(VD, RedMap, Opcode);
-  }
-
-  void updateXteamRedVarOpcode(const VarDecl *VD, XteamRedVarMap *RedMap,
-                               XteamRedOpKind Opcode) {
-    assert(RedMap->contains(VD) && "Expected reduction variable in map");
-    RedMap->find(VD)->second.Opcode = Opcode;
   }
 
   void updateXteamRedKernel(const Stmt *S, llvm::Value *ThdIndex,
@@ -2200,63 +2121,6 @@ public:
   /// Return true if the provided expression accesses the provided variable,
   /// otherwise return false.
   bool isXteamRedVarExpr(const Expr *E, const VarDecl *VD) const;
-
-  /// Return status indicating whether the call is an Xteam-supported host
-  /// builtin.
-  CodeGenModule::NoLoopXteamErr
-  getStatusOptKernelHostBuiltin(std::string CallName) const;
-
-  /// Is the function name recognized as a min builtin by the host compile?
-  bool isOptKernelHostMin(std::string CallName) const {
-    return (!CallName.compare("fmin") || !CallName.compare("fminf") ||
-            !CallName.compare("fminl") || !CallName.compare("__builtin_fmin") ||
-            !CallName.compare("__builtin_fminf") ||
-            !CallName.compare("__builtin_fminl"));
-  }
-
-  /// Is the function name recognized as a max builtin by the host compile?
-  bool isOptKernelHostMax(std::string CallName) const {
-    return (!CallName.compare("fmax") || !CallName.compare("fmaxf") ||
-            !CallName.compare("fmaxl") || !CallName.compare("__builtin_fmax") ||
-            !CallName.compare("__builtin_fmaxf") ||
-            !CallName.compare("__builtin_fmaxl"));
-  }
-
-  /// Return status indicating whether the amdgcn device function is supported
-  /// by Xteam.
-  CodeGenModule::NoLoopXteamErr
-  getStatusOptKernelAMDGCNBuiltin(std::string CallName) const;
-
-  /// Is the function name recognized as a min builtin by the device compile?
-  bool isOptKernelAMDGCNMin(std::string CallName) const {
-    return (!CallName.compare("fmin[device={arch(amdgcn)}]") ||
-            !CallName.compare("fminf[device={arch(amdgcn)}]") ||
-            !CallName.compare("fminl[device={arch(amdgcn)}]") ||
-            !CallName.compare("fmin") || !CallName.compare("fminf") ||
-            !CallName.compare("fminl") || !CallName.compare("__builtin_fmin") ||
-            !CallName.compare("__builtin_fminf") ||
-            !CallName.compare("__builtin_fminl"));
-  }
-
-  // Is the function name recognized as a max builtin by the device compile?
-  bool isOptKernelAMDGCNMax(std::string CallName) const {
-    return (!CallName.compare("fmax[device={arch(amdgcn)}]") ||
-            !CallName.compare("fmaxf[device={arch(amdgcn)}]") ||
-            !CallName.compare("fmaxl[device={arch(amdgcn)}]") ||
-            !CallName.compare("fmax") || !CallName.compare("fmaxf") ||
-            !CallName.compare("fmaxl") || !CallName.compare("__builtin_fmax") ||
-            !CallName.compare("__builtin_fmaxf") ||
-            !CallName.compare("__builtin_fmaxl"));
-  }
-
-  /// Return status indicating whether the call expression is supported by Xteam
-  /// as a builtin
-  CodeGenModule::NoLoopXteamErr getStatusOptKernelBuiltin(const CallExpr *C);
-
-  /// Return status indicating if the pseudo-object expression is supported by
-  /// Xteam
-  std::pair<CodeGenModule::NoLoopXteamErr, const Expr *>
-  getStatusXteamSupportedPseudoObject(const PseudoObjectExpr *PO);
 
   /// Are we generating multi-device kernel for the statement
   bool multiDeviceFStmtEntryExists(const Stmt *S) {
@@ -2412,8 +2276,6 @@ public:
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
   }
-  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
-  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
@@ -2628,7 +2490,7 @@ private:
   /// Top level checker for xteam reduction of the loop
   std::pair<NoLoopXteamErr, bool>
   getXteamRedForStmtStatus(const OMPExecutableDirective &, const Stmt *,
-                           XteamRedVarMap *);
+                           const XteamRedVarMap &);
 
   /// Are clauses on a combined OpenMP construct compatible with no-loop
   /// codegen?
@@ -2641,7 +2503,8 @@ private:
   getXteamRedStatusForClauses(const OptKernelNestDirectives &NestDirs);
 
   /// Collect the reduction variables that may satisfy Xteam criteria
-  std::pair<NoLoopXteamErr, XteamRedCollectionInfo>
+  std::pair<NoLoopXteamErr, std::pair<CodeGenModule::XteamRedVarMap,
+                                      CodeGenModule::XteamRedVarVecTy>>
   collectXteamRedVars(const OptKernelNestDirectives &NestDirs);
 
   /// Top level checker for multi device of the loop

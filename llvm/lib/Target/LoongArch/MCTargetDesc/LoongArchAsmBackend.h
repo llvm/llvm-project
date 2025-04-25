@@ -57,9 +57,12 @@ public:
                                      MCAlignFragment &AF) override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t Value,
                              const MCSubtargetInfo *STI) override;
 
+  unsigned getNumFixupKinds() const override {
+    return LoongArch::NumTargetFixupKinds;
+  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 

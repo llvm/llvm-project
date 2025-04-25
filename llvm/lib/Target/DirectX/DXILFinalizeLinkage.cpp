@@ -18,7 +18,7 @@
 using namespace llvm;
 
 static bool finalizeLinkage(Module &M) {
-  SmallVector<Function *> Funcs;
+  SmallPtrSet<Function *, 8> Funcs;
 
   // Collect non-entry and non-exported functions to set to internal linkage.
   for (Function &EF : M.functions()) {
@@ -26,7 +26,7 @@ static bool finalizeLinkage(Module &M) {
       continue;
     if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
       continue;
-    Funcs.push_back(&EF);
+    Funcs.insert(&EF);
   }
 
   for (Function *F : Funcs) {
@@ -35,14 +35,6 @@ static bool finalizeLinkage(Module &M) {
     if (F->isDefTriviallyDead())
       M.getFunctionList().erase(F);
   }
-
-  // Do a pass over intrinsics that are no longer used and remove them.
-  Funcs.clear();
-  for (Function &F : M.functions())
-    if (F.isIntrinsic() && F.use_empty())
-      Funcs.push_back(&F);
-  for (Function *F : Funcs)
-    F->eraseFromParent();
 
   return false;
 }

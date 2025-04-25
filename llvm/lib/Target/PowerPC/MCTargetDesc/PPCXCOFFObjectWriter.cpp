@@ -9,7 +9,6 @@
 
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
-#include "PPCMCExpr.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCValue.h"
@@ -40,8 +39,9 @@ llvm::createPPCXCOFFObjectWriter(bool Is64Bit) {
 
 std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     const MCValue &Target, const MCFixup &Fixup, bool IsPCRel) const {
-  const auto Specifier =
-      Target.isAbsolute() ? PPCMCExpr::VK_None : getSpecifier(Target.getSymA());
+  const MCSymbolRefExpr::VariantKind Modifier =
+      Target.isAbsolute() ? MCSymbolRefExpr::VK_None
+                          : Target.getSymA()->getKind();
   // People from AIX OS team says AIX link editor does not care about
   // the sign bit in the relocation entry "most" of the time.
   // The system assembler seems to set the sign bit on relocation entry
@@ -59,18 +59,18 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     report_fatal_error("Unimplemented fixup kind.");
   case PPC::fixup_ppc_half16: {
     const uint8_t SignAndSizeForHalf16 = EncodedSignednessIndicator | 15;
-    switch (Specifier) {
+    switch (Modifier) {
     default:
       report_fatal_error("Unsupported modifier for half16 fixup.");
-    case PPCMCExpr::VK_None:
+    case MCSymbolRefExpr::VK_None:
       return {XCOFF::RelocationType::R_TOC, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_U:
+    case MCSymbolRefExpr::VK_PPC_U:
       return {XCOFF::RelocationType::R_TOCU, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_L:
+    case MCSymbolRefExpr::VK_PPC_L:
       return {XCOFF::RelocationType::R_TOCL, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_AIX_TLSLE:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForHalf16};
-    case PPCMCExpr::VK_AIX_TLSLD:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLD:
       return {XCOFF::RelocationType::R_TLS_LD, SignAndSizeForHalf16};
     }
   } break;
@@ -78,16 +78,16 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
   case PPC::fixup_ppc_half16dq: {
     if (IsPCRel)
       report_fatal_error("Invalid PC-relative relocation.");
-    switch (Specifier) {
+    switch (Modifier) {
     default:
       llvm_unreachable("Unsupported Modifier");
-    case PPCMCExpr::VK_None:
+    case MCSymbolRefExpr::VK_None:
       return {XCOFF::RelocationType::R_TOC, 15};
-    case PPCMCExpr::VK_L:
+    case MCSymbolRefExpr::VK_PPC_L:
       return {XCOFF::RelocationType::R_TOCL, 15};
-    case PPCMCExpr::VK_AIX_TLSLE:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, 15};
-    case PPCMCExpr::VK_AIX_TLSLD:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLD:
       return {XCOFF::RelocationType::R_TLS_LD, 15};
     }
   } break;
@@ -98,7 +98,7 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
   case PPC::fixup_ppc_br24abs:
     return {XCOFF::RelocationType::R_RBA, EncodedSignednessIndicator | 25};
   case PPC::fixup_ppc_nofixup: {
-    if (Specifier == PPCMCExpr::VK_None)
+    if (Modifier == MCSymbolRefExpr::VK_None)
       return {XCOFF::RelocationType::R_REF, 0};
     else
       llvm_unreachable("Unsupported Modifier");
@@ -108,22 +108,22 @@ std::pair<uint8_t, uint8_t> PPCXCOFFObjectWriter::getRelocTypeAndSignSize(
     const uint8_t SignAndSizeForFKData =
         EncodedSignednessIndicator |
         ((unsigned)Fixup.getKind() == FK_Data_4 ? 31 : 63);
-    switch (Specifier) {
+    switch (Modifier) {
     default:
       report_fatal_error("Unsupported modifier");
-    case PPCMCExpr::VK_AIX_TLSGD:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSGD:
       return {XCOFF::RelocationType::R_TLS, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSGDM:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSGDM:
       return {XCOFF::RelocationType::R_TLSM, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSIE:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSIE:
       return {XCOFF::RelocationType::R_TLS_IE, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSLE:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLE:
       return {XCOFF::RelocationType::R_TLS_LE, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSLD:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSLD:
       return {XCOFF::RelocationType::R_TLS_LD, SignAndSizeForFKData};
-    case PPCMCExpr::VK_AIX_TLSML:
+    case MCSymbolRefExpr::VK_PPC_AIX_TLSML:
       return {XCOFF::RelocationType::R_TLSML, SignAndSizeForFKData};
-    case PPCMCExpr::VK_None:
+    case MCSymbolRefExpr::VK_None:
       return {XCOFF::RelocationType::R_POS, SignAndSizeForFKData};
     }
   }

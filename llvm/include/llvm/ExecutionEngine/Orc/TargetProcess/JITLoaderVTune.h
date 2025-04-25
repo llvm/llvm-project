@@ -1,3 +1,4 @@
+
 //===------ JITLoaderVTune.h --- Register profiler objects ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -18,13 +19,13 @@
 #include <cstdint>
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerVTuneImpl(const char *ArgData, size_t ArgSize);
+llvm_orc_registerVTuneImpl(const char *Data, uint64_t Size);
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_unregisterVTuneImpl(const char *ArgData, size_t ArgSize);
+llvm_orc_unregisterVTuneImpl(const char *Data, uint64_t Size);
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_test_registerVTuneImpl(const char *ArgData, size_t ArgSize);
+llvm_orc_test_registerVTuneImpl(const char *Data, uint64_t Size);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_JITLOADERVTUNE_H
 

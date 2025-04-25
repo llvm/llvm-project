@@ -74,8 +74,8 @@ contains
 
   ! C1020
   subroutine s5
-    real, target, save :: x[*]
-    real, target, volatile, save :: y[*]
+    real, target :: x[*]
+    real, target, volatile :: y[*]
     real, pointer :: p
     real, pointer, volatile :: q
     p => x
@@ -146,23 +146,12 @@ contains
     end
   end
 
-  ! F'2023 C1029 A data-target shall not be a coindexed object.
+  ! C1026 (R1037) A data-target shall not be a coindexed object.
   subroutine s10
-    real, target, save :: a[*]
+    real, target :: a[*]
     real, pointer :: b
     !ERROR: A coindexed object may not be a pointer target
     b => a[1]
-  end
-
-  ! F'2023 C1027 the LHS may not be coindexed
-  subroutine s11
-    type t
-      real, pointer :: p
-    end type
-    type(t), save :: ca[*]
-    real, target :: x
-    !ERROR: The left-hand side of a pointer assignment must not be coindexed
-    ca[1]%p => x
   end
 
 end

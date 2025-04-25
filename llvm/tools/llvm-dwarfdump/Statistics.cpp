@@ -529,9 +529,8 @@ static void collectStatsRecursive(
     auto OffsetFn = Die.find(dwarf::DW_AT_abstract_origin);
     if (OffsetFn) {
       uint64_t OffsetOfInlineFnCopy = (*OffsetFn).getRawUValue();
-      if (auto It = LocalAbstractOriginFnInfo.find(OffsetOfInlineFnCopy);
-          It != LocalAbstractOriginFnInfo.end()) {
-        AbstractOriginVars = It->second;
+      if (LocalAbstractOriginFnInfo.count(OffsetOfInlineFnCopy)) {
+        AbstractOriginVars = LocalAbstractOriginFnInfo[OffsetOfInlineFnCopy];
         AbstractOriginVarsPtr = &AbstractOriginVars;
       } else {
         // This means that the DW_AT_inline fn copy is out of order
@@ -783,10 +782,9 @@ static void collectZeroLocCovForVarsWithAbstractOrigin(
     // If there is no entry within LocalAbstractOriginFnInfo for the given
     // FnCopyRawUValue, function isn't out-of-order in DWARF. Rather, we have
     // CrossCU referencing.
-    auto It = LocalAbstractOriginFnInfo.find(FnCopyRawUValue);
-    if (It == LocalAbstractOriginFnInfo.end())
+    if (!LocalAbstractOriginFnInfo.count(FnCopyRawUValue))
       continue;
-    AbstractOriginVars = It->second;
+    AbstractOriginVars = LocalAbstractOriginFnInfo[FnCopyRawUValue];
     updateVarsWithAbstractOriginLocCovInfo(FnDieWithAbstractOrigin,
                                            AbstractOriginVars);
 
@@ -973,7 +971,6 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   SaturatingUINT64 VarParamUnique = 0;
   SaturatingUINT64 VarParamWithLoc = 0;
   SaturatingUINT64 NumFunctions = 0;
-  SaturatingUINT64 NumOutOfLineFunctions = 0;
   SaturatingUINT64 NumInlinedFunctions = 0;
   SaturatingUINT64 NumFuncsWithSrcLoc = 0;
   SaturatingUINT64 NumAbstractOrigins = 0;
@@ -1002,7 +999,6 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
                << Entry.getKey() << ": " << V.getKey() << "\n");
     NumFunctions += Stats.IsFunction;
     NumFuncsWithSrcLoc += Stats.HasSourceLocation;
-    NumOutOfLineFunctions += Stats.IsFunction * Stats.NumFnOutOfLine;
     NumInlinedFunctions += Stats.IsFunction * Stats.NumFnInlined;
     NumAbstractOrigins += Stats.IsFunction * Stats.NumAbstractOrigins;
     ParamTotal += Stats.NumParams;
@@ -1028,7 +1024,6 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
 
   printDatum(J, "#functions", NumFunctions.Value);
   printDatum(J, "#functions with location", NumFuncsWithSrcLoc.Value);
-  printDatum(J, "#out-of-line functions", NumOutOfLineFunctions.Value);
   printDatum(J, "#inlined functions", NumInlinedFunctions.Value);
   printDatum(J, "#inlined functions with abstract origins",
              NumAbstractOrigins.Value);

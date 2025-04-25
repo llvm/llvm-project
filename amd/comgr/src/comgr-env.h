@@ -43,7 +43,6 @@ namespace env {
 
 /// Return whether the environment requests temps be saved.
 bool shouldSaveTemps();
-bool shouldSaveLLVMTemps();
 
 /// If the environment requests logs be redirected, return the string identifier
 /// of where to redirect. Otherwise return @p None.
@@ -58,15 +57,6 @@ bool needTimeStatistics();
 /// If environment variable LLVM_PATH is set, return the environment variable,
 /// otherwise return the default LLVM path.
 llvm::StringRef getLLVMPath();
-
-/// If environment variable AMD_COMGR_CACHE_POLICY is set, return the
-/// environment variable, otherwise return empty
-llvm::StringRef getCachePolicy();
-
-/// If environment variable AMD_COMGR_CACHE_DIR is set, return the environment
-/// variable, otherwise return the default path: On Linux it's typically
-/// $HOME/.cache/comgr_cache (depends on XDG_CACHE_HOME)
-llvm::StringRef getCacheDirectory();
 
 } // namespace env
 } // namespace COMGR

@@ -464,13 +464,9 @@ struct ExtractCoindexedObjectHelper {
   }
 };
 
-static inline std::optional<CoarrayRef> ExtractCoarrayRef(const DataRef &x) {
-  return ExtractCoindexedObjectHelper{}(x);
-}
-
 template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   if (auto dataRef{ExtractDataRef(x, true)}) {
-    return ExtractCoarrayRef(*dataRef);
+    return ExtractCoindexedObjectHelper{}(*dataRef);
   } else {
     return ExtractCoindexedObjectHelper{}(x);
   }
@@ -1063,11 +1059,9 @@ bool IsProcedurePointer(const Expr<SomeType> &);
 bool IsProcedure(const Expr<SomeType> &);
 bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsBareNullPointer(const Expr<SomeType> *); // NULL() w/o MOLD= or type
-bool IsNullObjectPointer(const Expr<SomeType> *); // NULL() or NULL(objptr)
-bool IsNullProcedurePointer(const Expr<SomeType> *); // NULL() or NULL(procptr)
-bool IsNullPointer(const Expr<SomeType> *); // NULL() or NULL(pointer)
-bool IsNullAllocatable(const Expr<SomeType> *); // NULL(allocatable)
-bool IsNullPointerOrAllocatable(const Expr<SomeType> *); // NULL of any form
+bool IsNullObjectPointer(const Expr<SomeType> &);
+bool IsNullProcedurePointer(const Expr<SomeType> &);
+bool IsNullPointer(const Expr<SomeType> &);
 bool IsObjectPointer(const Expr<SomeType> &);
 
 // Can Expr be passed as absent to an optional dummy argument.
@@ -1309,18 +1303,6 @@ inline bool IsCUDADeviceSymbol(const Symbol &sym) {
   return false;
 }
 
-inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        (*details->cudaDataAttr() == common::CUDADataAttr::Managed ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 // Get the number of distinct symbols with CUDA device
 // attribute in the expression.
 template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
@@ -1333,40 +1315,10 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   return symbols.size();
 }
 
-// Get the number of distinct symbols with CUDA managed or unified
-// attribute in the expression.
-template <typename A>
-inline int GetNbOfCUDAManagedOrUnifiedSymbols(const A &expr) {
-  semantics::UnorderedSymbolSet symbols;
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDAManagedOrUnifiedSymbol(sym)) {
-      symbols.insert(sym);
-    }
-  }
-  return symbols.size();
-}
-
 // Check if any of the symbols part of the expression has a CUDA device
 // attribute.
 template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
-}
-
-// Check if any of the symbols part of the lhs or rhs expression has a CUDA
-// device attribute.
-template <typename A, typename B>
-inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
-  int lhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
-  int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
-
-  // Special case where only managed or unifed symbols are involved. This is
-  // performed on the host.
-  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
-      rhsNbSymbols == 1) {
-    return false;
-  }
-  return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
 }
 
 /// Check if the expression is a mix of host and device variables that require
@@ -1465,8 +1417,8 @@ inline bool IsAssumedSizeArray(const Symbol &symbol) {
 // In a SELECT RANK construct, ResolveAssociations() stops at a
 // RANK(n) or RANK(*) case symbol, but traverses the selector for
 // RANK DEFAULT.
-const Symbol &ResolveAssociations(const Symbol &, bool stopAtTypeGuard = false);
-const Symbol &GetAssociationRoot(const Symbol &, bool stopAtTypeGuard = false);
+const Symbol &ResolveAssociations(const Symbol &);
+const Symbol &GetAssociationRoot(const Symbol &);
 
 const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);

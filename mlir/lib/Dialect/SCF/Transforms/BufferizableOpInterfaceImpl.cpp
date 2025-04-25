@@ -52,7 +52,7 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
 static bool doesNotAliasExternalValue(Value value, Region *region,
                                       ValueRange exceptions,
                                       const OneShotAnalysisState &state) {
-  assert(llvm::hasSingleElement(region->getBlocks()) &&
+  assert(region->getBlocks().size() == 1 &&
          "expected region with single block");
   bool result = true;
   state.applyOnAliases(value, [&](Value alias) {
@@ -652,7 +652,8 @@ struct ForOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (state.getOptions().copyBeforeWrite)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult
@@ -893,7 +894,8 @@ struct WhileOpInterface
     if (failed(bufferizableOp.resolveTensorOpOperandConflicts(rewriter, state)))
       return failure();
 
-    if (state.getOptions().copyBeforeWrite)
+    if (!state.getOptions().enforceAliasingInvariants ||
+        state.getOptions().copyBeforeWrite)
       return success();
 
     // According to the `getAliasing...` implementations, a bufferized OpResult

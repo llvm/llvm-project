@@ -52,7 +52,7 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS __cxa_exception* __cxa_init_primary_exception(
 
 #endif
 
-_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+namespace std { // purposefully not using versioning namespace
 
 #ifndef _LIBCPP_ABI_MICROSOFT
 
@@ -171,6 +171,6 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 }
 
 #endif // _LIBCPP_ABI_MICROSOFT
-_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+} // namespace std
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_PTR_H

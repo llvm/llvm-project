@@ -109,7 +109,8 @@ class PhiIncomingAnalysis {
 
   // For each reachable basic block, whether it is a source in the induced
   // subgraph of the CFG.
-  MapVector<MachineBasicBlock *, bool> ReachableMap;
+  DenseMap<MachineBasicBlock *, bool> ReachableMap;
+  SmallVector<MachineBasicBlock *, 4> ReachableOrdered;
   SmallVector<MachineBasicBlock *, 4> Stack;
   SmallVector<MachineBasicBlock *, 4> Predecessors;
 
@@ -128,11 +129,13 @@ public:
   void analyze(MachineBasicBlock &DefBlock, ArrayRef<Incoming> Incomings) {
     assert(Stack.empty());
     ReachableMap.clear();
+    ReachableOrdered.clear();
     Predecessors.clear();
 
     // Insert the def block first, so that it acts as an end point for the
     // traversal.
     ReachableMap.try_emplace(&DefBlock, false);
+    ReachableOrdered.push_back(&DefBlock);
 
     for (auto Incoming : Incomings) {
       MachineBasicBlock *MBB = Incoming.Block;
@@ -142,6 +145,7 @@ public:
       }
 
       ReachableMap.try_emplace(MBB, false);
+      ReachableOrdered.push_back(MBB);
 
       // If this block has a divergent terminator and the def block is its
       // post-dominator, the wave may first visit the other successors.
@@ -151,11 +155,14 @@ public:
 
     while (!Stack.empty()) {
       MachineBasicBlock *MBB = Stack.pop_back_val();
-      if (ReachableMap.try_emplace(MBB, false).second)
-        append_range(Stack, MBB->successors());
+      if (!ReachableMap.try_emplace(MBB, false).second)
+        continue;
+      ReachableOrdered.push_back(MBB);
+
+      append_range(Stack, MBB->successors());
     }
 
-    for (auto &[MBB, Reachable] : ReachableMap) {
+    for (MachineBasicBlock *MBB : ReachableOrdered) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
         if (ReachableMap.count(Pred)) {
@@ -165,7 +172,7 @@ public:
         }
       }
       if (!HaveReachablePred)
-        Reachable = true;
+        ReachableMap[MBB] = true;
       if (HaveReachablePred) {
         for (MachineBasicBlock *UnreachablePred : Stack) {
           if (!llvm::is_contained(Predecessors, UnreachablePred))

@@ -555,6 +555,8 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     default: llvm_unreachable("Invalid attribute set number");)";
 
   for (const CodeGenIntrinsic &Int : Ints) {
+    if (!hasFnAttributes(Int))
+      continue;
     unsigned ID = UniqFnAttributes.size();
     if (!UniqFnAttributes.try_emplace(&Int, ID).second)
       continue;
@@ -604,7 +606,8 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
   }
 } // getIntrinsicFnAttributeSet
 
-static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
+AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {
+)";
 
   // Compute the maximum number of attribute arguments and the map. For function
   // attributes, we only consider whether the intrinsics has any function
@@ -616,14 +619,6 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
     UniqAttributes.try_emplace(&Int, ID);
   }
 
-  // Emit an array of AttributeList.  Most intrinsics will have at least one
-  // entry, for the function itself (index ~1), which is usually nounwind.
-  for (const CodeGenIntrinsic &Int : Ints) {
-    uint16_t FnAttrIndex = UniqFnAttributes[&Int];
-    OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
-                  UniqAttributes[&Int], Int.Name);
-  }
-
   // Assign a 16-bit packed ID for each intrinsic. The lower 8-bits will be its
   // "argument attribute ID" (index in UniqAttributes) and upper 8 bits will be
   // its "function attribute ID" (index in UniqFnAttributes).
@@ -632,12 +627,17 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
   if (UniqFnAttributes.size() > 256)
     PrintFatalError("Too many unique function attributes for table!");
 
-  OS << R"(
-};
-
-AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {)";
+  // Emit an array of AttributeList.  Most intrinsics will have at least one
+  // entry, for the function itself (index ~1), which is usually nounwind.
+  OS << "  static constexpr uint16_t IntrinsicsToAttributesMap[] = {";
+  for (const CodeGenIntrinsic &Int : Ints) {
+    uint16_t FnAttrIndex = hasFnAttributes(Int) ? UniqFnAttributes[&Int] : 0;
+    OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
+                  UniqAttributes[&Int], Int.Name);
+  }
 
   OS << formatv(R"(
+  };
   if (id == 0)
     return AttributeList();
 

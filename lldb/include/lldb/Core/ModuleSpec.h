@@ -389,7 +389,8 @@ public:
   }
 
   typedef std::vector<ModuleSpec> collection;
-  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
+  typedef LockingAdaptedIterable<collection, ModuleSpec, vector_adapter,
+                                 std::recursive_mutex>
       ModuleSpecIterable;
 
   ModuleSpecIterable ModuleSpecs() {

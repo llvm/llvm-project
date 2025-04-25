@@ -16,6 +16,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -32,7 +33,8 @@ protected:
         DiagID(new DiagnosticIDs()),
         Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions),
-        Search(HSOpts, SourceMgr, Diags, LangOpts, Target.get()) {
+        Search(std::make_shared<HeaderSearchOptions>(), SourceMgr, Diags,
+               LangOpts, Target.get()) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
   }
@@ -86,7 +88,6 @@ protected:
   LangOptions LangOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
-  HeaderSearchOptions HSOpts;
   HeaderSearch Search;
   std::unique_ptr<HeaderMap> HMap;
 };

@@ -27,7 +27,6 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
@@ -48,7 +47,7 @@ using namespace CodeGen;
 static_assert(clang::Sema::MaximumAlignment <= llvm::Value::MaximumAlignment,
               "Clang max alignment greater than what LLVM supports?");
 
-void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
+void CodeGenFunction::EmitDecl(const Decl &D) {
   switch (D.getKind()) {
   case Decl::BuiltinTemplate:
   case Decl::TranslationUnit:
@@ -152,7 +151,7 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     return;
   case Decl::UsingPack:
     for (auto *Using : cast<UsingPackDecl>(D).expansions())
-      EmitDecl(*Using, /*EvaluateConditionDecl=*/EvaluateConditionDecl);
+      EmitDecl(*Using);
     return;
   case Decl::UsingDirective: // using namespace X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
@@ -164,8 +163,10 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     assert(VD.isLocalVarDecl() &&
            "Should not see file-scope variables inside a function!");
     EmitVarDecl(VD);
-    if (EvaluateConditionDecl)
-      MaybeEmitDeferredVarDeclInit(&VD);
+    if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
+      for (auto *B : DD->flat_bindings())
+        if (auto *HD = B->getHoldingVar())
+          EmitVarDecl(*HD);
 
     return;
   }
@@ -175,11 +176,6 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
 
   case Decl::OMPDeclareMapper:
     return CGM.EmitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(&D), this);
-
-  case Decl::OpenACCDeclare:
-    return CGM.EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(&D), this);
-  case Decl::OpenACCRoutine:
-    return CGM.EmitOpenACCRoutine(cast<OpenACCRoutineDecl>(&D), this);
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
@@ -2076,14 +2072,6 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
                         /*IsAutoInit=*/false);
 }
 
-void CodeGenFunction::MaybeEmitDeferredVarDeclInit(const VarDecl *VD) {
-  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
-    for (auto *B : DD->flat_bindings())
-      if (auto *HD = B->getHoldingVar())
-        EmitVarDecl(*HD);
-  }
-}
-
 /// Emit an expression as an initializer for an object (variable, field, etc.)
 /// at the given location.  The expression is not necessarily the normal
 /// initializer for the object, and the address is not necessarily
@@ -2877,16 +2865,6 @@ void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
       (!LangOpts.EmitAllDecls && !D->isUsed()))
     return;
   getOpenMPRuntime().emitUserDefinedMapper(D, CGF);
-}
-
-void CodeGenModule::EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
-                                       CodeGenFunction *CGF) {
-  // This is a no-op, we cna just ignore these declarations.
-}
-
-void CodeGenModule::EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
-                                       CodeGenFunction *CGF) {
-  // This is a no-op, we cna just ignore these declarations.
 }
 
 void CodeGenModule::EmitOMPRequiresDecl(const OMPRequiresDecl *D) {

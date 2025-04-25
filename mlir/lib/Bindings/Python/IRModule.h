@@ -11,7 +11,6 @@
 #define MLIR_BINDINGS_PYTHON_IRMODULES_H
 
 #include <optional>
-#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -23,10 +22,9 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Transforms.h"
-#include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/ThreadPool.h"
 
 namespace mlir {
 namespace python {
@@ -158,29 +156,6 @@ private:
   nanobind::object location;
   // The kind of push that was performed.
   FrameKind frameKind;
-};
-
-/// Wrapper around MlirLlvmThreadPool
-/// Python object owns the C++ thread pool
-class PyThreadPool {
-public:
-  PyThreadPool() {
-    ownedThreadPool = std::make_unique<llvm::DefaultThreadPool>();
-  }
-  PyThreadPool(const PyThreadPool &) = delete;
-  PyThreadPool(PyThreadPool &&) = delete;
-
-  int getMaxConcurrency() const { return ownedThreadPool->getMaxConcurrency(); }
-  MlirLlvmThreadPool get() { return wrap(ownedThreadPool.get()); }
-
-  std::string _mlir_thread_pool_ptr() const {
-    std::stringstream ss;
-    ss << ownedThreadPool.get();
-    return ss.str();
-  }
-
-private:
-  std::unique_ptr<llvm::ThreadPoolInterface> ownedThreadPool;
 };
 
 /// Wrapper around MlirContext.
@@ -601,16 +576,15 @@ public:
   /// Implements the bound 'print' method and helps with others.
   void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool useNameLocAsPrefix, bool assumeVerified,
-             nanobind::object fileObject, bool binary, bool skipRegions);
+             bool assumeVerified, nanobind::object fileObject, bool binary,
+             bool skipRegions);
   void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
   nanobind::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope,
-                          bool useNameLocAsPrefix, bool assumeVerified,
-                          bool skipRegions);
+                          bool assumeVerified, bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const nanobind::object &fileObject,

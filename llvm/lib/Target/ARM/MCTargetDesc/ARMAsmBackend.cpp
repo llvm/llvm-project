@@ -12,7 +12,6 @@
 #include "MCTargetDesc/ARMAsmBackendELF.h"
 #include "MCTargetDesc/ARMAsmBackendWinCOFF.h"
 #include "MCTargetDesc/ARMFixupKinds.h"
-#include "MCTargetDesc/ARMMCExpr.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -199,7 +198,7 @@ const MCFixupKindInfo &ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < ARM::NumTargetFixupKinds &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
          "Invalid kind!");
   return (Endian == llvm::endianness::little
               ? InfosLE
@@ -606,7 +605,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     // Offset by 8 just as above.
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (getSpecifier(SRE) == ARMMCExpr::VK_TLSCALL)
+      if (SRE->getKind() == MCSymbolRefExpr::VK_TLSCALL)
         return 0;
     return 0xffffff & (Value >> 2);
   case ARM::fixup_t2_uncondbranch: {
@@ -733,7 +732,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     uint32_t offset = (Value - 4) >> 2;
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (getSpecifier(SRE) == ARMMCExpr::VK_TLSCALL)
+      if (SRE->getKind() == MCSymbolRefExpr::VK_TLSCALL)
         offset = 0;
     uint32_t signBit = (offset & 0x400000) >> 22;
     uint32_t I1Bit = (offset & 0x200000) >> 21;
@@ -956,11 +955,13 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
 
 bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
-                                          const MCValue &Target,
+                                          const MCValue &Target, const uint64_t,
                                           const MCSubtargetInfo *STI) {
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind();
+  if (FixupKind >= FirstLiteralRelocationKind)
+    return true;
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
 

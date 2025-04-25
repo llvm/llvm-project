@@ -3641,12 +3641,14 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
     }
     // Next check all loops nested within L.
     SmallVector<const Loop *, 4> Worklist;
-    llvm::append_range(Worklist, L->getSubLoops());
+    Worklist.insert(Worklist.end(), L->getSubLoops().begin(),
+                    L->getSubLoops().end());
     while (!Worklist.empty()) {
       auto *CurLoop = Worklist.pop_back_val();
       if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
         return false;
-      llvm::append_range(Worklist, CurLoop->getSubLoops());
+      Worklist.insert(Worklist.end(), CurLoop->getSubLoops().begin(),
+                      CurLoop->getSubLoops().end());
     }
     return true;
   };

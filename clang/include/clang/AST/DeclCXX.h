@@ -1720,6 +1720,14 @@ public:
   /// static analysis, or similar.
   bool hasMemberName(DeclarationName N) const;
 
+  /// Performs an imprecise lookup of a dependent name in this class.
+  ///
+  /// This function does not follow strict semantic rules and should be used
+  /// only when lookup rules can be relaxed, e.g. indexing.
+  std::vector<const NamedDecl *>
+  lookupDependentName(DeclarationName Name,
+                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+
   /// Renders and displays an inheritance diagram
   /// for this C++ class and all of its base classes (transitively) using
   /// GraphViz.
@@ -4186,8 +4194,8 @@ public:
   /// decomposition declaration, and when the initializer is type-dependent.
   Expr *getBinding() const { return Binding; }
 
-  // Get the array of nested BindingDecls when the binding represents a pack.
-  llvm::ArrayRef<BindingDecl *> getBindingPackDecls() const;
+  // Get the array of Exprs when the binding represents a pack.
+  llvm::ArrayRef<Expr *> getBindingPackExprs() const;
 
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
@@ -4238,8 +4246,10 @@ class DecompositionDecl final
     for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
       if (B->isParameterPack() && B->getBinding()) {
-        for (BindingDecl *NestedBD : B->getBindingPackDecls()) {
-          NestedBD->setDecomposedDecl(this);
+        for (Expr *E : B->getBindingPackExprs()) {
+          auto *DRE = cast<DeclRefExpr>(E);
+          auto *NestedB = cast<BindingDecl>(DRE->getDecl());
+          NestedB->setDecomposedDecl(this);
         }
       }
     }
@@ -4268,21 +4278,25 @@ public:
   // Provide a flattened range to visit each binding.
   auto flat_bindings() const {
     llvm::ArrayRef<BindingDecl *> Bindings = bindings();
-    llvm::ArrayRef<BindingDecl *> PackBindings;
+    llvm::ArrayRef<Expr *> PackExprs;
 
     // Split the bindings into subranges split by the pack.
-    llvm::ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
+    auto S1 = Bindings.take_until(
         [](BindingDecl *BD) { return BD->isParameterPack(); });
 
-    Bindings = Bindings.drop_front(BeforePackBindings.size());
+    Bindings = Bindings.drop_front(S1.size());
     if (!Bindings.empty()) {
-      PackBindings = Bindings.front()->getBindingPackDecls();
+      PackExprs = Bindings.front()->getBindingPackExprs();
       Bindings = Bindings.drop_front();
     }
 
-    return llvm::concat<BindingDecl *const>(std::move(BeforePackBindings),
-                                            std::move(PackBindings),
-                                            std::move(Bindings));
+    auto S2 = llvm::map_range(PackExprs, [](Expr *E) {
+      auto *DRE = cast<DeclRefExpr>(E);
+      return cast<BindingDecl>(DRE->getDecl());
+    });
+
+    return llvm::concat<BindingDecl *>(std::move(S1), std::move(S2),
+                                       std::move(Bindings));
   }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;

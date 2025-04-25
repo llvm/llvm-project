@@ -95,10 +95,10 @@ public:
         CreateAnalysisConsumer(Compiler);
     if (OnlyEmitWarnings)
       AnalysisConsumer->AddDiagnosticConsumer(
-          std::make_unique<OnlyWarningsDiagConsumer>(DiagsOutput));
+          new OnlyWarningsDiagConsumer(DiagsOutput));
     else
       AnalysisConsumer->AddDiagnosticConsumer(
-          std::make_unique<PathDiagConsumer>(DiagsOutput));
+          new PathDiagConsumer(DiagsOutput));
     addChecker<Fns...>(*AnalysisConsumer, Compiler.getAnalyzerOpts());
     return std::move(AnalysisConsumer);
   }

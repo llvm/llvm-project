@@ -90,6 +90,10 @@ public:
                                          : llvm::endianness::big),
         TT(TT) {}
 
+  unsigned getNumFixupKinds() const override {
+    return PPC::NumTargetFixupKinds;
+  }
+
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
@@ -126,7 +130,7 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(Kind - FirstTargetFixupKind < PPC::NumTargetFixupKinds &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
            "Invalid kind!");
     return (Endian == llvm::endianness::little
                 ? InfosLE
@@ -157,12 +161,12 @@ public:
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t,
                              const MCSubtargetInfo *STI) override {
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {
     default:
-      return false;
+      return Kind >= FirstLiteralRelocationKind;
     case PPC::fixup_ppc_br24:
     case PPC::fixup_ppc_br24abs:
     case PPC::fixup_ppc_br24_notoc:

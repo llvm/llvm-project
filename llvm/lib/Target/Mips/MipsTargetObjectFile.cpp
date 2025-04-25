@@ -186,7 +186,8 @@ MCSection *MipsTargetObjectFile::getSectionForConstant(const DataLayout &DL,
 
 const MCExpr *
 MipsTargetObjectFile::getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
   Expr = MCBinaryExpr::createAdd(
       Expr, MCConstantExpr::create(0x8000, getContext()), getContext());
   return MipsMCExpr::create(MipsMCExpr::MEK_DTPREL, Expr, getContext());

@@ -996,6 +996,7 @@ public:
     return C == OMPTileDirectiveClass || C == OMPUnrollDirectiveClass ||
            C == OMPReverseDirectiveClass || C == OMPInterchangeDirectiveClass ||
            C == OMPStripeDirectiveClass;
+    ;
   }
 };
 
@@ -5674,6 +5675,7 @@ public:
   /// \param NumLoops   Number of associated loops to allocate.
   static OMPStripeDirective *
   CreateEmpty(const ASTContext &C, unsigned NumClauses, unsigned NumLoops);
+
   /// Gets/sets the associated loops after striping.
   ///
   /// This is in de-sugared format stored as a CompoundStmt.

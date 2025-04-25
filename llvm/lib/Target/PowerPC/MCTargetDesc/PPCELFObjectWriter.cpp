@@ -9,7 +9,6 @@
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -38,13 +37,36 @@ PPCELFObjectWriter::PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI)
                             Is64Bit ?  ELF::EM_PPC64 : ELF::EM_PPC,
                             /*HasRelocationAddend*/ true) {}
 
-static PPCMCExpr::Specifier getAccessVariant(const MCValue &Target,
-                                             const MCFixup &Fixup) {
+static MCSymbolRefExpr::VariantKind getAccessVariant(const MCValue &Target,
+                                                     const MCFixup &Fixup) {
   const MCExpr *Expr = Fixup.getValue();
 
   if (Expr->getKind() != MCExpr::Target)
-    return PPCMCExpr::Specifier(Target.getAccessVariant());
-  return cast<PPCMCExpr>(Expr)->getSpecifier();
+    return Target.getAccessVariant();
+
+  switch (cast<PPCMCExpr>(Expr)->getKind()) {
+  case PPCMCExpr::VK_PPC_None:
+    return MCSymbolRefExpr::VK_None;
+  case PPCMCExpr::VK_PPC_LO:
+    return MCSymbolRefExpr::VK_PPC_LO;
+  case PPCMCExpr::VK_PPC_HI:
+    return MCSymbolRefExpr::VK_PPC_HI;
+  case PPCMCExpr::VK_PPC_HA:
+    return MCSymbolRefExpr::VK_PPC_HA;
+  case PPCMCExpr::VK_PPC_HIGH:
+    return MCSymbolRefExpr::VK_PPC_HIGH;
+  case PPCMCExpr::VK_PPC_HIGHA:
+    return MCSymbolRefExpr::VK_PPC_HIGHA;
+  case PPCMCExpr::VK_PPC_HIGHERA:
+    return MCSymbolRefExpr::VK_PPC_HIGHERA;
+  case PPCMCExpr::VK_PPC_HIGHER:
+    return MCSymbolRefExpr::VK_PPC_HIGHER;
+  case PPCMCExpr::VK_PPC_HIGHEST:
+    return MCSymbolRefExpr::VK_PPC_HIGHEST;
+  case PPCMCExpr::VK_PPC_HIGHESTA:
+    return MCSymbolRefExpr::VK_PPC_HIGHESTA;
+  }
+  llvm_unreachable("unknown PPCMCExpr kind");
 }
 
 unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -53,59 +75,7 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   MCFixupKind Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  auto RefKind = static_cast<PPCMCExpr::Specifier>(Target.getRefKind());
-  auto Modifier = getAccessVariant(Target, Fixup);
-
-  switch (PPCMCExpr::Specifier(Modifier)) {
-  case PPCMCExpr::VK_DTPMOD:
-  case PPCMCExpr::VK_DTPREL:
-  case PPCMCExpr::VK_DTPREL_HA:
-  case PPCMCExpr::VK_DTPREL_HI:
-  case PPCMCExpr::VK_DTPREL_HIGH:
-  case PPCMCExpr::VK_DTPREL_HIGHA:
-  case PPCMCExpr::VK_DTPREL_HIGHER:
-  case PPCMCExpr::VK_DTPREL_HIGHERA:
-  case PPCMCExpr::VK_DTPREL_HIGHEST:
-  case PPCMCExpr::VK_DTPREL_HIGHESTA:
-  case PPCMCExpr::VK_DTPREL_LO:
-  case PPCMCExpr::VK_GOT_DTPREL:
-  case PPCMCExpr::VK_GOT_DTPREL_HA:
-  case PPCMCExpr::VK_GOT_DTPREL_HI:
-  case PPCMCExpr::VK_GOT_DTPREL_LO:
-  case PPCMCExpr::VK_GOT_TLSGD:
-  case PPCMCExpr::VK_GOT_TLSGD_HA:
-  case PPCMCExpr::VK_GOT_TLSGD_HI:
-  case PPCMCExpr::VK_GOT_TLSGD_LO:
-  case PPCMCExpr::VK_GOT_TLSGD_PCREL:
-  case PPCMCExpr::VK_GOT_TLSLD:
-  case PPCMCExpr::VK_GOT_TLSLD_HA:
-  case PPCMCExpr::VK_GOT_TLSLD_HI:
-  case PPCMCExpr::VK_GOT_TLSLD_LO:
-  case PPCMCExpr::VK_GOT_TPREL:
-  case PPCMCExpr::VK_GOT_TPREL_HA:
-  case PPCMCExpr::VK_GOT_TPREL_HI:
-  case PPCMCExpr::VK_GOT_TPREL_LO:
-  case PPCMCExpr::VK_GOT_TPREL_PCREL:
-  case PPCMCExpr::VK_TLS:
-  case PPCMCExpr::VK_TLSGD:
-  case PPCMCExpr::VK_TLSLD:
-  case PPCMCExpr::VK_TLS_PCREL:
-  case PPCMCExpr::VK_TPREL:
-  case PPCMCExpr::VK_TPREL_HA:
-  case PPCMCExpr::VK_TPREL_HI:
-  case PPCMCExpr::VK_TPREL_HIGH:
-  case PPCMCExpr::VK_TPREL_HIGHA:
-  case PPCMCExpr::VK_TPREL_HIGHER:
-  case PPCMCExpr::VK_TPREL_HIGHERA:
-  case PPCMCExpr::VK_TPREL_HIGHEST:
-  case PPCMCExpr::VK_TPREL_HIGHESTA:
-  case PPCMCExpr::VK_TPREL_LO:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
-    break;
-  default:
-    break;
-  }
+  MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);
 
   // determine the type of the relocation
   unsigned Type;
@@ -118,16 +88,16 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_br24_notoc:
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
-      case PPCMCExpr::VK_None:
+      case MCSymbolRefExpr::VK_None:
         Type = ELF::R_PPC_REL24;
         break;
-      case PPCMCExpr::VK_PLT:
+      case MCSymbolRefExpr::VK_PLT:
         Type = ELF::R_PPC_PLTREL24;
         break;
-      case PPCMCExpr::VK_LOCAL:
+      case MCSymbolRefExpr::VK_PPC_LOCAL:
         Type = ELF::R_PPC_LOCAL24PC;
         break;
-      case PPCMCExpr::VK_NOTOC:
+      case MCSymbolRefExpr::VK_PPC_NOTOC:
         Type = ELF::R_PPC64_REL24_NOTOC;
         break;
       }
@@ -137,18 +107,20 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       Type = ELF::R_PPC_REL14;
       break;
     case PPC::fixup_ppc_half16:
-      switch (RefKind) {
-      default:
-        Ctx.reportError(Fixup.getLoc(), "invalid VariantKind");
-        return ELF::R_PPC_NONE;
-      case PPCMCExpr::VK_None:
-        return ELF::R_PPC_REL16;
-      case PPCMCExpr::VK_LO:
-        return ELF::R_PPC_REL16_LO;
-      case PPCMCExpr::VK_HI:
-        return ELF::R_PPC_REL16_HI;
-      case PPCMCExpr::VK_HA:
-        return ELF::R_PPC_REL16_HA;
+      switch (Modifier) {
+      default: llvm_unreachable("Unsupported Modifier");
+      case MCSymbolRefExpr::VK_None:
+        Type = ELF::R_PPC_REL16;
+        break;
+      case MCSymbolRefExpr::VK_PPC_LO:
+        Type = ELF::R_PPC_REL16_LO;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HI:
+        Type = ELF::R_PPC_REL16_HI;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HA:
+        Type = ELF::R_PPC_REL16_HA;
+        break;
       }
       break;
     case PPC::fixup_ppc_half16ds:
@@ -160,19 +132,19 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       switch (Modifier) {
       default:
         llvm_unreachable("Unsupported Modifier for fixup_ppc_pcrel34");
-      case PPCMCExpr::VK_PCREL:
+      case MCSymbolRefExpr::VK_PCREL:
         Type = ELF::R_PPC64_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_PCREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_PCREL:
         Type = ELF::R_PPC64_GOT_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_PCREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL:
         Type = ELF::R_PPC64_GOT_TLSGD_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_PCREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL:
         Type = ELF::R_PPC64_GOT_TLSLD_PCREL34;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_PCREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL:
         Type = ELF::R_PPC64_GOT_TPREL_PCREL34;
         break;
       }
@@ -196,231 +168,230 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       Type = ELF::R_PPC_ADDR14; // XXX: or BRNTAKEN?_
       break;
     case PPC::fixup_ppc_half16:
-      switch (RefKind) {
-      default:
-        break;
-      case PPCMCExpr::VK_LO:
-        return ELF::R_PPC_ADDR16_LO;
-      case PPCMCExpr::VK_HI:
-        return ELF::R_PPC_ADDR16_HI;
-      case PPCMCExpr::VK_HA:
-        return ELF::R_PPC_ADDR16_HA;
-      case PPCMCExpr::VK_HIGH:
-        return ELF::R_PPC64_ADDR16_HIGH;
-      case PPCMCExpr::VK_HIGHA:
-        return ELF::R_PPC64_ADDR16_HIGHA;
-      case PPCMCExpr::VK_HIGHER:
-        return ELF::R_PPC64_ADDR16_HIGHER;
-      case PPCMCExpr::VK_HIGHERA:
-        return ELF::R_PPC64_ADDR16_HIGHERA;
-      case PPCMCExpr::VK_HIGHEST:
-        return ELF::R_PPC64_ADDR16_HIGHEST;
-      case PPCMCExpr::VK_HIGHESTA:
-        return ELF::R_PPC64_ADDR16_HIGHESTA;
-      }
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
-      case PPCMCExpr::VK_None:
+      case MCSymbolRefExpr::VK_None:
         Type = ELF::R_PPC_ADDR16;
         break;
-      case PPCMCExpr::VK_GOT:
+      case MCSymbolRefExpr::VK_PPC_LO:
+        Type = ELF::R_PPC_ADDR16_LO;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HI:
+        Type = ELF::R_PPC_ADDR16_HI;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HA:
+        Type = ELF::R_PPC_ADDR16_HA;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HIGH:
+        Type = ELF::R_PPC64_ADDR16_HIGH;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HIGHA:
+        Type = ELF::R_PPC64_ADDR16_HIGHA;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HIGHER:
+        Type = ELF::R_PPC64_ADDR16_HIGHER;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HIGHERA:
+        Type = ELF::R_PPC64_ADDR16_HIGHERA;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HIGHEST:
+        Type = ELF::R_PPC64_ADDR16_HIGHEST;
+        break;
+      case MCSymbolRefExpr::VK_PPC_HIGHESTA:
+        Type = ELF::R_PPC64_ADDR16_HIGHESTA;
+        break;
+      case MCSymbolRefExpr::VK_GOT:
         Type = ELF::R_PPC_GOT16;
         break;
-      case PPCMCExpr::VK_GOT_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_LO:
         Type = ELF::R_PPC_GOT16_LO;
         break;
-      case PPCMCExpr::VK_GOT_HI:
+      case MCSymbolRefExpr::VK_PPC_GOT_HI:
         Type = ELF::R_PPC_GOT16_HI;
         break;
-      case PPCMCExpr::VK_GOT_HA:
+      case MCSymbolRefExpr::VK_PPC_GOT_HA:
         Type = ELF::R_PPC_GOT16_HA;
         break;
-      case PPCMCExpr::VK_TOC:
+      case MCSymbolRefExpr::VK_PPC_TOC:
         Type = ELF::R_PPC64_TOC16;
         break;
-      case PPCMCExpr::VK_TOC_LO:
+      case MCSymbolRefExpr::VK_PPC_TOC_LO:
         Type = ELF::R_PPC64_TOC16_LO;
         break;
-      case PPCMCExpr::VK_TOC_HI:
+      case MCSymbolRefExpr::VK_PPC_TOC_HI:
         Type = ELF::R_PPC64_TOC16_HI;
         break;
-      case PPCMCExpr::VK_TOC_HA:
+      case MCSymbolRefExpr::VK_PPC_TOC_HA:
         Type = ELF::R_PPC64_TOC16_HA;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         Type = ELF::R_PPC_TPREL16;
         break;
-      case PPCMCExpr::VK_TPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_TPREL_LO:
         Type = ELF::R_PPC_TPREL16_LO;
         break;
-      case PPCMCExpr::VK_TPREL_HI:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HI:
         Type = ELF::R_PPC_TPREL16_HI;
         break;
-      case PPCMCExpr::VK_TPREL_HA:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HA:
         Type = ELF::R_PPC_TPREL16_HA;
         break;
-      case PPCMCExpr::VK_TPREL_HIGH:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGH:
         Type = ELF::R_PPC64_TPREL16_HIGH;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHA:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGHA:
         Type = ELF::R_PPC64_TPREL16_HIGHA;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHER:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGHER:
         Type = ELF::R_PPC64_TPREL16_HIGHER;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHERA:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGHERA:
         Type = ELF::R_PPC64_TPREL16_HIGHERA;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHEST:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGHEST:
         Type = ELF::R_PPC64_TPREL16_HIGHEST;
         break;
-      case PPCMCExpr::VK_TPREL_HIGHESTA:
+      case MCSymbolRefExpr::VK_PPC_TPREL_HIGHESTA:
         Type = ELF::R_PPC64_TPREL16_HIGHESTA;
         break;
-      case PPCMCExpr::VK_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC64_DTPREL16;
         break;
-      case PPCMCExpr::VK_DTPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
         Type = ELF::R_PPC64_DTPREL16_LO;
         break;
-      case PPCMCExpr::VK_DTPREL_HI:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HI:
         Type = ELF::R_PPC64_DTPREL16_HI;
         break;
-      case PPCMCExpr::VK_DTPREL_HA:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HA:
         Type = ELF::R_PPC64_DTPREL16_HA;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGH:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGH:
         Type = ELF::R_PPC64_DTPREL16_HIGH;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHA:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHA:
         Type = ELF::R_PPC64_DTPREL16_HIGHA;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHER:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHER:
         Type = ELF::R_PPC64_DTPREL16_HIGHER;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHERA:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHERA:
         Type = ELF::R_PPC64_DTPREL16_HIGHERA;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHEST:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHEST:
         Type = ELF::R_PPC64_DTPREL16_HIGHEST;
         break;
-      case PPCMCExpr::VK_DTPREL_HIGHESTA:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHESTA:
         Type = ELF::R_PPC64_DTPREL16_HIGHESTA;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSGD:
         if (is64Bit())
           Type = ELF::R_PPC64_GOT_TLSGD16;
         else
           Type = ELF::R_PPC_GOT_TLSGD16;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO:
         Type = ELF::R_PPC64_GOT_TLSGD16_LO;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_HI:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HI:
         Type = ELF::R_PPC64_GOT_TLSGD16_HI;
         break;
-      case PPCMCExpr::VK_GOT_TLSGD_HA:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HA:
         Type = ELF::R_PPC64_GOT_TLSGD16_HA;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSLD:
         if (is64Bit())
           Type = ELF::R_PPC64_GOT_TLSLD16;
         else
           Type = ELF::R_PPC_GOT_TLSLD16;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO:
         Type = ELF::R_PPC64_GOT_TLSLD16_LO;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_HI:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HI:
         Type = ELF::R_PPC64_GOT_TLSLD16_HI;
         break;
-      case PPCMCExpr::VK_GOT_TLSLD_HA:
+      case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HA:
         Type = ELF::R_PPC64_GOT_TLSLD16_HA;
         break;
-      case PPCMCExpr::VK_GOT_TPREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_TPREL:
         /* We don't have R_PPC64_GOT_TPREL16, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_TPREL16_DS.  */
         Type = ELF::R_PPC64_GOT_TPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO:
         /* We don't have R_PPC64_GOT_TPREL16_LO, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_TPREL16_LO_DS.  */
         Type = ELF::R_PPC64_GOT_TPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_HI:
+      case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HI:
         Type = ELF::R_PPC64_GOT_TPREL16_HI;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_DTPREL:
         /* We don't have R_PPC64_GOT_DTPREL16, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_DTPREL16_DS.  */
         Type = ELF::R_PPC64_GOT_DTPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_LO:
         /* We don't have R_PPC64_GOT_DTPREL16_LO, but since GOT offsets
            are always 4-aligned, we can use R_PPC64_GOT_DTPREL16_LO_DS.  */
         Type = ELF::R_PPC64_GOT_DTPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_HA:
+      case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA:
         Type = ELF::R_PPC64_GOT_TPREL16_HA;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_HI:
+      case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HI:
         Type = ELF::R_PPC64_GOT_DTPREL16_HI;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_HA:
+      case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HA:
         Type = ELF::R_PPC64_GOT_DTPREL16_HA;
         break;
       }
       break;
     case PPC::fixup_ppc_half16ds:
     case PPC::fixup_ppc_half16dq:
-      switch (RefKind) {
-      default:
-        Ctx.reportError(Fixup.getLoc(), "invalid VariantKind");
-        return ELF::R_PPC64_NONE;
-      case PPCMCExpr::VK_None:
-        break;
-      case PPCMCExpr::VK_LO:
-        return ELF::R_PPC64_ADDR16_LO_DS;
-      }
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
-      case PPCMCExpr::VK_None:
+      case MCSymbolRefExpr::VK_None:
         Type = ELF::R_PPC64_ADDR16_DS;
         break;
-      case PPCMCExpr::VK_GOT:
+      case MCSymbolRefExpr::VK_PPC_LO:
+        Type = ELF::R_PPC64_ADDR16_LO_DS;
+        break;
+      case MCSymbolRefExpr::VK_GOT:
         Type = ELF::R_PPC64_GOT16_DS;
         break;
-      case PPCMCExpr::VK_GOT_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_LO:
         Type = ELF::R_PPC64_GOT16_LO_DS;
         break;
-      case PPCMCExpr::VK_TOC:
+      case MCSymbolRefExpr::VK_PPC_TOC:
         Type = ELF::R_PPC64_TOC16_DS;
         break;
-      case PPCMCExpr::VK_TOC_LO:
+      case MCSymbolRefExpr::VK_PPC_TOC_LO:
         Type = ELF::R_PPC64_TOC16_LO_DS;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         Type = ELF::R_PPC64_TPREL16_DS;
         break;
-      case PPCMCExpr::VK_TPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_TPREL_LO:
         Type = ELF::R_PPC64_TPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC64_DTPREL16_DS;
         break;
-      case PPCMCExpr::VK_DTPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
         Type = ELF::R_PPC64_DTPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_TPREL:
         Type = ELF::R_PPC64_GOT_TPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_TPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO:
         Type = ELF::R_PPC64_GOT_TPREL16_LO_DS;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL:
+      case MCSymbolRefExpr::VK_PPC_GOT_DTPREL:
         Type = ELF::R_PPC64_GOT_DTPREL16_DS;
         break;
-      case PPCMCExpr::VK_GOT_DTPREL_LO:
+      case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_LO:
         Type = ELF::R_PPC64_GOT_DTPREL16_LO_DS;
         break;
       }
@@ -428,25 +399,25 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case PPC::fixup_ppc_nofixup:
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
-      case PPCMCExpr::VK_TLSGD:
+      case MCSymbolRefExpr::VK_PPC_TLSGD:
         if (is64Bit())
           Type = ELF::R_PPC64_TLSGD;
         else
           Type = ELF::R_PPC_TLSGD;
         break;
-      case PPCMCExpr::VK_TLSLD:
+      case MCSymbolRefExpr::VK_PPC_TLSLD:
         if (is64Bit())
           Type = ELF::R_PPC64_TLSLD;
         else
           Type = ELF::R_PPC_TLSLD;
         break;
-      case PPCMCExpr::VK_TLS:
+      case MCSymbolRefExpr::VK_PPC_TLS:
         if (is64Bit())
           Type = ELF::R_PPC64_TLS;
         else
           Type = ELF::R_PPC_TLS;
         break;
-      case PPCMCExpr::VK_TLS_PCREL:
+      case MCSymbolRefExpr::VK_PPC_TLS_PCREL:
         Type = ELF::R_PPC64_TLS;
         break;
       }
@@ -455,10 +426,10 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       switch (Modifier) {
       default:
         report_fatal_error("Unsupported Modifier for fixup_ppc_imm34.");
-      case PPCMCExpr::VK_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC64_DTPREL34;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         Type = ELF::R_PPC64_TPREL34;
         break;
       }
@@ -466,26 +437,26 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
     case FK_Data_8:
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
-      case PPCMCExpr::VK_TOCBASE:
+      case MCSymbolRefExpr::VK_PPC_TOCBASE:
         Type = ELF::R_PPC64_TOC;
         break;
-      case PPCMCExpr::VK_None:
+      case MCSymbolRefExpr::VK_None:
         Type = ELF::R_PPC64_ADDR64;
         break;
-      case PPCMCExpr::VK_DTPMOD:
+      case MCSymbolRefExpr::VK_PPC_DTPMOD:
         Type = ELF::R_PPC64_DTPMOD64;
         break;
-      case PPCMCExpr::VK_TPREL:
+      case MCSymbolRefExpr::VK_TPREL:
         Type = ELF::R_PPC64_TPREL64;
         break;
-      case PPCMCExpr::VK_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC64_DTPREL64;
         break;
       }
       break;
     case FK_Data_4:
       switch (Modifier) {
-      case PPCMCExpr::VK_DTPREL:
+      case MCSymbolRefExpr::VK_DTPREL:
         Type = ELF::R_PPC_DTPREL32;
         break;
       default:
@@ -508,7 +479,7 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
       return false;
 
     case ELF::R_PPC_REL24:
-    case ELF::R_PPC64_REL24_NOTOC: {
+    case ELF::R_PPC64_REL24_NOTOC:
       // If the target symbol has a local entry point, we must keep the
       // target symbol to preserve that information for the linker.
       // The "other" values are stored in the last 6 bits of the second byte.
@@ -516,16 +487,7 @@ bool PPCELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
       // the shift to pack it.
       unsigned Other = cast<MCSymbolELF>(Sym).getOther() << 2;
       return (Other & ELF::STO_PPC64_LOCAL_MASK) != 0;
-    }
-
-    case ELF::R_PPC64_GOT16:
-    case ELF::R_PPC64_GOT16_DS:
-    case ELF::R_PPC64_GOT16_LO:
-    case ELF::R_PPC64_GOT16_LO_DS:
-    case ELF::R_PPC64_GOT16_HI:
-    case ELF::R_PPC64_GOT16_HA:
-      return true;
-    }
+  }
 }
 
 std::unique_ptr<MCObjectTargetWriter>

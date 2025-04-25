@@ -1620,12 +1620,10 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
       assert(P.getPointer() != RemInst &&
              "Already removed NonLocalPointerDeps info for RemInst");
 
-      auto &NLPD = NonLocalPointerDeps[P];
-
-      NonLocalDepInfo &NLPDI = NLPD.NonLocalDeps;
+      NonLocalDepInfo &NLPDI = NonLocalPointerDeps[P].NonLocalDeps;
 
       // The cache is not valid for any specific block anymore.
-      NLPD.Pair = BBSkipFirstBlockPair();
+      NonLocalPointerDeps[P].Pair = BBSkipFirstBlockPair();
 
       // Update any entries for RemInst to use the instruction after it.
       for (auto &Entry : NLPDI) {

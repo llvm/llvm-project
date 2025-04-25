@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-reduce -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -loop-reduce -S | FileCheck %s
 
 ; Test that LSR does not produce invalid debug info when a debug value is
 ; salvaged during LSR by adding additional location operands, then becomes

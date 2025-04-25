@@ -44,9 +44,8 @@ public:
   public:
     static std::unique_ptr<Directive>
     create(bool RegexKind, SourceLocation DirectiveLoc,
-           SourceLocation DiagnosticLoc, StringRef Spelling,
-           bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
-           unsigned Min, unsigned Max);
+           SourceLocation DiagnosticLoc, bool MatchAnyFileAndLine,
+           bool MatchAnyLine, StringRef Text, unsigned Min, unsigned Max);
 
   public:
     /// Constant representing n or more matches.
@@ -54,7 +53,6 @@ public:
 
     SourceLocation DirectiveLoc;
     SourceLocation DiagnosticLoc;
-    const std::string Spelling;
     const std::string Text;
     unsigned Min, Max;
     bool MatchAnyLine;
@@ -73,11 +71,10 @@ public:
 
   protected:
     Directive(SourceLocation DirectiveLoc, SourceLocation DiagnosticLoc,
-              StringRef Spelling, bool MatchAnyFileAndLine, bool MatchAnyLine,
-              StringRef Text, unsigned Min, unsigned Max)
-        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc),
-          Spelling(Spelling), Text(Text), Min(Min), Max(Max),
-          MatchAnyLine(MatchAnyLine || MatchAnyFileAndLine),
+              bool MatchAnyFileAndLine, bool MatchAnyLine, StringRef Text,
+              unsigned Min, unsigned Max)
+        : DirectiveLoc(DirectiveLoc), DiagnosticLoc(DiagnosticLoc), Text(Text),
+          Min(Min), Max(Max), MatchAnyLine(MatchAnyLine || MatchAnyFileAndLine),
           MatchAnyFileAndLine(MatchAnyFileAndLine) {
       assert(!DirectiveLoc.isInvalid() && "DirectiveLoc is invalid!");
       assert((!DiagnosticLoc.isInvalid() || MatchAnyLine) &&
@@ -109,11 +106,6 @@ public:
     HasOtherExpectedDirectives
   };
 
-  struct ParsingState {
-    DirectiveStatus Status;
-    std::string FirstNoDiagnosticsDirective;
-  };
-
   class MarkerTracker;
 
 private:
@@ -126,7 +118,7 @@ private:
   const LangOptions *LangOpts = nullptr;
   SourceManager *SrcManager = nullptr;
   unsigned ActiveSourceFiles = 0;
-  ParsingState State;
+  DirectiveStatus Status;
   ExpectedData ED;
 
   void CheckDiagnostics();

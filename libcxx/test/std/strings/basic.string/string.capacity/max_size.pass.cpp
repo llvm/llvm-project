@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: no-exceptions
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // After changing the alignment of the allocated pointer from 16 to 8, the exception
 // thrown is no longer `bad_alloc` but instead length_error on systems using new
 // headers but a dylib that doesn't contain 04ce0ba.
@@ -55,7 +53,7 @@ TEST_CONSTEXPR_CXX20 void test_resize_max_size(const S& s) {
   } catch (const std::bad_alloc&) {
     return;
   }
-  assert(s2.size() == sz);
+  assert(s.size() == sz);
 }
 
 template <class S>
@@ -93,15 +91,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
-  test_string<std::basic_string<char, std::char_traits<char>, tiny_size_allocator<64, char> > >();
 #endif
-
-  { // Test resizing where we can assume that the allocation succeeds
-    std::basic_string<char, std::char_traits<char>, tiny_size_allocator<32, char> > str;
-    auto max_size = str.max_size();
-    str.resize(max_size);
-    assert(str.size() == max_size);
-  }
 
   return true;
 }

@@ -12,7 +12,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   BoolPointerImplicitConversionCheck.cpp
   BranchCloneCheck.cpp
   BugproneTidyModule.cpp
-  CapturingThisInMemberVariableCheck.cpp
   CastingThroughVoidCheck.cpp
   ChainedComparisonCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp
@@ -30,7 +29,6 @@ add_clang_library(clangTidyBugproneModule STATIC
   InaccurateEraseCheck.cpp
   IncorrectEnableIfCheck.cpp
   IncorrectEnableSharedFromThisCheck.cpp
-  UnintendedCharOstreamOutputCheck.cpp
   ReturnConstRefFromParameterCheck.cpp
   SuspiciousStringviewDataUsageCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
@@ -119,7 +117,6 @@ clang_target_link_libraries(clangTidyBugproneModule
   clangASTMatchers
   clangBasic
   clangLex
-  clangSema
   clangTooling
   clangTransformer
   )

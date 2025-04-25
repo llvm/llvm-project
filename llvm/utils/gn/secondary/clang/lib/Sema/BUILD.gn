@@ -43,7 +43,6 @@ static_library("Sema") {
     "CodeCompleteConsumer.cpp",
     "DeclSpec.cpp",
     "DelayedDiagnostic.cpp",
-    "HLSLBuiltinTypeDeclBuilder.cpp",
     "HLSLExternalSemaSource.cpp",
     "HeuristicResolver.cpp",
     "IdentifierResolver.cpp",

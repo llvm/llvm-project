@@ -105,11 +105,8 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
     auto allocaOp = cast<memref::AllocaOp>(op);
     auto elementType =
         typeConverter->convertType(allocaOp.getType().getElementType());
-    FailureOr<unsigned> maybeAddressSpace =
-        getTypeConverter()->getMemRefAddressSpace(allocaOp.getType());
-    if (failed(maybeAddressSpace))
-      return std::make_tuple(Value(), Value());
-    unsigned addrSpace = *maybeAddressSpace;
+    unsigned addrSpace =
+        *getTypeConverter()->getMemRefAddressSpace(allocaOp.getType());
     auto elementPtrType =
         LLVM::LLVMPointerType::get(rewriter.getContext(), addrSpace);
 
@@ -366,6 +363,11 @@ struct LoadStoreOpLowering : public ConvertOpToLLVMPattern<Derived> {
   using ConvertOpToLLVMPattern<Derived>::ConvertOpToLLVMPattern;
   using ConvertOpToLLVMPattern<Derived>::isConvertibleAndHasIdentityMaps;
   using Base = LoadStoreOpLowering<Derived>;
+
+  LogicalResult match(Derived op) const override {
+    MemRefType type = op.getMemRefType();
+    return isConvertibleAndHasIdentityMaps(type) ? success() : failure();
+  }
 };
 
 /// Wrap a llvm.cmpxchg operation in a while loop so that the operation can be
@@ -661,11 +663,9 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
 };
 
 struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
-  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern<memref::CastOp>::ConvertOpToLLVMPattern;
 
-  LogicalResult
-  matchAndRewrite(memref::CastOp memRefCastOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
+  LogicalResult match(memref::CastOp memRefCastOp) const override {
     Type srcType = memRefCastOp.getOperand().getType();
     Type dstType = memRefCastOp.getType();
 
@@ -675,22 +675,30 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
     // perform a sanity check that the underlying structs are the same. Once op
     // semantics are relaxed we can revisit.
     if (isa<MemRefType>(srcType) && isa<MemRefType>(dstType))
-      if (typeConverter->convertType(srcType) !=
-          typeConverter->convertType(dstType))
-        return failure();
+      return success(typeConverter->convertType(srcType) ==
+                     typeConverter->convertType(dstType));
+
+    // At least one of the operands is unranked type
+    assert(isa<UnrankedMemRefType>(srcType) ||
+           isa<UnrankedMemRefType>(dstType));
 
     // Unranked to unranked cast is disallowed
-    if (isa<UnrankedMemRefType>(srcType) && isa<UnrankedMemRefType>(dstType))
-      return failure();
+    return !(isa<UnrankedMemRefType>(srcType) &&
+             isa<UnrankedMemRefType>(dstType))
+               ? success()
+               : failure();
+  }
 
+  void rewrite(memref::CastOp memRefCastOp, OpAdaptor adaptor,
+               ConversionPatternRewriter &rewriter) const override {
+    auto srcType = memRefCastOp.getOperand().getType();
+    auto dstType = memRefCastOp.getType();
     auto targetStructType = typeConverter->convertType(memRefCastOp.getType());
     auto loc = memRefCastOp.getLoc();
 
     // For ranked/ranked case, just keep the original descriptor.
-    if (isa<MemRefType>(srcType) && isa<MemRefType>(dstType)) {
-      rewriter.replaceOp(memRefCastOp, {adaptor.getSource()});
-      return success();
-    }
+    if (isa<MemRefType>(srcType) && isa<MemRefType>(dstType))
+      return rewriter.replaceOp(memRefCastOp, {adaptor.getSource()});
 
     if (isa<MemRefType>(srcType) && isa<UnrankedMemRefType>(dstType)) {
       // Casting ranked to unranked memref type
@@ -729,8 +737,6 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
     } else {
       llvm_unreachable("Unsupported unranked memref to unranked memref cast");
     }
-
-    return success();
   }
 };
 

@@ -200,7 +200,9 @@ public:
 
   /// canRematerializeAt - Determine if ParentVNI can be rematerialized at
   /// UseIdx. It is assumed that parent_.getVNINfoAt(UseIdx) == ParentVNI.
-  bool canRematerializeAt(Remat &RM, VNInfo *OrigVNI, SlotIndex UseIdx);
+  /// When cheapAsAMove is set, only cheap remats are allowed.
+  bool canRematerializeAt(Remat &RM, VNInfo *OrigVNI, SlotIndex UseIdx,
+                          bool cheapAsAMove);
 
   /// rematerializeAt - Rematerialize RM.ParentVNI into DestReg by inserting an
   /// instruction into MBB before MI. The new instruction is mapped, but

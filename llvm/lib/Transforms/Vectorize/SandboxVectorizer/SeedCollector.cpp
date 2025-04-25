@@ -1,4 +1,4 @@
-//===- SeedCollector.cpp  -------------------------------------------------===//
+//===- SeedCollector.cpp  -0000000-----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,16 +17,16 @@
 using namespace llvm;
 namespace llvm::sandboxir {
 
-static cl::opt<unsigned> SeedBundleSizeLimit(
+cl::opt<unsigned> SeedBundleSizeLimit(
     "sbvec-seed-bundle-size-limit", cl::init(32), cl::Hidden,
     cl::desc("Limit the size of the seed bundle to cap compilation time."));
 #define LoadSeedsDef "loads"
 #define StoreSeedsDef "stores"
-static cl::opt<std::string> CollectSeeds(
+cl::opt<std::string> CollectSeeds(
     "sbvec-collect-seeds", cl::init(LoadSeedsDef "," StoreSeedsDef), cl::Hidden,
     cl::desc("Collect these seeds. Use empty for none or a comma-separated "
              "list of '" LoadSeedsDef "' and '" StoreSeedsDef "'."));
-static cl::opt<unsigned> SeedGroupsLimit(
+cl::opt<unsigned> SeedGroupsLimit(
     "sbvec-seed-groups-limit", cl::init(256), cl::Hidden,
     cl::desc("Limit the number of collected seeds groups in a BB to "
              "cap compilation time."));

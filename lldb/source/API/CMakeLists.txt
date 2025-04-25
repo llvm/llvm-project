@@ -56,6 +56,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBCommandReturnObject.cpp
   SBCommunication.cpp
   SBCompileUnit.cpp
+  SBSaveCoreOptions.cpp
   SBData.cpp
   SBDebugger.cpp
   SBDeclaration.cpp
@@ -64,8 +65,8 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBEvent.cpp
   SBExecutionContext.cpp
   SBExpressionOptions.cpp
-  SBFile.cpp
   SBFileSpec.cpp
+  SBFile.cpp
   SBFileSpecList.cpp
   SBFormat.cpp
   SBFrame.cpp
@@ -81,16 +82,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBMemoryRegionInfoList.cpp
   SBModule.cpp
   SBModuleSpec.cpp
-  SBMutex.cpp
   SBPlatform.cpp
+  SBProgress.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
   SBProcessInfoList.cpp
-  SBProgress.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
-  SBSaveCoreOptions.cpp
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
@@ -115,12 +114,12 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBTypeNameSpecifier.cpp
   SBTypeSummary.cpp
   SBTypeSynthetic.cpp
-  SBUnixSignals.cpp
   SBValue.cpp
   SBValueList.cpp
   SBVariablesOptions.cpp
   SBWatchpoint.cpp
   SBWatchpointOptions.cpp
+  SBUnixSignals.cpp
   SystemInitializerFull.cpp
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
@@ -207,23 +206,23 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     # If we're not exporting all symbols, we'll want to explicitly set
     # the exported symbols here.  This prevents 'log enable --stack ...'
     # from working on some systems but limits the liblldb size.
-    message(STATUS "Symbols (liblldb): exporting all symbols from the lldb namespace")
+    MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
   elseif (NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
     # Don't use an explicit export. Instead, tell the linker to export all symbols.
-    message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
-    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+    MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
                     "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
   else ()
-    message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
+    MESSAGE("-- Symbols (liblldb): exporting all symbols specified in the exports "
             " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
-    message(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
                     "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
 elseif (LLDB_EXPORT_ALL_SYMBOLS)
-  message(STATUS "Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+  MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
 
   # Pull out the various lldb libraries linked into liblldb, these will be used
   # when looking for symbols to extract. We ignore most plugin libraries here,

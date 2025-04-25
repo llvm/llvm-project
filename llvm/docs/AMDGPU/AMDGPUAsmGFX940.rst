@@ -6,7 +6,7 @@
     **************************************************
 
 ====================================================================================
-Syntax of gfx942 Instructions
+Syntax of gfx940 Instructions
 ====================================================================================
 
 .. contents::
@@ -15,7 +15,7 @@ Syntax of gfx942 Instructions
 Introduction
 ============
 
-This document describes the syntax of gfx942 instructions.
+This document describes the syntax of gfx940 instructions.
 
 Notation
 ========

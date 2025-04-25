@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
   checkError(Status, "amd_comgr_action_data_count");
 
   if (Count != 1) {
-    printf("AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC Failed: "
+    printf("AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC Failed: "
            "produced %zu BC objects (expected 1)\n",
            Count);
     exit(1);

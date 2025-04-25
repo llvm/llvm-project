@@ -399,7 +399,7 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // After last node has been created, update the use information.
   if (!Us.empty()) {
     PN->Flags |= GepNode::Used;
-    Uses[PN].insert_range(Us);
+    Uses[PN].insert(Us.begin(), Us.end());
   }
 
   // Link the last node with the originating GEP instruction. This is to
@@ -604,10 +604,8 @@ void HexagonCommonGEP::common() {
       uint32_t NF = N->Flags;
       // If N is used, append all original values of N to the list of
       // original values of Min.
-      if (NF & GepNode::Used) {
-        auto &U = Uses[N];
-        MinUs.insert_range(U);
-      }
+      if (NF & GepNode::Used)
+        MinUs.insert(Uses[N].begin(), Uses[N].end());
       Flags |= NF;
     }
     if (MinUs.empty())

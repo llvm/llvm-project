@@ -959,6 +959,7 @@ protected:
         }
 
         LineEntry function_start;
+        uint32_t index_ptr = 0, end_ptr = UINT32_MAX;
         std::vector<addr_t> address_list;
 
         // Find the beginning & end index of the function, but first make
@@ -969,14 +970,19 @@ protected:
           return;
         }
 
-        RangeVector<uint32_t, uint32_t> line_idx_ranges;
-        for (const AddressRange &range : sc.function->GetAddressRanges()) {
-          auto [begin, end] = line_table->GetLineEntryIndexRange(range);
-          line_idx_ranges.Append(begin, end - begin);
-        }
-        line_idx_ranges.Sort();
+        AddressRange fun_addr_range = sc.function->GetAddressRange();
+        Address fun_start_addr = fun_addr_range.GetBaseAddress();
+        line_table->FindLineEntryByAddress(fun_start_addr, function_start,
+                                           &index_ptr);
 
-        bool found_something = false;
+        Address fun_end_addr(fun_start_addr.GetSection(),
+                             fun_start_addr.GetOffset() +
+                                 fun_addr_range.GetByteSize());
+
+        bool all_in_function = true;
+
+        line_table->FindLineEntryByAddress(fun_end_addr, function_start,
+                                           &end_ptr);
 
         // Since not all source lines will contribute code, check if we are
         // setting the breakpoint on the exact line number or the nearest
@@ -985,43 +991,45 @@ protected:
         for (uint32_t line_number : line_numbers) {
           LineEntry line_entry;
           bool exact = false;
-          if (sc.comp_unit->FindLineEntry(0, line_number, nullptr, exact,
-                                          &line_entry) == UINT32_MAX)
-            continue;
-
-          found_something = true;
-          line_number = line_entry.line;
+          uint32_t start_idx_ptr = index_ptr;
+          start_idx_ptr = sc.comp_unit->FindLineEntry(
+              index_ptr, line_number, nullptr, exact, &line_entry);
+          if (start_idx_ptr != UINT32_MAX)
+            line_number = line_entry.line;
           exact = true;
-          uint32_t end_func_idx = line_idx_ranges.GetMaxRangeEnd(0);
-          uint32_t idx = sc.comp_unit->FindLineEntry(
-              line_idx_ranges.GetMinRangeBase(UINT32_MAX), line_number, nullptr,
-              exact, &line_entry);
-          while (idx < end_func_idx) {
-            if (line_idx_ranges.FindEntryIndexThatContains(idx) != UINT32_MAX) {
-              addr_t address =
-                  line_entry.range.GetBaseAddress().GetLoadAddress(target);
-              if (address != LLDB_INVALID_ADDRESS)
+          start_idx_ptr = index_ptr;
+          while (start_idx_ptr <= end_ptr) {
+            start_idx_ptr = sc.comp_unit->FindLineEntry(
+                start_idx_ptr, line_number, nullptr, exact, &line_entry);
+            if (start_idx_ptr == UINT32_MAX)
+              break;
+
+            addr_t address =
+                line_entry.range.GetBaseAddress().GetLoadAddress(target);
+            if (address != LLDB_INVALID_ADDRESS) {
+              if (fun_addr_range.ContainsLoadAddress(address, target))
                 address_list.push_back(address);
+              else
+                all_in_function = false;
             }
-            idx = sc.comp_unit->FindLineEntry(idx + 1, line_number, nullptr,
-                                              exact, &line_entry);
+            start_idx_ptr++;
           }
         }
 
         for (lldb::addr_t address : m_options.m_until_addrs) {
-          AddressRange unused;
-          if (sc.function->GetRangeContainingLoadAddress(address, *target,
-                                                         unused))
+          if (fun_addr_range.ContainsLoadAddress(address, target))
             address_list.push_back(address);
+          else
+            all_in_function = false;
         }
 
         if (address_list.empty()) {
-          if (found_something)
-            result.AppendErrorWithFormat(
-                "Until target outside of the current function.\n");
-          else
+          if (all_in_function)
             result.AppendErrorWithFormat(
                 "No line entries matching until target.\n");
+          else
+            result.AppendErrorWithFormat(
+                "Until target outside of the current function.\n");
 
           return;
         }
@@ -1270,7 +1278,6 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json_thread = false;
       m_json_stopinfo = false;
-      m_backing_thread = false;
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1287,10 +1294,6 @@ public:
         m_json_stopinfo = true;
         break;
 
-      case 'b':
-        m_backing_thread = true;
-        break;
-
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1303,7 +1306,6 @@ public:
 
     bool m_json_thread;
     bool m_json_stopinfo;
-    bool m_backing_thread;
   };
 
   CommandObjectThreadInfo(CommandInterpreter &interpreter)
@@ -1340,8 +1342,6 @@ public:
     }
 
     Thread *thread = thread_sp.get();
-    if (m_options.m_backing_thread && thread->GetBackingThread())
-      thread = thread->GetBackingThread().get();
 
     Stream &strm = result.GetOutputStream();
     if (!thread->GetDescription(strm, eDescriptionLevelFull,

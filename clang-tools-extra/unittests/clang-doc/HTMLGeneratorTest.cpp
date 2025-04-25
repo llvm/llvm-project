@@ -28,11 +28,9 @@ std::unique_ptr<Generator> getHTMLGenerator() {
 
 ClangDocContext
 getClangDocContext(std::vector<std::string> UserStylesheets = {},
-                   StringRef RepositoryUrl = "",
-                   StringRef RepositoryLinePrefix = "", StringRef Base = "") {
+                   StringRef RepositoryUrl = "") {
   ClangDocContext CDCtx{
-      {},   "test-project", {}, {}, {}, RepositoryUrl, RepositoryLinePrefix,
-      Base, UserStylesheets};
+      {}, "test-project", {}, {}, {}, RepositoryUrl, UserStylesheets};
   CDCtx.UserStylesheets.insert(
       CDCtx.UserStylesheets.begin(),
       "../share/clang/clang-doc-default-stylesheet.css");

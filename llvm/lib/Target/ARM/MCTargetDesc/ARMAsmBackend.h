@@ -23,6 +23,9 @@ public:
   ARMAsmBackend(const Target &T, bool isThumb, llvm::endianness Endian)
       : MCAsmBackend(Endian), isThumbMode(isThumb) {}
 
+  unsigned getNumFixupKinds() const override {
+    return ARM::NumTargetFixupKinds;
+  }
 
   bool hasNOP(const MCSubtargetInfo *STI) const {
     return STI->hasFeature(ARM::HasV6T2Ops);
@@ -33,7 +36,7 @@ public:
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t Value,
                              const MCSubtargetInfo *STI) override;
 
   unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,

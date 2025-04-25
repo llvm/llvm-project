@@ -11,7 +11,6 @@
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
-include "mlir/IR/OpAsmInterface.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorBase.td"
 include "mlir/IR/TensorEncoding.td"
 
@@ -113,7 +112,7 @@ def SparseTensorDimSliceAttr : SparseTensor_Attr<"SparseTensorDimSlice", []> {
 
 // Sparse tensor encoding attribute.
 def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
-         [ DeclareAttrInterfaceMethods<VerifiableTensorEncoding>, OpAsmAttrInterface ] > {
+         [ DeclareAttrInterfaceMethods<VerifiableTensorEncoding> ] > {
   let mnemonic = "encoding";
 
   let description = [{
@@ -544,15 +543,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     void printSymbols(AffineMap &map, AsmPrinter &printer) const;
     void printDimensions(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::SparseTensorDimSliceAttr> dimSlices) const;
     void printLevels(AffineMap &map, AsmPrinter &printer, ArrayRef<::mlir::sparse_tensor::LevelType> lvlTypes) const;
-
-    //
-    // OpAsmAttrInterface methods.
-    //
-
-    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
-      os << "sparse";
-      return ::mlir::OpAsmAliasResult::OverridableAlias;
-    }
   }];
 
   let genVerifyDecl = 1;

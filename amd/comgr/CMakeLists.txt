@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+include(CheckIncludeFileCXX)
+
 file(READ "VERSION.txt" comgr_ver_file)
 
 string(REGEX MATCH "#COMGR_VERSION_MAJOR\n([0-9]*)" _ ${comgr_ver_file})
@@ -69,9 +71,6 @@ option(COMGR_BUILD_SHARED_LIBS "Build the shared library"
        ${build_shared_libs_default})
 
 set(SOURCES
-  src/comgr-cache.cpp
-  src/comgr-cache-command.cpp
-  src/comgr-clang-command.cpp
   src/comgr-compiler.cpp
   src/comgr.cpp
   src/comgr-device-libs.cpp
@@ -82,10 +81,8 @@ set(SOURCES
   src/comgr-metadata.cpp
   src/comgr-objdump.cpp
   src/comgr-signal.cpp
-  src/comgr-spirv-command.cpp
   src/comgr-symbol.cpp
   src/comgr-symbolizer.cpp
-  src/comgr-unbundle-command.cpp
   src/time-stat/time-stat.cpp)
 
 if(COMGR_BUILD_SHARED_LIBS)

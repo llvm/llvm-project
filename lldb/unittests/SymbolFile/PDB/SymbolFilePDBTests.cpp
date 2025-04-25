@@ -371,7 +371,7 @@ TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   CompilerType compiler_type = udt_type->GetForwardCompilerType();
   EXPECT_TRUE(TypeSystemClang::IsClassType(compiler_type.GetOpaqueQualType()));
   EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_Class"),
-            llvm::expectedToOptional(udt_type->GetByteSize(nullptr)));
+            udt_type->GetByteSize(nullptr));
 }
 
 TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
@@ -427,7 +427,7 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   EXPECT_TRUE(TypeSystemClang::IsClassType(compiler_type.GetOpaqueQualType()));
 
   EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_NestedClass"),
-            llvm::expectedToOptional(udt_type->GetByteSize(nullptr)));
+            udt_type->GetByteSize(nullptr));
 }
 
 TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
@@ -471,7 +471,7 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   EXPECT_TRUE(TypeSystemClang::IsClassType(compiler_type.GetOpaqueQualType()));
 
   EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_NSClass"),
-            llvm::expectedToOptional(udt_type->GetByteSize(nullptr)));
+            udt_type->GetByteSize(nullptr));
 }
 
 TEST_F(SymbolFilePDBTests, TestEnumTypes) {
@@ -501,7 +501,7 @@ TEST_F(SymbolFilePDBTests, TestEnumTypes) {
     std::string sizeof_var = "sizeof_";
     sizeof_var.append(Enum);
     EXPECT_EQ(GetGlobalConstantInteger(session, sizeof_var),
-              llvm::expectedToOptional(enum_type->GetByteSize(nullptr)));
+              enum_type->GetByteSize(nullptr));
   }
 }
 
@@ -547,7 +547,7 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
     std::string sizeof_var = "sizeof_";
     sizeof_var.append(Typedef);
     EXPECT_EQ(GetGlobalConstantInteger(session, sizeof_var),
-              llvm::expectedToOptional(typedef_type->GetByteSize(nullptr)));
+              typedef_type->GetByteSize(nullptr));
   }
 }
 

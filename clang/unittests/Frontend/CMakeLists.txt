@@ -10,7 +10,6 @@ add_clang_unittest(FrontendTests
   FixedPointString.cpp
   FrontendActionTest.cpp
   CodeGenActionTest.cpp
-  NoAlterCodeGenActionTest.cpp
   ParsedSourceLocationTest.cpp
   PCHPreambleTest.cpp
   ReparseWorkingDirTest.cpp
@@ -28,5 +27,4 @@ clang_target_link_libraries(FrontendTests
   clangCodeGen
   clangFrontendTool
   clangSerialization
-  clangTooling
   )

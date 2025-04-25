@@ -143,8 +143,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
   case ParsedAttr::AT_PreserveNone:                                            \
-  case ParsedAttr::AT_RISCVVectorCC:                                           \
-  case ParsedAttr::AT_RISCVVLSCC
+  case ParsedAttr::AT_RISCVVectorCC
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -1122,7 +1121,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
   case DeclSpec::TST_int128:
     if (!S.Context.getTargetInfo().hasInt128Type() &&
-        !(S.getLangOpts().isTargetDevice()))
+        !(S.getLangOpts().SYCLIsDevice || S.getLangOpts().CUDAIsDevice ||
+          (S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice)))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned)
@@ -1167,7 +1167,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
-        !S.getLangOpts().isTargetDevice())
+        !S.getLangOpts().SYCLIsDevice && !S.getLangOpts().CUDAIsDevice &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
     Result = Context.Float128Ty;
@@ -1592,38 +1593,35 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
   // object or incomplete types shall not be restrict-qualified."
   if (Qs.hasRestrict()) {
     unsigned DiagID = 0;
-    QualType EltTy = Context.getBaseElementType(T);
+    QualType ProblemTy;
 
-    if (EltTy->isAnyPointerType() || EltTy->isReferenceType() ||
-        EltTy->isMemberPointerType()) {
-
-      if (const auto *PTy = EltTy->getAs<MemberPointerType>())
+    if (T->isAnyPointerType() || T->isReferenceType() ||
+        T->isMemberPointerType()) {
+      QualType EltTy;
+      if (T->isObjCObjectPointerType())
+        EltTy = T;
+      else if (const MemberPointerType *PTy = T->getAs<MemberPointerType>())
         EltTy = PTy->getPointeeType();
       else
-        EltTy = EltTy->getPointeeType();
+        EltTy = T->getPointeeType();
 
       // If we have a pointer or reference, the pointee must have an object
       // incomplete type.
-      if (!EltTy->isIncompleteOrObjectType())
+      if (!EltTy->isIncompleteOrObjectType()) {
         DiagID = diag::err_typecheck_invalid_restrict_invalid_pointee;
-
+        ProblemTy = EltTy;
+      }
     } else if (!isDependentOrGNUAutoType(T)) {
       // For an __auto_type variable, we may not have seen the initializer yet
       // and so have no idea whether the underlying type is a pointer type or
       // not.
       DiagID = diag::err_typecheck_invalid_restrict_not_pointer;
-      EltTy = T;
+      ProblemTy = T;
     }
 
-    Loc = DS ? DS->getRestrictSpecLoc() : Loc;
     if (DiagID) {
-      Diag(Loc, DiagID) << EltTy;
+      Diag(DS ? DS->getRestrictSpecLoc() : Loc, DiagID) << ProblemTy;
       Qs.removeRestrict();
-    } else {
-      if (T->isArrayType())
-        Diag(Loc, getLangOpts().C23
-                      ? diag::warn_c23_compat_restrict_on_array_of_pointers
-                      : diag::ext_restrict_on_array_of_pointers_c23);
     }
   }
 
@@ -2084,7 +2082,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
     // an inheritance model, even if it's inside an unused typedef.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>())
-        if (!MPTy->getQualifier()->isDependent())
+        if (!MPTy->getClass()->isDependentType())
           (void)isCompleteType(Loc, T);
 
   } else {
@@ -2529,8 +2527,7 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 }
 
 bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
-  if ((T->isArrayType() && !getLangOpts().allowArrayReturnTypes()) ||
-      T->isFunctionType()) {
+  if (T->isArrayType() || T->isFunctionType()) {
     Diag(Loc, diag::err_func_returning_array_function)
       << T->isFunctionType() << T;
     return true;
@@ -2683,23 +2680,9 @@ QualType Sema::BuildFunctionType(QualType T,
   return Context.getFunctionType(T, ParamTypes, EPI);
 }
 
-QualType Sema::BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
-                                      CXXRecordDecl *Cls, SourceLocation Loc,
+QualType Sema::BuildMemberPointerType(QualType T, QualType Class,
+                                      SourceLocation Loc,
                                       DeclarationName Entity) {
-  if (!Cls && !isDependentScopeSpecifier(SS)) {
-    Cls = dyn_cast_or_null<CXXRecordDecl>(computeDeclContext(SS));
-    if (!Cls) {
-      auto D =
-          Diag(SS.getBeginLoc(), diag::err_illegal_decl_mempointer_in_nonclass)
-          << SS.getRange();
-      if (const IdentifierInfo *II = Entity.getAsIdentifierInfo())
-        D << II;
-      else
-        D << "member pointer";
-      return QualType();
-    }
-  }
-
   // Verify that we're not building a pointer to pointer to function with
   // exception specification.
   if (CheckDistantExceptionSpec(T)) {
@@ -2718,6 +2701,11 @@ QualType Sema::BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
   if (T->isVoidType()) {
     Diag(Loc, diag::err_illegal_decl_mempointer_to_void)
       << getPrintableNameForEntity(Entity);
+    return QualType();
+  }
+
+  if (!Class->isDependentType() && !Class->isRecordType()) {
+    Diag(Loc, diag::err_mempointer_in_nonclass_type) << Class;
     return QualType();
   }
 
@@ -2741,7 +2729,7 @@ QualType Sema::BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
   if (T->isFunctionType())
     adjustMemberFunctionCC(T, /*HasThisPointer=*/true, IsCtorOrDtor, Loc);
 
-  return Context.getMemberPointerType(T, SS.getScopeRep(), Cls);
+  return Context.getMemberPointerType(T, Class.getTypePtr());
 }
 
 QualType Sema::BuildBlockPointerType(QualType T,
@@ -4943,9 +4931,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
       // C99 6.7.5.3p1: The return type may not be a function or array type.
       // For conversion functions, we'll diagnose this particular error later.
-      if (!D.isInvalidType() &&
-          ((T->isArrayType() && !S.getLangOpts().allowArrayReturnTypes()) ||
-           T->isFunctionType()) &&
+      if (!D.isInvalidType() && (T->isArrayType() || T->isFunctionType()) &&
           (D.getName().getKind() !=
            UnqualifiedIdKind::IK_ConversionFunctionId)) {
         unsigned diagID = diag::err_func_returning_array_function;
@@ -5345,6 +5331,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case DeclaratorChunk::MemberPointer: {
       // The scope spec must refer to a class, or be dependent.
       CXXScopeSpec &SS = DeclType.Mem.Scope();
+      QualType ClsType;
 
       // Handle pointer nullability.
       inferPointerNullability(SimplePointerKind::MemberPointer, DeclType.Loc,
@@ -5354,11 +5341,56 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       if (SS.isInvalid()) {
         // Avoid emitting extra errors if we already errored on the scope.
         D.setInvalidType(true);
-        AreDeclaratorChunksValid = false;
+      } else if (S.isDependentScopeSpecifier(SS) ||
+                 isa_and_nonnull<CXXRecordDecl>(S.computeDeclContext(SS))) {
+        NestedNameSpecifier *NNS = SS.getScopeRep();
+        NestedNameSpecifier *NNSPrefix = NNS->getPrefix();
+        switch (NNS->getKind()) {
+        case NestedNameSpecifier::Identifier:
+          ClsType = Context.getDependentNameType(
+              ElaboratedTypeKeyword::None, NNSPrefix, NNS->getAsIdentifier());
+          break;
+
+        case NestedNameSpecifier::Namespace:
+        case NestedNameSpecifier::NamespaceAlias:
+        case NestedNameSpecifier::Global:
+        case NestedNameSpecifier::Super:
+          llvm_unreachable("Nested-name-specifier must name a type");
+
+        case NestedNameSpecifier::TypeSpec:
+        case NestedNameSpecifier::TypeSpecWithTemplate:
+          const Type *NNSType = NNS->getAsType();
+          ClsType = QualType(NNSType, 0);
+          // Note: if the NNS has a prefix and ClsType is a nondependent
+          // TemplateSpecializationType or a RecordType, then the NNS prefix is
+          // NOT included in ClsType; hence we wrap ClsType into an
+          // ElaboratedType. NOTE: in particular, no wrap occurs if ClsType
+          // already is an Elaborated, DependentName, or
+          // DependentTemplateSpecialization.
+          if (isa<DependentTemplateSpecializationType>(NNSType)) {
+            // FIXME: Rebuild DependentTemplateSpecializationType, adding the
+            // Prefix.
+          } else if (isa<TemplateSpecializationType, RecordType>(NNSType)) {
+            // Either the dependent case (TemplateSpecializationType), or the
+            // non-dependent one (RecordType).
+            ClsType = Context.getElaboratedType(ElaboratedTypeKeyword::None,
+                                                NNSPrefix, ClsType);
+          }
+          break;
+        }
       } else {
-        T = S.BuildMemberPointerType(T, SS, /*Cls=*/nullptr, DeclType.Loc,
-                                     D.getIdentifier());
+        S.Diag(DeclType.Mem.Scope().getBeginLoc(),
+             diag::err_illegal_decl_mempointer_in_nonclass)
+          << (D.getIdentifier() ? D.getIdentifier()->getName() : "type name")
+          << DeclType.Mem.Scope().getRange();
+        D.setInvalidType(true);
       }
+
+      if (!ClsType.isNull())
+        T = S.BuildMemberPointerType(T, ClsType, DeclType.Loc,
+                                     D.getIdentifier());
+      else
+        AreDeclaratorChunksValid = false;
 
       if (T.isNull()) {
         T = Context.IntTy;
@@ -6145,8 +6177,48 @@ namespace {
     }
     void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
       assert(Chunk.Kind == DeclaratorChunk::MemberPointer);
+      const CXXScopeSpec& SS = Chunk.Mem.Scope();
+      NestedNameSpecifierLoc NNSLoc = SS.getWithLocInContext(Context);
+
+      const Type* ClsTy = TL.getClass();
+      QualType ClsQT = QualType(ClsTy, 0);
+      TypeSourceInfo *ClsTInfo = Context.CreateTypeSourceInfo(ClsQT, 0);
+      // Now copy source location info into the type loc component.
+      TypeLoc ClsTL = ClsTInfo->getTypeLoc();
+      switch (NNSLoc.getNestedNameSpecifier()->getKind()) {
+      case NestedNameSpecifier::Identifier:
+        assert(isa<DependentNameType>(ClsTy) && "Unexpected TypeLoc");
+        {
+          DependentNameTypeLoc DNTLoc = ClsTL.castAs<DependentNameTypeLoc>();
+          DNTLoc.setElaboratedKeywordLoc(SourceLocation());
+          DNTLoc.setQualifierLoc(NNSLoc.getPrefix());
+          DNTLoc.setNameLoc(NNSLoc.getLocalBeginLoc());
+        }
+        break;
+
+      case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
+        if (isa<ElaboratedType>(ClsTy)) {
+          ElaboratedTypeLoc ETLoc = ClsTL.castAs<ElaboratedTypeLoc>();
+          ETLoc.setElaboratedKeywordLoc(SourceLocation());
+          ETLoc.setQualifierLoc(NNSLoc.getPrefix());
+          TypeLoc NamedTL = ETLoc.getNamedTypeLoc();
+          NamedTL.initializeFullCopy(NNSLoc.getTypeLoc());
+        } else {
+          ClsTL.initializeFullCopy(NNSLoc.getTypeLoc());
+        }
+        break;
+
+      case NestedNameSpecifier::Namespace:
+      case NestedNameSpecifier::NamespaceAlias:
+      case NestedNameSpecifier::Global:
+      case NestedNameSpecifier::Super:
+        llvm_unreachable("Nested-name-specifier must name a type");
+      }
+
+      // Finally fill in MemberPointerLocInfo fields.
       TL.setStarLoc(Chunk.Mem.StarLoc);
-      TL.setQualifierLoc(Chunk.Mem.Scope().getWithLocInContext(Context));
+      TL.setClassTInfo(ClsTInfo);
     }
     void VisitLValueReferenceTypeLoc(LValueReferenceTypeLoc TL) {
       assert(Chunk.Kind == DeclaratorChunk::Reference);
@@ -6975,8 +7047,7 @@ namespace {
       case MemberPointer: {
         const MemberPointerType *OldMPT = cast<MemberPointerType>(Old);
         QualType New = wrap(C, OldMPT->getPointeeType(), I);
-        return C.getMemberPointerType(New, OldMPT->getQualifier(),
-                                      OldMPT->getMostRecentCXXRecordDecl());
+        return C.getMemberPointerType(New, OldMPT->getClass());
       }
 
       case Reference: {
@@ -7552,20 +7623,6 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
   case ParsedAttr::AT_RISCVVectorCC:
     return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
-  case ParsedAttr::AT_RISCVVLSCC: {
-    // If the riscv_abi_vlen doesn't have any argument, we set set it to default
-    // value 128.
-    unsigned ABIVLen = 128;
-    if (Attr.getNumArgs()) {
-      std::optional<llvm::APSInt> MaybeABIVLen =
-          Attr.getArgAsExpr(0)->getIntegerConstantExpr(Ctx);
-      if (!MaybeABIVLen)
-        llvm_unreachable("Invalid RISC-V ABI VLEN");
-      ABIVLen = MaybeABIVLen->getZExtValue();
-    }
-
-    return ::new (Ctx) RISCVVLSCCAttr(Ctx, Attr, ABIVLen);
-  }
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -8284,7 +8341,12 @@ static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
 /// match one of the standard Neon vector types.
 static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S, VectorKind VecKind) {
-  bool IsTargetOffloading = S.getLangOpts().isTargetDevice();
+  bool IsTargetCUDAAndHostARM = false;
+  if (S.getLangOpts().CUDAIsDevice) {
+    const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
+    IsTargetCUDAAndHostARM =
+        AuxTI && (AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM());
+  }
 
   // Target must have NEON (or MVE, whose vectors are similar enough
   // not to need a separate attribute)
@@ -8318,7 +8380,8 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
 
   // Only certain element types are supported for Neon vectors.
-  if (!isPermittedNeonBaseType(CurType, VecKind, S) && !IsTargetOffloading) {
+  if (!isPermittedNeonBaseType(CurType, VecKind, S) &&
+      !IsTargetCUDAAndHostARM) {
     S.Diag(Attr.getLoc(), diag::err_attribute_invalid_vector_type) << CurType;
     Attr.setInvalid();
     return;
@@ -9249,17 +9312,17 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   //         "Can't ask whether a dependent type is complete");
 
   if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
-    if (CXXRecordDecl *RD = MPTy->getMostRecentCXXRecordDecl();
-        RD && !RD->isDependentType()) {
-      QualType T = Context.getTypeDeclType(RD);
-      if (getLangOpts().CompleteMemberPointers && !RD->isBeingDefined() &&
-          RequireCompleteType(Loc, T, Kind, diag::err_memptr_incomplete))
+    if (!MPTy->getClass()->isDependentType()) {
+      if (getLangOpts().CompleteMemberPointers &&
+          !MPTy->getClass()->getAsCXXRecordDecl()->isBeingDefined() &&
+          RequireCompleteType(Loc, QualType(MPTy->getClass(), 0), Kind,
+                              diag::err_memptr_incomplete))
         return true;
 
       // We lock in the inheritance model once somebody has asked us to ensure
       // that a pointer-to-member type is complete.
       if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-        (void)isCompleteType(Loc, T);
+        (void)isCompleteType(Loc, QualType(MPTy->getClass(), 0));
         assignInheritanceModel(*this, MPTy->getMostRecentCXXRecordDecl());
       }
     }

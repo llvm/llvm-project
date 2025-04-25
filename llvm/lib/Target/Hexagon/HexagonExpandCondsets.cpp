@@ -401,7 +401,8 @@ void HexagonExpandCondsets::updateDeadsInRange(Register Reg, LaneBitmask LM,
         continue;
       if (B == Entry)
         return false;
-      Work.insert_range(B->predecessors());
+      for (auto *P : B->predecessors())
+        Work.insert(P);
     }
     return true;
   };

@@ -201,11 +201,6 @@ public:
     return nullptr;
   }
 
-  /// Fully translate this nested name specifier to a type.
-  /// Unlike getAsType, this will convert this entire nested
-  /// name specifier chain into its equivalent type.
-  const Type *translateToType(const ASTContext &Context) const;
-
   NestedNameSpecifierDependence getDependence() const;
 
   /// Whether this nested name specifier refers to a dependent
@@ -228,8 +223,7 @@ public:
   /// `ns::SomeTemplate<int, MyClass>` instead of
   /// `ns::SomeTemplate<Container::value_type, T>`.
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
-             bool ResolveTemplateArguments = false,
-             bool PrintFinalScopeResOp = true) const;
+             bool ResolveTemplateArguments = false) const;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     ID.AddPointer(Prefix.getOpaqueValue());

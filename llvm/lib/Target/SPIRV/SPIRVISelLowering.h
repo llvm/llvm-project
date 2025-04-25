@@ -43,7 +43,9 @@ public:
 
   // This is to prevent sexts of non-i64 vector indices which are generated
   // within general IRTranslator hence type generation for it is omitted.
-  unsigned getVectorIdxWidth(const DataLayout &DL) const override { return 32; }
+  MVT getVectorIdxTy(const DataLayout &DL) const override {
+    return MVT::getIntegerVT(32);
+  }
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;

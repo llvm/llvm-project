@@ -137,7 +137,7 @@ public:
 
   void addParsedRegions(ArrayRef<PPRegion> Regions) {
     std::lock_guard<std::mutex> MG(Mutex);
-    ParsedRegions.insert_range(Regions);
+    ParsedRegions.insert(Regions.begin(), Regions.end());
   }
 };
 

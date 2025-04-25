@@ -562,33 +562,53 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
   let hasVerifier = 1;
 
   let builders = [
-    OpBuilder<(ins "::mlir::Value":$var,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
-          var.getType());
-        build($_builder, $_state, var.getType(), var,
-          /*varType=*/ptrLikeTy ?
-            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
-            ::mlir::TypeAttr::get(var.getType()),
+        build($_builder, $_state, varPtr.getType(), varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+            varPtr.getType().getElementType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::Value":$var,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
+                   "bool":$structured, "bool":$implicit,
+                   "const ::llvm::Twine &":$name,
+                   CArg<"::mlir::ValueRange", "{}">:$bounds),
+      [{
+        build($_builder, $_state, varPtr.getType(), varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+            varPtr.getType().getElementType()),
+          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
+          /*asyncOperandsDeviceType=*/nullptr,
+          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
+          /*structured=*/$_builder.getBoolAttr(structured),
+          /*implicit=*/$_builder.getBoolAttr(implicit),
+          /*name=*/$_builder.getStringAttr(name));
+      }]>,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
+                   "bool":$structured, "bool":$implicit,
+                   CArg<"::mlir::ValueRange", "{}">:$bounds),
+      [{
+        build($_builder, $_state, var.getType(), var,
+          /*varType=*/::mlir::TypeAttr::get(var.getType()),
+          /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
+          /*asyncOperandsDeviceType=*/nullptr,
+          /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
+          /*structured=*/$_builder.getBoolAttr(structured),
+          /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
+      }]>,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::MappableType>":$var,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                   CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
-          var.getType());
         build($_builder, $_state, var.getType(), var,
-          /*varType=*/ptrLikeTy ?
-            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
-            ::mlir::TypeAttr::get(var.getType()),
+          /*varType=*/::mlir::TypeAttr::get(var.getType()),
           /*varPtrPtr=*/{}, bounds, /*asyncOperands=*/{},
           /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
@@ -922,34 +942,28 @@ class OpenACC_DataExitOpWithVarPtr<string mnemonic, string clause>
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::Value":$accVar,
-                   "::mlir::Value":$var,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
-          var.getType());
-        build($_builder, $_state, accVar, var,
-          /*varType=*/ptrLikeTy ?
-            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
-            ::mlir::TypeAttr::get(var.getType()),
+        build($_builder, $_state, accPtr, varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+            varPtr.getType().getElementType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::Value":$accVar,
-                   "::mlir::Value":$var,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
+                   "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$varPtr,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        auto ptrLikeTy = ::mlir::dyn_cast<::mlir::acc::PointerLikeType>(
-          var.getType());
-        build($_builder, $_state, accVar, var,
-          /*varType=*/ptrLikeTy ?
-            ::mlir::TypeAttr::get(ptrLikeTy.getElementType()) :
-            ::mlir::TypeAttr::get(var.getType()),
+        build($_builder, $_state, accPtr, varPtr,
+          /*varType=*/::mlir::TypeAttr::get(
+            varPtr.getType().getElementType()),
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
@@ -982,22 +996,22 @@ class OpenACC_DataExitOpNoVarPtr<string mnemonic, string clause> :
   }];
 
   let builders = [
-    OpBuilder<(ins "::mlir::Value":$accVar,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
                    "bool":$structured, "bool":$implicit,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accVar,
+        build($_builder, $_state, accPtr,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),
           /*implicit=*/$_builder.getBoolAttr(implicit), /*name=*/nullptr);
       }]>,
-    OpBuilder<(ins "::mlir::Value":$accVar,
+    OpBuilder<(ins "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$accPtr,
                    "bool":$structured, "bool":$implicit,
                    "const ::llvm::Twine &":$name,
                    CArg<"::mlir::ValueRange", "{}">:$bounds),
       [{
-        build($_builder, $_state, accVar,
+        build($_builder, $_state, accPtr,
           bounds, /*asyncOperands=*/{}, /*asyncOperandsDeviceType=*/nullptr,
           /*asyncOnly=*/nullptr, /*dataClause=*/nullptr,
           /*structured=*/$_builder.getBoolAttr(structured),

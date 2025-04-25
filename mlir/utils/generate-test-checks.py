@@ -159,7 +159,7 @@ def get_num_ssa_results(input_line):
 
 
 # Process a line of input that has been split at each SSA identifier '%'.
-def process_line(line_chunks, variable_namer, strict_name_re=False):
+def process_line(line_chunks, variable_namer):
     output_line = ""
 
     # Process the rest that contained an SSA value name.
@@ -180,14 +180,7 @@ def process_line(line_chunks, variable_namer, strict_name_re=False):
         else:
             # Otherwise, generate a new variable.
             variable = variable_namer.generate_name(ssa_name)
-            if strict_name_re:
-                # Use stricter regexp for the variable name, if requested.
-                # Greedy matching may cause issues with the generic '.*'
-                # regexp when the checks are split across several
-                # lines (e.g. for CHECK-SAME).
-                output_line += "%[[" + variable + ":" + SSA_RE_STR + "]]"
-            else:
-                output_line += "%[[" + variable + ":.*]]"
+            output_line += "%[[" + variable + ":.*]]"
 
         # Append the non named group.
         output_line += chunk[len(ssa_name) :]
@@ -397,9 +390,7 @@ def main():
                 output_line += " " * len(ssa_split[0])
 
                 # Process the rest of the line.
-                output_line += process_line(
-                    [argument], variable_namer, strict_name_re=True
-                )
+                output_line += process_line([argument], variable_namer)
 
         # Append the output line.
         output_segments[-1].append(output_line)

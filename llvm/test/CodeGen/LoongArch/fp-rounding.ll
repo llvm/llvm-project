@@ -6,8 +6,7 @@
 define float @ceil_f32(float %i) nounwind {
 ; NOLSX-LABEL: ceil_f32:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(ceilf)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(ceilf)
 ;
 ; LSX-LABEL: ceil_f32:
 ; LSX:       # %bb.0: # %entry
@@ -25,8 +24,7 @@ entry:
 define double @ceil_f64(double %i) nounwind {
 ; NOLSX-LABEL: ceil_f64:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(ceil)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(ceil)
 ;
 ; LSX-LABEL: ceil_f64:
 ; LSX:       # %bb.0: # %entry
@@ -44,8 +42,7 @@ entry:
 define float @floor_f32(float %i) nounwind {
 ; NOLSX-LABEL: floor_f32:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(floorf)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(floorf)
 ;
 ; LSX-LABEL: floor_f32:
 ; LSX:       # %bb.0: # %entry
@@ -63,8 +60,7 @@ entry:
 define double @floor_f64(double %i) nounwind {
 ; NOLSX-LABEL: floor_f64:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(floor)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(floor)
 ;
 ; LSX-LABEL: floor_f64:
 ; LSX:       # %bb.0: # %entry
@@ -82,8 +78,7 @@ entry:
 define float @trunc_f32(float %i) nounwind {
 ; NOLSX-LABEL: trunc_f32:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(truncf)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(truncf)
 ;
 ; LSX-LABEL: trunc_f32:
 ; LSX:       # %bb.0: # %entry
@@ -101,8 +96,7 @@ entry:
 define double @trunc_f64(double %i) nounwind {
 ; NOLSX-LABEL: trunc_f64:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(trunc)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(trunc)
 ;
 ; LSX-LABEL: trunc_f64:
 ; LSX:       # %bb.0: # %entry
@@ -120,8 +114,7 @@ entry:
 define float @roundeven_f32(float %i) nounwind {
 ; NOLSX-LABEL: roundeven_f32:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(roundevenf)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(roundevenf)
 ;
 ; LSX-LABEL: roundeven_f32:
 ; LSX:       # %bb.0: # %entry
@@ -139,8 +132,7 @@ entry:
 define double @roundeven_f64(double %i) nounwind {
 ; NOLSX-LABEL: roundeven_f64:
 ; NOLSX:       # %bb.0: # %entry
-; NOLSX-NEXT:    pcaddu18i $t8, %call36(roundeven)
-; NOLSX-NEXT:    jr $t8
+; NOLSX-NEXT:    b %plt(roundeven)
 ;
 ; LSX-LABEL: roundeven_f64:
 ; LSX:       # %bb.0: # %entry

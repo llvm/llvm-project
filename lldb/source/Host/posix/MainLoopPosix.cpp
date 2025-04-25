@@ -392,5 +392,9 @@ void MainLoopPosix::Interrupt() {
     return;
 
   char c = '.';
-  cantFail(m_interrupt_pipe.Write(&c, 1));
+  size_t bytes_written;
+  Status error = m_interrupt_pipe.Write(&c, 1, bytes_written);
+  assert(error.Success());
+  UNUSED_IF_ASSERT_DISABLED(error);
+  assert(bytes_written == 1);
 }

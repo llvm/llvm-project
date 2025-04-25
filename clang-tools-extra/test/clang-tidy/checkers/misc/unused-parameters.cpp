@@ -33,9 +33,9 @@ void f(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: parameter 'fn' is unused [misc-unused-parameters]
 // CHECK-FIXES: {{^}}void f(void (* /*fn*/)()) {;}{{$}}
 
-int *k([[clang::lifetimebound]] int *i) { return nullptr; }
+int *k([[clang::lifetimebound]] int *i) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: parameter 'i' is unused [misc-unused-parameters]
-// CHECK-FIXES: {{^}}int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) { return nullptr; }{{$}}
+// CHECK-FIXES: {{^}}int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) {;}{{$}}
 
 #define ATTR_BEFORE(x) [[clang::lifetimebound]] x
 int* m(ATTR_BEFORE(const int *i)) { return nullptr; }

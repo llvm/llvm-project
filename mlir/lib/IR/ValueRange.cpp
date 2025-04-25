@@ -13,7 +13,6 @@ using namespace mlir;
 
 //===----------------------------------------------------------------------===//
 // TypeRangeRange
-//===----------------------------------------------------------------------===//
 
 TypeRangeRange OperandRangeRange::getTypes() const {
   return TypeRangeRange(*this);
@@ -23,7 +22,6 @@ TypeRangeRange OperandRangeRange::getType() const { return getTypes(); }
 
 //===----------------------------------------------------------------------===//
 // OperandRange
-//===----------------------------------------------------------------------===//
 
 OperandRange::type_range OperandRange::getTypes() const {
   return {begin(), end()};
@@ -33,7 +31,6 @@ OperandRange::type_range OperandRange::getType() const { return getTypes(); }
 
 //===----------------------------------------------------------------------===//
 // ResultRange
-//===----------------------------------------------------------------------===//
 
 ResultRange::type_range ResultRange::getTypes() const {
   return {begin(), end()};
@@ -43,7 +40,6 @@ ResultRange::type_range ResultRange::getType() const { return getTypes(); }
 
 //===----------------------------------------------------------------------===//
 // ValueRange
-//===----------------------------------------------------------------------===//
 
 ValueRange::type_range ValueRange::getTypes() const { return {begin(), end()}; }
 

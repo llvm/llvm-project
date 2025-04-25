@@ -1174,8 +1174,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   for (const ByteSpan::Block &B : VSpan) {
     ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
     for (const ByteSpan::Block &S : ASection) {
-      auto &EU = EarliestUser[S.Seg.Val];
-      EU = std::min(EU, earliestUser(B.Seg.Val->uses()), isEarlier);
+      EarliestUser[S.Seg.Val] = std::min(
+          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
 
@@ -2392,7 +2392,7 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb,
+    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb, {},
                                           {Hi64, Lo64, Amt},
                                           /*FMFSource=*/nullptr, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");

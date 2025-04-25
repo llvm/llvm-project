@@ -119,7 +119,6 @@ AsmParserState &AsmParserState::operator=(AsmParserState &&other) {
 
 //===----------------------------------------------------------------------===//
 // Access State
-//===----------------------------------------------------------------------===//
 
 auto AsmParserState::getBlockDefs() const -> iterator_range<BlockDefIterator> {
   return llvm::make_pointee_range(llvm::ArrayRef(impl->blocks));
@@ -217,7 +216,6 @@ SMRange AsmParserState::convertIdLocToRange(SMLoc loc) {
 
 //===----------------------------------------------------------------------===//
 // Populate State
-//===----------------------------------------------------------------------===//
 
 void AsmParserState::initialize(Operation *topLevelOp) {
   startOperationDefinition(topLevelOp->getName());

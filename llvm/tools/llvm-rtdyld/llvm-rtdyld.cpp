@@ -929,17 +929,15 @@ static int linkAndVerify() {
                                        StringRef SymbolName,
                                        StringRef KindNameFilter)
       -> Expected<RuntimeDyldChecker::MemoryRegionInfo> {
-    auto SMIt = StubMap.find(StubContainer);
-    if (SMIt == StubMap.end())
+    if (!StubMap.count(StubContainer))
       return make_error<StringError>("Stub container not found: " +
                                          StubContainer,
                                      inconvertibleErrorCode());
-    auto It = SMIt->second.find(SymbolName);
-    if (It == SMIt->second.end())
+    if (!StubMap[StubContainer].count(SymbolName))
       return make_error<StringError>("Symbol name " + SymbolName +
                                          " in stub container " + StubContainer,
                                      inconvertibleErrorCode());
-    auto &SI = It->second;
+    auto &SI = StubMap[StubContainer][SymbolName];
     RuntimeDyldChecker::MemoryRegionInfo StubMemInfo;
     StubMemInfo.setTargetAddress(Dyld.getSectionLoadAddress(SI.SectionID) +
                                  SI.Offset);

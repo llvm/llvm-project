@@ -45,8 +45,9 @@ int TestRunner::run(StringRef Filename) const {
                           /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
 
   if (Result < 0) {
-    Error E = make_error<StringError>(
-        "running interesting-ness test: " + ErrMsg, inconvertibleErrorCode());
+    Error E = make_error<StringError>("Error running interesting-ness test: " +
+                                          ErrMsg,
+                                      inconvertibleErrorCode());
     WithColor::error(errs(), ToolName) << toString(std::move(E)) << '\n';
     exit(1);
   }
@@ -60,8 +61,7 @@ void TestRunner::writeOutput(StringRef Message) {
                      EmitBitcode && !Program->isMIR() ? sys::fs::OF_None
                                                       : sys::fs::OF_Text);
   if (EC) {
-    WithColor::error(errs(), ToolName)
-        << "opening output file: " << EC.message() << '\n';
+    errs() << "Error opening output file: " << EC.message() << "!\n";
     exit(1);
   }
 

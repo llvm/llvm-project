@@ -617,18 +617,13 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Wait:
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
-  case OpenACCDirectiveKind::Cache:
-  case OpenACCDirectiveKind::Loop:
-  case OpenACCDirectiveKind::Atomic:
-  case OpenACCDirectiveKind::Declare:
-  case OpenACCDirectiveKind::Routine:
-  case OpenACCDirectiveKind::Set:
-  case OpenACCDirectiveKind::Update:
     return 0;
   case OpenACCDirectiveKind::Invalid:
     llvm_unreachable("Shouldn't be creating a scope for an invalid construct");
+  default:
+    break;
   }
-  llvm_unreachable("Shouldn't be creating a scope for an invalid construct");
+  return 0;
 }
 
 } // namespace
@@ -986,7 +981,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::PresentOrCopyIn: {
       bool IsReadOnly = tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::ReadOnly, ClauseKind);
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      IsReadOnly,
                                      /*IsZero=*/false);
       break;
@@ -999,7 +994,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::PresentOrCopyOut: {
       bool IsZero = tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::Zero, ClauseKind);
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, IsZero);
       break;
     }
@@ -1007,8 +1002,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // If we're missing a clause-kind (or it is invalid), see if we can parse
       // the var-list anyway.
       OpenACCReductionOperator Op = ParseReductionOperator(*this);
-      ParsedClause.setReductionDetails(
-          Op, ParseOpenACCVarList(DirKind, ClauseKind));
+      ParsedClause.setReductionDetails(Op, ParseOpenACCVarList(ClauseKind));
       break;
     }
     case OpenACCClauseKind::Self:
@@ -1019,13 +1013,21 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       [[fallthrough]];
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::Host:
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+                                     /*IsReadOnly=*/false, /*IsZero=*/false);
+      break;
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::Link:
+      ParseOpenACCVarList(ClauseKind);
+      break;
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::UseDevice:
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
+                                     /*IsReadOnly=*/false, /*IsZero=*/false);
+      break;
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
@@ -1033,7 +1035,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(ClauseKind),
                                      /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
     case OpenACCClauseKind::Collapse: {
@@ -1059,11 +1061,8 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       break;
     }
     case OpenACCClauseKind::Bind: {
-      ParsedClause.setBindDetails(ParseOpenACCBindClauseArgument());
-
-      // We can create an 'empty' bind clause in the event of an error
-      if (std::holds_alternative<std::monostate>(
-              ParsedClause.getBindDetails())) {
+      ExprResult BindArg = ParseOpenACCBindClauseArgument();
+      if (BindArg.isInvalid()) {
         Parens.skipToEnd();
         return OpenACCCanContinue();
       }
@@ -1337,8 +1336,7 @@ ExprResult Parser::ParseOpenACCIDExpression() {
   return getActions().CorrectDelayedTyposInExpr(Res);
 }
 
-std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
-Parser::ParseOpenACCBindClauseArgument() {
+ExprResult Parser::ParseOpenACCBindClauseArgument() {
   // OpenACC 3.3 section 2.15:
   // The bind clause specifies the name to use when calling the procedure on a
   // device other than the host. If the name is specified as an identifier, it
@@ -1347,21 +1345,14 @@ Parser::ParseOpenACCBindClauseArgument() {
   // name unmodified.
   if (getCurToken().is(tok::r_paren)) {
     Diag(getCurToken(), diag::err_acc_incorrect_bind_arg);
-    return std::monostate{};
+    return ExprError();
   }
 
-  if (getCurToken().is(tok::identifier)) {
-    IdentifierInfo *II = getCurToken().getIdentifierInfo();
-    ConsumeToken();
-    return II;
-  }
+  if (tok::isStringLiteral(getCurToken().getKind()))
+    return getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
+        /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
 
-  ExprResult Res =
-      getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
-          /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
-  if (!Res.isUsable())
-    return std::monostate{};
-  return cast<StringLiteral>(Res.get());
+  return ParseOpenACCIDExpression();
 }
 
 /// OpenACC 3.3, section 1.6:
@@ -1371,8 +1362,7 @@ Parser::ParseOpenACCBindClauseArgument() {
 /// - an array element
 /// - a member of a composite variable
 /// - a common block name between slashes (fortran only)
-Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCDirectiveKind DK,
-                                                      OpenACCClauseKind CK) {
+Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCClauseKind CK) {
   OpenACCArraySectionRAII ArraySections(*this);
 
   ExprResult Res = ParseAssignmentExpression();
@@ -1383,16 +1373,15 @@ Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCDirectiveKind DK,
   if (!Res.isUsable())
     return {Res, OpenACCParseCanContinue::Can};
 
-  Res = getActions().OpenACC().ActOnVar(DK, CK, Res.get());
+  Res = getActions().OpenACC().ActOnVar(CK, Res.get());
 
   return {Res, OpenACCParseCanContinue::Can};
 }
 
-llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCDirectiveKind DK,
-                                                      OpenACCClauseKind CK) {
+llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCClauseKind CK) {
   llvm::SmallVector<Expr *> Vars;
 
-  auto [Res, CanContinue] = ParseOpenACCVar(DK, CK);
+  auto [Res, CanContinue] = ParseOpenACCVar(CK);
   if (Res.isUsable()) {
     Vars.push_back(Res.get());
   } else if (CanContinue == OpenACCParseCanContinue::Cannot) {
@@ -1403,7 +1392,7 @@ llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCDirectiveKind DK,
   while (!getCurToken().isOneOf(tok::r_paren, tok::annot_pragma_openacc_end)) {
     ExpectAndConsume(tok::comma);
 
-    auto [Res, CanContinue] = ParseOpenACCVar(DK, CK);
+    auto [Res, CanContinue] = ParseOpenACCVar(CK);
 
     if (Res.isUsable()) {
       Vars.push_back(Res.get());
@@ -1419,29 +1408,25 @@ llvm::SmallVector<Expr *> Parser::ParseOpenACCVarList(OpenACCDirectiveKind DK,
 /// In C and C++, the syntax of the cache directive is:
 ///
 /// #pragma acc cache ([readonly:]var-list) new-line
-Parser::OpenACCCacheParseInfo Parser::ParseOpenACCCacheVarList() {
+void Parser::ParseOpenACCCacheVarList() {
   // If this is the end of the line, just return 'false' and count on the close
   // paren diagnostic to catch the issue.
   if (getCurToken().isAnnotation())
-    return {};
+    return;
 
-  OpenACCCacheParseInfo CacheInfo;
-
-  SourceLocation ReadOnlyLoc = getCurToken().getLocation();
   // The VarList is an optional `readonly:` followed by a list of a variable
   // specifications. Consume something that looks like a 'tag', and diagnose if
   // it isn't 'readonly'.
   if (tryParseAndConsumeSpecialTokenKind(*this,
                                          OpenACCSpecialTokenKind::ReadOnly,
-                                         OpenACCDirectiveKind::Cache))
-    CacheInfo.ReadOnlyLoc = ReadOnlyLoc;
+                                         OpenACCDirectiveKind::Cache)) {
+    // FIXME: Record that this is a 'readonly' so that we can use that during
+    // Sema/AST generation.
+  }
 
   // ParseOpenACCVarList should leave us before a r-paren, so no need to skip
   // anything here.
-  CacheInfo.Vars = ParseOpenACCVarList(OpenACCDirectiveKind::Cache,
-                                       OpenACCClauseKind::Invalid);
-
-  return CacheInfo;
+  ParseOpenACCVarList(OpenACCClauseKind::Invalid);
 }
 
 Parser::OpenACCDirectiveParseInfo
@@ -1450,9 +1435,7 @@ Parser::ParseOpenACCDirective() {
   SourceLocation DirLoc = getCurToken().getLocation();
   OpenACCDirectiveKind DirKind = ParseOpenACCDirectiveKind(*this);
   Parser::OpenACCWaitParseInfo WaitInfo;
-  Parser::OpenACCCacheParseInfo CacheInfo;
   OpenACCAtomicKind AtomicKind = OpenACCAtomicKind::None;
-  ExprResult RoutineName;
 
   getActions().OpenACC().ActOnConstruct(DirKind, DirLoc);
 
@@ -1476,20 +1459,17 @@ Parser::ParseOpenACCDirective() {
     case OpenACCDirectiveKind::Routine: {
       // Routine has an optional paren-wrapped name of a function in the local
       // scope. We parse the name, emitting any diagnostics
-      RoutineName = ParseOpenACCIDExpression();
+      ExprResult RoutineName = ParseOpenACCIDExpression();
       // If the routine name is invalid, just skip until the closing paren to
       // recover more gracefully.
-      if (!RoutineName.isUsable()) {
+      if (RoutineName.isInvalid())
         T.skipToEnd();
-      } else {
+      else
         T.consumeClose();
-        RoutineName =
-            getActions().OpenACC().ActOnRoutineName(RoutineName.get());
-      }
       break;
     }
     case OpenACCDirectiveKind::Cache:
-      CacheInfo = ParseOpenACCCacheVarList();
+      ParseOpenACCCacheVarList();
       // The ParseOpenACCCacheVarList function manages to recover from failures,
       // so we can always consume the close.
       T.consumeClose();
@@ -1517,21 +1497,10 @@ Parser::ParseOpenACCDirective() {
                                       T.getOpenLocation(),
                                       T.getCloseLocation(),
                                       /*EndLoc=*/SourceLocation{},
-                                      (DirKind == OpenACCDirectiveKind::Wait
-                                           ? WaitInfo.QueuesLoc
-                                           : CacheInfo.ReadOnlyLoc),
+                                      WaitInfo.QueuesLoc,
                                       AtomicKind,
-                                      {},
-                                      {}};
-
-  if (DirKind == OpenACCDirectiveKind::Wait)
-    ParseInfo.Exprs = WaitInfo.getAllExprs();
-  else if (DirKind == OpenACCDirectiveKind::Cache)
-    ParseInfo.Exprs = std::move(CacheInfo.Vars);
-  else if (DirKind == OpenACCDirectiveKind::Routine && RoutineName.isUsable())
-    ParseInfo.Exprs = llvm::SmallVector<Expr *>(1, RoutineName.get());
-
-  ParseInfo.Clauses = ParseOpenACCClauseList(DirKind);
+                                      WaitInfo.getAllExprs(),
+                                      ParseOpenACCClauseList(DirKind)};
 
   assert(Tok.is(tok::annot_pragma_openacc_end) &&
          "Didn't parse all OpenACC Clauses");
@@ -1542,84 +1511,20 @@ Parser::ParseOpenACCDirective() {
   return ParseInfo;
 }
 
-Parser::DeclGroupPtrTy Parser::ParseOpenACCAfterRoutineDecl(
-    AccessSpecifier &AS, ParsedAttributes &Attrs, DeclSpec::TST TagType,
-    Decl *TagDecl, OpenACCDirectiveParseInfo &DirInfo) {
-  assert(DirInfo.DirKind == OpenACCDirectiveKind::Routine);
-
-  DeclGroupPtrTy Ptr;
-  if (DirInfo.LParenLoc.isInvalid()) {
-    if (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
-      if (AS == AS_none) {
-        // This is either an external declaration, or inside of a C struct. If
-        // the latter, we have to diagnose if this is the 'implicit' named
-        // version.
-        if (TagType == DeclSpec::TST_unspecified) {
-          ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-          MaybeParseCXX11Attributes(Attrs);
-          ParsingDeclSpec PDS(*this);
-          Ptr = ParseExternalDeclaration(Attrs, EmptyDeclSpecAttrs, &PDS);
-        }
-        // The only way we can have a 'none' access specifier that is in a
-        // not-unspecified tag-type is a C struct. Member functions and
-        // lambdas don't work in C, so we can just count on
-        // ActonRoutineDeclDirective to recognize that Ptr is null and diagnose.
-      } else {
-        Ptr = ParseCXXClassMemberDeclarationWithPragmas(AS, Attrs, TagType,
-                                                        TagDecl);
-      }
-    }
-  }
-
-  return DeclGroupPtrTy::make(
-      getActions().OpenACC().ActOnEndRoutineDeclDirective(
-          DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
-          DirInfo.Exprs.empty() ? nullptr : DirInfo.Exprs.front(),
-          DirInfo.RParenLoc, DirInfo.Clauses, DirInfo.EndLoc, Ptr));
-}
-
-StmtResult
-Parser::ParseOpenACCAfterRoutineStmt(OpenACCDirectiveParseInfo &DirInfo) {
-  assert(DirInfo.DirKind == OpenACCDirectiveKind::Routine);
-  // We have to know the next statement for 1 of 2 reasons:
-  // Routine without a name needs an associated DeclStmt.
-  // Routine WITH a name needs to see if it is a DeclStmt to diagnose.
-  StmtResult NextStmt = StmtEmpty();
-
-  // Parse the next statement in the 'implicit' case, not in the 'named' case.
-  // In the 'named' case we will use the creation of the next decl to determine
-  // whether we should warn.
-  if (DirInfo.LParenLoc.isInvalid()) {
-    ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
-    NextStmt = ParseStatement();
-  }
-
-  return getActions().OpenACC().ActOnEndRoutineStmtDirective(
-      DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
-      DirInfo.Exprs.empty() ? nullptr : DirInfo.Exprs.front(),
-      DirInfo.RParenLoc, DirInfo.Clauses, DirInfo.EndLoc, NextStmt.get());
-}
-
 // Parse OpenACC directive on a declaration.
-Parser::DeclGroupPtrTy
-Parser::ParseOpenACCDirectiveDecl(AccessSpecifier &AS, ParsedAttributes &Attrs,
-                                  DeclSpec::TST TagType, Decl *TagDecl) {
+Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
   assert(Tok.is(tok::annot_pragma_openacc) && "expected OpenACC Start Token");
 
   ParsingOpenACCDirectiveRAII DirScope(*this);
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
 
-  if (getActions().OpenACC().ActOnStartDeclDirective(
-          DirInfo.DirKind, DirInfo.StartLoc, DirInfo.Clauses))
+  if (getActions().OpenACC().ActOnStartDeclDirective(DirInfo.DirKind,
+                                                     DirInfo.StartLoc))
     return nullptr;
 
-  if (DirInfo.DirKind == OpenACCDirectiveKind::Routine)
-    return ParseOpenACCAfterRoutineDecl(AS, Attrs, TagType, TagDecl, DirInfo);
-
-  return DeclGroupPtrTy::make(getActions().OpenACC().ActOnEndDeclDirective(
-      DirInfo.DirKind, DirInfo.StartLoc, DirInfo.DirLoc, DirInfo.LParenLoc,
-      DirInfo.RParenLoc, DirInfo.EndLoc, DirInfo.Clauses));
+  // TODO OpenACC: Do whatever decl parsing is required here.
+  return DeclGroupPtrTy::make(getActions().OpenACC().ActOnEndDeclDirective());
 }
 
 // Parse OpenACC Directive on a Statement.
@@ -1632,9 +1537,6 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
   if (getActions().OpenACC().ActOnStartStmtDirective(
           DirInfo.DirKind, DirInfo.StartLoc, DirInfo.Clauses))
     return StmtError();
-
-  if (DirInfo.DirKind == OpenACCDirectiveKind::Routine)
-    return ParseOpenACCAfterRoutineStmt(DirInfo);
 
   StmtResult AssocStmt;
   if (doesDirectiveHaveAssociatedStmt(DirInfo.DirKind)) {

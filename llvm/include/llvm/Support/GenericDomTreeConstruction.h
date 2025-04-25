@@ -697,7 +697,7 @@ struct SemiNCAInfo {
                             const SmallVectorImpl<NodePtr> &B) {
     if (A.size() != B.size())
       return false;
-    SmallPtrSet<NodePtr, 4> Set(llvm::from_range, A);
+    SmallPtrSet<NodePtr, 4> Set(A.begin(), A.end());
     for (NodePtr N : B)
       if (Set.count(N) == 0)
         return false;

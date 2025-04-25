@@ -15,8 +15,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -771,20 +769,19 @@ CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
 }
 // Exploring the type
 
-llvm::Expected<uint64_t>
+std::optional<uint64_t>
 CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetBitSize(m_type, exe_scope);
-  return llvm::createStringError("Invalid type: Cannot determine size");
+  return {};
 }
 
-llvm::Expected<uint64_t>
+std::optional<uint64_t>
 CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
-  auto bit_size_or_err = GetBitSize(exe_scope);
-  if (!bit_size_or_err)
-    return bit_size_or_err.takeError();
-  return (*bit_size_or_err + 7) / 8;
+  if (std::optional<uint64_t> bit_size = GetBitSize(exe_scope))
+    return (*bit_size + 7) / 8;
+  return {};
 }
 
 std::optional<size_t>
@@ -1107,18 +1104,10 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    auto byte_size_or_err = GetByteSize(exe_scope);
-    if (!byte_size_or_err) {
-      LLDB_LOG_ERRORV(
-          GetLog(LLDBLog::Types), byte_size_or_err.takeError(),
-          "Cannot get value as scalar: Cannot determine type size: {0}");
-      return false;
-    }
-    uint64_t byte_size = *byte_size_or_err;
-
+    std::optional<uint64_t> byte_size = GetByteSize(exe_scope);
     // A bit or byte size of 0 is not a bug, but it doesn't make sense to read a
     // scalar of zero size.
-    if (byte_size == 0)
+    if (!byte_size || *byte_size == 0)
       return false;
 
     lldb::offset_t offset = data_byte_offset;
@@ -1128,15 +1117,15 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     case lldb::eEncodingVector:
       break;
     case lldb::eEncodingUint:
-      if (byte_size <= sizeof(unsigned long long)) {
-        uint64_t uval64 = data.GetMaxU64(&offset, byte_size);
-        if (byte_size <= sizeof(unsigned int)) {
+      if (*byte_size <= sizeof(unsigned long long)) {
+        uint64_t uval64 = data.GetMaxU64(&offset, *byte_size);
+        if (*byte_size <= sizeof(unsigned int)) {
           value = (unsigned int)uval64;
           return true;
-        } else if (byte_size <= sizeof(unsigned long)) {
+        } else if (*byte_size <= sizeof(unsigned long)) {
           value = (unsigned long)uval64;
           return true;
-        } else if (byte_size <= sizeof(unsigned long long)) {
+        } else if (*byte_size <= sizeof(unsigned long long)) {
           value = (unsigned long long)uval64;
           return true;
         } else
@@ -1145,15 +1134,15 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       break;
 
     case lldb::eEncodingSint:
-      if (byte_size <= sizeof(long long)) {
-        int64_t sval64 = data.GetMaxS64(&offset, byte_size);
-        if (byte_size <= sizeof(int)) {
+      if (*byte_size <= sizeof(long long)) {
+        int64_t sval64 = data.GetMaxS64(&offset, *byte_size);
+        if (*byte_size <= sizeof(int)) {
           value = (int)sval64;
           return true;
-        } else if (byte_size <= sizeof(long)) {
+        } else if (*byte_size <= sizeof(long)) {
           value = (long)sval64;
           return true;
-        } else if (byte_size <= sizeof(long long)) {
+        } else if (*byte_size <= sizeof(long long)) {
           value = (long long)sval64;
           return true;
         } else
@@ -1162,10 +1151,10 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
       break;
 
     case lldb::eEncodingIEEE754:
-      if (byte_size <= sizeof(long double)) {
+      if (*byte_size <= sizeof(long double)) {
         uint32_t u32;
         uint64_t u64;
-        if (byte_size == sizeof(float)) {
+        if (*byte_size == sizeof(float)) {
           if (sizeof(float) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((float *)&u32);
@@ -1175,7 +1164,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
             value = *((float *)&u64);
             return true;
           }
-        } else if (byte_size == sizeof(double)) {
+        } else if (*byte_size == sizeof(double)) {
           if (sizeof(double) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((double *)&u32);
@@ -1185,7 +1174,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
             value = *((double *)&u64);
             return true;
           }
-        } else if (byte_size == sizeof(long double)) {
+        } else if (*byte_size == sizeof(long double)) {
           if (sizeof(long double) == sizeof(uint32_t)) {
             u32 = data.GetU32(&offset);
             value = *((long double *)&u32);

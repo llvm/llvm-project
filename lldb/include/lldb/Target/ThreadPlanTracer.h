@@ -56,7 +56,7 @@ protected:
   Process &m_process;
   lldb::tid_t m_tid;
 
-  lldb::StreamSP GetLogStreamSP();
+  Stream *GetLogStream();
 
   virtual void Log();
 

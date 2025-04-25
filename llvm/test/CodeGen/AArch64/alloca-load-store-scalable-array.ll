@@ -13,12 +13,13 @@ define void @array_1D(ptr %addr) #0 {
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    ldr z1, [x0, #2, mul vl]
-; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
-; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    str z1, [sp, #2, mul vl]
-; CHECK-NEXT:    str z2, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
+; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z2.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -36,7 +37,8 @@ define %my_subtype @array_1D_extract(ptr %addr) #0 {
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -54,11 +56,12 @@ define void @array_1D_insert(ptr %addr, %my_subtype %elt) #0 {
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ldr z1, [x0, #2, mul vl]
-; CHECK-NEXT:    ldr z2, [x0]
-; CHECK-NEXT:    str z0, [sp, #1, mul vl]
-; CHECK-NEXT:    str z1, [sp, #2, mul vl]
-; CHECK-NEXT:    str z2, [sp]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0]
+; CHECK-NEXT:    st1d { z0.d }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z2.d }, p0, [sp]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -77,18 +80,19 @@ define void @array_2D(ptr %addr) #0 {
 ; CHECK-NEXT:    addvl sp, sp, #-6
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x30, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 48 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    ldr z1, [x0, #5, mul vl]
-; CHECK-NEXT:    ldr z2, [x0, #1, mul vl]
-; CHECK-NEXT:    ldr z3, [x0, #4, mul vl]
-; CHECK-NEXT:    ldr z4, [x0, #2, mul vl]
-; CHECK-NEXT:    ldr z5, [x0, #3, mul vl]
-; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    str z1, [sp, #5, mul vl]
-; CHECK-NEXT:    str z3, [sp, #4, mul vl]
-; CHECK-NEXT:    str z5, [sp, #3, mul vl]
-; CHECK-NEXT:    str z4, [sp, #2, mul vl]
-; CHECK-NEXT:    str z2, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, #5, mul vl]
+; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x0, #4, mul vl]
+; CHECK-NEXT:    ld1d { z4.d }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
+; CHECK-NEXT:    st1d { z1.d }, p0, [sp, #5, mul vl]
+; CHECK-NEXT:    st1d { z3.d }, p0, [sp, #4, mul vl]
+; CHECK-NEXT:    st1d { z5.d }, p0, [sp, #3, mul vl]
+; CHECK-NEXT:    st1d { z4.d }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    st1d { z2.d }, p0, [sp, #1, mul vl]
 ; CHECK-NEXT:    addvl sp, sp, #6
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

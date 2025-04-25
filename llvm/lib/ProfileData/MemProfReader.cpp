@@ -521,7 +521,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // we insert a new entry for callsite data if we need to.
     IndexedMemProfRecord &Record = MemProfData.Records[Id];
     for (LocationPtr Loc : Locs)
-      Record.CallSites.emplace_back(MemProfData.addCallStack(*Loc));
+      Record.CallSiteIds.push_back(MemProfData.addCallStack(*Loc));
   }
 
   return Error::success();
@@ -808,10 +808,10 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
       IndexedRecord.AllocSites.emplace_back(CSId, AI.Info);
     }
 
-    // Populate CallSites with CalleeGuids.
+    // Populate CallSiteIds.
     for (const auto &CallSite : Record.CallSites) {
-      CallStackId CSId = AddCallStack(CallSite.Frames);
-      IndexedRecord.CallSites.emplace_back(CSId, CallSite.CalleeGuids);
+      CallStackId CSId = AddCallStack(CallSite);
+      IndexedRecord.CallSiteIds.push_back(CSId);
     }
 
     MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));

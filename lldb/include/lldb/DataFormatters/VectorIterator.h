@@ -30,6 +30,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:

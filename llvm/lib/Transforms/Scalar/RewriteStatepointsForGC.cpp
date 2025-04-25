@@ -1138,12 +1138,13 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
   auto getBaseForInput = [&](Value *Input, Instruction *InsertPt) {
     Value *BDV = findBaseOrBDV(Input, Cache, KnownBases);
     Value *Base = nullptr;
-    if (auto It = States.find(BDV); It == States.end()) {
+    if (!States.count(BDV)) {
       assert(areBothVectorOrScalar(BDV, Input));
       Base = BDV;
     } else {
       // Either conflict or base.
-      Base = It->second.getBaseValue();
+      assert(States.count(BDV));
+      Base = States[BDV].getBaseValue();
     }
     assert(Base && "Can't be null");
     // The cast is needed since base traversal may strip away bitcasts
@@ -1182,12 +1183,11 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
       for (unsigned i = 0; i < NumPHIValues; i++) {
         Value *InVal = PN->getIncomingValue(i);
         BasicBlock *InBB = PN->getIncomingBlock(i);
-        auto [It, Inserted] = BlockToValue.try_emplace(InBB);
-        if (Inserted)
-          It->second = getBaseForInput(InVal, InBB->getTerminator());
+        if (!BlockToValue.count(InBB))
+          BlockToValue[InBB] = getBaseForInput(InVal, InBB->getTerminator());
         else {
 #ifndef NDEBUG
-          Value *OldBase = It->second;
+          Value *OldBase = BlockToValue[InBB];
           Value *Base = getBaseForInput(InVal, nullptr);
 
           // We can't use `stripPointerCasts` instead of this function because
@@ -1207,7 +1207,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
                  "findBaseOrBDV should be pure!");
 #endif
         }
-        Value *Base = It->second;
+        Value *Base = BlockToValue[InBB];
         BasePHI->setIncomingValue(i, Base);
       }
     } else if (SelectInst *BaseSI =
@@ -1377,7 +1377,8 @@ static Instruction *rematerializeChain(ArrayRef<Instruction *> ChainToBase,
   Instruction *LastClonedValue = nullptr;
   Instruction *LastValue = nullptr;
   // Walk backwards to visit top-most instructions first.
-  for (Instruction *Instr : reverse(ChainToBase)) {
+  for (Instruction *Instr :
+       make_range(ChainToBase.rbegin(), ChainToBase.rend())) {
     // Only GEP's and casts are supported as we need to be careful to not
     // introduce any new uses of pointers not in the liveset.
     // Note that it's fine to introduce new uses of pointers which were
@@ -1545,10 +1546,9 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
     Value *LiveIdx = Builder.getInt32(i);
 
     Type *Ty = LiveVariables[i]->getType();
-    auto [It, Inserted] = TypeToDeclMap.try_emplace(Ty);
-    if (Inserted)
-      It->second = getGCRelocateDecl(Ty);
-    Function *GCRelocateDecl = It->second;
+    if (!TypeToDeclMap.count(Ty))
+      TypeToDeclMap[Ty] = getGCRelocateDecl(Ty);
+    Function *GCRelocateDecl = TypeToDeclMap[Ty];
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(
@@ -2379,9 +2379,9 @@ findRematerializationCandidates(PointerToBaseTy PointerToBase,
 
     // Handle the scenario where the RootOfChain is not equal to the
     // Base Value, but they are essentially the same phi values.
-    if (Value *BaseVal = PointerToBase[Derived]; RootOfChain != BaseVal) {
+    if (RootOfChain != PointerToBase[Derived]) {
       PHINode *OrigRootPhi = dyn_cast<PHINode>(RootOfChain);
-      PHINode *AlternateRootPhi = dyn_cast<PHINode>(BaseVal);
+      PHINode *AlternateRootPhi = dyn_cast<PHINode>(PointerToBase[Derived]);
       if (!OrigRootPhi || !AlternateRootPhi)
         continue;
       // PHI nodes that have the same incoming values, and belonging to the same
@@ -3301,7 +3301,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     Data.LiveIn[&BB].set_union(Data.LiveOut[&BB]);
     Data.LiveIn[&BB].set_subtract(Data.KillSet[&BB]);
     if (!Data.LiveIn[&BB].empty())
-      Worklist.insert_range(predecessors(&BB));
+      Worklist.insert(pred_begin(&BB), pred_end(&BB));
   }
 
   // Propagate that liveness until stable
@@ -3335,7 +3335,7 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
     // assert: OldLiveIn is a subset of LiveTmp
     if (OldLiveIn.size() != LiveTmp.size()) {
       Data.LiveIn[BB] = LiveTmp;
-      Worklist.insert_range(predecessors(BB));
+      Worklist.insert(pred_begin(BB), pred_end(BB));
     }
   } // while (!Worklist.empty())
 
@@ -3362,7 +3362,7 @@ static void findLiveSetAtInst(Instruction *Inst, GCPtrLivenessData &Data,
   computeLiveInValues(BB->rbegin(), ++Inst->getIterator().getReverse(), LiveOut,
                       GC);
   LiveOut.remove(Inst);
-  Out.insert_range(LiveOut);
+  Out.insert(LiveOut.begin(), LiveOut.end());
 }
 
 static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,

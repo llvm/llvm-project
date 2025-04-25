@@ -354,13 +354,14 @@ public:
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
 
-  /// Given a symbol context list of matches which supposedly represent the
-  /// same file and line number in a CU, erases those that should be ignored
-  /// when setting breakpoints by line (number or regex). Helpful for languages
-  /// that create split a single source-line into many functions (e.g. call
-  /// sites transformed by CoroSplitter).
-  virtual void
-  FilterForLineBreakpoints(llvm::SmallVectorImpl<SymbolContext> &) const {}
+  /// Returns true if this SymbolContext should be ignored when setting
+  /// breakpoints by line (number or regex). Helpful for languages that create
+  /// artificial functions without meaningful user code associated with them
+  /// (e.g. code that gets expanded in late compilation stages, like by
+  /// CoroSplitter).
+  virtual bool IgnoreForLineBreakpoints(const SymbolContext &) const {
+    return false;
+  }
 
   /// Returns a boolean indicating whether two symbol contexts are equal for the
   /// purposes of frame comparison. If the plugin has no opinion, it should

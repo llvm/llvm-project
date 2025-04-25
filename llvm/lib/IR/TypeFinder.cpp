@@ -99,11 +99,7 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
             if (DVI->isDbgAssign()) {
               if (Value *Addr = DVI->getAddress())
                 incorporateValue(Addr);
-              if (auto *Expr = DVI->getRawAddressExpression())
-                incorporateMDNode(Expr);
             }
-            if (auto *Expr = DVI->getRawExpression())
-              incorporateMDNode(Expr);
           }
         }
       }

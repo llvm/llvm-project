@@ -1022,8 +1022,8 @@ SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   return m_symfile_up ? m_symfile_up->GetSymbolFile() : nullptr;
 }
 
-Symtab *Module::GetSymtab(bool can_create) {
-  if (SymbolFile *symbols = GetSymbolFile(can_create))
+Symtab *Module::GetSymtab() {
+  if (SymbolFile *symbols = GetSymbolFile())
     return symbols->GetSymtab();
   return nullptr;
 }
@@ -1485,9 +1485,7 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
             scripting_fspec.Dump(scripting_stream.AsRawOstream());
             LoadScriptOptions options;
             bool did_load = script_interpreter->LoadScriptingModule(
-                scripting_stream.GetData(), options, error,
-                /*module_sp*/ nullptr, /*extra_path*/ {},
-                target->shared_from_this());
+                scripting_stream.GetData(), options, error);
             if (!did_load)
               return false;
           }

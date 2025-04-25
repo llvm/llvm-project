@@ -58,7 +58,8 @@ static void addHints(ArrayRef<MCPhysReg> Order,
                      SmallVectorImpl<MCPhysReg> &Hints,
                      const TargetRegisterClass *RC,
                      const MachineRegisterInfo *MRI) {
-  SmallSet<unsigned, 4> CopyHints(llvm::from_range, Hints);
+  SmallSet<unsigned, 4> CopyHints;
+  CopyHints.insert(Hints.begin(), Hints.end());
   Hints.clear();
   for (MCPhysReg Reg : Order)
     if (CopyHints.count(Reg) &&

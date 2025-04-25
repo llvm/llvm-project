@@ -251,19 +251,19 @@ opt<std::string> EnableFunctionArgSnippets{
     init("-1"),
 };
 
-opt<Config::HeaderInsertionPolicy> HeaderInsertion{
+opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
     "header-insertion",
     cat(Features),
     desc("Add #include directives when accepting code completions"),
     init(CodeCompleteOptions().InsertIncludes),
     values(
-        clEnumValN(Config::HeaderInsertionPolicy::IWYU, "iwyu",
+        clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
                    "Include what you use. "
                    "Insert the owning header for top-level symbols, unless the "
                    "header is already directly included or the symbol is "
                    "forward-declared"),
         clEnumValN(
-            Config::HeaderInsertionPolicy::NeverInsert, "never",
+            CodeCompleteOptions::NeverInsert, "never",
             "Never insert #include directives as part of code completion")),
 };
 
@@ -668,7 +668,6 @@ public:
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
     std::optional<Config::ArgumentListsPolicy> ArgumentLists;
-    std::optional<Config::HeaderInsertionPolicy> HeaderInsertionPolicy;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -713,11 +712,6 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
-    // If CLI has set never, use that regardless of what the config files have
-    if (HeaderInsertion == Config::HeaderInsertionPolicy::NeverInsert) {
-      HeaderInsertionPolicy = Config::HeaderInsertionPolicy::NeverInsert;
-    }
-
     if (std::optional<bool> Enable = shouldEnableFunctionArgSnippets()) {
       ArgumentLists = *Enable ? Config::ArgumentListsPolicy::FullPlaceholders
                               : Config::ArgumentListsPolicy::Delimiters;
@@ -732,8 +726,6 @@ public:
         C.Index.Background = *BGPolicy;
       if (ArgumentLists)
         C.Completion.ArgumentLists = *ArgumentLists;
-      if (HeaderInsertionPolicy)
-        C.Completion.HeaderInsertion = *HeaderInsertionPolicy;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 

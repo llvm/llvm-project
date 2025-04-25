@@ -8,9 +8,8 @@
 
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
-#include "MCTargetDesc/SystemZTargetStreamer.h"
+#include "SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -440,9 +439,9 @@ private:
                     bool HasLength = false, bool HasVectorIndex = false);
   bool parseAddressRegister(Register &Reg);
 
-  bool parseDirectiveInsn(SMLoc L);
-  bool parseDirectiveMachine(SMLoc L);
-  bool parseGNUAttribute(SMLoc L);
+  bool ParseDirectiveInsn(SMLoc L);
+  bool ParseDirectiveMachine(SMLoc L);
+  bool ParseGNUAttribute(SMLoc L);
 
   ParseStatus parseAddress(OperandVector &Operands, MemoryKind MemKind,
                            RegisterKind RegKind);
@@ -1237,18 +1236,18 @@ ParseStatus SystemZAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
 
   if (IDVal == ".insn")
-    return parseDirectiveInsn(DirectiveID.getLoc());
+    return ParseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
-    return parseDirectiveMachine(DirectiveID.getLoc());
+    return ParseDirectiveMachine(DirectiveID.getLoc());
   if (IDVal.starts_with(".gnu_attribute"))
-    return parseGNUAttribute(DirectiveID.getLoc());
+    return ParseGNUAttribute(DirectiveID.getLoc());
 
   return ParseStatus::NoMatch;
 }
 
 /// ParseDirectiveInsn
 /// ::= .insn [ format, encoding, (operands (, operands)*) ]
-bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
+bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
   // Expect instruction format as identifier.
@@ -1360,7 +1359,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
 
 /// ParseDirectiveMachine
 /// ::= .machine [ mcpu ]
-bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
+bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Identifier) &&
       Parser.getTok().isNot(AsmToken::String))
@@ -1380,7 +1379,7 @@ bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
   return false;
 }
 
-bool SystemZAsmParser::parseGNUAttribute(SMLoc L) {
+bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
   int64_t Tag;
   int64_t IntegerValue;
   if (!Parser.parseGNUAttribute(L, Tag, IntegerValue))
@@ -1649,7 +1648,8 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     int64_t Value = CE->getValue();
     MCSymbol *Sym = Ctx.createTempSymbol();
     Out.emitLabel(Sym);
-    const MCExpr *Base = MCSymbolRefExpr::create(Sym, Ctx);
+    const MCExpr *Base = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
+                                                 Ctx);
     Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);
   }
 
@@ -1669,12 +1669,12 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     if (Parser.getTok().isNot(AsmToken::Identifier))
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
-    SystemZMCExpr::Specifier Kind = SystemZMCExpr::VK_None;
+    MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
     StringRef Name = Parser.getTok().getString();
     if (Name == "tls_gdcall")
-      Kind = SystemZMCExpr::VK_TLSGD;
+      Kind = MCSymbolRefExpr::VK_TLSGD;
     else if (Name == "tls_ldcall")
-      Kind = SystemZMCExpr::VK_TLSLDM;
+      Kind = MCSymbolRefExpr::VK_TLSLDM;
     else
       return Error(Parser.getTok().getLoc(), "unknown TLS tag");
     Parser.Lex();

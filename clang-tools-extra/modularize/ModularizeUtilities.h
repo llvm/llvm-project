@@ -213,8 +213,6 @@ public:
   llvm::IntrusiveRefCntPtr<clang::FileManager> FileMgr;
   /// Source manager.
   llvm::IntrusiveRefCntPtr<clang::SourceManager> SourceMgr;
-  /// Header search options.
-  clang::HeaderSearchOptions HSOpts;
   /// Header search manager.
   std::unique_ptr<clang::HeaderSearch> HeaderInfo;
   // The loaded module map objects.

@@ -21,7 +21,7 @@
 ; GCN-O0-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand large div/rem
-; GCN-O0-NEXT:      Expand fp
+; GCN-O0-NEXT:      Expand large fp convert
 ; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O0-NEXT:    AMDGPU Printf lowering
 ; GCN-O0-NEXT:    Lower ctors and dtors for AMDGPU
@@ -33,7 +33,7 @@
 ; GCN-O0-NEXT:        Dominator Tree Construction
 ; GCN-O0-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O0-NEXT:        Function Alias Analysis Results
-; GCN-O0-NEXT:    Externalize enqueued block runtime handles
+; GCN-O0-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O0-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:    FunctionPass Manager
@@ -126,11 +126,11 @@
 ; GCN-O0-NEXT:        Post RA hazard recognizer
 ; GCN-O0-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O0-NEXT:        Branch relaxation pass
+; GCN-O0-NEXT:        AMDGPU Preload Kernel Arguments Prolog
 ; GCN-O0-NEXT:        Register Usage Information Collector Pass
 ; GCN-O0-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O0-NEXT:        Live DEBUG_VALUE analysis
 ; GCN-O0-NEXT:        Machine Sanitizer Binary Metadata
-; GCN-O0-NEXT:        AMDGPU Preload Kernel Arguments Prolog
 ; GCN-O0-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O0-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:        Stack Frame Layout Analysis
@@ -159,7 +159,7 @@
 ; GCN-O3-NEXT:    Pre-ISel Intrinsic Lowering
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Expand large div/rem
-; GCN-O3-NEXT:      Expand fp
+; GCN-O3-NEXT:      Expand large fp convert
 ; GCN-O3-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O3-NEXT:    AMDGPU Printf lowering
 ; GCN-O3-NEXT:    Lower ctors and dtors for AMDGPU
@@ -173,7 +173,7 @@
 ; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:        Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:        Function Alias Analysis Results
-; GCN-O3-NEXT:    Externalize enqueued block runtime handles
+; GCN-O3-NEXT:    Lower OpenCL enqueued blocks
 ; GCN-O3-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager
@@ -455,11 +455,11 @@
 ; GCN-O3-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O3-NEXT:        Branch relaxation pass
+; GCN-O3-NEXT:        AMDGPU Preload Kernel Arguments Prolog
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass
 ; GCN-O3-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O3-NEXT:        Live DEBUG_VALUE analysis
 ; GCN-O3-NEXT:        Machine Sanitizer Binary Metadata
-; GCN-O3-NEXT:        AMDGPU Preload Kernel Arguments Prolog
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Stack Frame Layout Analysis

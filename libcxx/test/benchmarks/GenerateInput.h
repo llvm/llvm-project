@@ -13,7 +13,6 @@
 #include <climits>
 #include <concepts>
 #include <cstddef>
-#include <initializer_list>
 #include <random>
 #include <string>
 #include <vector>
@@ -204,14 +203,5 @@ struct Generate<std::string> {
     return getRandomString(length);
   }
 };
-
-template <class T>
-T random_different_from(std::initializer_list<T> others) {
-  T value;
-  do {
-    value = Generate<T>::random();
-  } while (std::find(others.begin(), others.end(), value) != others.end());
-  return value;
-}
 
 #endif // BENCHMARK_GENERATE_INPUT_H

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AVRFixupKinds.h"
-#include "MCTargetDesc/AVRMCExpr.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #include "llvm/MC/MCAssembler.h"
@@ -40,42 +39,42 @@ unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   const unsigned Kind = Fixup.getTargetKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
-  auto Modifier = AVRMCExpr::Specifier(Target.getAccessVariant());
+  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
   switch ((unsigned)Fixup.getKind()) {
   case FK_Data_1:
     switch (Modifier) {
     default:
       llvm_unreachable("Unsupported Modifier");
-    case AVRMCExpr::VK_None:
+    case MCSymbolRefExpr::VK_None:
       return ELF::R_AVR_8;
-    case AVRMCExpr::VK_DIFF8:
+    case MCSymbolRefExpr::VK_AVR_DIFF8:
       return ELF::R_AVR_DIFF8;
-    case AVRMCExpr::VK_LO8:
+    case MCSymbolRefExpr::VK_AVR_LO8:
       return ELF::R_AVR_8_LO8;
-    case AVRMCExpr::VK_HI8:
+    case MCSymbolRefExpr::VK_AVR_HI8:
       return ELF::R_AVR_8_HI8;
-    case AVRMCExpr::VK_HH8:
+    case MCSymbolRefExpr::VK_AVR_HLO8:
       return ELF::R_AVR_8_HLO8;
     }
   case FK_Data_4:
     switch (Modifier) {
     default:
       llvm_unreachable("Unsupported Modifier");
-    case AVRMCExpr::VK_None:
+    case MCSymbolRefExpr::VK_None:
       return ELF::R_AVR_32;
-    case AVRMCExpr::VK_DIFF32:
+    case MCSymbolRefExpr::VK_AVR_DIFF32:
       return ELF::R_AVR_DIFF32;
     }
   case FK_Data_2:
     switch (Modifier) {
     default:
       llvm_unreachable("Unsupported Modifier");
-    case AVRMCExpr::VK_None:
+    case MCSymbolRefExpr::VK_None:
       return ELF::R_AVR_16;
-    case AVRMCExpr::VK_AVR_NONE:
-    case AVRMCExpr::VK_PM:
+    case MCSymbolRefExpr::VK_AVR_NONE:
+    case MCSymbolRefExpr::VK_AVR_PM:
       return ELF::R_AVR_16_PM;
-    case AVRMCExpr::VK_DIFF16:
+    case MCSymbolRefExpr::VK_AVR_DIFF16:
       return ELF::R_AVR_DIFF16;
     }
   case AVR::fixup_32:

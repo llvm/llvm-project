@@ -202,33 +202,20 @@ bool arm::useAAPCSForMachO(const llvm::Triple &T) {
          T.getOS() == llvm::Triple::UnknownOS || isARMMProfile(T);
 }
 
-// Check whether the architecture backend has support for the MRC/MCR
+// We follow GCC and support when the backend has support for the MRC/MCR
 // instructions that are used to set the hard thread pointer ("CP15 C13
 // Thread id").
-// This is not identical to ability to use the instruction, as the ARMV6K
-// variants can only use it in Arm mode since they don't support Thumb2
-// encoding.
 bool arm::isHardTPSupported(const llvm::Triple &Triple) {
   int Ver = getARMSubArchVersionNumber(Triple);
   llvm::ARM::ArchKind AK = llvm::ARM::parseArch(Triple.getArchName());
-  return AK == llvm::ARM::ArchKind::ARMV6K ||
-         AK == llvm::ARM::ArchKind::ARMV6KZ ||
-         (Ver >= 7 && !isARMMProfile(Triple));
-}
-
-// Checks whether the architecture is capable of supporting the Thumb2 encoding
-static bool supportsThumb2Encoding(const llvm::Triple &Triple) {
-  int Ver = arm::getARMSubArchVersionNumber(Triple);
-  llvm::ARM::ArchKind AK = llvm::ARM::parseArch(Triple.getArchName());
-  return AK == llvm::ARM::ArchKind::ARMV6T2 ||
+  return Triple.isARM() || AK == llvm::ARM::ArchKind::ARMV6T2 ||
          (Ver >= 7 && AK != llvm::ARM::ArchKind::ARMV8MBaseline);
 }
 
 // Select mode for reading thread pointer (-mtp=soft/cp15).
 arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
                                    const llvm::Triple &Triple, bool ForAS) {
-  Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ);
-  if (A && A->getValue() != StringRef("auto")) {
+  if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
     arm::ReadTPMode ThreadPointer =
         llvm::StringSwitch<arm::ReadTPMode>(A->getValue())
             .Case("cp15", ReadTPMode::TPIDRURO)
@@ -252,13 +239,7 @@ arm::ReadTPMode arm::getReadTPMode(const Driver &D, const ArgList &Args,
       D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
     return ReadTPMode::Invalid;
   }
-  // In auto mode we enable HW mode only if both the hardware supports it and
-  // the thumb2 encoding. For example ARMV6T2 supports thumb2, but not hardware.
-  // ARMV6K has HW suport, but not thumb2. Otherwise we could enable it for
-  // ARMV6K in thumb mode.
-  bool autoUseHWTPMode =
-      isHardTPSupported(Triple) && supportsThumb2Encoding(Triple);
-  return autoUseHWTPMode ? ReadTPMode::TPIDRURO : ReadTPMode::Soft;
+  return ReadTPMode::Soft;
 }
 
 void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
@@ -593,14 +574,12 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
       A->ignoreTargetSpecific();
   }
 
-  arm::ReadTPMode TPMode = getReadTPMode(D, Args, Triple, ForAS);
-
-  if (TPMode == ReadTPMode::TPIDRURW)
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRURW)
     Features.push_back("+read-tp-tpidrurw");
-  else if (TPMode == ReadTPMode::TPIDRPRW)
-    Features.push_back("+read-tp-tpidrprw");
-  else if (TPMode == ReadTPMode::TPIDRURO)
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRURO)
     Features.push_back("+read-tp-tpidruro");
+  if (getReadTPMode(D, Args, Triple, ForAS) == ReadTPMode::TPIDRPRW)
+    Features.push_back("+read-tp-tpidrprw");
 
   const Arg *ArchArg = Args.getLastArg(options::OPT_march_EQ);
   const Arg *CPUArg = Args.getLastArg(options::OPT_mcpu_EQ);

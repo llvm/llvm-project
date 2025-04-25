@@ -23,7 +23,7 @@ static_library("GlobalISel") {
     "CombinerHelperVectorOps.cpp",
     "GIMatchTableExecutor.cpp",
     "GISelChangeObserver.cpp",
-    "GISelValueTracking.cpp",
+    "GISelKnownBits.cpp",
     "GlobalISel.cpp",
     "IRTranslator.cpp",
     "InlineAsmLowering.cpp",

@@ -362,15 +362,6 @@ struct ScalarEnumerationTraits<
 };
 
 template <>
-struct ScalarEnumerationTraits<FormatStyle::EnumTrailingCommaStyle> {
-  static void enumeration(IO &IO, FormatStyle::EnumTrailingCommaStyle &Value) {
-    IO.enumCase(Value, "Leave", FormatStyle::ETC_Leave);
-    IO.enumCase(Value, "Insert", FormatStyle::ETC_Insert);
-    IO.enumCase(Value, "Remove", FormatStyle::ETC_Remove);
-  }
-};
-
-template <>
 struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
   static void enumeration(IO &IO, FormatStyle::IndentExternBlockStyle &Value) {
     IO.enumCase(Value, "AfterExternBlock", FormatStyle::IEBS_AfterExternBlock);
@@ -410,7 +401,6 @@ template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
 
 template <> struct ScalarEnumerationTraits<FormatStyle::LanguageKind> {
   static void enumeration(IO &IO, FormatStyle::LanguageKind &Value) {
-    IO.enumCase(Value, "C", FormatStyle::LK_C);
     IO.enumCase(Value, "Cpp", FormatStyle::LK_Cpp);
     IO.enumCase(Value, "Java", FormatStyle::LK_Java);
     IO.enumCase(Value, "JavaScript", FormatStyle::LK_JavaScript);
@@ -1051,7 +1041,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.EmptyLineAfterAccessModifier);
     IO.mapOptional("EmptyLineBeforeAccessModifier",
                    Style.EmptyLineBeforeAccessModifier);
-    IO.mapOptional("EnumTrailingComma", Style.EnumTrailingComma);
     IO.mapOptional("ExperimentalAutoDetectBinPacking",
                    Style.ExperimentalAutoDetectBinPacking);
     IO.mapOptional("FixNamespaceComments", Style.FixNamespaceComments);
@@ -1522,7 +1511,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BinPackLongBracedList = true;
   LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
-  LLVMStyle.BracedInitializerIndentWidth = -1;
+  LLVMStyle.BracedInitializerIndentWidth = std::nullopt;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
                              /*AfterClass=*/false,
                              /*AfterControlStatement=*/FormatStyle::BWACS_Never,
@@ -1568,7 +1557,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.DisableFormat = false;
   LLVMStyle.EmptyLineAfterAccessModifier = FormatStyle::ELAAMS_Never;
   LLVMStyle.EmptyLineBeforeAccessModifier = FormatStyle::ELBAMS_LogicalBlock;
-  LLVMStyle.EnumTrailingComma = FormatStyle::ETC_Leave;
   LLVMStyle.ExperimentalAutoDetectBinPacking = false;
   LLVMStyle.FixNamespaceComments = true;
   LLVMStyle.ForEachMacros.push_back("foreach");
@@ -1724,10 +1712,6 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
       FormatStyle::SIS_WithoutElse;
   GoogleStyle.AllowShortLoopsOnASingleLine = true;
   GoogleStyle.AlwaysBreakBeforeMultilineStrings = true;
-  // Abseil aliases to clang's `_Nonnull`, `_Nullable` and `_Null_unspecified`.
-  GoogleStyle.AttributeMacros.push_back("absl_nonnull");
-  GoogleStyle.AttributeMacros.push_back("absl_nullable");
-  GoogleStyle.AttributeMacros.push_back("absl_nullability_unknown");
   GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   GoogleStyle.DerivePointerAlignment = true;
   GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
@@ -2134,14 +2118,10 @@ std::error_code parseConfiguration(llvm::MemoryBufferRef Config,
   FormatStyle::FormatStyleSet StyleSet;
   bool LanguageFound = false;
   for (const FormatStyle &Style : llvm::reverse(Styles)) {
-    const auto Lang = Style.Language;
-    if (Lang != FormatStyle::LK_None)
+    if (Style.Language != FormatStyle::LK_None)
       StyleSet.Add(Style);
-    if (Lang == Language ||
-        // For backward compatibility.
-        (Lang == FormatStyle::LK_Cpp && Language == FormatStyle::LK_C)) {
+    if (Style.Language == Language)
       LanguageFound = true;
-    }
   }
   if (!LanguageFound) {
     if (Styles.empty() || Styles[0].Language != FormatStyle::LK_None)
@@ -2181,14 +2161,8 @@ FormatStyle::FormatStyleSet::Get(FormatStyle::LanguageKind Language) const {
   if (!Styles)
     return std::nullopt;
   auto It = Styles->find(Language);
-  if (It == Styles->end()) {
-    if (Language != FormatStyle::LK_C)
-      return std::nullopt;
-    // For backward compatibility.
-    It = Styles->find(FormatStyle::LK_Cpp);
-    if (It == Styles->end())
-      return std::nullopt;
-  }
+  if (It == Styles->end())
+    return std::nullopt;
   FormatStyle Style = It->second;
   Style.StyleSet = *this;
   return Style;
@@ -2213,21 +2187,6 @@ FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
 }
 
 namespace {
-
-void replaceToken(const FormatToken &Token, FormatToken *Next,
-                  const SourceManager &SourceMgr, tooling::Replacements &Result,
-                  StringRef Text = "") {
-  const auto &Tok = Token.Tok;
-  SourceLocation Start;
-  if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
-    Start = Tok.getLocation();
-    Next->WhitespaceRange = Token.WhitespaceRange;
-  } else {
-    Start = Token.WhitespaceRange.getBegin();
-  }
-  const auto &Range = CharSourceRange::getCharRange(Start, Tok.getEndLoc());
-  cantFail(Result.add(tooling::Replacement(SourceMgr, Range, Text)));
-}
 
 class ParensRemover : public TokenAnalyzer {
 public:
@@ -2255,8 +2214,20 @@ private:
         continue;
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (Token->Optional && Token->isOneOf(tok::l_paren, tok::r_paren))
-          replaceToken(*Token, Token->Next, SourceMgr, Result, " ");
+        if (!Token->Optional || !Token->isOneOf(tok::l_paren, tok::r_paren))
+          continue;
+        auto *Next = Token->Next;
+        assert(Next && Next->isNot(tok::eof));
+        SourceLocation Start;
+        if (Next->NewlinesBefore == 0) {
+          Start = Token->Tok.getLocation();
+          Next->WhitespaceRange = Token->WhitespaceRange;
+        } else {
+          Start = Token->WhitespaceRange.getBegin();
+        }
+        const auto &Range =
+            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
+        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, " ")));
       }
     }
   }
@@ -2345,13 +2316,24 @@ private:
       const auto *NextLine = I + 1 == End ? nullptr : I[1];
       for (const auto *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (!Token->Optional || !Token->isOneOf(tok::l_brace, tok::r_brace))
+        if (!Token->Optional)
+          continue;
+        if (!Token->isOneOf(tok::l_brace, tok::r_brace))
           continue;
         auto *Next = Token->Next;
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
           Next = NextLine->First;
-        replaceToken(*Token, Next, SourceMgr, Result);
+        SourceLocation Start;
+        if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
+          Start = Token->Tok.getLocation();
+          Next->WhitespaceRange = Token->WhitespaceRange;
+        } else {
+          Start = Token->WhitespaceRange.getBegin();
+        }
+        const auto &Range =
+            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
+        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
       }
     }
   }
@@ -2403,51 +2385,16 @@ private:
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
           Next = NextLine->First;
-        replaceToken(*Token, Next, SourceMgr, Result);
-      }
-    }
-  }
-};
-
-class EnumTrailingCommaEditor : public TokenAnalyzer {
-public:
-  EnumTrailingCommaEditor(const Environment &Env, const FormatStyle &Style)
-      : TokenAnalyzer(Env, Style) {}
-
-  std::pair<tooling::Replacements, unsigned>
-  analyze(TokenAnnotator &Annotator,
-          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-          FormatTokenLexer &Tokens) override {
-    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
-    tooling::Replacements Result;
-    editEnumTrailingComma(AnnotatedLines, Result);
-    return {Result, 0};
-  }
-
-private:
-  void editEnumTrailingComma(SmallVectorImpl<AnnotatedLine *> &Lines,
-                             tooling::Replacements &Result) {
-    const auto &SourceMgr = Env.getSourceManager();
-    for (auto *Line : Lines) {
-      if (!Line->Children.empty())
-        editEnumTrailingComma(Line->Children, Result);
-      if (!Line->Affected)
-        continue;
-      for (const auto *Token = Line->First; Token && !Token->Finalized;
-           Token = Token->Next) {
-        if (Token->isNot(TT_EnumRBrace))
-          continue;
-        const auto *BeforeRBrace = Token->getPreviousNonComment();
-        assert(BeforeRBrace);
-        if (BeforeRBrace->is(TT_EnumLBrace)) // Empty braces.
-          continue;
-        if (BeforeRBrace->is(tok::comma)) {
-          if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
-            replaceToken(*BeforeRBrace, BeforeRBrace->Next, SourceMgr, Result);
-        } else if (Style.EnumTrailingComma == FormatStyle::ETC_Insert) {
-          cantFail(Result.add(tooling::Replacement(
-              SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
+        SourceLocation Start;
+        if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
+          Start = Token->Tok.getLocation();
+          Next->WhitespaceRange = Token->WhitespaceRange;
+        } else {
+          Start = Token->WhitespaceRange.getBegin();
         }
+        const auto &Range =
+            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
+        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
       }
     }
   }
@@ -3599,8 +3546,7 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
     return sortJavaScriptImports(Style, Code, Ranges, FileName);
   if (Style.Language == FormatStyle::LanguageKind::LK_Java)
     return sortJavaImports(Style, Code, Ranges, FileName, Replaces);
-  if (Style.isCpp())
-    sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
+  sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
   return Replaces;
 }
 
@@ -3850,13 +3796,6 @@ reformat(const FormatStyle &Style, StringRef Code,
       });
     }
 
-    if (Style.EnumTrailingComma != FormatStyle::ETC_Leave) {
-      Passes.emplace_back([&](const Environment &Env) {
-        return EnumTrailingCommaEditor(Env, Expanded)
-            .process(/*SkipAnnotation=*/true);
-      });
-    }
-
     if (Style.FixNamespaceComments) {
       Passes.emplace_back([&](const Environment &Env) {
         return NamespaceEndCommentsFixer(Env, Expanded).process();
@@ -4001,42 +3940,29 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOptions LangOpts;
 
-  auto LexingStd = Style.Standard;
-  if (LexingStd == FormatStyle::LS_Auto || LexingStd == FormatStyle::LS_Latest)
+  FormatStyle::LanguageStandard LexingStd = Style.Standard;
+  if (LexingStd == FormatStyle::LS_Auto)
+    LexingStd = FormatStyle::LS_Latest;
+  if (LexingStd == FormatStyle::LS_Latest)
     LexingStd = FormatStyle::LS_Cpp20;
-
-  const bool SinceCpp11 = LexingStd >= FormatStyle::LS_Cpp11;
-  const bool SinceCpp20 = LexingStd >= FormatStyle::LS_Cpp20;
-
-  switch (Style.Language) {
-  case FormatStyle::LK_C:
-    LangOpts.C17 = 1;
-    break;
-  case FormatStyle::LK_Cpp:
-  case FormatStyle::LK_ObjC:
-    LangOpts.CXXOperatorNames = 1;
-    LangOpts.CPlusPlus11 = SinceCpp11;
-    LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
-    LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
-    LangOpts.CPlusPlus20 = SinceCpp20;
-    [[fallthrough]];
-  default:
-    LangOpts.CPlusPlus = 1;
-  }
-
-  LangOpts.Char8 = SinceCpp20;
+  LangOpts.CPlusPlus = 1;
+  LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp14;
+  LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp17;
+  LangOpts.CPlusPlus20 = LexingStd >= FormatStyle::LS_Cpp20;
+  LangOpts.Char8 = LexingStd >= FormatStyle::LS_Cpp20;
   // Turning on digraphs in standards before C++0x is error-prone, because e.g.
   // the sequence "<::" will be unconditionally treated as "[:".
   // Cf. Lexer::LexTokenInternal.
-  LangOpts.Digraphs = SinceCpp11;
+  LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
 
   LangOpts.LineComment = 1;
+  LangOpts.CXXOperatorNames = Style.isCpp();
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
   LangOpts.DeclSpecKeyword = 1; // To get __declspec.
   LangOpts.C99 = 1; // To get kw_restrict for non-underscore-prefixed restrict.
-
   return LangOpts;
 }
 
@@ -4056,8 +3982,6 @@ const char *StyleOptionHelpDescription =
     "   --style=\"{BasedOnStyle: llvm, IndentWidth: 8}\"";
 
 static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
-  if (FileName.ends_with(".c"))
-    return FormatStyle::LK_C;
   if (FileName.ends_with(".java"))
     return FormatStyle::LK_Java;
   if (FileName.ends_with_insensitive(".js") ||
@@ -4097,35 +4021,6 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
   return FormatStyle::LK_Cpp;
 }
 
-static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
-  const auto ID = Env.getFileID();
-  const auto &SourceMgr = Env.getSourceManager();
-
-  LangOptions LangOpts;
-  LangOpts.CPlusPlus = 1;
-  LangOpts.LineComment = 1;
-
-  Lexer Lex(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts);
-  Lex.SetCommentRetentionState(true);
-
-  for (Token Tok; !Lex.LexFromRawLexer(Tok) && Tok.is(tok::comment);) {
-    auto Text = StringRef(SourceMgr.getCharacterData(Tok.getLocation()),
-                          Tok.getLength());
-    if (!Text.consume_front("// clang-format Language:"))
-      continue;
-
-    Text = Text.trim();
-    if (Text == "C")
-      return FormatStyle::LK_C;
-    if (Text == "Cpp")
-      return FormatStyle::LK_Cpp;
-    if (Text == "ObjC")
-      return FormatStyle::LK_ObjC;
-  }
-
-  return FormatStyle::LK_None;
-}
-
 FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
   const auto GuessedLanguage = getLanguageByFileName(FileName);
   if (GuessedLanguage == FormatStyle::LK_Cpp) {
@@ -4135,10 +4030,6 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
     if (!Code.empty() && (Extension.empty() || Extension == ".h")) {
       auto NonEmptyFileName = FileName.empty() ? "guess.h" : FileName;
       Environment Env(Code, NonEmptyFileName, /*Ranges=*/{});
-      if (const auto Language = getLanguageByComment(Env);
-          Language != FormatStyle::LK_None) {
-        return Language;
-      }
       ObjCHeaderStyleGuesser Guesser(Env, getLLVMStyle());
       Guesser.process();
       if (Guesser.isObjC())

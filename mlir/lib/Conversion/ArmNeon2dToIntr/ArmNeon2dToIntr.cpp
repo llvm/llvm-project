@@ -16,7 +16,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARMNEON2DTOINTRPASS
+#define GEN_PASS_DEF_CONVERTARMNEON2DTOINTR
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -52,7 +52,7 @@ public:
 };
 
 class ConvertArmNeon2dToIntr
-    : public impl::ConvertArmNeon2dToIntrPassBase<ConvertArmNeon2dToIntr> {
+    : public impl::ConvertArmNeon2dToIntrBase<ConvertArmNeon2dToIntr> {
   void runOnOperation() override {
     auto *context = &getContext();
 
@@ -68,4 +68,8 @@ class ConvertArmNeon2dToIntr
 
 void mlir::populateConvertArmNeon2dToIntrPatterns(RewritePatternSet &patterns) {
   patterns.add<Sdot2dLoweringPattern>(patterns.getContext());
+}
+
+std::unique_ptr<Pass> mlir::createConvertArmNeon2dToIntrPass() {
+  return std::make_unique<ConvertArmNeon2dToIntr>();
 }

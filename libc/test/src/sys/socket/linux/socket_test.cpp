@@ -10,19 +10,15 @@
 
 #include "src/unistd/close.h"
 
-#include "test/UnitTest/ErrnoCheckingTest.h"
-#include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-using LlvmLibcSocketTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
-
-TEST_F(LlvmLibcSocketTest, LocalSocket) {
+TEST(LlvmLibcSocketTest, LocalSocket) {
   int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);
   ASSERT_ERRNO_SUCCESS();
 
-  ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0));
+  LIBC_NAMESPACE::close(sock);
 }

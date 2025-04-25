@@ -47,6 +47,11 @@ inline Attributes &operator|=(Attributes &a, Attributes &b) {
   return a;
 }
 
+struct Properties {
+#define DXIL_PROPERTY(Name) bool Name = false;
+#include "DXILOperation.inc"
+};
+
 } // namespace dxil
 } // namespace llvm
 

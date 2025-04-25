@@ -100,8 +100,7 @@ protected:
   llvm::Expected<std::vector<AddressRange>> GetPCRanges();
   llvm::Expected<std::vector<AddressRange>> GetStartEndAddressRanges();
 
-  llvm::Expected<std::vector<AddressRange>>
-  CheckRangeSize(std::vector<AddressRange> ranges, llvm::StringRef what);
+  llvm::Error CheckRangeSize(const AddressRange &range, llvm::StringRef what);
 
   CommandOptions m_options;
 };

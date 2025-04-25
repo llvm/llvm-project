@@ -174,8 +174,8 @@ private:
   unsigned copyValue(unsigned Reg);
 
   // Backend specific FastISel code.
-  Register fastMaterializeAlloca(const AllocaInst *AI) override;
-  Register fastMaterializeConstant(const Constant *C) override;
+  unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
+  unsigned fastMaterializeConstant(const Constant *C) override;
   bool fastLowerArguments() override;
 
   // Selection routines.
@@ -610,7 +610,7 @@ unsigned WebAssemblyFastISel::copyValue(unsigned Reg) {
   return ResultReg;
 }
 
-Register WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   DenseMap<const AllocaInst *, int>::iterator SI =
       FuncInfo.StaticAllocaMap.find(AI);
 
@@ -625,15 +625,15 @@ Register WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return Register();
+  return 0;
 }
 
-Register WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
+unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
     if (TLI.isPositionIndependent())
-      return Register();
+      return 0;
     if (GV->isThreadLocal())
-      return Register();
+      return 0;
     Register ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
                                                : &WebAssembly::I32RegClass);
@@ -645,7 +645,7 @@ Register WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
   }
 
   // Let target-independent code handle it.
-  return Register();
+  return 0;
 }
 
 bool WebAssemblyFastISel::fastLowerArguments() {

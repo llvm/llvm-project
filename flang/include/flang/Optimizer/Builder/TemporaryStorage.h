@@ -179,8 +179,6 @@ private:
 /// type. Fetching variable N will return a variable with the same address,
 /// dynamic type, bounds, and type parameters as the Nth variable that was
 /// pushed. It is implemented using runtime.
-/// Note that this is not meant to save POINTER or ALLOCATABLE descriptor
-/// addresses, use AnyAddressStack instead.
 class AnyVariableStack {
 public:
   AnyVariableStack(mlir::Location loc, fir::FirOpBuilder &builder,
@@ -203,23 +201,6 @@ private:
   Counter counter;
   /// Pointer box passed to the runtime when fetching the values.
   mlir::Value retValueBox;
-};
-
-/// Data structure to stack simple addresses (C pointers). It can be used to
-/// store data base addresses, descriptor addresses, procedure addresses, and
-/// pointer procedure address. It stores the addresses as int_ptr values under
-/// the hood.
-class AnyAddressStack : public AnyValueStack {
-public:
-  AnyAddressStack(mlir::Location loc, fir::FirOpBuilder &builder,
-                  mlir::Type addressType);
-
-  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                 mlir::Value value);
-  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
-
-private:
-  mlir::Type addressType;
 };
 
 class TemporaryStorage;
@@ -283,7 +264,7 @@ public:
 
 private:
   std::variant<HomogeneousScalarStack, SimpleCopy, SSARegister, AnyValueStack,
-               AnyVariableStack, AnyVectorSubscriptStack, AnyAddressStack>
+               AnyVariableStack, AnyVectorSubscriptStack>
       impl;
 };
 } // namespace fir::factory

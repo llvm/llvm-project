@@ -19,7 +19,7 @@ MATH_MANGLE(tgamma)(float x)
     if (ax > 0x1.0p-6f) {
         // For x < 3, push to larger value using gamma(x) = gamma(x+1) / x
         float d = 1.0f;
-        if (ax < 1.0f) {
+        if (x < 1.0f) {
             d = MATH_MAD((ax + 3.0f), ax, 2.0f) * ax;
             ax = ax + 3.0f;
         } else if (ax < 2.0f) {
@@ -42,16 +42,9 @@ MATH_MANGLE(tgamma)(float x)
             ret = x >  0x1.18521ep+5f ? PINF_F32 : ret;
         } else {
             float s = MATH_MANGLE(sinpi)(x);
-            if (x > -30.0f) {
-                float p = s*x*t2*t1*t1;
-                ret = MATH_DIV(-sqrtpiby2*d,  MATH_MAD(p, pt, p));
-            } else if (x > -41.0f) {
-                float t3 = t2*t1;
-                float p1 = MATH_MAD(t3, pt, t3);
-                float p2 = s*x*t1;
-                ret = MATH_DIV(MATH_DIV(-sqrtpiby2*d, p1), p2);
-            } else
-                ret = 0.0f;
+            float p = s*x*t2*t1*t1;
+            ret = MATH_DIV(-sqrtpiby2*d,  MATH_MAD(p, pt, p));
+            ret = x < -42.0f ? 0.0f : ret;
             ret = BUILTIN_FRACTION_F32(x) == 0.0f ? QNAN_F32 : ret;
         }
     } else {

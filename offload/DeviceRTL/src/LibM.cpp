@@ -31,6 +31,54 @@ using size_t = decltype(sizeof(char));
 
 #undef __OPENMP_AMDGCN__
 
+extern "C" {
+
+#ifndef FORTRAN_NO_LONGER_NEEDS
+// Attach Fortran runtimes which are used by Classic Flang
+double __f90_dmodulov(double a, double p) {
+  double d;
+  d = a - floor(a/p) * p;
+  return d;
+}
+
+float __f90_amodulov(float a, float p) { return __f90_dmodulov(a, p); }
+
+int32_t __f90_modulov(int32_t a, int32_t p) {
+  int32_t q, r;
+
+  q = a / p;
+  r = a - q * p;
+  if (r != 0 && (a ^ p) < 0) { /* signs differ */
+    r += p;
+  }
+  return r;
+}
+
+int64_t __f90_i8modulov_i8(int64_t a, int64_t p) {
+  int64_t q, r;
+
+  q = a / p;
+  r = a - q * p;
+  if (r != 0 && (a ^ p) < 0) { /* signs differ */
+    r += (p);
+  }
+  return r;
+}
+
+int16_t __f90_imodulov(int16_t a, int16_t p) {
+  int32_t q, r;
+
+  q = a / p;
+  r = a - q * p;
+  if (r != 0 && (a ^ p) < 0) { /* signs differ */
+    r += p;
+  }
+  return r;
+}
+}
+
+#endif
+
 #endif // __AMDGPU__
 
 #ifdef __NVPTX__

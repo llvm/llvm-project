@@ -364,8 +364,6 @@ private:
   template <typename ELFT>
   std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
                                      const typename ELFT::Shdr *sec);
-  template <typename ELFT>
-  void parseGnuAndFeatures(const llvm::object::ELFFile<ELFT> &obj);
 };
 
 class BinaryFile : public InputFile {

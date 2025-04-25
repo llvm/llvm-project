@@ -203,9 +203,9 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   }
 
   // With -flat_namespace, all extern symbols in dylibs are interposable.
-  bool interposable = ((config->namespaceKind == NamespaceKind::flat &&
-                        config->outputType != MachO::MH_EXECUTE) ||
-                       config->interposable) &&
+  // FIXME: Add support for `-interposable` (PR53680).
+  bool interposable = config->namespaceKind == NamespaceKind::flat &&
+                      config->outputType != MachO::MH_EXECUTE &&
                       !isPrivateExtern;
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,

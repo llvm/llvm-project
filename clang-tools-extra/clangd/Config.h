@@ -59,7 +59,6 @@ struct Config {
     std::optional<std::string> FixedCDBPath;
   };
 
-  enum class BuiltinHeaderPolicy { Clangd, QueryDriver };
   /// Controls how the compile command for the current file is determined.
   struct {
     /// Edits to apply to the compile command, in sequence.
@@ -67,10 +66,6 @@ struct Config {
         Edits;
     /// Where to search for compilation databases for this file's flags.
     CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, std::nullopt};
-
-    /// Whether to use clangd's own builtin headers, or ones from the system
-    /// include extractor, if available.
-    BuiltinHeaderPolicy BuiltinHeaders = BuiltinHeaderPolicy::Clangd;
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
@@ -147,11 +142,6 @@ struct Config {
     FullPlaceholders,
   };
 
-  enum class HeaderInsertionPolicy {
-    IWYU,       // Include what you use
-    NeverInsert // Never insert headers as part of code completion
-  };
-
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
@@ -159,8 +149,6 @@ struct Config {
     bool AllScopes = true;
     /// controls the completion options for argument lists.
     ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
-    /// Controls if headers should be inserted when completions are accepted
-    HeaderInsertionPolicy HeaderInsertion = HeaderInsertionPolicy::IWYU;
   } Completion;
 
   /// Configures hover feature.

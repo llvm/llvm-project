@@ -1738,7 +1738,7 @@ bool LSRUse::InsertFormula(const Formula &F, const Loop &L) {
   Formulae.push_back(F);
 
   // Record registers now being used by this use.
-  Regs.insert_range(F.BaseRegs);
+  Regs.insert(F.BaseRegs.begin(), F.BaseRegs.end());
   if (F.ScaledReg)
     Regs.insert(F.ScaledReg);
 
@@ -1759,7 +1759,7 @@ void LSRUse::RecomputeRegs(size_t LUIdx, RegUseTracker &RegUses) {
   Regs.clear();
   for (const Formula &F : Formulae) {
     if (F.ScaledReg) Regs.insert(F.ScaledReg);
-    Regs.insert_range(F.BaseRegs);
+    Regs.insert(F.BaseRegs.begin(), F.BaseRegs.end());
   }
 
   // Update the RegTracker.
@@ -3215,7 +3215,8 @@ void LSRInstance::ChainInstruction(Instruction *UserInst, Instruction *IVOper,
   SmallPtrSet<Instruction*,4> &NearUsers = ChainUsersVec[ChainIdx].NearUsers;
   // This chain's NearUsers become FarUsers.
   if (!LastIncExpr->isZero()) {
-    ChainUsersVec[ChainIdx].FarUsers.insert_range(NearUsers);
+    ChainUsersVec[ChainIdx].FarUsers.insert(NearUsers.begin(),
+                                            NearUsers.end());
     NearUsers.clear();
   }
 
@@ -5293,7 +5294,7 @@ void LSRInstance::NarrowSearchSpaceByDeletingCostlyFormulas() {
     Formula &F = LU.Formulae[0];
     LLVM_DEBUG(dbgs() << "  Leaving only "; F.print(dbgs()); dbgs() << '\n');
     // When we choose the formula, the regs become unique.
-    UniqRegs.insert_range(F.BaseRegs);
+    UniqRegs.insert(F.BaseRegs.begin(), F.BaseRegs.end());
     if (F.ScaledReg)
       UniqRegs.insert(F.ScaledReg);
   }

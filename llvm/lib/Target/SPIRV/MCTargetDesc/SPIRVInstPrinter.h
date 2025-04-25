@@ -35,7 +35,6 @@ public:
 
   void printOpDecorate(const MCInst *MI, raw_ostream &O);
   void printOpExtInst(const MCInst *MI, raw_ostream &O);
-  void printUnknownType(const MCInst *MI, raw_ostream &O);
   void printRemainingVariableOps(const MCInst *MI, unsigned StartIndex,
                                  raw_ostream &O, bool SkipFirstSpace = false,
                                  bool SkipImmediates = false);

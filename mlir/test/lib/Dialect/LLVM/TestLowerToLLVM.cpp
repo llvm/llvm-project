@@ -55,7 +55,7 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // Blanket-convert any remaining affine ops if any remain.
   pm.addPass(createLowerAffinePass());
   // Convert SCF to CF (always needed).
-  pm.addPass(createSCFToControlFlowPass());
+  pm.addPass(createConvertSCFToCFPass());
   // Sprinkle some cleanups.
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());

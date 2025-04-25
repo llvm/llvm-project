@@ -388,8 +388,6 @@ enum MetadataCodes {
   METADATA_EXPR = 48,             // [distinct, ...]
   METADATA_FRAGMENT = 49,         // []
   METADATA_LIFETIME = 50,         // [obj, loc, n x args]
-  METADATA_SUBRANGE_TYPE = 51,    // [distinct, ...]
-  METADATA_FIXED_POINT_TYPE = 52, // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -792,15 +790,9 @@ enum AttributeKindCodes {
   ATTR_KIND_CORO_ELIDE_SAFE = 98,
   ATTR_KIND_NO_EXT = 99,
   ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
-  ATTR_KIND_SANITIZE_TYPE = 101,
-  ATTR_KIND_CAPTURES = 102,
-
-  // TODO: Get rid of this.
-  // There really shouldn't be incompatible bitcode changes specific to AMD
-  // branches because that is prone to break compiler developer's workflows. In
-  // the meantime, try to reduce the blast radius by using bitcode values that
-  // are extremely unlikely to be used upstream.
-  ATTR_KIND_SANITIZED_PADDED_GLOBAL = 9999,
+  ATTR_KIND_SANITIZED_PADDED_GLOBAL = 101,
+  ATTR_KIND_SANITIZE_TYPE = 102,
+  ATTR_KIND_CAPTURES = 103,
 };
 
 enum ComdatSelectionKindCodes {

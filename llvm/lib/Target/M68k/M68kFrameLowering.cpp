@@ -462,7 +462,7 @@ void M68kFrameLowering::emitPrologueCalleeSavedFrameMoves(
   // Calculate offsets.
   for (const auto &I : CSI) {
     int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-    MCRegister Reg = I.getReg();
+    Register Reg = I.getReg();
 
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
     BuildCFI(MBB, MBBI, DL,
@@ -837,7 +837,7 @@ bool M68kFrameLowering::spillCalleeSavedRegisters(
   unsigned Mask = 0;
   for (const auto &Info : CSI) {
     FI = std::max(FI, Info.getFrameIdx());
-    MCRegister Reg = Info.getReg();
+    Register Reg = Info.getReg();
     unsigned Shift = MRI.getSpillRegisterOrder(Reg);
     Mask |= 1 << Shift;
   }
@@ -851,7 +851,7 @@ bool M68kFrameLowering::spillCalleeSavedRegisters(
   const MachineFunction &MF = *MBB.getParent();
   const MachineRegisterInfo &RI = MF.getRegInfo();
   for (const auto &Info : CSI) {
-    MCRegister Reg = Info.getReg();
+    Register Reg = Info.getReg();
     bool IsLiveIn = RI.isLiveIn(Reg);
     if (!IsLiveIn)
       MBB.addLiveIn(Reg);
@@ -872,7 +872,7 @@ bool M68kFrameLowering::restoreCalleeSavedRegisters(
   unsigned Mask = 0;
   for (const auto &Info : CSI) {
     FI = std::max(FI, Info.getFrameIdx());
-    MCRegister Reg = Info.getReg();
+    Register Reg = Info.getReg();
     unsigned Shift = MRI.getSpillRegisterOrder(Reg);
     Mask |= 1 << Shift;
   }

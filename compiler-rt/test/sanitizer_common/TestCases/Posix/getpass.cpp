@@ -3,6 +3,7 @@
 // Ignore leaks as this is not the point of test, but HWASAN repors one here.
 // RUN: %env_tool_opts=detect_leaks=0 %run %t | FileCheck %s
 
+// REQUIRES: stable-runtime
 // XFAIL: android && asan
 
 // No libutil.

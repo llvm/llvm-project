@@ -1,5 +1,3 @@
-! REQUIRES: flang-supports-f128-math
-! REQUIRES: x86_64-registered-target
 ! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: @_QPadd_test

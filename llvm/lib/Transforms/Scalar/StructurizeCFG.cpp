@@ -361,8 +361,6 @@ class StructurizeCFG {
 
   void rebuildSSA();
 
-  void setDebugLoc(BranchInst *Br, BasicBlock *BB);
-
 public:
   void init(Region *R);
   bool run(Region *R, DominatorTree *DT);
@@ -597,6 +595,14 @@ void StructurizeCFG::collectInfos() {
     // Find the last back edges
     analyzeLoops(RN);
   }
+
+  // Reset the collected term debug locations
+  TermDL.clear();
+
+  for (BasicBlock &BB : *Func) {
+    if (const DebugLoc &DL = BB.getTerminator()->getDebugLoc())
+      TermDL[&BB] = DL;
+  }
 }
 
 /// Insert the missing branch conditions
@@ -737,10 +743,12 @@ void StructurizeCFG::findUndefBlocks(
     if (!VisitedBlock.insert(Current).second)
       continue;
 
-    if (FlowSet.contains(Current))
-      llvm::append_range(Stack, predecessors(Current));
-    else if (!Incomings.contains(Current))
+    if (FlowSet.contains(Current)) {
+      for (auto P : predecessors(Current))
+        Stack.push_back(P);
+    } else if (!Incomings.contains(Current)) {
       UndefBlks.push_back(Current);
+    }
   }
 }
 
@@ -817,7 +825,8 @@ void StructurizeCFG::setPhiValues() {
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {
-      Incomings.insert_range(llvm::make_first_range(BlkPhis.front().second));
+      for (const auto &VI : BlkPhis.front().second)
+        Incomings.insert(VI.first);
       findUndefBlocks(To, Incomings, UndefBlks);
     }
 
@@ -843,17 +852,16 @@ void StructurizeCFG::setPhiValues() {
     BasicBlock *To = AddedPhi.first;
     const BBVector &From = AddedPhi.second;
 
-    auto It = DeletedPhis.find(To);
-    if (It == DeletedPhis.end())
+    if (!DeletedPhis.count(To))
       continue;
 
-    PhiMap &Map = It->second;
+    PhiMap &Map = DeletedPhis[To];
     SmallVector<BasicBlock *> &UndefBlks = UndefBlksMap[To];
     for (const auto &[Phi, Incoming] : Map) {
-      Value *Poison = PoisonValue::get(Phi->getType());
+      Value *Undef = UndefValue::get(Phi->getType());
       Updater.Initialize(Phi->getType(), "");
-      Updater.AddAvailableValue(&Func->getEntryBlock(), Poison);
-      Updater.AddAvailableValue(To, Poison);
+      Updater.AddAvailableValue(&Func->getEntryBlock(), Undef);
+      Updater.AddAvailableValue(To, Undef);
 
       // Use leader phi's incoming if there is.
       auto LeaderIt = PhiClasses.findLeader(Phi);
@@ -882,7 +890,7 @@ void StructurizeCFG::setPhiValues() {
         if (Updater.HasValueForBlock(UB))
           continue;
 
-        Updater.AddAvailableValue(UB, Poison);
+        Updater.AddAvailableValue(UB, Undef);
       }
 
       for (BasicBlock *FI : From)
@@ -915,23 +923,11 @@ void StructurizeCFG::simplifyAffectedPhis() {
   } while (Changed);
 }
 
-void StructurizeCFG::setDebugLoc(BranchInst *Br, BasicBlock *BB) {
-  auto I = TermDL.find(BB);
-  if (I == TermDL.end())
-    return;
-
-  Br->setDebugLoc(I->second);
-  TermDL.erase(I);
-}
-
 /// Remove phi values from all successors and then remove the terminator.
 void StructurizeCFG::killTerminator(BasicBlock *BB) {
   Instruction *Term = BB->getTerminator();
   if (!Term)
     return;
-
-  if (const DebugLoc &DL = Term->getDebugLoc())
-    TermDL[BB] = DL;
 
   for (BasicBlock *Succ : successors(BB))
     delPhiValues(BB, Succ);
@@ -977,7 +973,7 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
     killTerminator(BB);
     BranchInst *Br = BranchInst::Create(NewExit, BB);
-    setDebugLoc(Br, BB);
+    Br->setDebugLoc(TermDL[BB]);
     addPhiValues(BB, NewExit);
     if (IncludeDominator)
       DT->changeImmediateDominator(NewExit, BB);
@@ -993,14 +989,10 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
                                         Func, Insert);
   FlowSet.insert(Flow);
 
-  if (auto *Term = Dominator->getTerminator()) {
-    if (const DebugLoc &DL = Term->getDebugLoc())
-      TermDL[Flow] = DL;
-  } else if (DebugLoc DLTemp = TermDL.lookup(Dominator)) {
-    // Use a temporary copy to avoid a use-after-free if the map's storage
-    // is reallocated.
-    TermDL[Flow] = DLTemp;
-  }
+  // use a temporary variable to avoid a use-after-free if the map's storage is
+  // reallocated
+  DebugLoc DL = TermDL[Dominator];
+  TermDL[Flow] = std::move(DL);
 
   DT->addNewBlock(Flow, Dominator);
   ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
@@ -1095,7 +1087,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
 
     // let it point to entry and next block
     BranchInst *Br = BranchInst::Create(Entry, Next, BoolPoison, Flow);
-    setDebugLoc(Br, Flow);
+    Br->setDebugLoc(TermDL[Flow]);
     Conditions.push_back(Br);
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
@@ -1136,7 +1128,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   LoopEnd = needPrefix(false);
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
   BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolPoison, LoopEnd);
-  setDebugLoc(Br, LoopEnd);
+  Br->setDebugLoc(TermDL[LoopEnd]);
   LoopConds.push_back(Br);
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
@@ -1189,9 +1181,9 @@ void StructurizeCFG::rebuildSSA() {
           continue;
 
         if (!Initialized) {
-          Value *Poison = PoisonValue::get(I.getType());
+          Value *Undef = UndefValue::get(I.getType());
           Updater.Initialize(I.getType(), "");
-          Updater.AddAvailableValue(&Func->getEntryBlock(), Poison);
+          Updater.AddAvailableValue(&Func->getEntryBlock(), Undef);
           Updater.AddAvailableValue(BB, &I);
           Initialized = true;
         }

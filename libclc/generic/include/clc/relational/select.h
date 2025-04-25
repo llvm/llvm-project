@@ -1,10 +1,6 @@
-//===----------------------------------------------------------------------===//
-//
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
+/* Duplciate these so we don't have to distribute utils.h */
+#define __CLC_CONCAT(x, y) x ## y
+#define __CLC_XCONCAT(x, y) __CLC_CONCAT(x, y)
 
 #define __CLC_SELECT_FN select
 
@@ -14,3 +10,5 @@
 #include <clc/integer/gentype.inc>
 
 #undef __CLC_SELECT_FN
+#undef __CLC_CONCAT
+#undef __CLC_XCONCAT

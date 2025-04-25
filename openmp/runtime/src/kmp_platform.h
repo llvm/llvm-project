@@ -22,7 +22,6 @@
 #define KMP_OS_OPENBSD 0
 #define KMP_OS_DARWIN 0
 #define KMP_OS_WINDOWS 0
-#define KMP_OS_HAIKU 0
 #define KMP_OS_HURD 0
 #define KMP_OS_SOLARIS 0
 #define KMP_OS_WASI 0
@@ -74,11 +73,6 @@
 #define KMP_OS_OPENBSD 1
 #endif
 
-#if (defined __HAIKU__)
-#undef KMP_OS_HAIKU
-#define KMP_OS_HAIKU 1
-#endif
-
 #if (defined __GNU__)
 #undef KMP_OS_HURD
 #define KMP_OS_HURD 1
@@ -100,14 +94,14 @@
 #endif
 
 #if (1 != KMP_OS_LINUX + KMP_OS_DRAGONFLY + KMP_OS_FREEBSD + KMP_OS_NETBSD +   \
-              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HAIKU + \
-              KMP_OS_HURD + KMP_OS_SOLARIS + KMP_OS_WASI + KMP_OS_AIX)
+              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HURD +  \
+              KMP_OS_SOLARIS + KMP_OS_WASI + KMP_OS_AIX)
 #error Unknown OS
 #endif
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HAIKU || KMP_OS_HURD ||          \
-    KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
+    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HURD || KMP_OS_SOLARIS ||        \
+    KMP_OS_WASI || KMP_OS_AIX
 #undef KMP_OS_UNIX
 #define KMP_OS_UNIX 1
 #endif

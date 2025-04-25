@@ -24,7 +24,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "BranchFolding.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -358,7 +357,7 @@ public:
   unsigned UnscheduledPredecessors = 0;
 };
 
-class MachineBlockPlacement {
+class MachineBlockPlacement : public MachineFunctionPass {
   /// A type for a block filter set.
   using BlockFilterSet = SmallSetVector<const MachineBasicBlock *, 16>;
 
@@ -410,11 +409,7 @@ class MachineBlockPlacement {
 
   ProfileSummaryInfo *PSI = nullptr;
 
-  // Tail merging is also determined based on
-  // whether structured CFG is required.
-  bool AllowTailMerge;
-
-  CodeGenOptLevel OptLevel;
+  TargetPassConfig *PassConfig = nullptr;
 
   /// Duplicator used to duplicate tails during placement.
   ///
@@ -614,47 +609,17 @@ class MachineBlockPlacement {
   void createCFGChainExtTsp();
 
 public:
-  MachineBlockPlacement(const MachineBranchProbabilityInfo *MBPI,
-                        MachineLoopInfo *MLI, ProfileSummaryInfo *PSI,
-                        std::unique_ptr<MBFIWrapper> MBFI,
-                        MachinePostDominatorTree *MPDT, bool AllowTailMerge)
-      : MBPI(MBPI), MBFI(std::move(MBFI)), MLI(MLI), MPDT(MPDT), PSI(PSI),
-        AllowTailMerge(AllowTailMerge) {};
-
-  bool run(MachineFunction &F);
-
-  static bool allowTailDupPlacement(MachineFunction &MF) {
-    return TailDupPlacement && !MF.getTarget().requiresStructuredCFG();
-  }
-};
-
-class MachineBlockPlacementLegacy : public MachineFunctionPass {
-public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementLegacyPass(*PassRegistry::getPassRegistry());
+  MachineBlockPlacement() : MachineFunctionPass(ID) {
+    initializeMachineBlockPlacementPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
+  bool runOnMachineFunction(MachineFunction &F) override;
 
-    auto *MBPI =
-        &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-    auto MBFI = std::make_unique<MBFIWrapper>(
-        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
-    auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-    auto *MPDT = MachineBlockPlacement::allowTailDupPlacement(MF)
-                     ? &getAnalysis<MachinePostDominatorTreeWrapperPass>()
-                            .getPostDomTree()
-                     : nullptr;
-    auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-    auto *PassConfig = &getAnalysis<TargetPassConfig>();
-    bool AllowTailMerge = PassConfig->getEnableTailMerge();
-    return MachineBlockPlacement(MBPI, MLI, PSI, std::move(MBFI), MPDT,
-                                 AllowTailMerge)
-        .run(MF);
+  bool allowTailDupPlacement() const {
+    assert(F);
+    return TailDupPlacement && !F->getTarget().requiresStructuredCFG();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -671,18 +636,18 @@ public:
 
 } // end anonymous namespace
 
-char MachineBlockPlacementLegacy::ID = 0;
+char MachineBlockPlacement::ID = 0;
 
-char &llvm::MachineBlockPlacementID = MachineBlockPlacementLegacy::ID;
+char &llvm::MachineBlockPlacementID = MachineBlockPlacement::ID;
 
-INITIALIZE_PASS_BEGIN(MachineBlockPlacementLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachineBlockPlacement, DEBUG_TYPE,
                       "Branch Probability Basic Block Placement", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
-INITIALIZE_PASS_END(MachineBlockPlacementLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
                     "Branch Probability Basic Block Placement", false, false)
 
 #ifndef NDEBUG
@@ -1165,7 +1130,7 @@ MachineBlockPlacement::getBestTrellisSuccessor(
     MachineBasicBlock *Succ1 = BestA.Dest;
     MachineBasicBlock *Succ2 = BestB.Dest;
     // Check to see if tail-duplication would be profitable.
-    if (allowTailDupPlacement(*F) && shouldTailDuplicate(Succ2) &&
+    if (allowTailDupPlacement() && shouldTailDuplicate(Succ2) &&
         canTailDuplicateUnplacedPreds(BB, Succ2, Chain, BlockFilter) &&
         isProfitableToTailDup(BB, Succ2, MBPI->getEdgeProbability(BB, Succ1),
                               Chain, BlockFilter)) {
@@ -1690,7 +1655,7 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
     if (hasBetterLayoutPredecessor(BB, Succ, SuccChain, SuccProb, RealSuccProb,
                                    Chain, BlockFilter)) {
       // If tail duplication would make Succ profitable, place it.
-      if (allowTailDupPlacement(*F) && shouldTailDuplicate(Succ))
+      if (allowTailDupPlacement() && shouldTailDuplicate(Succ))
         DupCandidates.emplace_back(SuccProb, Succ);
       continue;
     }
@@ -1827,12 +1792,12 @@ MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
 
   for (MachineFunction::iterator I = PrevUnplacedBlockIt, E = F->end(); I != E;
        ++I) {
-    if (BlockChain *Chain = BlockToChain[&*I]; Chain != &PlacedChain) {
+    if (BlockToChain[&*I] != &PlacedChain) {
       PrevUnplacedBlockIt = I;
       // Now select the head of the chain to which the unplaced block belongs
       // as the block to place. This will force the entire chain to be placed,
       // and satisfies the requirements of merging chains.
-      return *Chain->begin();
+      return *BlockToChain[&*I]->begin();
     }
   }
   return nullptr;
@@ -1918,7 +1883,7 @@ void MachineBlockPlacement::buildChain(const MachineBasicBlock *HeadBB,
     auto Result = selectBestSuccessor(BB, Chain, BlockFilter);
     MachineBasicBlock *BestSucc = Result.BB;
     bool ShouldTailDup = Result.ShouldTailDup;
-    if (allowTailDupPlacement(*F))
+    if (allowTailDupPlacement())
       ShouldTailDup |= (BestSucc && canTailDuplicateUnplacedPreds(
                                         BB, BestSucc, Chain, BlockFilter));
 
@@ -1945,7 +1910,7 @@ void MachineBlockPlacement::buildChain(const MachineBasicBlock *HeadBB,
 
     // Placement may have changed tail duplication opportunities.
     // Check for that now.
-    if (allowTailDupPlacement(*F) && BestSucc && ShouldTailDup) {
+    if (allowTailDupPlacement() && BestSucc && ShouldTailDup) {
       repeatedlyTailDuplicateBlock(BestSucc, BB, LoopHeaderBB, Chain,
                                    BlockFilter, PrevUnplacedBlockIt,
                                    PrevUnplacedBlockInFilterIt);
@@ -3501,7 +3466,7 @@ void MachineBlockPlacement::initTailDupThreshold() {
 
   // For aggressive optimization, we can adjust some thresholds to be less
   // conservative.
-  if (OptLevel >= CodeGenOptLevel::Aggressive) {
+  if (PassConfig->getOptLevel() >= CodeGenOptLevel::Aggressive) {
     // At O3 we should be more willing to copy blocks for tail duplication. This
     // increases size pressure, so we only do it at O3
     // Do this unless only the regular threshold is explicitly set.
@@ -3513,56 +3478,29 @@ void MachineBlockPlacement::initTailDupThreshold() {
   // If there's no threshold provided through options, query the target
   // information for a threshold instead.
   if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
-      (OptLevel < CodeGenOptLevel::Aggressive ||
+      (PassConfig->getOptLevel() < CodeGenOptLevel::Aggressive ||
        TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
-    TailDupSize = TII->getTailDuplicateSize(OptLevel);
+    TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
 }
 
-PreservedAnalyses
-MachineBlockPlacementPass::run(MachineFunction &MF,
-                               MachineFunctionAnalysisManager &MFAM) {
-  auto *MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
-  auto MBFI = std::make_unique<MBFIWrapper>(
-      MFAM.getResult<MachineBlockFrequencyAnalysis>(MF));
-  auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto *MPDT = MachineBlockPlacement::allowTailDupPlacement(MF)
-                   ? &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF)
-                   : nullptr;
-  auto *PSI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-                  .getCachedResult<ProfileSummaryAnalysis>(
-                      *MF.getFunction().getParent());
-  if (!PSI)
-    report_fatal_error("MachineBlockPlacement requires ProfileSummaryAnalysis",
-                       false);
-
-  MachineBlockPlacement MBP(MBPI, MLI, PSI, std::move(MBFI), MPDT,
-                            AllowTailMerge);
-
-  if (!MBP.run(MF))
-    return PreservedAnalyses::all();
-
-  return getMachineFunctionPassPreservedAnalyses();
-}
-
-void MachineBlockPlacementPass::printPipeline(
-    raw_ostream &OS,
-    function_ref<StringRef(StringRef)> MapClassName2PassName) const {
-  OS << MapClassName2PassName(name());
-  if (!AllowTailMerge)
-    OS << "<no-tail-merge>";
-}
-
-bool MachineBlockPlacement::run(MachineFunction &MF) {
+bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
 
   // Check for single-block functions and skip them.
   if (std::next(MF.begin()) == MF.end())
     return false;
 
   F = &MF;
-  OptLevel = F->getTarget().getOptLevel();
-
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  MBFI = std::make_unique<MBFIWrapper>(
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
+  MPDT = nullptr;
+  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  PassConfig = &getAnalysis<TargetPassConfig>();
 
   // Initialize PreferredLoopExit to nullptr here since it may never be set if
   // there are no MachineLoops.
@@ -3591,7 +3529,8 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   }
 
   // Apply tail duplication.
-  if (allowTailDupPlacement(*F)) {
+  if (allowTailDupPlacement()) {
+    MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     if (OptForSize)
       TailDupSize = 1;
     const bool PreRegAlloc = false;
@@ -3609,8 +3548,8 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   // TailMerge can create jump into if branches that make CFG irreducible for
   // HW that requires structured CFG.
   const bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
-                               AllowTailMerge && BranchFoldPlacement &&
-                               MF.size() > 3;
+                               PassConfig->getEnableTailMerge() &&
+                               BranchFoldPlacement && MF.size() > 3;
   // No tail merging opportunities if the block number is less than four.
   if (EnableTailMerge) {
     const unsigned TailMergeSize = TailDupSize + 1;

@@ -38,19 +38,13 @@ private:
   llvm::DenseMap<const Stmt *, MutationAnalyzer> ScopesCache;
   llvm::DenseSet<SourceLocation> TemplateDiagnosticsCache;
 
-  const bool AnalyzePointers;
-  const bool AnalyzeReferences;
   const bool AnalyzeValues;
-
-  const bool WarnPointersAsPointers;
+  const bool AnalyzeReferences;
   const bool WarnPointersAsValues;
 
-  const bool TransformPointersAsPointers;
-  const bool TransformPointersAsValues;
-  const bool TransformReferences;
   const bool TransformValues;
-
-  const std::vector<StringRef> AllowedTypes;
+  const bool TransformReferences;
+  const bool TransformPointersAsValues;
 };
 
 } // namespace clang::tidy::misc

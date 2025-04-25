@@ -15,12 +15,16 @@ namespace mlir {
 class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_SCFTOCONTROLFLOWPASS
+#define GEN_PASS_DECL_SCFTOCONTROLFLOW
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Collect a set of patterns to convert SCF operations to CFG branch-based
 /// operations within the ControlFlow dialect.
 void populateSCFToControlFlowConversionPatterns(RewritePatternSet &patterns);
+
+/// Creates a pass to convert SCF operations to CFG branch-based operation in
+/// the ControlFlow dialect.
+std::unique_ptr<Pass> createConvertSCFToCFPass();
 
 } // namespace mlir
 

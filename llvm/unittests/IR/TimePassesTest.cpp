@@ -161,8 +161,8 @@ TEST(TimePassesTest, CustomOut) {
   PI.runBeforePass(Pass2, M);
   PI.runAfterPass(Pass2, M, PreservedAnalyses::all());
 
-  // Clear and generate report again.
-  TimePasses->print();
+  // Generate report by deleting the handler.
+  TimePasses.reset();
 
   // There should be Pass2 in this report and no Pass1.
   EXPECT_FALSE(TimePassesStr.str().empty());

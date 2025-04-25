@@ -19,7 +19,7 @@
 #endif
 
 #if _LIBCPP_STD_VER >= 17
-_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+namespace std { // purposefully not versioned
 
 enum class byte : unsigned char {};
 
@@ -79,7 +79,7 @@ template <class _Integer, __enable_if_t<is_integral<_Integer>::value, int> = 0>
   return static_cast<_Integer>(__b);
 }
 
-_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+} // namespace std
 #endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___CSTDDEF_BYTE_H

@@ -431,6 +431,7 @@ end:
 
 ; CHECK-LABEL: name: unreachable
 ; CHECK: G_ADD
+; CHECK-NEXT: {{^$}}
 ; CHECK-NEXT: ...
 define void @unreachable(i32 %a) {
   %sum = add i32 %a, %a

@@ -521,12 +521,6 @@ def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def Sincospi : Builtin, FPMathTemplate {
-  let Spellings = ["__builtin_sincospi"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
-  let Prototype = "void(T, T*, T*)";
-}
-
 // Access to floating point environment.
 def BuiltinFltRounds : Builtin {
   let Spellings = ["__builtin_flt_rounds"];
@@ -833,12 +827,6 @@ def BuiltinVaStart : Builtin {
   let Prototype = "void(__builtin_va_list_ref, ...)";
 }
 
-def BuiltinC23VaStart : LangBuiltin<"C23_LANG"> {
-  let Spellings = ["__builtin_c23_va_start"];
-  let Attributes = [NoThrow, CustomTypeChecking];
-  let Prototype = "void(__builtin_va_list_ref, ...)";
-}
-
 def BuiltinStdargStart : Builtin {
   let Spellings = ["__builtin_stdarg_start"];
   let Attributes = [NoThrow, CustomTypeChecking];
@@ -849,12 +837,6 @@ def BuiltinAssumeAligned : Builtin {
   let Spellings = ["__builtin_assume_aligned"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void*(void const*, size_t, ...)";
-}
-
-def BuiltinAssumeDereferenceable : Builtin {
-  let Spellings = ["__builtin_assume_dereferenceable"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(void const*, _Constant size_t)";
 }
 
 def BuiltinFree : Builtin {
@@ -1342,12 +1324,6 @@ def ElementwiseExp : Builtin {
 
 def ElementwiseExp2 : Builtin {
   let Spellings = ["__builtin_elementwise_exp2"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def ElementwiseExp10 : Builtin {
-  let Spellings = ["__builtin_elementwise_exp10"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4777,12 +4753,6 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
-def HLSLAddUint64: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_adduint64"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
-}
-
 def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getpointer"];
   let Attributes = [NoThrow];
@@ -4793,18 +4763,6 @@ def HLSLAll : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_all"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool(...)";
-}
-
-def HLSLAnd : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_and"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
-}
-
-def HLSLOr : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_or"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "void(...)";
 }
 
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
@@ -4869,7 +4827,7 @@ def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
@@ -4881,13 +4839,13 @@ def HLSLCross: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_degrees"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
 def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
@@ -4917,7 +4875,7 @@ def HLSLFirstBitLow : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLFrac : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_frac"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
@@ -4929,7 +4887,7 @@ def HLSLIsinf : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLLerp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_lerp"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
@@ -4941,25 +4899,25 @@ def HLSLMad : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLNormalize : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_normalize"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
 def HLSLRcp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rcp"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
 def HLSLRSqrt : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_rsqrt"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
 def HLSLSaturate : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_saturate"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
@@ -4983,7 +4941,7 @@ def HLSLStep: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLRadians : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_radians"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 
@@ -5001,7 +4959,7 @@ def HLSLSplitDouble: LangBuiltin<"HLSL_LANG"> {
 
 def HLSLClip: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clip"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }
 

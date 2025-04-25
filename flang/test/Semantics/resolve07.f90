@@ -18,7 +18,6 @@ subroutine s2
 end
 
 subroutine s3
-  save
   dimension :: x(4), x2(8)
   !ERROR: The dimensions of 'x' have already been declared
   allocatable :: x(:)

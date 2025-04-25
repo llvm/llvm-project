@@ -16,6 +16,11 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
+if (LLVM_BUILD_TELEMETRY)
+   set(TELEMETRY_DEPS Telemetry)
+   add_definitions(-DLLDB_BUILD_TELEMETRY)
+endif()
+
 # TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
 add_lldb_library(lldbCore
   Address.cpp
@@ -46,7 +51,6 @@ add_lldb_library(lldbCore
   Opcode.cpp
   PluginManager.cpp
   Progress.cpp
-  Statusline.cpp
   RichManglingContext.cpp
   SearchFilter.cpp
   Section.cpp
@@ -70,7 +74,6 @@ add_lldb_library(lldbCore
     lldbTarget
     lldbUtility
     lldbValueObject
-    lldbVersion
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}
@@ -82,7 +85,7 @@ add_lldb_library(lldbCore
     Support
     Demangle
     TargetParser
-    Telemetry
+    ${TELEMETRY_DEPS}
   )
 
 add_dependencies(lldbCore

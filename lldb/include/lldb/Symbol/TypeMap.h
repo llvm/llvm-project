@@ -44,8 +44,7 @@ public:
   lldb::TypeSP FirstType() const;
 
   typedef std::multimap<lldb::user_id_t, lldb::TypeSP> collection;
-  typedef llvm::iterator_range<ValueMapIterator<collection::const_iterator>>
-      TypeIterable;
+  typedef AdaptedIterable<collection, lldb::TypeSP, map_adapter> TypeIterable;
 
   TypeIterable Types() const { return TypeIterable(m_types); }
 

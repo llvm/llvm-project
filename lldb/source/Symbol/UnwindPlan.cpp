@@ -15,7 +15,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include <optional>
@@ -390,65 +389,78 @@ bool UnwindPlan::Row::operator==(const UnwindPlan::Row &rhs) const {
          m_register_locations == rhs.m_register_locations;
 }
 
-void UnwindPlan::AppendRow(Row row) {
-  if (m_row_list.empty() || m_row_list.back()->GetOffset() != row.GetOffset())
-    m_row_list.push_back(std::make_shared<Row>(std::move(row)));
+void UnwindPlan::AppendRow(const UnwindPlan::RowSP &row_sp) {
+  if (m_row_list.empty() ||
+      m_row_list.back()->GetOffset() != row_sp->GetOffset())
+    m_row_list.push_back(row_sp);
   else
-    *m_row_list.back() = std::move(row);
+    m_row_list.back() = row_sp;
 }
 
-struct RowLess {
-  bool operator()(addr_t a, const UnwindPlan::RowSP &b) const {
-    return a < b->GetOffset();
+void UnwindPlan::InsertRow(const UnwindPlan::RowSP &row_sp,
+                           bool replace_existing) {
+  collection::iterator it = m_row_list.begin();
+  while (it != m_row_list.end()) {
+    RowSP row = *it;
+    if (row->GetOffset() >= row_sp->GetOffset())
+      break;
+    it++;
   }
-  bool operator()(const UnwindPlan::RowSP &a, addr_t b) const {
-    return a->GetOffset() < b;
-  }
-};
-
-void UnwindPlan::InsertRow(Row row, bool replace_existing) {
-  auto it = llvm::lower_bound(m_row_list, row.GetOffset(), RowLess());
-  if (it == m_row_list.end() || it->get()->GetOffset() > row.GetOffset())
-    m_row_list.insert(it, std::make_shared<Row>(std::move(row)));
-  else {
-    assert(it->get()->GetOffset() == row.GetOffset());
-    if (replace_existing)
-      **it = std::move(row);
-  }
+  if (it == m_row_list.end() || (*it)->GetOffset() != row_sp->GetOffset())
+    m_row_list.insert(it, row_sp);
+  else if (replace_existing)
+    *it = row_sp;
 }
 
-const UnwindPlan::Row *
-UnwindPlan::GetRowForFunctionOffset(std::optional<int> offset) const {
-  auto it = offset ? llvm::upper_bound(m_row_list, *offset, RowLess())
-                   : m_row_list.end();
-  if (it == m_row_list.begin())
-    return nullptr;
-  // upper_bound returns the row strictly greater than our desired offset, which
-  // means that the row before it is a match.
-  return std::prev(it)->get();
+UnwindPlan::RowSP UnwindPlan::GetRowForFunctionOffset(int offset) const {
+  RowSP row;
+  if (!m_row_list.empty()) {
+    if (offset == -1)
+      row = m_row_list.back();
+    else {
+      collection::const_iterator pos, end = m_row_list.end();
+      for (pos = m_row_list.begin(); pos != end; ++pos) {
+        if ((*pos)->GetOffset() <= static_cast<lldb::offset_t>(offset))
+          row = *pos;
+        else
+          break;
+      }
+    }
+  }
+  return row;
 }
 
 bool UnwindPlan::IsValidRowIndex(uint32_t idx) const {
   return idx < m_row_list.size();
 }
 
-const UnwindPlan::Row *UnwindPlan::GetRowAtIndex(uint32_t idx) const {
+const UnwindPlan::RowSP UnwindPlan::GetRowAtIndex(uint32_t idx) const {
   if (idx < m_row_list.size())
-    return m_row_list[idx].get();
-  LLDB_LOG(GetLog(LLDBLog::Unwind),
-           "error: UnwindPlan::GetRowAtIndex(idx = {0}) invalid index "
-           "(number rows is {1})",
-           idx, m_row_list.size());
-  return nullptr;
+    return m_row_list[idx];
+  else {
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log,
+              "error: UnwindPlan::GetRowAtIndex(idx = %u) invalid index "
+              "(number rows is %u)",
+              idx, (uint32_t)m_row_list.size());
+    return UnwindPlan::RowSP();
+  }
 }
 
-const UnwindPlan::Row *UnwindPlan::GetLastRow() const {
+const UnwindPlan::RowSP UnwindPlan::GetLastRow() const {
   if (m_row_list.empty()) {
-    LLDB_LOG(GetLog(LLDBLog::Unwind),
-             "UnwindPlan::GetLastRow() when rows are empty");
-    return nullptr;
+    Log *log = GetLog(LLDBLog::Unwind);
+    LLDB_LOGF(log, "UnwindPlan::GetLastRow() when rows are empty");
+    return UnwindPlan::RowSP();
   }
-  return m_row_list.back().get();
+  return m_row_list.back();
+}
+
+int UnwindPlan::GetRowCount() const { return m_row_list.size(); }
+
+void UnwindPlan::SetPlanValidAddressRange(const AddressRange &range) {
+  if (range.GetBaseAddress().IsValid() && range.GetByteSize() != 0)
+    m_plan_valid_address_range = range;
 }
 
 bool UnwindPlan::PlanValidAtAddress(Address addr) {
@@ -474,9 +486,9 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) {
   // If the 0th Row of unwind instructions is missing, or if it doesn't provide
   // a register to use to find the Canonical Frame Address, this is not a valid
   // UnwindPlan.
-  const Row *row0 = GetRowForFunctionOffset(0);
-  if (!row0 ||
-      row0->GetCFAValue().GetValueType() == Row::FAValue::unspecified) {
+  if (GetRowAtIndex(0).get() == nullptr ||
+      GetRowAtIndex(0)->GetCFAValue().GetValueType() ==
+          Row::FAValue::unspecified) {
     Log *log = GetLog(LLDBLog::Unwind);
     if (log) {
       StreamString s;
@@ -495,15 +507,17 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) {
     return false;
   }
 
-  if (m_plan_valid_ranges.empty())
+  if (!m_plan_valid_address_range.GetBaseAddress().IsValid() ||
+      m_plan_valid_address_range.GetByteSize() == 0)
     return true;
 
   if (!addr.IsValid())
     return true;
 
-  return llvm::any_of(m_plan_valid_ranges, [&](const AddressRange &range) {
-    return range.ContainsFileAddress(addr);
-  });
+  if (m_plan_valid_address_range.ContainsFileAddress(addr))
+    return true;
+
+  return false;
 }
 
 void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
@@ -560,17 +574,20 @@ void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
     s.Printf("not specified.\n");
     break;
   }
-  if (!m_plan_valid_ranges.empty()) {
+  if (m_plan_valid_address_range.GetBaseAddress().IsValid() &&
+      m_plan_valid_address_range.GetByteSize() > 0) {
     s.PutCString("Address range of this UnwindPlan: ");
     TargetSP target_sp(thread->CalculateTarget());
-    for (const AddressRange &range : m_plan_valid_ranges)
-      range.Dump(&s, target_sp.get(), Address::DumpStyleSectionNameOffset);
+    m_plan_valid_address_range.Dump(&s, target_sp.get(),
+                                    Address::DumpStyleSectionNameOffset);
     s.EOL();
   }
-  for (const auto &[index, row_sp] : llvm::enumerate(m_row_list)) {
-    s.Format("row[{0}]: ", index);
-    row_sp->Dump(s, this, thread, base_addr);
-    s << "\n";
+  collection::const_iterator pos, begin = m_row_list.begin(),
+                                  end = m_row_list.end();
+  for (pos = begin; pos != end; ++pos) {
+    s.Printf("row[%u]: ", (uint32_t)std::distance(begin, pos));
+    (*pos)->Dump(s, this, thread, base_addr);
+    s.Printf("\n");
   }
 }
 

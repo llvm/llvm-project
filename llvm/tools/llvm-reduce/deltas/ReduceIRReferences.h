@@ -14,19 +14,17 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEIRREFERENCES_MIR_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEIRREFERENCES_MIR_H
 
-#include "Delta.h"
-
 namespace llvm {
+class TestRunner;
 
 /// Remove IR references from instructions (i.e. from memory operands)
-void reduceIRInstructionReferencesDeltaPass(Oracle &O,
-                                            ReducerWorkItem &WorkItem);
+void reduceIRInstructionReferencesDeltaPass(TestRunner &Test);
 
 /// Remove IR BasicBlock references (the block names)
-void reduceIRBlockReferencesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceIRBlockReferencesDeltaPass(TestRunner &Test);
 
 /// Remove IR references from function level fields (e.g. frame object names)
-void reduceIRFunctionReferencesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceIRFunctionReferencesDeltaPass(TestRunner &Test);
 
 } // namespace llvm
 

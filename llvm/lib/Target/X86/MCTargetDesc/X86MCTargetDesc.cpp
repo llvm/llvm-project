@@ -514,7 +514,7 @@ public:
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const MCSubtargetInfo &STI) const override;
+                 const Triple &TargetTriple) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
@@ -630,8 +630,7 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
 std::vector<std::pair<uint64_t, uint64_t>>
 X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
                                    ArrayRef<uint8_t> PltContents,
-                                   const MCSubtargetInfo &STI) const {
-  const auto TargetTriple = STI.getTargetTriple();
+                                   const Triple &TargetTriple) const {
   switch (TargetTriple.getArch()) {
   case Triple::x86:
     return findX86PltEntries(PltSectionVA, PltContents);

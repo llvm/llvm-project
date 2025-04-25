@@ -889,8 +889,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     }
 
     // Handle multiple gc.relocates of the same input efficiently.
-    auto [VRegIt, Inserted] = VirtRegs.try_emplace(SD);
-    if (!Inserted)
+    if (VirtRegs.count(SD))
       continue;
 
     auto *RetTy = Relocate->getType();
@@ -901,7 +900,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
     PendingExports.push_back(Chain);
 
-    VRegIt->second = Reg;
+    VirtRegs[SD] = Reg;
   }
 
   // Record for later use how each relocation was lowered.  This is needed to
@@ -916,16 +915,13 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     bool IsLocal = (Relocate->getParent() == StatepointInstr->getParent());
 
     RecordType Record;
-    if (LowerAsVReg.count(SDV)) {
-      if (IsLocal) {
-        // Result is already stored in StatepointLowering
-        Record.type = RecordType::SDValueNode;
-      } else {
-        Record.type = RecordType::VReg;
-        auto It = VirtRegs.find(SDV);
-        assert(It != VirtRegs.end());
-        Record.payload.Reg = It->second;
-      }
+    if (IsLocal && LowerAsVReg.count(SDV)) {
+      // Result is already stored in StatepointLowering
+      Record.type = RecordType::SDValueNode;
+    } else if (LowerAsVReg.count(SDV)) {
+      Record.type = RecordType::VReg;
+      assert(VirtRegs.count(SDV));
+      Record.payload.Reg = VirtRegs[SDV];
     } else if (Loc.getNode()) {
       Record.type = RecordType::Spill;
       Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();

@@ -55,7 +55,6 @@ using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 
 //===----------------------------------------------------------------------===//
 // IntegerOverflowFlags
-//===----------------------------------------------------------------------===//
 
 namespace mlir {
 static Attribute convertToAttribute(MLIRContext *ctx,
@@ -635,7 +634,7 @@ static void printSwitchOpCases(OpAsmPrinter &p, SwitchOp op, Type flagType,
       llvm::zip(caseValues, caseDestinations),
       [&](auto i) {
         p << "  ";
-        p << std::get<0>(i);
+        p << std::get<0>(i).getLimitedValue();
         p << ": ";
         p.printSuccessorAndUseList(std::get<1>(i), caseOperands[index++]);
       },
@@ -941,7 +940,6 @@ void LoadOp::build(OpBuilder &builder, OperationState &state, Type type,
         alignment ? builder.getI64IntegerAttr(alignment) : nullptr, isVolatile,
         isNonTemporal, isInvariant, isInvariantGroup, ordering,
         syncscope.empty() ? nullptr : builder.getStringAttr(syncscope),
-        /*dereferenceable=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr,
         /*tbaa=*/nullptr);
@@ -1037,8 +1035,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1066,8 +1063,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
-        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1081,8 +1077,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1096,8 +1091,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
@@ -1938,18 +1932,6 @@ OpFoldResult LLVM::ExtractValueOp::fold(FoldAdaptor adaptor) {
     getContainerMutable().set(extractValueOp.getContainer());
     return getResult();
   }
-
-  {
-    DenseElementsAttr constval;
-    matchPattern(getContainer(), m_Constant(&constval));
-    if (constval && constval.getElementType() == getType()) {
-      if (isa<SplatElementsAttr>(constval))
-        return constval.getSplatValue<Attribute>();
-      if (getPosition().size() == 1)
-        return constval.getValues<Attribute>()[getPosition()[0]];
-    }
-  }
-
   auto insertValueOp = getContainer().getDefiningOp<InsertValueOp>();
   OpFoldResult result = {};
   while (insertValueOp) {
@@ -2125,57 +2107,6 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // AddressOfOp constant-folds to the global symbol name.
 OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
   return getGlobalNameAttr();
-}
-
-//===----------------------------------------------------------------------===//
-// LLVM::DSOLocalEquivalentOp
-//===----------------------------------------------------------------------===//
-
-LLVMFuncOp
-DSOLocalEquivalentOp::getFunction(SymbolTableCollection &symbolTable) {
-  return dyn_cast_or_null<LLVMFuncOp>(symbolTable.lookupSymbolIn(
-      parentLLVMModule(*this), getFunctionNameAttr()));
-}
-
-AliasOp DSOLocalEquivalentOp::getAlias(SymbolTableCollection &symbolTable) {
-  return dyn_cast_or_null<AliasOp>(symbolTable.lookupSymbolIn(
-      parentLLVMModule(*this), getFunctionNameAttr()));
-}
-
-LogicalResult
-DSOLocalEquivalentOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  Operation *symbol = symbolTable.lookupSymbolIn(parentLLVMModule(*this),
-                                                 getFunctionNameAttr());
-  auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
-  auto alias = dyn_cast_or_null<AliasOp>(symbol);
-
-  if (!function && !alias)
-    return emitOpError(
-        "must reference a global defined by 'llvm.func' or 'llvm.mlir.alias'");
-
-  if (alias) {
-    if (alias.getInitializer()
-            .walk([&](AddressOfOp addrOp) {
-              if (addrOp.getGlobal(symbolTable))
-                return WalkResult::interrupt();
-              return WalkResult::advance();
-            })
-            .wasInterrupted())
-      return emitOpError("must reference an alias to a function");
-  }
-
-  if ((function && function.getLinkage() == LLVM::Linkage::ExternWeak) ||
-      (alias && alias.getLinkage() == LLVM::Linkage::ExternWeak))
-    return emitOpError(
-        "target function with 'extern_weak' linkage not allowed");
-
-  return success();
-}
-
-/// Fold a dso_local_equivalent operation to a dedicated dso_local_equivalent
-/// attribute.
-OpFoldResult DSOLocalEquivalentOp::fold(FoldAdaptor) {
-  return DSOLocalEquivalentAttr::get(getContext(), getFunctionNameAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2513,17 +2444,6 @@ LogicalResult GlobalOp::verifyRegions() {
 // LLVM::GlobalCtorsOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult checkGlobalXtorData(Operation *op, ArrayAttr data) {
-  if (data.empty())
-    return success();
-
-  if (llvm::all_of(data.getAsRange<Attribute>(), [](Attribute v) {
-        return isa<FlatSymbolRefAttr, ZeroAttr>(v);
-      }))
-    return success();
-  return op->emitError("data element must be symbol or #llvm.zero");
-}
-
 LogicalResult
 GlobalCtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   for (Attribute ctor : getCtors()) {
@@ -2535,14 +2455,10 @@ GlobalCtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 LogicalResult GlobalCtorsOp::verify() {
-  if (checkGlobalXtorData(*this, getData()).failed())
-    return failure();
-
-  if (getCtors().size() == getPriorities().size() &&
-      getCtors().size() == getData().size())
-    return success();
-  return emitError(
-      "ctors, priorities, and data must have the same number of elements");
+  if (getCtors().size() != getPriorities().size())
+    return emitError(
+        "mismatch between the number of ctors and the number of priorities");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2560,14 +2476,10 @@ GlobalDtorsOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 LogicalResult GlobalDtorsOp::verify() {
-  if (checkGlobalXtorData(*this, getData()).failed())
-    return failure();
-
-  if (getDtors().size() == getPriorities().size() &&
-      getDtors().size() == getData().size())
-    return success();
-  return emitError(
-      "dtors, priorities, and data must have the same number of elements");
+  if (getDtors().size() != getPriorities().size())
+    return emitError(
+        "mismatch between the number of dtors and the number of priorities");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2670,7 +2582,6 @@ LogicalResult AliasOp::verify() {
   case Linkage::Internal:
   case Linkage::Private:
   case Linkage::Weak:
-  case Linkage::WeakODR:
   case Linkage::Linkonce:
   case Linkage::LinkonceODR:
   case Linkage::AvailableExternally:
@@ -3624,8 +3535,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3633,16 +3543,14 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, /*resultTypes=*/TypeRange{}, intrin, args,
         fastMathFlags,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::Type resultType, mlir::StringAttr intrin,
                             mlir::ValueRange args) {
   build(builder, state, {resultType}, intrin, args, FastmathFlagsAttr{},
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
@@ -3650,101 +3558,7 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::StringAttr intrin, mlir::ValueRange args,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, resultTypes, intrin, args, fastMathFlags,
-        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
-        /*res_attrs=*/{});
-}
-
-ParseResult CallIntrinsicOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  StringAttr intrinAttr;
-  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
-  SmallVector<SmallVector<OpAsmParser::UnresolvedOperand>> opBundleOperands;
-  SmallVector<SmallVector<Type>> opBundleOperandTypes;
-  ArrayAttr opBundleTags;
-
-  // Parse intrinsic name.
-  if (parser.parseCustomAttributeWithFallback(
-          intrinAttr, parser.getBuilder().getType<NoneType>()))
-    return failure();
-  result.addAttribute(CallIntrinsicOp::getIntrinAttrName(result.name),
-                      intrinAttr);
-
-  if (parser.parseLParen())
-    return failure();
-
-  // Parse the function arguments.
-  if (parser.parseOperandList(operands))
-    return mlir::failure();
-
-  if (parser.parseRParen())
-    return mlir::failure();
-
-  // Handle bundles.
-  SMLoc opBundlesLoc = parser.getCurrentLocation();
-  if (std::optional<ParseResult> result = parseOpBundles(
-          parser, opBundleOperands, opBundleOperandTypes, opBundleTags);
-      result && failed(*result))
-    return failure();
-  if (opBundleTags && !opBundleTags.empty())
-    result.addAttribute(
-        CallIntrinsicOp::getOpBundleTagsAttrName(result.name).getValue(),
-        opBundleTags);
-
-  if (parser.parseOptionalAttrDict(result.attributes))
-    return mlir::failure();
-
-  SmallVector<DictionaryAttr> argAttrs;
-  SmallVector<DictionaryAttr> resultAttrs;
-  if (parseCallTypeAndResolveOperands(parser, result, /*isDirect=*/true,
-                                      operands, argAttrs, resultAttrs))
-    return failure();
-  call_interface_impl::addArgAndResultAttrs(
-      parser.getBuilder(), result, argAttrs, resultAttrs,
-      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
-
-  if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
-                              opBundleOperandTypes,
-                              getOpBundleSizesAttrName(result.name)))
-    return failure();
-
-  int32_t numOpBundleOperands = 0;
-  for (const auto &operands : opBundleOperands)
-    numOpBundleOperands += operands.size();
-
-  result.addAttribute(
-      CallIntrinsicOp::getOperandSegmentSizeAttr(),
-      parser.getBuilder().getDenseI32ArrayAttr(
-          {static_cast<int32_t>(operands.size()), numOpBundleOperands}));
-
-  return mlir::success();
-}
-
-void CallIntrinsicOp::print(OpAsmPrinter &p) {
-  p << ' ';
-  p.printAttributeWithoutType(getIntrinAttr());
-
-  OperandRange args = getArgs();
-  p << "(" << args << ")";
-
-  // Operand bundles.
-  if (!getOpBundleOperands().empty()) {
-    p << ' ';
-    printOpBundles(p, *this, getOpBundleOperands(),
-                   getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
-  }
-
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
-                          {getOperandSegmentSizesAttrName(),
-                           getOpBundleSizesAttrName(), getIntrinAttrName(),
-                           getOpBundleTagsAttrName(), getArgAttrsAttrName(),
-                           getResAttrsAttrName()});
-
-  p << " : ";
-
-  // Reconstruct the MLIR function type from operand and result types.
-  call_interface_impl::printFunctionSignature(
-      p, args.getTypes(), getArgAttrsAttr(),
-      /*isVariadic=*/false, getResultTypes(), getResAttrsAttr());
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{});
 }
 
 //===----------------------------------------------------------------------===//
@@ -3785,20 +3599,6 @@ LogicalResult LinkerOptionsOp::verify() {
   if (mlir::Operation *parentOp = (*this)->getParentOp();
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// ModuleFlagsOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult ModuleFlagsOp::verify() {
-  if (Operation *parentOp = (*this)->getParentOp();
-      parentOp && !satisfiesLLVMModule(parentOp))
-    return emitOpError("must appear at the module level");
-  for (Attribute flag : getFlags())
-    if (!isa<ModuleFlagAttr>(flag))
-      return emitOpError("expected a module flag attribute");
   return success();
 }
 
@@ -4033,7 +3833,6 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
   if (name == LLVMDialect::getStructRetAttrName() ||
       name == LLVMDialect::getByValAttrName() ||
       name == LLVMDialect::getByRefAttrName() ||
-      name == LLVMDialect::getElementTypeAttrName() ||
       name == LLVMDialect::getInAllocaAttrName() ||
       name == LLVMDialect::getPreallocatedAttrName()) {
     if (failed(checkTypeAttrType()))
@@ -4056,17 +3855,11 @@ LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
   // Check an integer attribute that is attached to a pointer value.
   if (name == LLVMDialect::getAlignAttrName() ||
       name == LLVMDialect::getDereferenceableAttrName() ||
-      name == LLVMDialect::getDereferenceableOrNullAttrName()) {
+      name == LLVMDialect::getDereferenceableOrNullAttrName() ||
+      name == LLVMDialect::getStackAlignmentAttrName()) {
     if (failed(checkIntegerAttrType()))
       return failure();
     if (verifyValueType && failed(checkPointerType()))
-      return failure();
-    return success();
-  }
-
-  // Check an integer attribute that is attached to a pointer value.
-  if (name == LLVMDialect::getStackAlignmentAttrName()) {
-    if (failed(checkIntegerAttrType()))
       return failure();
     return success();
   }

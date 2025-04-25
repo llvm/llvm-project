@@ -10,7 +10,7 @@ set(TEST_INPUT_LINKED_OBJS)
 macro(add_test_input_binary name input output)
   add_custom_command(
     OUTPUT "${output}"
-    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -mcpu=gfx900 -nogpulib -nogpuinc
+    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -mcpu=gfx900 -nogpulib
     ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -27,7 +27,7 @@ macro(add_test_input_bitcode name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c -emit-llvm -target amdgcn-amd-amdhsa
-    -mcpu=gfx900 -nogpulib -nogpuinc
+    -mcpu=gfx900 -nogpulib
     ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
     -o "${output}"
     VERBATIM
@@ -45,7 +45,7 @@ macro(add_test_input_bitcode_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 -emit-llvm -fgpu-rdc
-    --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib -nogpuinc
+    --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib
     -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -62,7 +62,7 @@ macro(add_test_input_object_file_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 --gpu-bundle-output
-    --offload-device-only ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib -nogpuinc
+    --offload-device-only ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib
     -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -193,12 +193,9 @@ endif()
   add_dependencies(check-comgr ${name})
   # Windows binaries have no equivalent to RPATH, so we must set their PATH to
   # include the .lib/.dll directory.
-  if (UNIX)
+  if (NOT(UNIX))
     set_tests_properties(${test_name}
-      PROPERTIES ENVIRONMENT "AMD_COMGR_CACHE=0;")
-  else()
-    set_tests_properties(${test_name}
-      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>;AMD_COMGR_CACHE=0;")
+      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
   endif()
 endmacro()
 

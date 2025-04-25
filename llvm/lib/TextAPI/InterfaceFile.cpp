@@ -59,11 +59,14 @@ void InterfaceFile::addRPath(StringRef RPath, const Target &InputTarget) {
     return;
   using RPathEntryT = const std::pair<Target, std::string>;
   RPathEntryT Entry(InputTarget, RPath);
+  auto Iter =
+      lower_bound(RPaths, Entry,
+                  [](RPathEntryT &LHS, RPathEntryT &RHS) { return LHS < RHS; });
 
-  if (is_contained(RPaths, Entry))
+  if ((Iter != RPaths.end()) && (*Iter == Entry))
     return;
 
-  RPaths.emplace_back(Entry);
+  RPaths.emplace(Iter, Entry);
 }
 
 void InterfaceFile::addTarget(const Target &Target) {

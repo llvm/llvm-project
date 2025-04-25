@@ -282,7 +282,6 @@ clang_tidy_library(
         ":lib",
         ":utils",
         "//clang:analysis",
-        "//clang:sema",
         "//clang:tooling",
         "//clang:transformer",
     ],

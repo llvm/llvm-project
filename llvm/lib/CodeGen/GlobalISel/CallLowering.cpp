@@ -96,7 +96,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
                              Register SwiftErrorVReg,
                              std::optional<PtrAuthInfo> PAI,
                              Register ConvergenceCtrlToken,
-                             std::function<Register()> GetCalleeReg) const {
+                             std::function<unsigned()> GetCalleeReg) const {
   CallLoweringInfo Info;
   const DataLayout &DL = MIRBuilder.getDataLayout();
   MachineFunction &MF = MIRBuilder.getMF();

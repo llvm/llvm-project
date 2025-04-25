@@ -15,8 +15,8 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+namespace std { // purposefully not using versioning namespace
 [[__noreturn__]] _LIBCPP_EXPORTED_FROM_ABI void terminate() _NOEXCEPT;
-_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+} // namespace std
 
 #endif // _LIBCPP___EXCEPTION_TERMINATE_H

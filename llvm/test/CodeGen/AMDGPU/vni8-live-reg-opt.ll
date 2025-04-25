@@ -806,39 +806,51 @@ define amdgpu_kernel void @reuseOp() {
 ; GFX906-SAME: ) #[[ATTR0]] {
 ; GFX906-NEXT:  entry:
 ; GFX906-NEXT:    [[VEC1:%.*]] = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
+; GFX906-NEXT:    [[VEC1_BC:%.*]] = bitcast <16 x i8> [[VEC1]] to <4 x i32>
 ; GFX906-NEXT:    br label [[BB_1:%.*]]
 ; GFX906:       bb.1:
+; GFX906-NEXT:    [[VEC1_BC_BC:%.*]] = bitcast <4 x i32> [[VEC1_BC]] to <16 x i8>
 ; GFX906-NEXT:    [[SEL0:%.*]] = select i1 false, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer
-; GFX906-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1]], <16 x i8> [[SEL0]]
+; GFX906-NEXT:    [[SEL0_BC:%.*]] = bitcast <16 x i8> [[SEL0]] to <4 x i32>
+; GFX906-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1_BC_BC]], <16 x i8> [[SEL0]]
 ; GFX906-NEXT:    br label [[BB_2:%.*]]
 ; GFX906:       bb.2:
-; GFX906-NEXT:    [[VAL:%.*]] = extractelement <16 x i8> [[SEL0]], i64 0
+; GFX906-NEXT:    [[SEL0_BC_BC:%.*]] = bitcast <4 x i32> [[SEL0_BC]] to <16 x i8>
+; GFX906-NEXT:    [[VAL:%.*]] = extractelement <16 x i8> [[SEL0_BC_BC]], i64 0
 ; GFX906-NEXT:    ret void
 ;
 ; FEATURE-LABEL: define amdgpu_kernel void @reuseOp(
 ; FEATURE-SAME: ) #[[ATTR0]] {
 ; FEATURE-NEXT:  entry:
 ; FEATURE-NEXT:    [[VEC1:%.*]] = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
+; FEATURE-NEXT:    [[VEC1_BC:%.*]] = bitcast <16 x i8> [[VEC1]] to <4 x i32>
 ; FEATURE-NEXT:    br label [[BB_1:%.*]]
 ; FEATURE:       bb.1:
+; FEATURE-NEXT:    [[VEC1_BC_BC:%.*]] = bitcast <4 x i32> [[VEC1_BC]] to <16 x i8>
 ; FEATURE-NEXT:    [[SEL0:%.*]] = select i1 false, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer
-; FEATURE-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1]], <16 x i8> [[SEL0]]
+; FEATURE-NEXT:    [[SEL0_BC:%.*]] = bitcast <16 x i8> [[SEL0]] to <4 x i32>
+; FEATURE-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1_BC_BC]], <16 x i8> [[SEL0]]
 ; FEATURE-NEXT:    br label [[BB_2:%.*]]
 ; FEATURE:       bb.2:
-; FEATURE-NEXT:    [[VAL:%.*]] = extractelement <16 x i8> [[SEL0]], i64 0
+; FEATURE-NEXT:    [[SEL0_BC_BC:%.*]] = bitcast <4 x i32> [[SEL0_BC]] to <16 x i8>
+; FEATURE-NEXT:    [[VAL:%.*]] = extractelement <16 x i8> [[SEL0_BC_BC]], i64 0
 ; FEATURE-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define amdgpu_kernel void @reuseOp(
 ; DEFAULT-SAME: ) #[[ATTR0]] {
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[VEC1:%.*]] = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
+; DEFAULT-NEXT:    [[VEC1_BC:%.*]] = bitcast <16 x i8> [[VEC1]] to <4 x i32>
 ; DEFAULT-NEXT:    br label [[BB_1:%.*]]
 ; DEFAULT:       bb.1:
+; DEFAULT-NEXT:    [[VEC1_BC_BC:%.*]] = bitcast <4 x i32> [[VEC1_BC]] to <16 x i8>
 ; DEFAULT-NEXT:    [[SEL0:%.*]] = select i1 false, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer
-; DEFAULT-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1]], <16 x i8> [[SEL0]]
+; DEFAULT-NEXT:    [[SEL0_BC:%.*]] = bitcast <16 x i8> [[SEL0]] to <4 x i32>
+; DEFAULT-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1_BC_BC]], <16 x i8> [[SEL0]]
 ; DEFAULT-NEXT:    br label [[BB_2:%.*]]
 ; DEFAULT:       bb.2:
-; DEFAULT-NEXT:    [[VAL:%.*]] = extractelement <16 x i8> [[SEL0]], i64 0
+; DEFAULT-NEXT:    [[SEL0_BC_BC:%.*]] = bitcast <4 x i32> [[SEL0_BC]] to <16 x i8>
+; DEFAULT-NEXT:    [[VAL:%.*]] = extractelement <16 x i8> [[SEL0_BC_BC]], i64 0
 ; DEFAULT-NEXT:    ret void
 ;
 entry:

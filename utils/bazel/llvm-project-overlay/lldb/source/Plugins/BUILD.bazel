@@ -748,13 +748,10 @@ cc_library(
     hdrs = glob(["MemoryHistory/asan/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginInstrumentationRuntimeUtility",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Expression",
         "//lldb:Headers",
-        "//lldb:Symbol",
-        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
     ],
@@ -1680,12 +1677,9 @@ cc_library(
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Expression",
-        "//lldb:Headers",
         "//lldb:Symbol",
         "//lldb:Target",
         "//lldb:TargetHeaders",
-        "//lldb:Utility",
-        "//lldb:UtilityHeaders",
     ],
 )
 
@@ -2168,7 +2162,6 @@ cc_library(
     hdrs = glob(["Process/scripted/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
         "//lldb:Host",

@@ -764,7 +764,7 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
   if (!TheTarget)
     return createStringError(inconvertibleErrorCode(), Error);
   auto *Target = TheTarget->createTargetMachine(
-      TheTriple, codegen::getCPUStr(), codegen::getFeaturesStr(),
+      TheTriple.getTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
       codegen::InitTargetOptionsFromCodeGenFlags(TheTriple),
       codegen::getExplicitRelocModel(), codegen::getExplicitCodeModel(),
       OptLevel);

@@ -1,6 +1,4 @@
 # RUN: llc %s -run-pass=machine-sink --aarch64-enable-sink-fold=true -o - | FileCheck %s
-
-# RUN: llc %s -passes="machine-sink<enable-sink-fold>" -o - | FileCheck %s
 --- |
   target triple = "aarch64-linux"
 
@@ -83,7 +81,7 @@ tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHContTarget: false
+hasEHCatchret:   false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
@@ -156,7 +154,7 @@ tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHContTarget: false
+hasEHCatchret:   false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false

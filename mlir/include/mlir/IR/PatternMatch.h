@@ -234,58 +234,41 @@ private:
 // RewritePattern
 //===----------------------------------------------------------------------===//
 
-namespace detail {
-/// Helper class that derives from a RewritePattern class and provides separate
-/// `match` and `rewrite` entry points instead of a combined `matchAndRewrite`.
+/// RewritePattern is the common base class for all DAG to DAG replacements.
+/// There are two possible usages of this class:
+///   * Multi-step RewritePattern with "match" and "rewrite"
+///     - By overloading the "match" and "rewrite" functions, the user can
+///       separate the concerns of matching and rewriting.
+///   * Single-step RewritePattern with "matchAndRewrite"
+///     - By overloading the "matchAndRewrite" function, the user can perform
+///       the rewrite in the same call as the match.
 ///
-/// This class is deprecated. Use `matchAndRewrite` instead of separate `match`
-/// and `rewrite`.
-template <typename PatternT>
-class SplitMatchAndRewriteImpl : public PatternT {
-  using PatternT::PatternT;
-
-  /// Attempt to match against IR rooted at the specified operation, which is
-  /// the same operation kind as getRootKind().
-  ///
-  /// Note: This function must not modify the IR.
-  virtual LogicalResult match(typename PatternT::OperationT op) const = 0;
+class RewritePattern : public Pattern {
+public:
+  virtual ~RewritePattern() = default;
 
   /// Rewrite the IR rooted at the specified operation with the result of
   /// this pattern, generating any new operations with the specified
-  /// rewriter.
-  virtual void rewrite(typename PatternT::OperationT op,
-                       PatternRewriter &rewriter) const = 0;
+  /// builder.  If an unexpected error is encountered (an internal
+  /// compiler error), it is emitted through the normal MLIR diagnostic
+  /// hooks and the IR is left in a valid state.
+  virtual void rewrite(Operation *op, PatternRewriter &rewriter) const;
 
-  LogicalResult matchAndRewrite(typename PatternT::OperationT op,
-                                PatternRewriter &rewriter) const final {
+  /// Attempt to match against code rooted at the specified operation,
+  /// which is the same operation code as getRootKind().
+  virtual LogicalResult match(Operation *op) const;
+
+  /// Attempt to match against code rooted at the specified operation,
+  /// which is the same operation code as getRootKind(). If successful, this
+  /// function will automatically perform the rewrite.
+  virtual LogicalResult matchAndRewrite(Operation *op,
+                                        PatternRewriter &rewriter) const {
     if (succeeded(match(op))) {
       rewrite(op, rewriter);
       return success();
     }
     return failure();
   }
-};
-} // namespace detail
-
-/// RewritePattern is the common base class for all DAG to DAG replacements.
-class RewritePattern : public Pattern {
-public:
-  using OperationT = Operation *;
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite = detail::SplitMatchAndRewriteImpl<RewritePattern>;
-
-  virtual ~RewritePattern() = default;
-
-  /// Attempt to match against code rooted at the specified operation,
-  /// which is the same operation code as getRootKind(). If successful, perform
-  /// the rewrite.
-  ///
-  /// Note: Implementations must modify the IR if and only if the function
-  /// returns "success".
-  virtual LogicalResult matchAndRewrite(Operation *op,
-                                        PatternRewriter &rewriter) const = 0;
 
   /// This method provides a convenient interface for creating and initializing
   /// derived rewrite patterns of the given type `T`.
@@ -334,19 +317,36 @@ namespace detail {
 /// class or Interface.
 template <typename SourceOp>
 struct OpOrInterfaceRewritePatternBase : public RewritePattern {
-  using OperationT = SourceOp;
   using RewritePattern::RewritePattern;
 
-  /// Wrapper around the RewritePattern method that passes the derived op type.
+  /// Wrappers around the RewritePattern methods that pass the derived op type.
+  void rewrite(Operation *op, PatternRewriter &rewriter) const final {
+    rewrite(cast<SourceOp>(op), rewriter);
+  }
+  LogicalResult match(Operation *op) const final {
+    return match(cast<SourceOp>(op));
+  }
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
     return matchAndRewrite(cast<SourceOp>(op), rewriter);
   }
 
-  /// Method that operates on the SourceOp type. Must be overridden by the
-  /// derived pattern class.
+  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  /// overridden by the derived pattern class.
+  virtual void rewrite(SourceOp op, PatternRewriter &rewriter) const {
+    llvm_unreachable("must override rewrite or matchAndRewrite");
+  }
+  virtual LogicalResult match(SourceOp op) const {
+    llvm_unreachable("must override match or matchAndRewrite");
+  }
   virtual LogicalResult matchAndRewrite(SourceOp op,
-                                        PatternRewriter &rewriter) const = 0;
+                                        PatternRewriter &rewriter) const {
+    if (succeeded(match(op))) {
+      rewrite(op, rewriter);
+      return success();
+    }
+    return failure();
+  }
 };
 } // namespace detail
 
@@ -356,12 +356,6 @@ struct OpOrInterfaceRewritePatternBase : public RewritePattern {
 template <typename SourceOp>
 struct OpRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::SplitMatchAndRewriteImpl<OpRewritePattern<SourceOp>>;
-
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching and a list of generated
   /// ops.
@@ -377,12 +371,6 @@ struct OpRewritePattern
 template <typename SourceOp>
 struct OpInterfaceRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::SplitMatchAndRewriteImpl<OpInterfaceRewritePattern<SourceOp>>;
-
   OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
       : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
             Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),

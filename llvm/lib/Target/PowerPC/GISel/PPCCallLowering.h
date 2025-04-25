@@ -16,6 +16,7 @@
 
 #include "PPCISelLowering.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/IR/CallingConv.h"
 
 namespace llvm {
 

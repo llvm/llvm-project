@@ -93,7 +93,7 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
             FI->setFrameBaseVreg(VReg);
             LLVM_DEBUG({
               dbgs() << "replacing preg " << PReg << " with " << VReg << " ("
-                     << Register(VReg).virtRegIndex() << ")\n";
+                     << Register::virtReg2Index(VReg) << ")\n";
             });
           }
         }

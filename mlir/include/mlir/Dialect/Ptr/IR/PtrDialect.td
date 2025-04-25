@@ -38,14 +38,13 @@ class Ptr_Type<string name, string typeMnemonic, list<Trait> traits = []>
 def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     MemRefElementTypeInterface,
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface, [
-      "areCompatible", "getIndexBitwidth", "verifyEntries",
-      "getPreferredAlignment"]>
+      "areCompatible", "getIndexBitwidth", "verifyEntries"]>
   ]> {
   let summary = "pointer type";
   let description = [{
     The `ptr` type is an opaque pointer type. This type typically represents a
     handle to an object in memory or target-dependent values like `nullptr`.
-    Pointers are parameterized by a memory space.
+    Pointers are optionally parameterized by a memory space.
 
     Syntax:
 
@@ -54,14 +53,14 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
     memory-space ::= attribute-value
     ```
   }];
-  let parameters = (ins "MemorySpaceAttrInterface":$memorySpace);
-  let assemblyFormat = "`<` $memorySpace `>`";
+  let parameters = (ins OptionalParameter<"Attribute">:$memorySpace);
+  let assemblyFormat = "(`<` $memorySpace^ `>`)?";
   let builders = [
-    TypeBuilderWithInferredContext<(ins
-      "MemorySpaceAttrInterface":$memorySpace), [{
-      return $_get(memorySpace.getContext(), memorySpace);
+    TypeBuilder<(ins CArg<"Attribute", "nullptr">:$memorySpace), [{
+      return $_get($_ctxt, memorySpace);
     }]>
   ];
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//

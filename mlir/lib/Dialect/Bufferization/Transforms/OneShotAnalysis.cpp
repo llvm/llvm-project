@@ -705,8 +705,7 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         // Note: If ops are executed multiple times (e.g., because they are
         //       inside a loop), mutually exclusive regions may be executed
         //       multiple times.
-        if (state.insideMutuallyExclusiveRegions(readingOp,
-                                                 conflictingWritingOp)) {
+        if (insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp)) {
           LLVM_DEBUG(llvm::dbgs() << "  no conflict: read and write are in "
                                      "mutually exclusive regions\n");
           continue;

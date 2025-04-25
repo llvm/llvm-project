@@ -259,6 +259,15 @@ public:
 
   void emitSLEB128Value(const MCExpr *Value) override;
 
+  void emitDTPRel32Value(const MCExpr *Value) override;
+  void emitDTPRel64Value(const MCExpr *Value) override;
+  void emitTPRel32Value(const MCExpr *Value) override;
+  void emitTPRel64Value(const MCExpr *Value) override;
+
+  void emitGPRel64Value(const MCExpr *Value) override;
+
+  void emitGPRel32Value(const MCExpr *Value) override;
+
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
 
@@ -294,8 +303,8 @@ public:
                                unsigned CUID = 0) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
-                             unsigned Discriminator, StringRef FileName,
-                             StringRef Location = {}) override;
+                             unsigned Discriminator,
+                             StringRef FileName) override;
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
   MCSymbol *getDwarfLineTableSymbol(unsigned CUID) override;
@@ -1438,6 +1447,48 @@ void MCAsmStreamer::emitSLEB128Value(const MCExpr *Value) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitDTPRel64Value(const MCExpr *Value) {
+  assert(MAI->getDTPRel64Directive() != nullptr);
+  OS << MAI->getDTPRel64Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitDTPRel32Value(const MCExpr *Value) {
+  assert(MAI->getDTPRel32Directive() != nullptr);
+  OS << MAI->getDTPRel32Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitTPRel64Value(const MCExpr *Value) {
+  assert(MAI->getTPRel64Directive() != nullptr);
+  OS << MAI->getTPRel64Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitTPRel32Value(const MCExpr *Value) {
+  assert(MAI->getTPRel32Directive() != nullptr);
+  OS << MAI->getTPRel32Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitGPRel64Value(const MCExpr *Value) {
+  assert(MAI->getGPRel64Directive() != nullptr);
+  OS << MAI->getGPRel64Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitGPRel32Value(const MCExpr *Value) {
+  assert(MAI->getGPRel32Directive() != nullptr);
+  OS << MAI->getGPRel32Directive();
+  Value->print(OS, MAI);
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                              SMLoc Loc) {
   int64_t IntNumBytes;
@@ -1703,8 +1754,7 @@ void MCAsmStreamer::emitDwarfFile0Directive(
 void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                           unsigned Column, unsigned Flags,
                                           unsigned Isa, unsigned Discriminator,
-                                          StringRef FileName,
-                                          StringRef Comment) {
+                                          StringRef FileName) {
   // If target doesn't support .loc/.file directive, we need to record the lines
   // same way like we do in object mode.
   if (MAI->isAIX()) {
@@ -1712,7 +1762,7 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
     // first one gets a line entry.
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
     this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
-                                            Discriminator, FileName, Comment);
+                                            Discriminator, FileName);
     return;
   }
 
@@ -1743,15 +1793,12 @@ void MCAsmStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 
   if (IsVerboseAsm) {
     OS.PadToColumn(MAI->getCommentColumn());
-    OS << MAI->getCommentString() << ' ';
-    if (Comment.empty())
-      OS << FileName << ':' << Line << ':' << Column;
-    else
-      OS << Comment;
+    OS << MAI->getCommentString() << ' ' << FileName << ':'
+       << Line << ':' << Column;
   }
   EmitEOL();
   this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
-                                          Discriminator, FileName, Comment);
+                                          Discriminator, FileName);
 }
 
 void MCAsmStreamer::emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) {

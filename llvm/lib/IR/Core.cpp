@@ -322,11 +322,11 @@ void LLVMSetDataLayout(LLVMModuleRef M, const char *DataLayoutStr) {
 
 /*--.. Target triple .......................................................--*/
 const char * LLVMGetTarget(LLVMModuleRef M) {
-  return unwrap(M)->getTargetTriple().str().c_str();
+  return unwrap(M)->getTargetTriple().c_str();
 }
 
-void LLVMSetTarget(LLVMModuleRef M, const char *TripleStr) {
-  unwrap(M)->setTargetTriple(Triple(TripleStr));
+void LLVMSetTarget(LLVMModuleRef M, const char *Triple) {
+  unwrap(M)->setTargetTriple(Triple);
 }
 
 /*--.. Module flags ........................................................--*/
@@ -1801,6 +1801,23 @@ LLVMValueRef LLVMConstNSWSub(LLVMValueRef LHSConstant,
 LLVMValueRef LLVMConstNUWSub(LLVMValueRef LHSConstant,
                              LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getNUWSub(unwrap<Constant>(LHSConstant),
+                                      unwrap<Constant>(RHSConstant)));
+}
+
+LLVMValueRef LLVMConstMul(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
+  return wrap(ConstantExpr::getMul(unwrap<Constant>(LHSConstant),
+                                   unwrap<Constant>(RHSConstant)));
+}
+
+LLVMValueRef LLVMConstNSWMul(LLVMValueRef LHSConstant,
+                             LLVMValueRef RHSConstant) {
+  return wrap(ConstantExpr::getNSWMul(unwrap<Constant>(LHSConstant),
+                                      unwrap<Constant>(RHSConstant)));
+}
+
+LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant,
+                             LLVMValueRef RHSConstant) {
+  return wrap(ConstantExpr::getNUWMul(unwrap<Constant>(LHSConstant),
                                       unwrap<Constant>(RHSConstant)));
 }
 

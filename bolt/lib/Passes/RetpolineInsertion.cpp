@@ -33,17 +33,19 @@ namespace opts {
 
 extern cl::OptionCategory BoltCategory;
 
-static llvm::cl::opt<bool>
-    InsertRetpolines("insert-retpolines",
-                     cl::desc("run retpoline insertion pass"),
-                     cl::cat(BoltCategory));
+llvm::cl::opt<bool> InsertRetpolines("insert-retpolines",
+                                     cl::desc("run retpoline insertion pass"),
+                                     cl::cat(BoltCategory));
 
-static llvm::cl::opt<bool> RetpolineLfence(
-    "retpoline-lfence",
-    cl::desc("determine if lfence instruction should exist in the retpoline"),
-    cl::init(true), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
+llvm::cl::opt<bool>
+RetpolineLfence("retpoline-lfence",
+  cl::desc("determine if lfence instruction should exist in the retpoline"),
+  cl::init(true),
+  cl::ZeroOrMore,
+  cl::Hidden,
+  cl::cat(BoltCategory));
 
-static cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
+cl::opt<RetpolineInsertion::AvailabilityOptions> R11Availability(
     "r11-availability",
     cl::desc("determine the availability of r11 before indirect branches"),
     cl::init(RetpolineInsertion::AvailabilityOptions::NEVER),

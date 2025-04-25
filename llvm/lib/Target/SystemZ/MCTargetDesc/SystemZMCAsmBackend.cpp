@@ -110,8 +110,14 @@ public:
   SystemZMCAsmBackend() : MCAsmBackend(llvm::endianness::big) {}
 
   // Override MCAsmBackend
+  unsigned getNumFixupKinds() const override {
+    return SystemZ::NumTargetFixupKinds;
+  }
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
+                             const MCValue &Target, const uint64_t Value,
+                             const MCSubtargetInfo *STI) override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -148,9 +154,16 @@ SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < SystemZ::NumTargetFixupKinds &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
          "Invalid kind!");
   return SystemZ::MCFixupKindInfos[Kind - FirstTargetFixupKind];
+}
+
+bool SystemZMCAsmBackend::shouldForceRelocation(const MCAssembler &,
+                                                const MCFixup &Fixup,
+                                                const MCValue &, const uint64_t,
+                                                const MCSubtargetInfo *STI) {
+  return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
 void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm,

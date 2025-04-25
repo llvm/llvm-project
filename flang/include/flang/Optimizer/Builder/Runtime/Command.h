@@ -58,15 +58,5 @@ mlir::Value genGetEnvVariable(fir::FirOpBuilder &, mlir::Location,
 mlir::Value genGetCwd(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value c);
 
-/// Generate a call to the Hostnm runtime function which implements
-/// the HOSTNM intrinsic.
-mlir::Value genHostnm(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value res);
-
-/// Generate a call to the Perror runtime function which implements
-/// the PERROR GNU intrinsic.
-void genPerror(fir::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value string);
-
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H

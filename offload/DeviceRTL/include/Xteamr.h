@@ -17,7 +17,6 @@
 #ifndef OMPTARGET_DEVICERTL_XTEAMR_H
 #define OMPTARGET_DEVICERTL_XTEAMR_H
 #include "DeviceTypes.h"
-#include "Synchronization.h"
 
 #define _CD double _Complex
 #define _CF float _Complex
@@ -77,16 +76,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_d_16x64(
     double v, double *r_ptr, double *tvs, uint32_t *td,
     void (*_rf)(double *, double),
     void (*_rf_lds)(_RF_LDS double *, _RF_LDS double *), const double rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_d_16x64_fast_sum(
     double v, double *r_ptr, double *tvs, uint32_t *td,
     void (*_rf)(double *, double),
     void (*_rf_lds)(_RF_LDS double *, _RF_LDS double *), const double rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_d_16x64(double v, double *r_ptr,
                                          void (*_rf)(double *, double),
@@ -98,16 +95,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_f_16x64(
     float v, float *r_ptr, float *tvs, uint32_t *td,
     void (*_rf)(float *, float),
     void (*_rf_lds)(_RF_LDS float *, _RF_LDS float *), const float rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_f_16x64_fast_sum(
     float v, float *r_ptr, float *tvs, uint32_t *td,
     void (*_rf)(float *, float),
     void (*_rf_lds)(_RF_LDS float *, _RF_LDS float *), const float rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_f_16x64(float v, float *r_ptr,
                                          void (*_rf)(float *, float),
@@ -119,16 +114,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_h_16x64(
     _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
     void (*_rf)(_Float16 *, _Float16),
     void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_h_16x64_fast_sum(
     _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
     void (*_rf)(_Float16 *, _Float16),
     void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_h_16x64(_Float16 v, _Float16 *r_ptr,
                                          void (*_rf)(_Float16 *, _Float16),
@@ -140,16 +133,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_bf_16x64(
     __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
     void (*_rf)(__bf16 *, __bf16),
     void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_bf_16x64_fast_sum(
     __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
     void (*_rf)(__bf16 *, __bf16),
     void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_bf_16x64(__bf16 v, __bf16 *r_ptr,
                                           void (*_rf)(__bf16 *, __bf16),
@@ -160,15 +151,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_bf_16x64(__bf16 v, __bf16 *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_cd_16x64(
     _CD v, _CD *r_ptr, _CD *tvs, uint32_t *td, void (*_rf)(_CD *, _CD),
     void (*_rf_lds)(_RF_LDS _CD *, _RF_LDS _CD *), const _CD rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_cd_16x64_fast_sum(
     _CD v, _CD *r_ptr, _CD *tvs, uint32_t *td, void (*_rf)(_CD *, _CD),
     void (*_rf_lds)(_RF_LDS _CD *, _RF_LDS _CD *), const _CD rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_cd_16x64(_CD v, _CD *r_ptr,
                                           void (*_rf)(_CD *, _CD),
@@ -179,15 +168,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_cd_16x64(_CD v, _CD *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_cf_16x64(
     _CF v, _CF *r_ptr, _CF *tvs, uint32_t *td, void (*_rf)(_CF *, _CF),
     void (*_rf_lds)(_RF_LDS _CF *, _RF_LDS _CF *), const _CF rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_cf_16x64_fast_sum(
     _CF v, _CF *r_ptr, _CF *tvs, uint32_t *td, void (*_rf)(_CF *, _CF),
     void (*_rf_lds)(_RF_LDS _CF *, _RF_LDS _CF *), const _CF rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_cf_16x64(_CF v, _CF *r_ptr,
                                           void (*_rf)(_CF *, _CF),
@@ -199,16 +186,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_s_16x64(
     short v, short *r_ptr, short *tvs, uint32_t *td,
     void (*_rf)(short *, short),
     void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_s_16x64_fast_sum(
     short v, short *r_ptr, short *tvs, uint32_t *td,
     void (*_rf)(short *, short),
     void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_s_16x64(short v, short *r_ptr,
                                          void (*_rf)(short *, short),
@@ -219,15 +204,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_s_16x64(short v, short *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_us_16x64(
     _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
     void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_us_16x64_fast_sum(
     _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
     void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_us_16x64(_US v, _US *r_ptr,
                                           void (*_rf)(_US *, _US),
@@ -238,15 +221,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_us_16x64(_US v, _US *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_i_16x64(
     int v, int *r_ptr, int *tvs, uint32_t *td, void (*_rf)(int *, int),
     void (*_rf_lds)(_RF_LDS int *, _RF_LDS int *), const int rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_i_16x64_fast_sum(
     int v, int *r_ptr, int *tvs, uint32_t *td, void (*_rf)(int *, int),
     void (*_rf_lds)(_RF_LDS int *, _RF_LDS int *), const int rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_i_16x64(int v, int *r_ptr,
                                          void (*_rf)(int *, int),
@@ -257,15 +238,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_i_16x64(int v, int *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_ui_16x64(
     _UI v, _UI *r_ptr, _UI *tvs, uint32_t *td, void (*_rf)(_UI *, _UI),
     void (*_rf_lds)(_RF_LDS _UI *, _RF_LDS _UI *), const _UI rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_ui_16x64_fast_sum(
     _UI v, _UI *r_ptr, _UI *tvs, uint32_t *td, void (*_rf)(_UI *, _UI),
     void (*_rf_lds)(_RF_LDS _UI *, _RF_LDS _UI *), const _UI rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_ui_16x64(_UI v, _UI *r_ptr,
                                           void (*_rf)(_UI *, _UI),
@@ -276,15 +255,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_ui_16x64(_UI v, _UI *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_l_16x64(
     long v, long *r_ptr, long *tvs, uint32_t *td, void (*_rf)(long *, long),
     void (*_rf_lds)(_RF_LDS long *, _RF_LDS long *), const long rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_l_16x64_fast_sum(
     long v, long *r_ptr, long *tvs, uint32_t *td, void (*_rf)(long *, long),
     void (*_rf_lds)(_RF_LDS long *, _RF_LDS long *), const long rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_l_16x64(long v, long *r_ptr,
                                          void (*_rf)(long *, long),
@@ -295,15 +272,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_l_16x64(long v, long *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_ul_16x64(
     _UL v, _UL *r_ptr, _UL *tvs, uint32_t *td, void (*_rf)(_UL *, _UL),
     void (*_rf_lds)(_RF_LDS _UL *, _RF_LDS _UL *), const _UL rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_ul_16x64_fast_sum(
     _UL v, _UL *r_ptr, _UL *tvs, uint32_t *td, void (*_rf)(_UL *, _UL),
     void (*_rf_lds)(_RF_LDS _UL *, _RF_LDS _UL *), const _UL rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_ul_16x64(_UL v, _UL *r_ptr,
                                           void (*_rf)(_UL *, _UL),
@@ -315,16 +290,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_d_32x32(
     double v, double *r_ptr, double *tvs, uint32_t *td,
     void (*_rf)(double *, double),
     void (*_rf_lds)(_RF_LDS double *, _RF_LDS double *), const double rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_d_32x32_fast_sum(
     double v, double *r_ptr, double *tvs, uint32_t *td,
     void (*_rf)(double *, double),
     void (*_rf_lds)(_RF_LDS double *, _RF_LDS double *), const double rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_d_32x32(double v, double *r_ptr,
                                          void (*_rf)(double *, double),
@@ -336,16 +309,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_f_32x32(
     float v, float *r_ptr, float *tvs, uint32_t *td,
     void (*_rf)(float *, float),
     void (*_rf_lds)(_RF_LDS float *, _RF_LDS float *), const float rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_f_32x32_fast_sum(
     float v, float *r_ptr, float *tvs, uint32_t *td,
     void (*_rf)(float *, float),
     void (*_rf_lds)(_RF_LDS float *, _RF_LDS float *), const float rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_f_32x32(float v, float *r_ptr,
                                          void (*_rf)(float *, float),
@@ -357,16 +328,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_h_32x32(
     _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
     void (*_rf)(_Float16 *, _Float16),
     void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_h_32x32_fast_sum(
     _Float16 v, _Float16 *r_ptr, _Float16 *tvs, uint32_t *td,
     void (*_rf)(_Float16 *, _Float16),
     void (*_rf_lds)(_RF_LDS _Float16 *, _RF_LDS _Float16 *), const _Float16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_h_32x32(_Float16 v, _Float16 *r_ptr,
                                          void (*_rf)(_Float16 *, _Float16),
@@ -378,16 +347,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_bf_32x32(
     __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
     void (*_rf)(__bf16 *, __bf16),
     void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_bf_32x32_fast_sum(
     __bf16 v, __bf16 *r_ptr, __bf16 *tvs, uint32_t *td,
     void (*_rf)(__bf16 *, __bf16),
     void (*_rf_lds)(_RF_LDS __bf16 *, _RF_LDS __bf16 *), const __bf16 rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_bf_32x32(__bf16 v, __bf16 *r_ptr,
                                           void (*_rf)(__bf16 *, __bf16),
@@ -398,15 +365,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_bf_32x32(__bf16 v, __bf16 *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_cd_32x32(
     _CD v, _CD *r_ptr, _CD *tvs, uint32_t *td, void (*_rf)(_CD *, _CD),
     void (*_rf_lds)(_RF_LDS _CD *, _RF_LDS _CD *), const _CD rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_cd_32x32_fast_sum(
     _CD v, _CD *r_ptr, _CD *tvs, uint32_t *td, void (*_rf)(_CD *, _CD),
     void (*_rf_lds)(_RF_LDS _CD *, _RF_LDS _CD *), const _CD rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_cd_32x32(_CD v, _CD *r_ptr,
                                           void (*_rf)(_CD *, _CD),
@@ -417,15 +382,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_cd_32x32(_CD v, _CD *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_cf_32x32(
     _CF v, _CF *r_ptr, _CF *tvs, uint32_t *td, void (*_rf)(_CF *, _CF),
     void (*_rf_lds)(_RF_LDS _CF *, _RF_LDS _CF *), const _CF rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_cf_32x32_fast_sum(
     _CF v, _CF *r_ptr, _CF *tvs, uint32_t *td, void (*_rf)(_CF *, _CF),
     void (*_rf_lds)(_RF_LDS _CF *, _RF_LDS _CF *), const _CF rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_cf_32x32(_CF v, _CF *r_ptr,
                                           void (*_rf)(_CF *, _CF),
@@ -437,16 +400,14 @@ void _INLINE_ATTR_ __kmpc_xteamr_s_32x32(
     short v, short *r_ptr, short *tvs, uint32_t *td,
     void (*_rf)(short *, short),
     void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_s_32x32_fast_sum(
     short v, short *r_ptr, short *tvs, uint32_t *td,
     void (*_rf)(short *, short),
     void (*_rf_lds)(_RF_LDS short *, _RF_LDS short *), const short rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_s_32x32(short v, short *r_ptr,
                                          void (*_rf)(short *, short),
@@ -457,15 +418,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_s_32x32(short v, short *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_us_32x32(
     _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
     void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_us_32x32_fast_sum(
     _US v, _US *r_ptr, _US *tvs, uint32_t *td, void (*_rf)(_US *, _US),
     void (*_rf_lds)(_RF_LDS _US *, _RF_LDS _US *), const _US rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_us_32x32(_US v, _US *r_ptr,
                                           void (*_rf)(_US *, _US),
@@ -476,15 +435,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_us_32x32(_US v, _US *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_i_32x32(
     int v, int *r_ptr, int *tvs, uint32_t *td, void (*_rf)(int *, int),
     void (*_rf_lds)(_RF_LDS int *, _RF_LDS int *), const int rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_i_32x32_fast_sum(
     int v, int *r_ptr, int *tvs, uint32_t *td, void (*_rf)(int *, int),
     void (*_rf_lds)(_RF_LDS int *, _RF_LDS int *), const int rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_i_32x32(int v, int *r_ptr,
                                          void (*_rf)(int *, int),
@@ -495,15 +452,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_i_32x32(int v, int *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_ui_32x32(
     _UI v, _UI *r_ptr, _UI *tvs, uint32_t *td, void (*_rf)(_UI *, _UI),
     void (*_rf_lds)(_RF_LDS _UI *, _RF_LDS _UI *), const _UI rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_ui_32x32_fast_sum(
     _UI v, _UI *r_ptr, _UI *tvs, uint32_t *td, void (*_rf)(_UI *, _UI),
     void (*_rf_lds)(_RF_LDS _UI *, _RF_LDS _UI *), const _UI rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_ui_32x32(_UI v, _UI *r_ptr,
                                           void (*_rf)(_UI *, _UI),
@@ -514,15 +469,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_ui_32x32(_UI v, _UI *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_l_32x32(
     long v, long *r_ptr, long *tvs, uint32_t *td, void (*_rf)(long *, long),
     void (*_rf_lds)(_RF_LDS long *, _RF_LDS long *), const long rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_l_32x32_fast_sum(
     long v, long *r_ptr, long *tvs, uint32_t *td, void (*_rf)(long *, long),
     void (*_rf_lds)(_RF_LDS long *, _RF_LDS long *), const long rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_l_32x32(long v, long *r_ptr,
                                          void (*_rf)(long *, long),
@@ -533,15 +486,13 @@ void _INLINE_ATTR_ __kmpc_iteamr_l_32x32(long v, long *r_ptr,
 void _INLINE_ATTR_ __kmpc_xteamr_ul_32x32(
     _UL v, _UL *r_ptr, _UL *tvs, uint32_t *td, void (*_rf)(_UL *, _UL),
     void (*_rf_lds)(_RF_LDS _UL *, _RF_LDS _UL *), const _UL rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Fast Cross team sum reduction (xteamr) helper function, see documentation
 /// above.
 void _INLINE_ATTR_ __kmpc_xteamr_ul_32x32_fast_sum(
     _UL v, _UL *r_ptr, _UL *tvs, uint32_t *td, void (*_rf)(_UL *, _UL),
     void (*_rf_lds)(_RF_LDS _UL *, _RF_LDS _UL *), const _UL rnv,
-    const uint64_t k, const uint32_t numteams,
-    ompx::atomic::MemScopeTy Scope = ompx::atomic::system);
+    const uint64_t k, const uint32_t numteams);
 /// Intra-team reduction (iteamr) helper function, see documentation above.
 void _INLINE_ATTR_ __kmpc_iteamr_ul_32x32(_UL v, _UL *r_ptr,
                                           void (*_rf)(_UL *, _UL),

@@ -9,8 +9,7 @@ define i32 @main(i32 %argc, ptr %argv) {
 ; CHECK-NEXT:    ret i32 0
 ;
   %c_19 = alloca ptr
-  %mul = mul i32 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i32), 10
-  %malloc_206 = tail call ptr @malloc(i32 %mul)
+  %malloc_206 = tail call ptr @malloc(i32 mul (i32 ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i32), i32 10))
   store ptr %malloc_206, ptr %c_19
   %tmp_207 = load ptr, ptr %c_19
   tail call void @free(ptr %tmp_207)

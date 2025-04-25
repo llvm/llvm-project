@@ -860,7 +860,10 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
          "Section must already have been defined in executePostLayoutBinding!");
 
   COFFSection *Sec = SectionMap[MCSec];
-  if (const MCSymbol *B = Target.getSubSym()) {
+  const MCSymbolRefExpr *SymB = Target.getSymB();
+
+  if (SymB) {
+    const MCSymbol *B = &SymB->getSymbol();
     if (!B->getFragment()) {
       Asm.getContext().reportError(
           Fixup.getLoc(),
@@ -920,7 +923,7 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
 
   Reloc.Data.VirtualAddress += Fixup.getOffset();
   Reloc.Data.Type = OWriter.TargetObjectWriter->getRelocType(
-      Asm.getContext(), Target, Fixup, Target.getSubSym(), Asm.getBackend());
+      Asm.getContext(), Target, Fixup, SymB, Asm.getBackend());
 
   // The *_REL32 relocations are relative to the end of the relocation,
   // not to the start.

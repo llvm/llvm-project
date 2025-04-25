@@ -39,8 +39,7 @@ public:
 
 #define LIST_SQRT_TESTS(T, func)                                               \
   using LlvmLibcSqrtTest = SqrtTest<T, T>;                                     \
-  TEST_F(LlvmLibcSqrtTest, SpecialNumbers) { test_special_numbers(&func); }    \
-  static_assert(true, "Require semicolon.")
+  TEST_F(LlvmLibcSqrtTest, SpecialNumbers) { test_special_numbers(&func); }
 
 #define LIST_NARROWING_SQRT_TESTS(OutType, InType, func)                       \
   using LlvmLibcSqrtTest = SqrtTest<OutType, InType>;                          \

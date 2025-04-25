@@ -417,7 +417,7 @@ public:
     return false;
   }
   bool inUnion() const {
-    if (isBlockPointer() && asBlockPointer().Base >= sizeof(InlineDescriptor))
+    if (isBlockPointer())
       return getInlineDesc()->InUnion;
     return false;
   };
@@ -493,6 +493,9 @@ public:
   }
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
+
+  /// Checks if the object is a union.
+  bool isUnion() const;
 
   /// Checks if the storage is extern.
   bool isExtern() const {
@@ -726,8 +729,6 @@ public:
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
-
-  size_t computeOffsetForComparison() const;
 
 private:
   friend class Block;

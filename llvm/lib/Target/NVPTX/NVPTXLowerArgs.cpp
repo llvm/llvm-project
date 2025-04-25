@@ -153,7 +153,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/NVPTXAddrSpace.h"
 #include <numeric>
 #include <queue>
 
@@ -162,16 +161,27 @@
 using namespace llvm;
 
 namespace llvm {
-void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
+void initializeNVPTXLowerArgsPass(PassRegistry &);
 }
 
 namespace {
-class NVPTXLowerArgsLegacyPass : public FunctionPass {
+class NVPTXLowerArgs : public FunctionPass {
   bool runOnFunction(Function &F) override;
+
+  bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F);
+  bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F);
+
+  // handle byval parameters
+  void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg);
+  // Knowing Ptr must point to the global address space, this function
+  // addrspacecasts Ptr to global and then back to generic. This allows
+  // NVPTXInferAddressSpaces to fold the global-to-generic cast into
+  // loads/stores that appear later.
+  void markPointerAsGlobal(Value *Ptr);
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerArgsLegacyPass() : FunctionPass(ID) {}
+  NVPTXLowerArgs() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
   }
@@ -181,12 +191,12 @@ public:
 };
 } // namespace
 
-char NVPTXLowerArgsLegacyPass::ID = 1;
+char NVPTXLowerArgs::ID = 1;
 
-INITIALIZE_PASS_BEGIN(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
+INITIALIZE_PASS_BEGIN(NVPTXLowerArgs, "nvptx-lower-args",
                       "Lower arguments (NVPTX)", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
+INITIALIZE_PASS_END(NVPTXLowerArgs, "nvptx-lower-args",
                     "Lower arguments (NVPTX)", false, false)
 
 // =============================================================================
@@ -363,19 +373,19 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
   Type *StructType = Arg->getParamByValType();
   const DataLayout &DL = Func->getDataLayout();
 
-  const Align NewArgAlign =
-      TLI->getFunctionParamOptimizedAlign(Func, StructType, DL);
-  const Align CurArgAlign = Arg->getParamAlign().valueOrOne();
+  uint64_t NewArgAlign =
+      TLI->getFunctionParamOptimizedAlign(Func, StructType, DL).value();
+  uint64_t CurArgAlign =
+      Arg->getAttribute(Attribute::Alignment).getValueAsInt();
 
   if (CurArgAlign >= NewArgAlign)
     return;
 
-  LLVM_DEBUG(dbgs() << "Try to use alignment " << NewArgAlign.value()
-                    << " instead of " << CurArgAlign.value() << " for " << *Arg
-                    << '\n');
+  LLVM_DEBUG(dbgs() << "Try to use alignment " << NewArgAlign << " instead of "
+                    << CurArgAlign << " for " << *Arg << '\n');
 
   auto NewAlignAttr =
-      Attribute::getWithAlignment(Func->getContext(), NewArgAlign);
+      Attribute::get(Func->getContext(), Attribute::Alignment, NewArgAlign);
   Arg->removeAttr(Attribute::Alignment);
   Arg->addAttr(NewAlignAttr);
 
@@ -392,17 +402,24 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
   SmallVector<Load> Loads;
   std::queue<LoadContext> Worklist;
   Worklist.push({ArgInParamAS, 0});
+  bool IsGridConstant = isParamGridConstant(*Arg);
 
   while (!Worklist.empty()) {
     LoadContext Ctx = Worklist.front();
     Worklist.pop();
 
     for (User *CurUser : Ctx.InitialVal->users()) {
-      if (auto *I = dyn_cast<LoadInst>(CurUser))
+      if (auto *I = dyn_cast<LoadInst>(CurUser)) {
         Loads.push_back({I, Ctx.Offset});
-      else if (isa<BitCastInst>(CurUser) || isa<AddrSpaceCastInst>(CurUser))
-        Worklist.push({cast<Instruction>(CurUser), Ctx.Offset});
-      else if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
+        continue;
+      }
+
+      if (auto *I = dyn_cast<BitCastInst>(CurUser)) {
+        Worklist.push({I, Ctx.Offset});
+        continue;
+      }
+
+      if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
         APInt OffsetAccumulated =
             APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_PARAM));
 
@@ -414,13 +431,26 @@ static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
         assert(Offset != OffsetLimit && "Expect Offset less than UINT64_MAX");
 
         Worklist.push({I, Ctx.Offset + Offset});
+        continue;
       }
+
+      if (isa<MemTransferInst>(CurUser))
+        continue;
+
+      // supported for grid_constant
+      if (IsGridConstant &&
+          (isa<CallInst>(CurUser) || isa<StoreInst>(CurUser) ||
+           isa<PtrToIntInst>(CurUser)))
+        continue;
+
+      llvm_unreachable("All users must be one of: load, "
+                       "bitcast, getelementptr, call, store, ptrtoint");
     }
   }
 
   for (Load &CurLoad : Loads) {
-    Align NewLoadAlign(std::gcd(NewArgAlign.value(), CurLoad.Offset));
-    Align CurLoadAlign = CurLoad.Inst->getAlign();
+    Align NewLoadAlign(std::gcd(NewArgAlign, CurLoad.Offset));
+    Align CurLoadAlign(CurLoad.Inst->getAlign());
     CurLoad.Inst->setAlignment(std::max(NewLoadAlign, CurLoadAlign));
   }
 }
@@ -541,7 +571,8 @@ void copyByValParam(Function &F, Argument &Arg) {
 }
 } // namespace
 
-static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
+void NVPTXLowerArgs::handleByValParam(const NVPTXTargetMachine &TM,
+                                      Argument *Arg) {
   Function *Func = Arg->getParent();
   bool HasCvtaParam =
       TM.getSubtargetImpl(*Func)->hasCvtaParam() && isKernelFunction(*Func);
@@ -610,7 +641,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
     copyByValParam(*Func, *Arg);
 }
 
-static void markPointerAsAS(Value *Ptr, const unsigned AS) {
+void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
   if (Ptr->getType()->getPointerAddressSpace() != ADDRESS_SPACE_GENERIC)
     return;
 
@@ -627,7 +658,8 @@ static void markPointerAsAS(Value *Ptr, const unsigned AS) {
   }
 
   Instruction *PtrInGlobal = new AddrSpaceCastInst(
-      Ptr, PointerType::get(Ptr->getContext(), AS), Ptr->getName(), InsertPt);
+      Ptr, PointerType::get(Ptr->getContext(), ADDRESS_SPACE_GLOBAL),
+      Ptr->getName(), InsertPt);
   Value *PtrInGeneric = new AddrSpaceCastInst(PtrInGlobal, Ptr->getType(),
                                               Ptr->getName(), InsertPt);
   // Replace with PtrInGeneric all uses of Ptr except PtrInGlobal.
@@ -635,19 +667,16 @@ static void markPointerAsAS(Value *Ptr, const unsigned AS) {
   PtrInGlobal->setOperand(0, Ptr);
 }
 
-static void markPointerAsGlobal(Value *Ptr) {
-  markPointerAsAS(Ptr, ADDRESS_SPACE_GLOBAL);
-}
-
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
+bool NVPTXLowerArgs::runOnKernelFunction(const NVPTXTargetMachine &TM,
+                                         Function &F) {
   // Copying of byval aggregates + SROA may result in pointers being loaded as
   // integers, followed by intotoptr. We may want to mark those as global, too,
   // but only if the loaded integer is used exclusively for conversion to a
   // pointer with inttoptr.
-  auto HandleIntToPtr = [](Value &V) {
+  auto HandleIntToPtr = [this](Value &V) {
     if (llvm::all_of(V.users(), [](User *U) { return isa<IntToPtrInst>(U); })) {
       SmallVector<User *, 16> UsersToUpdate(V.users());
       for (User *U : UsersToUpdate)
@@ -692,32 +721,23 @@ static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
 }
 
 // Device functions only need to copy byval args into local memory.
-static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
+bool NVPTXLowerArgs::runOnDeviceFunction(const NVPTXTargetMachine &TM,
+                                         Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
-
-  const auto *TLI =
-      cast<NVPTXTargetLowering>(TM.getSubtargetImpl()->getTargetLowering());
-
   for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
-      markPointerAsAS(&Arg, ADDRESS_SPACE_LOCAL);
-      adjustByValArgAlignment(&Arg, &Arg, TLI);
-    }
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
+      handleByValParam(TM, &Arg);
   return true;
 }
 
-static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
+bool NVPTXLowerArgs::runOnFunction(Function &F) {
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
+
   return isKernelFunction(F) ? runOnKernelFunction(TM, F)
                              : runOnDeviceFunction(TM, F);
 }
 
-bool NVPTXLowerArgsLegacyPass::runOnFunction(Function &F) {
-  auto &TM = getAnalysis<TargetPassConfig>().getTM<NVPTXTargetMachine>();
-  return processFunction(F, TM);
-}
-FunctionPass *llvm::createNVPTXLowerArgsPass() {
-  return new NVPTXLowerArgsLegacyPass();
-}
+FunctionPass *llvm::createNVPTXLowerArgsPass() { return new NVPTXLowerArgs(); }
 
 static bool copyFunctionByValArgs(Function &F) {
   LLVM_DEBUG(dbgs() << "Creating a copy of byval args of " << F.getName()
@@ -736,11 +756,4 @@ PreservedAnalyses NVPTXCopyByValArgsPass::run(Function &F,
                                               FunctionAnalysisManager &AM) {
   return copyFunctionByValArgs(F) ? PreservedAnalyses::none()
                                   : PreservedAnalyses::all();
-}
-
-PreservedAnalyses NVPTXLowerArgsPass::run(Function &F,
-                                          FunctionAnalysisManager &AM) {
-  auto &NTM = static_cast<NVPTXTargetMachine &>(TM);
-  bool Changed = processFunction(F, NTM);
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

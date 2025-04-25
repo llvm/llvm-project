@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -20,7 +19,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
@@ -85,7 +83,7 @@ static std::vector<std::string> getSearchPaths() {
     Paths.push_back(std::string(CWD.begin(), CWD.end()));
 
   // Get the PATH environment variable
-  if (std::optional<std::string> PathEnv = sys::Process::GetEnv("PATH")) {
+  if (auto PathEnv = sys::Process::GetEnv("PATH")) {
     SmallVector<StringRef, 16> PathList;
     StringRef(*PathEnv).split(PathList, sys::EnvPathSeparator);
     for (auto &Path : PathList)
@@ -96,25 +94,19 @@ static std::vector<std::string> getSearchPaths() {
 }
 
 // Custom comparison function for dll name
-static bool compareVersions(StringRef A, StringRef B) {
-  auto ParseVersion = [](StringRef S) -> VersionTuple {
-    size_t Pos = S.find_last_of('_');
-    StringRef VerStr = (Pos == StringRef::npos) ? S : S.substr(Pos + 1);
-    VersionTuple Vt;
-    (void)Vt.tryParse(VerStr);
-    return Vt;
-  };
-
-  VersionTuple VtA = ParseVersion(A);
-  VersionTuple VtB = ParseVersion(B);
-  return VtA > VtB;
+static bool compareVersions(const std::string &a, const std::string &b) {
+  // Extract version numbers
+  int versionA = std::stoi(a.substr(a.find_last_of('_') + 1));
+  int versionB = std::stoi(b.substr(b.find_last_of('_') + 1));
+  return versionA > versionB;
 }
+
 #endif
 
 // On Windows, prefer amdhip64_n.dll where n is ROCm major version and greater
 // value of n takes precedence. If amdhip64_n.dll is not found, fall back to
 // amdhip64.dll. The reason is that a normal driver installation only has
-// amdhip64_n.dll but we do not know what n is since this program may be used
+// amdhip64_n.dll but we do not know what n is since this progrm may be used
 // with a future version of HIP runtime.
 //
 // On Linux, always use default libamdhip64.so.
@@ -142,7 +134,7 @@ static std::pair<std::string, bool> findNewestHIPDLL() {
   if (DLLNames.empty())
     return {"amdhip64.dll", true};
 
-  llvm::sort(DLLNames, compareVersions);
+  std::sort(DLLNames.begin(), DLLNames.end(), compareVersions);
   return {DLLNames[0], false};
 #else
   // On Linux, fallback to default shared object
@@ -155,9 +147,9 @@ int printGPUsByHIP() {
 
   if (Verbose) {
     if (IsFallback)
-      outs() << "Using default HIP runtime: " << DynamicHIPPath << '\n';
+      outs() << "Using default HIP runtime: " << DynamicHIPPath << "\n";
     else
-      outs() << "Found HIP runtime: " << DynamicHIPPath << '\n';
+      outs() << "Found HIP runtime: " << DynamicHIPPath << "\n";
   }
 
   std::string ErrMsg;

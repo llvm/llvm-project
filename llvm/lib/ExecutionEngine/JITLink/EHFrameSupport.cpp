@@ -70,7 +70,8 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   // Sort eh-frame blocks into address order to ensure we visit CIEs before
   // their child FDEs.
   std::vector<Block *> EHFrameBlocks;
-  llvm::append_range(EHFrameBlocks, EHFrame->blocks());
+  for (auto *B : EHFrame->blocks())
+    EHFrameBlocks.push_back(B);
   llvm::sort(EHFrameBlocks, [](const Block *LHS, const Block *RHS) {
     return LHS->getAddress() < RHS->getAddress();
   });
@@ -638,6 +639,20 @@ Error EHFrameNullTerminator::operator()(LinkGraph &G) {
   return Error::success();
 }
 
+EHFrameRegistrar::~EHFrameRegistrar() = default;
+
+Error InProcessEHFrameRegistrar::registerEHFrames(
+    orc::ExecutorAddrRange EHFrameSection) {
+  return orc::registerEHFrameSection(EHFrameSection.Start.toPtr<void *>(),
+                                     EHFrameSection.size());
+}
+
+Error InProcessEHFrameRegistrar::deregisterEHFrames(
+    orc::ExecutorAddrRange EHFrameSection) {
+  return orc::deregisterEHFrameSection(EHFrameSection.Start.toPtr<void *>(),
+                                       EHFrameSection.size());
+}
+
 EHFrameCFIBlockInspector EHFrameCFIBlockInspector::FromEdgeScan(Block &B) {
   if (B.edges_empty())
     return EHFrameCFIBlockInspector(nullptr);
@@ -663,24 +678,36 @@ EHFrameCFIBlockInspector::EHFrameCFIBlockInspector(Edge &CIEEdge,
                                                    Edge *LSDAEdge)
     : CIEEdge(&CIEEdge), PCBeginEdge(&PCBeginEdge), LSDAEdge(LSDAEdge) {}
 
-Section *getEHFrameSection(LinkGraph &G) {
+LinkGraphPassFunction
+createEHFrameRecorderPass(const Triple &TT,
+                          StoreFrameRangeFunction StoreRangeAddress) {
   const char *EHFrameSectionName = nullptr;
-  switch (G.getTargetTriple().getObjectFormat()) {
-  case Triple::MachO:
+  if (TT.getObjectFormat() == Triple::MachO)
     EHFrameSectionName = "__TEXT,__eh_frame";
-    break;
-  case Triple::ELF:
+  else
     EHFrameSectionName = ".eh_frame";
-    break;
-  default:
-    return nullptr;
-  }
 
-  if (auto *S = G.findSectionByName(EHFrameSectionName))
-    if (!S->empty())
-      return S;
+  auto RecordEHFrame =
+      [EHFrameSectionName,
+       StoreFrameRange = std::move(StoreRangeAddress)](LinkGraph &G) -> Error {
+    // Search for a non-empty eh-frame and record the address of the first
+    // symbol in it.
+    orc::ExecutorAddr Addr;
+    size_t Size = 0;
+    if (auto *S = G.findSectionByName(EHFrameSectionName)) {
+      auto R = SectionRange(*S);
+      Addr = R.getStart();
+      Size = R.getSize();
+    }
+    if (!Addr && Size != 0)
+      return make_error<JITLinkError>(
+          StringRef(EHFrameSectionName) +
+          " section can not have zero address with non-zero size");
+    StoreFrameRange(Addr, Size);
+    return Error::success();
+  };
 
-  return nullptr;
+  return RecordEHFrame;
 }
 
 } // end namespace jitlink

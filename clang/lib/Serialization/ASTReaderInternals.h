@@ -69,7 +69,7 @@ public:
         }
 
         // Switch to tracking found IDs in the set.
-        Found.insert_range(Data);
+        Found.insert(Data.begin(), Data.end());
       }
 
       if (Found.insert(ID).second)
@@ -191,7 +191,7 @@ public:
         }
 
         // Switch to tracking found IDs in the set.
-        Found.insert_range(Data);
+        Found.insert(Data.begin(), Data.end());
       }
 
       if (Found.insert(Info).second)

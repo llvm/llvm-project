@@ -364,7 +364,7 @@ public:
                               Scale, AddrSpace, /*I=*/nullptr,
                               BaseOffset.getScalable()))
       return 0;
-    return InstructionCost::getInvalid();
+    return -1;
   }
 
   bool LSRWithInstrQueries() const { return false; }
@@ -504,13 +504,11 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
-  bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
-    return false;
-  }
+  bool hasConditionalLoadStoreForType(Type *Ty) const { return false; }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     return Vector ? 1 : 0;
-  }
+  };
 
   const char *getRegisterClassName(unsigned ClassID) const {
     switch (ClassID) {
@@ -747,17 +745,6 @@ public:
     return 1;
   }
 
-  InstructionCost
-  getInsertExtractValueCost(unsigned Opcode,
-                            TTI::TargetCostKind CostKind) const {
-    // Note: The `insertvalue` cost here is chosen to match the default case of
-    // getInstructionCost() -- as pior to adding this helper `insertvalue` was
-    // not handled.
-    if (Opcode == Instruction::InsertValue)
-      return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
-    return TTI::TCC_Free;
-  }
-
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
@@ -887,7 +874,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           std::optional<FastMathFlags> FMF,
+                                           FastMathFlags FMF,
                                            TTI::TargetCostKind CostKind) const {
     return 1;
   }
@@ -1008,10 +995,13 @@ public:
 
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty) const { return false; }
-  bool preferAlternateOpcodeVectorization() const { return true; }
+  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
+                             TTI::ReductionFlags Flags) const {
+    return false;
+  }
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
+                                       TTI::ReductionFlags Flags) const {
     return false;
   }
 
@@ -1316,11 +1306,9 @@ public:
     case Instruction::PHI:
     case Instruction::Switch:
       return TargetTTI->getCFInstrCost(Opcode, CostKind, I);
+    case Instruction::ExtractValue:
     case Instruction::Freeze:
       return TTI::TCC_Free;
-    case Instruction::ExtractValue:
-    case Instruction::InsertValue:
-      return TargetTTI->getInsertExtractValueCost(Opcode, CostKind);
     case Instruction::Alloca:
       if (cast<AllocaInst>(U)->isStaticAlloca())
         return TTI::TCC_Free;

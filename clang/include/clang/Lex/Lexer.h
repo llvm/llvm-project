@@ -582,12 +582,6 @@ public:
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
 
-  /// Diagnose use of a delimited or named escape sequence.
-  static void DiagnoseDelimitedOrNamedEscapeSequence(SourceLocation Loc,
-                                                     bool Named,
-                                                     const LangOptions &Opts,
-                                                     DiagnosticsEngine &Diags);
-
   /// Represents a char and the number of bytes parsed to produce it.
   struct SizedChar {
     char Char;

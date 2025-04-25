@@ -21,7 +21,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOSPIRVPASS
+#define GEN_PASS_DEF_CONVERTVECTORTOSPIRV
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -29,7 +29,7 @@ using namespace mlir;
 
 namespace {
 struct ConvertVectorToSPIRVPass
-    : public impl::ConvertVectorToSPIRVPassBase<ConvertVectorToSPIRVPass> {
+    : public impl::ConvertVectorToSPIRVBase<ConvertVectorToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -55,4 +55,8 @@ void ConvertVectorToSPIRVPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
+}
+
+std::unique_ptr<OperationPass<>> mlir::createConvertVectorToSPIRVPass() {
+  return std::make_unique<ConvertVectorToSPIRVPass>();
 }

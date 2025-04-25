@@ -204,8 +204,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
-  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
-                          true))
+  if (DriverArgs.hasArg(options::OPT_nogpulib))
     return {};
 
   ArgStringList LibraryPaths;

@@ -267,11 +267,15 @@ static StackDuration mergeStackDuration(const StackDuration &Left,
   Data.IntermediateDurations.reserve(Left.IntermediateDurations.size() +
                                      Right.IntermediateDurations.size());
   // Aggregate the durations.
-  llvm::append_range(Data.TerminalDurations, Left.TerminalDurations);
-  llvm::append_range(Data.TerminalDurations, Right.TerminalDurations);
+  for (auto duration : Left.TerminalDurations)
+    Data.TerminalDurations.push_back(duration);
+  for (auto duration : Right.TerminalDurations)
+    Data.TerminalDurations.push_back(duration);
 
-  llvm::append_range(Data.IntermediateDurations, Left.IntermediateDurations);
-  llvm::append_range(Data.IntermediateDurations, Right.IntermediateDurations);
+  for (auto duration : Left.IntermediateDurations)
+    Data.IntermediateDurations.push_back(duration);
+  for (auto duration : Right.IntermediateDurations)
+    Data.IntermediateDurations.push_back(duration);
   return Data;
 }
 
@@ -502,7 +506,8 @@ public:
     for (const auto &RootNodeRange :
          make_range(map_iterator(Roots.begin(), MapValueFn),
                     map_iterator(Roots.end(), MapValueFn))) {
-      llvm::append_range(RootValues, RootNodeRange);
+      for (auto *RootNode : RootNodeRange)
+        RootValues.push_back(RootNode);
     }
 
     print(OS, FN, RootValues);
@@ -560,7 +565,8 @@ public:
       while (!S.empty()) {
         auto *Top = S.pop_back_val();
         printSingleStack<AggType>(OS, FN, ReportThread, ThreadId, Top);
-        llvm::append_range(S, Top->Callees);
+        for (const auto *C : Top->Callees)
+          S.push_back(C);
       }
     }
   }
@@ -635,7 +641,8 @@ public:
               TopStacksByCount.pop_back();
           }
         }
-        llvm::append_range(S, Top->Callees);
+        for (const auto *C : Top->Callees)
+          S.push_back(C);
       }
     }
 

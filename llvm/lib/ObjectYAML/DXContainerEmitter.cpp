@@ -266,15 +266,15 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.RootSignature.has_value())
         continue;
 
-      mcdxbc::RootSignatureDesc RS;
-      RS.Flags = P.RootSignature->getEncodedFlags();
-      RS.Version = P.RootSignature->Version;
-      RS.NumParameters = P.RootSignature->NumParameters;
-      RS.RootParametersOffset = P.RootSignature->RootParametersOffset;
-      RS.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
-      RS.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
+      mcdxbc::RootSignatureHeader Header;
+      Header.Flags = P.RootSignature->getEncodedFlags();
+      Header.Version = P.RootSignature->Version;
+      Header.NumParameters = P.RootSignature->NumParameters;
+      Header.RootParametersOffset = P.RootSignature->RootParametersOffset;
+      Header.NumStaticSamplers = P.RootSignature->NumStaticSamplers;
+      Header.StaticSamplersOffset = P.RootSignature->StaticSamplersOffset;
 
-      RS.write(OS);
+      Header.write(OS);
       break;
     }
     uint64_t BytesWritten = OS.tell() - DataStart;

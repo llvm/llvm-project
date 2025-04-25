@@ -362,7 +362,6 @@ public:
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override {
     return AtomicExpansionKind::LLSC;
   }
-  bool softPromoteHalfType() const override { return true; }
 
 private:
   void initializeHVXLowering();

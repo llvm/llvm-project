@@ -162,7 +162,7 @@ entry:
   br label %bb.1
 
 bb.1:
-  store float 1.0, ptr poison
+  store float 1.0, ptr undef
   br label %bb.2
 
 bb.2:

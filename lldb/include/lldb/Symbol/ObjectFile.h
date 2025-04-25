@@ -81,14 +81,9 @@ public:
   enum BinaryType {
     eBinaryTypeInvalid = 0,
     eBinaryTypeUnknown,
-    /// kernel binary
-    eBinaryTypeKernel,
-    /// user process binary, dyld addr
-    eBinaryTypeUser,
-    /// user process binary, dyld_all_image_infos addr
-    eBinaryTypeUserAllImageInfos,
-    /// standalone binary / firmware
-    eBinaryTypeStandalone
+    eBinaryTypeKernel,    /// kernel binary
+    eBinaryTypeUser,      /// user process binary
+    eBinaryTypeStandalone /// standalone binary / firmware
   };
 
   struct LoadableData {

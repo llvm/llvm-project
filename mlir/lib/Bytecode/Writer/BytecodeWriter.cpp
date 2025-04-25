@@ -613,9 +613,6 @@ private:
 } // namespace
 
 void EncodingEmitter::writeTo(raw_ostream &os) const {
-  // Reserve space in the ostream for the encoded contents.
-  os.reserveExtraSpace(size());
-
   for (auto &prevResult : prevResultList)
     os.write((const char *)prevResult.data(), prevResult.size());
   os.write((const char *)currentResult.data(), currentResult.size());
@@ -772,7 +769,6 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
 
 //===----------------------------------------------------------------------===//
 // Dialects
-//===----------------------------------------------------------------------===//
 
 /// Write the given entries in contiguous groups with the same parent dialect.
 /// Each dialect sub-group is encoded with the parent dialect and number of
@@ -856,7 +852,6 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Attributes and Types
-//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
   EncodingEmitter attrTypeEmitter;
@@ -938,7 +933,6 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Operations
-//===----------------------------------------------------------------------===//
 
 LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
                                          Block *block) {
@@ -1218,7 +1212,6 @@ LogicalResult BytecodeWriter::writeIRSection(EncodingEmitter &emitter,
 
 //===----------------------------------------------------------------------===//
 // Resources
-//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents a resource builder implementation for the MLIR
@@ -1331,7 +1324,6 @@ void BytecodeWriter::writeResourceSection(Operation *op,
 
 //===----------------------------------------------------------------------===//
 // Strings
-//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
   EncodingEmitter stringEmitter;
@@ -1341,7 +1333,6 @@ void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Properties
-//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
   EncodingEmitter propertiesEmitter;

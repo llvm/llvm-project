@@ -145,6 +145,7 @@ static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   t->GetStartData(params);
 
   auto res = (*params.start_routine)(params.arg);
+  t->Destroy();  // POSIX calls this from TSD destructor.
   return res;
 }
 
@@ -165,13 +166,6 @@ INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
                             thr_flags, tid);
 }
 
-INTERCEPTOR_WINAPI(void, ExitThread, DWORD dwExitCode) {
-  AsanThread *t = (AsanThread *)__asan::GetCurrentThread();
-  if (t)
-    t->Destroy();
-  REAL(ExitThread)(dwExitCode);
-}
-
 // }}}
 
 namespace __asan {
@@ -187,7 +181,6 @@ void InitializePlatformInterceptors() {
       (LPCWSTR)&InitializePlatformInterceptors, &pinned));
 
   ASAN_INTERCEPT_FUNC(CreateThread);
-  ASAN_INTERCEPT_FUNC(ExitThread);
   ASAN_INTERCEPT_FUNC(SetUnhandledExceptionFilter);
 
 #ifdef _WIN64
@@ -278,9 +271,6 @@ uptr FindDynamicShadowStart() {
                           /*min_shadow_base_alignment*/ 0, kHighMemEnd,
                           GetMmapGranularity());
 }
-
-// Not used
-void TryReExecWithoutASLR() {}
 
 void AsanCheckDynamicRTPrereqs() {}
 

@@ -117,15 +117,13 @@
 ## Check that only string-literal patterns match
 ## Check that comments and blank lines are stripped from symbol list
 # RUN: %lld -dylib %t/symdefs.o -o %t/literal \
-# RUN:     -exported_symbols_list %t/literals.txt \
-# RUN:     -exported_symbol singleton
+# RUN:     -exported_symbols_list %t/literals.txt
 # RUN: llvm-objdump --macho --exports-trie %t/literal | \
 # RUN:     FileCheck --check-prefix=LITERAL %s
 
 # LITERAL-DAG: literal_only
 # LITERAL-DAG: literal_also
 # LITERAL-DAG: globby_also
-# LITERAL-DAG: singleton
 # LITERAL-NOT: globby_only
 
 ## Check that only glob patterns match
@@ -247,7 +245,7 @@ _keep_lazy:
 
 #--- symdefs.s
 
-.globl literal_only, literal_also, globby_only, globby_also, singleton
+.globl literal_only, literal_also, globby_only, globby_also
 literal_only:
   retq
 literal_also:
@@ -255,8 +253,6 @@ literal_also:
 globby_only:
   retq
 globby_also:
-  retq
-singleton:
   retq
 
 #--- literals.txt

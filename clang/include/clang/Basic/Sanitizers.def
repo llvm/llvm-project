@@ -152,7 +152,8 @@ SANITIZER_GROUP("undefined", Undefined,
                     FloatCastOverflow |
                     IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
                     PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
-                    SignedIntegerOverflow | Unreachable | VLABound | Function)
+                    SignedIntegerOverflow | Unreachable | VLABound | Function |
+                    Vptr)
 
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)

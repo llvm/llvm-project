@@ -710,38 +710,24 @@ func.func @fold_extract_transpose(
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast_same_input_output_scalar
+// CHECK-LABEL: fold_extract_broadcast
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
-func.func @fold_extract_broadcast_same_input_output_scalar(%a : f32, 
-  %idx0 : index, %idx1 : index, %idx2 : index) -> f32 {
+func.func @fold_extract_broadcast(%a : f32) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
-  %r = vector.extract %b[%idx0, %idx1, %idx2] : f32 from vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast_same_input_output_vec
-//  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
-//       CHECK:   return %[[A]] : vector<4xf32>
-func.func @fold_extract_broadcast_same_input_output_vec(%a : vector<4xf32>, 
-  %idx0 : index, %idx1 : index) -> vector<4xf32> {
-  %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
-  %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
-  return %r : vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: fold_extract_broadcast_0dvec_input_scalar_output
+// CHECK-LABEL: fold_extract_broadcast_0dvec
 //  CHECK-SAME:   %[[A:.*]]: vector<f32>
-//       CHECK:   %[[B:.+]] = vector.extract %[[A]][] : f32 from vector<f32>
+//       CHECK:   %[[B:.+]] = vector.extractelement %[[A]][] : vector<f32>
 //       CHECK:   return %[[B]] : f32
-func.func @fold_extract_broadcast_0dvec_input_scalar_output(%a : vector<f32>, 
-  %idx0 : index, %idx1 : index, %idx2: index) -> f32 {
+func.func @fold_extract_broadcast_0dvec(%a : vector<f32>) -> f32 {
   %b = vector.broadcast %a : vector<f32> to vector<1x2x4xf32>
-  %r = vector.extract %b[%idx0, %idx1, %idx2] : f32 from vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
 }
 
@@ -761,68 +747,57 @@ func.func @fold_extract_broadcast_negative(%a : vector<1x1xf32>) -> vector<4xf32
 // CHECK-LABEL: fold_extract_splat
 //  CHECK-SAME:   %[[A:.*]]: f32
 //       CHECK:   return %[[A]] : f32
-func.func @fold_extract_splat(%a : f32, %idx0 : index, %idx1 : index, %idx2 : index) -> f32 {
+func.func @fold_extract_splat(%a : f32) -> f32 {
   %b = vector.splat %a : vector<1x2x4xf32>
-  %r = vector.extract %b[%idx0, %idx1, %idx2] : f32 from vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
   return %r : f32
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast_dim1_broadcasting
-//  CHECK-SAME:   %[[A:.*]]: vector<2x1xf32>
-//  CHECK-SAME:   %[[IDX:.*]]: index, %[[IDX1:.*]]: index, %[[IDX2:.*]]: index
-//       CHECK:   %[[R:.*]] = vector.extract %[[A]][%[[IDX1]], 0] : f32 from vector<2x1xf32>
-//       CHECK:   return %[[R]] : f32
-func.func @fold_extract_broadcast_dim1_broadcasting(%a : vector<2x1xf32>, 
-  %idx : index, %idx1 : index, %idx2 : index) -> f32 {
-  %b = vector.broadcast %a : vector<2x1xf32> to vector<1x2x4xf32>
-  %r = vector.extract %b[%idx, %idx1, %idx2] : f32 from vector<1x2x4xf32>
-  return %r : f32
-}
-
-// -----
-
-// CHECK-LABEL: fold_extract_broadcast_to_lower_rank
-//  CHECK-SAME:   %[[A:.*]]: vector<2x4xf32>
-//  CHECK-SAME:   %[[IDX0:.*]]: index, %[[IDX1:.*]]: index
-//       CHECK:   %[[B:.+]] = vector.extract %[[A]][%[[IDX1]]] : vector<4xf32> from vector<2x4xf32>
-//       CHECK:   return %[[B]] : vector<4xf32>
-// rank(extract_output) < rank(broadcast_input)
-func.func @fold_extract_broadcast_to_lower_rank(%a : vector<2x4xf32>, 
-  %idx0 : index, %idx1 : index) -> vector<4xf32> {
-  %b = vector.broadcast %a : vector<2x4xf32> to vector<1x2x4xf32>
-  %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
+// CHECK-LABEL: fold_extract_broadcast_vector
+//  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
+//       CHECK:   return %[[A]] : vector<4xf32>
+func.func @fold_extract_broadcast_vector(%a : vector<4xf32>) -> vector<4xf32> {
+  %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1] : vector<4xf32> from vector<1x2x4xf32>
   return %r : vector<4xf32>
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast_to_higher_rank
+// CHECK-LABEL: fold_extract_broadcast
+//  CHECK-SAME:   %[[A:.*]]: vector<4xf32>
+//       CHECK:   %[[R:.*]] = vector.extract %[[A]][2] : f32 from vector<4xf32>
+//       CHECK:   return %[[R]] : f32
+func.func @fold_extract_broadcast(%a : vector<4xf32>) -> f32 {
+  %b = vector.broadcast %a : vector<4xf32> to vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1, 2] : f32 from vector<1x2x4xf32>
+  return %r : f32
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_broadcast
 //       CHECK:   %[[B:.*]] = vector.broadcast %{{.*}} : f32 to vector<4xf32>
 //       CHECK:   return %[[B]] : vector<4xf32>
-// rank(extract_output) > rank(broadcast_input)
-func.func @fold_extract_broadcast_to_higher_rank(%a : f32, %idx0 : index, %idx1 : index) 
-  -> vector<4xf32> {
+func.func @fold_extract_broadcast(%a : f32) -> vector<4xf32> {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
-  %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1] : vector<4xf32> from vector<1x2x4xf32>
   return %r : vector<4xf32>
 }
 
 // -----
 
-// CHECK-LABEL: fold_extract_broadcast_to_equal_rank
+// CHECK-LABEL: fold_extract_broadcast
 //  CHECK-SAME:   %[[A:.*]]: vector<1xf32>
 //       CHECK:   %[[R:.*]] = vector.broadcast %[[A]] : vector<1xf32> to vector<8xf32>
 //       CHECK:   return %[[R]] : vector<8xf32>
-// rank(extract_output) == rank(broadcast_input)
-func.func @fold_extract_broadcast_to_equal_rank(%a : vector<1xf32>, %idx0 : index) 
-  -> vector<8xf32> {
+func.func @fold_extract_broadcast(%a : vector<1xf32>) -> vector<8xf32> {
   %b = vector.broadcast %a : vector<1xf32> to vector<1x8xf32>
-  %r = vector.extract %b[%idx0] : vector<8xf32> from vector<1x8xf32>
+  %r = vector.extract %b[0] : vector<8xf32> from vector<1x8xf32>
   return %r : vector<8xf32>
 }
-
 // -----
 
 // CHECK-LABEL: @fold_extract_shuffle
@@ -2658,7 +2633,7 @@ func.func @fold_extractelement_of_broadcast(%f: f32) -> f32 {
 
 // CHECK-LABEL: func.func @fold_0d_vector_reduction
 func.func @fold_0d_vector_reduction(%arg0: vector<f32>) -> f32 {
-  // CHECK-NEXT: %[[RES:.*]] = vector.extract %arg{{.*}}[] : f32 from vector<f32>
+  // CHECK-NEXT: %[[RES:.*]] = vector.extractelement %arg{{.*}}[] : vector<f32>
   // CHECK-NEXT: return %[[RES]] : f32
   %0 = vector.reduction <add>, %arg0 : vector<f32> into f32
   return %0 : f32
@@ -2834,7 +2809,7 @@ func.func @extract_from_0d_splat_broadcast_regression(%a: f32, %b: vector<f32>, 
   %3 = vector.extract %2[] : f32 from vector<f32>
 
   // Broadcast 0D to 3D and extract scalar.
-  // CHECK: %[[extract1:.*]] = vector.extract %[[b]][] : f32 from vector<f32>
+  // CHECK: %[[extract1:.*]] = vector.extractelement %[[b]][] : vector<f32>
   %4 = vector.broadcast %b : vector<f32> to vector<1x2x4xf32>
   %5 = vector.extract %4[0, 0, 1] : f32 from vector<1x2x4xf32>
 
@@ -3009,23 +2984,12 @@ func.func @insert_multiple_poison_idx(%a: vector<4x5x8xf32>, %b: vector<8xf32>)
 
 // -----
 
-// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_dims_overlap
+// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract
 // CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0, 0, 0, 0] : vector<4xi32> from vector<8x1x2x1x1x4xi32>
 // CHECK-NEXT:   return %[[EXTRACT]] :  vector<4xi32>
-func.func @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_dims_overlap(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<4xi32> {
+func.func @contiguous_extract_strided_slices_to_extract(%arg0 : vector<8x1x2x1x1x4xi32>) -> vector<4xi32> {
   %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0, 0, 0, 0, 0], sizes = [1, 1, 1, 1, 1, 4], strides = [1, 1, 1, 1, 1, 1]} : vector<8x1x2x1x1x4xi32> to vector<1x1x1x1x1x4xi32>
   %2 = vector.shape_cast %1 : vector<1x1x1x1x1x4xi32> to vector<4xi32>
-  return %2 : vector<4xi32>
-}
-
-// -----
-
-// CHECK-LABEL: @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_dims_no_overlap
-// CHECK:        %[[EXTRACT:.+]] = vector.extract {{.*}}[0, 0] : vector<4xi32> from vector<8x2x4xi32>
-// CHECK-NEXT:   return %[[EXTRACT]] :  vector<4xi32>
-func.func @contiguous_extract_strided_slices_to_extract_sizes_and_outer_source_dims_no_overlap(%arg0 : vector<8x2x4xi32>) -> vector<4xi32> {
-  %1 = vector.extract_strided_slice %arg0 {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]} : vector<8x2x4xi32> to vector<1x1x4xi32>
-  %2 = vector.shape_cast %1 : vector<1x1x4xi32> to vector<4xi32>
   return %2 : vector<4xi32>
 }
 

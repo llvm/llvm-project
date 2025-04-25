@@ -195,9 +195,9 @@ bool Coloring::color() {
     Q.insert(N);
     for (unsigned I = 0; I != Q.size(); ++I) {
       NodeSet &Ns = Edges[Q[I]];
-      Q.insert_range(Ns);
+      Q.insert(Ns.begin(), Ns.end());
     }
-    FirstQ.insert_range(Q);
+    FirstQ.insert(Q.begin(), Q.end());
   };
   for (Node N : Needed)
     Enqueue(N);
@@ -1062,7 +1062,8 @@ static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
       Segs.set(M >> Shift);
   }
 
-  llvm::append_range(SegList, Segs.set_bits());
+  for (unsigned B : Segs.set_bits())
+    SegList.push_back(B);
   return SegList;
 }
 

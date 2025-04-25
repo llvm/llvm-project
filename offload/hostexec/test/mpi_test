@@ -1,0 +1,26 @@
+
+TRUNK=${TRUNK:-$HOME/rocm/trunk}
+GPU=${GPU:-gfx908}
+export LD_LIBRARY_PATH=$TRUNK/lib
+binary=mpi_in_target_region
+[ -f $binary ] && rm $binary
+
+# try to find openmpi
+MPI=~/local/openmpi
+[ ! -d $MPI ] && MPI=/opt/openmpi-4.1.5
+[ ! -d $MPI ] && MPI=/opt/openmpi-4.1.4
+[ ! -d $MPI ] && MPI=/usr/local/openmpi
+[ ! -d $MPI ] && MPI=/usr/lib/openmpi
+[ ! -d $MPI ] && MPI=/usr/lib/x86_64-linux-gnu/openmpi
+[ ! -d $MPI ] && exit 
+echo
+echo ===== Compiling mpi-in-target-region.cpp =====
+echo OMPI_CC=$TRUNK/bin/clang++ $MPI/bin/mpicc -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$GPU mpi-in-target-region.cpp -I. -o $binary
+OMPI_CC=$TRUNK/bin/clang++ $MPI/bin/mpicc -O2 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=$GPU mpi-in-target-region.cpp -I. -o $binary
+echo
+if [ -f $binary ] ; then 
+echo ===== Running ./$binary offloading =====
+echo
+LIBOMPTARGET_KERNEL_TRACE=1 LD_LIBRARY_PATH=$TRUNK/lib:$MPI/lib:/usr/lib/x86_64-linux-gnu $MPI/bin/mpirun -np 2 --mca btl_openib_warn_no_device_params_found 0 ./$binary
+fi
+

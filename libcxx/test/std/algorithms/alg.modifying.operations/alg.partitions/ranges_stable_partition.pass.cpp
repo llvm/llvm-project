@@ -13,14 +13,12 @@
 // template<bidirectional_iterator I, sentinel_for<I> S, class Proj = identity,
 //          indirect_unary_predicate<projected<I, Proj>> Pred>
 //   requires permutable<I>
-//   constexpr subrange<I>                                                         // constexpr since C++26
-//     stable_partition(I first, S last, Pred pred, Proj proj = {});               // Since C++20
+//   subrange<I> stable_partition(I first, S last, Pred pred, Proj proj = {});                      // Since C++20
 //
 // template<bidirectional_range R, class Proj = identity,
 //          indirect_unary_predicate<projected<iterator_t<R>, Proj>> Pred>
 //   requires permutable<iterator_t<R>>
-//   constexpr borrowed_subrange_t<R>                                              // constexpr since C++26
-//     stable_partition(R&& r, Pred pred, Proj proj = {});                         // Since C++20
+//   borrowed_subrange_t<R> stable_partition(R&& r, Pred pred, Proj proj = {});                     // Since C++20
 
 #include <algorithm>
 #include <array>
@@ -87,8 +85,7 @@ static_assert(!HasStablePartitionRange<R<PermutableNotForwardIterator>, UnaryPre
 static_assert(!HasStablePartitionRange<R<PermutableNotSwappable>, UnaryPred>);
 
 template <class Iter, class Sent, std::size_t N, class Pred>
-TEST_CONSTEXPR_CXX26 void
-test_one(std::array<int, N> input, Pred pred, std::size_t partition_point, std::array<int, N> expected) {
+void test_one(std::array<int, N> input, Pred pred, std::size_t partition_point, std::array<int, N> expected) {
   auto neg_pred = [&](int x) { return !pred(x); };
 
   { // (iterator, sentinel) overload.
@@ -124,7 +121,7 @@ test_one(std::array<int, N> input, Pred pred, std::size_t partition_point, std::
 }
 
 template <class Iter, class Sent>
-TEST_CONSTEXPR_CXX26 void test_iterators_2() {
+void test_iterators_2() {
   auto is_odd = [](int x) { return x % 2 != 0; };
 
   // Empty sequence.
@@ -160,19 +157,19 @@ TEST_CONSTEXPR_CXX26 void test_iterators_2() {
 }
 
 template <class Iter>
-TEST_CONSTEXPR_CXX26 void test_iterators_1() {
+void test_iterators_1() {
   test_iterators_2<Iter, Iter>();
   test_iterators_2<Iter, sentinel_wrapper<Iter>>();
 }
 
-TEST_CONSTEXPR_CXX26 void test_iterators() {
+void test_iterators() {
   test_iterators_1<bidirectional_iterator<int*>>();
   test_iterators_1<random_access_iterator<int*>>();
   test_iterators_1<contiguous_iterator<int*>>();
   test_iterators_1<int*>();
 }
 
-TEST_CONSTEXPR_CXX26 bool test() {
+void test() {
   test_iterators();
 
   { // The algorithm is stable (equivalent elements remain in the same order).
@@ -241,15 +238,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
       }
     }
   }
-
-  return true;
 }
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
+  // Note: `stable_partition` is not `constexpr`.
 
   return 0;
 }

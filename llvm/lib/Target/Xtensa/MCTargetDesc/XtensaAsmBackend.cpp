@@ -33,6 +33,9 @@ public:
       : MCAsmBackend(llvm::endianness::little), OSABI(osABI),
         IsLittleEndian(isLE) {}
 
+  unsigned getNumFixupKinds() const override {
+    return Xtensa::NumTargetFixupKinds;
+  }
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -68,7 +71,7 @@ XtensaMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
-  assert(unsigned(Kind - FirstTargetFixupKind) < Xtensa::NumTargetFixupKinds &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }

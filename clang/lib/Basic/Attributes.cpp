@@ -143,17 +143,13 @@ static SmallString<64> normalizeName(const IdentifierInfo *Name,
   StringRef ScopeName = normalizeAttrScopeName(Scope, SyntaxUsed);
   StringRef AttrName = normalizeAttrName(Name, ScopeName, SyntaxUsed);
 
-  std::string StrAttrName = AttrName.str();
-  if (SyntaxUsed == AttributeCommonInfo::AS_HLSLAnnotation)
-    StrAttrName = AttrName.lower();
-
   SmallString<64> FullName = ScopeName;
   if (!ScopeName.empty()) {
     assert(SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
            SyntaxUsed == AttributeCommonInfo::AS_C23);
     FullName += "::";
   }
-  FullName += StrAttrName;
+  FullName += AttrName;
 
   return FullName;
 }

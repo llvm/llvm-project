@@ -166,7 +166,6 @@ private:
 
 //===----------------------------------------------------------------------===//
 // AttributePosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing an attribute of an operation.
 struct AttributePosition
@@ -181,7 +180,6 @@ struct AttributePosition
 
 //===----------------------------------------------------------------------===//
 // AttributeLiteralPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing a literal attribute.
 struct AttributeLiteralPosition
@@ -192,7 +190,6 @@ struct AttributeLiteralPosition
 
 //===----------------------------------------------------------------------===//
 // ForEachPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing an iterative choice of an operation.
 struct ForEachPosition : public PredicateBase<ForEachPosition, Position,
@@ -207,7 +204,6 @@ struct ForEachPosition : public PredicateBase<ForEachPosition, Position,
 
 //===----------------------------------------------------------------------===//
 // OperandPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing an operand of an operation.
 struct OperandPosition
@@ -222,7 +218,6 @@ struct OperandPosition
 
 //===----------------------------------------------------------------------===//
 // OperandGroupPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing an operand group of an operation.
 struct OperandGroupPosition
@@ -250,7 +245,6 @@ struct OperandGroupPosition
 
 //===----------------------------------------------------------------------===//
 // OperationPosition
-//===----------------------------------------------------------------------===//
 
 /// An operation position describes an operation node in the IR. Other position
 /// kinds are formed with respect to an operation position.
@@ -288,7 +282,6 @@ struct OperationPosition : public PredicateBase<OperationPosition, Position,
 
 //===----------------------------------------------------------------------===//
 // ConstraintPosition
-//===----------------------------------------------------------------------===//
 
 struct ConstraintQuestion;
 
@@ -311,7 +304,6 @@ struct ConstraintPosition
 
 //===----------------------------------------------------------------------===//
 // ResultPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing a result of an operation.
 struct ResultPosition
@@ -326,7 +318,6 @@ struct ResultPosition
 
 //===----------------------------------------------------------------------===//
 // ResultGroupPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing a result group of an operation.
 struct ResultGroupPosition
@@ -356,7 +347,6 @@ struct ResultGroupPosition
 
 //===----------------------------------------------------------------------===//
 // TypePosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing the result type of an entity, i.e. an Attribute,
 /// Operand, Result, etc.
@@ -372,7 +362,6 @@ struct TypePosition : public PredicateBase<TypePosition, Position, Position *,
 
 //===----------------------------------------------------------------------===//
 // TypeLiteralPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing a literal type or type range. The value is stored as
 /// either a TypeAttr, or an ArrayAttr of TypeAttr.
@@ -384,7 +373,6 @@ struct TypeLiteralPosition
 
 //===----------------------------------------------------------------------===//
 // UsersPosition
-//===----------------------------------------------------------------------===//
 
 /// A position describing the users of a value or a range of values. The second
 /// value in the key indicates whether we choose users of a representative for
@@ -433,7 +421,6 @@ private:
 
 //===----------------------------------------------------------------------===//
 // Answers
-//===----------------------------------------------------------------------===//
 
 /// An Answer representing an `Attribute` value.
 struct AttributeAnswer
@@ -477,7 +464,6 @@ struct UnsignedAnswer
 
 //===----------------------------------------------------------------------===//
 // Questions
-//===----------------------------------------------------------------------===//
 
 /// Compare an `Attribute` to a constant value.
 struct AttributeQuestion

@@ -445,10 +445,10 @@ private:
             (RE.Size == 2 || RE.Size == 3)) ||
            RE.Size == 2);
     SectionEntry &Section = Sections[RE.SectionID];
-    auto [It, Inserted] = Stubs.try_emplace(Value);
+    StubMap::const_iterator i = Stubs.find(Value);
     int64_t Offset;
-    if (!Inserted)
-      Offset = static_cast<int64_t>(It->second);
+    if (i != Stubs.end())
+      Offset = static_cast<int64_t>(i->second);
     else {
       // FIXME: There must be a better way to do this then to check and fix the
       // alignment every time!!!
@@ -458,7 +458,7 @@ private:
           (BaseAddress + Section.getStubOffset() + StubAlignment - 1) &
           -StubAlignment;
       unsigned StubOffset = StubAddress - BaseAddress;
-      It->second = StubOffset;
+      Stubs[Value] = StubOffset;
       assert(isAligned(getStubAlignment(), StubAddress) &&
              "GOT entry not aligned");
       RelocationEntry GOTRE(RE.SectionID, StubOffset,

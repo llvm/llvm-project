@@ -1,4 +1,5 @@
 ; RUN: opt %s -O2 -S -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -O2 -S -o - | FileCheck %s
 ; Verify that we emit the same intrinsic at most once.
 ; rdar://problem/13056109
 ;

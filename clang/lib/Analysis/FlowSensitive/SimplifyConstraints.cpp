@@ -64,9 +64,9 @@ projectToLeaders(const llvm::DenseSet<Atom> &Atoms,
 // `LeaderIt`.
 static llvm::SmallVector<Atom>
 atomsInEquivalenceClass(const llvm::EquivalenceClasses<Atom> &EquivalentAtoms,
-                        const Atom &At) {
+                        llvm::EquivalenceClasses<Atom>::iterator LeaderIt) {
   llvm::SmallVector<Atom> Result;
-  for (auto MemberIt = EquivalentAtoms.findLeader(At);
+  for (auto MemberIt = EquivalentAtoms.member_begin(LeaderIt);
        MemberIt != EquivalentAtoms.member_end(); ++MemberIt)
     Result.push_back(*MemberIt);
   return Result;
@@ -151,24 +151,27 @@ void simplifyConstraints(llvm::SetVector<const Formula *> &Constraints,
   }
 
   if (Info) {
-    for (const auto &E : EquivalentAtoms) {
-      if (!E.isLeader())
+    for (auto It = EquivalentAtoms.begin(), End = EquivalentAtoms.end();
+         It != End; ++It) {
+      if (!It->isLeader())
         continue;
-      Atom At = *EquivalentAtoms.findLeader(E);
+      Atom At = *EquivalentAtoms.findLeader(It);
       if (TrueAtoms.contains(At) || FalseAtoms.contains(At))
         continue;
       llvm::SmallVector<Atom> Atoms =
-          atomsInEquivalenceClass(EquivalentAtoms, At);
+          atomsInEquivalenceClass(EquivalentAtoms, It);
       if (Atoms.size() == 1)
         continue;
       std::sort(Atoms.begin(), Atoms.end());
       Info->EquivalentAtoms.push_back(std::move(Atoms));
     }
     for (Atom At : TrueAtoms)
-      Info->TrueAtoms.append(atomsInEquivalenceClass(EquivalentAtoms, At));
+      Info->TrueAtoms.append(atomsInEquivalenceClass(
+          EquivalentAtoms, EquivalentAtoms.findValue(At)));
     std::sort(Info->TrueAtoms.begin(), Info->TrueAtoms.end());
     for (Atom At : FalseAtoms)
-      Info->FalseAtoms.append(atomsInEquivalenceClass(EquivalentAtoms, At));
+      Info->FalseAtoms.append(atomsInEquivalenceClass(
+          EquivalentAtoms, EquivalentAtoms.findValue(At)));
     std::sort(Info->FalseAtoms.begin(), Info->FalseAtoms.end());
   }
 }

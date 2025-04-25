@@ -60,8 +60,13 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 using namespace llvm;
 
@@ -79,7 +84,7 @@ namespace {
 
   raw_ostream &operator<< (raw_ostream &OS, const printv &PV) {
     if (PV.R)
-      OS << 'v' << Register(PV.R).virtRegIndex();
+      OS << 'v' << Register::virtReg2Index(PV.R);
     else
       OS << 's';
     return OS;
@@ -942,7 +947,7 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         else
           dbgs() << "\n  does not fall through\n";
       }
-      Targets.insert_range(BTs);
+      Targets.insert(BTs.begin(), BTs.end());
     }
     ++It;
   } while (FallsThrough && It != End);
@@ -965,7 +970,8 @@ void BT::visitBranchesFrom(const MachineInstr &BI) {
         Targets.insert(&*Next);
     }
   } else {
-    Targets.insert_range(B.successors());
+    for (const MachineBasicBlock *SB : B.successors())
+      Targets.insert(SB);
   }
 
   for (const MachineBasicBlock *TB : Targets)

@@ -90,10 +90,12 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
   const GlobalValue *GV = dyn_cast<GlobalValue>(CV->stripPointerCasts());
   assert(GV && "C++ constructor pointer was not a GlobalValue!");
 
-  const MCExpr *E = MCSymbolRefExpr::create(
-      GetARMGVSymbol(GV, ARMII::MO_NO_FLAG),
-      (Subtarget->isTargetELF() ? ARMMCExpr::VK_TARGET1 : ARMMCExpr::VK_None),
-      OutContext);
+  const MCExpr *E = MCSymbolRefExpr::create(GetARMGVSymbol(GV,
+                                                           ARMII::MO_NO_FLAG),
+                                            (Subtarget->isTargetELF()
+                                             ? MCSymbolRefExpr::VK_ARM_TARGET1
+                                             : MCSymbolRefExpr::VK_None),
+                                            OutContext);
 
   OutStreamer->emitValue(E, Size);
 }
@@ -120,7 +122,8 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Collect all globals that had their storage promoted to a constant pool.
   // Functions are emitted before variables, so this accumulates promoted
   // globals from all functions in PromotedGlobals.
-  PromotedGlobals.insert_range(AFI->getGlobalsPromotedToConstantPool());
+  for (const auto *GV : AFI->getGlobalsPromotedToConstantPool())
+    PromotedGlobals.insert(GV);
 
   // Calculate this function's optimization goal.
   unsigned OptimizationGoal;
@@ -832,20 +835,21 @@ static MCSymbol *getPICLabel(StringRef Prefix, unsigned FunctionNumber,
   return Label;
 }
 
-static uint8_t getModifierSpecifier(ARMCP::ARMCPModifier Modifier) {
+static MCSymbolRefExpr::VariantKind
+getModifierVariantKind(ARMCP::ARMCPModifier Modifier) {
   switch (Modifier) {
   case ARMCP::no_modifier:
-    return ARMMCExpr::VK_None;
+    return MCSymbolRefExpr::VK_None;
   case ARMCP::TLSGD:
-    return ARMMCExpr::VK_TLSGD;
+    return MCSymbolRefExpr::VK_TLSGD;
   case ARMCP::TPOFF:
-    return ARMMCExpr::VK_TPOFF;
+    return MCSymbolRefExpr::VK_TPOFF;
   case ARMCP::GOTTPOFF:
-    return ARMMCExpr::VK_GOTTPOFF;
+    return MCSymbolRefExpr::VK_GOTTPOFF;
   case ARMCP::SBREL:
-    return ARMMCExpr::VK_SBREL;
+    return MCSymbolRefExpr::VK_ARM_SBREL;
   case ARMCP::GOT_PREL:
-    return ARMMCExpr::VK_GOT_PREL;
+    return MCSymbolRefExpr::VK_ARM_GOT_PREL;
   case ARMCP::SECREL:
     return MCSymbolRefExpr::VK_SECREL;
   }
@@ -960,8 +964,9 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
   }
 
   // Create an MCSymbol for the reference.
-  const MCExpr *Expr = MCSymbolRefExpr::create(
-      MCSym, getModifierSpecifier(ACPV->getModifier()), OutContext);
+  const MCExpr *Expr =
+    MCSymbolRefExpr::create(MCSym, getModifierVariantKind(ACPV->getModifier()),
+                            OutContext);
 
   if (ACPV->getPCAdjustment()) {
     MCSymbol *PCLabel =

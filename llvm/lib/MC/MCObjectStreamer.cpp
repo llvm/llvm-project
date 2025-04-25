@@ -418,14 +418,13 @@ void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                              unsigned Column, unsigned Flags,
                                              unsigned Isa,
                                              unsigned Discriminator,
-                                             StringRef FileName,
-                                             StringRef Comment) {
+                                             StringRef FileName) {
   // In case we see two .loc directives in a row, make sure the
   // first one gets a line entry.
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   this->MCStreamer::emitDwarfLocDirective(FileNo, Line, Column, Flags, Isa,
-                                          Discriminator, FileName, Comment);
+                                          Discriminator, FileName);
 }
 
 static const MCExpr *buildSymbolDiff(MCObjectStreamer &OS, const MCSymbol *A,
@@ -582,13 +581,61 @@ void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
   insert(getContext().allocFragment<MCOrgFragment>(*Offset, Value, Loc));
 }
 
+// Associate DTPRel32 fixup with data and resize data area
+void MCObjectStreamer::emitDTPRel32Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_DTPRel_4));
+  DF->appendContents(4, 0);
+}
+
+// Associate DTPRel64 fixup with data and resize data area
+void MCObjectStreamer::emitDTPRel64Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_DTPRel_8));
+  DF->appendContents(8, 0);
+}
+
+// Associate TPRel32 fixup with data and resize data area
+void MCObjectStreamer::emitTPRel32Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_TPRel_4));
+  DF->appendContents(4, 0);
+}
+
+// Associate TPRel64 fixup with data and resize data area
+void MCObjectStreamer::emitTPRel64Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  DF->getFixups().push_back(MCFixup::create(DF->getContents().size(),
+                                            Value, FK_TPRel_8));
+  DF->appendContents(8, 0);
+}
+
+// Associate GPRel32 fixup with data and resize data area
+void MCObjectStreamer::emitGPRel32Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), Value, FK_GPRel_4));
+  DF->appendContents(4, 0);
+}
+
+// Associate GPRel64 fixup with data and resize data area
+void MCObjectStreamer::emitGPRel64Value(const MCExpr *Value) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  DF->getFixups().push_back(
+      MCFixup::create(DF->getContents().size(), Value, FK_GPRel_4));
+  DF->appendContents(8, 0);
+}
+
 static std::optional<std::pair<bool, std::string>>
 getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
                          MCDataFragment *&DF) {
   if (Symbol.isVariable()) {
     const MCExpr *SymbolExpr = Symbol.getVariableValue();
     MCValue OffsetVal;
-    if (!SymbolExpr->evaluateAsRelocatable(OffsetVal, nullptr))
+    if(!SymbolExpr->evaluateAsRelocatable(OffsetVal, nullptr, nullptr))
       return std::make_pair(false,
                             std::string("symbol in .reloc offset is not "
                                         "relocatable"));
@@ -605,7 +652,7 @@ getOffsetAndDataFragment(const MCSymbol &Symbol, uint32_t &RelocOffset,
       return std::nullopt;
     }
 
-    if (OffsetVal.getSubSym())
+    if (OffsetVal.getSymB())
       return std::make_pair(false,
                             std::string(".reloc symbol offset is not "
                                         "representable"));
@@ -662,7 +709,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
 
   MCDataFragment *DF = getOrCreateDataFragment(&STI);
   MCValue OffsetVal;
-  if (!Offset.evaluateAsRelocatable(OffsetVal, nullptr))
+  if (!Offset.evaluateAsRelocatable(OffsetVal, nullptr, nullptr))
     return std::make_pair(false,
                           std::string(".reloc offset is not relocatable"));
   if (OffsetVal.isAbsolute()) {
@@ -672,7 +719,7 @@ MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
         MCFixup::create(OffsetVal.getConstant(), Expr, Kind, Loc));
     return std::nullopt;
   }
-  if (OffsetVal.getSubSym())
+  if (OffsetVal.getSymB())
     return std::make_pair(false,
                           std::string(".reloc offset is not representable"));
 

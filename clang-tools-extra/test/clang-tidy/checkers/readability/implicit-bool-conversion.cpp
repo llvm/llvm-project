@@ -465,7 +465,7 @@ struct S {
   // CHECK-FIXES: S(bool a, bool b, bool c) : a(static_cast<int>(a)), b(b), c(static_cast<int>(c)) {}
 };
 
-void f(S& s) {
+bool f(S& s) {
   functionTaking<bool>(s.a);
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> 'bool'
   // CHECK-FIXES: functionTaking<bool>(s.a != 0);

@@ -182,10 +182,11 @@ int main(int Argc, char *Argv[]) {
     Status = amd_comgr_release_data(DataElement);
     checkError(Status, "amd_comgr_release_data");
 
-    if (!BytesSize) {
-      printf("Bitcode host empty (expected non-empty)\n");
-      exit(1);
-    }
+    // TODO: Re-enable after finalizing LLVM PR #122629
+    // if (BytesSize != 0) {
+    //   printf("Bitcode host element size: %ld (expected 0)\n", BytesSize);
+    //   exit(1);
+    // }
 
     // bitcode hip-gfx900 element (non-empty)
     Status = amd_comgr_action_data_get_data(
@@ -247,10 +248,11 @@ int main(int Argc, char *Argv[]) {
     Status = amd_comgr_release_data(DataElement);
     checkError(Status, "amd_comgr_release_data");
 
-    if (BytesSize) {
-     printf("Object host element size: %ld (expected empty)\n", BytesSize);
-     exit(1);
-    }
+    // TODO: Re-enable after finalizing LLVM PR #122629
+    // if (BytesSize != 0) {
+    //  printf("Object host element size: %ld (expected empty)\n", BytesSize);
+    //  exit(1);
+    //}
 
     // object hip-gfx900 element (non-empty)
     Status = amd_comgr_action_data_get_data(
@@ -312,8 +314,8 @@ int main(int Argc, char *Argv[]) {
     Status = amd_comgr_release_data(DataElement);
     checkError(Status, "amd_comgr_release_data");
 
-    if (!BytesSize) {
-      printf("Arvhive host empty (expected non-empty)\n");
+    if (BytesSize != 8) {
+      printf("Arvhive host element size: %ld (expected 8)\n", BytesSize);
       exit(1);
     }
 

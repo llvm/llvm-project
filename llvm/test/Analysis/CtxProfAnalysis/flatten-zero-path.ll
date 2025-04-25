@@ -52,7 +52,5 @@ exit:
 !0 = !{i64 1234}
 
 ;--- profile.yaml
-Contexts:
-  - Guid: 1234
-    TotalRootEntryCount: 12
-    Counters: [6,0,0,0]
+- Guid: 1234
+  Counters: [6,0,0,0]

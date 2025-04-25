@@ -84,7 +84,6 @@ DefinedFunction *WasmSym::applyGlobalRelocs;
 DefinedFunction *WasmSym::applyTLSRelocs;
 DefinedFunction *WasmSym::applyGlobalTLSRelocs;
 DefinedFunction *WasmSym::initTLS;
-DefinedData *WasmSym::firstPageEnd;
 DefinedFunction *WasmSym::startFunction;
 DefinedData *WasmSym::dsoHandle;
 DefinedData *WasmSym::dataEnd;
@@ -184,7 +183,7 @@ void Symbol::markLive() {
 }
 
 uint32_t Symbol::getOutputSymbolIndex() const {
-  assert(outputSymbolIndex != INVALID_INDEX || !isLive());
+  assert(outputSymbolIndex != INVALID_INDEX);
   return outputSymbolIndex;
 }
 

@@ -31,10 +31,7 @@ BOOL f2(struct S1 *s) {
 }
 
 #ifdef __OBJC__
-@interface SuperClass
-@end
-
-@interface I1 : SuperClass {
+@interface I1 {
 @public
   BOOL b1 : 1;
 }

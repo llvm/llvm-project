@@ -1424,10 +1424,10 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
       if (hasExceptionPointerOrCodeUser(CPI)) {
         // Get or create the virtual register to hold the pointer or code.  Mark
         // the live in physreg and copy into the vreg.
-        MCRegister EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
+        MCPhysReg EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
         assert(EHPhysReg && "target lacks exception pointer register");
         MBB->addLiveIn(EHPhysReg);
-        Register VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
+        unsigned VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
         BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(),
                 TII->get(TargetOpcode::COPY), VReg)
             .addReg(EHPhysReg, RegState::Kill);
@@ -1457,10 +1457,10 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     // Assign the call site to the landing pad's begin label.
     MF->setCallSiteLandingPad(Label, SDB->LPadToCallSiteMap[MBB]);
     // Mark exception register as live in.
-    if (MCRegister Reg = TLI->getExceptionPointerRegister(PersonalityFn))
+    if (unsigned Reg = TLI->getExceptionPointerRegister(PersonalityFn))
       FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
     // Mark exception selector register as live in.
-    if (MCRegister Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
+    if (unsigned Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
       FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
   }
 
@@ -1737,8 +1737,8 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
     FuncInfo->InsertPt = FuncInfo->MBB->end();
 
     // Setup an EH landing-pad block.
-    FuncInfo->ExceptionPointerVirtReg = Register();
-    FuncInfo->ExceptionSelectorVirtReg = Register();
+    FuncInfo->ExceptionPointerVirtReg = 0;
+    FuncInfo->ExceptionSelectorVirtReg = 0;
     if (LLVMBB->isEHPad())
       if (!PrepareEHLandingPad())
         continue;
@@ -1931,8 +1931,7 @@ SelectionDAGISel::FinishBasicBlock() {
              for (unsigned i = 0, e = FuncInfo->PHINodesToUpdate.size(); i != e;
                   ++i) dbgs()
              << "Node " << i << " : (" << FuncInfo->PHINodesToUpdate[i].first
-             << ", " << printReg(FuncInfo->PHINodesToUpdate[i].second)
-             << ")\n");
+             << ", " << FuncInfo->PHINodesToUpdate[i].second << ")\n");
 
   // Next, now that we know what the last MBB the LLVM BB expanded is, update
   // PHI nodes in successors.
@@ -2061,7 +2060,7 @@ SelectionDAGISel::FinishBasicBlock() {
     }
 
     // Update PHI Nodes
-    for (const std::pair<MachineInstr *, Register> &P :
+    for (const std::pair<MachineInstr *, unsigned> &P :
          FuncInfo->PHINodesToUpdate) {
       MachineInstrBuilder PHI(*MF, P.first);
       MachineBasicBlock *PHIBB = PHI->getParent();

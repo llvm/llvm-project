@@ -276,13 +276,13 @@ struct _LIBCPP_TEMPLATE_VIS array {
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type __n) {
     if (__n >= _Size)
-      std::__throw_out_of_range("array::at");
+      __throw_out_of_range("array::at");
     return __elems_[__n];
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type __n) const {
     if (__n >= _Size)
-      std::__throw_out_of_range("array::at");
+      __throw_out_of_range("array::at");
     return __elems_[__n];
   }
 
@@ -407,12 +407,12 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0> {
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 reference at(size_type) {
-    std::__throw_out_of_range("array<T, 0>::at");
+    __throw_out_of_range("array<T, 0>::at");
     __libcpp_unreachable();
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const_reference at(size_type) const {
-    std::__throw_out_of_range("array<T, 0>::at");
+    __throw_out_of_range("array<T, 0>::at");
     __libcpp_unreachable();
   }
 
@@ -497,7 +497,7 @@ struct _LIBCPP_TEMPLATE_VIS tuple_size<array<_Tp, _Size> > : public integral_con
 template <size_t _Ip, class _Tp, size_t _Size>
 struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, array<_Tp, _Size> > {
   static_assert(_Ip < _Size, "Index out of bounds in std::tuple_element<> (std::array)");
-  using type _LIBCPP_NODEBUG = _Tp;
+  using type = _Tp;
 };
 
 template <size_t _Ip, class _Tp, size_t _Size>

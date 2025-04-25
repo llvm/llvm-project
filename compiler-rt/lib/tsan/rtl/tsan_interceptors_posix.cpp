@@ -892,9 +892,10 @@ constexpr u32 kGuardWaiter = 1 << 17;
 
 static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g,
                          bool blocking_hooks = true) {
-  bool in_potentially_blocking_region = false;
-  auto on_exit = at_scope_exit([&] {
-    if (in_potentially_blocking_region)
+  if (blocking_hooks)
+    OnPotentiallyBlockingRegionBegin();
+  auto on_exit = at_scope_exit([blocking_hooks] {
+    if (blocking_hooks)
       OnPotentiallyBlockingRegionEnd();
   });
 
@@ -911,13 +912,8 @@ static int guard_acquire(ThreadState *thr, uptr pc, atomic_uint32_t *g,
     } else {
       if ((cmp & kGuardWaiter) ||
           atomic_compare_exchange_strong(g, &cmp, cmp | kGuardWaiter,
-                                         memory_order_relaxed)) {
-        if (blocking_hooks && !in_potentially_blocking_region) {
-          in_potentially_blocking_region = true;
-          OnPotentiallyBlockingRegionBegin();
-        }
+                                         memory_order_relaxed))
         FutexWait(g, cmp | kGuardWaiter);
-      }
     }
   }
 }

@@ -15,24 +15,16 @@
 #include "Debug.h"
 #include "DeviceTypes.h"
 #include "DeviceUtils.h"
-#include "EmissaryIds.h"
 #include "Interface.h"
 #include "LibC.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
 
-extern "C" {
-__attribute__((noinline)) void *__alt_libc_malloc(size_t sz);
-__attribute__((noinline)) void __alt_libc_free(void *ptr);
-__attribute__((noinline)) void *__llvm_omp_emissary_premalloc64(size_t sz);
-__attribute__((noinline)) void *__llvm_omp_emissary_premalloc(uint32_t sz32);
-__attribute__((noinline)) void __llvm_omp_emissary_free(void *ptr);
+using namespace ompx;
+
 __attribute__((noinline)) void *internal_malloc(uint64_t Size);
 __attribute__((noinline)) void internal_free(void *Ptr);
-}
-
-using namespace ompx;
 
 /// Memory implementation
 ///
@@ -76,31 +68,21 @@ __attribute__((noinline)) extern "C" void __asan_free_impl(uint64_t ptr,
 #endif
 #ifdef __AMDGPU__
 extern "C" {
-__attribute__((noinline)) uint64_t __ockl_devmem_request(uint64_t addr,
-                                                         uint64_t size) {
-  if (size) { // allocation request
-    [[clang::noinline]] return (uint64_t)__alt_libc_malloc((size_t)size);
-  } else { // free request
-    [[clang::noinline]] __alt_libc_free((void *)addr);
-    return 0;
-  }
-}
-
 __attribute__((noinline)) void *internal_malloc(uint64_t Size) {
 #if SANITIZER_AMDGPU
   uint64_t ptr =
       __asan_malloc_impl(Size, (uint64_t)__builtin_return_address(0));
-  return (void *)ptr;
 #else
-  [[clang::noinline]] return (void *)__ockl_dm_alloc(Size);
+  uint64_t ptr = __ockl_dm_alloc(Size);
 #endif
+  return (void *)ptr;
 }
 
 __attribute__((noinline)) void internal_free(void *Ptr) {
 #if SANITIZER_AMDGPU
   __asan_free_impl((uint64_t)Ptr, (uint64_t)__builtin_return_address(0));
 #else
-  [[clang::noinline]] __ockl_dm_dealloc((uint64_t)Ptr);
+  __ockl_dm_dealloc((uint64_t)Ptr);
 #endif
 }
 }
@@ -164,8 +146,8 @@ private:
   /// Compute the size of the storage space reserved for a thread.
   uint32_t computeThreadStorageTotal() {
     uint32_t NumLanesInBlock = mapping::getNumberOfThreadsInBlock();
-    return __builtin_align_down(state::SharedScratchpadSize / NumLanesInBlock,
-                                allocator::ALIGNMENT);
+    return utils::alignDown((state::SharedScratchpadSize / NumLanesInBlock),
+                            allocator::ALIGNMENT);
   }
 
   /// Return the top address of the warp data stack, that is the first address
@@ -196,7 +178,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   // First align the number of requested bytes.
   /// FIXME: The stack shouldn't require worst-case padding. Alignment needs to
   /// be passed in as an argument and the stack rewritten to support it.
-  uint64_t AlignedBytes = __builtin_align_up(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
 
   uint32_t StorageTotal = computeThreadStorageTotal();
 
@@ -224,7 +206,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 }
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint64_t Bytes) {
-  uint64_t AlignedBytes = __builtin_align_up(Bytes, allocator::ALIGNMENT);
+  uint64_t AlignedBytes = utils::alignPtr(Bytes, allocator::ALIGNMENT);
   if (utils::isSharedMemPtr(Ptr)) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;

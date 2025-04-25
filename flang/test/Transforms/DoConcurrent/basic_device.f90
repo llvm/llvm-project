@@ -1,9 +1,9 @@
 ! Tests mapping of a basic `do concurrent` loop to
 ! `!$omp target teams distribute parallel do`.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
 ! RUN:   | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
+! RUN: bbc -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
 ! RUN:   | FileCheck %s
 
 ! CHECK-LABEL: do_concurrent_basic
@@ -21,6 +21,12 @@ program do_concurrent_basic
 
     ! CHECK-NOT: fir.do_loop
 
+    ! CHECK: %[[DUPLICATED_C1:.*]] = arith.constant 1 : i32
+    ! CHECK: %[[DUPLICATED_LB:.*]] = fir.convert %[[DUPLICATED_C1]] : (i32) -> index
+    ! CHECK: %[[DUPLICATED_C10:.*]] = arith.constant 10 : i32
+    ! CHECK: %[[DUPLICATED_UB:.*]] = fir.convert %[[DUPLICATED_C10]] : (i32) -> index
+    ! CHECK: %[[DUPLICATED_STEP:.*]] = arith.constant 1 : index
+    
     ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
     ! CHECK: %[[HOST_LB:.*]] = fir.convert %[[C1]] : (i32) -> index
     ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
@@ -55,7 +61,7 @@ program do_concurrent_basic
 
     ! CHECK-NEXT: omp.loop_nest (%[[ARG0:.*]]) : index = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
     ! CHECK-NEXT: %[[IV_IDX:.*]] = fir.convert %[[ARG0]] : (index) -> i32
-    ! CHECK-NEXT: fir.store %[[IV_IDX]] to %[[BINDING]]#0 : !fir.ref<i32>
+    ! CHECK-NEXT: fir.store %[[IV_IDX]] to %[[BINDING]]#1 : !fir.ref<i32>
     ! CHECK-NEXT: %[[IV_VAL1:.*]] = fir.load %[[BINDING]]#0 : !fir.ref<i32>
     ! CHECK-NEXT: %[[IV_VAL2:.*]] = fir.load %[[BINDING]]#0 : !fir.ref<i32>
     ! CHECK-NEXT: %[[IV_VAL_I64:.*]] = fir.convert %[[IV_VAL2]] : (i32) -> i64

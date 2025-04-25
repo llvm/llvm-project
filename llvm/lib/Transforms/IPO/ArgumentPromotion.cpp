@@ -134,8 +134,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   unsigned ArgNo = 0, NewArgNo = 0;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgNo) {
-    auto It = ArgsToPromote.find(&*I);
-    if (It == ArgsToPromote.end()) {
+    if (!ArgsToPromote.count(&*I)) {
       // Unchanged argument
       Params.push_back(I->getType());
       ArgAttrVec.push_back(PAL.getParamAttrs(ArgNo));
@@ -151,7 +150,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
       NewArgIndices.push_back((unsigned)-1);
     } else {
-      const auto &ArgParts = It->second;
+      const auto &ArgParts = ArgsToPromote.find(&*I)->second;
       for (const auto &Pair : ArgParts) {
         Params.push_back(Pair.second.Ty);
         ArgAttrVec.push_back(AttributeSet());
@@ -236,13 +235,13 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     ArgNo = 0;
     for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
          ++I, ++AI, ++ArgNo) {
-      auto ArgIt = ArgsToPromote.find(&*I);
-      if (ArgIt == ArgsToPromote.end()) {
+      if (!ArgsToPromote.count(&*I)) {
         Args.push_back(*AI); // Unmodified argument
         ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
       } else if (!I->use_empty()) {
         Value *V = *AI;
-        for (const auto &Pair : ArgIt->second) {
+        const auto &ArgParts = ArgsToPromote.find(&*I)->second;
+        for (const auto &Pair : ArgParts) {
           LoadInst *LI = IRB.CreateAlignedLoad(
               Pair.second.Ty,
               createByteGEP(IRB, DL, V, Pair.second.Ty, Pair.first),
@@ -266,7 +265,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
           ArgAttrVec.push_back(AttributeSet());
         }
       } else {
-        assert(I->use_empty());
+        assert(ArgsToPromote.count(&*I) && I->use_empty());
         DeadArgs.emplace_back(AI->get());
       }
     }

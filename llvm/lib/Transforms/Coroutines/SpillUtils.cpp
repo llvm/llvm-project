@@ -24,10 +24,11 @@ namespace {
 
 typedef SmallPtrSet<BasicBlock *, 8> VisitedBlocksSet;
 
-static bool isNonSpilledIntrinsic(Instruction &I) {
-  // Structural coroutine intrinsics that should not be spilled into the
-  // coroutine frame.
-  return isa<CoroIdInst>(&I) || isa<CoroSaveInst>(&I);
+// Check for structural coroutine intrinsics that should not be spilled into
+// the coroutine frame.
+static bool isCoroutineStructureIntrinsic(Instruction &I) {
+  return isa<CoroIdInst>(&I) || isa<CoroSaveInst>(&I) ||
+         isa<CoroSuspendInst>(&I);
 }
 
 /// Does control flow starting at the given block ever reach a suspend
@@ -466,7 +467,7 @@ void collectSpillsAndAllocasFromInsts(
   for (Instruction &I : instructions(F)) {
     // Values returned from coroutine structure intrinsics should not be part
     // of the Coroutine Frame.
-    if (isNonSpilledIntrinsic(I) || &I == Shape.CoroBegin)
+    if (isCoroutineStructureIntrinsic(I) || &I == Shape.CoroBegin)
       continue;
 
     // Handle alloca.alloc specially here.

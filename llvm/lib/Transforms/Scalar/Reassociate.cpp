@@ -420,7 +420,7 @@ static bool LinearizeExprTree(Instruction *I,
   using LeafMap = DenseMap<Value *, uint64_t>;
   LeafMap Leaves; // Leaf -> Total weight so far.
   SmallVector<Value *, 8> LeafOrder; // Ensure deterministic leaf output order.
-  const DataLayout &DL = I->getDataLayout();
+  const DataLayout DL = I->getDataLayout();
 
 #ifndef NDEBUG
   SmallPtrSet<Value *, 8> Visited; // For checking the iteration scheme.
@@ -762,7 +762,8 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   }
 
   // Throw away any left over nodes from the original expression.
-  RedoInsts.insert_range(NodesToRewrite);
+  for (BinaryOperator *BO : NodesToRewrite)
+    RedoInsts.insert(BO);
 }
 
 /// Insert instructions before the instruction pointed to by BI,

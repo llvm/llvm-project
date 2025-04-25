@@ -130,7 +130,7 @@ public:
         return failure();
     }
 
-    SmallVector<int64_t, 4> loopBounds = linalgOp.getStaticLoopRanges();
+    SmallVector<int64_t, 4> loopBounds = linalgOp.computeStaticLoopSizes();
     int64_t numElements = outputType.getNumElements();
 
     // Use APInt/APFloat instead of Attribute here for constructing the output.

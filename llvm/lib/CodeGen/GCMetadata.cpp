@@ -41,10 +41,8 @@ CollectorMetadataAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   for (auto &F : M) {
     if (F.isDeclaration() || !F.hasGC())
       continue;
-    auto GCName = F.getGC();
-    auto [It, Inserted] = Map.try_emplace(GCName);
-    if (Inserted)
-      It->second = getGCStrategy(GCName);
+    if (auto GCName = F.getGC(); !Map.contains(GCName))
+      Map[GCName] = getGCStrategy(GCName);
   }
   return R;
 }

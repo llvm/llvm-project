@@ -104,7 +104,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < RISCV::NumTargetFixupKinds &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
@@ -115,7 +115,10 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
                                             const MCValue &Target,
+                                            const uint64_t,
                                             const MCSubtargetInfo *STI) {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return true;
   switch (Fixup.getTargetKind()) {
   default:
     break;
@@ -171,39 +174,8 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
   }
 }
 
-// Given a compressed control flow instruction this function returns
-// the expanded instruction.
-static unsigned getRelaxedOpcode(unsigned Op) {
-  switch (Op) {
-  default:
-    return Op;
-  case RISCV::C_BEQZ:
-    return RISCV::BEQ;
-  case RISCV::C_BNEZ:
-    return RISCV::BNE;
-  case RISCV::C_J:
-  case RISCV::C_JAL: // fall through.
-    return RISCV::JAL;
-  case RISCV::BEQ:
-    return RISCV::PseudoLongBEQ;
-  case RISCV::BNE:
-    return RISCV::PseudoLongBNE;
-  case RISCV::BLT:
-    return RISCV::PseudoLongBLT;
-  case RISCV::BGE:
-    return RISCV::PseudoLongBGE;
-  case RISCV::BLTU:
-    return RISCV::PseudoLongBLTU;
-  case RISCV::BGEU:
-    return RISCV::PseudoLongBGEU;
-  }
-}
-
 void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
                                        const MCSubtargetInfo &STI) const {
-  if (STI.hasFeature(RISCV::FeatureExactAssembly))
-    return;
-
   MCInst Res;
   switch (Inst.getOpcode()) {
   default:
@@ -372,14 +344,36 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(const MCAssembler &Asm,
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, Asm), false);
 }
 
+// Given a compressed control flow instruction this function returns
+// the expanded instruction.
+unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
+  switch (Op) {
+  default:
+    return Op;
+  case RISCV::C_BEQZ:
+    return RISCV::BEQ;
+  case RISCV::C_BNEZ:
+    return RISCV::BNE;
+  case RISCV::C_J:
+  case RISCV::C_JAL: // fall through.
+    return RISCV::JAL;
+  case RISCV::BEQ:
+    return RISCV::PseudoLongBEQ;
+  case RISCV::BNE:
+    return RISCV::PseudoLongBNE;
+  case RISCV::BLT:
+    return RISCV::PseudoLongBLT;
+  case RISCV::BGE:
+    return RISCV::PseudoLongBGE;
+  case RISCV::BLTU:
+    return RISCV::PseudoLongBLTU;
+  case RISCV::BGEU:
+    return RISCV::PseudoLongBGEU;
+  }
+}
+
 bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                         const MCSubtargetInfo &STI) const {
-  // This function has access to two STIs, the member of the AsmBackend, and the
-  // one passed as an argument. The latter is more specific, so we query it for
-  // specific features.
-  if (STI.hasFeature(RISCV::FeatureExactAssembly))
-    return false;
-
   return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 
@@ -554,17 +548,18 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
     // MCAssembler::evaluateFixup will emit an error for this case when it sees
     // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
     const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
-    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm))
+    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Asm, AUIPCFixup))
       return true;
     break;
   }
   }
 
-  if (!AUIPCTarget.getSymA())
+  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSymB())
     return false;
 
-  const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
-  if (SA.isUndefined())
+  const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
+  const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
+  if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
     return false;
 
   bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&
@@ -576,7 +571,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
+  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, Value, STI)) {
     WasForced = true;
     return false;
   }
@@ -589,8 +584,6 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
                                               uint64_t &FixedValue) const {
-  assert(Target.getRefKind() == 0 &&
-         "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
   unsigned TA = 0, TB = 0;
   switch (Fixup.getKind()) {

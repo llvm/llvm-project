@@ -11,9 +11,6 @@
 // RUN: llvm-readobj --hex-dump=.test %t.dll | FileCheck %s
 // CHECK: 0x180004000 01000000 01000000
 
-// RUN: lld-link -machine:arm64x -dll -noentry -out:%t-glob.dll %t-test.lib -includeglob:sym
-// RUN: llvm-readobj --hex-dump=.test %t-glob.dll | FileCheck %s
-
         .globl sym
         .section .test,"dr"
 sym:

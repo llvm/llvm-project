@@ -44,10 +44,6 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
                unless(isInTemplateInstantiation()))
           .bind("call-move");
 
-  // Match ternary expressions where either branch contains std::move
-  auto TernaryWithMoveMatcher =
-      conditionalOperator(hasDescendant(MoveCallMatcher));
-
   Finder->addMatcher(
       expr(anyOf(
           castExpr(hasSourceExpression(MoveCallMatcher)),
@@ -62,15 +58,13 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       qualType(rValueReferenceType()).bind("invocation-parm-type");
   // Matches respective ParmVarDecl for a CallExpr or CXXConstructExpr.
   auto ArgumentWithParamMatcher = forEachArgumentWithParam(
-      anyOf(MoveCallMatcher, TernaryWithMoveMatcher),
-      parmVarDecl(
-          anyOf(hasType(ConstTypeParmMatcher), hasType(RValueTypeParmMatcher)))
-          .bind("invocation-parm"));
+      MoveCallMatcher, parmVarDecl(anyOf(hasType(ConstTypeParmMatcher),
+                                         hasType(RValueTypeParmMatcher)))
+                           .bind("invocation-parm"));
   // Matches respective types of arguments for a CallExpr or CXXConstructExpr
   // and it works on calls through function pointers as well.
   auto ArgumentWithParamTypeMatcher = forEachArgumentWithParamType(
-      anyOf(MoveCallMatcher, TernaryWithMoveMatcher),
-      anyOf(ConstTypeParmMatcher, RValueTypeParmMatcher));
+      MoveCallMatcher, anyOf(ConstTypeParmMatcher, RValueTypeParmMatcher));
 
   Finder->addMatcher(
       invocation(anyOf(ArgumentWithParamMatcher, ArgumentWithParamTypeMatcher))

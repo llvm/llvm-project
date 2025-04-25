@@ -88,10 +88,11 @@ public:
         continue;
 
       // Look up Locations for this guard.
-      const auto &Locs = Ifndefs[MacroEntry.first.getIdentifierInfo()];
-      SourceLocation Ifndef = Locs.second;
+      SourceLocation Ifndef =
+          Ifndefs[MacroEntry.first.getIdentifierInfo()].second;
       SourceLocation Define = MacroEntry.first.getLocation();
-      SourceLocation EndIf = EndIfs[Locs.first];
+      SourceLocation EndIf =
+          EndIfs[Ifndefs[MacroEntry.first.getIdentifierInfo()].first];
 
       // If the macro Name is not equal to what we can compute, correct it in
       // the #ifndef and #define.

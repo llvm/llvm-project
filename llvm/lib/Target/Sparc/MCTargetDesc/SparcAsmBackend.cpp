@@ -142,6 +142,9 @@ namespace {
           Is64Bit(STI.getTargetTriple().isArch64Bit()),
           IsV8Plus(STI.hasFeature(Sparc::FeatureV8Plus)) {}
 
+    unsigned getNumFixupKinds() const override {
+      return Sparc::NumTargetFixupKinds;
+    }
 
     std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
       unsigned Type;
@@ -261,8 +264,7 @@ namespace {
       if (Kind < FirstTargetFixupKind)
         return MCAsmBackend::getFixupKindInfo(Kind);
 
-      assert(unsigned(Kind - FirstTargetFixupKind) <
-                 Sparc::NumTargetFixupKinds &&
+      assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
              "Invalid kind!");
       if (Endian == llvm::endianness::little)
         return InfosLE[Kind - FirstTargetFixupKind];
@@ -271,8 +273,10 @@ namespace {
     }
 
     bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
+                               const MCValue &Target, const uint64_t,
                                const MCSubtargetInfo *STI) override {
+      if (Fixup.getKind() >= FirstLiteralRelocationKind)
+        return true;
       switch ((Sparc::Fixups)Fixup.getKind()) {
       default:
         return false;

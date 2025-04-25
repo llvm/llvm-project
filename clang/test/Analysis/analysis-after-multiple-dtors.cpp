@@ -23,6 +23,6 @@ int main() {
 
   int x;
   int y = x;
-  // expected-warning@-1{{Assigned value is uninitialized}}
+  // expected-warning@-1{{Assigned value is garbage or undefined}}
   (void)y;
 }

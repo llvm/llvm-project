@@ -49,12 +49,10 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr bool operator>=(monostate, monostate) noe
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<monostate> {
-#  if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
-  using argument_type _LIBCPP_DEPRECATED_IN_CXX17 = monostate;
-  using result_type _LIBCPP_DEPRECATED_IN_CXX17   = size_t;
-#  endif
+  using argument_type = monostate;
+  using result_type   = size_t;
 
-  inline _LIBCPP_HIDE_FROM_ABI size_t operator()(const monostate&) const noexcept {
+  inline _LIBCPP_HIDE_FROM_ABI result_type operator()(const argument_type&) const _NOEXCEPT {
     return 66740831; // return a fundamentally attractive random value.
   }
 };

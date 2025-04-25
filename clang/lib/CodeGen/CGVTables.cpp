@@ -769,12 +769,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl GD =
-        component.getGlobalDecl(CGM.getCXXABI().hasVectorDeletingDtors());
-
-    const bool IsThunk =
-        nextVTableThunkIndex < layout.vtable_thunks().size() &&
-        layout.vtable_thunks()[nextVTableThunkIndex].first == componentIndex;
+    GlobalDecl GD = component.getGlobalDecl();
 
     if (CGM.getLangOpts().CUDA) {
       // Emit NULL for methods we can't codegen on this
@@ -787,12 +782,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
           CGM.getLangOpts().CUDAIsDevice
               ? MD->hasAttr<CUDADeviceAttr>()
               : (MD->hasAttr<CUDAHostAttr>() || !MD->hasAttr<CUDADeviceAttr>());
-      if (!CanEmitMethod) {
-        if (IsThunk)
-          nextVTableThunkIndex++;
+      if (!CanEmitMethod)
         return builder.add(
             llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
-      }
       // Method is acceptable, continue processing as usual.
     }
 
@@ -838,7 +830,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       fnPtr = DeletedVirtualFn;
 
     // Thunks.
-    } else if (IsThunk) {
+    } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
+               layout.vtable_thunks()[nextVTableThunkIndex].first ==
+                   componentIndex) {
       auto &thunkInfo = layout.vtable_thunks()[nextVTableThunkIndex].second;
 
       nextVTableThunkIndex++;
@@ -1401,8 +1395,9 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
       if (Comps[I].getKind() != VTableComponent::CK_FunctionPointer)
         continue;
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
-          Context.getMemberPointerType(Comps[I].getFunctionDecl()->getType(),
-                                       /*Qualifier=*/nullptr, AP.Base));
+          Context.getMemberPointerType(
+              Comps[I].getFunctionDecl()->getType(),
+              Context.getRecordType(AP.Base).getTypePtr()));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }

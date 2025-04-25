@@ -217,8 +217,10 @@ bool TypeSetByHwMode::operator==(const TypeSetByHwMode &VTS) const {
     return false;
 
   SmallSet<unsigned, 4> Modes;
-  Modes.insert_range(llvm::make_first_range(*this));
-  Modes.insert_range(llvm::make_first_range(VTS));
+  for (auto &I : *this)
+    Modes.insert(I.first);
+  for (const auto &I : VTS)
+    Modes.insert(I.first);
 
   if (HaveDefault) {
     // Both sets have default mode.
@@ -3319,7 +3321,8 @@ void CodeGenDAGPatterns::ParsePatternFragments(bool OutFrags) {
     std::vector<std::string> &Args = P->getArgList();
     // Copy the args so we can take StringRefs to them.
     auto ArgsCopy = Args;
-    SmallDenseSet<StringRef, 4> OperandsSet(llvm::from_range, ArgsCopy);
+    SmallDenseSet<StringRef, 4> OperandsSet;
+    OperandsSet.insert(ArgsCopy.begin(), ArgsCopy.end());
 
     if (OperandsSet.count(""))
       P->error("Cannot have unnamed 'node' values in pattern fragment!");
@@ -4136,19 +4139,23 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
 
   // If requested by the target, guess any undefined properties.
   if (Target.guessInstructionProperties()) {
-    for (const CodeGenInstruction *InstInfo : Instructions) {
+    for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
+      CodeGenInstruction *InstInfo =
+          const_cast<CodeGenInstruction *>(Instructions[i]);
       if (InstInfo->InferredFrom)
         continue;
       // The mayLoad and mayStore flags default to false.
       // Conservatively assume hasSideEffects if it wasn't explicit.
       if (InstInfo->hasSideEffects_Unset)
-        const_cast<CodeGenInstruction *>(InstInfo)->hasSideEffects = true;
+        InstInfo->hasSideEffects = true;
     }
     return;
   }
 
   // Complain about any flags that are still undefined.
-  for (const CodeGenInstruction *InstInfo : Instructions) {
+  for (unsigned i = 0, e = Instructions.size(); i != e; ++i) {
+    CodeGenInstruction *InstInfo =
+        const_cast<CodeGenInstruction *>(Instructions[i]);
     if (InstInfo->InferredFrom)
       continue;
     if (InstInfo->hasSideEffects_Unset)

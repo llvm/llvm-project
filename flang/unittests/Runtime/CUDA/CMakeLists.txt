@@ -1,9 +1,9 @@
 if (FLANG_CUF_RUNTIME)
 
 add_flang_unittest(FlangCufRuntimeTests
-  ${FLANG_RT_SOURCE_DIR}/unittests/Runtime/CUDA/Allocatable.cpp
-  ${FLANG_RT_SOURCE_DIR}/unittests/Runtime/CUDA/AllocatorCUF.cpp
-  ${FLANG_RT_SOURCE_DIR}/unittests/Runtime/CUDA/Memory.cpp
+  Allocatable.cpp
+  AllocatorCUF.cpp
+  Memory.cpp
 )
 
 if (BUILD_SHARED_LIBS)

@@ -56,6 +56,7 @@ struct DXILOperationDesc {
   SmallVector<const Record *> OverloadRecs;
   SmallVector<const Record *> StageRecs;
   SmallVector<const Record *> AttrRecs;
+  SmallVector<const Record *> PropRecs;
   SmallVector<DXILIntrinsicSelect> IntrinsicSelects;
   SmallVector<StringRef, 4>
       ShaderStages; // shader stages to which this applies, empty for all.
@@ -113,7 +114,9 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   ParamTypeRecs.push_back(R->getValueAsDef("result"));
 
-  llvm::append_range(ParamTypeRecs, R->getValueAsListOfDefs("arguments"));
+  for (const Record *ArgTy : R->getValueAsListOfDefs("arguments")) {
+    ParamTypeRecs.push_back(ArgTy);
+  }
   size_t ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
 
@@ -146,7 +149,9 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  llvm::append_range(OverloadRecs, Recs);
+  for (const Record *CR : Recs) {
+    OverloadRecs.push_back(CR);
+  }
 
   // Get stage records
   Recs = R->getValueAsListOfDefs("stages");
@@ -159,7 +164,9 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  llvm::append_range(StageRecs, Recs);
+  for (const Record *CR : Recs) {
+    StageRecs.push_back(CR);
+  }
 
   // Get attribute records
   Recs = R->getValueAsListOfDefs("attributes");
@@ -167,7 +174,15 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  llvm::append_range(AttrRecs, Recs);
+  for (const Record *CR : Recs) {
+    AttrRecs.push_back(CR);
+  }
+
+  Recs = R->getValueAsListOfDefs("properties");
+
+  // Get property records
+  for (const Record *CR : Recs)
+    PropRecs.push_back(CR);
 
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
@@ -213,13 +228,7 @@ static StringRef getOverloadKindStr(const Record *R) {
       .Case("ResRetDoubleTy", "OverloadKind::DOUBLE")
       .Case("ResRetInt16Ty", "OverloadKind::I16")
       .Case("ResRetInt32Ty", "OverloadKind::I32")
-      .Case("ResRetInt64Ty", "OverloadKind::I64")
-      .Case("CBufRetHalfTy", "OverloadKind::HALF")
-      .Case("CBufRetFloatTy", "OverloadKind::FLOAT")
-      .Case("CBufRetDoubleTy", "OverloadKind::DOUBLE")
-      .Case("CBufRetInt16Ty", "OverloadKind::I16")
-      .Case("CBufRetInt32Ty", "OverloadKind::I32")
-      .Case("CBufRetInt64Ty", "OverloadKind::I64");
+      .Case("ResRetInt64Ty", "OverloadKind::I64");
 }
 
 /// Return a string representation of valid overload information denoted
@@ -409,6 +418,15 @@ static void emitDXILOpAttributes(const RecordKeeper &Records,
     }
   }
   OS << "#undef DXIL_OP_ATTRIBUTES\n";
+  OS << "#endif\n\n";
+}
+
+/// Emit a list of DXIL op properties
+static void emitDXILProperties(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef DXIL_PROPERTY\n";
+  for (const Record *Prop : Records.getAllDerivedDefinitions("DXILProperty"))
+    OS << "DXIL_PROPERTY(" << Prop->getName() << ")\n";
+  OS << "#undef DXIL_PROPERTY\n";
   OS << "#endif\n\n";
 }
 
@@ -615,6 +633,7 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
   emitDXILOpParamTypes(Records, OS);
   emitDXILAttributes(Records, OS);
   emitDXILOpAttributes(Records, DXILOps, OS);
+  emitDXILProperties(Records, OS);
   emitDXILOpFunctionTypes(DXILOps, OS);
   emitDXILIntrinsicArgSelectTypes(Records, OS);
   emitDXILIntrinsicMap(DXILOps, OS);

@@ -54,7 +54,6 @@
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
-#include "llvm/Transforms/IPO/FatLTOCleanup.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
@@ -77,6 +76,7 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
+#include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
@@ -267,6 +267,10 @@ static cl::opt<bool> FlattenedProfileUsed(
     cl::desc("Indicate the sample profile being used is flattened, i.e., "
              "no inline hierarchy exists in the profile"));
 
+static cl::opt<bool> EnableOrderFileInstrumentation(
+    "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
+    cl::desc("Enable order file instrumentation (default = off)"));
+
 static cl::opt<bool>
     EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
                  cl::desc("Enable lowering of the matrix intrinsics"));
@@ -410,25 +414,6 @@ static void addAnnotationRemarksPass(ModulePassManager &MPM) {
 static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
   return Phase == ThinOrFullLTOPhase::ThinLTOPreLink ||
          Phase == ThinOrFullLTOPhase::FullLTOPreLink;
-}
-
-// Helper to check if the current compilation phase is LTO backend
-static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
-  return Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
-         Phase == ThinOrFullLTOPhase::FullLTOPostLink;
-}
-
-// Helper to wrap conditionally Coro passes.
-static CoroConditionalWrapper buildCoroWrapper(ThinOrFullLTOPhase Phase) {
-  // TODO: Skip passes according to Phase.
-  ModulePassManager CoroPM;
-  CoroPM.addPass(CoroEarlyPass());
-  CGSCCPassManager CGPM;
-  CGPM.addPass(CoroSplitPass());
-  CoroPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
-  CoroPM.addPass(CoroCleanupPass());
-  CoroPM.addPass(GlobalDCEPass());
-  return CoroConditionalWrapper(std::move(CoroPM));
 }
 
 // TODO: Investigate the cost/benefit of tail call elimination on debugging.
@@ -1208,10 +1193,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // We already asserted this happens in non-FullLTOPostLink earlier.
   const bool IsPreLink = Phase != ThinOrFullLTOPhase::ThinLTOPostLink;
-  // Enable contextual profiling instrumentation.
-  const bool IsCtxProfGen =
-      IsPreLink && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
-  const bool IsPGOPreLink = !IsCtxProfGen && PGOOpt && IsPreLink;
+  const bool IsPGOPreLink = PGOOpt && IsPreLink;
   const bool IsPGOInstrGen =
       IsPGOPreLink && PGOOpt->Action == PGOOptions::IRInstr;
   const bool IsPGOInstrUse =
@@ -1222,6 +1204,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled()) &&
          "Enabling both instrumented PGO and contextual instrumentation is not "
          "supported.");
+  // Enable contextual profiling instrumentation.
+  const bool IsCtxProfGen = !IsPGOInstrGen && IsPreLink &&
+                            PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
   const bool IsCtxProfUse =
       !UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 
@@ -1254,13 +1239,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse)
       return MPM;
-    // Block further inlining in the instrumented ctxprof case. This avoids
-    // confusingly collecting profiles for the same GUID corresponding to
-    // different variants of the function. We could do like PGO and identify
-    // functions by a (GUID, Hash) tuple, but since the ctxprof "use" waits for
-    // thinlto to happen before performing any further optimizations, it's
-    // unnecessary to collect profiles for non-prevailing copies.
-    MPM.addPass(NoinlineNonPrevailing());
     addPostPGOLoopRotation(MPM, Level);
     MPM.addPass(PGOCtxProfLoweringPass());
   } else if (IsColdFuncOnlyInstrGen) {
@@ -1469,6 +1447,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (!LTOPreLink)
     MPM.addPass(EliminateAvailableExternallyPass());
 
+  if (EnableOrderFileInstrumentation)
+    MPM.addPass(InstrOrderFilePass());
+
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
@@ -1626,7 +1607,8 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     MPM.addPass(MergeFunctionsPass());
 
   if (PTO.CallGraphProfile && !LTOPreLink)
-    MPM.addPass(CGProfilePass(isLTOPostLink(LTOPhase)));
+    MPM.addPass(CGProfilePass(LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
+                              LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink));
 
   // RelLookupTableConverterPass runs later in LTO post-link pipeline.
   if (!LTOPreLink)
@@ -1689,12 +1671,6 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   else
     MPM.addPass(buildLTOPreLinkDefaultPipeline(Level));
   MPM.addPass(EmbedBitcodePass(ThinLTO, EmitSummary));
-
-  // Perform any cleanups to the IR that aren't suitable for per TU compilation,
-  // like removing CFI/WPD related instructions. Note, we reuse
-  // LowerTypeTestsPass to clean up type tests rather than duplicate that logic
-  // in FatLtoCleanup.
-  MPM.addPass(FatLtoCleanup());
 
   // If we're doing FatLTO w/ CFI enabled, we don't want the type tests in the
   // object code, only in the bitcode section, so drop it before we run
@@ -1866,8 +1842,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
 
-    MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
-
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
     // Emit annotation remarks.
@@ -1952,8 +1926,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(LowerTypeTestsPass(nullptr, nullptr,
                                    lowertypetests::DropTestKind::Assume));
 
-    MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
-
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
     // Emit annotation remarks.
@@ -1961,9 +1933,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
     return MPM;
   }
-
-  // TODO: Skip to match buildCoroWrapper.
-  MPM.addPass(CoroEarlyPass());
 
   // Optimize globals to try and fold them into constants.
   MPM.addPass(GlobalOptPass());
@@ -2030,11 +1999,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // If we didn't decide to inline a function, check to see if we can
   // transform it to pass arguments by value instead of by reference.
-  CGSCCPassManager CGPM;
-  CGPM.addPass(ArgumentPromotionPass());
-  CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
-  CGPM.addPass(CoroAnnotationElidePass());
-  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(ArgumentPromotionPass()));
 
   FunctionPassManager FPM;
   // The IPO Passes may leave cruft around. Clean up after them.
@@ -2186,8 +2151,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   if (PTO.CallGraphProfile)
     MPM.addPass(CGProfilePass(/*InLTOPostLink=*/true));
 
-  MPM.addPass(CoroCleanupPass());
-
   invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 
   // Emit annotation remarks.
@@ -2302,7 +2265,14 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
       MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   }
 
-  MPM.addPass(buildCoroWrapper(Phase));
+  ModulePassManager CoroPM;
+  CoroPM.addPass(CoroEarlyPass());
+  CGSCCPassManager CGPM;
+  CGPM.addPass(CoroSplitPass());
+  CoroPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  CoroPM.addPass(CoroCleanupPass());
+  CoroPM.addPass(GlobalDCEPass());
+  MPM.addPass(CoroConditionalWrapper(std::move(CoroPM)));
 
   invokeOptimizerLastEPCallbacks(MPM, Level, Phase);
 

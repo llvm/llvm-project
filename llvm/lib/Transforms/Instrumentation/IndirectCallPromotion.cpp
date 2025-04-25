@@ -1003,7 +1003,8 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
   if (EnableVTableProfileUse) {
     computeVirtualCallSiteTypeInfoMap(M, MAM, VirtualCSInfo);
 
-    IgnoredBaseTypes.insert_range(ICPIgnoredBaseTypes);
+    for (StringRef Str : ICPIgnoredBaseTypes)
+      IgnoredBaseTypes.insert(Str);
   }
 
   // VTableAddressPointOffsetVal stores the vtable address points. The vtable

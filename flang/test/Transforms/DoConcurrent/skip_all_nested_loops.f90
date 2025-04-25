@@ -1,10 +1,10 @@
 ! Tests that if `do concurrent` is indirectly nested in its parent loop, that we
 ! skip converting the indirectly nested `do concurrent` loop.
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=host %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=host %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=HOST,COMMON
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-to-openmp=device %s -o - \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fdo-concurrent-parallel=device %s -o - \
 ! RUN:   | FileCheck %s --check-prefixes=DEVICE,COMMON
 
 program main
@@ -50,13 +50,13 @@ end
 ! COMMON: omp.wsloop {
 ! COMMON: omp.loop_nest ({{[^[:space:]]+}}) {{.*}} {
 ! COMMON:   fir.do_loop {{.*}} iter_args(%[[J_IV:.*]] = {{.*}}) -> {{.*}} {
-! HOST:       fir.store %[[J_IV]] to %[[ORIG_J_DECL]]#0
-! DEVICE:     fir.store %[[J_IV]] to %[[TARGET_J_DECL]]#0
+! HOST:       fir.store %[[J_IV]] to %[[ORIG_J_DECL]]#1
+! DEVICE:     fir.store %[[J_IV]] to %[[TARGET_J_DECL]]#1
 
 ! COMMON:     fir.do_loop %[[K_IV:.*]] = {{.*}} {
 ! COMMON:       %[[K_IV_CONV:.*]] = fir.convert %[[K_IV]] : (index) -> i32
-! HOST:         fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#0
-! DEVICE:       fir.store %[[K_IV_CONV]] to %[[TARGET_K_DECL]]#0
+! HOST:         fir.store %[[K_IV_CONV]] to %[[ORIG_K_DECL]]#1
+! DEVICE:       fir.store %[[K_IV_CONV]] to %[[TARGET_K_DECL]]#1
 ! COMMON:     }
 ! COMMON:   }
 ! COMMON: omp.yield

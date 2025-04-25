@@ -25,7 +25,7 @@ static std::unique_ptr<TargetMachine> initTM() {
   LLVMInitializeX86Target();
   LLVMInitializeX86TargetMC();
 
-  Triple TT("x86_64--");
+  auto TT(Triple::normalize("x86_64--"));
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   return std::unique_ptr<TargetMachine>(

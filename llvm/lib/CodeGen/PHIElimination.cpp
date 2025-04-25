@@ -110,7 +110,7 @@ class PHIEliminationImpl {
 
   // Map reusable lowered PHI node -> incoming join register.
   using LoweredPHIMap =
-      DenseMap<MachineInstr *, Register, MachineInstrExpressionTrait>;
+      DenseMap<MachineInstr *, unsigned, MachineInstrExpressionTrait>;
   LoweredPHIMap LoweredPHIs;
 
   MachineFunctionPass *P = nullptr;
@@ -321,7 +321,7 @@ bool PHIEliminationImpl::EliminatePHINodes(MachineFunction &MF,
 
 /// Return true if all defs of VirtReg are implicit-defs.
 /// This includes registers with no defs.
-static bool isImplicitlyDefined(Register VirtReg,
+static bool isImplicitlyDefined(unsigned VirtReg,
                                 const MachineRegisterInfo &MRI) {
   for (MachineInstr &DI : MRI.def_instructions(VirtReg))
     if (!DI.isImplicitDef())
@@ -357,7 +357,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
 
   // Create a new register for the incoming PHI arguments.
   MachineFunction &MF = *MBB.getParent();
-  Register IncomingReg;
+  unsigned IncomingReg = 0;
   bool EliminateNow = true;    // delay elimination of nodes in LoweredPHIs
   bool reusedIncoming = false; // Is IncomingReg reused from an earlier PHI?
 
@@ -376,7 +376,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     // typically those created by tail duplication. Typically, an identical PHI
     // node can't occur, so avoid hashing/storing such PHIs, which is somewhat
     // expensive.
-    Register *Entry = nullptr;
+    unsigned *Entry = nullptr;
     if (AllEdgesCritical)
       Entry = &LoweredPHIs[MPhi];
     if (Entry && *Entry) {

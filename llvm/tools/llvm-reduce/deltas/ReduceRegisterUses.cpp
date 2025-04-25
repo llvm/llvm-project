@@ -55,10 +55,13 @@ static void removeUsesFromFunction(Oracle &O, MachineFunction &MF) {
   }
 }
 
-void llvm::reduceRegisterUsesMIRDeltaPass(Oracle &O,
-                                          ReducerWorkItem &WorkItem) {
+static void removeUsesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F))
       removeUsesFromFunction(O, *MF);
   }
+}
+
+void llvm::reduceRegisterUsesMIRDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, removeUsesFromModule, "Reducing register uses");
 }

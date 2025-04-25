@@ -30,7 +30,7 @@ tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHContTarget: false
+hasEHCatchret:   false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false

@@ -68,17 +68,11 @@
 
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++20"
-#   endif
-#   if __cpp_lib_format != 202110L
-#     error "__cpp_lib_format should have the value 202110L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++20"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++20"
 # endif
 
 # ifdef __cpp_lib_format_ranges
@@ -94,17 +88,11 @@
 
 #elif TEST_STD_VER == 23
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++23"
-#   endif
-#   if __cpp_lib_format != 202110L
-#     error "__cpp_lib_format should have the value 202110L in c++23"
-#   endif
-# else
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++23"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++23"
 # endif
 
 # ifndef __cpp_lib_format_ranges
@@ -123,17 +111,11 @@
 
 #elif TEST_STD_VER > 23
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++26"
-#   endif
-#   if __cpp_lib_format != 202110L
-#     error "__cpp_lib_format should have the value 202110L in c++26"
-#   endif
-# else
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++26"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++26"
 # endif
 
 # ifndef __cpp_lib_format_ranges

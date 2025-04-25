@@ -13,7 +13,6 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRLinalgOpsEnumsIncGen
   MLIRLinalgOpsIncGen
   MLIRLinalgStructuredOpsIncGen
-  MLIRLinalgRelayoutOpsIncGen
   MLIRShardingInterfaceIncGen
 
   LINK_LIBS PUBLIC

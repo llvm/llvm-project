@@ -4497,9 +4497,6 @@ public:
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
 
-  // Whether to do target lowering in SelectionDAG.
-  bool shouldLowerToTrap(bool TrapUnreachable, bool NoTrapAfterNoreturn) const;
-
 private:
   BasicBlock *getSuccessor(unsigned idx) const {
     llvm_unreachable("UnreachableInst has no successors!");

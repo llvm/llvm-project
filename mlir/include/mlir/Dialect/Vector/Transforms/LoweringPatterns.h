@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H
 #define MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H
 
-#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
 namespace mlir {
@@ -48,8 +47,7 @@ namespace vector {
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
 /// linearized `vector.extract` + `vector.outerproduct` + `vector.insert`.
 void populateVectorContractLoweringPatterns(
-    RewritePatternSet &patterns,
-    VectorContractLowering vectorContractLoweringOption,
+    RewritePatternSet &patterns, VectorTransformsOptions options,
     PatternBenefit benefit = 1, bool disableOuterProductLowering = false);
 
 /// Populate the pattern set with the following patterns:
@@ -144,10 +142,9 @@ void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns,
 ///
 /// [TransposeOp2DToShuffleLowering]
 ///
-void populateVectorTransposeLoweringPatterns(
-    RewritePatternSet &patterns,
-    VectorTransposeLowering vectorTransposeLowering,
-    PatternBenefit benefit = 1);
+void populateVectorTransposeLoweringPatterns(RewritePatternSet &patterns,
+                                             VectorTransformsOptions options,
+                                             PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
 ///
@@ -241,20 +238,16 @@ void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
-/// [UnrollGather]
-/// Unrolls 2 or more dimensional `vector.gather` ops by unrolling the
+/// [FlattenGather]
+/// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension.
-void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
-                                          PatternBenefit benefit = 1);
-
-/// Populate the pattern set with the following patterns:
 ///
 /// [Gather1DToConditionalLoads]
 /// Turns 1-d `vector.gather` into a scalarized sequence of `vector.loads` or
 /// `tensor.extract`s. To avoid out-of-bounds memory accesses, these
 /// loads/extracts are made conditional using `scf.if` ops.
-void populateVectorGatherToConditionalLoadPatterns(RewritePatternSet &patterns,
-                                                   PatternBenefit benefit = 1);
+void populateVectorGatherLoweringPatterns(RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
 
 /// Populates instances of `MaskOpRewritePattern` to lower masked operations
 /// with `vector.mask`. Patterns should rewrite the `vector.mask` operation and

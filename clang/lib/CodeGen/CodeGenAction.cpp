@@ -1104,7 +1104,7 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
     // linker using merged object file.
     if (!Bm) {
       auto M = std::make_unique<llvm::Module>("empty", *VMContext);
-      M->setTargetTriple(Triple(CI.getTargetOpts().Triple));
+      M->setTargetTriple(CI.getTargetOpts().Triple);
       return M;
     }
     Expected<std::unique_ptr<llvm::Module>> MOrErr =
@@ -1195,10 +1195,10 @@ void CodeGenAction::ExecuteAction() {
     return;
 
   const TargetOptions &TargetOpts = CI.getTargetOpts();
-  if (TheModule->getTargetTriple().str() != TargetOpts.Triple) {
+  if (TheModule->getTargetTriple() != TargetOpts.Triple) {
     Diagnostics.Report(SourceLocation(), diag::warn_fe_override_module)
         << TargetOpts.Triple;
-    TheModule->setTargetTriple(Triple(TargetOpts.Triple));
+    TheModule->setTargetTriple(TargetOpts.Triple);
   }
 
   EmbedObject(TheModule.get(), CodeGenOpts, Diagnostics);

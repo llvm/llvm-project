@@ -131,6 +131,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -283,7 +284,7 @@ private:
   const TargetRegisterInfo *TRI;
   const TargetInstrInfo *TII;
   const TargetFrameLowering *TFI;
-  bool ShouldEmitDebugEntryValues;
+  TargetPassConfig *TPC;
   BitVector CalleeSavedRegs;
   LexicalScopes LS;
   VarLocSet::Allocator Alloc;
@@ -1087,7 +1088,7 @@ private:
   void flushPendingLocs(VarLocInMBB &PendingInLocs, VarLocMap &VarLocIDs);
 
   bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
-                    bool ShouldEmitDebugEntryValues, unsigned InputBBLimit,
+                    TargetPassConfig *TPC, unsigned InputBBLimit,
                     unsigned InputDbgValLimit) override;
 
 public:
@@ -1358,9 +1359,10 @@ void VarLocBasedLDV::removeEntryValue(const MachineInstr &MI,
     return;
 
   // Try to get non-debug instruction responsible for the DBG_VALUE.
+  const MachineInstr *TransferInst = nullptr;
   Register Reg = MI.getDebugOperand(0).getReg();
-  const MachineInstr *TransferInst =
-      Reg.isValid() ? RegSetInstrs.lookup(Reg) : nullptr;
+  if (Reg.isValid() && RegSetInstrs.contains(Reg))
+    TransferInst = RegSetInstrs.find(Reg)->second;
 
   // Case of the parameter's DBG_VALUE at the start of entry MBB.
   if (!TransferInst && !LastNonDbgMI && MI.getParent()->isEntryBlock())
@@ -1647,8 +1649,11 @@ void VarLocBasedLDV::transferRegisterDef(MachineInstr &MI,
   collectIDsForRegs(KillSet, DeadRegs, OpenRanges.getVarLocs(), VarLocIDs);
   OpenRanges.erase(KillSet, VarLocIDs, LocIndex::kUniversalLocation);
 
-  if (ShouldEmitDebugEntryValues)
-    emitEntryValues(MI, OpenRanges, VarLocIDs, EntryValTransfers, KillSet);
+  if (TPC) {
+    auto &TM = TPC->getTM<TargetMachine>();
+    if (TM.Options.ShouldEmitDebugEntryValues())
+      emitEntryValues(MI, OpenRanges, VarLocIDs, EntryValTransfers, KillSet);
+  }
 }
 
 void VarLocBasedLDV::transferWasmDef(MachineInstr &MI,
@@ -2185,8 +2190,11 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
                                        const DefinedRegsSet &DefinedRegs,
                                        OpenRangesSet &OpenRanges,
                                        VarLocMap &VarLocIDs) {
-  if (!ShouldEmitDebugEntryValues)
-    return;
+  if (TPC) {
+    auto &TM = TPC->getTM<TargetMachine>();
+    if (!TM.Options.ShouldEmitDebugEntryValues())
+      return;
+  }
 
   DebugVariable V(MI.getDebugVariable(), MI.getDebugExpression(),
                   MI.getDebugLoc()->getInlinedAt());
@@ -2210,8 +2218,7 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
 /// extend ranges across basic blocks.
 bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
                                   MachineDominatorTree *DomTree,
-                                  bool ShouldEmitDebugEntryValues,
-                                  unsigned InputBBLimit,
+                                  TargetPassConfig *TPC, unsigned InputBBLimit,
                                   unsigned InputDbgValLimit) {
   (void)DomTree;
   LLVM_DEBUG(dbgs() << "\nDebug Range Extension: " << MF.getName() << "\n");
@@ -2229,8 +2236,7 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
   TII = MF.getSubtarget().getInstrInfo();
   TFI = MF.getSubtarget().getFrameLowering();
   TFI->getCalleeSaves(MF, CalleeSavedRegs);
-  this->ShouldEmitDebugEntryValues = ShouldEmitDebugEntryValues;
-
+  this->TPC = TPC;
   LS.initialize(MF);
 
   bool Changed = false;

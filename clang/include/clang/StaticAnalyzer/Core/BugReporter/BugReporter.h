@@ -570,8 +570,7 @@ class BugReporterData {
 public:
   virtual ~BugReporterData() = default;
 
-  virtual ArrayRef<std::unique_ptr<PathDiagnosticConsumer>>
-  getPathDiagnosticConsumers() = 0;
+  virtual ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() = 0;
   virtual ASTContext &getASTContext() = 0;
   virtual SourceManager &getSourceManager() = 0;
   virtual AnalyzerOptions &getAnalyzerOptions() = 0;
@@ -609,8 +608,7 @@ public:
   /// Generate and flush diagnostics for all bug reports.
   void FlushReports();
 
-  ArrayRef<std::unique_ptr<PathDiagnosticConsumer>>
-  getPathDiagnosticConsumers() {
+  ArrayRef<PathDiagnosticConsumer*> getPathDiagnosticConsumers() {
     return D.getPathDiagnosticConsumers();
   }
 
@@ -672,10 +670,9 @@ private:
 protected:
   /// Generate the diagnostics for the given bug report.
   virtual std::unique_ptr<DiagnosticForConsumerMapTy>
-  generateDiagnosticForConsumerMap(
-      BugReport *exampleReport,
-      ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
-      ArrayRef<BugReport *> bugReports);
+  generateDiagnosticForConsumerMap(BugReport *exampleReport,
+                                   ArrayRef<PathDiagnosticConsumer *> consumers,
+                                   ArrayRef<BugReport *> bugReports);
 };
 
 /// GRBugReporter is used for generating path-sensitive reports.
@@ -687,11 +684,10 @@ class PathSensitiveBugReporter final : public BugReporter {
       SmallVectorImpl<BugReport *> &bugReports) override;
 
   /// Generate the diagnostics for the given bug report.
-  std::unique_ptr<DiagnosticForConsumerMapTy> generateDiagnosticForConsumerMap(
-      BugReport *exampleReport,
-      ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
-      ArrayRef<BugReport *> bugReports) override;
-
+  std::unique_ptr<DiagnosticForConsumerMapTy>
+  generateDiagnosticForConsumerMap(BugReport *exampleReport,
+                                   ArrayRef<PathDiagnosticConsumer *> consumers,
+                                   ArrayRef<BugReport *> bugReports) override;
 public:
   PathSensitiveBugReporter(BugReporterData& d, ExprEngine& eng)
       : BugReporter(d), Eng(eng) {}
@@ -710,7 +706,7 @@ public:
   /// Iterates through the bug reports within a single equivalence class,
   /// stops at a first non-invalidated report.
   std::unique_ptr<DiagnosticForConsumerMapTy> generatePathDiagnostics(
-      ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
+      ArrayRef<PathDiagnosticConsumer *> consumers,
       ArrayRef<PathSensitiveBugReport *> &bugReports);
 
   void emitReport(std::unique_ptr<BugReport> R) override;

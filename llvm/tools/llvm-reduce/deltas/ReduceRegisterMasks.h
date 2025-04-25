@@ -12,7 +12,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceRegisterMasksMIRDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceRegisterMasksMIRDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

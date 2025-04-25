@@ -35,7 +35,6 @@ static_library("IPO") {
     "EmbedBitcodePass.cpp",
     "ExpandVariadics.cpp",
     "ExtractGV.cpp",
-    "FatLTOCleanup.cpp",
     "ForceFunctionAttrs.cpp",
     "FunctionAttrs.cpp",
     "FunctionImport.cpp",

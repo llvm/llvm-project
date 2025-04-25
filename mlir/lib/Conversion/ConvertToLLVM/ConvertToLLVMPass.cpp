@@ -280,3 +280,7 @@ void mlir::registerConvertToLLVMDependentDialectLoading(
     DialectRegistry &registry) {
   registry.addExtensions<LoadDependentDialectExtension>();
 }
+
+std::unique_ptr<Pass> mlir::createConvertToLLVMPass() {
+  return std::make_unique<ConvertToLLVMPass>();
+}

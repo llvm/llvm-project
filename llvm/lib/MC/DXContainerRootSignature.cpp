@@ -12,7 +12,7 @@
 using namespace llvm;
 using namespace llvm::mcdxbc;
 
-void RootSignatureDesc::write(raw_ostream &OS) const {
+void RootSignatureHeader::write(raw_ostream &OS) {
 
   support::endian::write(OS, Version, llvm::endianness::little);
   support::endian::write(OS, NumParameters, llvm::endianness::little);

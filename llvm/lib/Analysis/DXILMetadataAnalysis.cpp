@@ -24,7 +24,7 @@ using namespace dxil;
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
-  const Triple &TT = M.getTargetTriple();
+  Triple TT(Triple(M.getTargetTriple()));
   MMDAI.DXILVersion = TT.getDXILVersion();
   MMDAI.ShaderModelVersion = TT.getOSVersion();
   MMDAI.ShaderProfile = TT.getEnvironment();

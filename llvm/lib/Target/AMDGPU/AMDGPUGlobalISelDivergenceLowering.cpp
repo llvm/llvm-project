@@ -24,7 +24,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUGlobalISelUtils.h"
 #include "SILowerI1Copies.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -93,9 +92,6 @@ public:
                            Register DstReg, Register PrevReg,
                            Register CurReg) override;
   void constrainAsLaneMask(Incoming &In) override;
-
-  bool lowerTemporalDivergence();
-  bool lowerTemporalDivergenceI1();
 };
 
 DivergenceLoweringHelper::DivergenceLoweringHelper(
@@ -206,215 +202,6 @@ void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) {
   In.Reg = Copy.getReg(0);
 }
 
-void replaceUsesOfRegInInstWith(Register Reg, MachineInstr *Inst,
-                                Register NewReg) {
-  for (MachineOperand &Op : Inst->operands()) {
-    if (Op.isReg() && Op.getReg() == Reg)
-      Op.setReg(NewReg);
-  }
-}
-
-bool DivergenceLoweringHelper::lowerTemporalDivergence() {
-  AMDGPU::IntrinsicLaneMaskAnalyzer ILMA(*MF);
-  DenseMap<Register, Register> TDCache;
-
-  for (auto [Reg, UseInst, _] : MUI->getTemporalDivergenceList()) {
-    if (MRI->getType(Reg) == LLT::scalar(1) || MUI->isDivergent(Reg) ||
-        ILMA.isS32S64LaneMask(Reg))
-      continue;
-
-    Register CachedTDCopy = TDCache.lookup(Reg);
-    if (CachedTDCopy) {
-      replaceUsesOfRegInInstWith(Reg, UseInst, CachedTDCopy);
-      continue;
-    }
-
-    MachineInstr *Inst = MRI->getVRegDef(Reg);
-    MachineBasicBlock *MBB = Inst->getParent();
-    B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(Inst->getIterator())));
-
-    Register VgprReg = MRI->createGenericVirtualRegister(MRI->getType(Reg));
-    B.buildInstr(AMDGPU::COPY, {VgprReg}, {Reg})
-        .addUse(ExecReg, RegState::Implicit);
-
-    replaceUsesOfRegInInstWith(Reg, UseInst, VgprReg);
-    TDCache[Reg] = VgprReg;
-  }
-  return false;
-}
-
-bool DivergenceLoweringHelper::lowerTemporalDivergenceI1() {
-  MachineRegisterInfo::VRegAttrs BoolS1 = {ST->getBoolRC(), LLT::scalar(1)};
-  initializeLaneMaskRegisterAttributes(BoolS1);
-  MachineSSAUpdater SSAUpdater(*MF);
-
-  // In case of use outside muliple nested cycles or muliple uses we only need
-  // to merge lane mask across largest relevant cycle.
-  SmallDenseMap<Register, std::pair<const MachineCycle *, Register>> LRCCache;
-  for (auto [Reg, UseInst, LRC] : MUI->getTemporalDivergenceList()) {
-    if (MRI->getType(Reg) != LLT::scalar(1))
-      continue;
-
-    auto [LRCCacheIter, RegNotCached] = LRCCache.try_emplace(Reg);
-    auto &CycleMergedMask = LRCCacheIter->getSecond();
-    const MachineCycle *&CachedLRC = CycleMergedMask.first;
-    if (RegNotCached || LRC->contains(CachedLRC)) {
-      CachedLRC = LRC;
-    }
-  }
-
-  for (auto &LRCCacheEntry : LRCCache) {
-    Register Reg = LRCCacheEntry.first;
-    auto &CycleMergedMask = LRCCacheEntry.getSecond();
-    const MachineCycle *Cycle = CycleMergedMask.first;
-
-    Register MergedMask = MRI->createVirtualRegister(BoolS1);
-    SSAUpdater.Initialize(MergedMask);
-
-    MachineBasicBlock *MBB = MRI->getVRegDef(Reg)->getParent();
-    SSAUpdater.AddAvailableValue(MBB, MergedMask);
-
-    for (auto Entry : Cycle->getEntries()) {
-      for (MachineBasicBlock *Pred : Entry->predecessors()) {
-        if (!Cycle->contains(Pred)) {
-          B.setInsertPt(*Pred, Pred->getFirstTerminator());
-          auto ImplDef = B.buildInstr(AMDGPU::IMPLICIT_DEF, {BoolS1}, {});
-          SSAUpdater.AddAvailableValue(Pred, ImplDef.getReg(0));
-        }
-      }
-    }
-
-    buildMergeLaneMasks(*MBB, MBB->getFirstTerminator(), {}, MergedMask,
-                        SSAUpdater.GetValueInMiddleOfBlock(MBB), Reg);
-
-    CycleMergedMask.second = MergedMask;
-  }
-
-  for (auto [Reg, UseInst, Cycle] : MUI->getTemporalDivergenceList()) {
-    if (MRI->getType(Reg) != LLT::scalar(1))
-      continue;
-
-    replaceUsesOfRegInInstWith(Reg, UseInst, LRCCache.lookup(Reg).second);
-  }
-
-  return false;
-}
-
-/// This helper is used for unstructured per-lane control-flow.
-class DivergenceS1WideningHelper : public PhiLoweringHelper {
-public:
-  DivergenceS1WideningHelper(MachineFunction *MF, MachineUniformityInfo *MUI);
-
-private:
-  MachineUniformityInfo *MUI = nullptr;
-  MachineIRBuilder B;
-
-public:
-  void markAsLaneMask(Register DstReg) const override {}
-  void getCandidatesForLowering(
-      SmallVectorImpl<MachineInstr *> &Vreg1Phis) const override {}
-  void collectIncomingValuesFromPhi(
-      const MachineInstr *MI,
-      SmallVectorImpl<Incoming> &Incomings) const override {}
-  void replaceDstReg(Register NewReg, Register OldReg,
-                     MachineBasicBlock *MBB) override {}
-  void buildMergeLaneMasks(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator I, const DebugLoc &DL,
-                           Register DstReg, Register PrevReg,
-                           Register CurReg) override {}
-  void constrainAsLaneMask(Incoming &In) override {}
-
-  bool widenS1Phis();
-};
-
-DivergenceS1WideningHelper::DivergenceS1WideningHelper(
-    MachineFunction *MF, MachineUniformityInfo *MUI)
-    : PhiLoweringHelper(MF, nullptr, nullptr), MUI(MUI), B(*MF) {}
-
-bool DivergenceS1WideningHelper::widenS1Phis() {
-  bool Change = false;
-  DenseMap<Register, Register> S1ToS32;
-  SmallVector<MachineInstr *, 8> S1Phis;
-
-  const LLT S1 = LLT::scalar(1);
-  const LLT S32 = LLT::scalar(32);
-
-  // Round#1, replace the destination of divergent-s1-phi.
-  for (MachineBasicBlock &MBB : *MF) {
-
-    B.setInsertPt(MBB, MBB.getFirstNonPHI());
-
-    for (MachineInstr &MI : MBB) {
-      if (!MI.isPHI())
-        break;
-      Register Dst = MI.getOperand(0).getReg();
-      if (MRI->getType(Dst) != S1 || !MUI->isDivergent(Dst))
-        continue;
-
-      S1Phis.push_back(&MI);
-      Register Def32 = MRI->createGenericVirtualRegister(S32);
-      S1ToS32[Dst] = Def32;
-      // Replace the phi-dest.
-      MI.getOperand(0).setReg(Def32);
-      // Create g_icmp to convert v32 back to s1.
-      B.buildICmp(CmpInst::ICMP_NE, Dst, Def32, B.buildConstant(S32, 0));
-      Change = true;
-    }
-  }
-  // Round#2, replace the sources of divergent-s1-phi.
-  for (auto MI : S1Phis) {
-    for (unsigned I = 1; I < MI->getNumOperands(); I += 2) {
-      Register Src = MI->getOperand(I).getReg();
-      if (S1ToS32.find(Src) != S1ToS32.end()) {
-        MI->getOperand(I).setReg(S1ToS32[Src]);
-        continue;
-      }
-      // Create G_SELECT to convert from s1 to v32.
-      auto *S1DefI = MRI->getVRegDef(Src);
-      auto *MBB = S1DefI->getParent();
-      B.setInsertPt(*MBB,
-                    MBB->SkipPHIsAndLabels(std::next(S1DefI->getIterator())));
-      Register Def32 = MRI->createGenericVirtualRegister(S32);
-      S1ToS32[Src] = Def32;
-      auto CZero = B.buildConstant(S32, 0);
-      auto CNegOne = B.buildConstant(S32, -1);
-      B.buildSelect(Def32, Src, CNegOne, CZero);
-      MI->getOperand(I).setReg(Def32);
-    }
-  }
-
-  // Round#3, lower G_BRCOND.
-  SmallVector<MachineInstr *, 8> ToBeErased;
-  for (MachineBasicBlock &MBB : *MF) {
-    for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() != TargetOpcode::G_BRCOND)
-        continue;
-
-      MachineOperand &CondOp = MI.getOperand(0);
-      Register CondReg = CondOp.getReg();
-      const DebugLoc &DL = MI.getDebugLoc();
-
-      unsigned BrOpcode = MUI->isDivergent(CondReg) ? AMDGPU::SI_BRCOND
-                                                    : AMDGPU::SI_BRCOND_UNIFORM;
-      auto ConstrainRC = IsWave32 ? &AMDGPU::SReg_32_XM0_XEXECRegClass
-                                  : &AMDGPU::SReg_64_XEXECRegClass;
-
-      if (!MRI->getRegClassOrNull(CondReg))
-        MRI->setRegClass(CondReg, ConstrainRC);
-
-      // Create SI_BRCOND or SI_BRCOND_UNIFORM.
-      BuildMI(MBB, &MI, DL, TII->get(BrOpcode))
-          .addReg(CondReg)
-          .addMBB(MI.getOperand(1).getMBB());
-      ToBeErased.push_back(&MI);
-    }
-  }
-  for (auto MI : ToBeErased)
-    MI->eraseFromParent();
-
-  return Change;
-}
-
 } // End anonymous namespace.
 
 INITIALIZE_PASS_BEGIN(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
@@ -444,28 +231,7 @@ bool AMDGPUGlobalISelDivergenceLowering::runOnMachineFunction(
   MachineUniformityInfo &MUI =
       getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
 
-  bool Changed = false;
-  if (EnableWaveTransformCF) {
-    MF.getInfo<SIMachineFunctionInfo>()->setWholeWaveControlFlow(false);
-    Changed = DivergenceS1WideningHelper(&MF, &MUI).widenS1Phis();
-  } else {
-    DivergenceLoweringHelper Helper(&MF, &DT, &PDT, &MUI);
+  DivergenceLoweringHelper Helper(&MF, &DT, &PDT, &MUI);
 
-    // Temporal divergence lowering needs to inspect list of instructions used
-    // outside cycle with divergent exit provided by uniformity analysis. Uniform
-    // instructions from the list require lowering, no instruction is deleted.
-    // Thus it needs to be run before lowerPhis that deletes phis that require
-    // lowering and replaces them with new instructions.
-  
-    // Non-i1 temporal divergence lowering.
-    Changed |= Helper.lowerTemporalDivergence();
-    // This covers both uniform and divergent i1s. Lane masks are in sgpr and need
-    // to be updated in each iteration.
-    Changed |= Helper.lowerTemporalDivergenceI1();
-    // Temporal divergence lowering of divergent i1 phi used outside of the cycle
-    // could also be handled by lowerPhis but we do it in lowerTempDivergenceI1
-    // since in some case lowerPhis does unnecessary lane mask merging.
-    Changed |= Helper.lowerPhis();  
-  }
-  return Changed;
+  return Helper.lowerPhis();
 }

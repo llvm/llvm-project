@@ -387,7 +387,9 @@ Value CodeGen::genSingleExpr(const ast::Expr *expr) {
           [&](auto derivedNode) { return this->genExprImpl(derivedNode); })
       .Case<const ast::CallExpr, const ast::DeclRefExpr, const ast::TupleExpr>(
           [&](auto derivedNode) {
-            return llvm::getSingleElement(this->genExprImpl(derivedNode));
+            SmallVector<Value> results = this->genExprImpl(derivedNode);
+            assert(results.size() == 1 && "expected single expression result");
+            return results[0];
           });
 }
 

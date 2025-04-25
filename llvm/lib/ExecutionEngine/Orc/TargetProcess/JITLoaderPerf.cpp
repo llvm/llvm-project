@@ -396,25 +396,25 @@ static Error registerJITLoaderPerfEndImpl() {
 }
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfImpl(const char *ArgData, size_t ArgSize) {
+llvm_orc_registerJITLoaderPerfImpl(const char *Data, uint64_t Size) {
   using namespace orc::shared;
   return WrapperFunction<SPSError(SPSPerfJITRecordBatch)>::handle(
-             ArgData, ArgSize, registerJITLoaderPerfImpl)
+             Data, Size, registerJITLoaderPerfImpl)
       .release();
 }
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfStart(const char *ArgData, size_t ArgSize) {
+llvm_orc_registerJITLoaderPerfStart(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<SPSError()>::handle(ArgData, ArgSize,
+  return WrapperFunction<SPSError()>::handle(Data, Size,
                                              registerJITLoaderPerfStartImpl)
       .release();
 }
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfEnd(const char *ArgData, size_t ArgSize) {
+llvm_orc_registerJITLoaderPerfEnd(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<SPSError()>::handle(ArgData, ArgSize,
+  return WrapperFunction<SPSError()>::handle(Data, Size,
                                              registerJITLoaderPerfEndImpl)
       .release();
 }
@@ -434,23 +434,23 @@ static Error badOS() {
 static Error badOSBatch(PerfJITRecordBatch &Batch) { return badOS(); }
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfImpl(const char *ArgData, size_t ArgSize) {
+llvm_orc_registerJITLoaderPerfImpl(const char *Data, uint64_t Size) {
   using namespace shared;
-  return WrapperFunction<SPSError(SPSPerfJITRecordBatch)>::handle(
-             ArgData, ArgSize, badOSBatch)
+  return WrapperFunction<SPSError(SPSPerfJITRecordBatch)>::handle(Data, Size,
+                                                                  badOSBatch)
       .release();
 }
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfStart(const char *ArgData, size_t ArgSize) {
+llvm_orc_registerJITLoaderPerfStart(const char *Data, uint64_t Size) {
   using namespace shared;
-  return WrapperFunction<SPSError()>::handle(ArgData, ArgSize, badOS).release();
+  return WrapperFunction<SPSError()>::handle(Data, Size, badOS).release();
 }
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfEnd(const char *ArgData, size_t ArgSize) {
+llvm_orc_registerJITLoaderPerfEnd(const char *Data, uint64_t Size) {
   using namespace shared;
-  return WrapperFunction<SPSError()>::handle(ArgData, ArgSize, badOS).release();
+  return WrapperFunction<SPSError()>::handle(Data, Size, badOS).release();
 }
 
 #endif

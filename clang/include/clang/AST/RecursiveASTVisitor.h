@@ -20,7 +20,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
@@ -1004,10 +1003,7 @@ DEF_TRAVERSE_TYPE(RValueReferenceType,
                   { TRY_TO(TraverseType(T->getPointeeType())); })
 
 DEF_TRAVERSE_TYPE(MemberPointerType, {
-  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
-  if (T->isSugared())
-    TRY_TO(TraverseType(
-        QualType(T->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0)));
+  TRY_TO(TraverseType(QualType(T->getClass(), 0)));
   TRY_TO(TraverseType(T->getPointeeType()));
 })
 
@@ -1272,10 +1268,10 @@ DEF_TRAVERSE_TYPELOC(RValueReferenceType,
 // We traverse this in the type case as well, but how is it not reached through
 // the pointee type?
 DEF_TRAVERSE_TYPELOC(MemberPointerType, {
-  if (NestedNameSpecifierLoc QL = TL.getQualifierLoc())
-    TRY_TO(TraverseNestedNameSpecifierLoc(QL));
+  if (auto *TSI = TL.getClassTInfo())
+    TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
   else
-    TRY_TO(TraverseNestedNameSpecifier(TL.getTypePtr()->getQualifier()));
+    TRY_TO(TraverseType(QualType(TL.getTypePtr()->getClass(), 0)));
   TRY_TO(TraverseTypeLoc(TL.getPointeeLoc()));
 })
 
@@ -1823,14 +1819,6 @@ DEF_TRAVERSE_DECL(OMPAllocateDecl, {
     TRY_TO(TraverseStmt(I));
   for (auto *C : D->clauselists())
     TRY_TO(TraverseOMPClause(C));
-})
-
-DEF_TRAVERSE_DECL(OpenACCDeclareDecl,
-                  { TRY_TO(VisitOpenACCClauseList(D->clauses())); })
-
-DEF_TRAVERSE_DECL(OpenACCRoutineDecl, {
-  TRY_TO(TraverseStmt(D->getFunctionReference()));
-  TRY_TO(VisitOpenACCClauseList(D->clauses()));
 })
 
 // A helper method for TemplateDecl's children.
@@ -2413,15 +2401,15 @@ DEF_TRAVERSE_DECL(ImplicitConceptSpecializationDecl, {
   }
 
 DEF_TRAVERSE_STMT(GCCAsmStmt, {
-  TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getAsmStringExpr());
+  TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getAsmString());
   for (unsigned I = 0, E = S->getNumInputs(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInputConstraintExpr(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInputConstraintLiteral(I));
   }
   for (unsigned I = 0, E = S->getNumOutputs(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getOutputConstraintExpr(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getOutputConstraintLiteral(I));
   }
   for (unsigned I = 0, E = S->getNumClobbers(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getClobberExpr(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getClobberStringLiteral(I));
   }
   // children() iterates over inputExpr and outputExpr.
 })
@@ -2962,6 +2950,7 @@ DEF_TRAVERSE_STMT(FunctionParmPackExpr, {})
 DEF_TRAVERSE_STMT(CXXFoldExpr, {})
 DEF_TRAVERSE_STMT(AtomicExpr, {})
 DEF_TRAVERSE_STMT(CXXParenListInitExpr, {})
+DEF_TRAVERSE_STMT(ResolvedUnexpandedPackExpr, {})
 
 DEF_TRAVERSE_STMT(MaterializeTemporaryExpr, {
   if (S->getLifetimeExtendedTemporaryDecl()) {
@@ -3443,11 +3432,6 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDynamicAllocatorsClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPAtomicDefaultMemOrderClause(
     OMPAtomicDefaultMemOrderClause *) {
-  return true;
-}
-
-template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {
   return true;
 }
 
@@ -4126,10 +4110,6 @@ DEF_TRAVERSE_STMT(OpenACCUpdateConstruct,
                   { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
 DEF_TRAVERSE_STMT(OpenACCAtomicConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
-DEF_TRAVERSE_STMT(OpenACCCacheConstruct, {
-  for (auto *E : S->getVarList())
-    TRY_TO(TraverseStmt(E));
-})
 
 // Traverse HLSL: Out argument expression
 DEF_TRAVERSE_STMT(HLSLOutArgExpr, {})

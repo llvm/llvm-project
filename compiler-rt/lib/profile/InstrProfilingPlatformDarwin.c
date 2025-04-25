@@ -47,6 +47,8 @@ extern char
 COMPILER_RT_VISIBILITY
 extern char VNameEnd __asm("section$end$__DATA$" INSTR_PROF_VNAME_SECT_NAME);
 COMPILER_RT_VISIBILITY
+extern uint32_t
+    OrderFileStart __asm("section$start$__DATA$" INSTR_PROF_ORDERFILE_SECT_NAME);
 
 COMPILER_RT_VISIBILITY
 extern ValueProfNode
@@ -85,6 +87,8 @@ COMPILER_RT_VISIBILITY
 const char *__llvm_profile_begin_vtabnames(void) { return &VNameStart; }
 COMPILER_RT_VISIBILITY
 const char *__llvm_profile_end_vtabnames(void) { return &VNameEnd; }
+COMPILER_RT_VISIBILITY
+uint32_t *__llvm_profile_begin_orderfile(void) { return &OrderFileStart; }
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void) {

@@ -12,11 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ParentMapContext.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
 
@@ -70,21 +69,17 @@ class ParentMapContext::ParentMap {
       for (; N > 0; --N)
         push_back(Value);
     }
-    bool contains(const DynTypedNode &Value) const {
-      const void *Identity = Value.getMemoizationData();
-      assert(Identity);
-      return Dedup.contains(Identity);
+    bool contains(const DynTypedNode &Value) {
+      return Seen.contains(Value);
     }
     void push_back(const DynTypedNode &Value) {
-      const void *Identity = Value.getMemoizationData();
-      if (!Identity || Dedup.insert(Identity).second) {
+      if (!Value.getMemoizationData() || Seen.insert(Value).second)
         Items.push_back(Value);
-      }
     }
     llvm::ArrayRef<DynTypedNode> view() const { return Items; }
   private:
-    llvm::SmallVector<DynTypedNode, 1> Items;
-    llvm::SmallPtrSet<const void *, 2> Dedup;
+    llvm::SmallVector<DynTypedNode, 2> Items;
+    llvm::SmallDenseSet<DynTypedNode, 2> Seen;
   };
 
   /// Maps from a node to its parents. This is used for nodes that have

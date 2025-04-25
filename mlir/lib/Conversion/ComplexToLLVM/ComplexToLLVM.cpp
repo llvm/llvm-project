@@ -9,7 +9,6 @@
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
-#include "mlir/Conversion/ComplexCommon/DivisionConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -205,11 +204,6 @@ struct AddOpConversion : public ConvertOpToLLVMPattern<complex::AddOp> {
 };
 
 struct DivOpConversion : public ConvertOpToLLVMPattern<complex::DivOp> {
-  DivOpConversion(const LLVMTypeConverter &converter,
-                  complex::ComplexRangeFlags target)
-      : ConvertOpToLLVMPattern<complex::DivOp>(converter),
-        complexRange(target) {}
-
   using ConvertOpToLLVMPattern<complex::DivOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
@@ -233,26 +227,28 @@ struct DivOpConversion : public ConvertOpToLLVMPattern<complex::DivOp> {
     Value lhsRe = arg.lhs.real();
     Value lhsIm = arg.lhs.imag();
 
-    Value resultRe, resultIm;
+    Value rhsSqNorm = rewriter.create<LLVM::FAddOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, rhsRe, rhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, rhsIm, rhsIm, fmf), fmf);
 
-    if (complexRange == complex::ComplexRangeFlags::basic ||
-        complexRange == complex::ComplexRangeFlags::none) {
-      mlir::complex::convertDivToLLVMUsingAlgebraic(
-          rewriter, loc, lhsRe, lhsIm, rhsRe, rhsIm, fmf, &resultRe, &resultIm);
-    } else if (complexRange == complex::ComplexRangeFlags::improved) {
-      mlir::complex::convertDivToLLVMUsingRangeReduction(
-          rewriter, loc, lhsRe, lhsIm, rhsRe, rhsIm, fmf, &resultRe, &resultIm);
-    }
+    Value resultReal = rewriter.create<LLVM::FAddOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsIm, fmf), fmf);
 
-    result.setReal(rewriter, loc, resultRe);
-    result.setImaginary(rewriter, loc, resultIm);
+    Value resultImag = rewriter.create<LLVM::FSubOp>(
+        loc, rewriter.create<LLVM::FMulOp>(loc, lhsIm, rhsRe, fmf),
+        rewriter.create<LLVM::FMulOp>(loc, lhsRe, rhsIm, fmf), fmf);
+
+    result.setReal(
+        rewriter, loc,
+        rewriter.create<LLVM::FDivOp>(loc, resultReal, rhsSqNorm, fmf));
+    result.setImaginary(
+        rewriter, loc,
+        rewriter.create<LLVM::FDivOp>(loc, resultImag, rhsSqNorm, fmf));
 
     rewriter.replaceOp(op, {result});
     return success();
   }
-
-private:
-  complex::ComplexRangeFlags complexRange;
 };
 
 struct MulOpConversion : public ConvertOpToLLVMPattern<complex::MulOp> {
@@ -328,21 +324,19 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
 } // namespace
 
 void mlir::populateComplexToLLVMConversionPatterns(
-    const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    complex::ComplexRangeFlags complexRange) {
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
       AbsOpConversion,
       AddOpConversion,
       ConstantOpLowering,
       CreateOpConversion,
+      DivOpConversion,
       ImOpConversion,
       MulOpConversion,
       ReOpConversion,
       SubOpConversion
     >(converter);
-
-  patterns.add<DivOpConversion>(converter, complexRange);
   // clang-format on
 }
 
@@ -359,7 +353,7 @@ void ConvertComplexToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect using the converter defined above.
   RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
-  populateComplexToLLVMConversionPatterns(converter, patterns, complexRange);
+  populateComplexToLLVMConversionPatterns(converter, patterns);
 
   LLVMConversionTarget target(getContext());
   target.addIllegalDialect<complex::ComplexDialect>();

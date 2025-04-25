@@ -278,11 +278,8 @@ public:
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();
 
-  /// Read a list of OpenACC clauses into the passed SmallVector, during
-  /// statement reading.
+  /// Read a list of OpenACC clauses into the passed SmallVector.
   void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
-
-  void readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A);
 
   /// Read a source location, advancing Idx.
   SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {

@@ -6,9 +6,6 @@
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 // RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 
-// Test code generation for Wasm EH using WebAssembly EH proposal.
-// (https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md)
-
 void may_throw();
 void dont_throw() noexcept;
 
@@ -17,7 +14,7 @@ struct Cleanup {
 };
 
 // Multiple catch clauses w/o catch-all
-void multiple_catches_wo_catch_all() {
+void test0() {
   try {
     may_throw();
   } catch (int) {
@@ -27,7 +24,7 @@ void multiple_catches_wo_catch_all() {
   }
 }
 
-// CHECK-LABEL: define void @_Z29multiple_catches_wo_catch_allv() {{.*}} personality ptr @__gxx_wasm_personality_v0
+// CHECK-LABEL: define void @_Z5test0v() {{.*}} personality ptr @__gxx_wasm_personality_v0
 
 // CHECK:   %[[INT_ALLOCA:.*]] = alloca i32
 // CHECK:   invoke void @_Z9may_throwv()
@@ -73,7 +70,7 @@ void multiple_catches_wo_catch_all() {
 // CHECK-NEXT:   unreachable
 
 // Single catch-all
-void single_catch_all() {
+void test1() {
   try {
     may_throw();
   } catch (...) {
@@ -81,7 +78,7 @@ void single_catch_all() {
   }
 }
 
-// CATCH-LABEL: @_Z16single_catch_allv()
+// CATCH-LABEL: @_Z5test1v()
 
 // CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind to caller
 
@@ -93,7 +90,7 @@ void single_catch_all() {
 // CHECK:   catchret from %[[CATCHPAD]] to label
 
 // Multiple catch clauses w/ catch-all
-void multiple_catches_w_catch_all() {
+void test2() {
   try {
     may_throw();
   } catch (int) {
@@ -103,7 +100,7 @@ void multiple_catches_w_catch_all() {
   }
 }
 
-// CHECK-LABEL: @_Z28multiple_catches_w_catch_allv()
+// CHECK-LABEL: @_Z5test2v()
 
 // CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind to caller
 
@@ -118,12 +115,12 @@ void multiple_catches_w_catch_all() {
 // CHECK:   catchret from %[[CATCHPAD]] to label
 
 // Cleanup
-void cleanup() {
+void test3() {
   Cleanup c;
   may_throw();
 }
 
-// CHECK-LABEL: @_Z7cleanupv()
+// CHECK-LABEL: @_Z5test3v()
 
 // CHECK:   invoke void @_Z9may_throwv()
 // CHECK-NEXT:           to label {{.*}} unwind label %[[EHCLEANUP_BB:.*]]
@@ -134,7 +131,7 @@ void cleanup() {
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD]] unwind to caller
 
 // Possibly throwing function call within a catch
-void catch_int() {
+void test4() {
   try {
     may_throw();
   } catch (int) {
@@ -142,7 +139,7 @@ void catch_int() {
   }
 }
 
-// CHECK-LABEL: @_Z9catch_intv()
+// CHECK-LABEL: @_Z5test4v()
 
 // CHECK:   %[[CATCHSWITCH]] = catchswitch within none [label %[[CATCHSTART_BB]]] unwind to caller
 
@@ -162,7 +159,7 @@ void catch_int() {
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD]] unwind to caller
 
 // Possibly throwing function call within a catch-all
-void catch_all() {
+void test5() {
   try {
     may_throw();
   } catch (...) {
@@ -170,7 +167,7 @@ void catch_all() {
   }
 }
 
-// CHECK-LABEL: @_Z9catch_allv()
+// CHECK-LABEL: @_Z5test5v()
 
 // CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB]]] unwind to caller
 
@@ -198,7 +195,7 @@ void catch_all() {
 // CHECK-NEXT:   unreachable
 
 // Try-catch with cleanups
-void try_catch_w_cleanups() {
+void test6() {
   Cleanup c1;
   try {
     Cleanup c2;
@@ -209,7 +206,7 @@ void try_catch_w_cleanups() {
   }
 }
 
-// CHECK-LABEL: @_Z20try_catch_w_cleanupsv()
+// CHECK-LABEL: @_Z5test6v()
 // CHECK:   invoke void @_Z9may_throwv()
 // CHECK-NEXT:           to label %{{.*}} unwind label %[[EHCLEANUP_BB0:.*]]
 
@@ -254,7 +251,7 @@ void try_catch_w_cleanups() {
 // CHECK-NEXT:   unreachable
 
 // Nested try-catches within a try with cleanups
-void nested_try_catches_with_cleanups() {
+void test7() {
   Cleanup c1;
   may_throw();
   try {
@@ -275,7 +272,7 @@ void nested_try_catches_with_cleanups() {
   }
 }
 
-// CHECK-LABEL: @_Z32nested_try_catches_with_cleanupsv()
+// CHECK-LABEL: @_Z5test7v()
 // CHECK:   invoke void @_Z9may_throwv()
 
 // CHECK:   invoke void @_Z9may_throwv()
@@ -340,7 +337,7 @@ void nested_try_catches_with_cleanups() {
 // CHECK:   unreachable
 
 // Nested try-catches within a catch
-void nested_try_catch_within_catch() {
+void test8() {
   try {
     may_throw();
   } catch (int) {
@@ -352,7 +349,7 @@ void nested_try_catch_within_catch() {
   }
 }
 
-// CHECK-LABEL: @_Z29nested_try_catch_within_catchv()
+// CHECK-LABEL: @_Z5test8v()
 // CHECK:   invoke void @_Z9may_throwv()
 
 // CHECK:   %[[CATCHSWITCH0:.*]] = catchswitch within none
@@ -384,15 +381,6 @@ void nested_try_catch_within_catch() {
 
 // CHECK:   unreachable
 
-void noexcept_throw() noexcept {
-  throw 3;
-}
-
-// CATCH-LABEL: define void @_Z14noexcept_throwv()
-// CHECK: %{{.*}} = cleanuppad within none []
-// CHECK-NEXT:  call void @_ZSt9terminatev()
-
-
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wno-wasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-OFF
@@ -402,19 +390,19 @@ void noexcept_throw() noexcept {
 // This is controlled by -Wwasm-exception-spec, which is on by default. This
 // warning can be suppressed with -Wno-wasm-exception-spec. Checks if a warning
 // message is correctly printed or not printed depending on the options.
-void exception_spec_warning() throw(int) {
+void test9() throw(int) {
 }
 // WARNING-DEFAULT: warning: dynamic exception specifications with types are currently ignored in wasm
 // WARNING-ON: warning: dynamic exception specifications with types are currently ignored in wasm
 // WARNING-OFF-NOT: warning: dynamic exception specifications with types are currently ignored in wasm
 // EM-EH-WARNING: warning: dynamic exception specifications with types are currently ignored in wasm
 
-// Wasm currently treats 'throw()' in the same way as 'noexcept'. Check if the
+// Wasm curremtly treats 'throw()' in the same way as 'noexept'. Check if the
 // same warning message is printed as if when a 'noexcept' function throws.
-void exception_spec_throw_empty() throw() {
+void test10() throw() {
   throw 3;
 }
-// WARNING-DEFAULT: warning: 'exception_spec_throw_empty' has a non-throwing exception specification but can still throw
+// WARNING-DEFAULT: warning: 'test10' has a non-throwing exception specification but can still throw
 // WARNING-DEFAULT: function declared non-throwing here
 
 // Here we only check if the command enables wasm exception handling in the

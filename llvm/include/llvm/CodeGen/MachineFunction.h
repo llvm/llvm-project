@@ -359,9 +359,9 @@ class LLVM_ABI MachineFunction {
   /// construct a table of valid longjmp targets for Windows Control Flow Guard.
   std::vector<MCSymbol *> LongjmpTargets;
 
-  /// List of basic blocks that are the targets for Windows EH Continuation
-  /// Guard.
-  std::vector<MCSymbol *> EHContTargets;
+  /// List of basic blocks that are the target of catchrets. Used to construct
+  /// a table of valid targets for Windows EHCont Guard.
+  std::vector<MCSymbol *> CatchretTargets;
 
   /// \name Exception Handling
   /// \{
@@ -383,7 +383,7 @@ class LLVM_ABI MachineFunction {
 
   bool CallsEHReturn = false;
   bool CallsUnwindInit = false;
-  bool HasEHContTarget = false;
+  bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
   bool HasFakeUses = false;
@@ -927,7 +927,6 @@ public:
 
   /// Run the current MachineFunction through the machine code verifier, useful
   /// for debugger use.
-  /// TODO: Add the param for LiveStacks analysis.
   /// \returns true if no problems were found.
   bool verify(LiveIntervals *LiveInts, SlotIndexes *Indexes,
               const char *Banner = nullptr, raw_ostream *OS = nullptr,
@@ -1073,7 +1072,7 @@ public:
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
       Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
       const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
@@ -1099,7 +1098,7 @@ public:
             : LLT::scalar(8 * Size.getValue().getKnownMinValue()));
   }
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
-                                          int64_t Offset, TypeSize Size) {
+                                          int64_t Offset, uint64_t Size) {
     return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
 
@@ -1115,7 +1114,7 @@ public:
                                           LLT Ty);
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
-                                          TypeSize Size) {
+                                          uint64_t Size) {
     return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
   }
 
@@ -1201,15 +1200,17 @@ public:
   /// Control Flow Guard.
   void addLongjmpTarget(MCSymbol *Target) { LongjmpTargets.push_back(Target); }
 
-  /// Returns a reference to a list of symbols that are targets for Windows
-  /// EH Continuation Guard.
-  const std::vector<MCSymbol *> &getEHContTargets() const {
-    return EHContTargets;
+  /// Returns a reference to a list of symbols that we have catchrets.
+  /// Used to construct the catchret target table used by Windows EHCont Guard.
+  const std::vector<MCSymbol *> &getCatchretTargets() const {
+    return CatchretTargets;
   }
 
-  /// Add the specified symbol to the list of targets for Windows EH
-  /// Continuation Guard.
-  void addEHContTarget(MCSymbol *Target) { EHContTargets.push_back(Target); }
+  /// Add the specified symbol to the list of valid catchret targets for Windows
+  /// EHCont Guard.
+  void addCatchretTarget(MCSymbol *Target) {
+    CatchretTargets.push_back(Target);
+  }
 
   /// Tries to get the global and target flags for a call site, if the
   /// instruction is a call to a global.
@@ -1238,8 +1239,8 @@ public:
   bool callsUnwindInit() const { return CallsUnwindInit; }
   void setCallsUnwindInit(bool b) { CallsUnwindInit = b; }
 
-  bool hasEHContTarget() const { return HasEHContTarget; }
-  void setHasEHContTarget(bool V) { HasEHContTarget = V; }
+  bool hasEHCatchret() const { return HasEHCatchret; }
+  void setHasEHCatchret(bool V) { HasEHCatchret = V; }
 
   bool hasEHScopes() const { return HasEHScopes; }
   void setHasEHScopes(bool V) { HasEHScopes = V; }

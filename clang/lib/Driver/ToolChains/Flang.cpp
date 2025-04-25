@@ -60,8 +60,6 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
                             options::OPT_frealloc_lhs,
                             options::OPT_fno_realloc_lhs,
                             options::OPT_fsave_main_program,
-                            options::OPT_fd_lines_as_code,
-                            options::OPT_fd_lines_as_comments,
                             options::OPT_fno_save_main_program});
 }
 
@@ -132,11 +130,6 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_fno_offload_global_filtering,
                    options::OPT_funsigned, options::OPT_fno_unsigned});
 
-  if (Args.hasArg(options::OPT_fopenacc)) {
-     const Driver &D = getToolChain().getDriver();
-     D.Diag(diag::warn_openacc_experimental);
-  }
-
   llvm::codegenoptions::DebugInfoKind DebugInfoKind;
   if (Args.hasArg(options::OPT_gN_Group)) {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
@@ -158,14 +151,11 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  handleVectorizeLoopsArgs(Args, CmdArgs);
-  handleVectorizeSLPArgs(Args, CmdArgs);
-
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
   Args.addAllArgs(CmdArgs,
-                  {options::OPT_fdo_concurrent_to_openmp_EQ,
+                  {options::OPT_do_concurrent_parallel_EQ,
                    options::OPT_flang_experimental_hlfir,
                    options::OPT_flang_deprecated_no_hlfir,
                    options::OPT_fno_ppc_native_vec_elem_order,
@@ -274,18 +264,11 @@ void Flang::AddPPCTargetArgs(const ArgList &Args,
 
 void Flang::AddRISCVTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
-  const Driver &D = getToolChain().getDriver();
   const llvm::Triple &Triple = getToolChain().getTriple();
-
-  StringRef ABIName = riscv::getRISCVABI(Args, Triple);
-  if (ABIName == "lp64" || ABIName == "lp64f" || ABIName == "lp64d")
-    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
-  else
-    D.Diag(diag::err_drv_unsupported_option_argument) << "-mabi=" << ABIName;
-
   // Handle -mrvv-vector-bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_mrvv_vector_bits_EQ)) {
     StringRef Val = A->getValue();
+    const Driver &D = getToolChain().getDriver();
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
@@ -515,9 +498,6 @@ void Flang::addTargetOptions(const ArgList &Args,
     else
       CmdArgs.push_back(A->getValue());
   }
-
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
@@ -580,8 +560,7 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
-    if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
-                      true))
+    if (Args.hasArg(options::OPT_nogpulib))
       CmdArgs.push_back("-nogpulib");
   }
 
@@ -821,13 +800,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // 'flang -E' always produces output that is suitable for use as fixed form
   // Fortran. However it is only valid free form source if the original is also
-  // free form. Ensure this logic does not incorrectly assume fixed-form for
-  // cases where it shouldn't, such as `flang -x f95 foo.f90`.
-  bool isAtemporaryPreprocessedFile =
-      Input.isFilename() &&
-      llvm::sys::path::extension(Input.getFilename())
-          .ends_with(types::getTypeTempSuffix(InputType, /*CLStyle=*/false));
-  if (InputType == types::TY_PP_Fortran && isAtemporaryPreprocessedFile &&
+  // free form.
+  if (InputType == types::TY_PP_Fortran &&
       !Args.getLastArg(options::OPT_ffixed_form, options::OPT_ffree_form))
     CmdArgs.push_back("-ffixed-form");
 

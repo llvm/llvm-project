@@ -1498,6 +1498,16 @@ llvm::Type *CGOpenMPRuntime::getIdentTyPointerTy() {
   return OMPBuilder.IdentPtr;
 }
 
+llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
+  if (!Kmpc_MicroTy) {
+    // Build void (*kmpc_micro)(kmp_int32 *global_tid, kmp_int32 *bound_tid,...)
+    llvm::Type *MicroParams[] = {llvm::PointerType::getUnqual(CGM.Int32Ty),
+                                 llvm::PointerType::getUnqual(CGM.Int32Ty)};
+    Kmpc_MicroTy = llvm::FunctionType::get(CGM.VoidTy, MicroParams, true);
+  }
+  return llvm::PointerType::getUnqual(Kmpc_MicroTy);
+}
+
 static llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseKind
 convertDeviceClause(const VarDecl *VD) {
   std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
@@ -1870,10 +1880,11 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
   auto &&ThenGen = [&M, OutlinedFn, CapturedVars, RTLoc,
                     this](CodeGenFunction &CGF, PrePostActionTy &) {
     // Build call __kmpc_fork_call(loc, n, microtask, var1, .., varn);
+    CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
     llvm::Value *Args[] = {
         RTLoc,
         CGF.Builder.getInt32(CapturedVars.size()), // Number of captured vars
-        OutlinedFn};
+        CGF.Builder.CreateBitCast(OutlinedFn, RT.getKmpc_MicroPointerTy())};
     llvm::SmallVector<llvm::Value *, 16> RealArgs;
     RealArgs.append(std::begin(Args), std::end(Args));
     RealArgs.append(CapturedVars.begin(), CapturedVars.end());
@@ -2656,7 +2667,8 @@ void CGOpenMPRuntime::emitDistributeStaticInit(
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction;
   bool isGPUDistribute =
-      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU();
+      CGM.getLangOpts().OpenMPIsTargetDevice &&
+      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX());
   if (IsMultiDeviceKernel && isGPUDistribute) {
     StaticInitFunction = OMPBuilder.createMDDistributeForStaticInitFunction(
         Values.IVSize, Values.IVSigned);
@@ -2689,7 +2701,8 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
       getThreadID(CGF, Loc)};
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   if (isOpenMPDistributeDirective(DKind) &&
-      CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU())
+      CGM.getLangOpts().OpenMPIsTargetDevice &&
+      (CGM.getTriple().isAMDGCN() || CGM.getTriple().isNVPTX()))
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(
             CGM.getModule(), OMPRTL___kmpc_distribute_static_fini),
@@ -7482,7 +7495,7 @@ private:
           // Update info about the lowest and highest elements for this struct
           if (!PartialStruct.Base.isValid()) {
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
-            if (IsFinalArraySection && OASE) {
+            if (IsFinalArraySection) {
               Address HB =
                   CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress();
@@ -7495,7 +7508,7 @@ private:
           } else if (FieldIndex < PartialStruct.LowestElem.first) {
             PartialStruct.LowestElem = {FieldIndex, LowestElem};
           } else if (FieldIndex > PartialStruct.HighestElem.first) {
-            if (IsFinalArraySection && OASE) {
+            if (IsFinalArraySection) {
               Address HB =
                   CGF.EmitArraySectionExpr(OASE, /*IsLowerBound=*/false)
                       .getAddress();
@@ -8908,7 +8921,7 @@ static void emitOffloadingArraysAndArgs(
   };
 
   auto CustomMapperCB = [&](unsigned int I) {
-    llvm::Function *MFunc = nullptr;
+    llvm::Value *MFunc = nullptr;
     if (CombinedInfo.Mappers[I]) {
       Info.HasMapper = true;
       MFunc = CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
@@ -8916,9 +8929,9 @@ static void emitOffloadingArraysAndArgs(
     }
     return MFunc;
   };
-  cantFail(OMPBuilder.emitOffloadingArraysAndArgs(
-      AllocaIP, CodeGenIP, Info, Info.RTArgs, CombinedInfo, CustomMapperCB,
-      IsNonContiguous, ForEndCall, DeviceAddrCB));
+  OMPBuilder.emitOffloadingArraysAndArgs(
+      AllocaIP, CodeGenIP, Info, Info.RTArgs, CombinedInfo, IsNonContiguous,
+      ForEndCall, DeviceAddrCB, CustomMapperCB);
 }
 
 /// Check for inner distribute directive.
@@ -9111,15 +9124,15 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
     return CombinedInfo;
   };
 
-  auto CustomMapperCB = [&](unsigned I) {
-    llvm::Function *MapperFunc = nullptr;
+  auto CustomMapperCB = [&](unsigned I, llvm::Function **MapperFunc) {
     if (CombinedInfo.Mappers[I]) {
       // Call the corresponding mapper function.
-      MapperFunc = getOrCreateUserDefinedMapperFunc(
+      *MapperFunc = getOrCreateUserDefinedMapperFunc(
           cast<OMPDeclareMapperDecl>(CombinedInfo.Mappers[I]));
-      assert(MapperFunc && "Expect a valid mapper function is available.");
+      assert(*MapperFunc && "Expect a valid mapper function is available.");
+      return true;
     }
-    return MapperFunc;
+    return false;
   };
 
   SmallString<64> TyStr;
@@ -9127,8 +9140,8 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
 
-  llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
-      PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB));
+  auto *NewFn = OMPBuilder.emitUserDefinedMapper(PrivatizeAndGenMapInfoCB,
+                                                 ElemTy, Name, CustomMapperCB);
   UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);
@@ -9559,8 +9572,8 @@ static void emitTargetCallKernelLaunch(
               CGF.Builder.CreateAlloca(RedVarType, nullptr, "d_team_vals");
           Address DTeamValsAddr(DTeamValsInst, RedVarType,
                                 Context.getTypeAlignInChars(RedVarQualType));
-          llvm::Value *NullPtrDTeamVals = llvm::ConstantPointerNull::get(
-              llvm::PointerType::get(CGF.getLLVMContext(), /*AddressSpace=*/0));
+          llvm::Value *NullPtrDTeamVals =
+              llvm::ConstantPointerNull::get(RedVarType->getPointerTo());
           CGF.Builder.CreateStore(NullPtrDTeamVals, DTeamValsAddr);
         } else {
           // dteam_vals = omp_target_alloc(sizeof(red-type) * num_teams, devid)
@@ -9652,8 +9665,8 @@ static void emitTargetCallKernelLaunch(
           Address DTeamsDoneAddr(
               DTeamsDonePtrInst, CGF.Int32Ty,
               Context.getTypeAlignInChars(Context.UnsignedIntTy));
-          llvm::Value *NullPtrDTeamsDone = llvm::ConstantPointerNull::get(
-              llvm::PointerType::get(CGF.getLLVMContext(), /*AddressSpace=*/0));
+          llvm::Value *NullPtrDTeamsDone =
+              llvm::ConstantPointerNull::get(CGF.Int32Ty->getPointerTo());
           CGF.Builder.CreateStore(NullPtrDTeamsDone, DTeamsDoneAddr);
         } else {
           // uint32 teams_done = 0
@@ -10344,7 +10357,7 @@ void CGOpenMPRuntime::emitTeamsCall(CodeGenFunction &CGF,
   llvm::Value *Args[] = {
       RTLoc,
       CGF.Builder.getInt32(CapturedVars.size()), // Number of captured vars
-      OutlinedFn};
+      CGF.Builder.CreateBitCast(OutlinedFn, getKmpc_MicroPointerTy())};
   llvm::SmallVector<llvm::Value *, 16> RealArgs;
   RealArgs.append(std::begin(Args), std::end(Args));
   RealArgs.append(CapturedVars.begin(), CapturedVars.end());
@@ -10480,7 +10493,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   };
 
   auto CustomMapperCB = [&](unsigned int I) {
-    llvm::Function *MFunc = nullptr;
+    llvm::Value *MFunc = nullptr;
     if (CombinedInfo.Mappers[I]) {
       Info.HasMapper = true;
       MFunc = CGF.CGM.getOpenMPRuntime().getOrCreateUserDefinedMapperFunc(
@@ -10500,8 +10513,7 @@ void CGOpenMPRuntime::emitTargetDataCalls(
   llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
       cantFail(OMPBuilder.createTargetData(
           OmpLoc, AllocaIP, CodeGenIP, DeviceID, IfCondVal, Info, GenMapInfoCB,
-          CustomMapperCB,
-          /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, RTLoc));
+          /*MapperFunc=*/nullptr, BodyCB, DeviceAddrCB, CustomMapperCB, RTLoc));
   CGF.Builder.restoreIP(AfterIP);
 }
 

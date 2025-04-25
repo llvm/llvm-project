@@ -372,21 +372,6 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
                                                    CXXMethodDecl *MemberDecl,
                                                    bool ConstRHS,
                                                    bool Diagnose) {
-  // If MemberDecl is virtual destructor of an explicit template class
-  // instantiation, it must be emitted, therefore it needs to be inferred
-  // conservatively by ignoring implicit host/device attrs of member and parent
-  // dtors called by it. Also, it needs to be checed by deferred diag visitor.
-  bool IsExpVDtor = false;
-  if (isa<CXXDestructorDecl>(MemberDecl) && MemberDecl->isVirtual()) {
-    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(ClassDecl)) {
-      TemplateSpecializationKind TSK = Spec->getTemplateSpecializationKind();
-      IsExpVDtor = TSK == TSK_ExplicitInstantiationDeclaration ||
-                   TSK == TSK_ExplicitInstantiationDefinition;
-    }
-  }
-  if (IsExpVDtor)
-    SemaRef.DeclsToCheckForDeferredDiags.insert(MemberDecl);
-
   // If the defaulted special member is defined lexically outside of its
   // owning class, or the special member already has explicit device or host
   // attributes, do not infer.
@@ -437,9 +422,7 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     if (!SMOR.getMethod())
       continue;
 
-    CUDAFunctionTarget BaseMethodTarget =
-        IdentifyTarget(SMOR.getMethod(), IsExpVDtor);
-
+    CUDAFunctionTarget BaseMethodTarget = IdentifyTarget(SMOR.getMethod());
     if (!InferredTarget) {
       InferredTarget = BaseMethodTarget;
     } else {
@@ -483,9 +466,7 @@ bool SemaCUDA::inferTargetForImplicitSpecialMember(CXXRecordDecl *ClassDecl,
     if (!SMOR.getMethod())
       continue;
 
-    CUDAFunctionTarget FieldMethodTarget =
-        IdentifyTarget(SMOR.getMethod(), IsExpVDtor);
-
+    CUDAFunctionTarget FieldMethodTarget = IdentifyTarget(SMOR.getMethod());
     if (!InferredTarget) {
       InferredTarget = FieldMethodTarget;
     } else {

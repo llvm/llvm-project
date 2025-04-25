@@ -107,7 +107,7 @@ static void getBackwardSliceImpl(Operation *op,
       // into us. For now, just bail.
       if (parentOp && backwardSlice->count(parentOp) == 0) {
         assert(parentOp->getNumRegions() == 1 &&
-               llvm::hasSingleElement(parentOp->getRegion(0).getBlocks()));
+               parentOp->getRegion(0).getBlocks().size() == 1);
         getBackwardSliceImpl(parentOp, backwardSlice, options);
       }
     } else {
@@ -171,12 +171,12 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
     getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    slice.insert_range(backwardSlice);
+    slice.insert(backwardSlice.begin(), backwardSlice.end());
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
     getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
-    slice.insert_range(forwardSlice);
+    slice.insert(forwardSlice.begin(), forwardSlice.end());
     ++currentIndex;
   }
   return topologicalSort(slice);

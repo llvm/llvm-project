@@ -351,7 +351,7 @@ public:
   EHProgramRange(EHProgram::const_iterator begin,
                  EHProgram::const_iterator end);
 
-  UnwindPlan::Row BuildUnwindPlanRow() const;
+  std::unique_ptr<UnwindPlan::Row> BuildUnwindPlanRow() const;
 
 private:
   int32_t GetCFAFrameOffset() const;
@@ -364,11 +364,11 @@ EHProgramRange::EHProgramRange(EHProgram::const_iterator begin,
                                EHProgram::const_iterator end)
     : m_begin(begin), m_end(end) {}
 
-UnwindPlan::Row EHProgramRange::BuildUnwindPlanRow() const {
-  UnwindPlan::Row row;
+std::unique_ptr<UnwindPlan::Row> EHProgramRange::BuildUnwindPlanRow() const {
+  std::unique_ptr<UnwindPlan::Row> row = std::make_unique<UnwindPlan::Row>();
 
   if (m_begin != m_end)
-    row.SetOffset(m_begin->offset);
+    row->SetOffset(m_begin->offset);
 
   int32_t cfa_frame_offset = GetCFAFrameOffset();
 
@@ -376,8 +376,8 @@ UnwindPlan::Row EHProgramRange::BuildUnwindPlanRow() const {
   for (EHProgram::const_iterator it = m_begin; it != m_end; ++it) {
     switch (it->type) {
     case EHInstruction::Type::SET_FRAME_POINTER_REGISTER:
-      row.GetCFAValue().SetIsRegisterPlusOffset(it->reg, cfa_frame_offset -
-                                                             it->frame_offset);
+      row->GetCFAValue().SetIsRegisterPlusOffset(it->reg, cfa_frame_offset -
+                                                              it->frame_offset);
       frame_pointer_found = true;
       break;
     default:
@@ -387,14 +387,14 @@ UnwindPlan::Row EHProgramRange::BuildUnwindPlanRow() const {
       break;
   }
   if (!frame_pointer_found)
-    row.GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64,
-                                              cfa_frame_offset);
+    row->GetCFAValue().SetIsRegisterPlusOffset(lldb_rsp_x86_64,
+                                               cfa_frame_offset);
 
   int32_t rsp_frame_offset = 0;
   for (EHProgram::const_iterator it = m_begin; it != m_end; ++it) {
     switch (it->type) {
     case EHInstruction::Type::PUSH_REGISTER:
-      row.SetRegisterLocationToAtCFAPlusOffset(
+      row->SetRegisterLocationToAtCFAPlusOffset(
           it->reg, rsp_frame_offset - cfa_frame_offset, false);
       rsp_frame_offset += it->frame_offset;
       break;
@@ -402,7 +402,7 @@ UnwindPlan::Row EHProgramRange::BuildUnwindPlanRow() const {
       rsp_frame_offset += it->frame_offset;
       break;
     case EHInstruction::Type::SAVE_REGISTER:
-      row.SetRegisterLocationToAtCFAPlusOffset(
+      row->SetRegisterLocationToAtCFAPlusOffset(
           it->reg, it->frame_offset - cfa_frame_offset, false);
       break;
     default:
@@ -410,7 +410,7 @@ UnwindPlan::Row EHProgramRange::BuildUnwindPlanRow() const {
     }
   }
 
-  row.SetRegisterLocationToIsCFAPlusOffset(lldb_rsp_x86_64, 0, false);
+  row->SetRegisterLocationToIsCFAPlusOffset(lldb_rsp_x86_64, 0, false);
 
   return row;
 }
@@ -477,7 +477,7 @@ bool PECallFrameInfo::GetUnwindPlan(const AddressRange &range,
   if (!builder.Build())
     return false;
 
-  std::vector<UnwindPlan::Row> rows;
+  std::vector<UnwindPlan::RowSP> rows;
 
   uint32_t last_offset = UINT32_MAX;
   for (auto it = builder.GetProgram().begin(); it != builder.GetProgram().end();
@@ -493,11 +493,11 @@ bool PECallFrameInfo::GetUnwindPlan(const AddressRange &range,
   }
 
   for (auto it = rows.rbegin(); it != rows.rend(); ++it)
-    unwind_plan.AppendRow(std::move(*it));
+    unwind_plan.AppendRow(*it);
 
-  unwind_plan.SetPlanValidAddressRanges({AddressRange(
+  unwind_plan.SetPlanValidAddressRange(AddressRange(
       m_object_file.GetAddress(runtime_function->StartAddress),
-      runtime_function->EndAddress - runtime_function->StartAddress)});
+      runtime_function->EndAddress - runtime_function->StartAddress));
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
 
   return true;

@@ -15,7 +15,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -151,10 +150,6 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
   auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  auto GetEphValuesCache =
-      [&](Function &F) -> EphemeralValuesAnalysis::Result & {
-    return FAM.getResult<EphemeralValuesAnalysis>(F);
-  };
 
   Function &Callee = *CB.getCalledFunction();
   auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
@@ -163,8 +158,7 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
         Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
             DEBUG_TYPE);
     return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
-                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr,
-                         GetEphValuesCache);
+                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
   };
   return llvm::shouldInline(
       CB, CalleeTTI, GetInlineCost, ORE,
@@ -344,7 +338,7 @@ static raw_ostream &operator<<(raw_ostream &R, const ore::NV &Arg) {
 }
 
 template <class RemarkT>
-decltype(auto) operator<<(RemarkT &&R, const InlineCost &IC) {
+RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
   using namespace ore;
   if (IC.isAlways()) {
     R << "(cost=always)";
@@ -356,7 +350,7 @@ decltype(auto) operator<<(RemarkT &&R, const InlineCost &IC) {
   }
   if (const char *Reason = IC.getReason())
     R << ": " << ore::NV("Reason", Reason);
-  return std::forward<RemarkT>(R);
+  return R;
 }
 } // namespace llvm
 

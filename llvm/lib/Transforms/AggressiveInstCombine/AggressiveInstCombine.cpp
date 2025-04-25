@@ -675,15 +675,14 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Verify if both loads have same base pointers
+  // Verify if both loads have same base pointers and load sizes are same.
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
-  if (Load1Ptr != Load2Ptr)
+  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
     return false;
 
-  // Make sure that there are no padding bits.
-  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) ||
-      !DL.typeSizeEqualsStoreSize(LI2->getType()))
+  // Support Loadsizes greater or equal to 8bits and only power of 2.
+  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.

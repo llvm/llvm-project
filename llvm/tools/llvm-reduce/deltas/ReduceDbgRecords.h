@@ -15,9 +15,11 @@
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEDBGRECORDS_H
 
 #include "Delta.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugProgramInstruction.h"
 
 namespace llvm {
-void reduceDbgRecordDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceDbgRecordDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

@@ -40,6 +40,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -67,6 +69,8 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
+
+  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -291,6 +295,11 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
+bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
+    MightHaveChildren() {
+  return true;
+}
+
 size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   return ExtractIndexFromString(name.GetCString());
@@ -396,6 +405,11 @@ lldb::ValueObjectSP lldb_private::formatters::
   if (m_pair_sp)
     return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
+}
+
+bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
+    MightHaveChildren() {
+  return true;
 }
 
 size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::

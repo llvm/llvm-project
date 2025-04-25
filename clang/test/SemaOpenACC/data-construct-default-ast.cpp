@@ -15,9 +15,6 @@ void NormalFunc() {
   // CHECK: OpenACCDataConstruct {{.*}}data
   // CHECK-NEXT: default(present)
 #pragma acc data default(present)
-  // CHECK-NEXT: OpenACCDataConstruct {{.*}}data
-  // CHECK-NEXT: default(present)
-_Pragma("acc data default(present)")
     ;
 }
 template<typename T>

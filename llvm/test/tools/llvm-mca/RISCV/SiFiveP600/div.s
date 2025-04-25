@@ -17,6 +17,8 @@ vsetvli zero, zero, e8, m4, tu, mu
 vdiv.vv v8, v16, v24
 vsetvli zero, zero, e8, m8, tu, mu
 vdiv.vv v8, v16, v24
+vsetvli zero, zero, e16, mf8, tu, mu
+vdiv.vv v8, v16, v24
 vsetvli zero, zero, e16, mf4, tu, mu
 vdiv.vv v8, v16, v24
 vsetvli zero, zero, e16, mf2, tu, mu
@@ -31,6 +33,10 @@ vsetvli zero, zero, e16, m4, tu, mu
 vdiv.vv v8, v16, v24
 vsetvli zero, zero, e16, m8, tu, mu
 vdiv.vv v8, v16, v24
+vsetvli zero, zero, e32, mf8, tu, mu
+vdiv.vv v8, v16, v24
+vsetvli zero, zero, e32, mf4, tu, mu
+vdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, mf2, tu, mu
 vdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, m1, tu, mu
@@ -42,6 +48,12 @@ vdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, m4, tu, mu
 vdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, m8, tu, mu
+vdiv.vv v8, v16, v24
+vsetvli zero, zero, e64, mf8, tu, mu
+vdiv.vv v8, v16, v24
+vsetvli zero, zero, e64, mf4, tu, mu
+vdiv.vv v8, v16, v24
+vsetvli zero, zero, e64, mf2, tu, mu
 vdiv.vv v8, v16, v24
 vsetvli zero, zero, e64, m1, tu, mu
 vdiv.vv v8, v16, v24
@@ -70,6 +82,8 @@ vsetvli zero, zero, e8, m4, tu, mu
 vdiv.vx v8, v16, a0
 vsetvli zero, zero, e8, m8, tu, mu
 vdiv.vx v8, v16, a0
+vsetvli zero, zero, e16, mf8, tu, mu
+vdiv.vx v8, v16, a0
 vsetvli zero, zero, e16, mf4, tu, mu
 vdiv.vx v8, v16, a0
 vsetvli zero, zero, e16, mf2, tu, mu
@@ -84,6 +98,10 @@ vsetvli zero, zero, e16, m4, tu, mu
 vdiv.vx v8, v16, a0
 vsetvli zero, zero, e16, m8, tu, mu
 vdiv.vx v8, v16, a0
+vsetvli zero, zero, e32, mf8, tu, mu
+vdiv.vx v8, v16, a0
+vsetvli zero, zero, e32, mf4, tu, mu
+vdiv.vx v8, v16, a0
 vsetvli zero, zero, e32, mf2, tu, mu
 vdiv.vx v8, v16, a0
 vsetvli zero, zero, e32, m1, tu, mu
@@ -95,6 +113,12 @@ vdiv.vx v8, v16, a0
 vsetvli zero, zero, e32, m4, tu, mu
 vdiv.vx v8, v16, a0
 vsetvli zero, zero, e32, m8, tu, mu
+vdiv.vx v8, v16, a0
+vsetvli zero, zero, e64, mf8, tu, mu
+vdiv.vx v8, v16, a0
+vsetvli zero, zero, e64, mf4, tu, mu
+vdiv.vx v8, v16, a0
+vsetvli zero, zero, e64, mf2, tu, mu
 vdiv.vx v8, v16, a0
 vsetvli zero, zero, e64, m1, tu, mu
 vdiv.vx v8, v16, a0
@@ -123,6 +147,8 @@ vsetvli zero, zero, e8, m4, tu, mu
 vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e8, m8, tu, mu
 vfdiv.vv v8, v16, v24
+vsetvli zero, zero, e16, mf8, tu, mu
+vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e16, mf4, tu, mu
 vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e16, mf2, tu, mu
@@ -137,6 +163,10 @@ vsetvli zero, zero, e16, m4, tu, mu
 vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e16, m8, tu, mu
 vfdiv.vv v8, v16, v24
+vsetvli zero, zero, e32, mf8, tu, mu
+vfdiv.vv v8, v16, v24
+vsetvli zero, zero, e32, mf4, tu, mu
+vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, mf2, tu, mu
 vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, m1, tu, mu
@@ -148,6 +178,12 @@ vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, m4, tu, mu
 vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e32, m8, tu, mu
+vfdiv.vv v8, v16, v24
+vsetvli zero, zero, e64, mf8, tu, mu
+vfdiv.vv v8, v16, v24
+vsetvli zero, zero, e64, mf4, tu, mu
+vfdiv.vv v8, v16, v24
+vsetvli zero, zero, e64, mf2, tu, mu
 vfdiv.vv v8, v16, v24
 vsetvli zero, zero, e64, m1, tu, mu
 vfdiv.vv v8, v16, v24
@@ -176,6 +212,8 @@ vsetvli zero, zero, e8, m4, tu, mu
 vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e8, m8, tu, mu
 vfdiv.vf v8, v16, fa0
+vsetvli zero, zero, e16, mf8, tu, mu
+vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e16, mf4, tu, mu
 vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e16, mf2, tu, mu
@@ -190,6 +228,10 @@ vsetvli zero, zero, e16, m4, tu, mu
 vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e16, m8, tu, mu
 vfdiv.vf v8, v16, fa0
+vsetvli zero, zero, e32, mf8, tu, mu
+vfdiv.vf v8, v16, fa0
+vsetvli zero, zero, e32, mf4, tu, mu
+vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e32, mf2, tu, mu
 vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e32, m1, tu, mu
@@ -201,6 +243,12 @@ vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e32, m4, tu, mu
 vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e32, m8, tu, mu
+vfdiv.vf v8, v16, fa0
+vsetvli zero, zero, e64, mf8, tu, mu
+vfdiv.vf v8, v16, fa0
+vsetvli zero, zero, e64, mf4, tu, mu
+vfdiv.vf v8, v16, fa0
+vsetvli zero, zero, e64, mf2, tu, mu
 vfdiv.vf v8, v16, fa0
 vsetvli zero, zero, e64, m1, tu, mu
 vfdiv.vf v8, v16, fa0
@@ -229,6 +277,8 @@ vsetvli zero, zero, e8, m4, tu, mu
 vfsqrt.v v8, v16
 vsetvli zero, zero, e8, m8, tu, mu
 vfsqrt.v v8, v16
+vsetvli zero, zero, e16, mf8, tu, mu
+vfsqrt.v v8, v16
 vsetvli zero, zero, e16, mf4, tu, mu
 vfsqrt.v v8, v16
 vsetvli zero, zero, e16, mf2, tu, mu
@@ -243,6 +293,10 @@ vsetvli zero, zero, e16, m4, tu, mu
 vfsqrt.v v8, v16
 vsetvli zero, zero, e16, m8, tu, mu
 vfsqrt.v v8, v16
+vsetvli zero, zero, e32, mf8, tu, mu
+vfsqrt.v v8, v16
+vsetvli zero, zero, e32, mf4, tu, mu
+vfsqrt.v v8, v16
 vsetvli zero, zero, e32, mf2, tu, mu
 vfsqrt.v v8, v16
 vsetvli zero, zero, e32, m1, tu, mu
@@ -254,6 +308,12 @@ vfsqrt.v v8, v16
 vsetvli zero, zero, e32, m4, tu, mu
 vfsqrt.v v8, v16
 vsetvli zero, zero, e32, m8, tu, mu
+vfsqrt.v v8, v16
+vsetvli zero, zero, e64, mf8, tu, mu
+vfsqrt.v v8, v16
+vsetvli zero, zero, e64, mf4, tu, mu
+vfsqrt.v v8, v16
+vsetvli zero, zero, e64, mf2, tu, mu
 vfsqrt.v v8, v16
 vsetvli zero, zero, e64, m1, tu, mu
 vfsqrt.v v8, v16
@@ -267,14 +327,14 @@ vsetvli zero, zero, e64, m8, tu, mu
 vfsqrt.v v8, v16
 
 # CHECK:      Iterations:        1
-# CHECK-NEXT: Instructions:      260
-# CHECK-NEXT: Total Cycles:      10243
-# CHECK-NEXT: Total uOps:        260
+# CHECK-NEXT: Instructions:      320
+# CHECK-NEXT: Total Cycles:      14613
+# CHECK-NEXT: Total uOps:        320
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.03
-# CHECK-NEXT: IPC:               0.03
-# CHECK-NEXT: Block RThroughput: 10185.0
+# CHECK-NEXT: uOps Per Cycle:    0.02
+# CHECK-NEXT: IPC:               0.02
+# CHECK-NEXT: Block RThroughput: 14361.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -301,6 +361,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      204   204.00                      vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  1      408   408.00                      vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      45    45.00                       vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -315,6 +377,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      180   180.00                      vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  1      360   360.00                      vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  1      42    42.00                       vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
@@ -327,6 +393,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      168   168.00                      vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  1      336   336.00                      vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      72    72.00                       vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -353,6 +425,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      204   204.00                      vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  1      408   408.00                      vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      45    45.00                       vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -367,6 +441,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      180   180.00                      vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  1      360   360.00                      vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  1      42    42.00                       vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
@@ -379,6 +457,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      168   168.00                      vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  1      336   336.00                      vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  1      408   408.00                      vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      72    72.00                       vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -405,6 +489,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      29    29.00                       vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -419,6 +505,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      116   116.00                      vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  1      25    25.00                       vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
@@ -431,6 +521,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      100   100.00                      vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  1      200   200.00                      vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      37    37.00                       vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -457,6 +553,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      29    29.00                       vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -471,6 +569,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      116   116.00                      vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  1      25    25.00                       vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
@@ -483,6 +585,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      100   100.00                      vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  1      200   200.00                      vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      37    37.00                       vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -509,6 +617,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      29    29.00                       vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -523,6 +633,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      116   116.00                      vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  1      25    25.00                       vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
@@ -535,6 +649,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  1      100   100.00                      vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  1      200   200.00                      vfsqrt.v	v8, v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
+# CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  1      232   232.00                      vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  1      37    37.00                       vfsqrt.v	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, tu, mu
@@ -566,7 +686,7 @@ vfsqrt.v v8, v16
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -     130.00  -      -      -      -      -     7290.00  -    485.00 10185.00  -    -
+# CHECK-NEXT:  -      -      -      -     160.00  -      -      -      -      -     12186.00  -   725.00 14361.00  -    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
@@ -586,6 +706,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     204.00  -     4.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     45.00   -     1.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -600,6 +722,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     180.00  -     4.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     360.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     42.00   -     1.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
@@ -612,6 +738,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     168.00  -     4.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     336.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     72.00   -     1.00    -      -      -     vdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -638,6 +770,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     204.00  -     4.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     45.00   -     1.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -652,6 +786,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     180.00  -     4.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     360.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     42.00   -     1.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
@@ -664,6 +802,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     168.00  -     4.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     336.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     408.00  -     8.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     72.00   -     1.00    -      -      -     vdiv.vx	v8, v16, a0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -690,6 +834,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   29.00   -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -704,6 +850,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00   116.00  -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   25.00   -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
@@ -716,6 +866,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00   100.00  -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   200.00  -      -     vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   37.00   -      -     vfdiv.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -742,6 +898,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   29.00   -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -756,6 +914,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00   116.00  -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   25.00   -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
@@ -768,6 +930,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00   100.00  -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   200.00  -      -     vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   37.00   -      -     vfdiv.vf	v8, v16, fa0
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
@@ -794,6 +962,8 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   29.00   -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, tu, mu
@@ -808,6 +978,10 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00   116.00  -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   25.00   -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
@@ -820,6 +994,12 @@ vfsqrt.v v8, v16
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00   100.00  -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   200.00  -      -     vfsqrt.v	v8, v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf8, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
+# CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, mf2, tu, mu
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00   232.00  -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   37.00   -      -     vfsqrt.v	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, tu, mu

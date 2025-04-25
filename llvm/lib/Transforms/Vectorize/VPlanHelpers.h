@@ -16,7 +16,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANHELPERS_H
 
 #include "VPlanAnalysis.h"
-#include "VPlanDominatorTree.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -49,20 +48,13 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
 
-/// A helper function that returns how much we should divide the cost of a
-/// predicated block by. Typically this is the reciprocal of the block
-/// probability, i.e. if we return X we are assuming the predicated block will
-/// execute once for every X iterations of the loop header so the block should
-/// only contribute 1/X of its cost to the total cost calculation, but when
-/// optimizing for code size it will just be 1 as code size costs don't depend
-/// on execution probabilities.
+/// A helper function that returns the reciprocal of the block probability of
+/// predicated blocks. If we return X, we are assuming the predicated block
+/// will execute once for every X iterations of the loop header.
 ///
 /// TODO: We should use actual block probability here, if available. Currently,
 ///       we always assume predicated blocks have a 50% chance of executing.
-inline unsigned
-getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind) {
-  return CostKind == TTI::TCK_CodeSize ? 1 : 2;
-}
+inline unsigned getReciprocalPredBlockProb() { return 2; }
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -202,7 +194,7 @@ public:
 /// VPTransformState holds information passed down when "executing" a VPlan,
 /// needed for generating the output IR.
 struct VPTransformState {
-  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF,
+  VPTransformState(const TargetTransformInfo *TTI, ElementCount VF, unsigned UF,
                    LoopInfo *LI, DominatorTree *DT, IRBuilderBase &Builder,
                    InnerLoopVectorizer *ILV, VPlan *Plan,
                    Loop *CurrentParentLoop, Type *CanonicalIVTy);
@@ -220,23 +212,21 @@ struct VPTransformState {
   struct DataState {
     // Each value from the original loop, when vectorized, is represented by a
     // vector value in the map.
-    DenseMap<const VPValue *, Value *> VPV2Vector;
+    DenseMap<VPValue *, Value *> VPV2Vector;
 
-    DenseMap<const VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
+    DenseMap<VPValue *, SmallVector<Value *, 4>> VPV2Scalars;
   } Data;
 
   /// Get the generated vector Value for a given VPValue \p Def if \p IsScalar
   /// is false, otherwise return the generated scalar. \See set.
-  Value *get(const VPValue *Def, bool IsScalar = false);
+  Value *get(VPValue *Def, bool IsScalar = false);
 
   /// Get the generated Value for a given VPValue and given Part and Lane.
-  Value *get(const VPValue *Def, const VPLane &Lane);
+  Value *get(VPValue *Def, const VPLane &Lane);
 
-  bool hasVectorValue(const VPValue *Def) {
-    return Data.VPV2Vector.contains(Def);
-  }
+  bool hasVectorValue(VPValue *Def) { return Data.VPV2Vector.contains(Def); }
 
-  bool hasScalarValue(const VPValue *Def, VPLane Lane) {
+  bool hasScalarValue(VPValue *Def, VPLane Lane) {
     auto I = Data.VPV2Scalars.find(Def);
     if (I == Data.VPV2Scalars.end())
       return false;
@@ -246,24 +236,24 @@ struct VPTransformState {
 
   /// Set the generated vector Value for a given VPValue, if \p
   /// IsScalar is false. If \p IsScalar is true, set the scalar in lane 0.
-  void set(const VPValue *Def, Value *V, bool IsScalar = false) {
+  void set(VPValue *Def, Value *V, bool IsScalar = false) {
     if (IsScalar) {
       set(Def, V, VPLane(0));
       return;
     }
-    assert((VF.isScalar() || isVectorizedTy(V->getType())) &&
+    assert((VF.isScalar() || V->getType()->isVectorTy()) &&
            "scalar values must be stored as (0, 0)");
     Data.VPV2Vector[Def] = V;
   }
 
   /// Reset an existing vector value for \p Def and a given \p Part.
-  void reset(const VPValue *Def, Value *V) {
+  void reset(VPValue *Def, Value *V) {
     assert(Data.VPV2Vector.contains(Def) && "need to overwrite existing value");
     Data.VPV2Vector[Def] = V;
   }
 
   /// Set the generated scalar \p V for \p Def and the given \p Lane.
-  void set(const VPValue *Def, Value *V, const VPLane &Lane) {
+  void set(VPValue *Def, Value *V, const VPLane &Lane) {
     auto &Scalars = Data.VPV2Scalars[Def];
     unsigned CacheIdx = Lane.mapToCacheIndex(VF);
     if (Scalars.size() <= CacheIdx)
@@ -273,7 +263,7 @@ struct VPTransformState {
   }
 
   /// Reset an existing scalar value for \p Def and a given \p Lane.
-  void reset(const VPValue *Def, Value *V, const VPLane &Lane) {
+  void reset(VPValue *Def, Value *V, const VPLane &Lane) {
     auto Iter = Data.VPV2Scalars.find(Def);
     assert(Iter != Data.VPV2Scalars.end() &&
            "need to overwrite existing value");
@@ -300,9 +290,8 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Construct the vectorized value of a scalarized value \p V one lane at a
-  /// time.
-  void packScalarIntoVectorizedValue(const VPValue *Def, const VPLane &Lane);
+  /// Construct the vector value of a scalarized value \p V one lane at a time.
+  void packScalarIntoVectorValue(VPValue *Def, const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -320,7 +309,7 @@ struct VPTransformState {
 
     /// A mapping of each VPBasicBlock to the corresponding BasicBlock. In case
     /// of replication, maps the BasicBlock of the last replica created.
-    SmallDenseMap<const VPBasicBlock *, BasicBlock *> VPBB2IRBB;
+    SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
     /// Updater for the DominatorTree.
     DomTreeUpdater DTU;
@@ -355,11 +344,12 @@ struct VPTransformState {
   /// memchecks.  The actually versioning is performed manually.
   LoopVersioning *LVer = nullptr;
 
+  /// Map SCEVs to their expanded values. Populated when executing
+  /// VPExpandSCEVRecipes.
+  DenseMap<const SCEV *, Value *> ExpandedSCEVs;
+
   /// VPlan-based type analysis.
   VPTypeAnalysis TypeAnalysis;
-
-  /// VPlan-based dominator tree.
-  VPDominatorTree VPDT;
 };
 
 /// Struct to hold various analysis needed for cost computations.

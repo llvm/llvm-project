@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <atomic>
 
 // template <class T>
@@ -68,12 +66,12 @@ struct S {
 void member_function_pointer() {
   {
     volatile std::atomic<void (S::*)(int)> fun;
-    // expected-error@*:* {{no matching function for call to 'atomic_fetch_add_explicit'}}
+    // expected-error@*:* {{no member named 'fetch_add' in}}
     std::atomic_fetch_add_explicit(&fun, 0, std::memory_order_relaxed);
   }
   {
     std::atomic<void (S::*)(int)> fun;
-    // expected-error@*:* {{no matching function for call to 'atomic_fetch_add_explicit'}}
+    // expected-error@*:* {{no member named 'fetch_add' in}}
     std::atomic_fetch_add_explicit(&fun, 0, std::memory_order_relaxed);
   }
 }

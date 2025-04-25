@@ -83,7 +83,7 @@ static bool switchCaseExists(Use &Op, ConstantInt *CI) {
   return SI->findCaseValue(CI) != SI->case_default();
 }
 
-void llvm::reduceOperandsOneDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
@@ -118,10 +118,15 @@ void llvm::reduceOperandsOneDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
 
     return nullptr;
   };
-  extractOperandsFromModule(O, WorkItem, ReduceValue);
+  runDeltaPass(
+      Test,
+      [ReduceValue](Oracle &O, ReducerWorkItem &WorkItem) {
+        extractOperandsFromModule(O, WorkItem, ReduceValue);
+      },
+      "Reducing Operands to one");
 }
 
-void llvm::reduceOperandsZeroDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
@@ -129,24 +134,18 @@ void llvm::reduceOperandsZeroDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
     if (auto *IntTy = dyn_cast<IntegerType>(Op->getType()))
       if (switchCaseExists(Op, ConstantInt::get(IntTy, 0)))
         return nullptr;
-
-    if (auto *TET = dyn_cast<TargetExtType>(Op->getType())) {
-      if (isa<ConstantTargetNone, PoisonValue>(Op))
-        return nullptr;
-      if (TET->hasProperty(TargetExtType::HasZeroInit))
-        return ConstantTargetNone::get(TET);
-
-      // TODO: Poison reduction for this case
-      return nullptr;
-    }
-
     // Don't replace existing zeroes.
     return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
   };
-  extractOperandsFromModule(O, WorkItem, ReduceValue);
+  runDeltaPass(
+      Test,
+      [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
+        extractOperandsFromModule(O, Program, ReduceValue);
+      },
+      "Reducing Operands to zero");
 }
 
-void llvm::reduceOperandsNaNDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceOperandsNaNDeltaPass(TestRunner &Test) {
   auto ReduceValue = [](Use &Op) -> Value * {
     Type *Ty = Op->getType();
     if (!Ty->isFPOrFPVectorTy())
@@ -166,5 +165,10 @@ void llvm::reduceOperandsNaNDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
 
     return ConstantFP::getQNaN(Ty);
   };
-  extractOperandsFromModule(O, WorkItem, ReduceValue);
+  runDeltaPass(
+      Test,
+      [ReduceValue](Oracle &O, ReducerWorkItem &Program) {
+        extractOperandsFromModule(O, Program, ReduceValue);
+      },
+      "Reducing Operands to NaN");
 }

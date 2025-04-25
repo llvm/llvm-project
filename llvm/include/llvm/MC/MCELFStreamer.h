@@ -105,7 +105,7 @@ public:
     unsigned IntValue;
     std::string StringValue;
     AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
-        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
+        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(SV) {}
   };
 
   /// ELF object attributes subsection support
@@ -159,8 +159,10 @@ public:
 
 private:
   bool isBundleLocked() const;
+  void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
 
+  void fixSymbolsInTLSFixups(const MCExpr *expr);
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S, uint64_t Offset);
   void finalizeCGProfile();
 

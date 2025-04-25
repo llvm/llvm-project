@@ -48,18 +48,12 @@ protected:
     if (Triple.isPPC())
       GTEST_SKIP();
 
-    auto PageSize = sys::Process::getPageSize();
-    if (!PageSize) {
-      consumeError(PageSize.takeError());
-      GTEST_SKIP();
-    }
-
     ES = std::make_unique<ExecutionSession>(
         std::make_unique<UnsupportedExecutorProcessControl>(
-            nullptr, nullptr, JTMB->getTargetTriple().getTriple(), *PageSize));
+            nullptr, nullptr, JTMB->getTargetTriple().getTriple()));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(*PageSize));
+        *ES, std::make_unique<InProcessMemoryManager>(16384));
     DL = std::make_unique<DataLayout>(std::move(*DLOrErr));
   }
   JITDylib *JD{nullptr};

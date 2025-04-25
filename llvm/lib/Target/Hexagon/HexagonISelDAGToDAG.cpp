@@ -617,8 +617,7 @@ void HexagonDAGToDAGISel::SelectSHL(SDNode *N) {
       if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(Shl2_1)) {
         int32_t ValConst = 1 << (ShlConst + C2->getSExtValue());
         if (isInt<9>(-ValConst)) {
-          SDValue Val =
-              CurDAG->getSignedTargetConstant(-ValConst, dl, MVT::i32);
+          SDValue Val = CurDAG->getTargetConstant(-ValConst, dl, MVT::i32);
           SDNode *Result = CurDAG->getMachineNode(Hexagon::M2_mpysmi, dl,
                                                   MVT::i32, Shl2_0, Val);
           ReplaceNode(N, Result);
@@ -2022,9 +2021,8 @@ static bool isTargetConstant(const SDValue &V) {
 }
 
 unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
-  auto [It, Inserted] = GAUsesInFunction.try_emplace(V);
-  if (!Inserted)
-    return It->second;
+  if (GAUsesInFunction.count(V))
+    return GAUsesInFunction[V];
 
   unsigned Result = 0;
   const Function &CurF = CurDAG->getMachineFunction().getFunction();
@@ -2034,7 +2032,7 @@ unsigned HexagonDAGToDAGISel::getUsesInFunction(const Value *V) {
       ++Result;
   }
 
-  It->second = Result;
+  GAUsesInFunction[V] = Result;
 
   return Result;
 }
@@ -2437,7 +2435,10 @@ void HexagonDAGToDAGISel::rebalanceAddressTrees() {
         continue;
 
       // This root node has already been processed
-      RootWeights.try_emplace(N, -1);
+      if (RootWeights.count(N))
+        continue;
+
+      RootWeights[N] = -1;
     }
 
     // Balance node itself

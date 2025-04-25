@@ -634,14 +634,16 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
   bool IsVariadic = MCDesc.isVariadic();
   if ((ID->IsRecyclable = !IsVariadic && !IsVariant)) {
     auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
-    return *(Descriptors[DKey] = std::move(ID));
+    Descriptors[DKey] = std::move(ID);
+    return *Descriptors[DKey];
   }
 
   auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
   assert(
       !VariantDescriptors.contains(VDKey) &&
       "Expected VariantDescriptors to not already have a value for this key.");
-  return *(VariantDescriptors[VDKey] = std::move(ID));
+  VariantDescriptors[VDKey] = std::move(ID);
+  return *VariantDescriptors[VDKey];
 }
 
 Expected<const InstrDesc &>

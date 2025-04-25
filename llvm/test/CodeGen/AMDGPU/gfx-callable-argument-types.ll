@@ -366,7 +366,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %var = load volatile i1, ptr addrspace(1) poison
+  %var = load volatile i1, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_i1_signext(i1 signext%var)
   ret void
 }
@@ -495,7 +495,7 @@ define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %var = load volatile i1, ptr addrspace(1) poison
+  %var = load volatile i1, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_i1_zeroext(i1 zeroext %var)
   ret void
 }
@@ -734,7 +734,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %var = load volatile i8, ptr addrspace(1) poison
+  %var = load volatile i8, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_i8_signext(i8 signext %var)
   ret void
 }
@@ -856,7 +856,7 @@ define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %var = load volatile i8, ptr addrspace(1) poison
+  %var = load volatile i8, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_i8_zeroext(i8 zeroext %var)
   ret void
 }
@@ -1095,7 +1095,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %var = load volatile i16, ptr addrspace(1) poison
+  %var = load volatile i16, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_i16_signext(i16 signext %var)
   ret void
 }
@@ -1217,7 +1217,7 @@ define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %var = load volatile i16, ptr addrspace(1) poison
+  %var = load volatile i16, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_i16_zeroext(i16 zeroext %var)
   ret void
 }
@@ -1838,7 +1838,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64() #0 {
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
   %load = load <2 x i64>, ptr addrspace(1) null
-  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 poison>, <3 x i32> <i32 0, i32 1, i32 2>
+  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 undef>, <3 x i32> <i32 0, i32 1, i32 2>
 
   call amdgpu_gfx void @external_void_func_v3i64(<3 x i64> %val)
   ret void
@@ -5797,7 +5797,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i16>, ptr addrspace(1) poison
+  %val = load <2 x i16>, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v2i16(<2 x i16> %val)
   ret void
 }
@@ -5915,7 +5915,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x i16>, ptr addrspace(1) poison
+  %val = load <3 x i16>, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v3i16(<3 x i16> %val)
   ret void
 }
@@ -6033,7 +6033,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x half>, ptr addrspace(1) poison
+  %val = load <3 x half>, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v3f16(<3 x half> %val)
   ret void
 }
@@ -6392,7 +6392,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i16>, ptr addrspace(1) poison
+  %val = load <4 x i16>, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v4i16(<4 x i16> %val)
   ret void
 }
@@ -6631,7 +6631,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x half>, ptr addrspace(1) poison
+  %val = load <2 x half>, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v2f16(<2 x half> %val)
   ret void
 }
@@ -6749,7 +6749,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i32>, ptr addrspace(1) poison
+  %val = load <2 x i32>, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v2i32(<2 x i32> %val)
   ret void
 }
@@ -7238,7 +7238,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i32>, ptr addrspace(1) poison
+  %val = load <4 x i32>, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v4i32(<4 x i32> %val)
   ret void
 }
@@ -7635,7 +7635,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
+  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
   %val = load <8 x i32>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v8i32(<8 x i32> %val)
   ret void
@@ -7924,7 +7924,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
+  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
   %val = load <16 x i32>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v16i32(<16 x i32> %val)
   ret void
@@ -8089,7 +8089,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
+  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
   %val = load <32 x i32>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v32i32(<32 x i32> %val)
   ret void
@@ -8265,9 +8265,9 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
   %val0 = load <32 x i32>, ptr addrspace(1) %ptr0
-  %val1 = load i32, ptr addrspace(1) poison
+  %val1 = load i32, ptr addrspace(1) undef
   call amdgpu_gfx void @external_void_func_v32i32_i32(<32 x i32> %val0, i32 %val1)
   ret void
 }
@@ -8560,7 +8560,7 @@ define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
   %val = load { i8, i32 }, ptr addrspace(1) %ptr0
   call amdgpu_gfx void @external_void_func_struct_i8_i32({ i8, i32 } %val)
   ret void
@@ -8881,8 +8881,8 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
   %out.val0 = load i8, ptr addrspace(5) %out.gep0
   %out.val1 = load i32, ptr addrspace(5) %out.gep1
 
-  store volatile i8 %out.val0, ptr addrspace(1) poison
-  store volatile i32 %out.val1, ptr addrspace(1) poison
+  store volatile i8 %out.val0, ptr addrspace(1) undef
+  store volatile i32 %out.val1, ptr addrspace(1) undef
   ret void
 }
 
@@ -9086,7 +9086,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
+  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
   %val = load <16 x i8>, ptr addrspace(1) %ptr
   call amdgpu_gfx void @external_void_func_v16i8(<16 x i8> %val)
   ret void
@@ -9108,16 +9108,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v40, s37, 3
 ; GFX9-NEXT:    v_writelane_b32 v40, s38, 4
 ; GFX9-NEXT:    v_writelane_b32 v40, s39, 5
-; GFX9-NEXT:    v_writelane_b32 v40, s48, 6
-; GFX9-NEXT:    v_writelane_b32 v40, s49, 7
-; GFX9-NEXT:    v_writelane_b32 v40, s50, 8
-; GFX9-NEXT:    v_writelane_b32 v40, s51, 9
-; GFX9-NEXT:    v_writelane_b32 v40, s52, 10
-; GFX9-NEXT:    v_writelane_b32 v40, s53, 11
-; GFX9-NEXT:    v_writelane_b32 v40, s54, 12
-; GFX9-NEXT:    v_writelane_b32 v40, s55, 13
-; GFX9-NEXT:    v_writelane_b32 v40, s30, 14
-; GFX9-NEXT:    v_writelane_b32 v40, s31, 15
+; GFX9-NEXT:    v_writelane_b32 v40, s40, 6
+; GFX9-NEXT:    v_writelane_b32 v40, s41, 7
+; GFX9-NEXT:    v_writelane_b32 v40, s42, 8
+; GFX9-NEXT:    v_writelane_b32 v40, s43, 9
+; GFX9-NEXT:    v_writelane_b32 v40, s44, 10
+; GFX9-NEXT:    v_writelane_b32 v40, s45, 11
+; GFX9-NEXT:    v_writelane_b32 v40, s46, 12
+; GFX9-NEXT:    v_writelane_b32 v40, s47, 13
+; GFX9-NEXT:    v_writelane_b32 v40, s48, 14
+; GFX9-NEXT:    v_writelane_b32 v40, s49, 15
+; GFX9-NEXT:    v_writelane_b32 v40, s50, 16
+; GFX9-NEXT:    v_writelane_b32 v40, s51, 17
+; GFX9-NEXT:    v_writelane_b32 v40, s52, 18
+; GFX9-NEXT:    v_writelane_b32 v40, s53, 19
+; GFX9-NEXT:    v_writelane_b32 v40, s54, 20
+; GFX9-NEXT:    v_writelane_b32 v40, s55, 21
+; GFX9-NEXT:    v_writelane_b32 v40, s56, 22
+; GFX9-NEXT:    v_writelane_b32 v40, s57, 23
+; GFX9-NEXT:    v_writelane_b32 v40, s58, 24
+; GFX9-NEXT:    v_writelane_b32 v40, s59, 25
+; GFX9-NEXT:    v_writelane_b32 v40, s60, 26
+; GFX9-NEXT:    v_writelane_b32 v40, s61, 27
+; GFX9-NEXT:    v_writelane_b32 v40, s62, 28
+; GFX9-NEXT:    v_writelane_b32 v40, s63, 29
+; GFX9-NEXT:    v_writelane_b32 v40, s30, 30
+; GFX9-NEXT:    v_writelane_b32 v40, s31, 31
 ; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:16
 ; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:20
 ; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s33
@@ -9128,16 +9144,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT:    v_readlane_b32 s30, v40, 14
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 15
-; GFX9-NEXT:    v_readlane_b32 s55, v40, 13
-; GFX9-NEXT:    v_readlane_b32 s54, v40, 12
-; GFX9-NEXT:    v_readlane_b32 s53, v40, 11
-; GFX9-NEXT:    v_readlane_b32 s52, v40, 10
-; GFX9-NEXT:    v_readlane_b32 s51, v40, 9
-; GFX9-NEXT:    v_readlane_b32 s50, v40, 8
-; GFX9-NEXT:    v_readlane_b32 s49, v40, 7
-; GFX9-NEXT:    v_readlane_b32 s48, v40, 6
+; GFX9-NEXT:    v_readlane_b32 s30, v40, 30
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 31
+; GFX9-NEXT:    v_readlane_b32 s63, v40, 29
+; GFX9-NEXT:    v_readlane_b32 s62, v40, 28
+; GFX9-NEXT:    v_readlane_b32 s61, v40, 27
+; GFX9-NEXT:    v_readlane_b32 s60, v40, 26
+; GFX9-NEXT:    v_readlane_b32 s59, v40, 25
+; GFX9-NEXT:    v_readlane_b32 s58, v40, 24
+; GFX9-NEXT:    v_readlane_b32 s57, v40, 23
+; GFX9-NEXT:    v_readlane_b32 s56, v40, 22
+; GFX9-NEXT:    v_readlane_b32 s55, v40, 21
+; GFX9-NEXT:    v_readlane_b32 s54, v40, 20
+; GFX9-NEXT:    v_readlane_b32 s53, v40, 19
+; GFX9-NEXT:    v_readlane_b32 s52, v40, 18
+; GFX9-NEXT:    v_readlane_b32 s51, v40, 17
+; GFX9-NEXT:    v_readlane_b32 s50, v40, 16
+; GFX9-NEXT:    v_readlane_b32 s49, v40, 15
+; GFX9-NEXT:    v_readlane_b32 s48, v40, 14
+; GFX9-NEXT:    v_readlane_b32 s47, v40, 13
+; GFX9-NEXT:    v_readlane_b32 s46, v40, 12
+; GFX9-NEXT:    v_readlane_b32 s45, v40, 11
+; GFX9-NEXT:    v_readlane_b32 s44, v40, 10
+; GFX9-NEXT:    v_readlane_b32 s43, v40, 9
+; GFX9-NEXT:    v_readlane_b32 s42, v40, 8
+; GFX9-NEXT:    v_readlane_b32 s41, v40, 7
+; GFX9-NEXT:    v_readlane_b32 s40, v40, 6
 ; GFX9-NEXT:    v_readlane_b32 s39, v40, 5
 ; GFX9-NEXT:    v_readlane_b32 s38, v40, 4
 ; GFX9-NEXT:    v_readlane_b32 s37, v40, 3
@@ -9168,16 +9200,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-NEXT:    v_writelane_b32 v40, s37, 3
 ; GFX10-NEXT:    v_writelane_b32 v40, s38, 4
 ; GFX10-NEXT:    v_writelane_b32 v40, s39, 5
-; GFX10-NEXT:    v_writelane_b32 v40, s48, 6
-; GFX10-NEXT:    v_writelane_b32 v40, s49, 7
-; GFX10-NEXT:    v_writelane_b32 v40, s50, 8
-; GFX10-NEXT:    v_writelane_b32 v40, s51, 9
-; GFX10-NEXT:    v_writelane_b32 v40, s52, 10
-; GFX10-NEXT:    v_writelane_b32 v40, s53, 11
-; GFX10-NEXT:    v_writelane_b32 v40, s54, 12
-; GFX10-NEXT:    v_writelane_b32 v40, s55, 13
-; GFX10-NEXT:    v_writelane_b32 v40, s30, 14
-; GFX10-NEXT:    v_writelane_b32 v40, s31, 15
+; GFX10-NEXT:    v_writelane_b32 v40, s40, 6
+; GFX10-NEXT:    v_writelane_b32 v40, s41, 7
+; GFX10-NEXT:    v_writelane_b32 v40, s42, 8
+; GFX10-NEXT:    v_writelane_b32 v40, s43, 9
+; GFX10-NEXT:    v_writelane_b32 v40, s44, 10
+; GFX10-NEXT:    v_writelane_b32 v40, s45, 11
+; GFX10-NEXT:    v_writelane_b32 v40, s46, 12
+; GFX10-NEXT:    v_writelane_b32 v40, s47, 13
+; GFX10-NEXT:    v_writelane_b32 v40, s48, 14
+; GFX10-NEXT:    v_writelane_b32 v40, s49, 15
+; GFX10-NEXT:    v_writelane_b32 v40, s50, 16
+; GFX10-NEXT:    v_writelane_b32 v40, s51, 17
+; GFX10-NEXT:    v_writelane_b32 v40, s52, 18
+; GFX10-NEXT:    v_writelane_b32 v40, s53, 19
+; GFX10-NEXT:    v_writelane_b32 v40, s54, 20
+; GFX10-NEXT:    v_writelane_b32 v40, s55, 21
+; GFX10-NEXT:    v_writelane_b32 v40, s56, 22
+; GFX10-NEXT:    v_writelane_b32 v40, s57, 23
+; GFX10-NEXT:    v_writelane_b32 v40, s58, 24
+; GFX10-NEXT:    v_writelane_b32 v40, s59, 25
+; GFX10-NEXT:    v_writelane_b32 v40, s60, 26
+; GFX10-NEXT:    v_writelane_b32 v40, s61, 27
+; GFX10-NEXT:    v_writelane_b32 v40, s62, 28
+; GFX10-NEXT:    v_writelane_b32 v40, s63, 29
+; GFX10-NEXT:    v_writelane_b32 v40, s30, 30
+; GFX10-NEXT:    v_writelane_b32 v40, s31, 31
 ; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:16
 ; GFX10-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:20
@@ -9189,16 +9237,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GFX10-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GFX10-NEXT:    v_readlane_b32 s30, v40, 14
-; GFX10-NEXT:    v_readlane_b32 s31, v40, 15
-; GFX10-NEXT:    v_readlane_b32 s55, v40, 13
-; GFX10-NEXT:    v_readlane_b32 s54, v40, 12
-; GFX10-NEXT:    v_readlane_b32 s53, v40, 11
-; GFX10-NEXT:    v_readlane_b32 s52, v40, 10
-; GFX10-NEXT:    v_readlane_b32 s51, v40, 9
-; GFX10-NEXT:    v_readlane_b32 s50, v40, 8
-; GFX10-NEXT:    v_readlane_b32 s49, v40, 7
-; GFX10-NEXT:    v_readlane_b32 s48, v40, 6
+; GFX10-NEXT:    v_readlane_b32 s30, v40, 30
+; GFX10-NEXT:    v_readlane_b32 s31, v40, 31
+; GFX10-NEXT:    v_readlane_b32 s63, v40, 29
+; GFX10-NEXT:    v_readlane_b32 s62, v40, 28
+; GFX10-NEXT:    v_readlane_b32 s61, v40, 27
+; GFX10-NEXT:    v_readlane_b32 s60, v40, 26
+; GFX10-NEXT:    v_readlane_b32 s59, v40, 25
+; GFX10-NEXT:    v_readlane_b32 s58, v40, 24
+; GFX10-NEXT:    v_readlane_b32 s57, v40, 23
+; GFX10-NEXT:    v_readlane_b32 s56, v40, 22
+; GFX10-NEXT:    v_readlane_b32 s55, v40, 21
+; GFX10-NEXT:    v_readlane_b32 s54, v40, 20
+; GFX10-NEXT:    v_readlane_b32 s53, v40, 19
+; GFX10-NEXT:    v_readlane_b32 s52, v40, 18
+; GFX10-NEXT:    v_readlane_b32 s51, v40, 17
+; GFX10-NEXT:    v_readlane_b32 s50, v40, 16
+; GFX10-NEXT:    v_readlane_b32 s49, v40, 15
+; GFX10-NEXT:    v_readlane_b32 s48, v40, 14
+; GFX10-NEXT:    v_readlane_b32 s47, v40, 13
+; GFX10-NEXT:    v_readlane_b32 s46, v40, 12
+; GFX10-NEXT:    v_readlane_b32 s45, v40, 11
+; GFX10-NEXT:    v_readlane_b32 s44, v40, 10
+; GFX10-NEXT:    v_readlane_b32 s43, v40, 9
+; GFX10-NEXT:    v_readlane_b32 s42, v40, 8
+; GFX10-NEXT:    v_readlane_b32 s41, v40, 7
+; GFX10-NEXT:    v_readlane_b32 s40, v40, 6
 ; GFX10-NEXT:    v_readlane_b32 s39, v40, 5
 ; GFX10-NEXT:    v_readlane_b32 s38, v40, 4
 ; GFX10-NEXT:    v_readlane_b32 s37, v40, 3
@@ -9229,16 +9293,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX11-NEXT:    v_writelane_b32 v40, s37, 3
 ; GFX11-NEXT:    v_writelane_b32 v40, s38, 4
 ; GFX11-NEXT:    v_writelane_b32 v40, s39, 5
-; GFX11-NEXT:    v_writelane_b32 v40, s48, 6
-; GFX11-NEXT:    v_writelane_b32 v40, s49, 7
-; GFX11-NEXT:    v_writelane_b32 v40, s50, 8
-; GFX11-NEXT:    v_writelane_b32 v40, s51, 9
-; GFX11-NEXT:    v_writelane_b32 v40, s52, 10
-; GFX11-NEXT:    v_writelane_b32 v40, s53, 11
-; GFX11-NEXT:    v_writelane_b32 v40, s54, 12
-; GFX11-NEXT:    v_writelane_b32 v40, s55, 13
-; GFX11-NEXT:    v_writelane_b32 v40, s30, 14
-; GFX11-NEXT:    v_writelane_b32 v40, s31, 15
+; GFX11-NEXT:    v_writelane_b32 v40, s40, 6
+; GFX11-NEXT:    v_writelane_b32 v40, s41, 7
+; GFX11-NEXT:    v_writelane_b32 v40, s42, 8
+; GFX11-NEXT:    v_writelane_b32 v40, s43, 9
+; GFX11-NEXT:    v_writelane_b32 v40, s44, 10
+; GFX11-NEXT:    v_writelane_b32 v40, s45, 11
+; GFX11-NEXT:    v_writelane_b32 v40, s46, 12
+; GFX11-NEXT:    v_writelane_b32 v40, s47, 13
+; GFX11-NEXT:    v_writelane_b32 v40, s48, 14
+; GFX11-NEXT:    v_writelane_b32 v40, s49, 15
+; GFX11-NEXT:    v_writelane_b32 v40, s50, 16
+; GFX11-NEXT:    v_writelane_b32 v40, s51, 17
+; GFX11-NEXT:    v_writelane_b32 v40, s52, 18
+; GFX11-NEXT:    v_writelane_b32 v40, s53, 19
+; GFX11-NEXT:    v_writelane_b32 v40, s54, 20
+; GFX11-NEXT:    v_writelane_b32 v40, s55, 21
+; GFX11-NEXT:    v_writelane_b32 v40, s56, 22
+; GFX11-NEXT:    v_writelane_b32 v40, s57, 23
+; GFX11-NEXT:    v_writelane_b32 v40, s58, 24
+; GFX11-NEXT:    v_writelane_b32 v40, s59, 25
+; GFX11-NEXT:    v_writelane_b32 v40, s60, 26
+; GFX11-NEXT:    v_writelane_b32 v40, s61, 27
+; GFX11-NEXT:    v_writelane_b32 v40, s62, 28
+; GFX11-NEXT:    v_writelane_b32 v40, s63, 29
+; GFX11-NEXT:    v_writelane_b32 v40, s30, 30
+; GFX11-NEXT:    v_writelane_b32 v40, s31, 31
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_load_b64 v[32:33], off, s33 offset:16
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s33
@@ -9247,16 +9327,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    scratch_store_b64 off, v[32:33], s32
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    v_readlane_b32 s30, v40, 14
-; GFX11-NEXT:    v_readlane_b32 s31, v40, 15
-; GFX11-NEXT:    v_readlane_b32 s55, v40, 13
-; GFX11-NEXT:    v_readlane_b32 s54, v40, 12
-; GFX11-NEXT:    v_readlane_b32 s53, v40, 11
-; GFX11-NEXT:    v_readlane_b32 s52, v40, 10
-; GFX11-NEXT:    v_readlane_b32 s51, v40, 9
-; GFX11-NEXT:    v_readlane_b32 s50, v40, 8
-; GFX11-NEXT:    v_readlane_b32 s49, v40, 7
-; GFX11-NEXT:    v_readlane_b32 s48, v40, 6
+; GFX11-NEXT:    v_readlane_b32 s30, v40, 30
+; GFX11-NEXT:    v_readlane_b32 s31, v40, 31
+; GFX11-NEXT:    v_readlane_b32 s63, v40, 29
+; GFX11-NEXT:    v_readlane_b32 s62, v40, 28
+; GFX11-NEXT:    v_readlane_b32 s61, v40, 27
+; GFX11-NEXT:    v_readlane_b32 s60, v40, 26
+; GFX11-NEXT:    v_readlane_b32 s59, v40, 25
+; GFX11-NEXT:    v_readlane_b32 s58, v40, 24
+; GFX11-NEXT:    v_readlane_b32 s57, v40, 23
+; GFX11-NEXT:    v_readlane_b32 s56, v40, 22
+; GFX11-NEXT:    v_readlane_b32 s55, v40, 21
+; GFX11-NEXT:    v_readlane_b32 s54, v40, 20
+; GFX11-NEXT:    v_readlane_b32 s53, v40, 19
+; GFX11-NEXT:    v_readlane_b32 s52, v40, 18
+; GFX11-NEXT:    v_readlane_b32 s51, v40, 17
+; GFX11-NEXT:    v_readlane_b32 s50, v40, 16
+; GFX11-NEXT:    v_readlane_b32 s49, v40, 15
+; GFX11-NEXT:    v_readlane_b32 s48, v40, 14
+; GFX11-NEXT:    v_readlane_b32 s47, v40, 13
+; GFX11-NEXT:    v_readlane_b32 s46, v40, 12
+; GFX11-NEXT:    v_readlane_b32 s45, v40, 11
+; GFX11-NEXT:    v_readlane_b32 s44, v40, 10
+; GFX11-NEXT:    v_readlane_b32 s43, v40, 9
+; GFX11-NEXT:    v_readlane_b32 s42, v40, 8
+; GFX11-NEXT:    v_readlane_b32 s41, v40, 7
+; GFX11-NEXT:    v_readlane_b32 s40, v40, 6
 ; GFX11-NEXT:    v_readlane_b32 s39, v40, 5
 ; GFX11-NEXT:    v_readlane_b32 s38, v40, 4
 ; GFX11-NEXT:    v_readlane_b32 s37, v40, 3
@@ -9287,16 +9383,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s37, 3
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s38, 4
 ; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s39, 5
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s48, 6
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s49, 7
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s50, 8
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s51, 9
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s52, 10
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s53, 11
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s54, 12
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s55, 13
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s30, 14
-; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s31, 15
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s40, 6
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s41, 7
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s42, 8
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s43, 9
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s44, 10
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s45, 11
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s46, 12
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s47, 13
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s48, 14
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s49, 15
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s50, 16
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s51, 17
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s52, 18
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s53, 19
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s54, 20
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s55, 21
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s56, 22
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s57, 23
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s58, 24
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s59, 25
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s60, 26
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s61, 27
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s62, 28
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s63, 29
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s30, 30
+; GFX10-SCRATCH-NEXT:    v_writelane_b32 v40, s31, 31
 ; GFX10-SCRATCH-NEXT:    s_clause 0x1
 ; GFX10-SCRATCH-NEXT:    scratch_load_dwordx2 v[32:33], off, s33 offset:16
 ; GFX10-SCRATCH-NEXT:    scratch_load_dword v31, off, s33
@@ -9305,16 +9417,32 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-SCRATCH-NEXT:    scratch_store_dwordx2 off, v[32:33], s32
 ; GFX10-SCRATCH-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s30, v40, 14
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s31, v40, 15
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s55, v40, 13
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s54, v40, 12
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s53, v40, 11
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s52, v40, 10
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s51, v40, 9
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s50, v40, 8
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s49, v40, 7
-; GFX10-SCRATCH-NEXT:    v_readlane_b32 s48, v40, 6
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s30, v40, 30
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s31, v40, 31
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s63, v40, 29
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s62, v40, 28
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s61, v40, 27
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s60, v40, 26
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s59, v40, 25
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s58, v40, 24
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s57, v40, 23
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s56, v40, 22
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s55, v40, 21
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s54, v40, 20
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s53, v40, 19
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s52, v40, 18
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s51, v40, 17
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s50, v40, 16
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s49, v40, 15
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s48, v40, 14
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s47, v40, 13
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s46, v40, 12
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s45, v40, 11
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s44, v40, 10
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s43, v40, 9
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s42, v40, 8
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s41, v40, 7
+; GFX10-SCRATCH-NEXT:    v_readlane_b32 s40, v40, 6
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s39, v40, 5
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s38, v40, 4
 ; GFX10-SCRATCH-NEXT:    v_readlane_b32 s37, v40, 3
@@ -10451,7 +10579,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
   %load = load <2 x i64>, ptr addrspace(4) null
-  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 poison>, <3 x i32> <i32 0, i32 1, i32 2>
+  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 undef>, <3 x i32> <i32 0, i32 1, i32 2>
 
   call amdgpu_gfx void @external_void_func_v3i64_inreg(<3 x i64> inreg %val)
   ret void
@@ -11964,7 +12092,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i16>, ptr addrspace(4) poison
+  %val = load <2 x i16>, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v2i16_inreg(<2 x i16> inreg %val)
   ret void
 }
@@ -12098,7 +12226,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x i16>, ptr addrspace(4) poison
+  %val = load <3 x i16>, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v3i16_inreg(<3 x i16> inreg %val)
   ret void
 }
@@ -12232,7 +12360,7 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x half>, ptr addrspace(4) poison
+  %val = load <3 x half>, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v3f16_inreg(<3 x half> inreg %val)
   ret void
 }
@@ -12638,7 +12766,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i16>, ptr addrspace(4) poison
+  %val = load <4 x i16>, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v4i16_inreg(<4 x i16> inreg %val)
   ret void
 }
@@ -12900,7 +13028,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x half>, ptr addrspace(4) poison
+  %val = load <2 x half>, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v2f16_inreg(<2 x half> inreg %val)
   ret void
 }
@@ -13034,7 +13162,7 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i32>, ptr addrspace(4) poison
+  %val = load <2 x i32>, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v2i32_inreg(<2 x i32> inreg %val)
   ret void
 }
@@ -13628,7 +13756,7 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i32>, ptr addrspace(4) poison
+  %val = load <4 x i32>, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v4i32_inreg(<4 x i32> inreg %val)
   ret void
 }
@@ -14150,7 +14278,7 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(4), ptr addrspace(4) poison
+  %ptr = load ptr addrspace(4), ptr addrspace(4) undef
   %val = load <8 x i32>, ptr addrspace(4) %ptr
   call amdgpu_gfx void @external_void_func_v8i32_inreg(<8 x i32> inreg %val)
   ret void
@@ -14613,7 +14741,7 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(4), ptr addrspace(4) poison
+  %ptr = load ptr addrspace(4), ptr addrspace(4) undef
   %val = load <16 x i32>, ptr addrspace(4) %ptr
   call amdgpu_gfx void @external_void_func_v16i32_inreg(<16 x i32> inreg %val)
   ret void
@@ -15037,7 +15165,7 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load ptr addrspace(4), ptr addrspace(4) poison
+  %ptr = load ptr addrspace(4), ptr addrspace(4) undef
   %val = load <32 x i32>, ptr addrspace(4) %ptr
   call amdgpu_gfx void @external_void_func_v32i32_inreg(<32 x i32> inreg %val)
   ret void
@@ -15481,9 +15609,9 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s0
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
-  %ptr0 = load ptr addrspace(4), ptr addrspace(4) poison
+  %ptr0 = load ptr addrspace(4), ptr addrspace(4) undef
   %val0 = load <32 x i32>, ptr addrspace(4) %ptr0
-  %val1 = load i32, ptr addrspace(4) poison
+  %val1 = load i32, ptr addrspace(4) undef
   call amdgpu_gfx void @external_void_func_v32i32_i32_inreg(<32 x i32> inreg %val0, i32 inreg %val1)
   ret void
 }

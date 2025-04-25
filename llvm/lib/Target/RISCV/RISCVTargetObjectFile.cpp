@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVTargetObjectFile.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -27,7 +26,7 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
                                           const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
 
-  PLTPCRelativeSpecifier = RISCVMCExpr::VK_PLTPCREL;
+  PLTRelativeVariantKind = MCSymbolRefExpr::VK_PLT;
   SupportIndirectSymViaGOTPCRel = true;
 
   SmallDataSection = getContext().getELFSection(
@@ -49,11 +48,11 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
 const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     const GlobalValue *GV, const MCSymbol *Sym, const MCValue &MV,
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
-  auto &Ctx = getContext();
-  const MCExpr *Res = MCSymbolRefExpr::create(Sym, Ctx);
-  Res = MCBinaryExpr::createAdd(
-      Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
-  return RISCVMCExpr::create(Res, RISCVMCExpr::VK_GOTPCREL, Ctx);
+  int64_t FinalOffset = Offset + MV.getConstant();
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOTPCREL, getContext());
+  const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
+  return MCBinaryExpr::createAdd(Res, Off, getContext());
 }
 
 // A address must be loaded from a small section if its size is less than the
@@ -179,11 +178,4 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
                                                             Alignment);
-}
-
-const MCExpr *
-RISCVELFTargetObjectFile::createTargetMCExpr(const MCExpr *Expr,
-                                             uint8_t Specifier) const {
-  return RISCVMCExpr::create(Expr, RISCVMCExpr::Specifier(Specifier),
-                             getContext());
 }

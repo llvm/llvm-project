@@ -360,8 +360,8 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     assert(MI.getNumOperands() >= (OperandNo + X86::AddrNumOperands) &&
            "Unexpected number of operands!");
     if (auto *C = X86::getConstantFromPool(MI, OperandNo)) {
-      unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
-      RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
+      RegBitWidth =
+          RegBitWidth ? RegBitWidth : C->getType()->getPrimitiveSizeInBits();
       for (const FixupEntry &Fixup : Fixups) {
         if (Fixup.Op) {
           // Construct a suitable constant and adjust the MI to use the new

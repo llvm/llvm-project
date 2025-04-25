@@ -510,9 +510,7 @@ struct Variant {
 
 #define VARIANT_APSINT(Enum, NumBits, IsUnsigned)                              \
   case PDB_VariantType::Enum:                                                  \
-    return APSInt(                                                             \
-        APInt(NumBits, static_cast<uint64_t>(Value.Enum), !IsUnsigned),        \
-        IsUnsigned);
+    return APSInt(APInt(NumBits, Value.Enum), IsUnsigned);
 
   APSInt toAPSInt() const {
     switch (Type) {

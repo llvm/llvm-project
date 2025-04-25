@@ -1,28 +1,10 @@
-!RUN: split-file %s %t
+!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/no_bind_clause.f90 -o - \
-!RUN: | FileCheck %s
-
-!RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/bind_clause_teams.f90 -o - \
-!RUN: | FileCheck %s
-
-!--- no_bind_clause.f90
 subroutine target_teams_loop
     implicit none
     integer :: x, i
 
     !$omp target teams loop
-    do i = 0, 10
-      x = x + i
-    end do
-end subroutine target_teams_loop
-
-!--- bind_clause_teams.f90
-subroutine target_teams_loop
-    implicit none
-    integer :: x, i
-
-    !$omp target teams loop bind(teams)
     do i = 0, 10
       x = x + i
     end do
@@ -52,7 +34,7 @@ end subroutine target_teams_loop
 !CHECK:                   omp.loop_nest (%{{.*}}) : i32 = 
 !CHECK-SAME:                (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:                     %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_PRIV_ARG]]
-!CHECK:                     hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK:                     fir.store %{{.*}} to %[[I_PRIV_DECL]]#1 : !fir.ref<i32>
 !CHECK:                   }
 !CHECK:                 }
 !CHECK:               }

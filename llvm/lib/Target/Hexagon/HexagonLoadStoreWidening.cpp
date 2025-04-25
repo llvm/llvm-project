@@ -801,7 +801,9 @@ bool HexagonLoadStoreWidening::replaceInsts(InstrGroup &OG, InstrGroup &NG) {
   // the insertion point.
 
   // Create a set of all instructions in OG (for quick lookup).
-  InstrSet OldMemInsts(llvm::from_range, OG);
+  InstrSet OldMemInsts;
+  for (auto *I : OG)
+    OldMemInsts.insert(I);
 
   if (Mode == WideningMode::Load) {
     // Find the first load instruction in the block that is present in OG.

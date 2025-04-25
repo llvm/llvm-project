@@ -80,7 +80,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     for (auto MIB : OutMIs) {
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
-      uint16_t MIBFlags = Flags | MIB.getInstr()->getFlags();
+      uint16_t MIBFlags = Flags;
       if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
       if (Observer)

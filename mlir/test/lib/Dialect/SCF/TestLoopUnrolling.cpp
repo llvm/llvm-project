@@ -42,11 +42,10 @@ struct TestLoopUnrollingPass
   TestLoopUnrollingPass(const TestLoopUnrollingPass &) {}
   explicit TestLoopUnrollingPass(uint64_t unrollFactorParam,
                                  unsigned loopDepthParam,
-                                 bool annotateLoopParam, bool unrollFullParam) {
+                                 bool annotateLoopParam) {
     unrollFactor = unrollFactorParam;
     loopDepth = loopDepthParam;
     annotateLoop = annotateLoopParam;
-    unrollFull = unrollFactorParam;
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -64,12 +63,8 @@ struct TestLoopUnrollingPass
         op->setAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
       }
     };
-    for (auto loop : loops) {
-      if (unrollFull)
-        (void)loopUnrollFull(loop);
-      else
-        (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
-    }
+    for (auto loop : loops)
+      (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
   }
   Option<uint64_t> unrollFactor{*this, "unroll-factor",
                                 llvm::cl::desc("Loop unroll factor."),
@@ -82,9 +77,6 @@ struct TestLoopUnrollingPass
                                 llvm::cl::init(false)};
   Option<unsigned> loopDepth{*this, "loop-depth", llvm::cl::desc("Loop depth."),
                              llvm::cl::init(0)};
-  Option<bool> unrollFull{*this, "unroll-full",
-                          llvm::cl::desc("Full unroll loops."),
-                          llvm::cl::init(false)};
 };
 } // namespace
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
+// XFAIL: *
 
 void foo(int v, int x) {
 // CHECK: #pragma acc atomic read

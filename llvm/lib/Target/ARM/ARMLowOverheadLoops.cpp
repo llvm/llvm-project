@@ -568,7 +568,7 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     }
     if (!ModifiedITs.empty())
       return false;
-    Killed.insert_range(RemoveITs);
+    Killed.insert(RemoveITs.begin(), RemoveITs.end());
     return true;
   };
 
@@ -577,7 +577,7 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     return false;
 
   if (WontCorruptITs(Uses, RDA)) {
-    ToRemove.insert_range(Uses);
+    ToRemove.insert(Uses.begin(), Uses.end());
     LLVM_DEBUG(dbgs() << "ARM Loops: Able to remove: " << *MI
                << " - can also remove:\n";
                for (auto *Use : Uses)
@@ -586,7 +586,7 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     SmallPtrSet<MachineInstr*, 4> Killed;
     RDA.collectKilledOperands(MI, Killed);
     if (WontCorruptITs(Killed, RDA)) {
-      ToRemove.insert_range(Killed);
+      ToRemove.insert(Killed.begin(), Killed.end());
       LLVM_DEBUG(for (auto *Dead : Killed)
                    dbgs() << "   - " << *Dead);
     }
@@ -759,7 +759,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     SmallPtrSet<MachineInstr*, 2> Ignore;
     unsigned ExpectedVectorWidth = getTailPredVectorWidth(VCTP->getOpcode());
 
-    Ignore.insert_range(VCTPs);
+    Ignore.insert(VCTPs.begin(), VCTPs.end());
 
     if (TryRemove(Def, RDA, ElementChain, Ignore)) {
       bool FoundSub = false;
@@ -781,7 +781,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
           return false;
         }
       }
-      ToRemove.insert_range(ElementChain);
+      ToRemove.insert(ElementChain.begin(), ElementChain.end());
     }
   }
 
@@ -794,7 +794,8 @@ bool LowOverheadLoop::ValidateTailPredicate() {
       !RDA.hasLocalDefBefore(VCTP, VCTP->getOperand(1).getReg())) {
     if (auto *Def = RDA.getUniqueReachingMIDef(
             &Preheader->back(), VCTP->getOperand(1).getReg().asMCReg())) {
-      SmallPtrSet<MachineInstr *, 2> Ignore(llvm::from_range, VCTPs);
+      SmallPtrSet<MachineInstr*, 2> Ignore;
+      Ignore.insert(VCTPs.begin(), VCTPs.end());
       TryRemove(Def, RDA, ToRemove, Ignore);
     }
   }
@@ -1692,7 +1693,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
     }
   }
 
-  LoLoop.ToRemove.insert_range(LoLoop.VCTPs);
+  LoLoop.ToRemove.insert(LoLoop.VCTPs.begin(), LoLoop.VCTPs.end());
 }
 
 void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {

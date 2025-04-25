@@ -23,7 +23,6 @@ include "mlir/IR/DialectBase.td"
 
 //===----------------------------------------------------------------------===//
 // Base attribute definition
-//===----------------------------------------------------------------------===//
 
 // Base class for all attributes.
 class Attr<Pred condition, string summary = ""> :
@@ -92,7 +91,6 @@ class DialectAttr<Dialect d, Pred condition, string summary = ""> :
 
 //===----------------------------------------------------------------------===//
 // Attribute modifier definition
-//===----------------------------------------------------------------------===//
 
 // Decorates an attribute to have an (unvalidated) default value if not present.
 class DefaultValuedAttr<Attr attr, string val> :
@@ -152,7 +150,6 @@ class DefaultValuedOptionalStrAttr<Attr attr, string val>
 
 //===----------------------------------------------------------------------===//
 // Primitive attribute kinds
-//===----------------------------------------------------------------------===//
 
 // A generic attribute that must be constructed around a specific buildable type
 // `attrValType`. Backed by MLIR attribute kind `attrKind`.
@@ -398,7 +395,6 @@ def UnitAttr : Attr<CPred<"::llvm::isa<::mlir::UnitAttr>($_self)">, "unit attrib
 
 //===----------------------------------------------------------------------===//
 // Composite attribute kinds
-//===----------------------------------------------------------------------===//
 
 class DictionaryAttrBase<Pred condition, string summary> :
     Attr<condition, summary> {
@@ -685,7 +681,6 @@ def FlatSymbolRefArrayAttr :
 
 //===----------------------------------------------------------------------===//
 // Derive attribute kinds
-//===----------------------------------------------------------------------===//
 
 // DerivedAttr are attributes whose value is computed from properties
 // of the operation. They do not require additional storage and are
@@ -719,7 +714,6 @@ class DerivedTypeAttr<code body> : DerivedAttr<"::mlir::Type", body> {
 
 //===----------------------------------------------------------------------===//
 // Constant attribute kinds
-//===----------------------------------------------------------------------===//
 
 // Represents a constant attribute of specific Attr type. A constant
 // attribute can be specified only of attributes that have a constant

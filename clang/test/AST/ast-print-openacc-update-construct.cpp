@@ -1,3 +1,5 @@
+// -fopenacc unsupported on AMD downstream
+// UNSUPPORTED: true
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
 void uses(bool cond) {
   int I;

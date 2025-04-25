@@ -59,16 +59,14 @@
 ; CHECK:       ![[AN_ENTRYPOINT_BW]] = !{!"branch_weights", i32 40, i32 60} 
 
 ;--- profile.yaml
-Contexts:
-  - Guid: 4909520559318251808
-    TotalRootEntryCount: 100
-    Counters: [100, 40]
-    Callsites: -
-                - Guid: 11872291593386833696
-                  Counters: [ 100, 5 ]
-               -
-                - Guid: 11872291593386833696
-                  Counters: [ 40, 10 ]
+- Guid: 4909520559318251808
+  Counters: [100, 40]
+  Callsites: -
+              - Guid: 11872291593386833696
+                Counters: [ 100, 5 ]
+             -
+              - Guid: 11872291593386833696
+                Counters: [ 40, 10 ]
 ;--- example.ll
 declare void @bar()
 

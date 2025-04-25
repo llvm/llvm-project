@@ -306,15 +306,11 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     checkTargetID(*DAL);
   }
 
-  if (!Args.hasArg(options::OPT_flto_partitions_EQ))
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
-                      "8");
-
   return DAL;
 }
 
 Tool *HIPAMDToolChain::buildLinker() const {
-  assert(getTriple().isAMDGCN() ||
+  assert(getTriple().getArch() == llvm::Triple::amdgcn ||
          getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
 }
@@ -370,8 +366,7 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
-  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
-                          true) ||
+  if (DriverArgs.hasArg(options::OPT_nogpulib) ||
       getGPUArch(DriverArgs) == "amdgcnspirv")
     return {};
   ArgStringList LibraryPaths;
@@ -392,7 +387,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         llvm::sys::path::append(Path, BCName);
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
-          BCLibs.emplace_back(FullName);
+          BCLibs.push_back(FullName);
           return;
         }
       }
@@ -407,11 +402,22 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // If --hip-device-lib is not set, add the default bitcode libraries.
+    if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                           options::OPT_fno_gpu_sanitize, true) &&
+        getSanitizerArgs(DriverArgs).needsAsanRt()) {
+      auto AsanRTL = RocmInstallation->getAsanRTLPath();
+      if (AsanRTL.empty()) {
+        getDriver().Diag(diag::err_drv_no_asan_rt_lib);
+        return {};
+      } else
+        BCLibs.emplace_back(AsanRTL, /*ShouldInternalize=*/false);
+    }
+
     // Add the HIP specific bitcode library.
-    BCLibs.emplace_back(RocmInstallation->getHIPPath());
+    BCLibs.push_back(RocmInstallation->getHIPPath());
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
+    for (StringRef N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.

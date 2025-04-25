@@ -874,7 +874,8 @@ DataFlowSanitizer::DataFlowSanitizer(
   ABIList.set(
       SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
 
-  CombineTaintLookupTableNames.insert_range(ClCombineTaintLookupTables);
+  for (StringRef v : ClCombineTaintLookupTables)
+    CombineTaintLookupTableNames.insert(v);
 }
 
 TransformedFunction DataFlowSanitizer::getCustomFunctionType(FunctionType *T) {
@@ -3446,9 +3447,9 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
                                       PN.getIterator());
 
   // Give the shadow phi node valid predecessors to fool SplitEdge into working.
-  Value *PoisonShadow = PoisonValue::get(ShadowTy);
+  Value *UndefShadow = UndefValue::get(ShadowTy);
   for (BasicBlock *BB : PN.blocks())
-    ShadowPN->addIncoming(PoisonShadow, BB);
+    ShadowPN->addIncoming(UndefShadow, BB);
 
   DFSF.setShadow(&PN, ShadowPN);
 
@@ -3456,9 +3457,9 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   if (DFSF.DFS.shouldTrackOrigins()) {
     OriginPN = PHINode::Create(DFSF.DFS.OriginTy, PN.getNumIncomingValues(), "",
                                PN.getIterator());
-    Value *PoisonOrigin = PoisonValue::get(DFSF.DFS.OriginTy);
+    Value *UndefOrigin = UndefValue::get(DFSF.DFS.OriginTy);
     for (BasicBlock *BB : PN.blocks())
-      OriginPN->addIncoming(PoisonOrigin, BB);
+      OriginPN->addIncoming(UndefOrigin, BB);
     DFSF.setOrigin(&PN, OriginPN);
   }
 

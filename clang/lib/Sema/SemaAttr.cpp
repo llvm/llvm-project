@@ -14,7 +14,6 @@
 #include "CheckExprLifetime.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -219,10 +218,6 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
 
 void Sema::inferLifetimeBoundAttribute(FunctionDecl *FD) {
   if (FD->getNumParams() == 0)
-    return;
-  // Skip void returning functions (except constructors). This can occur in
-  // cases like 'as_const'.
-  if (!isa<CXXConstructorDecl>(FD) && FD->getReturnType()->isVoidType())
     return;
 
   if (unsigned BuiltinID = FD->getBuiltinID()) {
@@ -1226,11 +1221,10 @@ void Sema::AddPragmaAttributes(Scope *S, Decl *D) {
   }
 }
 
-void Sema::PrintPragmaAttributeInstantiationPoint(
-    InstantiationContextDiagFuncRef DiagFunc) {
+void Sema::PrintPragmaAttributeInstantiationPoint() {
   assert(PragmaAttributeCurrentTargetDecl && "Expected an active declaration");
-  DiagFunc(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
-           PDiag(diag::note_pragma_attribute_applied_decl_here));
+  Diags.Report(PragmaAttributeCurrentTargetDecl->getBeginLoc(),
+               diag::note_pragma_attribute_applied_decl_here);
 }
 
 void Sema::DiagnosePrecisionLossInComplexDivision() {
@@ -1272,7 +1266,7 @@ void Sema::ActOnPragmaMSFunction(
     return;
   }
 
-  MSFunctionNoBuiltins.insert_range(NoBuiltins);
+  MSFunctionNoBuiltins.insert(NoBuiltins.begin(), NoBuiltins.end());
 }
 
 void Sema::AddRangeBasedOptnone(FunctionDecl *FD) {

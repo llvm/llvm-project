@@ -408,7 +408,7 @@ void MemorySlotPromotionAnalyzer::computeMergePoints(
   SmallVector<Block *> mergePointsVec;
   idfCalculator.calculate(mergePointsVec);
 
-  mergePoints.insert_range(mergePointsVec);
+  mergePoints.insert(mergePointsVec.begin(), mergePointsVec.end());
 }
 
 bool MemorySlotPromotionAnalyzer::areMergePointsUsable(

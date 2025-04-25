@@ -17,9 +17,9 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceUsingSimplifyCFGDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
-void reduceConditionalsTrueDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
-void reduceConditionalsFalseDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceUsingSimplifyCFGDeltaPass(TestRunner &Test);
+void reduceConditionalsTrueDeltaPass(TestRunner &Test);
+void reduceConditionalsFalseDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

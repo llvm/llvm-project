@@ -59,8 +59,7 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
-  const MCExpr *lowerConstant(const Constant *CV, const Constant *BaseCV,
-                              uint64_t Offset) override;
+  const MCExpr *lowerConstant(const Constant *CV) override;
 
   void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
 
@@ -200,20 +199,18 @@ void AVRAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, I);
 }
 
-const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV,
-                                           const Constant *BaseCV,
-                                           uint64_t Offset) {
+const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
   MCContext &Ctx = OutContext;
 
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
     bool IsProgMem = GV->getAddressSpace() == AVR::ProgramMemory;
     if (IsProgMem) {
       const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GV), Ctx);
-      return AVRMCExpr::create(AVRMCExpr::VK_PM, Expr, false, Ctx);
+      return AVRMCExpr::create(AVRMCExpr::VK_AVR_PM, Expr, false, Ctx);
     }
   }
 
-  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
+  return AsmPrinter::lowerConstant(CV);
 }
 
 void AVRAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {

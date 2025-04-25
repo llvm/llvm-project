@@ -272,8 +272,7 @@ bool ABISysV_ppc64::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    std::optional<uint64_t> bit_size =
-        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
+    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
     bool is_signed;
@@ -345,7 +344,7 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning complex values at present");
     else {
       std::optional<uint64_t> bit_width =
-          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
+          compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
         error = Status::FromErrorString("can't get size of type");
         return error;
@@ -569,8 +568,7 @@ private:
   ReturnValueExtractor(Thread &thread, CompilerType &type,
                        RegisterContext *reg_ctx, ProcessSP process_sp)
       : m_thread(thread), m_type(type),
-        m_byte_size(
-            llvm::expectedToOptional(m_type.GetByteSize(&thread)).value_or(0)),
+        m_byte_size(m_type.GetByteSize(&thread).value_or(0)),
         m_data_up(new DataBufferHeap(m_byte_size, 0)), m_reg_ctx(reg_ctx),
         m_process_sp(process_sp), m_byte_order(process_sp->GetByteOrder()),
         m_addr_size(
@@ -646,8 +644,7 @@ private:
     DataExtractor de(&raw_data, sizeof(raw_data), m_byte_order, m_addr_size);
 
     lldb::offset_t offset = 0;
-    std::optional<uint64_t> byte_size =
-        llvm::expectedToOptional(type.GetByteSize(m_process_sp.get()));
+    std::optional<uint64_t> byte_size = type.GetByteSize(m_process_sp.get());
     if (!byte_size)
       return {};
     switch (*byte_size) {
@@ -787,7 +784,7 @@ private:
     if (m_type.IsHomogeneousAggregate(&elem_type)) {
       uint32_t type_flags = elem_type.GetTypeInfo();
       std::optional<uint64_t> elem_size =
-          llvm::expectedToOptional(elem_type.GetByteSize(m_process_sp.get()));
+          elem_type.GetByteSize(m_process_sp.get());
       if (!elem_size)
         return {};
       if (type_flags & eTypeIsComplex || !(type_flags & eTypeIsFloat)) {
@@ -957,7 +954,9 @@ ValueObjectSP ABISysV_ppc64::GetReturnValueObjectImpl(
   return GetReturnValueObjectSimple(thread, return_compiler_type);
 }
 
-UnwindPlanSP ABISysV_ppc64::CreateFunctionEntryUnwindPlan() {
+bool ABISysV_ppc64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
   uint32_t lr_reg_num;
   uint32_t sp_reg_num;
@@ -973,22 +972,27 @@ UnwindPlanSP ABISysV_ppc64::CreateFunctionEntryUnwindPlan() {
     pc_reg_num = ppc64_dwarf::dwarf_pc_ppc64;
   }
 
-  UnwindPlan::Row row;
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value
-  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // The previous PC is in the LR. All other registers are the same.
-  row.SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
+  // The previous PC is in the LR
+  row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
+  unwind_plan.AppendRow(row);
 
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("ppc64 at-func-entry default");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  return plan_sp;
+  // All other registers are the same.
+
+  unwind_plan.SetSourceName("ppc64 at-func-entry default");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+
+  return true;
 }
 
-UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
+bool ABISysV_ppc64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+
   uint32_t sp_reg_num;
   uint32_t pc_reg_num;
   uint32_t cr_reg_num;
@@ -1003,23 +1007,22 @@ UnwindPlanSP ABISysV_ppc64::CreateDefaultUnwindPlan() {
     cr_reg_num = ppc64_dwarf::dwarf_cr_ppc64;
   }
 
-  UnwindPlan::Row row;
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
   const int32_t ptr_size = 8;
-  row.SetUnspecifiedRegistersAreUndefined(true);
-  row.GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
+  row->SetUnspecifiedRegistersAreUndefined(true);
+  row->GetCFAValue().SetIsRegisterDereferenced(sp_reg_num);
 
-  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 2, true);
-  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(cr_reg_num, ptr_size, true);
+  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 2, true);
+  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row->SetRegisterLocationToAtCFAPlusOffset(cr_reg_num, ptr_size, true);
 
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("ppc64 default unwind plan");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  plan_sp->SetReturnAddressRegister(pc_reg_num);
-  return plan_sp;
+  unwind_plan.AppendRow(row);
+  unwind_plan.SetSourceName("ppc64 default unwind plan");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  unwind_plan.SetReturnAddressRegister(pc_reg_num);
+  return true;
 }
 
 bool ABISysV_ppc64::RegisterIsVolatile(const RegisterInfo *reg_info) {

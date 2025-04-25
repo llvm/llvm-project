@@ -56,7 +56,6 @@
     __cpp_lib_complex_udls                                  201309L [C++14]
     __cpp_lib_concepts                                      202002L [C++20]
     __cpp_lib_constexpr_algorithms                          201806L [C++20]
-                                                            202306L [C++26]
     __cpp_lib_constexpr_bitset                              202207L [C++23]
     __cpp_lib_constexpr_charconv                            202207L [C++23]
     __cpp_lib_constexpr_cmath                               202202L [C++23]
@@ -1885,7 +1884,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should not be defined before c++17"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++14"
 #   endif
@@ -1894,7 +1893,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -2971,7 +2970,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++17"
 #   endif
@@ -2980,7 +2979,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -2998,7 +2997,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++17"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++17"
 #   endif
@@ -3007,7 +3006,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -3283,11 +3282,17 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++20"
 # endif
 
-# ifndef __cpp_lib_atomic_float
-#   error "__cpp_lib_atomic_float should be defined in c++20"
-# endif
-# if __cpp_lib_atomic_float != 201711L
-#   error "__cpp_lib_atomic_float should have the value 201711L in c++20"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should be defined in c++20"
+#   endif
+#   if __cpp_lib_atomic_float != 201711L
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -3680,17 +3685,11 @@
 #   error "__cpp_lib_flat_set should not be defined before c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++20"
-#   endif
-#   if __cpp_lib_format != 202110L
-#     error "__cpp_lib_format should have the value 202110L in c++20"
-#   endif
-# else
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++20"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++20"
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -4333,7 +4332,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++20"
 #   endif
@@ -4342,7 +4341,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -4360,7 +4359,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++20"
 #   endif
@@ -4369,7 +4368,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -4702,11 +4701,17 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++23"
 # endif
 
-# ifndef __cpp_lib_atomic_float
-#   error "__cpp_lib_atomic_float should be defined in c++23"
-# endif
-# if __cpp_lib_atomic_float != 201711L
-#   error "__cpp_lib_atomic_float should have the value 201711L in c++23"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should be defined in c++23"
+#   endif
+#   if __cpp_lib_atomic_float != 201711L
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -5141,17 +5146,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++23"
-#   endif
-#   if __cpp_lib_format != 202110L
-#     error "__cpp_lib_format should have the value 202110L in c++23"
-#   endif
-# else
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++23"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++23"
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -5680,17 +5679,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++23"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++23"
-#   endif
-# else
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++23"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
@@ -5938,7 +5931,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++23"
 #   endif
@@ -5947,7 +5940,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -5965,7 +5958,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++23"
 #   endif
@@ -5974,7 +5967,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -6358,11 +6351,17 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++26"
 # endif
 
-# ifndef __cpp_lib_atomic_float
-#   error "__cpp_lib_atomic_float should be defined in c++26"
-# endif
-# if __cpp_lib_atomic_float != 201711L
-#   error "__cpp_lib_atomic_float should have the value 201711L in c++26"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should be defined in c++26"
+#   endif
+#   if __cpp_lib_atomic_float != 201711L
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -6566,8 +6565,8 @@
 # ifndef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should be defined in c++26"
 # endif
-# if __cpp_lib_constexpr_algorithms != 202306L
-#   error "__cpp_lib_constexpr_algorithms should have the value 202306L in c++26"
+# if __cpp_lib_constexpr_algorithms != 201806L
+#   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++26"
 # endif
 
 # ifndef __cpp_lib_constexpr_bitset
@@ -6854,17 +6853,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++26"
-#   endif
-#   if __cpp_lib_format != 202110L
-#     error "__cpp_lib_format should have the value 202110L in c++26"
-#   endif
-# else
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++26"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7564,17 +7557,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
-#   ifndef __cpp_lib_print
-#     error "__cpp_lib_print should be defined in c++26"
-#   endif
-#   if __cpp_lib_print != 202207L
-#     error "__cpp_lib_print should have the value 202207L in c++26"
-#   endif
-# else
-#   ifdef __cpp_lib_print
-#     error "__cpp_lib_print should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT' is not met!"
-#   endif
+# ifndef __cpp_lib_print
+#   error "__cpp_lib_print should be defined in c++26"
+# endif
+# if __cpp_lib_print != 202207L
+#   error "__cpp_lib_print should have the value 202207L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
@@ -7858,7 +7845,7 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++26"
 #   endif
@@ -7867,7 +7854,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -7885,7 +7872,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+# if _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++26"
 #   endif
@@ -7894,7 +7881,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 

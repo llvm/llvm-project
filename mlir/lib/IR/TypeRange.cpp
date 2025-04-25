@@ -13,7 +13,6 @@ using namespace mlir;
 
 //===----------------------------------------------------------------------===//
 // TypeRange
-//===----------------------------------------------------------------------===//
 
 TypeRange::TypeRange(ArrayRef<Type> types)
     : TypeRange(types.data(), types.size()) {

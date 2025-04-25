@@ -2435,8 +2435,8 @@ protected:
 
     // Collect registered option categories into vector in preparation for
     // sorting.
-    llvm::append_range(SortedCategories,
-                       GlobalParser->RegisteredOptionCategories);
+    for (OptionCategory *Category : GlobalParser->RegisteredOptionCategories)
+      SortedCategories.push_back(Category);
 
     // Sort the different option categories alphabetically.
     assert(SortedCategories.size() > 0 && "No option categories registered!");

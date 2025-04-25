@@ -261,13 +261,14 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   if (MO.getTargetFlags() & AArch64II::MO_NC)
     RefFlags |= AArch64MCExpr::VK_NC;
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  AArch64MCExpr::Specifier RefKind;
-  RefKind = static_cast<AArch64MCExpr::Specifier>(RefFlags);
+  AArch64MCExpr::VariantKind RefKind;
+  RefKind = static_cast<AArch64MCExpr::VariantKind>(RefFlags);
   Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);
 
   return MCOperand::createExpr(Expr);
@@ -315,12 +316,13 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
       RefFlags |= AArch64MCExpr::VK_NC;
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  auto RefKind = static_cast<AArch64MCExpr::Specifier>(RefFlags);
+  auto RefKind = static_cast<AArch64MCExpr::VariantKind>(RefFlags);
   assert(RefKind != AArch64MCExpr::VK_INVALID &&
          "Invalid relocation requested");
   Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);

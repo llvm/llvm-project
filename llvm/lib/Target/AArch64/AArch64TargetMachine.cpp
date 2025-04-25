@@ -268,7 +268,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64StackTaggingPreRAPass(*PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelLegacyPass(*PR);
-  initializeAArch64CondBrTuningPass(*PR);
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
@@ -870,7 +869,7 @@ void AArch64PassConfig::addPreEmitPass() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardCatchretPass());
   }
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCollectLOH &&

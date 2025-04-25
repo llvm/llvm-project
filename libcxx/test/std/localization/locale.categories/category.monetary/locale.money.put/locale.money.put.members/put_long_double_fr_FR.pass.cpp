@@ -13,8 +13,6 @@
 
 // REQUIRES: locale.fr_FR.UTF-8
 
-// ADDITIONAL_COMPILE_FLAGS: -DFR_MON_THOU_SEP=%{LOCALE_CONV_FR_FR_UTF_8_MON_THOUSANDS_SEP}
-
 // <locale>
 
 // class money_put<charT, OutputIterator>
@@ -61,8 +59,7 @@ public:
 };
 
 static std::wstring convert_thousands_sep(std::wstring const& in) {
-  const wchar_t fr_sep = LocaleHelpers::mon_thousands_sep_or_default(FR_MON_THOU_SEP);
-  return LocaleHelpers::convert_thousands_sep(in, fr_sep);
+  return LocaleHelpers::convert_thousands_sep_fr_FR(in);
 }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 

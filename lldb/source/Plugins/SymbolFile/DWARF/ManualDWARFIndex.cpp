@@ -81,7 +81,7 @@ void ManualDWARFIndex::Index() {
   const uint64_t total_progress = units_to_index.size() * 2 + 8;
   Progress progress("Manually indexing DWARF", module_desc.GetData(),
                     total_progress, /*debugger=*/nullptr,
-                    Progress::kDefaultHighFrequencyReportTime);
+                    /*minimum_report_time=*/std::chrono::milliseconds(20));
 
   // Share one thread pool across operations to avoid the overhead of
   // recreating the threads.

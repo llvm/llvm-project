@@ -68,8 +68,8 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
     AddressRange &func, Thread &thread, UnwindPlan &unwind_plan) {
   bool do_augment_unwindplan = true;
 
-  const UnwindPlan::Row *first_row = unwind_plan.GetRowForFunctionOffset(0);
-  const UnwindPlan::Row *last_row = unwind_plan.GetLastRow();
+  UnwindPlan::RowSP first_row = unwind_plan.GetRowForFunctionOffset(0);
+  UnwindPlan::RowSP last_row = unwind_plan.GetRowForFunctionOffset(-1);
 
   int wordsize = 8;
   ProcessSP process_sp(thread.GetProcess());
@@ -193,11 +193,9 @@ bool UnwindAssembly_x86::GetFastUnwindPlan(AddressRange &func, Thread &thread,
               0 ||
           memcmp(opcode_data.data(), x86_64_push_mov,
                  sizeof(x86_64_push_mov)) == 0) {
-        if (ABISP abi_sp = process_sp->GetABI()) {
-          if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
-            unwind_plan = std::move(*plan_sp);
-            return true;
-          }
+        ABISP abi_sp = process_sp->GetABI();
+        if (abi_sp) {
+          return abi_sp->CreateDefaultUnwindPlan(unwind_plan);
         }
       }
     }

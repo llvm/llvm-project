@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -O0 -mtriple=x86_64-apple-darwin -filetype=asm %s -o - | FileCheck %s
 ; Ensure that we generate an indirect location for the variable length array a.
 ; CHECK: ##DEBUG_VALUE: vla:a <- [DW_OP_deref] [{{\$r[a-z]+}}+0]
 ; CHECK: DW_OP_breg{{[0-9]}}

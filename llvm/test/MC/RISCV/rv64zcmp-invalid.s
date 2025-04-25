@@ -13,38 +13,17 @@ cm.mva01s a1, a2
 # CHECK-ERROR: error: invalid register list, {ra, s0-s10} or {x1, x8-x9, x18-x26} is not supported
 cm.popretz {ra, s0-s10}, 112
 
-# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
 cm.popretz {ra, s0-s1}, 112
 
-# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
 cm.push {ra}, 16
 
-# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
 cm.pop {ra, s0-s1}, -32
 
-# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
 cm.push {ra}, -15
 
-# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [32, 80]
+# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Zc spec for a detailed range of stack adjustment
 cm.pop {ra, s0-s1}, -33
-
-# CHECK-ERROR: :[[@LINE+1]]:9: error: register list must start from 'ra' or 'x1'
-cm.pop {s0}, -40
-
-# CHECK-ERROR: :[[@LINE+1]]:13: error: continuous register list must start from 's0' or 'x8'
-cm.pop {ra, t1}, -40
-
-# CHECK-ERROR: :[[@LINE+1]]:16: error: invalid register
-cm.pop {ra, s0-t1}, -40
-
-# CHECK-ERROR: :[[@LINE+1]]:20: error: second contiguous registers pair of register list must start from 'x18'
-cm.pop {ra, x8-x9, x28}, -40
-
-# CHECK-ERROR: :[[@LINE+1]]:24: error: invalid register
-cm.pop {ra, x8-x9, x18-x28}, -40
-
-# CHECK-ERROR: :[[@LINE+1]]:24: error: invalid register
-cm.pop {ra, x8-x9, x18-x17}, -40
-
-# CHECK-ERROR: :[[@LINE+1]]:16: error: invalid register
-cm.pop {ra, x8-f8, x18-x17}, -40

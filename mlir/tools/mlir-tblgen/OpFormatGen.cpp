@@ -11,7 +11,6 @@
 #include "OpClass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/TableGen/Class.h"
-#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
@@ -35,7 +34,6 @@ using llvm::StringMap;
 
 //===----------------------------------------------------------------------===//
 // VariableElement
-//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents an instance of an op variable element. A variable
@@ -141,7 +139,6 @@ struct AttributeLikeVariable : public VariableElement {
 
 //===----------------------------------------------------------------------===//
 // DirectiveElement
-//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents the `operands` directive. This directive represents
@@ -426,19 +423,18 @@ struct OperationFormat {
 
 //===----------------------------------------------------------------------===//
 // Parser Gen
-//===----------------------------------------------------------------------===//
 
-/// Returns true if we can format the given attribute as an enum in the
+/// Returns true if we can format the given attribute as an EnumAttr in the
 /// parser format.
 static bool canFormatEnumAttr(const NamedAttribute *attr) {
   Attribute baseAttr = attr->attr.getBaseAttr();
-  if (!baseAttr.isEnumAttr())
+  const EnumAttr *enumAttr = dyn_cast<EnumAttr>(&baseAttr);
+  if (!enumAttr)
     return false;
-  EnumInfo enumInfo(&baseAttr.getDef());
 
   // The attribute must have a valid underlying type and a constant builder.
-  return !enumInfo.getUnderlyingType().empty() &&
-         !baseAttr.getConstBuilderTemplate().empty();
+  return !enumAttr->getUnderlyingType().empty() &&
+         !enumAttr->getConstBuilderTemplate().empty();
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -1154,21 +1150,21 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
                               FmtContext &attrTypeCtx, bool parseAsOptional,
                               bool useProperties, StringRef opCppClassName) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  EnumInfo enumInfo(&baseAttr.getDef());
-  std::vector<EnumCase> cases = enumInfo.getAllCases();
+  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
+  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
 
   // Generate the code for building an attribute for this enum.
   std::string attrBuilderStr;
   {
     llvm::raw_string_ostream os(attrBuilderStr);
-    os << tgfmt(baseAttr.getConstBuilderTemplate(), &attrTypeCtx,
+    os << tgfmt(enumAttr.getConstBuilderTemplate(), &attrTypeCtx,
                 "*attrOptional");
   }
 
   // Build a string containing the cases that can be formatted as a keyword.
   std::string validCaseKeywordsStr = "{";
   llvm::raw_string_ostream validCaseKeywordsOS(validCaseKeywordsStr);
-  for (const EnumCase &attrCase : cases)
+  for (const EnumAttrCase &attrCase : cases)
     if (canFormatStringAsKeyword(attrCase.getStr()))
       validCaseKeywordsOS << '"' << attrCase.getStr() << "\",";
   validCaseKeywordsOS.str().back() = '}';
@@ -1198,8 +1194,8 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
         formatv("result.addAttribute(\"{0}\", {0}Attr);", var->name);
   }
 
-  body << formatv(enumAttrParserCode, var->name, enumInfo.getCppNamespace(),
-                  enumInfo.getStringToSymbolFnName(), attrBuilderStr,
+  body << formatv(enumAttrParserCode, var->name, enumAttr.getCppNamespace(),
+                  enumAttr.getStringToSymbolFnName(), attrBuilderStr,
                   validCaseKeywordsStr, errorMessage, attrAssignment);
 }
 
@@ -1954,7 +1950,6 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
 
 //===----------------------------------------------------------------------===//
 // PrinterGen
-//===----------------------------------------------------------------------===//
 
 /// The code snippet used to generate a printer call for a region of an
 // operation that has the SingleBlockImplicitTerminator trait.
@@ -2269,13 +2264,13 @@ static MethodBody &genTypeOperandPrinter(FormatElement *arg, const Operator &op,
 static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
                                MethodBody &body) {
   Attribute baseAttr = var->attr.getBaseAttr();
-  const EnumInfo enumInfo(&baseAttr.getDef());
-  std::vector<EnumCase> cases = enumInfo.getAllCases();
+  const EnumAttr &enumAttr = cast<EnumAttr>(baseAttr);
+  std::vector<EnumAttrCase> cases = enumAttr.getAllCases();
 
   body << formatv(enumAttrBeginPrinterCode,
                   (var->attr.isOptional() ? "*" : "") +
                       op.getGetterName(var->name),
-                  enumInfo.getSymbolToStringFnName());
+                  enumAttr.getSymbolToStringFnName());
 
   // Get a string containing all of the cases that can't be represented with a
   // keyword.
@@ -2288,7 +2283,7 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // Otherwise if this is a bit enum attribute, don't allow cases that may
   // overlap with other cases. For simplicity sake, only allow cases with a
   // single bit value.
-  if (enumInfo.isBitEnum()) {
+  if (enumAttr.isBitEnum()) {
     for (auto it : llvm::enumerate(cases)) {
       int64_t value = it.value().getValue();
       if (value < 0 || !llvm::isPowerOf2_64(value))
@@ -2300,8 +2295,8 @@ static void genEnumAttrPrinter(const NamedAttribute *var, const Operator &op,
   // case value to determine when to print in the string form.
   if (nonKeywordCases.any()) {
     body << "    switch (caseValue) {\n";
-    StringRef cppNamespace = enumInfo.getCppNamespace();
-    StringRef enumName = enumInfo.getEnumClassName();
+    StringRef cppNamespace = enumAttr.getCppNamespace();
+    StringRef enumName = enumAttr.getEnumClassName();
     for (auto it : llvm::enumerate(cases)) {
       if (nonKeywordCases.test(it.index()))
         continue;

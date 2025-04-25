@@ -12,6 +12,12 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
+/// Assert that the given value range contains a single value and return it.
+static Value getSingleValue(ValueRange values) {
+  assert(values.size() == 1 && "expected single value");
+  return values.front();
+}
+
 static void convertLevelType(SparseTensorEncodingAttr enc, Level lvl,
                              SmallVectorImpl<Type> &fields) {
   // Position and coordinate buffer in the sparse structure.
@@ -194,7 +200,7 @@ public:
 
     // Construct the iteration space.
     SparseIterationSpace space(loc, rewriter,
-                               llvm::getSingleElement(adaptor.getTensor()), 0,
+                               getSingleValue(adaptor.getTensor()), 0,
                                op.getLvlRange(), adaptor.getParentIter());
 
     SmallVector<Value> result = space.toValues();
@@ -212,8 +218,8 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     Value pos = adaptor.getIterator().back();
-    Value valBuf = rewriter.create<ToValuesOp>(
-        loc, llvm::getSingleElement(adaptor.getTensor()));
+    Value valBuf =
+        rewriter.create<ToValuesOp>(loc, getSingleValue(adaptor.getTensor()));
     rewriter.replaceOpWithNewOp<memref::LoadOp>(op, valBuf, pos);
     return success();
   }

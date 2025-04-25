@@ -123,9 +123,7 @@ void ompt_fini(void);
 
 #define OMPT_GET_RETURN_ADDRESS(level) __builtin_return_address(level)
 #define OMPT_GET_FRAME_ADDRESS(level) __builtin_frame_address(level)
-#define OMPT_FRAME_FLAGS_APP (ompt_frame_application | ompt_frame_cfa)
-#define OMPT_FRAME_FLAGS_RUNTIME (ompt_frame_runtime | ompt_frame_cfa)
-
+  
 int __kmp_control_tool(uint64_t command, uint64_t modifier, void *arg);
 
 extern ompt_callbacks_active_t ompt_enabled;

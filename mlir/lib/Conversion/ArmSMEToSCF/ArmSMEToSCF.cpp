@@ -19,7 +19,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARMSMETOSCFPASS
+#define GEN_PASS_DEF_CONVERTARMSMETOSCF
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -397,7 +397,7 @@ void mlir::populateArmSMEToSCFConversionPatterns(RewritePatternSet &patterns) {
 namespace {
 
 struct ConvertArmSMEToSCFPass
-    : public impl::ConvertArmSMEToSCFPassBase<ConvertArmSMEToSCFPass> {
+    : public impl::ConvertArmSMEToSCFBase<ConvertArmSMEToSCFPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
@@ -412,3 +412,7 @@ struct ConvertArmSMEToSCFPass
 };
 
 } // namespace
+
+std::unique_ptr<Pass> mlir::createConvertArmSMEToSCFPass() {
+  return std::make_unique<ConvertArmSMEToSCFPass>();
+}

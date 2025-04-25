@@ -63,7 +63,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
@@ -130,7 +129,10 @@ STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
   STATS_DECL_(BUILD_STAT_NAME(NAME, TYPE), MSG);
 #define STATS_TRACK(NAME, TYPE) ++(BUILD_STAT_NAME(NAME, TYPE));
 #define STATS_DECLTRACK(NAME, TYPE, MSG)                                       \
-  {STATS_DECL(NAME, TYPE, MSG) STATS_TRACK(NAME, TYPE)}
+  {                                                                            \
+    STATS_DECL(NAME, TYPE, MSG)                                                \
+    STATS_TRACK(NAME, TYPE)                                                    \
+  }
 #define STATS_DECLTRACK_ARG_ATTR(NAME)                                         \
   STATS_DECLTRACK(NAME, Arguments, BUILD_STAT_MSG_IR_ATTR(arguments, NAME))
 #define STATS_DECLTRACK_CSARG_ATTR(NAME)                                       \
@@ -1680,8 +1682,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (auto *PHI = dyn_cast<PHINode>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
-      auto [PhiIt, IsFirstPHIUser] = OffsetInfoMap.try_emplace(PHI);
-      auto &UsrOI = PhiIt->second;
+      bool IsFirstPHIUser = !OffsetInfoMap.count(PHI);
+      auto &UsrOI = OffsetInfoMap[PHI];
       auto &PtrOI = OffsetInfoMap[CurPtr];
 
       // Check if the PHI operand has already an unknown offset as we can't
@@ -2418,7 +2420,7 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override { STATS_DECLTRACK_CSARG_ATTR(nofree) };
+  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nofree)};
 };
 
 /// NoFree attribute for function return value.
@@ -3736,7 +3738,7 @@ struct AAIntraFnReachabilityFunction final
       }
     }
 
-    DeadEdges.insert_range(LocalDeadEdges);
+    DeadEdges.insert(LocalDeadEdges.begin(), LocalDeadEdges.end());
     return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet,
                           IsTemporaryRQI);
   }
@@ -3968,17 +3970,18 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       // TODO: We should track the capturing uses in AANoCapture but the problem
       //       is CGSCC runs. For those we would need to "allow" AANoCapture for
       //       a value in the module slice.
-      // TODO(captures): Make this more precise.
-      UseCaptureInfo CI =
-          DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
-      if (capturesNothing(CI))
+      switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
+      case UseCaptureKind::NO_CAPTURE:
         return true;
-      if (CI.isPassthrough()) {
+      case UseCaptureKind::MAY_CAPTURE:
+        LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *UserI
+                          << "\n");
+        return false;
+      case UseCaptureKind::PASSTHROUGH:
         Follow = true;
         return true;
       }
-      LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] Unknown user: " << *UserI << "\n");
-      return false;
+      llvm_unreachable("unknown UseCaptureKind");
     };
 
     bool IsKnownNoCapture;
@@ -5749,7 +5752,8 @@ bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   if (IRP.getPositionKind() == IRP_CALL_SITE_ARGUMENT)
     if (Argument *Arg = IRP.getAssociatedArgument()) {
       SmallVector<Attribute, 1> Attrs;
-      A.getAttrs(IRP, {Attribute::Captures, Attribute::ByVal}, Attrs,
+      A.getAttrs(IRPosition::argument(*Arg),
+                 {Attribute::Captures, Attribute::ByVal}, Attrs,
                  /* IgnoreSubsumingPositions */ true);
       bool ArgNoCapture = any_of(Attrs, [](Attribute Attr) {
         return Attr.getKindAsEnum() == Attribute::ByVal ||
@@ -6015,16 +6019,16 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
   };
 
   auto UseCheck = [&](const Use &U, bool &Follow) -> bool {
-    // TODO(captures): Make this more precise.
-    UseCaptureInfo CI =
-        DetermineUseCaptureKind(U, /*Base=*/nullptr, IsDereferenceableOrNull);
-    if (capturesNothing(CI))
+    switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
+    case UseCaptureKind::NO_CAPTURE:
       return true;
-    if (CI.isPassthrough()) {
+    case UseCaptureKind::MAY_CAPTURE:
+      return checkUse(A, T, U, Follow);
+    case UseCaptureKind::PASSTHROUGH:
       Follow = true;
       return true;
     }
-    return checkUse(A, T, U, Follow);
+    llvm_unreachable("Unexpected use capture kind!");
   };
 
   if (!A.checkForAllUses(UseCheck, *this, *V))
@@ -6075,9 +6079,7 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
   }
 
   /// See AbstractAttribute::trackStatistics()
-  void trackStatistics() const override {
-    STATS_DECLTRACK_CSARG_ATTR(nocapture)
-  };
+  void trackStatistics() const override{STATS_DECLTRACK_CSARG_ATTR(nocapture)};
 };
 
 /// NoCapture attribute for floating values.
@@ -12159,13 +12161,16 @@ struct AAGlobalValueInfoFloating : public AAGlobalValueInfo {
 
     auto UsePred = [&](const Use &U, bool &Follow) -> bool {
       Uses.insert(&U);
-      // TODO(captures): Make this more precise.
-      UseCaptureInfo CI = DetermineUseCaptureKind(U, /*Base=*/nullptr, nullptr);
-      if (CI.isPassthrough()) {
+      switch (DetermineUseCaptureKind(U, nullptr)) {
+      case UseCaptureKind::NO_CAPTURE:
+        return checkUse(A, U, Follow, Worklist);
+      case UseCaptureKind::MAY_CAPTURE:
+        return checkUse(A, U, Follow, Worklist);
+      case UseCaptureKind::PASSTHROUGH:
         Follow = true;
         return true;
       }
-      return checkUse(A, U, Follow, Worklist);
+      return true;
     };
     auto EquivalentUseCB = [&](const Use &OldU, const Use &NewU) {
       Uses.insert(&OldU);
@@ -12231,7 +12236,8 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
     } else if (A.isClosedWorldModule()) {
       ArrayRef<Function *> IndirectlyCallableFunctions =
           A.getInfoCache().getIndirectlyCallableFunctions(A);
-      PotentialCallees.insert_range(IndirectlyCallableFunctions);
+      PotentialCallees.insert(IndirectlyCallableFunctions.begin(),
+                              IndirectlyCallableFunctions.end());
     }
 
     if (PotentialCallees.empty())

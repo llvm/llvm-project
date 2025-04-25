@@ -24,7 +24,6 @@ class LangOptions;
 class FunctionDecl;
 class VarDecl;
 class APValue;
-class BlockExpr;
 
 namespace interp {
 class Function;
@@ -92,8 +91,7 @@ public:
                         const CXXRecordDecl *StaticDecl,
                         const CXXMethodDecl *InitialFunction) const;
 
-  const Function *getOrCreateFunction(const FunctionDecl *FuncDecl);
-  const Function *getOrCreateObjCBlock(const BlockExpr *E);
+  const Function *getOrCreateFunction(const FunctionDecl *FD);
 
   /// Returns whether we should create a global variable for the
   /// given ValueDecl.

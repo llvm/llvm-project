@@ -226,9 +226,9 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       return;
   }
   auto &N = getRegisters()[MsgPackDoc.getNode(Reg)];
-  auto [ExprIt, Inserted] = REM.try_emplace(Reg);
+  auto ExprIt = REM.find(Reg);
 
-  if (!Inserted) {
+  if (ExprIt != REM.end()) {
     Val = MCBinaryExpr::createOr(Val, ExprIt->getSecond(), Ctx);
     // This conditional may be redundant most of the time, but the alternate
     // setRegister(unsigned, unsigned) could've been called while the
@@ -245,7 +245,7 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
     // propagate ORs.
     N = (uint64_t)0;
   }
-  ExprIt->second = Val;
+  REM[Reg] = Val;
   DelayedExprs.assignDocNode(N, msgpack::Type::UInt, Val);
 }
 

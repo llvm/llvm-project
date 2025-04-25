@@ -91,11 +91,8 @@ struct MatchBuilder {
 
   auto matchMathCall(const StringRef FunctionName,
                      const Matcher<clang::Expr> ArgumentMatcher) const {
-    auto HasAnyPrecisionName = hasAnyName(
-        FunctionName, (FunctionName + "l").str(),
-        (FunctionName + "f").str()); // Support long double(l) and float(f).
     return expr(ignoreParenAndFloatingCasting(
-        callExpr(callee(functionDecl(HasAnyPrecisionName,
+        callExpr(callee(functionDecl(hasName(FunctionName),
                                      hasParameter(0, hasType(isArithmetic())))),
                  hasArgument(0, ArgumentMatcher))));
   }

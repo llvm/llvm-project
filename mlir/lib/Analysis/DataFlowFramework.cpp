@@ -118,17 +118,21 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   }
 
   // Run the analysis until fixpoint.
-  // Iterate until all states are in some initialized state and the worklist
-  // is exhausted.
-  while (!worklist.empty()) {
-    auto [point, analysis] = worklist.front();
-    worklist.pop();
+  do {
+    // Exhaust the worklist.
+    while (!worklist.empty()) {
+      auto [point, analysis] = worklist.front();
+      worklist.pop();
 
-    DATAFLOW_DEBUG(llvm::dbgs() << "Invoking '" << analysis->debugName
-                                << "' on: " << point << "\n");
-    if (failed(analysis->visit(point)))
-      return failure();
-  }
+      DATAFLOW_DEBUG(llvm::dbgs() << "Invoking '" << analysis->debugName
+                                  << "' on: " << point << "\n");
+      if (failed(analysis->visit(point)))
+        return failure();
+    }
+
+    // Iterate until all states are in some initialized state and the worklist
+    // is exhausted.
+  } while (!worklist.empty());
 
   return success();
 }

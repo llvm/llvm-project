@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def CpuCyclesPfmCounter : PfmCounter<"CYCLES">;
+def CpuCyclesPfmCounter : PfmCounter<"CPU_CYCLES">;
 
 def DefaultPfmCounters : ProcPfmCounters {
   let CycleCounter = CpuCyclesPfmCounter;

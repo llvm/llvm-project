@@ -119,10 +119,6 @@ bool LoopPipelinerInternal::initializeLoopInfo(
     int64_t ubImm = upperBoundCst.value();
     int64_t lbImm = lowerBoundCst.value();
     int64_t stepImm = stepCst.value();
-    if (stepImm <= 0) {
-      LDBG("--invalid loop step -> BAIL");
-      return false;
-    }
     int64_t numIteration = llvm::divideCeilSigned(ubImm - lbImm, stepImm);
     if (numIteration > maxStage) {
       dynamicLoop = false;
@@ -207,7 +203,9 @@ bool LoopPipelinerInternal::initializeLoopInfo(
 static SetVector<Value> getNestedOperands(Operation *op) {
   SetVector<Value> operands;
   op->walk([&](Operation *nestedOp) {
-    operands.insert_range(nestedOp->getOperands());
+    for (Value operand : nestedOp->getOperands()) {
+      operands.insert(operand);
+    }
   });
   return operands;
 }

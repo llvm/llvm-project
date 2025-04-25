@@ -20,7 +20,6 @@
 #include "bolt/Rewrite/JITLinkLinker.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
-#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/Support/Errc.h"
@@ -33,8 +32,9 @@ namespace opts {
 
 using namespace llvm;
 extern cl::opt<unsigned> AlignText;
-// FIXME! Upstream change
-// extern cl::opt<bool> CheckOverlappingElements;
+//FIXME! Upstream change
+//extern cl::opt<bool> CheckOverlappingElements;
+extern cl::opt<bool> ForcePatch;
 extern cl::opt<bool> Instrument;
 extern cl::opt<bool> InstrumentCalls;
 extern cl::opt<bolt::JumpTableSupportLevel> JumpTables;

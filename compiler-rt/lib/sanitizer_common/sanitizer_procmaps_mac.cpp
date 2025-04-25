@@ -334,22 +334,9 @@ static const load_command *NextCommand(const load_command *lc) {
   return (const load_command *)((const char *)lc + lc->cmdsize);
 }
 
-#  ifdef MH_MAGIC_64
-static constexpr size_t header_size = sizeof(mach_header_64);
-#  else
-static constexpr size_t header_size = sizeof(mach_header);
-#  endif
-
-static void FindUUID(const load_command *first_lc, const mach_header *hdr,
-                     u8 *uuid_output) {
-  uint32_t curcmd = 0;
-  for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
-       curcmd++, lc = NextCommand(lc)) {
-    CHECK_LT((const char *)lc,
-             (const char *)hdr + header_size + hdr->sizeofcmds);
-
-    if (lc->cmd != LC_UUID)
-      continue;
+static void FindUUID(const load_command *first_lc, u8 *uuid_output) {
+  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
+    if (lc->cmd != LC_UUID) continue;
 
     const uuid_command *uuid_lc = (const uuid_command *)lc;
     const uint8_t *uuid = &uuid_lc->uuid[0];
@@ -358,16 +345,9 @@ static void FindUUID(const load_command *first_lc, const mach_header *hdr,
   }
 }
 
-static bool IsModuleInstrumented(const load_command *first_lc,
-                                 const mach_header *hdr) {
-  uint32_t curcmd = 0;
-  for (const load_command *lc = first_lc; curcmd < hdr->ncmds;
-       curcmd++, lc = NextCommand(lc)) {
-    CHECK_LT((const char *)lc,
-             (const char *)hdr + header_size + hdr->sizeofcmds);
-
-    if (lc->cmd != LC_LOAD_DYLIB)
-      continue;
+static bool IsModuleInstrumented(const load_command *first_lc) {
+  for (const load_command *lc = first_lc; lc->cmd != 0; lc = NextCommand(lc)) {
+    if (lc->cmd != LC_LOAD_DYLIB) continue;
 
     const dylib_command *dylib_lc = (const dylib_command *)lc;
     uint32_t dylib_name_offset = dylib_lc->dylib.name.offset;
@@ -413,10 +393,10 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
           continue;
         }
       }
-      FindUUID((const load_command *)data_.current_load_cmd_addr, hdr,
+      FindUUID((const load_command *)data_.current_load_cmd_addr,
                data_.current_uuid);
       data_.current_instrumented = IsModuleInstrumented(
-          (const load_command *)data_.current_load_cmd_addr, hdr);
+          (const load_command *)data_.current_load_cmd_addr);
     }
 
     while (data_.current_load_cmd_count > 0) {

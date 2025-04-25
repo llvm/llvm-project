@@ -21,7 +21,6 @@
 namespace cir {
 
 bool isAnyFloatingPointType(mlir::Type t);
-bool isFPOrFPVectorTy(mlir::Type);
 
 } // namespace cir
 

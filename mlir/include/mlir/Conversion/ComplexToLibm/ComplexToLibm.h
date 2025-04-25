@@ -8,7 +8,6 @@
 #ifndef MLIR_CONVERSION_COMPLEXTOLIBM_COMPLEXTOLIBM_H_
 #define MLIR_CONVERSION_COMPLEXTOLIBM_COMPLEXTOLIBM_H_
 
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
@@ -22,6 +21,9 @@ class OperationPass;
 /// calls.
 void populateComplexToLibmConversionPatterns(RewritePatternSet &patterns,
                                              PatternBenefit benefit);
+
+/// Create a pass to convert Complex operations to libm calls.
+std::unique_ptr<OperationPass<ModuleOp>> createConvertComplexToLibmPass();
 
 } // namespace mlir
 

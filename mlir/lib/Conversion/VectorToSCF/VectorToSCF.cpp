@@ -549,26 +549,22 @@ struct Strategy<TransferWriteOp> {
 };
 
 template <typename OpTy>
-static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
-                                        VectorTransferToSCFOptions options) {
+LogicalResult checkPrepareXferOp(OpTy xferOp,
+                                 VectorTransferToSCFOptions options) {
   if (xferOp->hasAttr(kPassLabel))
-    return rewriter.notifyMatchFailure(
-        xferOp, "kPassLabel is present (vector-to-scf lowering in progress)");
+    return failure();
   if (xferOp.getVectorType().getRank() <= options.targetRank)
-    return rewriter.notifyMatchFailure(
-        xferOp, "xferOp vector rank <= transformation target rank");
+    return failure();
+  // Currently the unpacking of the leading dimension into the memref is not
+  // supported for scalable dimensions.
   if (xferOp.getVectorType().getScalableDims().front())
-    return rewriter.notifyMatchFailure(
-        xferOp, "Unpacking of the leading dimension into the memref is not yet "
-                "supported for scalable dims");
+    return failure();
   if (isTensorOp(xferOp) && !options.lowerTensors)
-    return rewriter.notifyMatchFailure(
-        xferOp, "Unpacking for tensors has been disabled.");
+    return failure();
+  // Transfer ops that modify the element type are not supported atm.
   if (xferOp.getVectorType().getElementType() !=
       xferOp.getShapedType().getElementType())
-    return rewriter.notifyMatchFailure(
-        xferOp, "Mismatching source and destination element types.");
-
+    return failure();
   return success();
 }
 
@@ -601,9 +597,8 @@ struct PrepareTransferReadConversion
 
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp, rewriter, options).failed())
-      return rewriter.notifyMatchFailure(
-          xferOp, "checkPrepareXferOp conditions not met!");
+    if (checkPrepareXferOp(xferOp, options).failed())
+      return failure();
 
     auto buffers = allocBuffers(rewriter, xferOp);
     auto *newXfer = rewriter.clone(*xferOp.getOperation());
@@ -651,9 +646,8 @@ struct PrepareTransferWriteConversion
 
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp, rewriter, options).failed())
-      return rewriter.notifyMatchFailure(
-          xferOp, "checkPrepareXferOp conditions not met!");
+    if (checkPrepareXferOp(xferOp, options).failed())
+      return failure();
 
     Location loc = xferOp.getLoc();
     auto buffers = allocBuffers(rewriter, xferOp);
@@ -909,8 +903,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
     if (!xferOp->hasAttr(kPassLabel))
-      return rewriter.notifyMatchFailure(
-          xferOp, "kPassLabel is present (progressing lowering in progress)");
+      return failure();
 
     // Find and cast data buffer. How the buffer can be found depends on OpTy.
     ImplicitLocOpBuilder locB(xferOp.getLoc(), rewriter);
@@ -918,8 +911,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     auto dataBufferType = dyn_cast<MemRefType>(dataBuffer.getType());
     FailureOr<MemRefType> castedDataType = unpackOneDim(dataBufferType);
     if (failed(castedDataType))
-      return rewriter.notifyMatchFailure(xferOp,
-                                         "Failed to unpack one vector dim.");
+      return failure();
 
     auto castedDataBuffer =
         locB.create<vector::TypeCastOp>(*castedDataType, dataBuffer);
@@ -1302,14 +1294,16 @@ struct UnrollTransferReadConversion
           xferOp, "vector rank is less or equal to target rank");
     if (failed(checkLowerTensors(xferOp, rewriter)))
       return failure();
+    // Transfer ops that modify the element type are not supported atm.
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
       return rewriter.notifyMatchFailure(
           xferOp, "not yet supported: element type mismatch");
     auto xferVecType = xferOp.getVectorType();
     if (xferVecType.getScalableDims()[0]) {
+      // Cannot unroll a scalable dimension at compile time.
       return rewriter.notifyMatchFailure(
-          xferOp, "scalable dimensions cannot be unrolled at compile time");
+          xferOp, "scalable dimensions cannot be unrolled");
     }
 
     auto insertOp = getInsertOp(xferOp);

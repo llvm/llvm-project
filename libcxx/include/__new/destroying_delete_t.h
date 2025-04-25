@@ -16,14 +16,15 @@
 #endif
 
 #if _LIBCPP_STD_VER >= 20
-_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+// purposefully not using versioning namespace
+namespace std {
 // Enable the declaration even if the compiler doesn't support the language
 // feature.
 struct destroying_delete_t {
   explicit destroying_delete_t() = default;
 };
 inline constexpr destroying_delete_t destroying_delete{};
-_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+} // namespace std
 #endif
 
 #endif // _LIBCPP___NEW_DESTROYING_DELETE_T_H

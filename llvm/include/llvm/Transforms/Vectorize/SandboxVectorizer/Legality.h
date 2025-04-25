@@ -17,7 +17,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
 namespace llvm::sandboxir {
@@ -43,7 +42,8 @@ public:
   static ShuffleMask getIdentity(unsigned Sz) {
     IndicesVecT Indices;
     Indices.reserve(Sz);
-    llvm::append_range(Indices, seq<int>(0, (int)Sz));
+    for (auto Idx : seq<int>(0, (int)Sz))
+      Indices.push_back(Idx);
     return ShuffleMask(std::move(Indices));
   }
   /// \Returns true if the mask is a perfect identity mask with consecutive
@@ -97,7 +97,6 @@ enum class ResultReason {
   CantSchedule,
   Unimplemented,
   Infeasible,
-  ForcePackForDebugging,
 };
 
 #ifndef NDEBUG
@@ -142,8 +141,6 @@ struct ToStr {
       return "Unimplemented";
     case ResultReason::Infeasible:
       return "Infeasible";
-    case ResultReason::ForcePackForDebugging:
-      return "ForcePackForDebugging";
     }
     llvm_unreachable("Unknown ResultReason enum");
   }
@@ -209,22 +206,22 @@ public:
 
 class DiamondReuse final : public LegalityResult {
   friend class LegalityAnalysis;
-  Action *Vec;
-  DiamondReuse(Action *Vec)
+  Value *Vec;
+  DiamondReuse(Value *Vec)
       : LegalityResult(LegalityResultID::DiamondReuse), Vec(Vec) {}
 
 public:
   static bool classof(const LegalityResult *From) {
     return From->getSubclassID() == LegalityResultID::DiamondReuse;
   }
-  Action *getVector() const { return Vec; }
+  Value *getVector() const { return Vec; }
 };
 
 class DiamondReuseWithShuffle final : public LegalityResult {
   friend class LegalityAnalysis;
-  Action *Vec;
+  Value *Vec;
   ShuffleMask Mask;
-  DiamondReuseWithShuffle(Action *Vec, const ShuffleMask &Mask)
+  DiamondReuseWithShuffle(Value *Vec, const ShuffleMask &Mask)
       : LegalityResult(LegalityResultID::DiamondReuseWithShuffle), Vec(Vec),
         Mask(Mask) {}
 
@@ -232,7 +229,7 @@ public:
   static bool classof(const LegalityResult *From) {
     return From->getSubclassID() == LegalityResultID::DiamondReuseWithShuffle;
   }
-  Action *getVector() const { return Vec; }
+  Value *getVector() const { return Vec; }
   const ShuffleMask &getMask() const { return Mask; }
 };
 
@@ -253,18 +250,18 @@ public:
   /// Describes how to get a value element. If the value is a vector then it
   /// also provides the index to extract it from.
   class ExtractElementDescr {
-    PointerUnion<Action *, Value *> V = nullptr;
+    Value *V;
     /// The index in `V` that the value can be extracted from.
-    int ExtractIdx = 0;
+    /// This is nullopt if we need to use `V` as a whole.
+    std::optional<int> ExtractIdx;
 
   public:
-    ExtractElementDescr(Action *V, int ExtractIdx)
+    ExtractElementDescr(Value *V, int ExtractIdx)
         : V(V), ExtractIdx(ExtractIdx) {}
-    ExtractElementDescr(Value *V) : V(V) {}
-    Action *getValue() const { return cast<Action *>(V); }
-    Value *getScalar() const { return cast<Value *>(V); }
-    bool needsExtract() const { return isa<Action *>(V); }
-    int getExtractIdx() const { return ExtractIdx; }
+    ExtractElementDescr(Value *V) : V(V), ExtractIdx(std::nullopt) {}
+    Value *getValue() const { return V; }
+    bool needsExtract() const { return ExtractIdx.has_value(); }
+    int getExtractIdx() const { return *ExtractIdx; }
   };
 
   using DescrVecT = SmallVector<ExtractElementDescr, 4>;
@@ -275,11 +272,11 @@ public:
       : Descrs(std::move(Descrs)) {}
   /// If all elements come from a single vector input, then return that vector
   /// and also the shuffle mask required to get them in order.
-  std::optional<std::pair<Action *, ShuffleMask>> getSingleInput() const {
+  std::optional<std::pair<Value *, ShuffleMask>> getSingleInput() const {
     const auto &Descr0 = *Descrs.begin();
+    Value *V0 = Descr0.getValue();
     if (!Descr0.needsExtract())
       return std::nullopt;
-    auto *V0 = Descr0.getValue();
     ShuffleMask::IndicesVecT MaskIndices;
     MaskIndices.push_back(Descr0.getExtractIdx());
     for (const auto &Descr : drop_begin(Descrs)) {
@@ -349,10 +346,6 @@ public:
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
   const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
                                      bool SkipScheduling = false);
-  /// \Returns a Pack with reason 'ForcePackForDebugging'.
-  const LegalityResult &getForcedPackForDebugging() {
-    return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);
-  }
   void clear();
 };
 

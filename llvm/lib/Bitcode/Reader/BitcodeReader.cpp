@@ -102,8 +102,18 @@ static cl::opt<bool> ExpandConstantExprs(
     cl::desc(
         "Expand constant expressions to instructions for testing purposes"));
 
+/// Load bitcode directly into RemoveDIs format (use debug records instead
+/// of debug intrinsics). UNSET is treated as FALSE, so the default action
+/// is to do nothing. Individual tools can override this to incrementally add
+/// support for the RemoveDIs format.
+cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat(
+    "load-bitcode-into-experimental-debuginfo-iterators", cl::Hidden,
+    cl::desc("Load bitcode directly into the new debug info format (regardless "
+             "of input format)"));
 extern cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 namespace {
 
@@ -1927,7 +1937,8 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 }
 
 /// This fills an AttrBuilder object with the LLVM attributes that have
-/// been decoded from the given integer.
+/// been decoded from the given integer. This function must stay in sync with
+/// 'encodeLLVMAttributesForBitcode'.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
                                            uint64_t EncodedAttrs,
                                            uint64_t AttrIdx) {
@@ -2389,28 +2400,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
-          else if (Kind == Attribute::Memory) {
-            uint64_t EncodedME = Record[++i];
-            const uint8_t Version = (EncodedME >> 56);
-            if (Version == 0) {
-              // Errno memory location was previously encompassed into default
-              // memory. Ensure this is taken into account while reconstructing
-              // the memory attribute prior to its introduction.
-              ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
-              ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
-              ModRefInfo OtherMem = ModRefInfo((EncodedME >> 4) & 3);
-              auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
-                        MemoryEffects::argMemOnly(ArgMem) |
-                        MemoryEffects::errnoMemOnly(OtherMem) |
-                        MemoryEffects::otherMemOnly(OtherMem);
-              B.addMemoryAttr(ME);
-            } else {
-              // Construct the memory attribute directly from the encoded base
-              // on newer versions.
-              B.addMemoryAttr(MemoryEffects::createFromIntValue(
-                  EncodedME & 0x00FFFFFFFFFFFFFFULL));
-            }
-          } else if (Kind == Attribute::Captures)
+          else if (Kind == Attribute::Memory)
+            B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
+          else if (Kind == Attribute::Captures)
             B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
@@ -3331,8 +3323,10 @@ Error BitcodeReader::parseConstants() {
       if (Record.empty())
         return error("Invalid aggregate record");
 
+      unsigned Size = Record.size();
       SmallVector<unsigned, 16> Elts;
-      llvm::append_range(Elts, Record);
+      for (unsigned i = 0; i != Size; ++i)
+        Elts.push_back(Record[i]);
 
       if (isa<StructType>(CurTy)) {
         V = BitcodeConstant::create(
@@ -4484,9 +4478,14 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata,
                                  ParserCallbacks Callbacks) {
-  // In preparation for the deletion of debug-intrinsics, don't allow module
-  // loading to escape intrinsics being autoupgraded to debug records.
-  TheModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
+  // Load directly into RemoveDIs format if LoadBitcodeIntoNewDbgInfoFormat
+  // has been set to true and we aren't attempting to preserve the existing
+  // format in the bitcode (default action: load into the old debug format).
+  if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
+    TheModule->IsNewDbgInfoFormat =
+        UseNewDbgInfoFormat &&
+        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
+  }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
   if (ResumeBit) {
@@ -4515,12 +4514,12 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
     // Auto-upgrade the layout string
     TentativeDataLayoutStr = llvm::UpgradeDataLayoutString(
-        TentativeDataLayoutStr, TheModule->getTargetTriple().str());
+        TentativeDataLayoutStr, TheModule->getTargetTriple());
 
     // Apply override
     if (Callbacks.DataLayout) {
       if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple().str(), TentativeDataLayoutStr))
+              TheModule->getTargetTriple(), TentativeDataLayoutStr))
         TentativeDataLayoutStr = *LayoutOverride;
     }
 
@@ -4704,7 +4703,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setTargetTriple(Triple(S));
+      TheModule->setTargetTriple(S);
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
@@ -7012,6 +7011,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         SeenAnyDebugInfo ? SeenDebugRecord : F->getParent()->IsNewDbgInfoFormat;
     if (SeenAnyDebugInfo) {
       UseNewDbgInfoFormat = SeenDebugRecord;
+      WriteNewDbgInfoFormatToBitcode = SeenDebugRecord;
+      WriteNewDbgInfoFormat = SeenDebugRecord;
     }
     // If the module's debug info format doesn't match the observed input
     // format, then set its format now; we don't need to call the conversion
@@ -8057,18 +8058,20 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
+      std::set<std::string, std::less<>> &CfiFunctionDefs =
+          TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
-                                static_cast<size_t>(Record[I + 1]));
+        CfiFunctionDefs.insert(
+            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
+      std::set<std::string, std::less<>> &CfiFunctionDecls =
+          TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
-                                 static_cast<size_t>(Record[I + 1]));
+        CfiFunctionDecls.insert(
+            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
       break;
     }
 

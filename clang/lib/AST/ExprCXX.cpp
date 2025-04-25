@@ -1779,31 +1779,31 @@ TemplateArgument SubstNonTypeTemplateParmPackExpr::getArgumentPack() const {
   return TemplateArgument(llvm::ArrayRef(Arguments, NumArguments));
 }
 
-FunctionParmPackExpr::FunctionParmPackExpr(QualType T, ValueDecl *ParamPack,
+FunctionParmPackExpr::FunctionParmPackExpr(QualType T, VarDecl *ParamPack,
                                            SourceLocation NameLoc,
                                            unsigned NumParams,
-                                           ValueDecl *const *Params)
+                                           VarDecl *const *Params)
     : Expr(FunctionParmPackExprClass, T, VK_LValue, OK_Ordinary),
       ParamPack(ParamPack), NameLoc(NameLoc), NumParameters(NumParams) {
   if (Params)
     std::uninitialized_copy(Params, Params + NumParams,
-                            getTrailingObjects<ValueDecl *>());
+                            getTrailingObjects<VarDecl *>());
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::Create(const ASTContext &Context, QualType T,
-                             ValueDecl *ParamPack, SourceLocation NameLoc,
-                             ArrayRef<ValueDecl *> Params) {
-  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(Params.size())))
+                             VarDecl *ParamPack, SourceLocation NameLoc,
+                             ArrayRef<VarDecl *> Params) {
+  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(Params.size())))
       FunctionParmPackExpr(T, ParamPack, NameLoc, Params.size(), Params.data());
 }
 
 FunctionParmPackExpr *
 FunctionParmPackExpr::CreateEmpty(const ASTContext &Context,
                                   unsigned NumParams) {
-  return new (Context.Allocate(totalSizeToAlloc<ValueDecl *>(NumParams)))
+  return new (Context.Allocate(totalSizeToAlloc<VarDecl *>(NumParams)))
       FunctionParmPackExpr(QualType(), nullptr, SourceLocation(), 0, nullptr);
 }
 
@@ -1854,42 +1854,23 @@ bool MaterializeTemporaryExpr::isUsableInConstantExpressions(
 
 TypeTraitExpr::TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                              ArrayRef<TypeSourceInfo *> Args,
-                             SourceLocation RParenLoc,
-                             std::variant<bool, APValue> Value)
+                             SourceLocation RParenLoc, bool Value)
     : Expr(TypeTraitExprClass, T, VK_PRValue, OK_Ordinary), Loc(Loc),
       RParenLoc(RParenLoc) {
   assert(Kind <= TT_Last && "invalid enum value!");
-
   TypeTraitExprBits.Kind = Kind;
   assert(static_cast<unsigned>(Kind) == TypeTraitExprBits.Kind &&
          "TypeTraitExprBits.Kind overflow!");
-
-  TypeTraitExprBits.IsBooleanTypeTrait = std::holds_alternative<bool>(Value);
-  if (TypeTraitExprBits.IsBooleanTypeTrait)
-    TypeTraitExprBits.Value = std::get<bool>(Value);
-  else
-    ::new (getTrailingObjects<APValue>())
-        APValue(std::get<APValue>(std::move(Value)));
-
+  TypeTraitExprBits.Value = Value;
   TypeTraitExprBits.NumArgs = Args.size();
   assert(Args.size() == TypeTraitExprBits.NumArgs &&
          "TypeTraitExprBits.NumArgs overflow!");
+
   auto **ToArgs = getTrailingObjects<TypeSourceInfo *>();
   for (unsigned I = 0, N = Args.size(); I != N; ++I)
     ToArgs[I] = Args[I];
 
   setDependence(computeDependence(this));
-
-  assert((TypeTraitExprBits.IsBooleanTypeTrait || isValueDependent() ||
-          getAPValue().isInt() || getAPValue().isAbsent()) &&
-         "Only int values are supported by clang");
-}
-
-TypeTraitExpr::TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool)
-    : Expr(TypeTraitExprClass, Empty) {
-  TypeTraitExprBits.IsBooleanTypeTrait = IsStoredAsBool;
-  if (!IsStoredAsBool)
-    ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
@@ -1898,26 +1879,14 @@ TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
                                      ArrayRef<TypeSourceInfo *> Args,
                                      SourceLocation RParenLoc,
                                      bool Value) {
-  void *Mem =
-      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(0, Args.size()));
-  return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
-}
-
-TypeTraitExpr *TypeTraitExpr::Create(const ASTContext &C, QualType T,
-                                     SourceLocation Loc, TypeTrait Kind,
-                                     ArrayRef<TypeSourceInfo *> Args,
-                                     SourceLocation RParenLoc, APValue Value) {
-  void *Mem =
-      C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(1, Args.size()));
+  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(Args.size()));
   return new (Mem) TypeTraitExpr(T, Loc, Kind, Args, RParenLoc, Value);
 }
 
 TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
-                                                 bool IsStoredAsBool,
                                                  unsigned NumArgs) {
-  void *Mem = C.Allocate(totalSizeToAlloc<APValue, TypeSourceInfo *>(
-      IsStoredAsBool ? 0 : 1, NumArgs));
-  return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
+  void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(NumArgs));
+  return new (Mem) TypeTraitExpr(EmptyShell());
 }
 
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,
@@ -1995,4 +1964,53 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::LHS] = LHS;
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
+}
+
+ResolvedUnexpandedPackExpr::ResolvedUnexpandedPackExpr(SourceLocation BL,
+                                                       QualType QT,
+                                                       unsigned NumExprs)
+    : Expr(ResolvedUnexpandedPackExprClass, QT, VK_PRValue, OK_Ordinary),
+      BeginLoc(BL), NumExprs(NumExprs) {
+  // C++ [temp.dep.expr]p3
+  // An id-expression is type-dependent if it is
+  //    - associated by name lookup with a pack
+  setDependence(ExprDependence::TypeValueInstantiation |
+                ExprDependence::UnexpandedPack);
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::CreateDeserialized(ASTContext &Ctx,
+                                               unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
+                           alignof(ResolvedUnexpandedPackExpr));
+  return new (Mem)
+      ResolvedUnexpandedPackExpr(SourceLocation(), QualType(), NumExprs);
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
+                                   QualType T, unsigned NumExprs) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Expr *>(NumExprs),
+                           alignof(ResolvedUnexpandedPackExpr));
+  ResolvedUnexpandedPackExpr *New =
+      new (Mem) ResolvedUnexpandedPackExpr(BL, T, NumExprs);
+
+  auto Exprs = New->getExprs();
+  std::uninitialized_fill(Exprs.begin(), Exprs.end(), nullptr);
+
+  return New;
+}
+
+ResolvedUnexpandedPackExpr *
+ResolvedUnexpandedPackExpr::Create(ASTContext &Ctx, SourceLocation BL,
+                                   QualType T, ArrayRef<Expr *> Exprs) {
+  auto *New = Create(Ctx, BL, T, Exprs.size());
+  std::uninitialized_copy(Exprs.begin(), Exprs.end(), New->getExprs().begin());
+  return New;
+}
+
+ResolvedUnexpandedPackExpr *ResolvedUnexpandedPackExpr::getFromDecl(Decl *D) {
+  if (auto *BD = dyn_cast<BindingDecl>(D))
+    return dyn_cast_if_present<ResolvedUnexpandedPackExpr>(BD->getBinding());
+  return nullptr;
 }

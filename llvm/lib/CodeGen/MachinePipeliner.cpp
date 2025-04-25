@@ -209,7 +209,7 @@ cl::opt<int> SwpForceIssueWidth(
     cl::init(-1));
 
 /// A command line argument to set the window scheduling option.
-static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
+cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
     "window-sched", cl::Hidden, cl::init(WindowSchedulingFlag::WS_On),
     cl::desc("Set how to use window scheduling algorithm."),
     cl::values(clEnumValN(WindowSchedulingFlag::WS_Off, "off",
@@ -710,7 +710,7 @@ void SwingSchedulerDAG::schedule() {
       Stages[SU->getInstr()] = Schedule.stageScheduled(SU);
     }
   }
-  DenseMap<MachineInstr *, std::pair<Register, int64_t>> NewInstrChanges;
+  DenseMap<MachineInstr *, std::pair<unsigned, int64_t>> NewInstrChanges;
   for (auto &KV : NewMIs) {
     Cycles[KV.first] = Cycles[KV.second];
     Stages[KV.first] = Stages[KV.second];
@@ -756,27 +756,27 @@ void SwingSchedulerDAG::finishBlock() {
 /// Return the register values for  the operands of a Phi instruction.
 /// This function assume the instruction is a Phi.
 static void getPhiRegs(MachineInstr &Phi, MachineBasicBlock *Loop,
-                       Register &InitVal, Register &LoopVal) {
+                       unsigned &InitVal, unsigned &LoopVal) {
   assert(Phi.isPHI() && "Expecting a Phi.");
 
-  InitVal = Register();
-  LoopVal = Register();
+  InitVal = 0;
+  LoopVal = 0;
   for (unsigned i = 1, e = Phi.getNumOperands(); i != e; i += 2)
     if (Phi.getOperand(i + 1).getMBB() != Loop)
       InitVal = Phi.getOperand(i).getReg();
     else
       LoopVal = Phi.getOperand(i).getReg();
 
-  assert(InitVal && LoopVal && "Unexpected Phi structure.");
+  assert(InitVal != 0 && LoopVal != 0 && "Unexpected Phi structure.");
 }
 
 /// Return the Phi register value that comes the loop block.
-static Register getLoopPhiReg(const MachineInstr &Phi,
+static unsigned getLoopPhiReg(const MachineInstr &Phi,
                               const MachineBasicBlock *LoopBB) {
   for (unsigned i = 1, e = Phi.getNumOperands(); i != e; i += 2)
     if (Phi.getOperand(i + 1).getMBB() == LoopBB)
       return Phi.getOperand(i).getReg();
-  return Register();
+  return 0;
 }
 
 /// Return true if SUb can be reached from SUa following the chain edges.
@@ -937,8 +937,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
   for (SUnit &I : SUnits) {
     RemoveDeps.clear();
     // Set to true if the instruction has an operand defined by a Phi.
-    Register HasPhiUse;
-    Register HasPhiDef;
+    unsigned HasPhiUse = 0;
+    unsigned HasPhiDef = 0;
     MachineInstr *MI = I.getInstr();
     // Iterate over each operand, and we process the definitions.
     for (const MachineOperand &MO : MI->operands()) {
@@ -1017,8 +1017,7 @@ void SwingSchedulerDAG::changeDependences() {
   // If so, we update the base and offset of the instruction and change
   // the dependences.
   for (SUnit &I : SUnits) {
-    unsigned BasePos = 0, OffsetPos = 0;
-    Register NewBase;
+    unsigned BasePos = 0, OffsetPos = 0, NewBase = 0;
     int64_t NewOffset = 0;
     if (!canUseLastOffsetValue(I.getInstr(), BasePos, OffsetPos, NewBase,
                                NewOffset))
@@ -1983,7 +1982,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<VRegMaskOrUnit, 8> LiveOutRegs;
-  SmallSet<Register, 4> Uses;
+  SmallSet<unsigned, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
     if (MI->isPHI())
@@ -1993,7 +1992,8 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (Reg.isVirtual())
         Uses.insert(Reg);
       else if (MRI.isAllocatable(Reg))
-        Uses.insert_range(TRI->regunits(Reg.asMCReg()));
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          Uses.insert(Unit);
     }
   }
   for (SUnit *SU : NS)
@@ -2131,7 +2131,7 @@ void SwingSchedulerDAG::groupRemainingNodes(NodeSetType &NodeSets) {
       if (!Path.empty())
         I.insert(Path.begin(), Path.end());
     }
-    NodesAdded.insert_range(I);
+    NodesAdded.insert(I.begin(), I.end());
   }
 
   // Create a new node set with the connected nodes of any successor of a node
@@ -2245,12 +2245,12 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
     OrderKind Order;
     SmallSetVector<SUnit *, 8> N;
     if (pred_L(NodeOrder, N, DDG.get()) && llvm::set_is_subset(N, Nodes)) {
-      R.insert_range(N);
+      R.insert(N.begin(), N.end());
       Order = BottomUp;
       LLVM_DEBUG(dbgs() << "  Bottom up (preds) ");
     } else if (succ_L(NodeOrder, N, DDG.get()) &&
                llvm::set_is_subset(N, Nodes)) {
-      R.insert_range(N);
+      R.insert(N.begin(), N.end());
       Order = TopDown;
       LLVM_DEBUG(dbgs() << "  Top down (succs) ");
     } else if (isIntersect(N, Nodes, R)) {
@@ -2329,7 +2329,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         LLVM_DEBUG(dbgs() << "\n   Switching order to bottom up ");
         SmallSetVector<SUnit *, 8> N;
         if (pred_L(NodeOrder, N, DDG.get(), &Nodes))
-          R.insert_range(N);
+          R.insert(N.begin(), N.end());
       } else {
         // Choose the node with the maximum depth.  If more than one, choose
         // the node with the maximum ZeroLatencyDepth. If still more than one,
@@ -2384,7 +2384,7 @@ void SwingSchedulerDAG::computeNodeOrder(NodeSetType &NodeSets) {
         LLVM_DEBUG(dbgs() << "\n   Switching order to top down ");
         SmallSetVector<SUnit *, 8> N;
         if (succ_L(NodeOrder, N, DDG.get(), &Nodes))
-          R.insert_range(N);
+          R.insert(N.begin(), N.end());
       }
     }
     LLVM_DEBUG(dbgs() << "\nDone with Nodeset\n");
@@ -2646,7 +2646,7 @@ bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
 bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
                                               unsigned &BasePos,
                                               unsigned &OffsetPos,
-                                              Register &NewBase,
+                                              unsigned &NewBase,
                                               int64_t &Offset) {
   // Get the load instruction.
   if (TII->isPostIncrement(*MI))
@@ -2662,7 +2662,7 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
   if (!Phi || !Phi->isPHI())
     return false;
   // Get the register defined in the loop block.
-  Register PrevReg = getLoopPhiReg(*Phi, MI->getParent());
+  unsigned PrevReg = getLoopPhiReg(*Phi, MI->getParent());
   if (!PrevReg)
     return false;
 
@@ -2702,10 +2702,10 @@ bool SwingSchedulerDAG::canUseLastOffsetValue(MachineInstr *MI,
 void SwingSchedulerDAG::applyInstrChange(MachineInstr *MI,
                                          SMSchedule &Schedule) {
   SUnit *SU = getSUnit(MI);
-  DenseMap<SUnit *, std::pair<Register, int64_t>>::iterator It =
+  DenseMap<SUnit *, std::pair<unsigned, int64_t>>::iterator It =
       InstrChanges.find(SU);
   if (It != InstrChanges.end()) {
-    std::pair<Register, int64_t> RegAndOffset = It->second;
+    std::pair<unsigned, int64_t> RegAndOffset = It->second;
     unsigned BasePos, OffsetPos;
     if (!TII->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos))
       return;
@@ -2789,10 +2789,10 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
     if (!DefB || !DefO || !DefB->isPHI() || !DefO->isPHI())
       return true;
 
-    Register InitValB;
-    Register LoopValB;
-    Register InitValO;
-    Register LoopValO;
+    unsigned InitValB = 0;
+    unsigned LoopValB = 0;
+    unsigned InitValO = 0;
+    unsigned LoopValO = 0;
     getPhiRegs(*DefB, BB, InitValB, LoopValB);
     getPhiRegs(*DefO, BB, InitValO, LoopValO);
     MachineInstr *InitDefB = MRI.getVRegDef(InitValB);
@@ -3062,7 +3062,7 @@ void SMSchedule::orderDependence(const SwingSchedulerDAG *SSD, SUnit *SU,
       unsigned BasePos, OffsetPos;
       if (ST.getInstrInfo()->getBaseAndOffsetPosition(*MI, BasePos, OffsetPos))
         if (MI->getOperand(BasePos).getReg() == Reg)
-          if (Register NewReg = SSD->getInstrBaseReg(SU))
+          if (unsigned NewReg = SSD->getInstrBaseReg(SU))
             Reg = NewReg;
       bool Reads, Writes;
       std::tie(Reads, Writes) =
@@ -3180,8 +3180,8 @@ bool SMSchedule::isLoopCarried(const SwingSchedulerDAG *SSD,
   unsigned DefCycle = cycleScheduled(DefSU);
   int DefStage = stageScheduled(DefSU);
 
-  Register InitVal;
-  Register LoopVal;
+  unsigned InitVal = 0;
+  unsigned LoopVal = 0;
   getPhiRegs(Phi, Phi.getParent(), InitVal, LoopVal);
   SUnit *UseSU = SSD->getSUnit(MRI.getVRegDef(LoopVal));
   if (!UseSU)
@@ -3212,7 +3212,7 @@ bool SMSchedule::isLoopCarriedDefOfUse(const SwingSchedulerDAG *SSD,
     return false;
   if (!isLoopCarried(SSD, *Phi))
     return false;
-  Register LoopReg = getLoopPhiReg(*Phi, Phi->getParent());
+  unsigned LoopReg = getLoopPhiReg(*Phi, Phi->getParent());
   for (MachineOperand &DMO : Def->all_defs()) {
     if (DMO.getReg() == LoopReg)
       return true;
@@ -3296,32 +3296,6 @@ bool SMSchedule::normalizeNonPipelinedInstructions(
                         << ") is not pipelined; moving from cycle " << OldCycle
                         << " to " << NewCycle << " Instr:" << *SU.getInstr());
     }
-
-    // We traverse the SUs in the order of the original basic block. Computing
-    // NewCycle in this order normally works fine because all dependencies
-    // (except for loop-carried dependencies) don't violate the original order.
-    // However, an artificial dependency (e.g., added by CopyToPhiMutation) can
-    // break it. That is, there may be exist an artificial dependency from
-    // bottom to top. In such a case, NewCycle may become too large to be
-    // scheduled in Stage 0. For example, assume that Inst0 is in DNP in the
-    // following case:
-    //
-    //             |  Inst0  <-+
-    //   SU order  |           | artificial dep
-    //             |  Inst1  --+
-    //             v
-    //
-    // If Inst1 is scheduled at cycle N and is not at Stage 0, then NewCycle of
-    // Inst0 must be greater than or equal to N so that Inst0 is not be
-    // scheduled at Stage 0. In such cases, we reject this schedule at this
-    // time.
-    // FIXME: The reason for this is the existence of artificial dependencies
-    // that are contradict to the original SU order. If ignoring artificial
-    // dependencies does not affect correctness, then it is better to ignore
-    // them.
-    if (FirstCycle + InitiationInterval <= NewCycle)
-      return false;
-
     NewLastCycle = std::max(NewLastCycle, NewCycle);
   }
   LastCycle = NewLastCycle;
@@ -3460,8 +3434,8 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
 /// In this case p and p' overlap, which means that two registers are needed.
 /// Instead, this function changes the load to use p' and updates the offset.
 void SwingSchedulerDAG::fixupRegisterOverlaps(std::deque<SUnit *> &Instrs) {
-  Register OverlapReg;
-  Register NewBaseReg;
+  unsigned OverlapReg = 0;
+  unsigned NewBaseReg = 0;
   for (SUnit *SU : Instrs) {
     MachineInstr *MI = SU->getInstr();
     for (unsigned i = 0, e = MI->getNumOperands(); i < e; ++i) {
@@ -3471,8 +3445,8 @@ void SwingSchedulerDAG::fixupRegisterOverlaps(std::deque<SUnit *> &Instrs) {
       if (MO.isReg() && MO.isUse() && MO.getReg() == OverlapReg) {
         // Check that the instruction appears in the InstrChanges structure,
         // which contains instructions that can have the offset updated.
-        DenseMap<SUnit *, std::pair<Register, int64_t>>::iterator It =
-            InstrChanges.find(SU);
+        DenseMap<SUnit *, std::pair<unsigned, int64_t>>::iterator It =
+          InstrChanges.find(SU);
         if (It != InstrChanges.end()) {
           unsigned BasePos, OffsetPos;
           // Update the base register and adjust the offset.
@@ -3487,8 +3461,8 @@ void SwingSchedulerDAG::fixupRegisterOverlaps(std::deque<SUnit *> &Instrs) {
             NewMIs[MI] = NewMI;
           }
         }
-        OverlapReg = Register();
-        NewBaseReg = Register();
+        OverlapReg = 0;
+        NewBaseReg = 0;
         break;
       }
       // Look for an instruction of the form p' = op(p), which uses and defines

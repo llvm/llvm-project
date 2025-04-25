@@ -28,7 +28,7 @@ using namespace llvm;
 static MCOperand LowerSymbolOperand(const MachineInstr *MI,
                                     const MachineOperand &MO,
                                     const MCSymbol *Symbol, AsmPrinter &AP) {
-  VEMCExpr::Specifier Kind = (VEMCExpr::Specifier)MO.getTargetFlags();
+  VEMCExpr::VariantKind Kind = (VEMCExpr::VariantKind)MO.getTargetFlags();
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, AP.OutContext);
   // Add offset iff MO is not jump table info or machine basic block.

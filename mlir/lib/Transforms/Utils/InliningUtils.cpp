@@ -25,29 +25,6 @@
 
 using namespace mlir;
 
-/// Combine `callee` location with `caller` location to create a stack that
-/// represents the call chain.
-/// If `callee` location is a `CallSiteLoc`, indicating an existing stack of
-/// locations, the `caller` location is appended to the end of it, extending
-/// the chain.
-/// Otherwise, a single `CallSiteLoc` is created, representing a direct call
-/// from `caller` to `callee`.
-static LocationAttr stackLocations(Location callee, Location caller) {
-  Location lastCallee = callee;
-  SmallVector<CallSiteLoc> calleeInliningStack;
-  while (auto nextCallSite = dyn_cast<CallSiteLoc>(lastCallee)) {
-    calleeInliningStack.push_back(nextCallSite);
-    lastCallee = nextCallSite.getCaller();
-  }
-
-  CallSiteLoc firstCallSite = CallSiteLoc::get(lastCallee, caller);
-  for (CallSiteLoc currentCallSite : reverse(calleeInliningStack))
-    firstCallSite =
-        CallSiteLoc::get(currentCallSite.getCallee(), firstCallSite);
-
-  return firstCallSite;
-}
-
 /// Remap all locations reachable from the inlined blocks with CallSiteLoc
 /// locations with the provided caller location.
 static void
@@ -58,7 +35,7 @@ remapInlinedLocations(iterator_range<Region::iterator> inlinedBlocks,
     auto [it, inserted] = mappedLocations.try_emplace(loc);
     // Only query the attribute uniquer once per callsite attribute.
     if (inserted) {
-      LocationAttr newLoc = stackLocations(loc, callerLoc);
+      auto newLoc = CallSiteLoc::get(loc, callerLoc);
       it->getSecond() = newLoc;
     }
     return it->second;
@@ -251,7 +228,9 @@ static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
   SmallVector<DictionaryAttr> resultAttributes;
   for (auto [result, resAttr] : llvm::zip(results, resAttrs)) {
     // Store the original result users before running the handler.
-    DenseSet<Operation *> resultUsers(llvm::from_range, result.getUsers());
+    DenseSet<Operation *> resultUsers;
+    for (Operation *user : result.getUsers())
+      resultUsers.insert(user);
 
     Value newResult =
         interface.handleResult(builder, call, callable, result, resAttr);
@@ -330,7 +309,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
   bool singleBlockFastPath = interface.allowSingleBlockOptimization(newBlocks);
 
   // Handle the case where only a single block was inlined.
-  if (singleBlockFastPath && llvm::hasSingleElement(newBlocks)) {
+  if (singleBlockFastPath && std::next(newBlocks.begin()) == newBlocks.end()) {
     // Run the result attribute handler on the terminator operands.
     Operation *firstBlockTerminator = firstNewBlock->getTerminator();
     builder.setInsertionPoint(firstBlockTerminator);

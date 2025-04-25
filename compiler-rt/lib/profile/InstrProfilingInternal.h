@@ -128,7 +128,7 @@ typedef struct VPDataReaderType {
                            uint8_t *SiteCountArray[]);
   /* Function pointer to getValueProfRecordHeader method. */
   uint32_t (*GetValueProfRecordHeaderSize)(uint32_t NumSites);
-  /* Function pointer to getFirstValueProfRecord method. */
+  /* Function pointer to getFristValueProfRecord method. */  
   struct ValueProfRecord *(*GetFirstValueProfRecord)(struct ValueProfData *);
   /* Return the number of value data for site \p Site.  */
   uint32_t (*GetNumValueDataForSite)(uint32_t VK, uint32_t Site);
@@ -160,8 +160,7 @@ int lprofWriteDataImpl(ProfDataWriter *Writer,
                        VPDataReaderType *VPDataReader, const char *NamesBegin,
                        const char *NamesEnd, const VTableProfData *VTableBegin,
                        const VTableProfData *VTableEnd, const char *VNamesBegin,
-                       const char *VNamesEnd, int SkipNameDataWrite,
-                       uint64_t Version);
+                       const char *VNamesEnd, int SkipNameDataWrite);
 
 /* Merge value profile data pointed to by SrcValueProfData into
  * in-memory profile counters pointed by to DstData.  */

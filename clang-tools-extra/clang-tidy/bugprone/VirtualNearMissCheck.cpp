@@ -179,15 +179,15 @@ static bool checkOverrideByDerivedMethod(const CXXMethodDecl *BaseMD,
 
 bool VirtualNearMissCheck::isPossibleToBeOverridden(
     const CXXMethodDecl *BaseMD) {
-  auto [Iter, Inserted] = PossibleMap.try_emplace(BaseMD);
-  if (!Inserted)
+  auto Iter = PossibleMap.find(BaseMD);
+  if (Iter != PossibleMap.end())
     return Iter->second;
 
   bool IsPossible = !BaseMD->isImplicit() && !isa<CXXConstructorDecl>(BaseMD) &&
                     !isa<CXXDestructorDecl>(BaseMD) && BaseMD->isVirtual() &&
                     !BaseMD->isOverloadedOperator() &&
                     !isa<CXXConversionDecl>(BaseMD);
-  Iter->second = IsPossible;
+  PossibleMap[BaseMD] = IsPossible;
   return IsPossible;
 }
 

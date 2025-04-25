@@ -263,17 +263,16 @@ static void promoteIfBlock(AffineIfOp ifOp, bool elseBlock) {
 static Operation *getOutermostInvariantForOp(AffineIfOp ifOp) {
   // Walk up the parents past all for op that this conditional is invariant on.
   auto ifOperands = ifOp.getOperands();
-  Operation *res = ifOp;
-  while (!res->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+  auto *res = ifOp.getOperation();
+  while (!isa<func::FuncOp>(res->getParentOp())) {
     auto *parentOp = res->getParentOp();
     if (auto forOp = dyn_cast<AffineForOp>(parentOp)) {
       if (llvm::is_contained(ifOperands, forOp.getInductionVar()))
         break;
     } else if (auto parallelOp = dyn_cast<AffineParallelOp>(parentOp)) {
-      if (llvm::any_of(parallelOp.getIVs(), [&](Value iv) {
-            return llvm::is_contained(ifOperands, iv);
-          }))
-        break;
+      for (auto iv : parallelOp.getIVs())
+        if (llvm::is_contained(ifOperands, iv))
+          break;
     } else if (!isa<AffineIfOp>(parentOp)) {
       // Won't walk up past anything other than affine.for/if ops.
       break;
@@ -439,10 +438,11 @@ LogicalResult mlir::affine::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   if (folded)
     *folded = false;
 
-  // The folding above should have ensured this.
+  // The folding above should have ensured this, but the affine.if's
+  // canonicalization is missing composition of affine.applys into it.
   assert(llvm::all_of(ifOp.getOperands(),
                       [](Value v) {
-                        return isTopLevelValue(v) || isAffineInductionVar(v);
+                        return isTopLevelValue(v) || isAffineForInductionVar(v);
                       }) &&
          "operands not composed");
 
@@ -636,8 +636,7 @@ static bool mustReachAtInnermost(const MemRefAccess &srcAccess,
                                  const MemRefAccess &destAccess) {
   // Affine dependence analysis is possible only if both ops in the same
   // AffineScope.
-  if (getAffineAnalysisScope(srcAccess.opInst) !=
-      getAffineAnalysisScope(destAccess.opInst))
+  if (getAffineScope(srcAccess.opInst) != getAffineScope(destAccess.opInst))
     return false;
 
   unsigned nsLoops =
@@ -660,9 +659,9 @@ static bool mayHaveEffect(Operation *srcMemOp, Operation *destMemOp,
   // AffineScope. Also, we can only check if our affine scope is isolated from
   // above; otherwise, values can from outside of the affine scope that the
   // check below cannot analyze.
-  Region *srcScope = getAffineAnalysisScope(srcMemOp);
+  Region *srcScope = getAffineScope(srcMemOp);
   if (srcAccess.memref == destAccess.memref &&
-      srcScope == getAffineAnalysisScope(destMemOp)) {
+      srcScope == getAffineScope(destMemOp)) {
     unsigned nsLoops = getNumCommonSurroundingLoops(*srcMemOp, *destMemOp);
     FlatAffineValueConstraints dependenceConstraints;
     for (unsigned d = nsLoops + 1; d > minSurroundingLoops; d--) {

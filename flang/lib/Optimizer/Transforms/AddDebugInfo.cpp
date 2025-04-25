@@ -118,10 +118,7 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
     op = conOp.getValue().getDefiningOp();
 
   if (auto cordOp = mlir::dyn_cast_if_present<fir::CoordinateOp>(op)) {
-    auto coors = cordOp.getCoor();
-    if (coors.size() != 1)
-      return false;
-    optint = fir::getIntIfConstant(coors[0]);
+    optint = fir::getIntIfConstant(cordOp.getOperand(1));
     if (!optint)
       return false;
     op = cordOp.getRef().getDefiningOp();
@@ -206,13 +203,8 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
   // a dummy_scope operand).
   unsigned argNo = 0;
   if (declOp.getDummyScope()) {
-    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref())) {
-      // Check if it is the BlockArgument of the function's entry block.
-      if (auto funcLikeOp =
-              declOp->getParentOfType<mlir::FunctionOpInterface>())
-        if (arg.getOwner() == &funcLikeOp.front())
-          argNo = arg.getArgNumber() + 1;
-    }
+    if (auto arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
+      argNo = arg.getArgNumber() + 1;
   }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
@@ -511,7 +503,11 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
+    // FIXME: We currently dont handle variables that are not in the entry
+    // blocks of the fuctions. These may be variable or arguments used in the
+    // OpenMP target regions.
+    if (&funcOp.front() == declOp->getBlock())
+      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
   });
   // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
   // the same name in one function. But it is ok (rather required) to create

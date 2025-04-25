@@ -358,19 +358,17 @@ static void stubifyDirectory(const StringRef InputPath, Context &Ctx) {
     SmallString<PATH_MAX> NormalizedPath(Path);
     replace_extension(NormalizedPath, "");
 
-    auto [It, Inserted] = Dylibs.try_emplace(NormalizedPath.str());
-
     if ((IF->getFileType() == FileType::MachO_DynamicLibrary) ||
         (IF->getFileType() == FileType::MachO_DynamicLibrary_Stub)) {
       OriginalNames[NormalizedPath.c_str()] = IF->getPath();
 
       // Don't add this MachO dynamic library because we already have a
       // text-based stub recorded for this path.
-      if (!Inserted)
+      if (Dylibs.count(NormalizedPath.c_str()))
         continue;
     }
 
-    It->second = std::move(IF);
+    Dylibs[NormalizedPath.c_str()] = std::move(IF);
   }
 
   for (auto &Lib : Dylibs) {

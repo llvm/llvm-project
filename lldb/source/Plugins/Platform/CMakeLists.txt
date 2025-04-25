@@ -1,4 +1,3 @@
-add_subdirectory(AIX)
 add_subdirectory(Android)
 add_subdirectory(FreeBSD)
 add_subdirectory(gdb-server)

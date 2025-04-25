@@ -74,9 +74,9 @@ struct ShaderHash {
 };
 
 #define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
-struct RootSignatureYamlDesc {
-  RootSignatureYamlDesc() = default;
-  RootSignatureYamlDesc(const object::DirectX::RootSignature &Data);
+struct RootSignatureDesc {
+  RootSignatureDesc() = default;
+  RootSignatureDesc(const object::DirectX::RootSignature &Data);
 
   uint32_t Version;
   uint32_t NumParameters;
@@ -176,7 +176,7 @@ struct Part {
   std::optional<ShaderHash> Hash;
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
-  std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
+  std::optional<DXContainerYAML::RootSignatureDesc> RootSignature;
 };
 
 struct Object {
@@ -259,9 +259,9 @@ template <> struct MappingTraits<DXContainerYAML::Signature> {
   static void mapping(IO &IO, llvm::DXContainerYAML::Signature &El);
 };
 
-template <> struct MappingTraits<DXContainerYAML::RootSignatureYamlDesc> {
+template <> struct MappingTraits<DXContainerYAML::RootSignatureDesc> {
   static void mapping(IO &IO,
-                      DXContainerYAML::RootSignatureYamlDesc &RootSignature);
+                      DXContainerYAML::RootSignatureDesc &RootSignature);
 };
 
 } // namespace yaml

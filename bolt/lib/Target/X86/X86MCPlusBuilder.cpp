@@ -387,7 +387,7 @@ public:
     return (Desc.TSFlags & X86II::OpPrefixMask) == X86II::PD;
   }
 
-  bool shouldRecordCodeRelocation(uint32_t RelType) const override {
+  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
     switch (RelType) {
     case ELF::R_X86_64_8:
     case ELF::R_X86_64_16:
@@ -1796,7 +1796,17 @@ public:
     if (!Op.isExpr())
       return nullptr;
 
-    return MCPlusBuilder::getTargetSymbol(Op.getExpr());
+    auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+    if (!SymExpr || SymExpr->getKind() != MCSymbolRefExpr::VK_None)
+      return nullptr;
+
+    return &SymExpr->getSymbol();
+  }
+
+  // This is the same as the base class, but since we are overriding one of
+  // getTargetSymbol's signatures above, we need to override all of them.
+  const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
+    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
@@ -2434,7 +2444,7 @@ public:
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();
 
-    uint32_t RelType;
+    uint64_t RelType;
     if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
       switch (FKI.TargetSize) {
       default:
@@ -2462,7 +2472,7 @@ public:
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                int64_t Addend, MCContext *Ctx, int64_t &Value,
-                               uint32_t RelType) const override {
+                               uint64_t RelType) const override {
     unsigned ImmOpNo = -1U;
 
     for (unsigned Index = 0; Index < MCPlus::getNumPrimeOperands(Inst);

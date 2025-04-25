@@ -146,9 +146,6 @@ def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
 
-def warn_openacc_experimental : Warning<
-"OpenACC is NOT supported for AMDGPU">;
-
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -287,11 +284,6 @@ def err_cpu_unsupported_isa
   : Error<"CPU '%0' does not support '%1' execution mode">;
 def err_arch_unsupported_isa
   : Error<"architecture '%0' does not support '%1' execution mode">;
-
-def err_zos_target_release_discontinued
-  : Error<"z/OS target level \"%0\" is discontinued">;
-def err_zos_target_unrecognized_release
-  : Error<"z/OS target level \"%0\" is invalid">;
 
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
@@ -571,11 +563,6 @@ def err_test_module_file_extension_format : Error<
 
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' cannot be used with multiple arch options">;
-
-def err_drv_reduced_module_output_overrided : Warning<
-  "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
-  "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
-  InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,

@@ -4,7 +4,6 @@
 ; Test that statistics distinguish functions with the same name.
 
 ; CHECK:      "#functions": 4,
-; CHECK:      "#out-of-line functions": 4,
 ; CHECK:      "#unique source variables": 2,
 ; CHECK-NEXT: "#source variables": 2,
 

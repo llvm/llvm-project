@@ -464,7 +464,7 @@ getUsedDecls(const HelperDeclRefGraph *RG,
   for (const auto *D : Decls) {
     auto Result = RG->getReachableNodes(
         HelperDeclRGBuilder::getOutmostClassOrFunDecl(D));
-    Nodes.insert_range(Result);
+    Nodes.insert(Result.begin(), Result.end());
   }
   llvm::DenseSet<const Decl *> Results;
   for (const auto *Node : Nodes)

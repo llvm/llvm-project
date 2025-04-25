@@ -24,16 +24,18 @@ using namespace llvm::logicalview;
 void LVSymbolTable::add(StringRef Name, LVScope *Function,
                         LVSectionIndex SectionIndex) {
   std::string SymbolName(Name);
-  auto [It, Inserted] =
-      SymbolNames.try_emplace(SymbolName, Function, 0, SectionIndex, false);
-  if (!Inserted) {
+  if (SymbolNames.find(SymbolName) == SymbolNames.end()) {
+    SymbolNames.emplace(
+        std::piecewise_construct, std::forward_as_tuple(SymbolName),
+        std::forward_as_tuple(Function, 0, SectionIndex, false));
+  } else {
     // Update a recorded entry with its logical scope and section index.
-    It->second.Scope = Function;
+    SymbolNames[SymbolName].Scope = Function;
     if (SectionIndex)
-      It->second.SectionIndex = SectionIndex;
+      SymbolNames[SymbolName].SectionIndex = SectionIndex;
   }
 
-  if (Function && It->second.IsComdat)
+  if (Function && SymbolNames[SymbolName].IsComdat)
     Function->setIsComdat();
 
   LLVM_DEBUG({ print(dbgs()); });
@@ -42,13 +44,15 @@ void LVSymbolTable::add(StringRef Name, LVScope *Function,
 void LVSymbolTable::add(StringRef Name, LVAddress Address,
                         LVSectionIndex SectionIndex, bool IsComdat) {
   std::string SymbolName(Name);
-  auto [It, Inserted] = SymbolNames.try_emplace(SymbolName, nullptr, Address,
-                                                SectionIndex, IsComdat);
-  if (!Inserted)
+  if (SymbolNames.find(SymbolName) == SymbolNames.end())
+    SymbolNames.emplace(
+        std::piecewise_construct, std::forward_as_tuple(SymbolName),
+        std::forward_as_tuple(nullptr, Address, SectionIndex, IsComdat));
+  else
     // Update a recorded symbol name with its logical scope.
-    It->second.Address = Address;
+    SymbolNames[SymbolName].Address = Address;
 
-  LVScope *Function = It->second.Scope;
+  LVScope *Function = SymbolNames[SymbolName].Scope;
   if (Function && IsComdat)
     Function->setIsComdat();
   LLVM_DEBUG({ print(dbgs()); });
@@ -61,24 +65,20 @@ LVSectionIndex LVSymbolTable::update(LVScope *Function) {
     Name = Function->getName();
   std::string SymbolName(Name);
 
-  if (SymbolName.empty())
-    return SectionIndex;
-
-  auto It = SymbolNames.find(SymbolName);
-  if (It == SymbolNames.end())
+  if (SymbolName.empty() || (SymbolNames.find(SymbolName) == SymbolNames.end()))
     return SectionIndex;
 
   // Update a recorded entry with its logical scope, only if the scope has
   // ranges. That is the case when in DWARF there are 2 DIEs connected via
   // the DW_AT_specification.
   if (Function->getHasRanges()) {
-    It->second.Scope = Function;
-    SectionIndex = It->second.SectionIndex;
+    SymbolNames[SymbolName].Scope = Function;
+    SectionIndex = SymbolNames[SymbolName].SectionIndex;
   } else {
     SectionIndex = UndefinedSectionIndex;
   }
 
-  if (It->second.IsComdat)
+  if (SymbolNames[SymbolName].IsComdat)
     Function->setIsComdat();
 
   LLVM_DEBUG({ print(dbgs()); });

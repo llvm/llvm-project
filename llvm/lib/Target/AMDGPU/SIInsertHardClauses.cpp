@@ -36,7 +36,6 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 
 using namespace llvm;
 
@@ -90,9 +89,17 @@ enum HardClauseType {
   HARDCLAUSE_ILLEGAL,
 };
 
-class SIInsertHardClauses {
+class SIInsertHardClauses : public MachineFunctionPass {
 public:
+  static char ID;
   const GCNSubtarget *ST = nullptr;
+
+  SIInsertHardClauses() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
@@ -182,7 +189,9 @@ public:
     return true;
   }
 
-  bool run(MachineFunction &MF) {
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
 
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasHardClauses())
@@ -256,40 +265,11 @@ public:
   }
 };
 
-class SIInsertHardClausesLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-  SIInsertHardClausesLegacy() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
-    return SIInsertHardClauses().run(MF);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-
 } // namespace
 
-PreservedAnalyses
-llvm::SIInsertHardClausesPass::run(MachineFunction &MF,
-                                   MachineFunctionAnalysisManager &MFAM) {
-  if (!SIInsertHardClauses().run(MF))
-    return PreservedAnalyses::all();
+char SIInsertHardClauses::ID = 0;
 
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
+char &llvm::SIInsertHardClausesID = SIInsertHardClauses::ID;
 
-char SIInsertHardClausesLegacy::ID = 0;
-
-char &llvm::SIInsertHardClausesID = SIInsertHardClausesLegacy::ID;
-
-INITIALIZE_PASS(SIInsertHardClausesLegacy, DEBUG_TYPE, "SI Insert Hard Clauses",
+INITIALIZE_PASS(SIInsertHardClauses, DEBUG_TYPE, "SI Insert Hard Clauses",
                 false, false)

@@ -87,8 +87,12 @@ public:
       BasicBlock *RHSTarget =
           BI->isConditional() ? BI->getSuccessor(1) : nullptr;
 
-      Value *LHS = TargetToValue.lookup(LHSTarget);
-      Value *RHS = TargetToValue.lookup(RHSTarget);
+      Value *LHS = TargetToValue.count(LHSTarget) != 0
+                       ? TargetToValue.at(LHSTarget)
+                       : nullptr;
+      Value *RHS = TargetToValue.count(RHSTarget) != 0
+                       ? TargetToValue.at(RHSTarget)
+                       : nullptr;
 
       if (LHS == nullptr || RHS == nullptr)
         return LHS == nullptr ? RHS : LHS;

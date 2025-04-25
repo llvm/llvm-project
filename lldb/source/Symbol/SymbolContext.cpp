@@ -104,19 +104,15 @@ bool SymbolContext::DumpStopContext(
 
     if (addr_t file_addr = addr.GetFileAddress();
         file_addr != LLDB_INVALID_ADDRESS) {
-      // Avoiding signed arithmetic due to UB in -INT_MAX.
-      const char sign =
-          file_addr >= function->GetAddress().GetFileAddress() ? '+' : '-';
-      addr_t offset = file_addr - function->GetAddress().GetFileAddress();
-      if (sign == '-')
-        offset = -offset;
+      const addr_t function_offset =
+          file_addr - function->GetAddress().GetFileAddress();
       if (!show_function_name) {
         // Print +offset even if offset is 0
         dumped_something = true;
-        s->Format("{0}{1}>", sign, offset);
-      } else if (offset) {
+        s->Printf("+%" PRIu64 ">", function_offset);
+      } else if (function_offset) {
         dumped_something = true;
-        s->Format(" {0} {1}", sign, offset);
+        s->Printf(" + %" PRIu64, function_offset);
       }
     }
 
@@ -355,8 +351,8 @@ bool SymbolContext::GetAddressRange(uint32_t scope, uint32_t range_idx,
   }
 
   if ((scope & eSymbolContextFunction) && (function != nullptr)) {
-    if (range_idx < function->GetAddressRanges().size()) {
-      range = function->GetAddressRanges()[range_idx];
+    if (range_idx == 0) {
+      range = function->GetAddressRange();
       return true;
     }
   }

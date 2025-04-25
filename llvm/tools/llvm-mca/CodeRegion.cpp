@@ -123,8 +123,8 @@ void InstrumentRegions::beginRegion(StringRef Description, SMLoc Loc,
     return;
   }
 
-  auto [It, Inserted] = ActiveRegions.try_emplace(Description, Regions.size());
-  if (!Inserted) {
+  auto It = ActiveRegions.find(Description);
+  if (It != ActiveRegions.end()) {
     const CodeRegion &R = *Regions[It->second];
     SM.PrintMessage(
         Loc, llvm::SourceMgr::DK_Error,
@@ -136,6 +136,7 @@ void InstrumentRegions::beginRegion(StringRef Description, SMLoc Loc,
     return;
   }
 
+  ActiveRegions[Description] = Regions.size();
   Regions.emplace_back(
       std::make_unique<InstrumentRegion>(Description, Loc, std::move(I)));
 }

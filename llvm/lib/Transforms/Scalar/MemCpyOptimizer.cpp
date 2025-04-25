@@ -638,19 +638,17 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
       (EnableMemCpyOptWithoutLibcalls ||
        (TLI->has(LibFunc_memcpy) && TLI->has(LibFunc_memmove)))) {
     MemoryLocation LoadLoc = MemoryLocation::get(LI);
+    MemoryUseOrDef *LoadAccess = MSSA->getMemoryAccess(LI),
+                   *StoreAccess = MSSA->getMemoryAccess(SI);
 
-    // We use alias analysis to check if an instruction may store to
-    // the memory we load from in between the load and the store. If
-    // such an instruction is found, we try to promote there instead
-    // of at the store position.
-    // TODO: Can use MSSA for this.
-    Instruction *P = SI;
-    for (auto &I : make_range(++LI->getIterator(), SI->getIterator())) {
-      if (isModSet(BAA.getModRefInfo(&I, LoadLoc))) {
-        P = &I;
-        break;
-      }
-    }
+    // We use MSSA to check if an instruction may store to the memory we load
+    // from in between the load and the store. If such an instruction is found,
+    // we try to promote there instead of at the store position.
+    auto *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+        StoreAccess->getDefiningAccess(), LoadLoc, BAA);
+    Instruction *P = MSSA->dominates(LoadAccess, Clobber)
+                         ? cast<MemoryUseOrDef>(Clobber)->getMemoryInst()
+                         : SI;
 
     // If we found an instruction that may write to the loaded memory,
     // we can try to promote at this position instead of the store
@@ -996,7 +994,8 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     // or src pointer.
     Value *DestObj = getUnderlyingObject(cpyDest);
     if (!isIdentifiedFunctionLocal(DestObj) ||
-        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true, C, DT,
+        PointerMayBeCapturedBefore(DestObj, /* ReturnCaptures */ true,
+                                   /* StoreCaptures */ true, C, DT,
                                    /* IncludeI */ true))
       return false;
 
@@ -1551,13 +1550,14 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        UseCaptureInfo CI =
-            DetermineUseCaptureKind(U, AI, IsDereferenceableOrNull);
-        // TODO(captures): Make this more precise.
-        if (capturesAnything(CI.UseCC))
+        switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
+        case UseCaptureKind::MAY_CAPTURE:
           return false;
-
-        if (UI->mayReadOrWriteMemory()) {
+        case UseCaptureKind::PASSTHROUGH:
+          // Instructions cannot have non-instruction users.
+          Worklist.push_back(UI);
+          continue;
+        case UseCaptureKind::NO_CAPTURE: {
           if (UI->isLifetimeStartOrEnd()) {
             // We note the locations of these intrinsic calls so that we can
             // delete them later if the optimization succeeds, this is safe
@@ -1575,10 +1575,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
           if (!ModRefCallback(UI))
             return false;
         }
-
-        if (capturesAnything(CI.ResultCC)) {
-          Worklist.push_back(UI);
-          continue;
         }
       }
     }

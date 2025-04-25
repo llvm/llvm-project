@@ -201,9 +201,8 @@ DAGDeltaAlgorithmImpl::DAGDeltaAlgorithmImpl(
     std::set<change_ty> &ChangeSuccs = SuccClosure[Change];
     for (pred_iterator_ty it = pred_begin(Change),
            ie = pred_end(Change); it != ie; ++it) {
-      auto &SC = SuccClosure[*it];
-      SC.insert(Change);
-      SC.insert(ChangeSuccs.begin(), ChangeSuccs.end());
+      SuccClosure[*it].insert(Change);
+      SuccClosure[*it].insert(ChangeSuccs.begin(), ChangeSuccs.end());
       Worklist.push_back(*it);
     }
   }

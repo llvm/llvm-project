@@ -319,12 +319,10 @@ void mlir::populateSCFToEmitCConversionPatterns(RewritePatternSet &patterns,
 void SCFToEmitCPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   TypeConverter typeConverter;
-  // Fallback for other types.
-  typeConverter.addConversion([](Type type) -> std::optional<Type> {
-    if (!emitc::isSupportedEmitCType(type))
-      return {};
-    return type;
-  });
+  // Fallback converter
+  // See note https://mlir.llvm.org/docs/DialectConversion/#type-converter
+  // Type converters are called most to least recently inserted
+  typeConverter.addConversion([](Type t) { return t; });
   populateEmitCSizeTTypeConversions(typeConverter);
   populateSCFToEmitCConversionPatterns(patterns, typeConverter);
 

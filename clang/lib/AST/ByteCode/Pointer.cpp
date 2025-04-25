@@ -210,8 +210,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   };
 
   bool UsePath = true;
-  if (const ValueDecl *VD = getDeclDesc()->asValueDecl();
-      VD && VD->getType()->isLValueReferenceType())
+  if (getType()->isLValueReferenceType())
     UsePath = false;
 
   // Build the path into the object.
@@ -249,12 +248,7 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
         Index = Ptr.getIndex();
 
       QualType ElemType = Desc->getElemQualType();
-      if (const auto *RD = ElemType->getAsRecordDecl();
-          RD && !RD->getDefinition()) {
-        // Ignore this for the offset.
-      } else {
-        Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
-      }
+      Offset += (Index * ASTCtx.getTypeSizeInChars(ElemType));
       if (Ptr.getArray().getType()->isArrayType())
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Index));
       Ptr = Ptr.getArray();
@@ -339,39 +333,6 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-/// Compute an integer that can be used to compare this pointer to
-/// another one.
-size_t Pointer::computeOffsetForComparison() const {
-  if (!isBlockPointer())
-    return Offset;
-
-  size_t Result = 0;
-  Pointer P = *this;
-  while (!P.isRoot()) {
-    if (P.isArrayRoot()) {
-      P = P.getBase();
-      continue;
-    }
-    if (P.isArrayElement()) {
-      P = P.expand();
-      Result += (P.getIndex() * P.elemSize());
-      P = P.getArray();
-      continue;
-    }
-
-    if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
-      // Direct child of a union - all have offset 0.
-      P = P.getBase();
-      continue;
-    }
-
-    Result += P.getInlineDesc()->Offset;
-    P = P.getBase();
-  }
-
-  return Result;
-}
-
 std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isZero())
     return "nullptr";
@@ -423,6 +384,7 @@ void Pointer::initialize() const {
     return;
 
   assert(PointeeStorage.BS.Pointee && "Cannot initialize null pointer");
+  const Descriptor *Desc = getFieldDesc();
 
   if (isRoot() && PointeeStorage.BS.Base == sizeof(GlobalInlineDescriptor)) {
     GlobalInlineDescriptor &GD = *reinterpret_cast<GlobalInlineDescriptor *>(
@@ -431,7 +393,6 @@ void Pointer::initialize() const {
     return;
   }
 
-  const Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
     // Primitive global arrays don't have an initmap.
@@ -476,35 +437,28 @@ void Pointer::activate() const {
   if (!getInlineDesc()->InUnion)
     return;
 
-  auto activate = [](Pointer &P) -> void {
-    P.getInlineDesc()->IsActive = true;
-  };
-  auto deactivate = [](Pointer &P) -> void {
-    P.getInlineDesc()->IsActive = false;
-  };
+  getInlineDesc()->IsActive = true;
 
-  // Unions might be nested etc., so find the topmost Pointer that's
-  // not in a union anymore.
+  // Get the union, iterate over its fields and DEactivate all others.
   Pointer UnionPtr = getBase();
-  while (!UnionPtr.isRoot() && UnionPtr.inUnion())
+  while (!UnionPtr.getFieldDesc()->isUnion())
     UnionPtr = UnionPtr.getBase();
-
-  assert(UnionPtr.getFieldDesc()->isUnion());
 
   const Record *UnionRecord = UnionPtr.getRecord();
   for (const Record::Field &F : UnionRecord->fields()) {
     Pointer FieldPtr = UnionPtr.atField(F.Offset);
     if (FieldPtr == *this) {
     } else {
-      deactivate(FieldPtr);
+      FieldPtr.getInlineDesc()->IsActive = false;
       // FIXME: Recurse.
     }
   }
 
-  Pointer B = *this;
-  while (B != UnionPtr) {
-    activate(B);
+  Pointer B = getBase();
+  while (!B.isRoot() && B.inUnion()) {
     // FIXME: Need to de-activate other fields of parent records.
+    B.getInlineDesc()->IsActive = true;
+    assert(B.isActive());
     B = B.getBase();
   }
 }
@@ -753,10 +707,6 @@ IntPointer IntPointer::atOffset(const ASTContext &ASTCtx,
 
 IntPointer IntPointer::baseCast(const ASTContext &ASTCtx,
                                 unsigned BaseOffset) const {
-  if (!Desc) {
-    assert(Value == 0);
-    return *this;
-  }
   const Record *R = Desc->ElemRecord;
   const Descriptor *BaseDesc = nullptr;
 

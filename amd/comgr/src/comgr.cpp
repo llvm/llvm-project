@@ -187,8 +187,6 @@ amd_comgr_status_t dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.compileToBitcode(true);
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
     return Compiler.compileToExecutable();
-  case AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE:
-    return Compiler.compileSpirvToRelocatable();
   case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
     return Compiler.translateSpirvToBitcode();
 
@@ -293,8 +291,6 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE";
   case AMD_COMGR_ACTION_UNBUNDLE:
     return "AMD_COMGR_ACTION_UNBUNDLE";
-  case AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE:
-    return "AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE";
   case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
     return "AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC";
   }
@@ -319,10 +315,6 @@ amd_comgr_status_t COMGR::setCStr(char *&Dest, StringRef Src, size_t *Size) {
     *Size = Src.size();
   }
   return AMD_COMGR_STATUS_SUCCESS;
-}
-
-StringRef COMGR::getComgrHashIdentifier() {
-  return xstringify(AMD_COMGR_VERSION_ID);
 }
 
 amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
@@ -1380,7 +1372,6 @@ amd_comgr_status_t AMD_COMGR_API
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
-    case AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
       ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                             ResultSetP, *LogP);

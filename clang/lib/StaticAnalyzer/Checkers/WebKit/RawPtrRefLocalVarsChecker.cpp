@@ -14,7 +14,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ParentMapContext.h"
-#include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -82,7 +81,7 @@ struct GuardianVisitor : DynamicRecursiveASTVisitor {
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCE) override {
     auto MethodName = safeGetName(MCE->getMethodDecl());
     if (MethodName == "swap" || MethodName == "leakRef" ||
-        MethodName == "releaseNonNull" || MethodName == "clear") {
+        MethodName == "releaseNonNull") {
       auto *ThisArg = MCE->getImplicitObjectArgument()->IgnoreParenCasts();
       if (auto *VarRef = dyn_cast<DeclRefExpr>(ThisArg)) {
         if (VarRef->getDecl() == Guardian)
@@ -169,16 +168,11 @@ class RawPtrRefLocalVarsChecker
   mutable BugReporter *BR;
   EnsureFunctionAnalysis EFA;
 
-protected:
-  mutable std::optional<RetainTypeChecker> RTC;
-
 public:
   RawPtrRefLocalVarsChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
-  virtual bool isSafePtr(const CXXRecordDecl *) const = 0;
-  virtual bool isSafePtrType(const QualType) const = 0;
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -206,12 +200,6 @@ public:
         if (D && (isa<FunctionDecl>(D) || isa<ObjCMethodDecl>(D)))
           DeclWithIssue = D;
         return DynamicRecursiveASTVisitor::TraverseDecl(D);
-      }
-
-      bool VisitTypedefDecl(TypedefDecl *TD) override {
-        if (Checker->RTC)
-          Checker->RTC->visitTypedef(TD);
-        return true;
       }
 
       bool VisitVarDecl(VarDecl *V) override {
@@ -263,8 +251,6 @@ public:
     };
 
     LocalVisitor visitor(this);
-    if (RTC)
-      RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
@@ -277,10 +263,6 @@ public:
     if (IsUncountedPtr && *IsUncountedPtr) {
       if (tryToFindPtrOrigin(
               Value, /*StopAtFirstRefCountedObj=*/false,
-              [&](const clang::CXXRecordDecl *Record) {
-                return isSafePtr(Record);
-              },
-              [&](const clang::QualType Type) { return isSafePtrType(Type); },
               [&](const clang::Expr *InitArgOrigin, bool IsSafe) {
                 if (!InitArgOrigin || IsSafe)
                   return true;
@@ -310,7 +292,8 @@ public:
                           MaybeGuardianArgType->getAsCXXRecordDecl();
                       if (MaybeGuardianArgCXXRecord) {
                         if (MaybeGuardian->isLocalVarDecl() &&
-                            (isSafePtr(MaybeGuardianArgCXXRecord) ||
+                            (isRefCounted(MaybeGuardianArgCXXRecord) ||
+                             isCheckedPtr(MaybeGuardianArgCXXRecord) ||
                              isRefcountedStringsHack(MaybeGuardian)) &&
                             isGuardedScopeEmbeddedInGuardianScope(
                                 V, MaybeGuardian))
@@ -335,8 +318,6 @@ public:
 
   bool shouldSkipVarDecl(const VarDecl *V) const {
     assert(V);
-    if (isa<ImplicitParamDecl>(V))
-      return true;
     return BR->getSourceManager().isInSystemHeader(V->getLocation());
   }
 
@@ -384,12 +365,6 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncountedPtr(T);
   }
-  bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRefCounted(Record) || isCheckedPtr(Record);
-  }
-  bool isSafePtrType(const QualType type) const final {
-    return isRefOrCheckedPtrType(type);
-  }
   const char *ptrKind() const final { return "uncounted"; }
 };
 
@@ -401,32 +376,7 @@ public:
   std::optional<bool> isUnsafePtr(const QualType T) const final {
     return isUncheckedPtr(T);
   }
-  bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRefCounted(Record) || isCheckedPtr(Record);
-  }
-  bool isSafePtrType(const QualType type) const final {
-    return isRefOrCheckedPtrType(type);
-  }
   const char *ptrKind() const final { return "unchecked"; }
-};
-
-class UnretainedLocalVarsChecker final : public RawPtrRefLocalVarsChecker {
-public:
-  UnretainedLocalVarsChecker()
-      : RawPtrRefLocalVarsChecker("Unretained raw pointer or reference not "
-                                  "provably backed by a RetainPtr") {
-    RTC = RetainTypeChecker();
-  }
-  std::optional<bool> isUnsafePtr(const QualType T) const final {
-    return RTC->isUnretained(T);
-  }
-  bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
-  }
-  bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
-  }
-  const char *ptrKind() const final { return "unretained"; }
 };
 
 } // namespace
@@ -444,13 +394,5 @@ void ento::registerUncheckedLocalVarsChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterUncheckedLocalVarsChecker(const CheckerManager &) {
-  return true;
-}
-
-void ento::registerUnretainedLocalVarsChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<UnretainedLocalVarsChecker>();
-}
-
-bool ento::shouldRegisterUnretainedLocalVarsChecker(const CheckerManager &) {
   return true;
 }

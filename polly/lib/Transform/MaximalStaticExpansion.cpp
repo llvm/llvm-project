@@ -139,7 +139,8 @@ class MaximalStaticExpansionImpl {
                     SmallPtrSetImpl<MemoryAccess *> &Reads, Scop &S) {
     if (SAI->isValueKind()) {
       Writes.insert(S.getValueDef(SAI));
-      Reads.insert_range(S.getValueUses(SAI));
+      for (auto MA : S.getValueUses(SAI))
+        Reads.insert(MA);
       return true;
     } else if (SAI->isPHIKind()) {
       auto Read = S.getPHIRead(SAI);
@@ -398,8 +399,9 @@ class MaximalStaticExpansionImpl {
   /// @param Dependences The RAW dependences of the SCop.
   void expandPhi(Scop &S, const ScopArrayInfo *SAI,
                  const isl::union_map &Dependences) {
-    SmallPtrSet<MemoryAccess *, 4> Writes(llvm::from_range,
-                                          S.getPHIIncomings(SAI));
+    SmallPtrSet<MemoryAccess *, 4> Writes;
+    for (auto MA : S.getPHIIncomings(SAI))
+      Writes.insert(MA);
     auto Read = S.getPHIRead(SAI);
     auto ExpandedSAI = expandAccess(Read);
 

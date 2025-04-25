@@ -733,7 +733,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
             none_of(SubRegion, [&](BasicBlock *Block) {
               return ColdBlocks.contains(Block);
             })) {
-          ColdBlocks.insert_range(SubRegion);
+          ColdBlocks.insert(SubRegion.begin(), SubRegion.end());
 
           LLVM_DEBUG({
             for (auto *Block : SubRegion)

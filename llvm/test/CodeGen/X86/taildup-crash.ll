@@ -8,9 +8,9 @@ target triple = "x86_64--"
 ; CHECK: je
 ; CHECK: retq
 ; CHECK: jmp
-define hidden void @func(i1 %arg) {
+define hidden void @func() {
 entry:
-  br i1 %arg, label %for.cond.cleanup, label %while.cond.preheader
+  br i1 undef, label %for.cond.cleanup, label %while.cond.preheader
 
 while.cond.preheader:
   br label %while.cond

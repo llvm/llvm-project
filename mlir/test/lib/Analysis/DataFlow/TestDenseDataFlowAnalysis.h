@@ -76,7 +76,7 @@ public:
     }
 
     size_t sizeBefore = accesses.size();
-    accesses.insert_range(other.accesses);
+    accesses.insert(other.accesses.begin(), other.accesses.end());
     return accesses.size() == sizeBefore ? ChangeResult::NoChange
                                          : ChangeResult::Change;
   }

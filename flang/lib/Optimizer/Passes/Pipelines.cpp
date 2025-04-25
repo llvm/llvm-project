@@ -198,12 +198,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
-  pm.addPass(fir::createLowerRepackArraysPass());
-  // Expand FIR operations that may use SCF dialect for their
-  // implementation. This is a mandatory pass.
-  pm.addPass(fir::createSimplifyFIROperations(
-      {/*preferInlineImplementation=*/pc.OptLevel.isOptimizingForSpeed()}));
-
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
@@ -211,14 +205,11 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
       pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
-  pm.addPass(mlir::createSCFToControlFlowPass());
+  pm.addPass(mlir::createConvertSCFToCFPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
-
-  if (pc.OptLevel.isOptimizingForSpeed())
-    pm.addPass(fir::createSetRuntimeCallAttributes());
 
   // Last Optimizer EP Callback
   pc.invokeFIROptLastEPCallbacks(pm, pc.OptLevel);
@@ -289,9 +280,6 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
 /// rather than the host device.
 void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
                                  OpenMPFIRPassPipelineOpts opts) {
-  using DoConcurrentMappingKind =
-      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
-
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None)
     pm.addPass(flangomp::createDoConcurrentConversionPass(
         opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));
@@ -346,8 +334,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.NoInfsFPMath, config.NoNaNsFPMath,
-       config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
-       ""}));
+       config.ApproxFuncFPMath, config.NoSignedZerosFPMath,
+       config.UnsafeFPMath}));
 
   fir::addFIRToLLVMPass(pm, config);
 }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86FixupKinds.h"
-#include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -139,19 +138,19 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       IsExtern = 1;
       Type = MachO::X86_64_RELOC_BRANCH;
     }
-  } else if (Target.getSubSym()) { // A - B + constant
+  } else if (Target.getSymB()) { // A - B + constant
     const MCSymbol *A = &Target.getSymA()->getSymbol();
     if (A->isTemporary())
       A = &Writer->findAliasedSymbol(*A);
     const MCSymbol *A_Base = Writer->getAtom(*A);
 
-    const MCSymbol *B = Target.getSubSym();
+    const MCSymbol *B = &Target.getSymB()->getSymbol();
     if (B->isTemporary())
       B = &Writer->findAliasedSymbol(*B);
     const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Neither symbol can be modified.
-    if (getSpecifier(Target.getSymA()) != X86MCExpr::VK_None) {
+    if (Target.getSymA()->getKind() != MCSymbolRefExpr::VK_None) {
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
       return;
@@ -266,10 +265,10 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       return;
     }
 
-    auto Specifier = getSpecifier(Target.getSymA());
+    MCSymbolRefExpr::VariantKind Modifier = Target.getSymA()->getKind();
     if (IsPCRel) {
       if (IsRIPRel) {
-        if (Specifier == X86MCExpr::VK_GOTPCREL) {
+        if (Modifier == MCSymbolRefExpr::VK_GOTPCREL) {
           // x86_64 distinguishes movq foo@GOTPCREL so that the linker can
           // rewrite the movq to an leaq at link time if the symbol ends up in
           // the same linkage unit.
@@ -277,9 +276,9 @@ void X86MachObjectWriter::RecordX86_64Relocation(
             Type = MachO::X86_64_RELOC_GOT_LOAD;
           else
             Type = MachO::X86_64_RELOC_GOT;
-        } else if (Specifier == X86MCExpr::VK_TLVP) {
+        }  else if (Modifier == MCSymbolRefExpr::VK_TLVP) {
           Type = MachO::X86_64_RELOC_TLV;
-        } else if (Specifier != X86MCExpr::VK_None) {
+        }  else if (Modifier != MCSymbolRefExpr::VK_None) {
           Asm.getContext().reportError(
               Fixup.getLoc(), "unsupported symbol modifier in relocation");
           return;
@@ -307,7 +306,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
           }
         }
       } else {
-        if (Specifier != X86MCExpr::VK_None) {
+        if (Modifier != MCSymbolRefExpr::VK_None) {
           Asm.getContext().reportError(
               Fixup.getLoc(),
               "unsupported symbol modifier in branch relocation");
@@ -317,20 +316,20 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         Type = MachO::X86_64_RELOC_BRANCH;
       }
     } else {
-      if (Specifier == X86MCExpr::VK_GOT) {
+      if (Modifier == MCSymbolRefExpr::VK_GOT) {
         Type = MachO::X86_64_RELOC_GOT;
-      } else if (Specifier == X86MCExpr::VK_GOTPCREL) {
+      } else if (Modifier == MCSymbolRefExpr::VK_GOTPCREL) {
         // GOTPCREL is allowed as a modifier on non-PCrel instructions, in which
         // case all we do is set the PCrel bit in the relocation entry; this is
         // used with exception handling, for example. The source is required to
         // include any necessary offset directly.
         Type = MachO::X86_64_RELOC_GOT;
         IsPCRel = 1;
-      } else if (Specifier == X86MCExpr::VK_TLVP) {
+      } else if (Modifier == MCSymbolRefExpr::VK_TLVP) {
         Asm.getContext().reportError(
             Fixup.getLoc(), "TLVP symbol modifier should have been rip-rel");
         return;
-      } else if (Specifier != X86MCExpr::VK_None) {
+      } else if (Modifier != MCSymbolRefExpr::VK_None) {
         Asm.getContext().reportError(
             Fixup.getLoc(), "unsupported symbol modifier in relocation");
         return;
@@ -385,7 +384,9 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   FixedValue += SecAddr;
   uint32_t Value2 = 0;
 
-  if (const MCSymbol *SB = Target.getSubSym()) {
+  if (const MCSymbolRefExpr *B = Target.getSymB()) {
+    const MCSymbol *SB = &B->getSymbol();
+
     if (!SB->getFragment()) {
       Asm.getContext().reportError(
           Fixup.getLoc(),
@@ -461,7 +462,7 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
                                                MCValue Target,
                                                uint64_t &FixedValue) {
   const MCSymbolRefExpr *SymA = Target.getSymA();
-  assert(getSpecifier(SymA) == X86MCExpr::VK_TLVP && !is64Bit() &&
+  assert(SymA->getKind() == MCSymbolRefExpr::VK_TLVP && !is64Bit() &&
          "Should only be called with a 32-bit TLVP relocation!");
 
   unsigned Log2Size = getFixupKindLog2Size(Fixup.getKind());
@@ -472,12 +473,13 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
   // subtraction from the picbase. For 32-bit pic the addend is the difference
   // between the picbase and the next address.  For 32-bit static the addend is
   // zero.
-  if (auto *SymB = Target.getSubSym()) {
+  if (auto *SymB = Target.getSymB()) {
     // If this is a subtraction then we're pcrel.
     uint32_t FixupAddress =
         Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset();
     IsPCRel = 1;
-    FixedValue = FixupAddress - Writer->getSymbolAddress(*SymB, Asm) +
+    FixedValue = FixupAddress -
+                 Writer->getSymbolAddress(SymB->getSymbol(), Asm) +
                  Target.getConstant();
     FixedValue += 1ULL << Log2Size;
   } else {
@@ -503,7 +505,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
 
   // If this is a 32-bit TLVP reloc it's handled a bit differently.
   if (Target.getSymA() &&
-      getSpecifier(Target.getSymA()) == X86MCExpr::VK_TLVP) {
+      Target.getSymA()->getKind() == MCSymbolRefExpr::VK_TLVP) {
     recordTLVPRelocation(Writer, Asm, Fragment, Fixup, Target, FixedValue);
     return;
   }
@@ -511,7 +513,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
   // If this is a difference or a defined symbol plus an offset, then we need a
   // scattered relocation entry. Differences always require scattered
   // relocations.
-  if (Target.getSubSym()) {
+  if (Target.getSymB()) {
     recordScatteredRelocation(Writer, Asm, Fragment, Fixup, Target, Log2Size,
                               FixedValue);
     return;

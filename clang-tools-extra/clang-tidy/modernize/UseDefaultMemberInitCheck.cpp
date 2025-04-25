@@ -176,11 +176,6 @@ static bool sameValue(const Expr *E1, const Expr *E2) {
            cast<StringLiteral>(E2)->getString();
   case Stmt::DeclRefExprClass:
     return cast<DeclRefExpr>(E1)->getDecl() == cast<DeclRefExpr>(E2)->getDecl();
-  case Stmt::CStyleCastExprClass:
-  case Stmt::CXXStaticCastExprClass:
-  case Stmt::CXXFunctionalCastExprClass:
-    return sameValue(cast<ExplicitCastExpr>(E1)->getSubExpr(),
-                     cast<ExplicitCastExpr>(E2)->getSubExpr());
   default:
     return false;
   }
@@ -199,8 +194,6 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto ConstExpRef = varDecl(anyOf(isConstexpr(), isStaticStorageClass()));
-
   auto InitBase =
       anyOf(stringLiteral(), characterLiteral(), integerLiteral(),
             unaryOperator(hasAnyOperatorName("+", "-"),
@@ -209,15 +202,12 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
             unaryOperator(hasAnyOperatorName("+", "-"),
                           hasUnaryOperand(floatLiteral())),
             cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
-            declRefExpr(to(anyOf(enumConstantDecl(), ConstExpRef))));
-
-  auto ExplicitCastExpr = castExpr(hasSourceExpression(InitBase));
-  auto InitMatcher = anyOf(InitBase, ExplicitCastExpr);
+            declRefExpr(to(enumConstantDecl())));
 
   auto Init =
-      anyOf(initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, InitMatcher)),
+      anyOf(initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, InitBase)),
                                initCountIs(0), hasType(arrayType()))),
-            InitBase, ExplicitCastExpr);
+            InitBase);
 
   Finder->addMatcher(
       cxxConstructorDecl(forEachConstructorInitializer(

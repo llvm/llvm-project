@@ -35,7 +35,7 @@ def check_first_register_readable(test_case):
         test_case.expect("register read r0", substrs=["r0 = 0x"])
     elif arch in ["powerpc64le"]:
         test_case.expect("register read r0", substrs=["r0 = 0x"])
-    elif arch in ["riscv64", "riscv32"]:
+    elif re.match("^rv(32|64)", arch):
         test_case.expect("register read zero", substrs=["zero = 0x"])
     else:
         # TODO: Add check for other architectures
@@ -240,10 +240,6 @@ def getArchitecture():
         arch = "x86_64"
     if arch in ["armv7l", "armv8l"]:
         arch = "arm"
-    if re.match("rv64*", arch):
-        arch = "riscv64"
-    if re.match("rv32*", arch):
-        arch = "riscv32"
     return arch
 
 

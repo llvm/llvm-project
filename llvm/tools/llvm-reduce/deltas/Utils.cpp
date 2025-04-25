@@ -24,16 +24,7 @@ cl::opt<bool> llvm::Verbose("verbose",
                             cl::init(false), cl::cat(LLVMReduceOptions));
 
 Value *llvm::getDefaultValue(Type *T) {
-  if (T->isVoidTy())
-    return PoisonValue::get(T);
-
-  if (auto *TET = dyn_cast<TargetExtType>(T)) {
-    if (TET->hasProperty(TargetExtType::HasZeroInit))
-      return ConstantTargetNone::get(TET);
-    return PoisonValue::get(TET);
-  }
-
-  return Constant::getNullValue(T);
+  return T->isVoidTy() ? PoisonValue::get(T) : Constant::getNullValue(T);
 }
 
 bool llvm::hasAliasUse(Function &F) {

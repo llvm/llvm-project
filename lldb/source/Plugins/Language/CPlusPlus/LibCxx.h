@@ -102,6 +102,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxSharedPtrSyntheticFrontEnd() override;
@@ -119,6 +121,8 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
+
+  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 

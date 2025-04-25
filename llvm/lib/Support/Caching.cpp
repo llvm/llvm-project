@@ -80,7 +80,6 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       sys::fs::TempFile TempFile;
       std::string ModuleName;
       unsigned Task;
-      bool Committed = false;
 
       CacheStream(std::unique_ptr<raw_pwrite_stream> OS, AddBufferFn AddBuffer,
                   sys::fs::TempFile TempFile, std::string EntryPath,

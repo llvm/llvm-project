@@ -1684,12 +1684,12 @@ static Type *getMinimumFPType(Value *V, bool PreferBFloat) {
     if (Type *T = shrinkFPConstant(CFP, PreferBFloat))
       return T;
 
-  // Try to shrink scalable and fixed splat vectors.
-  if (auto *FPC = dyn_cast<Constant>(V))
-    if (isa<VectorType>(V->getType()))
-      if (auto *Splat = dyn_cast_or_null<ConstantFP>(FPC->getSplatValue()))
-        if (Type *T = shrinkFPConstant(Splat, PreferBFloat))
-          return T;
+  // We can only correctly find a minimum type for a scalable vector when it is
+  // a splat. For splats of constant values the fpext is wrapped up as a
+  // ConstantExpr.
+  if (auto *FPCExt = dyn_cast<ConstantExpr>(V))
+    if (FPCExt->getOpcode() == Instruction::FPExt)
+      return FPCExt->getOperand(0)->getType();
 
   // Try to shrink a vector of FP constants. This returns nullptr on scalable
   // vectors
@@ -2743,7 +2743,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   if (DestTy == Src->getType())
     return replaceInstUsesWith(CI, Src);
 
-  if (isa<FixedVectorType>(DestTy)) {
+  if (FixedVectorType *DestVTy = dyn_cast<FixedVectorType>(DestTy)) {
     if (isa<IntegerType>(SrcTy)) {
       // If this is a cast from an integer to vector, check to see if the input
       // is a trunc or zext of a bitcast from vector.  If so, we can replace all

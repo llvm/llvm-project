@@ -75,7 +75,8 @@ protected:
       LangOpts.ImplicitModules = true;
     }
 
-    HeaderInfo.emplace(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    HeaderInfo.emplace(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                       Diags, LangOpts, Target.get());
 
     return std::make_unique<Preprocessor>(
         std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
@@ -101,7 +102,6 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
   LangOptions LangOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearchOptions HSOpts;
   std::optional<HeaderSearch> HeaderInfo;
 };
 

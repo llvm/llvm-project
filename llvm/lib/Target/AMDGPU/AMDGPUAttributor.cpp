@@ -111,8 +111,6 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
                                                     : QUEUE_PTR;
   case Intrinsic::trap:
-  case Intrinsic::debugtrap:
-  case Intrinsic::ubsantrap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
       return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
                                                       : QUEUE_PTR;
@@ -1238,8 +1236,6 @@ static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
   return false;
 }
 
-// TODO: Migrate to range merge of amdgpu-agpr-alloc.
-// FIXME: Why is this using Attribute::NoUnwind?
 struct AAAMDGPUNoAGPR
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>,
@@ -1255,10 +1251,7 @@ struct AAAMDGPUNoAGPR
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    auto [MinNumAGPR, MaxNumAGPR] =
-        AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
-                                        /*OnlyFirstRequired=*/true);
-    if (MinNumAGPR == 0)
+    if (F->hasFnAttribute("amdgpu-no-agpr"))
       indicateOptimisticFixpoint();
   }
 
@@ -1305,7 +1298,7 @@ struct AAAMDGPUNoAGPR
       return ChangeStatus::UNCHANGED;
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
     return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
+                           {Attribute::get(Ctx, "amdgpu-no-agpr")});
   }
 
   const std::string getName() const override { return "AAAMDGPUNoAGPR"; }

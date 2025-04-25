@@ -57,8 +57,6 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  bool enableInterleavedAccessVectorization() { return true; }
-
   unsigned getNumberOfRegisters(unsigned ClassID) const;
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   InstructionCost getArithmeticInstrCost(

@@ -42,6 +42,7 @@ public:
     return formatters::ExtractIndexFromString(name.GetCString());
   }
 
+  bool MightHaveChildren() override { return true; }
   llvm::Expected<uint32_t> CalculateNumChildren() override {
     return m_has_value ? 1U : 0U;
   }

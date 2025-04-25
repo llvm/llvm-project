@@ -206,8 +206,8 @@ public:
   static ABIArgInfo getIgnore() {
     return ABIArgInfo(Ignore);
   }
-  static ABIArgInfo getIndirect(CharUnits Alignment, unsigned AddrSpace,
-                                bool ByVal = true, bool Realign = false,
+  static ABIArgInfo getIndirect(CharUnits Alignment, bool ByVal = true,
+                                bool Realign = false,
                                 llvm::Type *Padding = nullptr) {
     auto AI = ABIArgInfo(Indirect);
     AI.setIndirectAlign(Alignment);
@@ -215,7 +215,6 @@ public:
     AI.setIndirectRealign(Realign);
     AI.setSRetAfterThis(false);
     AI.setPaddingType(Padding);
-    AI.setIndirectAddrSpace(AddrSpace);
     return AI;
   }
 
@@ -233,7 +232,7 @@ public:
 
   static ABIArgInfo getIndirectInReg(CharUnits Alignment, bool ByVal = true,
                                      bool Realign = false) {
-    auto AI = getIndirect(Alignment, 0, ByVal, Realign);
+    auto AI = getIndirect(Alignment, ByVal, Realign);
     AI.setInReg(true);
     return AI;
   }
@@ -423,12 +422,12 @@ public:
   }
 
   unsigned getIndirectAddrSpace() const {
-    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
+    assert(isIndirectAliased() && "Invalid kind!");
     return IndirectAttr.AddrSpace;
   }
 
   void setIndirectAddrSpace(unsigned AddrSpace) {
-    assert((isIndirect() || isIndirectAliased()) && "Invalid kind!");
+    assert(isIndirectAliased() && "Invalid kind!");
     IndirectAttr.AddrSpace = AddrSpace;
   }
 

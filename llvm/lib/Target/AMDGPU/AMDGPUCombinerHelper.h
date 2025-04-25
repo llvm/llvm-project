@@ -28,7 +28,7 @@ protected:
 public:
   using CombinerHelper::CombinerHelper;
   AMDGPUCombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
-                       bool IsPreLegalize, GISelValueTracking *VT,
+                       bool IsPreLegalize, GISelKnownBits *KB,
                        MachineDominatorTree *MDT, const LegalizerInfo *LI,
                        const GCNSubtarget &STI);
 

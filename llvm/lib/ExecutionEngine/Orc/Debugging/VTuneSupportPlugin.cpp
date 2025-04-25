@@ -71,8 +71,7 @@ static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
         SAddr, Sym->getSize(),
         DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
     Method.SourceFileSI = Batch.Strings.size();
-    Batch.Strings.push_back(
-        DC->getLineInfoForAddress(SAddr).value_or(DILineInfo()).FileName);
+    Batch.Strings.push_back(DC->getLineInfoForAddress(SAddr).FileName);
     for (auto &LInfo : LinesInfo) {
       Method.LineTable.push_back(
           std::pair<unsigned, unsigned>{/*unsigned*/ Sym->getOffset(),

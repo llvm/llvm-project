@@ -12,9 +12,6 @@
 #include "lldb/Core/IOHandler.h"
 
 namespace lldb_private {
-namespace curses {
-class Application;
-} // namespace curses
 
 class IOHandlerCursesGUI : public IOHandler {
 public:
@@ -37,7 +34,7 @@ public:
   void TerminalSizeChanged() override;
 
 protected:
-  std::unique_ptr<curses::Application> m_app_up;
+  curses::ApplicationAP m_app_ap;
 };
 
 } // namespace lldb_private

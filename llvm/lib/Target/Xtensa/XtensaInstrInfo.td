@@ -709,40 +709,22 @@ let isCall = 1, Defs = [A0] in {
   }
 }
 
-// Windowed call patterns. Currently rotation
-// window by 8 is implemented.
-def : Pat<(Xtensa_callw8 (i32 tglobaladdr:$dst)),
-          (CALL8 tglobaladdr:$dst)>;
-def : Pat<(Xtensa_callw8 (i32 texternalsym:$dst)),
-          (CALL8 texternalsym:$dst)>;
-def : Pat<(Xtensa_callw8 AR:$dst),
-          (CALLX8 AR:$dst)>;
-
 def MOVSP : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins AR:$s),
                     "movsp\t$t, $s", []>, Requires<[HasWindowed]> {
   let r = 0x01;
 }
 
-// Use this pseudo operation instead of getCopyToReg function to
-// update SP register.
-let usesCustomInserter = 1, Defs = [SP], Predicates = [HasWindowed] in {
-  def MOVSP_P : Pseudo<(outs), (ins AR:$s),
-                      "!movsp_p\tsp, $s", [(Xtensa_movsp AR:$s)]>;
-}
-
 let isReturn = 1, isTerminator = 1,
     isBarrier = 1, Uses = [A0] in {
   def RETW_N : RRRN_Inst<0x0D, (outs), (ins),
-                        "retw.n", [(Xtensa_retw)]>,
-                        Requires<[HasWindowed, HasDensity]> {
+                        "retw.n", []>, Requires<[HasWindowed, HasDensity]> {
     let r = 0x0F;
     let s = 0;
     let t = 1;
   }
 
   def RETW : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
-                       "retw", [(Xtensa_retw)]>,
-                       Requires<[HasWindowed]> {
+                       "retw", []>, Requires<[HasWindowed]> {
     let m = 0x2;
     let n = 0x1;
     let s = 0;
@@ -797,78 +779,3 @@ def ROTW : RRR_Inst<0x00, 0x00, 0x04, (outs), (ins imm8n_7:$imm),
   let s = 0x0;
   let t = imm{3-0};
 }
-
-//===----------------------------------------------------------------------===//
-// Boolean Instructions
-//===----------------------------------------------------------------------===//
-
-def ALL4 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
-                   "all4\t$t, $s", []>, Requires<[HasBoolean]> {
-  let r = 0x9;
-}
-
-def ALL8 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
-                   "all8\t$t, $s", []>, Requires<[HasBoolean]> {
-  let r = 0xB;
-}
-
-def ANDB : RRR_Inst<0x00, 0x02, 0x00, (outs BR:$r), (ins BR:$s, BR:$t),
-                   "andb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
-def ANDBC : RRR_Inst<0x00, 0x02, 0x01, (outs BR:$r), (ins BR:$s, BR:$t),
-                    "andbc\t$r, $s, $t", []>, Requires<[HasBoolean]>;
-def ORB : RRR_Inst<0x00, 0x02, 0x02, (outs BR:$r), (ins BR:$s, BR:$t),
-                  "orb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
-def ORBC : RRR_Inst<0x00, 0x02, 0x03, (outs BR:$r), (ins BR:$s, BR:$t),
-                   "orbc\t$r, $s, $t", []>, Requires<[HasBoolean]>;
-def XORB : RRR_Inst<0x00, 0x02, 0x04, (outs BR:$r), (ins BR:$s, BR:$t),
-                   "xorb\t$r, $s, $t", []>, Requires<[HasBoolean]>;
-
-def ANY4 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
-                   "any4\t$t, $s", []>, Requires<[HasBoolean]> {
-  let r = 0x8;
-}
-
-def ANY8 : RRR_Inst<0x00, 0x00, 0x00, (outs BR:$t), (ins BR:$s),
-                   "any8\t$t, $s", []>, Requires<[HasBoolean]> {
-  let r = 0xA;
-}
-
-let isBranch = 1, isTerminator = 1, Predicates = [HasBoolean] in {
-  def BT : RRI8_Inst<0x06, (outs), (ins BR:$b, brtarget:$target),
-                    "bt\t$b, $target", []> {
-    bits<8> target;
-    bits<4> b;
-
-    let r = 0x1;
-    let s = b;
-    let t = 0x7;
-    let imm8 = target;
-  }
-
-  def BF : RRI8_Inst<0x06, (outs), (ins BR:$b, brtarget:$target),
-                    "bf\t$b, $target", []> {
-    bits<8> target;
-    bits<4> b;
-
-    let r = 0x0;
-    let s = b;
-    let t = 0x7;
-    let imm8 = target;
-  }
-}
-
-def : InstAlias<"_BT\t$b, $target", (BT BR:$b, brtarget:$target)>;
-def : InstAlias<"_BF\t$b, $target", (BF BR:$b, brtarget:$target)>;
-
-let Constraints = "$dr = $r,@earlyclobber $dr" in {
-  def MOVF : RRR_Inst<0x00, 0x03, 0x0C, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
-                   "movf\t$r, $s, $t", []>, Requires<[HasBoolean]>;
-
-  def MOVT : RRR_Inst<0x00, 0x03, 0x0D, (outs AR:$dr), (ins AR:$r, AR:$s, BR:$t),
-                   "movt\t$r, $s, $t", []>, Requires<[HasBoolean]>;
-}
-
-//===----------------------------------------------------------------------===//
-// DSP Instructions
-//===----------------------------------------------------------------------===//
-include "XtensaDSPInstrInfo.td"

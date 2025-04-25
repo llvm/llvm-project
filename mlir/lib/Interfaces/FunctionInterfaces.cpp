@@ -199,7 +199,8 @@ void function_interface_impl::insertFunctionArguments(
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
-  // - Block arguments of entry block, if not empty.
+  // - Block arguments of entry block.
+  Block &entry = op->getRegion(0).front();
 
   // Update the argument attributes of the function.
   ArrayAttr oldArgAttrs = op.getArgAttrsAttr();
@@ -225,15 +226,10 @@ void function_interface_impl::insertFunctionArguments(
     setAllArgAttrDicts(op, newArgAttrs);
   }
 
-  // Update the function type.
+  // Update the function type and any entry block arguments.
   op.setFunctionTypeAttr(TypeAttr::get(newType));
-
-  // Update entry block arguments, if not empty.
-  if (!op.isExternal()) {
-    Block &entry = op->getRegion(0).front();
-    for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
-      entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
-  }
+  for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
+    entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
 }
 
 void function_interface_impl::insertFunctionResults(
@@ -283,7 +279,8 @@ void function_interface_impl::eraseFunctionArguments(
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
-  // - Block arguments of entry block, if not empty.
+  // - Block arguments of entry block.
+  Block &entry = op->getRegion(0).front();
 
   // Update the argument attributes of the function.
   if (ArrayAttr argAttrs = op.getArgAttrsAttr()) {
@@ -295,14 +292,9 @@ void function_interface_impl::eraseFunctionArguments(
     setAllArgAttrDicts(op, newArgAttrs);
   }
 
-  // Update the function type.
+  // Update the function type and any entry block arguments.
   op.setFunctionTypeAttr(TypeAttr::get(newType));
-
-  // Update entry block arguments, if not empty.
-  if (!op.isExternal()) {
-    Block &entry = op->getRegion(0).front();
-    entry.eraseArguments(argIndices);
-  }
+  entry.eraseArguments(argIndices);
 }
 
 void function_interface_impl::eraseFunctionResults(

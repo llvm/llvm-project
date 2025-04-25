@@ -20,7 +20,6 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -126,8 +125,8 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     DeclarationName Name =
         Context.DeclarationNames.getIdentifier(&Context.Idents.get("clear"));
 
-    auto Candidates = HeuristicResolver(Context).lookupDependentName(
-        MemberCall->getRecordDecl(), Name, [](const NamedDecl *ND) {
+    auto Candidates = MemberCall->getRecordDecl()->lookupDependentName(
+        Name, [](const NamedDecl *ND) {
           return isa<CXXMethodDecl>(ND) &&
                  llvm::cast<CXXMethodDecl>(ND)->getMinRequiredArguments() ==
                      0 &&
@@ -175,8 +174,8 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     DeclarationName Name =
         Context.DeclarationNames.getIdentifier(&Context.Idents.get("clear"));
 
-    auto Candidates = HeuristicResolver(Context).lookupDependentName(
-        ArgRecordDecl, Name, [](const NamedDecl *ND) {
+    auto Candidates =
+        ArgRecordDecl->lookupDependentName(Name, [](const NamedDecl *ND) {
           return isa<CXXMethodDecl>(ND) &&
                  llvm::cast<CXXMethodDecl>(ND)->getMinRequiredArguments() ==
                      0 &&

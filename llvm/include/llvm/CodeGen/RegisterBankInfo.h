@@ -419,7 +419,7 @@ protected:
 
   /// Getting the minimal register class of a physreg is expensive.
   /// Cache this information as we get it.
-  mutable DenseMap<MCRegister, const TargetRegisterClass *> PhysRegMinimalRCs;
+  mutable DenseMap<unsigned, const TargetRegisterClass *> PhysRegMinimalRCs;
 
   /// Create a RegisterBankInfo that can accommodate up to \p NumRegBanks
   /// RegisterBank instances.
@@ -445,7 +445,7 @@ protected:
   /// Get the MinimalPhysRegClass for Reg.
   /// \pre Reg is a physical register.
   const TargetRegisterClass *
-  getMinimalPhysRegClass(MCRegister Reg, const TargetRegisterInfo &TRI) const;
+  getMinimalPhysRegClass(Register Reg, const TargetRegisterInfo &TRI) const;
 
   /// Try to get the mapping of \p MI.
   /// See getInstrMapping for more details on what a mapping represents.

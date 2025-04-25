@@ -36,6 +36,7 @@ namespace members {
   };
 }
 
+
 namespace ignore_unions {
   union Foo {
     RefCountable* a;
@@ -59,12 +60,3 @@ void foo(RefCountable* t) {
 }
 
 } // ignore_system_header
-
-namespace ignore_non_ref_countable {
-  struct Foo {
-  };
-
-  struct Bar {
-    Foo* foo;
-  };
-}

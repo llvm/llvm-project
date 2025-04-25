@@ -1163,18 +1163,18 @@ func.func @speculate_ceildivsi_range(
 func.func @speculate_static_pack_and_unpack(%source: tensor<128x256xf32>,
   %dest: tensor<4x16x32x16xf32>, %lb: index, %ub: index, %step: index) {
 
-  // CHECK: linalg.pack
+  // CHECK: tensor.pack
   // CHECK-NEXT: scf.for
   scf.for %i = %lb to %ub step %step {
-    %packed = linalg.pack %source
+    %packed = tensor.pack %source
       inner_dims_pos = [0, 1]
       inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<4x16x32x16xf32>
   }
 
-  // CHECK: linalg.unpack
+  // CHECK: tensor.unpack
   // CHECK-NEXT: scf.for
   scf.for %i = %lb to %ub step %step {
-    %unpacked = linalg.unpack %dest
+    %unpacked = tensor.unpack %dest
       inner_dims_pos = [0, 1]
       inner_tiles = [32, 16] into %source : tensor<4x16x32x16xf32> -> tensor<128x256xf32>
   }
@@ -1188,25 +1188,25 @@ func.func @speculate_dynamic_pack_and_unpack(%source: tensor<?x?xf32>,
   %tile_m: index, %tile_n: index, %pad: f32) {
 
   // CHECK: scf.for
-  // CHECK-NEXT: linalg.pack
+  // CHECK-NEXT: tensor.pack
   scf.for %i = %lb to %ub step %step {
-    %packed = linalg.pack %source
+    %packed = tensor.pack %source
       inner_dims_pos = [0, 1]
       inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
   }
 
   // CHECK: scf.for
-  // CHECK-NEXT: linalg.unpack
+  // CHECK-NEXT: tensor.unpack
   scf.for %i = %lb to %ub step %step {
-    %unpacked = linalg.unpack %dest
+    %unpacked = tensor.unpack %dest
       inner_dims_pos = [0, 1]
       inner_tiles = [%tile_n, %tile_m] into %source : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
   }
 
-  // CHECK: linalg.pack
+  // CHECK: tensor.pack
   // CHECK-NEXT: scf.for
   scf.for %i = %lb to %ub step %step {
-    %packed = linalg.pack %source padding_value(%pad : f32)
+    %packed = tensor.pack %source padding_value(%pad : f32)
       inner_dims_pos = [0, 1]
       inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
   }

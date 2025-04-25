@@ -103,7 +103,6 @@ Type RangeType::getElementType() const {
 
 //===----------------------------------------------------------------------===//
 // TypeRangeType
-//===----------------------------------------------------------------------===//
 
 bool TypeRangeType::classof(Type type) {
   RangeType range = mlir::dyn_cast<RangeType>(type);
@@ -117,7 +116,6 @@ TypeRangeType TypeRangeType::get(Context &context) {
 
 //===----------------------------------------------------------------------===//
 // ValueRangeType
-//===----------------------------------------------------------------------===//
 
 bool ValueRangeType::classof(Type type) {
   RangeType range = mlir::dyn_cast<RangeType>(type);

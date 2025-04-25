@@ -42,19 +42,16 @@ HeapProfileRecords:
   - GUID:            main
     AllocSites:      []
     CallSites:
-      - Frames:
-        - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
+      - - { Function: main, LineOffset: 1, Column: 3, IsInlineFrame: false }
   - GUID:            _ZL2f1v
     AllocSites:      []
     CallSites:
-      - Frames:
-        - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
+      - - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
         - { Function: _ZL2f1v, LineOffset: 0, Column: 54, IsInlineFrame: false }
   - GUID:            _ZL2f2v
     AllocSites:      []
     CallSites:
-      - Frames:
-        - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
+      - - { Function: _ZL2f2v, LineOffset: 0, Column: 28, IsInlineFrame: true }
         - { Function: _ZL2f1v, LineOffset: 0, Column: 54, IsInlineFrame: false }
   - GUID:            _Z2f3v
     AllocSites:

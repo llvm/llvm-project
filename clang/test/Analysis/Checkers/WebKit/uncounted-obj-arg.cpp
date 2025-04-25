@@ -77,8 +77,6 @@ T&& forward(T& arg);
 template<typename T>
 T&& move( T&& t );
 
-#define offsetof(t, d) __builtin_offsetof(t, d)
-
 } // namespace std
 
 bool isMainThread();
@@ -196,10 +194,6 @@ public:
   ComplexNumber& operator+();
 
   const Number& real() const { return realPart; }
-  const Number& complex() const;
-
-  void ref() const;
-  void deref() const;
 
 private:
   Number realPart;
@@ -242,11 +236,6 @@ private:
 class SomeType : public BaseType {
 public:
   using BaseType::BaseType;
-};
-
-struct OtherObj {
-  unsigned v { 0 };
-  OtherObj* children[4] { nullptr };
 };
 
 void __libcpp_verbose_abort(const char *__format, ...);
@@ -384,8 +373,6 @@ public:
     double y;
   };
   void trivial68() { point pt = { 1.0 }; }
-  unsigned trivial69() { return offsetof(OtherObj, children); }
-  DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -476,8 +463,6 @@ public:
   unsigned nonTrivial22() { return ComplexNumber(123, "456").real().value(); }
   unsigned nonTrivial23() { return DerivedNumber("123").value(); }
   SomeType nonTrivial24() { return SomeType("123"); }
-  virtual void nonTrivial25() { }
-  virtual ComplexNumber* operator->() { return nullptr; }
 
   static unsigned s_v;
   unsigned v { 0 };
@@ -575,8 +560,6 @@ public:
     getFieldTrivial().trivial66()->trivial6(); // no-warning
     getFieldTrivial().trivial67()->trivial6(); // no-warning
     getFieldTrivial().trivial68(); // no-warning
-    getFieldTrivial().trivial69(); // no-warning
-    getFieldTrivial().trivial70(); // no-warning
 
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
@@ -653,10 +636,6 @@ public:
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial24();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
-    getFieldTrivial().nonTrivial25();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
-    getFieldTrivial()->complex();
-    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 
   void setField(RefCounted*);
@@ -695,13 +674,9 @@ RefPtr<RefCounted> object();
 void someFunction(const RefCounted&);
 
 void test2() {
-  someFunction(*object());
+    someFunction(*object());
 }
 
 void system_header() {
   callMethod<RefCountable>(object);
-}
-
-void log(RefCountable* obj) {
-  os_log_msg(os_log_create("WebKit", "DOM"), OS_LOG_TYPE_INFO, "obj: %p next: %p", obj, obj->next());
 }

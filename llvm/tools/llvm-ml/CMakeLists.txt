@@ -22,5 +22,3 @@ add_llvm_tool(llvm-ml
   MLTableGen
   GENERATE_DRIVER
   )
-
-add_llvm_tool_symlink(llvm-ml64 llvm-ml)

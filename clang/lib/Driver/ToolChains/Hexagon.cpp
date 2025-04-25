@@ -313,7 +313,6 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                                      // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_static_libgcc);
 
-  CmdArgs.push_back("--eh-frame-hdr");
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------

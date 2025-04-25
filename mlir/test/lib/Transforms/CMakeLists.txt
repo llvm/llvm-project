@@ -1,8 +1,3 @@
-set(LLVM_TARGET_DEFINITIONS TestTransformsOps.td)
-mlir_tablegen(TestTransformsOps.h.inc -gen-op-decls)
-mlir_tablegen(TestTransformsOps.cpp.inc -gen-op-defs)
-add_public_tablegen_target(MLIRTestTransformsOpsIncGen)
-
 set(LLVM_OPTIONAL_SOURCES 
   TestDialectConversion.cpp)
 set(MLIRTestTransformsPDLDep)
@@ -30,7 +25,6 @@ add_mlir_library(MLIRTestTransforms
   TestControlFlowSink.cpp
   TestInlining.cpp
   TestMakeIsolatedFromAbove.cpp
-  TestTransformsOps.cpp
   ${MLIRTestTransformsPDLSrc}
 
   EXCLUDE_FROM_LIBMLIR
@@ -40,7 +34,6 @@ add_mlir_library(MLIRTestTransforms
 
   DEPENDS
   ${MLIRTestTransformsPDLDep}
-  MLIRTestTransformsOpsIncGen
 
   LINK_LIBS PUBLIC
   MLIRTestDialect
@@ -50,7 +43,6 @@ mlir_target_link_libraries(MLIRTestTransforms PUBLIC
   MLIRFuncDialect
   MLIRInferIntRangeInterface
   MLIRTransforms
-  MLIRTransformDialect
   )
 
 target_include_directories(MLIRTestTransforms

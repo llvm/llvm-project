@@ -206,7 +206,6 @@ private:
     bool Error = false;              ///< Could not allocate.
 
     explicit LiveReg(Register VirtReg) : VirtReg(VirtReg) {}
-    explicit LiveReg() {}
 
     unsigned getSparseSetIndex() const { return VirtReg.virtRegIndex(); }
   };
@@ -217,12 +216,12 @@ private:
   LiveRegMap LiveVirtRegs;
 
   /// Stores assigned virtual registers present in the bundle MI.
-  DenseMap<Register, LiveReg> BundleVirtRegsMap;
+  DenseMap<Register, MCPhysReg> BundleVirtRegsMap;
 
-  DenseMap<Register, SmallVector<MachineOperand *, 2>> LiveDbgValueMap;
+  DenseMap<unsigned, SmallVector<MachineOperand *, 2>> LiveDbgValueMap;
   /// List of DBG_VALUE that we encountered without the vreg being assigned
   /// because they were placed after the last use of the vreg.
-  DenseMap<Register, SmallVector<MachineInstr *, 1>> DanglingDbgValues;
+  DenseMap<unsigned, SmallVector<MachineInstr *, 1>> DanglingDbgValues;
 
   /// Maps unspilled virtual registers to all DbgDefs which originally used
   /// the virtual register as their referrer. Used to allow updating DbgDefs
@@ -365,7 +364,7 @@ private:
   InstrPosIndexes PosIndexes;
 
   void setPhysRegState(MCRegister PhysReg, unsigned NewState);
-  bool isPhysRegFree(MCRegister PhysReg) const;
+  bool isPhysRegFree(MCPhysReg PhysReg) const;
 
   /// Mark a physreg as used in this instruction.
   void markRegUsedInInstr(MCPhysReg PhysReg) {
@@ -374,14 +373,14 @@ private:
   }
 
   // Check if physreg is clobbered by instruction's regmask(s).
-  bool isClobberedByRegMasks(MCRegister PhysReg) const {
+  bool isClobberedByRegMasks(MCPhysReg PhysReg) const {
     return llvm::any_of(RegMasks, [PhysReg](const uint32_t *Mask) {
       return MachineOperand::clobbersPhysReg(Mask, PhysReg);
     });
   }
 
   /// Check if a physreg or any of its aliases are used in this instruction.
-  bool isRegUsedInInstr(MCRegister PhysReg, bool LookAtPhysRegUses) const {
+  bool isRegUsedInInstr(MCPhysReg PhysReg, bool LookAtPhysRegUses) const {
     if (LookAtPhysRegUses && isClobberedByRegMasks(PhysReg))
       return true;
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
@@ -392,7 +391,7 @@ private:
 
   /// Mark physical register as being used in a register use operand.
   /// This is only used by the special livethrough handling code.
-  void markPhysRegUsedInInstr(MCRegister PhysReg) {
+  void markPhysRegUsedInInstr(MCPhysReg PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
       assert(UsedInInstr[Unit] <= InstrGen && "non-phys use before phys use?");
       UsedInInstr[Unit] = InstrGen;
@@ -400,7 +399,7 @@ private:
   }
 
   /// Remove mark of physical register being used in the instruction.
-  void unmarkRegUsedInInstr(MCRegister PhysReg) {
+  void unmarkRegUsedInInstr(MCPhysReg PhysReg) {
     for (MCRegUnit Unit : TRI->regunits(PhysReg))
       UsedInInstr[Unit] = 0;
   }
@@ -431,10 +430,10 @@ private:
   void handleDebugDefKill(MachineInstr &MI);
   void handleBundle(MachineInstr &MI);
 
-  bool usePhysReg(MachineInstr &MI, MCRegister PhysReg);
-  bool definePhysReg(MachineInstr &MI, MCRegister PhysReg);
-  bool displacePhysReg(MachineInstr &MI, MCRegister PhysReg);
-  void freePhysReg(MCRegister PhysReg);
+  bool usePhysReg(MachineInstr &MI, MCPhysReg PhysReg);
+  bool definePhysReg(MachineInstr &MI, MCPhysReg PhysReg);
+  bool displacePhysReg(MachineInstr &MI, MCPhysReg PhysReg);
+  void freePhysReg(MCPhysReg PhysReg);
 
   unsigned calcSpillCost(MCPhysReg PhysReg) const;
 
@@ -446,18 +445,18 @@ private:
     return LiveVirtRegs.find(VirtReg.virtRegIndex());
   }
 
-  void assignVirtToPhysReg(MachineInstr &MI, LiveReg &, MCRegister PhysReg);
+  void assignVirtToPhysReg(MachineInstr &MI, LiveReg &, MCPhysReg PhysReg);
   void allocVirtReg(MachineInstr &MI, LiveReg &LR, Register Hint,
                     bool LookAtPhysRegUses = false);
   void allocVirtRegUndef(MachineOperand &MO);
   void assignDanglingDebugValues(MachineInstr &Def, Register VirtReg,
-                                 MCRegister Reg);
+                                 MCPhysReg Reg);
   void removeDebugDef(MachineInstr &DbgDef) {
     Lifetime2DbgKills[DbgDef.getDebugLifetime()].removeAll();
     DbgDef.removeFromParent();
   }
   void assignDanglingDebugDefs(MachineInstr &Def, Register VirtReg,
-                                 MCRegister Reg);
+                               MCPhysReg Reg);
   bool defineLiveThroughVirtReg(MachineInstr &MI, unsigned OpNum,
                                 Register VirtReg);
   bool defineVirtReg(MachineInstr &MI, unsigned OpNum, Register VirtReg,
@@ -472,8 +471,7 @@ private:
                             SmallSet<Register, 2> &PrologLiveIns) const;
 
   void reloadAtBegin(MachineBasicBlock &MBB);
-  bool setPhysReg(MachineInstr &MI, MachineOperand &MO,
-                  const LiveReg &Assignment);
+  bool setPhysReg(MachineInstr &MI, MachineOperand &MO, MCPhysReg PhysReg);
 
   Register traceCopies(Register VirtReg) const;
   Register traceCopyChain(Register Reg) const;
@@ -487,8 +485,6 @@ private:
 
   bool mayLiveOut(Register VirtReg);
   bool mayLiveIn(Register VirtReg);
-
-  bool mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const;
 
   void dumpState() const;
 };
@@ -553,7 +549,7 @@ void RegAllocFastImpl::setPhysRegState(MCRegister PhysReg, unsigned NewState) {
     RegUnitStates[Unit] = NewState;
 }
 
-bool RegAllocFastImpl::isPhysRegFree(MCRegister PhysReg) const {
+bool RegAllocFastImpl::isPhysRegFree(MCPhysReg PhysReg) const {
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     if (RegUnitStates[Unit] != regFree)
       return false;
@@ -588,21 +584,6 @@ static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
   if (LLVM_UNLIKELY(PosIndexes.getIndex(B, IndexB)))
     PosIndexes.getIndex(A, IndexA);
   return IndexA < IndexB;
-}
-
-/// Returns true if \p MI is a spill of a live-in physical register in a block
-/// targeted by an INLINEASM_BR. Such spills must precede reloads of live-in
-/// virtual registers, so that we do not reload from an uninitialized stack
-/// slot.
-bool RegAllocFastImpl::mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const {
-  int FI;
-  auto *MBB = MI.getParent();
-  if (MBB->isInlineAsmBrIndirectTarget() && TII->isStoreToStackSlot(MI, FI) &&
-      MFI->isSpillSlotObjectIndex(FI))
-    for (const auto &Op : MI.operands())
-      if (Op.isReg() && MBB->isLiveIn(Op.getReg()))
-        return true;
-  return false;
 }
 
 /// Returns false if \p VirtReg is known to not live out of the current block.
@@ -773,8 +754,8 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
       continue;
     }
 
-    // Skip prologues and inlineasm_br spills to place reloads afterwards.
-    if (!TII->isBasicBlockPrologue(*I) && !mayBeSpillFromInlineAsmBr(*I))
+    // Most reloads should be inserted after prolog instructions.
+    if (!TII->isBasicBlockPrologue(*I))
       break;
 
     // However if a prolog instruction reads a register that needs to be
@@ -834,7 +815,7 @@ void RegAllocFastImpl::reloadAtBegin(MachineBasicBlock &MBB) {
 /// Handle the direct use of a physical register.  Check that the register is
 /// not used by a virtreg. Kill the physreg, marking it free. This may add
 /// implicit kills to MO->getParent() and invalidate MO.
-bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCRegister Reg) {
+bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCPhysReg Reg) {
   assert(Register::isPhysicalRegister(Reg) && "expected physreg");
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
@@ -842,7 +823,7 @@ bool RegAllocFastImpl::usePhysReg(MachineInstr &MI, MCRegister Reg) {
   return displacedAny;
 }
 
-bool RegAllocFastImpl::definePhysReg(MachineInstr &MI, MCRegister Reg) {
+bool RegAllocFastImpl::definePhysReg(MachineInstr &MI, MCPhysReg Reg) {
   bool displacedAny = displacePhysReg(MI, Reg);
   setPhysRegState(Reg, regPreAssigned);
   return displacedAny;
@@ -851,7 +832,7 @@ bool RegAllocFastImpl::definePhysReg(MachineInstr &MI, MCRegister Reg) {
 /// Mark PhysReg as reserved or free after spilling any virtregs. This is very
 /// similar to defineVirtReg except the physreg is reserved instead of
 /// allocated.
-bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
+bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCPhysReg PhysReg) {
   bool displacedAny = false;
 
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
@@ -861,8 +842,6 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
       assert(LRI != LiveVirtRegs.end() && "datastructures in sync");
       MachineBasicBlock::iterator ReloadBefore =
           std::next((MachineBasicBlock::iterator)MI.getIterator());
-      while (mayBeSpillFromInlineAsmBr(*ReloadBefore))
-        ++ReloadBefore;
       reload(ReloadBefore, VirtReg, LRI->PhysReg);
 
       setPhysRegState(LRI->PhysReg, regFree);
@@ -882,7 +861,7 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
   return displacedAny;
 }
 
-void RegAllocFastImpl::freePhysReg(MCRegister PhysReg) {
+void RegAllocFastImpl::freePhysReg(MCPhysReg PhysReg) {
   LLVM_DEBUG(dbgs() << "Freeing " << printReg(PhysReg, TRI) << ':');
 
   MCRegUnit FirstUnit = *TRI->regunits(PhysReg).begin();
@@ -930,7 +909,7 @@ unsigned RegAllocFastImpl::calcSpillCost(MCPhysReg PhysReg) const {
 
 void RegAllocFastImpl::assignDanglingDebugValues(MachineInstr &Definition,
                                                  Register VirtReg,
-                                                 MCRegister Reg) {
+                                                 MCPhysReg Reg) {
   auto UDBGValIter = DanglingDbgValues.find(VirtReg);
   if (UDBGValIter == DanglingDbgValues.end())
     return;
@@ -964,7 +943,7 @@ void RegAllocFastImpl::assignDanglingDebugValues(MachineInstr &Definition,
 }
 
 void RegAllocFastImpl::assignDanglingDebugDefs(MachineInstr &Definition,
-                                           Register VirtReg, MCRegister Reg) {
+                                           Register VirtReg, MCPhysReg Reg) {
   LLVM_DEBUG(dbgs() << "Assigning dangling DBG_DEFs for "
                     << printReg(VirtReg, TRI) << '\n');
   auto DanglingDbgDefsIter = VReg2DanglingDbgDefs.find(VirtReg);
@@ -1003,14 +982,14 @@ void RegAllocFastImpl::assignDanglingDebugDefs(MachineInstr &Definition,
 /// proper container for VirtReg now.  The physical register must not be used
 /// for anything else when this is called.
 void RegAllocFastImpl::assignVirtToPhysReg(MachineInstr &AtMI, LiveReg &LR,
-                                           MCRegister PhysReg) {
+                                           MCPhysReg PhysReg) {
   Register VirtReg = LR.VirtReg;
   LLVM_DEBUG(dbgs() << "Assigning " << printReg(VirtReg, TRI) << " to "
                     << printReg(PhysReg, TRI) << '\n');
   assert(LR.PhysReg == 0 && "Already assigned a physreg");
   assert(PhysReg != 0 && "Trying to assign no register");
   LR.PhysReg = PhysReg;
-  setPhysRegState(PhysReg, VirtReg.id());
+  setPhysRegState(PhysReg, VirtReg);
 
   assignDanglingDebugValues(AtMI, VirtReg, PhysReg);
   assignDanglingDebugDefs(AtMI, VirtReg, PhysReg);
@@ -1149,7 +1128,6 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
 
   LiveRegMap::iterator LRI = findLiveVirtReg(VirtReg);
   MCPhysReg PhysReg;
-  bool IsRenamable = true;
   if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
     PhysReg = LRI->PhysReg;
   } else {
@@ -1163,7 +1141,6 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
       // basic.
       PhysReg = getErrorAssignment(*LRI, *MO.getParent(), RC);
       LRI->Error = true;
-      IsRenamable = false;
     } else
       PhysReg = AllocationOrder.front();
   }
@@ -1174,7 +1151,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
     MO.setSubReg(0);
   }
   MO.setReg(PhysReg);
-  MO.setIsRenamable(IsRenamable);
+  MO.setIsRenamable(true);
 }
 
 /// Variation of defineVirtReg() with special handling for livethrough regs
@@ -1278,10 +1255,10 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
     LRI->Reloaded = false;
   }
   if (MI.getOpcode() == TargetOpcode::BUNDLE) {
-    BundleVirtRegsMap[VirtReg] = *LRI;
+    BundleVirtRegsMap[VirtReg] = PhysReg;
   }
   markRegUsedInInstr(PhysReg);
-  return setPhysReg(MI, MO, *LRI);
+  return setPhysReg(MI, MO, PhysReg);
 }
 
 /// Allocates a register for a VirtReg use.
@@ -1327,10 +1304,10 @@ bool RegAllocFastImpl::useVirtReg(MachineInstr &MI, MachineOperand &MO,
   LRI->LastUse = &MI;
 
   if (MI.getOpcode() == TargetOpcode::BUNDLE) {
-    BundleVirtRegsMap[VirtReg] = *LRI;
+    BundleVirtRegsMap[VirtReg] = LRI->PhysReg;
   }
   markRegUsedInInstr(LRI->PhysReg);
-  return setPhysReg(MI, MO, *LRI);
+  return setPhysReg(MI, MO, LRI->PhysReg);
 }
 
 /// Query a physical register to use as a filler in contexts where the
@@ -1384,27 +1361,16 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
 /// Changes operand OpNum in MI the refer the PhysReg, considering subregs.
 /// \return true if MI's MachineOperands were re-arranged/invalidated.
 bool RegAllocFastImpl::setPhysReg(MachineInstr &MI, MachineOperand &MO,
-                                  const LiveReg &Assignment) {
-  MCPhysReg PhysReg = Assignment.PhysReg;
-  assert(PhysReg && "assignments should always be to a valid physreg");
-
-  if (LLVM_UNLIKELY(Assignment.Error)) {
-    // Make sure we don't set renamable in error scenarios, as we may have
-    // assigned to a reserved register.
-    if (MO.isUse())
-      MO.setIsUndef(true);
-  }
-
+                                  MCPhysReg PhysReg) {
   if (!MO.getSubReg()) {
     MO.setReg(PhysReg);
-    MO.setIsRenamable(!Assignment.Error);
+    MO.setIsRenamable(true);
     return false;
   }
 
   // Handle subregister index.
-  MO.setReg(TRI->getSubReg(PhysReg, MO.getSubReg()));
-  MO.setIsRenamable(!Assignment.Error);
-
+  MO.setReg(PhysReg ? TRI->getSubReg(PhysReg, MO.getSubReg()) : MCRegister());
+  MO.setIsRenamable(true);
   // Note: We leave the subreg number around a little longer in case of defs.
   // This is so that the register freeing logic in allocateInstruction can still
   // recognize this as subregister defs. The code there will clear the number.
@@ -1864,8 +1830,6 @@ void RegAllocFastImpl::handleDebugValue(MachineInstr &MI) {
     Register Reg = MO.getReg();
     if (!Reg.isVirtual())
       continue;
-    if (!shouldAllocateRegister(Reg))
-      continue;
 
     // Already spilled to a stackslot?
     int SS = StackSlotForVirtReg[Reg];
@@ -1886,7 +1850,7 @@ void RegAllocFastImpl::handleDebugValue(MachineInstr &MI) {
     if (LRI != LiveVirtRegs.end() && LRI->PhysReg) {
       // Update every use of Reg within MI.
       for (auto &RegMO : DbgOps)
-        setPhysReg(MI, *RegMO, *LRI);
+        setPhysReg(MI, *RegMO, LRI->PhysReg);
     } else {
       DanglingDbgValues[Reg].push_back(&MI);
     }
@@ -1959,7 +1923,7 @@ void RegAllocFastImpl::handleDebugDefKill(MachineInstr &MI) {
     LLVM_DEBUG(dbgs() << "Record non-dangling DBG_DEF: " << MI);
     // This VirtReg has a definition reaching this DbgDef, and is currently in
     // LRI->PhysReg.
-    setPhysReg(MI, Referrer, *LRI);
+    setPhysReg(MI, Referrer, LRI->PhysReg);
     killDebugDefWithinBlock(MI);
   } else {
     LLVM_DEBUG(dbgs() << "Record dangling DBG_DEF: " << MI);
@@ -1985,7 +1949,8 @@ void RegAllocFastImpl::handleBundle(MachineInstr &MI) {
       if (!Reg.isVirtual() || !shouldAllocateRegister(Reg))
         continue;
 
-      DenseMap<Register, LiveReg>::iterator DI = BundleVirtRegsMap.find(Reg);
+      DenseMap<Register, MCPhysReg>::iterator DI;
+      DI = BundleVirtRegsMap.find(Reg);
       assert(DI != BundleVirtRegsMap.end() && "Unassigned virtual register");
 
       setPhysReg(MI, MO, DI->second);

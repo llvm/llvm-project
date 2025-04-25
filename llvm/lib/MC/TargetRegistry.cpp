@@ -92,14 +92,8 @@ MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<MCCodeEmitter> CE,
                                       std::unique_ptr<MCAsmBackend> TAB) const {
   formatted_raw_ostream &OSRef = *OS;
-  MCStreamer *S;
-  if (AsmStreamerCtorFn)
-    S = AsmStreamerCtorFn(Ctx, std::move(OS), IP, std::move(CE),
-                          std::move(TAB));
-  else
-    S = llvm::createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                                std::move(TAB));
-
+  MCStreamer *S = llvm::createAsmStreamer(Ctx, std::move(OS), IP,
+                                          std::move(CE), std::move(TAB));
   createAsmTargetStreamer(*S, OSRef, IP);
   return S;
 }
@@ -145,7 +139,7 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
   } else {
     // Get the target specific parser.
     std::string TempError;
-    TheTarget = TargetRegistry::lookupTarget(TheTriple, TempError);
+    TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), TempError);
     if (!TheTarget) {
       Error = "unable to get target for '" + TheTriple.getTriple() +
               "', see --version and --triple.";
@@ -156,20 +150,19 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
   return TheTarget;
 }
 
-const Target *TargetRegistry::lookupTarget(const Triple &TT,
-                                           std::string &Error) {
+const Target *TargetRegistry::lookupTarget(StringRef TT, std::string &Error) {
   // Provide special warning when no targets are initialized.
   if (targets().begin() == targets().end()) {
     Error = "Unable to find target for this triple (no targets are registered)";
     return nullptr;
   }
-  Triple::ArchType Arch = TT.getArch();
+  Triple::ArchType Arch = Triple(TT).getArch();
   auto ArchMatch = [&](const Target &T) { return T.ArchMatchFn(Arch); };
   auto I = find_if(targets(), ArchMatch);
 
   if (I == targets().end()) {
-    Error =
-        "No available targets are compatible with triple \"" + TT.str() + "\"";
+    Error = ("No available targets are compatible with triple \"" + TT + "\"")
+                .str();
     return nullptr;
   }
 

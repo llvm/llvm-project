@@ -552,8 +552,8 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
   lldb::TypeSP modified_type = GetOrCreateType(mr.ModifiedType);
 
   return MakeType(toOpaqueUid(type_id), ConstString(name),
-                  llvm::expectedToOptional(modified_type->GetByteSize(nullptr)),
-                  nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
+                  modified_type->GetByteSize(nullptr), nullptr,
+                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
                   Type::ResolveState::Full);
 }
 
@@ -670,11 +670,10 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
   Declaration decl;
   TypeSP underlying_type = GetOrCreateType(er.UnderlyingType);
 
-  return MakeType(
-      toOpaqueUid(type_id), ConstString(uname),
-      llvm::expectedToOptional(underlying_type->GetByteSize(nullptr)), nullptr,
-      LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, ct,
-      lldb_private::Type::ResolveState::Forward);
+  return MakeType(toOpaqueUid(type_id), ConstString(uname),
+                  underlying_type->GetByteSize(nullptr), nullptr,
+                  LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
+                  ct, lldb_private::Type::ResolveState::Forward);
 }
 
 TypeSP SymbolFileNativePDB::CreateArrayType(PdbTypeSymId type_id,
@@ -1311,17 +1310,18 @@ bool SymbolFileNativePDB::ParseLineTable(CompileUnit &comp_unit) {
   cii->m_global_line_table.Clear();
 
   // Add line entries in line_set to line_table.
-  std::vector<LineTable::Sequence> sequence(1);
+  auto line_table = std::make_unique<LineTable>(&comp_unit);
+  std::unique_ptr<LineSequence> sequence(
+      line_table->CreateLineSequenceContainer());
   for (const auto &line_entry : line_set) {
-    LineTable::AppendLineEntryToSequence(
-        sequence.back(), line_entry.file_addr, line_entry.line,
+    line_table->AppendLineEntryToSequence(
+        sequence.get(), line_entry.file_addr, line_entry.line,
         line_entry.column, line_entry.file_idx,
         line_entry.is_start_of_statement, line_entry.is_start_of_basic_block,
         line_entry.is_prologue_end, line_entry.is_epilogue_begin,
         line_entry.is_terminal_entry);
   }
-  auto line_table =
-      std::make_unique<LineTable>(&comp_unit, std::move(sequence));
+  line_table->InsertSequence(sequence.get());
 
   if (line_table->GetSize() == 0)
     return false;
@@ -1916,12 +1916,11 @@ TypeSP SymbolFileNativePDB::CreateTypedef(PdbGlobalSymId id) {
   ts->GetNativePDBParser()->GetOrCreateTypedefDecl(id);
 
   Declaration decl;
-  return MakeType(toOpaqueUid(id), ConstString(udt.Name),
-                  llvm::expectedToOptional(target_type->GetByteSize(nullptr)),
-                  nullptr, target_type->GetID(),
-                  lldb_private::Type::eEncodingIsTypedefUID, decl,
-                  target_type->GetForwardCompilerType(),
-                  lldb_private::Type::ResolveState::Forward);
+  return MakeType(
+      toOpaqueUid(id), ConstString(udt.Name), target_type->GetByteSize(nullptr),
+      nullptr, target_type->GetID(), lldb_private::Type::eEncodingIsTypedefUID,
+      decl, target_type->GetForwardCompilerType(),
+      lldb_private::Type::ResolveState::Forward);
 }
 
 TypeSP SymbolFileNativePDB::GetOrCreateTypedef(PdbGlobalSymId id) {

@@ -365,9 +365,9 @@ void MacroCallReconstructor::endReconstruction(FormatToken *Token) {
 }
 
 void MacroCallReconstructor::debugParentMap() const {
-  llvm::DenseSet<FormatToken *> Values(
-      llvm::from_range,
-      llvm::make_second_range(SpelledParentToReconstructedParent));
+  llvm::DenseSet<FormatToken *> Values;
+  for (const auto &P : SpelledParentToReconstructedParent)
+    Values.insert(P.second);
 
   for (const auto &P : SpelledParentToReconstructedParent) {
     if (Values.contains(P.first))

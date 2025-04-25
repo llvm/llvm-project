@@ -48,7 +48,8 @@ Error release(MemoryMapper &M, const std::vector<ExecutorAddr> &Reservations) {
 }
 
 // A basic function to be used as both initializer/deinitializer
-CWrapperFunctionResult incrementWrapper(const char *ArgData, size_t ArgSize) {
+orc::shared::CWrapperFunctionResult incrementWrapper(const char *ArgData,
+                                                     size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr A) -> Error {

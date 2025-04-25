@@ -488,16 +488,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       ArgsBase[I] = TgtPtrBase;
     }
 
-    // The || part of the if condition covers flang dope vectors that
-    // have different host and target addresses when USM is enabled. The
-    // pointer to the array is IsHostPtr but the dope vector is not.
-    // This happens  with dope vectors in Fortran modules.
-    // The pointer has to be copied into the
-    // target dope vector.
-    // Perhaps OMP_TGT_MAPTYPE_DESCRIPTOR would help here, not sure.
-    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) &&
-        (!IsHostPtr || (PointerTpr.getEntry() != nullptr &&
-                        PointerHstPtrBegin != PointerTgtPtrBegin)))
+    if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr)
       if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase, TgtPtrBegin,
                                PointerTpr, PointerHstPtrBegin,
                                PointerTgtPtrBegin,

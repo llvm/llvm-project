@@ -129,7 +129,7 @@ public:
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         IsCpp(Style.isCpp()), LangOpts(getFormattingLangOpts(Style)),
         Keywords(Keywords), Scopes(Scopes), TemplateDeclarationDepth(0) {
-    assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
+    assert(IsCpp == LangOpts.CXXOperatorNames);
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
   }
@@ -253,7 +253,8 @@ private:
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
           Prev.is(TT_BinaryOperator) &&
-          Prev.isOneOf(tok::pipepipe, tok::ampamp)) {
+          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
+           Prev.getPrecedence() == prec::Equality)) {
         MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
@@ -1312,7 +1313,7 @@ private:
     switch (bool IsIf = false; Tok->Tok.getKind()) {
     case tok::plus:
     case tok::minus:
-      if (!Tok->getPreviousNonComment() && Line.MustBeDeclaration)
+      if (!Tok->Previous && Line.MustBeDeclaration)
         Tok->setType(TT_ObjCMethodSpecifier);
       break;
     case tok::colon:
@@ -1417,10 +1418,6 @@ private:
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
-        auto *Prev = Tok->getPreviousNonComment();
-        assert(Prev);
-        if (Prev->isPointerOrReference())
-          Prev->setFinalizedType(TT_PointerOrReference);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
@@ -1642,31 +1639,6 @@ private:
     case tok::kw_operator:
       if (Style.isProto())
         break;
-      // Handle C++ user-defined conversion function.
-      if (IsCpp && CurrentToken) {
-        const auto *Info = CurrentToken->Tok.getIdentifierInfo();
-        // What follows Tok is an identifier or a non-operator keyword.
-        if (Info && !(CurrentToken->isPlacementOperator() ||
-                      CurrentToken->is(tok::kw_co_await) ||
-                      Info->isCPlusPlusOperatorKeyword())) {
-          FormatToken *LParen;
-          if (CurrentToken->startsSequence(tok::kw_decltype, tok::l_paren,
-                                           tok::kw_auto, tok::r_paren)) {
-            // Skip `decltype(auto)`.
-            LParen = CurrentToken->Next->Next->Next->Next;
-          } else {
-            // Skip to l_paren.
-            for (LParen = CurrentToken->Next;
-                 LParen && LParen->isNot(tok::l_paren); LParen = LParen->Next) {
-            }
-          }
-          if (LParen && LParen->is(tok::l_paren)) {
-            Tok->setFinalizedType(TT_FunctionDeclarationName);
-            LParen->setFinalizedType(TT_FunctionDeclarationLParen);
-            break;
-          }
-        }
-      }
       while (CurrentToken &&
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
@@ -2624,7 +2596,7 @@ private:
         (!NextNonComment && !Line.InMacroBody) ||
         (NextNonComment &&
          (NextNonComment->isPointerOrReference() ||
-          NextNonComment->isOneOf(TT_ClassHeadName, tok::string_literal) ||
+          NextNonComment->is(tok::string_literal) ||
           (Line.InPragmaDirective && NextNonComment->is(tok::identifier))))) {
       return false;
     }
@@ -3027,7 +2999,7 @@ private:
       return TT_UnaryOperator;
     if (PrevToken->is(TT_TypeName))
       return TT_PointerOrReference;
-    if (PrevToken->isPlacementOperator() && Tok.is(tok::ampamp))
+    if (PrevToken->isOneOf(tok::kw_new, tok::kw_delete) && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
@@ -3099,10 +3071,12 @@ private:
     if (InTemplateArgument && NextToken->Tok.isAnyIdentifier())
       return TT_BinaryOperator;
 
-    // "&&" followed by "*" or "&" is quite unlikely to be two successive unary
-    // "&".
-    if (Tok.is(tok::ampamp) && NextToken->isOneOf(tok::star, tok::amp))
+    // "&&" followed by "(", "*", or "&" is quite unlikely to be two successive
+    // unary "&".
+    if (Tok.is(tok::ampamp) &&
+        NextToken->isOneOf(tok::l_paren, tok::star, tok::amp)) {
       return TT_BinaryOperator;
+    }
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
@@ -3817,7 +3791,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
         return Next;
       if (Next->is(TT_OverloadedOperator))
         continue;
-      if (Next->isPlacementOperator() || Next->is(tok::kw_co_await)) {
+      if (Next->isOneOf(tok::kw_new, tok::kw_delete, tok::kw_co_await)) {
         // For 'new[]' and 'delete[]'.
         if (Next->Next &&
             Next->Next->startsSequence(tok::l_square, tok::r_square)) {
@@ -3847,7 +3821,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   };
 
   const auto *Next = Current.Next;
-  const bool IsCpp = LangOpts.CXXOperatorNames || LangOpts.C17;
+  const bool IsCpp = LangOpts.CXXOperatorNames;
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
@@ -4081,7 +4055,6 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   }
 
   bool InFunctionDecl = Line.MightBeFunctionDecl;
-  bool InParameterList = false;
   for (auto *Current = First->Next; Current; Current = Current->Next) {
     const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
@@ -4136,19 +4109,6 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
 
     Current->CanBreakBefore =
         Current->MustBreakBefore || canBreakBefore(Line, *Current);
-
-    if (Current->is(TT_FunctionDeclarationLParen)) {
-      InParameterList = true;
-    } else if (Current->is(tok::r_paren)) {
-      const auto *LParen = Current->MatchingParen;
-      if (LParen && LParen->is(TT_FunctionDeclarationLParen))
-        InParameterList = false;
-    } else if (InParameterList &&
-               Current->endsSequence(TT_AttributeMacro,
-                                     TT_PointerOrReference)) {
-      Current->CanBreakBefore = false;
-    }
-
     unsigned ChildSize = 0;
     if (Prev->Children.size() == 1) {
       FormatToken &LastOfChild = *Prev->Children[0]->Last;
@@ -4842,7 +4802,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
              spaceRequiredBeforeParens(Right);
     }
     if (Style.SpaceBeforeParens == FormatStyle::SBPO_Custom &&
-        Left.isPlacementOperator() &&
+        Left.isOneOf(tok::kw_new, tok::kw_delete) &&
         Right.isNot(TT_OverloadedOperatorLParen) &&
         !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
       const auto *RParen = Right.MatchingParen;
@@ -4885,11 +4845,16 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
       }
-      if (Left.isPlacementOperator() ||
-          (Left.is(tok::r_square) && Left.MatchingParen &&
-           Left.MatchingParen->Previous &&
-           Left.MatchingParen->Previous->is(tok::kw_delete))) {
-        return Style.SpaceBeforeParens != FormatStyle::SBPO_Never ||
+      if (Left.isOneOf(tok::kw_new, tok::kw_delete)) {
+        return ((!Line.MightBeFunctionDecl || !BeforeLeft) &&
+                Style.SpaceBeforeParens != FormatStyle::SBPO_Never) ||
+               spaceRequiredBeforeParens(Right);
+      }
+
+      if (Left.is(tok::r_square) && Left.MatchingParen &&
+          Left.MatchingParen->Previous &&
+          Left.MatchingParen->Previous->is(tok::kw_delete)) {
+        return (Style.SpaceBeforeParens != FormatStyle::SBPO_Never) ||
                spaceRequiredBeforeParens(Right);
       }
     }
@@ -6231,15 +6196,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return Line.IsMultiVariableDeclStmt ||
            (getTokenPointerOrReferenceAlignment(Right) ==
                 FormatStyle::PAS_Right &&
-            !(Right.Next &&
-              Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
+            (!Right.Next || Right.Next->isNot(TT_FunctionDeclarationName)));
   }
-  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
-                    TT_ClassHeadName, tok::kw_operator)) {
+  if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
+      Right.is(tok::kw_operator)) {
     return true;
   }
-  if (Right.isAttribute())
-    return true;
   if (Left.is(TT_PointerOrReference))
     return false;
   if (Right.isTrailingComment()) {
@@ -6383,6 +6345,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return !Right.isOneOf(tok::l_brace, tok::semi, tok::equal, tok::l_paren,
                           tok::less, tok::coloncolon);
   }
+
+  if (Right.isAttribute())
+    return true;
 
   if (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))
     return Left.isNot(TT_AttributeSquare);

@@ -266,7 +266,8 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
       }
     }
   }
-  llvm::append_range(Args, Opts.PreprocessArgs);
+  for (const auto &S : Opts.PreprocessArgs)
+    Args.push_back(S);
   Args.push_back(Src);
   Args.push_back("-o");
   Args.push_back(Dst);

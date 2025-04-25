@@ -31,7 +31,7 @@ using namespace llvm::yaml::bolt;
 
 namespace opts {
 
-static cl::OptionCategory MergeFdataCategory("merge-fdata options");
+cl::OptionCategory MergeFdataCategory("merge-fdata options");
 
 enum SortType : char {
   ST_NONE,

@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_EMPTYTENSORTOALLOCTENSORPASS
+#define GEN_PASS_DEF_EMPTYTENSORTOALLOCTENSOR
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -38,8 +38,10 @@ struct EmptyTensorLoweringPattern : public OpRewritePattern<tensor::EmptyOp> {
 };
 
 struct EmptyTensorToAllocTensor
-    : public bufferization::impl::EmptyTensorToAllocTensorPassBase<
+    : public bufferization::impl::EmptyTensorToAllocTensorBase<
           EmptyTensorToAllocTensor> {
+  EmptyTensorToAllocTensor() = default;
+
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -60,4 +62,9 @@ void EmptyTensorToAllocTensor::runOnOperation() {
   populateEmptyTensorToAllocTensorPattern(patterns);
   if (failed(applyPatternsGreedily(op, std::move(patterns))))
     signalPassFailure();
+}
+
+std::unique_ptr<Pass>
+mlir::bufferization::createEmptyTensorToAllocTensorPass() {
+  return std::make_unique<EmptyTensorToAllocTensor>();
 }

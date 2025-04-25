@@ -72,9 +72,6 @@ _warningFlags = [
 
     # This doesn't make sense in real code, but we have to test it because the standard requires us to not break
     "-Wno-self-move",
-
-    # We're not annotating all the APIs, since that's a lot of annotations compared to how many we actually care about
-    "-Wno-nullability-completeness",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
@@ -210,8 +207,7 @@ DEFAULT_PARAMETERS = [
         choices=["none", "clang", "clang-lsv"],
         type=str,
         help="Whether to build the test suite with modules enabled. "
-             "Select `clang` for Clang modules, and 'clang-lsv' for Clang modules with Local Submodule Visibility. "
-             "Note that in recent versions of Clang, using Clang modules with -std=c++20 and later implies LSV.",
+             "Select `clang` for Clang modules, and 'clang-lsv' for Clang modules with Local Submodule Visibility.",
         default="none",
         actions=lambda modules: filter(None, [
             AddFeature("clang-modules-build")           if modules in ("clang", "clang-lsv") else None,

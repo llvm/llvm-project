@@ -17,10 +17,12 @@
 
 namespace mlir {
 
-#define GEN_PASS_DECL_TOSATOSCFPASS
+#define GEN_PASS_DECL_TOSATOSCF
 #include "mlir/Conversion/Passes.h.inc"
 
 namespace tosa {
+
+std::unique_ptr<Pass> createTosaToSCF();
 
 void populateTosaToSCFConversionPatterns(RewritePatternSet *patterns);
 

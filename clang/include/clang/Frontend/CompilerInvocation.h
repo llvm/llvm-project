@@ -269,6 +269,7 @@ public:
   /// @{
   using CompilerInvocationBase::LangOpts;
   using CompilerInvocationBase::TargetOpts;
+  using CompilerInvocationBase::DiagnosticOpts;
   std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
     return HSOpts;
   }

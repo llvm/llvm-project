@@ -26,8 +26,7 @@ define dso_local void @test_b(i32 noundef signext %flag) nounwind {
 ; CHECK-NEXT:    andi $a0, $a0, 1
 ; CHECK-NEXT:    bnez $a0, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %if.then2
-; CHECK-NEXT:    pcaddu18i $t8, %call36(bug)
-; CHECK-NEXT:    jr $t8
+; CHECK-NEXT:    b %plt(bug)
 ; CHECK-NEXT:  .LBB0_4: # %if.end3
 ; CHECK-NEXT:    ret
 entry:
@@ -69,8 +68,7 @@ define dso_local void @test_h(i32 noundef signext %flag) nounwind {
 ; CHECK-NEXT:    andi $a0, $a0, 1
 ; CHECK-NEXT:    bnez $a0, .LBB1_4
 ; CHECK-NEXT:  # %bb.3: # %if.then2
-; CHECK-NEXT:    pcaddu18i $t8, %call36(bug)
-; CHECK-NEXT:    jr $t8
+; CHECK-NEXT:    b %plt(bug)
 ; CHECK-NEXT:  .LBB1_4: # %if.end3
 ; CHECK-NEXT:    ret
 entry:
@@ -112,8 +110,7 @@ define dso_local void @test_w(i32 noundef signext %flag) nounwind {
 ; CHECK-NEXT:    andi $a0, $a0, 1
 ; CHECK-NEXT:    bnez $a0, .LBB2_4
 ; CHECK-NEXT:  # %bb.3: # %if.then2
-; CHECK-NEXT:    pcaddu18i $t8, %call36(bug)
-; CHECK-NEXT:    jr $t8
+; CHECK-NEXT:    b %plt(bug)
 ; CHECK-NEXT:  .LBB2_4: # %if.end3
 ; CHECK-NEXT:    ret
 entry:
@@ -155,8 +152,7 @@ define dso_local void @test_d(i32 noundef signext %flag) nounwind {
 ; CHECK-NEXT:    andi $a0, $a0, 1
 ; CHECK-NEXT:    bnez $a0, .LBB3_4
 ; CHECK-NEXT:  # %bb.3: # %if.then2
-; CHECK-NEXT:    pcaddu18i $t8, %call36(bug)
-; CHECK-NEXT:    jr $t8
+; CHECK-NEXT:    b %plt(bug)
 ; CHECK-NEXT:  .LBB3_4: # %if.end3
 ; CHECK-NEXT:    ret
 entry:

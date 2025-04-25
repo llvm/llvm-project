@@ -92,15 +92,15 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
-MCSymbol *MachineBasicBlock::getEHContSymbol() const {
-  if (!CachedEHContMCSymbol) {
+MCSymbol *MachineBasicBlock::getEHCatchretSymbol() const {
+  if (!CachedEHCatchretMCSymbol) {
     const MachineFunction *MF = getParent();
     SmallString<128> SymbolName;
     raw_svector_ostream(SymbolName)
         << "$ehgcr_" << MF->getFunctionNumber() << '_' << getNumber();
-    CachedEHContMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
+    CachedEHCatchretMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
   }
-  return CachedEHContMCSymbol;
+  return CachedEHCatchretMCSymbol;
 }
 
 MCSymbol *MachineBasicBlock::getEndSymbol() const {
@@ -1137,9 +1137,6 @@ public:
   }
 };
 
-MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
-    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
 #define GET_RESULT(RESULT, GETTER, INFIX)                                      \
   [MF, P, MFAM]() {                                                            \
     if (P) {                                                                   \
@@ -1149,19 +1146,10 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     return MFAM->getCachedResult<RESULT##Analysis>(*MF);                       \
   }()
 
-  assert((P || MFAM) && "Need a way to get analysis results!");
-  MachineFunction *MF = getParent();
-  LiveIntervals *LIS = GET_RESULT(LiveIntervals, getLIS, );
-  SlotIndexes *Indexes = GET_RESULT(SlotIndexes, getSI, );
-  LiveVariables *LV = GET_RESULT(LiveVariables, getLV, );
-  MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info);
-  return SplitCriticalEdge(Succ, {LIS, Indexes, LV, MLI}, LiveInSets, MDTU);
-#undef GET_RESULT
-}
-
 MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
-    MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
+    MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
     std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU) {
+  assert((P || MFAM) && "Need a way to get analysis results!");
   if (!canSplitCriticalEdge(Succ))
     return nullptr;
 
@@ -1184,16 +1172,19 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   LLVM_DEBUG(dbgs() << "Splitting critical edge: " << printMBBReference(*this)
                     << " -- " << printMBBReference(*NMBB) << " -- "
                     << printMBBReference(*Succ) << '\n');
-  auto *LIS = Analyses.LIS;
+
+  LiveIntervals *LIS = GET_RESULT(LiveIntervals, getLIS, );
+  SlotIndexes *Indexes = GET_RESULT(SlotIndexes, getSI, );
   if (LIS)
     LIS->insertMBBInMaps(NMBB);
-  else if (Analyses.SI)
-    Analyses.SI->insertMBBInMaps(NMBB);
+  else if (Indexes)
+    Indexes->insertMBBInMaps(NMBB);
 
   // On some targets like Mips, branches may kill virtual registers. Make sure
   // that LiveVariables is properly updated after updateTerminator replaces the
   // terminators.
-  auto *LV = Analyses.LV;
+  LiveVariables *LV = GET_RESULT(LiveVariables, getLV, );
+
   // Collect a list of virtual registers killed by the terminators.
   SmallVector<Register, 4> KilledRegs;
   if (LV)
@@ -1232,7 +1223,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // as the fallthrough successor
   if (Succ == PrevFallthrough)
     PrevFallthrough = NMBB;
-  auto *Indexes = Analyses.SI;
+
   if (!ChangedIndirectJump) {
     SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
     updateTerminator(PrevFallthrough);
@@ -1360,7 +1351,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   if (MDTU)
     MDTU->splitCriticalEdge(this, Succ, NMBB);
 
-  if (MachineLoopInfo *MLI = Analyses.MLI)
+  if (MachineLoopInfo *MLI = GET_RESULT(MachineLoop, getLI, Info))
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
       // If one or the other blocks were not in a loop, the new block is not
       // either, and thus LI doesn't need to be updated.
@@ -1773,7 +1764,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
       "Liveness information is accurate");
 
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  MCRegister ExceptionPointer, ExceptionSelector;
+  MCPhysReg ExceptionPointer = 0, ExceptionSelector = 0;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
     ExceptionPointer = TLI.getExceptionPointerRegister(PersonalityFn);

@@ -210,7 +210,7 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
   // or non-zero in bits 8 and above.
-  if (RISCVVType::getVLMUL(Imm) == RISCVVType::VLMUL::LMUL_RESERVED ||
+  if (RISCVVType::getVLMUL(Imm) == RISCVII::VLMUL::LMUL_RESERVED ||
       RISCVVType::getSEW(Imm) > 64 || (Imm >> 8) != 0) {
     O << formatImm(Imm);
     return;
@@ -262,15 +262,15 @@ void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
 
 void RISCVInstPrinter::printRegReg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
-  const MCOperand &OffsetMO = MI->getOperand(OpNo + 1);
+  const MCOperand &MO = MI->getOperand(OpNo);
 
-  assert(OffsetMO.isReg() && "printRegReg can only print register operands");
-  printRegName(O, OffsetMO.getReg());
+  assert(MO.isReg() && "printRegReg can only print register operands");
+  printRegName(O, MO.getReg());
 
   O << "(";
-  const MCOperand &BaseMO = MI->getOperand(OpNo);
-  assert(BaseMO.isReg() && "printRegReg can only print register operands");
-  printRegName(O, BaseMO.getReg());
+  const MCOperand &MO1 = MI->getOperand(OpNo + 1);
+  assert(MO1.isReg() && "printRegReg can only print register operands");
+  printRegName(O, MO1.getReg());
   O << ")";
 }
 

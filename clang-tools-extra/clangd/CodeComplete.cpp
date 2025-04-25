@@ -294,7 +294,7 @@ struct CompletionCandidate {
   std::optional<llvm::StringRef>
   headerToInsertIfAllowed(const CodeCompleteOptions &Opts,
                           CodeCompletionContext::Kind ContextKind) const {
-    if (Opts.InsertIncludes == Config::HeaderInsertionPolicy::NeverInsert ||
+    if (Opts.InsertIncludes == CodeCompleteOptions::NeverInsert ||
         RankedIncludeHeaders.empty() ||
         !contextAllowsHeaderInsertion(ContextKind))
       return std::nullopt;

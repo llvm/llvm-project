@@ -44,7 +44,7 @@ void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
 }
 
 // Return the preferred allocation register for reg, given a COPY instruction.
-Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
+Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, unsigned Reg,
                                   const TargetRegisterInfo &TRI,
                                   const MachineRegisterInfo &MRI) {
   unsigned Sub, HSub;
@@ -74,7 +74,7 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
   if (Sub)
     return TRI.getMatchingSuperReg(CopiedPReg, Sub, RC);
 
-  return Register();
+  return 0;
 }
 
 // Check if all values in LI are rematerializable
@@ -334,10 +334,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   // re-materialization.
   if (isRematerializable(LI, LIS, VRM, *MF.getSubtarget().getInstrInfo()))
     TotalWeight *= 0.5F;
-
-  // Finally, we scale the weight by the scale factor of register class.
-  const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
-  TotalWeight *= TRI.getSpillWeightScaleFactor(RC);
 
   if (IsLocalSplitArtifact)
     return normalize(TotalWeight, Start->distance(*End), NumInstr);

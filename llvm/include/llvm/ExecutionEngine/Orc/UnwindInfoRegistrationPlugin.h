@@ -19,17 +19,15 @@ namespace llvm::orc {
 
 class UnwindInfoRegistrationPlugin : public LinkGraphLinkingLayer::Plugin {
 public:
-  UnwindInfoRegistrationPlugin(ExecutionSession &ES, ExecutorAddr Register,
-                               ExecutorAddr Deregister)
-      : ES(ES), Register(Register), Deregister(Deregister) {
-    DSOBaseName = ES.intern("__jitlink$libunwind_dso_base");
-  }
+  static Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
+  Create(IRLayer &IRL, JITDylib &PlatformJD, ExecutorAddr Instance,
+         ExecutorAddr FindHelper, ExecutorAddr Enable, ExecutorAddr Disable,
+         ExecutorAddr Register, ExecutorAddr Deregister);
 
   static Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
-  Create(ExecutionSession &ES, ExecutorAddr Register, ExecutorAddr Deregister);
+  Create(IRLayer &IRL, JITDylib &PlatformJD);
 
-  static Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
-  Create(ExecutionSession &ES);
+  ~UnwindInfoRegistrationPlugin();
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
@@ -51,11 +49,20 @@ public:
                                    ResourceKey SrcKey) override {}
 
 private:
+  UnwindInfoRegistrationPlugin(ExecutionSession &ES, ExecutorAddr Instance,
+                               ExecutorAddr Disable, ExecutorAddr Register,
+                               ExecutorAddr Deregister)
+      : ES(ES), Instance(Instance), Disable(Disable), Register(Register),
+        Deregister(Deregister) {
+    DSOBaseName = ES.intern("__jitlink$libunwind_dso_base");
+  }
+
+  static Expected<ThreadSafeModule> makeBouncerModule(ExecutionSession &ES);
   Error addUnwindInfoRegistrationActions(jitlink::LinkGraph &G);
 
   ExecutionSession &ES;
   SymbolStringPtr DSOBaseName;
-  ExecutorAddr Register, Deregister;
+  ExecutorAddr Instance, Disable, Register, Deregister;
 };
 
 } // namespace llvm::orc

@@ -23,7 +23,11 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
+cl::opt<bool> WriteNewDbgInfoFormat(
+    "write-experimental-debuginfo",
+    cl::desc("Write debug info in the new non-intrinsic format. Has no effect "
+             "if --preserve-input-debuginfo-format=true."),
+    cl::init(true));
 
 namespace {
 
@@ -41,11 +45,13 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
-    ScopedDbgInfoFormatSetter FormatSetter(M, UseNewDbgInfoFormat);
+    // RemoveDIs: Regardless of the format we've processed this module in, use
+    // `WriteNewDbgInfoFormat` to determine which format we use to write it.
+    ScopedDbgInfoFormatSetter FormatSetter(M, WriteNewDbgInfoFormat);
     // Remove intrinsic declarations when printing in the new format.
     // TODO: Move this into Module::setIsNewDbgInfoFormat when we're ready to
     // update test output.
-    if (UseNewDbgInfoFormat)
+    if (WriteNewDbgInfoFormat)
       M.removeDebugIntrinsicDeclarations();
 
     if (llvm::isFunctionInPrintList("*")) {
@@ -87,7 +93,9 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
-    ScopedDbgInfoFormatSetter FormatSetter(F, UseNewDbgInfoFormat);
+    // RemoveDIs: Regardless of the format we've processed this function in, use
+    // `WriteNewDbgInfoFormat` to determine which format we use to write it.
+    ScopedDbgInfoFormatSetter FormatSetter(F, WriteNewDbgInfoFormat);
 
     if (isFunctionInPrintList(F.getName())) {
       if (forcePrintModuleIR())

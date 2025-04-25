@@ -41,7 +41,7 @@ class MachineBasicBlock;
 class ProfileSummaryInfo;
 class APInt;
 class APFloat;
-class GISelValueTracking;
+class GISelKnownBits;
 class MachineInstr;
 class MachineIRBuilder;
 class MachineInstrBuilder;
@@ -588,7 +588,7 @@ public:
   virtual ~GIMatchTableExecutor() = default;
 
   CodeGenCoverage *CoverageInfo = nullptr;
-  GISelValueTracking *VT = nullptr;
+  GISelKnownBits *KB = nullptr;
   MachineFunction *MF = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
@@ -598,12 +598,12 @@ public:
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) = 0;
 
   /// Setup per-MF executor state.
-  virtual void setupMF(MachineFunction &mf, GISelValueTracking *vt,
+  virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,
                        CodeGenCoverage *covinfo = nullptr,
                        ProfileSummaryInfo *psi = nullptr,
                        BlockFrequencyInfo *bfi = nullptr) {
     CoverageInfo = covinfo;
-    VT = vt;
+    KB = kb;
     MF = &mf;
     PSI = psi;
     BFI = bfi;
@@ -620,7 +620,7 @@ protected:
   struct MatcherState {
     std::vector<ComplexRendererFns::value_type> Renderers;
     RecordedMIVector MIs;
-    DenseMap<unsigned, Register> TempRegisters;
+    DenseMap<unsigned, unsigned> TempRegisters;
     /// Named operands that predicate with 'let PredicateCodeUsesOperands = 1'
     /// referenced in its argument list. Operands are inserted at index set by
     /// emitter, it corresponds to the order in which names appear in argument

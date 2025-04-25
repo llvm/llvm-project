@@ -169,11 +169,17 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++20"
 # endif
 
-# ifndef __cpp_lib_atomic_float
-#   error "__cpp_lib_atomic_float should be defined in c++20"
-# endif
-# if __cpp_lib_atomic_float != 201711L
-#   error "__cpp_lib_atomic_float should have the value 201711L in c++20"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should be defined in c++20"
+#   endif
+#   if __cpp_lib_atomic_float != 201711L
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++20"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -256,11 +262,17 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++23"
 # endif
 
-# ifndef __cpp_lib_atomic_float
-#   error "__cpp_lib_atomic_float should be defined in c++23"
-# endif
-# if __cpp_lib_atomic_float != 201711L
-#   error "__cpp_lib_atomic_float should have the value 201711L in c++23"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should be defined in c++23"
+#   endif
+#   if __cpp_lib_atomic_float != 201711L
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
@@ -343,11 +355,17 @@
 #   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++26"
 # endif
 
-# ifndef __cpp_lib_atomic_float
-#   error "__cpp_lib_atomic_float should be defined in c++26"
-# endif
-# if __cpp_lib_atomic_float != 201711L
-#   error "__cpp_lib_atomic_float should have the value 201711L in c++26"
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should be defined in c++26"
+#   endif
+#   if __cpp_lib_atomic_float != 201711L
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free

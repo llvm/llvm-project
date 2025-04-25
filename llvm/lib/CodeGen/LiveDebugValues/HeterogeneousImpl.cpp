@@ -58,7 +58,7 @@ namespace {
 class HeterogeneousLDV : public LDVImpl {
 private:
   bool ExtendRanges(MachineFunction &MF, MachineDominatorTree *DomTree,
-                    bool ShouldEmitDebugEntryValues, unsigned InputBBLimit,
+                    TargetPassConfig *TPC, unsigned InputBBLimit,
                     unsigned InputDbgValLimit) override;
 
 public:
@@ -74,7 +74,7 @@ HeterogeneousLDV::~HeterogeneousLDV() {}
 
 bool HeterogeneousLDV::ExtendRanges(MachineFunction &MF,
                                     MachineDominatorTree *DomTree,
-                                    bool ShouldEmitDebugEntryValues,
+                                    TargetPassConfig *TPC,
                                     unsigned InputBBLimit,
                                     unsigned InputDbgValLimit) {
   LLVM_DEBUG(dbgs() << "\nDebug Range Extension\n");

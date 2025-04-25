@@ -22,6 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
   using FPBits_t = typename fputil::FPBits<float>;
   FPBits_t xbits(x);
+  uint32_t x_u = xbits.uintval();
 
   if (LIBC_UNLIKELY(x <= 1.0f)) {
     if (x == 1.0f)
@@ -32,8 +33,6 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
     return FPBits_t::quiet_nan().get_val();
   }
 
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  uint32_t x_u = xbits.uintval();
   if (LIBC_UNLIKELY(x_u >= 0x4f8ffb03)) {
     if (LIBC_UNLIKELY(xbits.is_inf_or_nan()))
       return x;
@@ -65,10 +64,6 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
       return round_result_slightly_up(0x1.451436p6f);
     }
   }
-#else
-  if (LIBC_UNLIKELY(xbits.is_inf_or_nan()))
-    return x;
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   double x_d = static_cast<double>(x);
   // acosh(x) = log(x + sqrt(x^2 - 1))

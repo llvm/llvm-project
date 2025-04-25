@@ -131,7 +131,6 @@ struct DataObject {
   DataSymbol *DataSym;
   std::vector<std::string> MangledNames;
   std::map<std::string, std::string> NameExpressionMap;
-  llvm::SmallVector<const char *, 128> SpirvFlags;
 
 private:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
@@ -315,10 +314,6 @@ public:
   long unsigned int MangledValue;
   long unsigned int RodataOffset;
 };
-
-// get a string identifying comgr: this is a combination of comgr's version,
-// device-libs contents and opencl-c.h contents.
-llvm::StringRef getComgrHashIdentifier();
 
 } // namespace COMGR
 

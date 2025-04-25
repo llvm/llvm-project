@@ -30,7 +30,8 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
   llvm::transform(IgnoredExceptionsVec, IgnoredExceptionsVec.begin(),
                   [](StringRef S) { return S.trim(); });
-  IgnoredExceptions.insert_range(IgnoredExceptionsVec);
+  IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
+                           IgnoredExceptionsVec.end());
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
 }

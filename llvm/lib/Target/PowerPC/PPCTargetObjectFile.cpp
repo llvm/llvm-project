@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCTargetObjectFile.h"
-#include "MCTargetDesc/PPCMCExpr.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -49,8 +48,8 @@ MCSection *PPC64LinuxTargetObjectFile::SelectSectionForGlobal(
 
 const MCExpr *PPC64LinuxTargetObjectFile::
 getDebugThreadLocalSymbol(const MCSymbol *Sym) const {
-  const MCExpr *Expr = MCSymbolRefExpr::create(
-      Sym, MCSymbolRefExpr::VariantKind(PPCMCExpr::VK_DTPREL), getContext());
+  const MCExpr *Expr =
+    MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_DTPREL, getContext());
   return MCBinaryExpr::createAdd(Expr,
                                  MCConstantExpr::create(0x8000, getContext()),
                                  getContext());

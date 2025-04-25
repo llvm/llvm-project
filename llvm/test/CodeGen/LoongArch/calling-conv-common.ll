@@ -24,8 +24,7 @@ define i64 @caller_i128_in_regs() nounwind {
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a1, $zero, 2
 ; CHECK-NEXT:    move $a2, $zero
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_i128_in_regs)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_i128_in_regs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
@@ -83,8 +82,7 @@ define i64 @caller_many_scalars() nounwind {
 ; CHECK-NEXT:    ori $a7, $zero, 7
 ; CHECK-NEXT:    st.d $zero, $sp, 0
 ; CHECK-NEXT:    move $a5, $zero
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_many_scalars)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_many_scalars)
 ; CHECK-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 32
 ; CHECK-NEXT:    ret
@@ -135,8 +133,7 @@ define i64 @caller_large_scalars() nounwind {
 ; CHECK-NEXT:    addi.d $a0, $sp, 32
 ; CHECK-NEXT:    addi.d $a1, $sp, 0
 ; CHECK-NEXT:    st.d $a2, $sp, 32
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_scalars)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_large_scalars)
 ; CHECK-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 80
 ; CHECK-NEXT:    ret
@@ -200,8 +197,7 @@ define i64 @caller_large_scalars_exhausted_regs() nounwind {
 ; CHECK-NEXT:    ori $a6, $zero, 7
 ; CHECK-NEXT:    addi.d $a7, $sp, 48
 ; CHECK-NEXT:    vst $vr0, $sp, 56
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_scalars_exhausted_regs)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_large_scalars_exhausted_regs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 96
 ; CHECK-NEXT:    ret
@@ -248,8 +244,7 @@ define i64 @caller_large_struct() nounwind {
 ; CHECK-NEXT:    st.d $a2, $sp, 24
 ; CHECK-NEXT:    st.d $a3, $sp, 32
 ; CHECK-NEXT:    addi.d $a0, $sp, 8
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_struct)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_large_struct)
 ; CHECK-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 80
 ; CHECK-NEXT:    ret
@@ -282,8 +277,7 @@ define i64 @caller_small_scalar_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_small_scalar_ret)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_small_scalar_ret)
 ; CHECK-NEXT:    addi.w $a2, $zero, -2
 ; CHECK-NEXT:    xor $a0, $a0, $a2
 ; CHECK-NEXT:    orn $a0, $a0, $a1
@@ -315,8 +309,7 @@ define i64 @caller_small_struct_ret() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_small_struct_ret)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_small_struct_ret)
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -351,8 +344,7 @@ define void @caller_large_scalar_ret() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -48
 ; CHECK-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $a0, $sp, 0
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_scalar_ret)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_large_scalar_ret)
 ; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 48
 ; CHECK-NEXT:    ret
@@ -391,8 +383,7 @@ define i64 @caller_large_struct_ret() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -48
 ; CHECK-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $a0, $sp, 8
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_large_struct_ret)
-; CHECK-NEXT:    jirl $ra, $ra, 0
+; CHECK-NEXT:    bl %plt(callee_large_struct_ret)
 ; CHECK-NEXT:    ld.d $a0, $sp, 8
 ; CHECK-NEXT:    ld.d $a1, $sp, 32
 ; CHECK-NEXT:    add.d $a0, $a0, $a1

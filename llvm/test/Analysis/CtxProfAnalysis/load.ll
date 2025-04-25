@@ -24,19 +24,15 @@
 ; This is the reference profile, laid out in the format the json formatter will
 ; output it from opt.
 ;--- profile.yaml
-Contexts:
-  - Guid: 12341
-    TotalRootEntryCount: 90
-    Counters: [9]
-  - Guid: 12074870348631550642
-    TotalRootEntryCount: 24
-    Counters: [5]
-  - Guid: 11872291593386833696
-    TotalRootEntryCount: 4
-    Counters: [1]
-    Callsites:  -
-                  - Guid: 728453322856651412
-                    Counters: [6, 7]
+- Guid: 12341
+  Counters: [9]
+- Guid: 12074870348631550642
+  Counters: [5]
+- Guid: 11872291593386833696
+  Counters: [1]
+  Callsites:  -
+                - Guid: 728453322856651412
+                  Counters: [6, 7]
 ;--- expected-profile-output.txt
 Function Info:
 4909520559318251808 : an_entrypoint. MaxCounterID: 2. MaxCallsiteID: 1
@@ -45,16 +41,13 @@ Function Info:
 
 Current Profile:
 
-Contexts:
-  - Guid:            11872291593386833696
-    TotalRootEntryCount: 4
-    Counters:        [ 1 ]
-    Callsites:
-      - - Guid:            728453322856651412
-          Counters:        [ 6, 7 ]
-  - Guid:            12074870348631550642
-    TotalRootEntryCount: 24
-    Counters:        [ 5 ]
+- Guid:            11872291593386833696
+  Counters:        [ 1 ]
+  Callsites:
+    - - Guid:            728453322856651412
+        Counters:        [ 6, 7 ]
+- Guid:            12074870348631550642
+  Counters:        [ 5 ]
 
 Flat Profile:
 728453322856651412 : 6 7 

@@ -191,8 +191,7 @@ private:
 
   // Get the Frame Address register for a given frame.
   bool ReadFrameAddress(lldb::RegisterKind register_kind,
-                        const UnwindPlan::Row::FAValue &fa,
-                        lldb::addr_t &address);
+                          UnwindPlan::Row::FAValue &fa, lldb::addr_t &address);
 
   lldb::UnwindPlanSP GetFastUnwindPlanForFrame();
 
@@ -228,17 +227,18 @@ private:
   lldb_private::Address m_start_pc;
   lldb_private::Address m_current_pc;
 
-  /// How far into the function we've executed. 0 if no instructions have been
-  /// executed yet, std::nullopt if unknown.
-  std::optional<int> m_current_offset;
+  int m_current_offset; // how far into the function we've executed; -1 if
+                        // unknown
+                        // 0 if no instructions have been executed yet.
 
-  // How far into the function we've executed. 0 if no instructions have been
-  // executed yet, std::nullopt if unknown. On architectures where the return
-  // address on the stack points to the instruction after the CALL, this value
-  // will have 1 subtracted from it. Otherwise, a function that ends in a CALL
-  // will have an offset pointing into the next function's address range.
+  // 0 if no instructions have been executed yet.
+  // On architectures where the return address on the stack points
+  // to the instruction after the CALL, this value will have 1
+  // subtracted from it.  Else a function that ends in a CALL will
+  // have an offset pointing into the next function's address range.
   // m_current_pc has the actual address of the "current" pc.
-  std::optional<int> m_current_offset_backed_up_one;
+  int m_current_offset_backed_up_one; // how far into the function we've
+                                      // executed; -1 if unknown
 
   bool m_behaves_like_zeroth_frame; // this frame behaves like frame zero
 

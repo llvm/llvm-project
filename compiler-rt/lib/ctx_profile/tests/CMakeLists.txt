@@ -22,12 +22,10 @@ append_list_if(COMPILER_RT_HAS_WVARIADIC_MACROS_FLAG -Wno-variadic-macros CTX_PR
 file(GLOB CTX_PROFILE_HEADERS ../*.h)
 
 set(CTX_PROFILE_SOURCES
-  ../CtxInstrProfiling.cpp
-  ../RootAutoDetector.cpp)
+  ../CtxInstrProfiling.cpp)
 
 set(CTX_PROFILE_UNITTESTS
   CtxInstrProfilingTest.cpp
-  RootAutoDetectorTest.cpp
   driver.cpp)
 
 include_directories(../../../include)

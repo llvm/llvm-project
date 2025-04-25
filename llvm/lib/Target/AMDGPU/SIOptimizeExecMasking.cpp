@@ -619,7 +619,7 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
                          VCmp.getDebugLoc(), TII->get(NewOpcode));
 
   auto TryAddImmediateValueFromNamedOperand =
-      [&](AMDGPU::OpName OperandName) -> void {
+      [&](unsigned OperandName) -> void {
     if (auto *Mod = TII->getNamedOperand(VCmp, OperandName))
       Builder.addImm(Mod->getImm());
   };
@@ -631,8 +631,6 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
   Builder.add(*Src1);
 
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
-
-  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::op_sel);
 
   // The kill flags may no longer be correct.
   if (Src0->isReg())

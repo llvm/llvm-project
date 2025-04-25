@@ -484,8 +484,10 @@ COFFPlatform::buildJDDepMap(JITDylib &JD) {
           }
           DM.push_back(KV.first);
           // Push unvisited entry.
-          if (JDDepMap.try_emplace(KV.first).second)
+          if (!JDDepMap.count(KV.first)) {
             Worklist.push_back(KV.first);
+            JDDepMap[KV.first] = {};
+          }
         }
       });
     }

@@ -140,7 +140,7 @@ class Preprocessor {
   friend class VariadicMacroScopeGuard;
 
   llvm::unique_function<void(const clang::Token &)> OnToken;
-  std::shared_ptr<const PreprocessorOptions> PPOpts;
+  std::shared_ptr<PreprocessorOptions> PPOpts;
   DiagnosticsEngine        *Diags;
   const LangOptions &LangOpts;
   const TargetInfo *Target = nullptr;
@@ -1165,7 +1165,7 @@ private:
   void updateOutOfDateIdentifier(const IdentifierInfo &II) const;
 
 public:
-  Preprocessor(std::shared_ptr<const PreprocessorOptions> PPOpts,
+  Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
                DiagnosticsEngine &diags, const LangOptions &LangOpts,
                SourceManager &SM, HeaderSearch &Headers,
                ModuleLoader &TheModuleLoader,
@@ -1197,7 +1197,7 @@ public:
 
   /// Retrieve the preprocessor options used to initialize this
   /// preprocessor.
-  const PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
+  PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
 
   DiagnosticsEngine &getDiagnostics() const { return *Diags; }
   void setDiagnostics(DiagnosticsEngine &D) { Diags = &D; }
@@ -1755,8 +1755,7 @@ public:
   bool LexAfterModuleImport(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
-  void makeModuleVisible(Module *M, SourceLocation Loc,
-                         bool IncludeExports = true);
+  void makeModuleVisible(Module *M, SourceLocation Loc);
 
   SourceLocation getModuleImportLoc(Module *M) const {
     return CurSubmoduleState->VisibleModules.getImportLoc(M);

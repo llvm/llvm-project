@@ -26,7 +26,7 @@ namespace dependencies {
 
 /// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
 using LookupModuleOutputCallback =
-    llvm::function_ref<std::string(const ModuleDeps &, ModuleOutputKind)>;
+    std::function<std::string(const ModuleID &, ModuleOutputKind)>;
 
 /// Graph of modular dependencies.
 using ModuleDepsGraph = std::vector<ModuleDeps>;
@@ -79,9 +79,6 @@ struct P1689Rule {
 class DependencyScanningTool {
 public:
   /// Construct a dependency scanning tool.
-  ///
-  /// @param Service  The parent service. Must outlive the tool.
-  /// @param FS The filesystem for the tool to use. Defaults to the physical FS.
   DependencyScanningTool(DependencyScanningService &Service,
                          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
                              llvm::vfs::createPhysicalFileSystem());
@@ -208,21 +205,19 @@ class CallbackActionController : public DependencyActionController {
 public:
   virtual ~CallbackActionController();
 
-  static std::string lookupUnreachableModuleOutput(const ModuleDeps &MD,
-                                                   ModuleOutputKind Kind) {
-    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
-  };
-
   CallbackActionController(LookupModuleOutputCallback LMO)
       : LookupModuleOutput(std::move(LMO)) {
     if (!LookupModuleOutput) {
-      LookupModuleOutput = lookupUnreachableModuleOutput;
+      LookupModuleOutput = [](const ModuleID &,
+                              ModuleOutputKind) -> std::string {
+        llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+      };
     }
   }
 
-  std::string lookupModuleOutput(const ModuleDeps &MD,
+  std::string lookupModuleOutput(const ModuleID &ID,
                                  ModuleOutputKind Kind) override {
-    return LookupModuleOutput(MD, Kind);
+    return LookupModuleOutput(ID, Kind);
   }
 
 private:

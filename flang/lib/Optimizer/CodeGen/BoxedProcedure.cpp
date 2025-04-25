@@ -348,9 +348,8 @@ public:
             rewriter.setInsertionPoint(coor);
             auto toTy = typeConverter.convertType(ty);
             auto toBaseTy = typeConverter.convertType(baseTy);
-            rewriter.replaceOpWithNewOp<CoordinateOp>(
-                coor, toTy, coor.getRef(), coor.getCoor(), toBaseTy,
-                coor.getFieldIndicesAttr());
+            rewriter.replaceOpWithNewOp<CoordinateOp>(coor, toTy, coor.getRef(),
+                                                      coor.getCoor(), toBaseTy);
             opIsValid = false;
           }
         } else if (auto index = mlir::dyn_cast<FieldIndexOp>(op)) {

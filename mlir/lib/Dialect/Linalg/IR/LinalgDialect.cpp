@@ -114,10 +114,6 @@ void mlir::linalg::LinalgDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
       >();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.cpp.inc"
-      >();
 
   // Fill the Linalg-specific OpName to RegionBuilder map.
   addNamedOpBuilders<
@@ -134,21 +130,12 @@ void mlir::linalg::LinalgDialect::initialize() {
                             >();
   declarePromisedInterface<SubsetOpInterface, CopyOp>();
   declarePromisedInterface<SubsetInsertionOpInterface, CopyOp>();
-
-  // ValueBoundsOpInterface
   declarePromisedInterface<ValueBoundsOpInterface, IndexOp>();
-
-  declarePromisedInterface<PartialReductionOpInterface, linalg::GenericOp>();
-
-  // Tiling Interface
   declarePromisedInterface<TilingInterface, linalg::GenericOp>();
+  declarePromisedInterface<PartialReductionOpInterface, linalg::GenericOp>();
   declarePromisedInterfaces<TilingInterface,
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-                            >();
-  declarePromisedInterfaces<TilingInterface,
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.cpp.inc"
                             >();
   declarePromisedInterfaces<PartialReductionOpInterface,
 #define GET_OP_LIST

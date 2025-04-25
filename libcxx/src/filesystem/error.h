@@ -96,11 +96,11 @@ struct ErrorHandler {
     string what = string("in ") + func_name_;
     switch (bool(p1_) + bool(p2_)) {
     case 0:
-      filesystem::__throw_filesystem_error(what, ec);
+      __throw_filesystem_error(what, ec);
     case 1:
-      filesystem::__throw_filesystem_error(what, *p1_, ec);
+      __throw_filesystem_error(what, *p1_, ec);
     case 2:
-      filesystem::__throw_filesystem_error(what, *p1_, *p2_, ec);
+      __throw_filesystem_error(what, *p1_, *p2_, ec);
     }
     __libcpp_unreachable();
   }
@@ -114,11 +114,11 @@ struct ErrorHandler {
     string what = string("in ") + func_name_ + ": " + detail::vformat_string(msg, ap);
     switch (bool(p1_) + bool(p2_)) {
     case 0:
-      filesystem::__throw_filesystem_error(what, ec);
+      __throw_filesystem_error(what, ec);
     case 1:
-      filesystem::__throw_filesystem_error(what, *p1_, ec);
+      __throw_filesystem_error(what, *p1_, ec);
     case 2:
-      filesystem::__throw_filesystem_error(what, *p1_, *p2_, ec);
+      __throw_filesystem_error(what, *p1_, *p2_, ec);
     }
     __libcpp_unreachable();
   }

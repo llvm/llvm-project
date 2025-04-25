@@ -41,9 +41,8 @@ llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(&S);
-  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true,
-                                                           /*AtEndOfTU=*/true);
-  Sema::LocalEagerInstantiationScope LocalInstantiations(S, /*AtEndOfTU=*/true);
+  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true);
+  Sema::LocalEagerInstantiationScope LocalInstantiations(S);
 
   // Add a new PTU.
   ASTContext &C = S.getASTContext();

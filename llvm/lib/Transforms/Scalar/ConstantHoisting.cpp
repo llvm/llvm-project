@@ -248,7 +248,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       continue;
 
     // Add nodes on the Path into Candidates.
-    Candidates.insert_range(Path);
+    Candidates.insert(Path.begin(), Path.end());
   }
 
   // Sort the nodes in Candidates in top-down order and save the nodes
@@ -274,7 +274,8 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   InsertPtsMap.reserve(Orders.size() + 1);
   for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
-    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap[Node];
+    auto &InsertPts = InsertPtsMap[Node].first;
+    BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
 
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
@@ -283,14 +284,15 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
           (InsertPtsFreq == BFI.getBlockFreq(Node) && InsertPts.size() > 1))
         BBs.insert(Entry);
       else
-        BBs.insert_range(InsertPts);
+        BBs.insert(InsertPts.begin(), InsertPts.end());
       break;
     }
 
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap[Parent];
+    auto &ParentInsertPts = InsertPtsMap[Parent].first;
+    BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
     // in EHPad.
@@ -304,7 +306,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
       ParentInsertPts.insert(Node);
       ParentPtsFreq += BFI.getBlockFreq(Node);
     } else {
-      ParentInsertPts.insert_range(InsertPts);
+      ParentInsertPts.insert(InsertPts.begin(), InsertPts.end());
       ParentPtsFreq += InsertPtsFreq;
     }
   }

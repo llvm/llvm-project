@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInstructionsMIR.h"
+#include "Delta.h"
+
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -149,10 +151,13 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
     MI->eraseFromParent();
 }
 
-void llvm::reduceInstructionsMIRDeltaPass(Oracle &O,
-                                          ReducerWorkItem &WorkItem) {
+static void extractInstrFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (MachineFunction *MF = WorkItem.MMI->getMachineFunction(F))
       extractInstrFromFunction(O, *MF);
   }
+}
+
+void llvm::reduceInstructionsMIRDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractInstrFromModule, "Reducing Instructions");
 }

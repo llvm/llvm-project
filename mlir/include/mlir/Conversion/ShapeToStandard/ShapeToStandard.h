@@ -19,14 +19,18 @@ template <typename T>
 class OperationPass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTSHAPECONSTRAINTSPASS
-#define GEN_PASS_DECL_CONVERTSHAPETOSTANDARDPASS
+#define GEN_PASS_DECL_CONVERTSHAPECONSTRAINTS
+#define GEN_PASS_DECL_CONVERTSHAPETOSTANDARD
 #include "mlir/Conversion/Passes.h.inc"
 
 void populateShapeToStandardConversionPatterns(RewritePatternSet &patterns);
 
+std::unique_ptr<OperationPass<ModuleOp>> createConvertShapeToStandardPass();
+
 void populateConvertShapeConstraintsConversionPatterns(
     RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createConvertShapeConstraintsPass();
 
 } // namespace mlir
 

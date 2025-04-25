@@ -178,7 +178,9 @@ ConnectionFileDescriptor::Connect(llvm::StringRef path,
 }
 
 bool ConnectionFileDescriptor::InterruptRead() {
-  return !errorToBool(m_pipe.Write("i", 1).takeError());
+  size_t bytes_written = 0;
+  Status result = m_pipe.Write("i", 1, bytes_written);
+  return result.Success();
 }
 
 ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
@@ -203,11 +205,13 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
   std::unique_lock<std::recursive_mutex> locker(m_mutex, std::defer_lock);
   if (!locker.try_lock()) {
     if (m_pipe.CanWrite()) {
-      llvm::Error err = m_pipe.Write("q", 1).takeError();
-      LLDB_LOG(log,
-               "{0}: Couldn't get the lock, sent 'q' to {1}, error = '{2}'.",
-               this, m_pipe.GetWriteFileDescriptor(), err);
-      consumeError(std::move(err));
+      size_t bytes_written = 0;
+      Status result = m_pipe.Write("q", 1, bytes_written);
+      LLDB_LOGF(log,
+                "%p ConnectionFileDescriptor::Disconnect(): Couldn't get "
+                "the lock, sent 'q' to %d, error = '%s'.",
+                static_cast<void *>(this), m_pipe.GetWriteFileDescriptor(),
+                result.AsCString());
     } else if (log) {
       LLDB_LOGF(log,
                 "%p ConnectionFileDescriptor::Disconnect(): Couldn't get the "

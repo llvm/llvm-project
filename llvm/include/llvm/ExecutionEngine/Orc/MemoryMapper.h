@@ -157,7 +157,6 @@ private:
   struct Reservation {
     void *LocalAddr;
     size_t Size;
-    int SharedMemoryId;
   };
 
   ExecutorProcessControl &EPC;
