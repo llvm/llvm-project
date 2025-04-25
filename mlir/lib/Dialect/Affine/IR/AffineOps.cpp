@@ -2194,7 +2194,7 @@ static void printBound(AffineMapAttr boundMap,
     // Print bound that consists of a single SSA symbol if the map is over a
     // single symbol.
     if (map.getNumDims() == 0 && map.getNumSymbols() == 1) {
-      if (dyn_cast<AffineSymbolExpr>(expr)) {
+      if (isa<AffineSymbolExpr>(expr)) {
         p.printOperand(*boundOperands.begin());
         return;
       }
