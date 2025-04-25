@@ -18,7 +18,7 @@ add_flang_library(FlangOpenMPTransforms
   LINK_LIBS
   FIRAnalysis
   FIRBuilder
-  FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport

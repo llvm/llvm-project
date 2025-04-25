@@ -63,6 +63,7 @@ class LowerNontemporalPass
                        fir::isPointerType((operand.getType())))) {
         operand = getBaseOperand(operand);
 
+        // TODO : Handling of nontemporal clause inside atomic construct
         if (llvm::is_contained(simdOp.getNontemporalVars(), operand)) {
           if (auto loadOp = llvm::dyn_cast<fir::LoadOp>(op))
             loadOp.setNontemporal(true);
