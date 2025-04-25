@@ -632,10 +632,11 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
       continue;
     }
 
-    if (Arg.hasAttribute("amdgpu-hidden-argument"))
+    if (Arg.hasAttribute("amdgpu-hidden-argument")) {
       F.getContext().diagnose(DiagnosticInfoUnsupported(
           F, "hidden argument in kernel signature was not preloaded",
           B.getDL()));
+    }
 
     ArgInfo OrigArg(VRegs[i], Arg, i);
     const unsigned OrigArgIdx = i + AttributeList::FirstArgIndex;
