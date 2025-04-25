@@ -2144,6 +2144,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanhf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    atanhf16_test.cpp
+  DEPENDS
+    libc.src.math.atanhf16
+)
+
+add_fp_unittest(
   fmul_test
   NEED_MPFR
   SUITE
@@ -2267,6 +2278,17 @@ add_fp_unittest(
     acosf16_test.cpp
   DEPENDS
     libc.src.math.acosf16  
+)
+
+add_fp_unittest(
+  acospif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acospif16_test.cpp
+  DEPENDS
+    libc.src.math.acospif16  
 )
 
 add_fp_unittest(
