@@ -338,7 +338,8 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  DXILResourceMap &DRM = getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+  DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   const ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
