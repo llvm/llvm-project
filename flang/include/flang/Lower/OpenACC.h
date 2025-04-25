@@ -37,11 +37,16 @@ class FirOpBuilder;
 }
 
 namespace Fortran {
+namespace evaluate {
+class ProcedureDesignator;
+} // namespace evaluate
+
 namespace parser {
 struct AccClauseList;
 struct OpenACCConstruct;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
+struct ProcedureDesignator;
 } // namespace parser
 
 namespace semantics {
@@ -70,6 +75,8 @@ static constexpr llvm::StringRef declarePostDeallocSuffix =
     "_acc_declare_update_desc_post_dealloc";
 
 static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
+
+bool needsOpenACCRoutineConstruct(const Fortran::evaluate::ProcedureDesignator *);
 
 mlir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,

@@ -36,6 +36,7 @@
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
@@ -4140,6 +4141,14 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
       mlir::acc::RoutineInfoAttr::get(func.getContext(), routines));
 }
 
+static mlir::ArrayAttr getArrayAttrOrNull(fir::FirOpBuilder &builder, llvm::SmallVector<mlir::Attribute> &attributes) {
+  if (attributes.empty()) {
+    return nullptr;
+  } else {
+    return builder.getArrayAttr(attributes);
+  }
+}
+
 void createOpenACCRoutineConstruct(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     mlir::ModuleOp mod, mlir::func::FuncOp funcOp, std::string funcName,
@@ -4173,31 +4182,29 @@ void createOpenACCRoutineConstruct(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   modBuilder.create<mlir::acc::RoutineOp>(
       loc, routineOpStr, funcName,
-      bindNames.empty() ? nullptr : builder.getArrayAttr(bindNames),
-      bindNameDeviceTypes.empty() ? nullptr
-                                  : builder.getArrayAttr(bindNameDeviceTypes),
-      workerDeviceTypes.empty() ? nullptr
-                                : builder.getArrayAttr(workerDeviceTypes),
-      vectorDeviceTypes.empty() ? nullptr
-                                : builder.getArrayAttr(vectorDeviceTypes),
-      seqDeviceTypes.empty() ? nullptr : builder.getArrayAttr(seqDeviceTypes),
+      getArrayAttrOrNull(builder, bindNames),
+      getArrayAttrOrNull(builder, bindNameDeviceTypes),
+      getArrayAttrOrNull(builder, workerDeviceTypes),
+      getArrayAttrOrNull(builder, vectorDeviceTypes),
+      getArrayAttrOrNull(builder, seqDeviceTypes),
       hasNohost, /*implicit=*/false,
-      gangDeviceTypes.empty() ? nullptr : builder.getArrayAttr(gangDeviceTypes),
-      gangDimValues.empty() ? nullptr : builder.getArrayAttr(gangDimValues),
-      gangDimDeviceTypes.empty() ? nullptr
-                                 : builder.getArrayAttr(gangDimDeviceTypes));
+      getArrayAttrOrNull(builder, gangDeviceTypes),
+      getArrayAttrOrNull(builder, gangDimValues),
+      getArrayAttrOrNull(builder, gangDimDeviceTypes));
 
-  if (funcOp)
-    attachRoutineInfo(funcOp, builder.getSymbolRefAttr(routineOpStr));
-  else
+  auto symbolRefAttr = builder.getSymbolRefAttr(routineOpStr);
+  if (funcOp) {
+    
+    attachRoutineInfo(funcOp, symbolRefAttr);
+  } else {
     // FuncOp is not lowered yet. Keep the information so the routine info
     // can be attached later to the funcOp.
-    converter.getAccDelayedRoutines().push_back(
-        std::make_pair(funcName, builder.getSymbolRefAttr(routineOpStr)));
+    converter.getAccDelayedRoutines().push_back(std::make_pair(funcName, symbolRefAttr));
+  }
 }
 
 static void interpretRoutineDeviceInfo(
-    fir::FirOpBuilder &builder,
+    Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::OpenACCRoutineDeviceTypeInfo &dinfo,
     llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &vectorDeviceTypes,
@@ -4207,23 +4214,24 @@ static void interpretRoutineDeviceInfo(
     llvm::SmallVector<mlir::Attribute> &gangDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &gangDimValues,
     llvm::SmallVector<mlir::Attribute> &gangDimDeviceTypes) {
-  mlir::MLIRContext *context{builder.getContext()};
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  auto getDeviceTypeAttr = [&]() -> mlir::Attribute {
+    auto context = builder.getContext();
+    auto value = getDeviceType(dinfo.dType());
+    return mlir::acc::DeviceTypeAttr::get(context, value );
+  };
   if (dinfo.isSeq()) {
-    seqDeviceTypes.push_back(
-        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+    seqDeviceTypes.push_back(getDeviceTypeAttr());
   }
   if (dinfo.isVector()) {
-    vectorDeviceTypes.push_back(
-        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+    vectorDeviceTypes.push_back(getDeviceTypeAttr());
   }
   if (dinfo.isWorker()) {
-    workerDeviceTypes.push_back(
-        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+    workerDeviceTypes.push_back(getDeviceTypeAttr());
   }
   if (dinfo.isGang()) {
     unsigned gangDim = dinfo.gangDim();
-    auto deviceType =
-        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType()));
+    auto deviceType = getDeviceTypeAttr();
     if (!gangDim) {
       gangDeviceTypes.push_back(deviceType);
     } else {
@@ -4232,10 +4240,18 @@ static void interpretRoutineDeviceInfo(
       gangDimDeviceTypes.push_back(deviceType);
     }
   }
-  if (const std::string *bindName{dinfo.bindName()}) {
-    bindNames.push_back(builder.getStringAttr(*bindName));
-    bindNameDeviceTypes.push_back(
-        mlir::acc::DeviceTypeAttr::get(context, getDeviceType(dinfo.dType())));
+  if (dinfo.bindNameOpt().has_value()) {
+    const auto &bindName = dinfo.bindNameOpt().value();
+    mlir::Attribute bindNameAttr;
+    if (const auto &bindStr{std::get_if<std::string>(&bindName)}) {
+        bindNameAttr = builder.getStringAttr(*bindStr);
+      } else if (const auto &bindSym{std::get_if<Fortran::semantics::SymbolRef>(&bindName)}) {
+        bindNameAttr = builder.getStringAttr(converter.mangleName(*bindSym));
+      } else {
+        llvm_unreachable("Unsupported bind name type");     
+      }
+      bindNames.push_back(bindNameAttr);
+      bindNameDeviceTypes.push_back(getDeviceTypeAttr());
   }
 }
 
@@ -4244,7 +4260,6 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     mlir::func::FuncOp funcOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &routineInfos) {
   CHECK(funcOp && "Expected a valid function operation");
-  fir::FirOpBuilder &builder{converter.getFirOpBuilder()};
   mlir::Location loc{funcOp.getLoc()};
   std::string funcName{funcOp.getName()};
 
@@ -4262,7 +4277,7 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     }
     // Note: Device Independent Attributes are set to the
     // none device type in `info`.
-    interpretRoutineDeviceInfo(builder, info, seqDeviceTypes, vectorDeviceTypes,
+    interpretRoutineDeviceInfo(converter, info, seqDeviceTypes, vectorDeviceTypes,
                                workerDeviceTypes, bindNameDeviceTypes,
                                bindNames, gangDeviceTypes, gangDimValues,
                                gangDimDeviceTypes);
@@ -4271,7 +4286,7 @@ void Fortran::lower::genOpenACCRoutineConstruct(
     for (const Fortran::semantics::OpenACCRoutineDeviceTypeInfo &dinfo :
          info.deviceTypeInfos()) {
       interpretRoutineDeviceInfo(
-          builder, dinfo, seqDeviceTypes, vectorDeviceTypes, workerDeviceTypes,
+          converter, dinfo, seqDeviceTypes, vectorDeviceTypes, workerDeviceTypes,
           bindNameDeviceTypes, bindNames, gangDeviceTypes, gangDimValues,
           gangDimDeviceTypes);
     }
@@ -4369,8 +4384,6 @@ void Fortran::lower::genOpenACCRoutineConstruct(
                    std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
       if (const auto *name =
               std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-        // FIXME: This case mangles the name, the one below does not.
-        // which is correct?
         mlir::Attribute bindNameAttr =
             builder.getStringAttr(converter.mangleName(*name->symbol));
         for (auto crtDeviceTypeAttr : crtDeviceTypes) {

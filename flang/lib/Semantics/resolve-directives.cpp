@@ -1076,13 +1076,13 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
         }
       } else if (const auto *bindClause =
                      std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
-        std::string bindName = "";
-        bool isInternal = false;
         if (const auto *name =
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
           if (Symbol *sym = ResolveFctName(*name)) {
-            bindName = sym->name().ToString();
-            isInternal = true;
+            Symbol &ultimate{sym->GetUltimate()};
+            for (auto &device : currentDevices) {
+              device->set_bindName(SymbolRef(ultimate));
+            }
           } else {
             context_.Say((*name).source,
                 "No function or subroutine declared for '%s'"_err_en_US,
@@ -1095,14 +1095,8 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
               Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
                   *charExpr);
           std::string str{std::get<std::string>(charConst->t)};
-          std::stringstream bindNameStream;
-          bindNameStream << "\"" << str << "\"";
-          bindName = bindNameStream.str();
-        }
-        if (!bindName.empty()) {
-          // Fixme: do we need to ensure there there is only one device?
           for (auto &device : currentDevices) {
-            device->set_bindName(std::string(bindName), isInternal);
+            device->set_bindName(std::string(str));
           }
         }
       }

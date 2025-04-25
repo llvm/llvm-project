@@ -24,6 +24,7 @@
 #include <fstream>
 #include <set>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace Fortran::semantics {
@@ -638,8 +639,14 @@ static void PutOpenACCDeviceTypeRoutineInfo(
   if (info.isWorker()) {
     os << " worker";
   }
-  if (info.bindName()) {
-    os << " bind(" << *info.bindName() << ")";
+  if (const std::variant<std::string, SymbolRef> *bindName{info.bindName()}) {
+    os << " bind(";
+    if (std::holds_alternative<std::string>(*bindName)) {
+      os << "\"" << std::get<std::string>(*bindName) << "\"";
+    } else {
+      os << std::get<SymbolRef>(*bindName)->name();
+    }
+    os << ")";
   }
 }
 

@@ -438,14 +438,7 @@ public:
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
               [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
-              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
-                builder = new fir::FirOpBuilder(
-                    bridge.getModule(), bridge.getKindMap(), &mlirSymbolTable);
-                Fortran::lower::genOpenACCRoutineConstruct(
-                    *this, bridge.getSemanticsContext(), bridge.getModule(),
-                    d.routine);
-                builder = nullptr;
-              },
+              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
           },
           u);
     }
@@ -472,6 +465,8 @@ public:
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
+    builder = new fir::FirOpBuilder(
+        bridge.getModule(), bridge.getKindMap(), &mlirSymbolTable);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -498,6 +493,7 @@ public:
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         declareFunction(*f);
+    builder = nullptr;
   }
 
   /// Get the scope that is defining or using \p sym. The returned scope is not
@@ -1035,7 +1031,10 @@ public:
     return bridge.getSemanticsContext().FindScope(currentPosition);
   }
 
-  fir::FirOpBuilder &getFirOpBuilder() override final { return *builder; }
+  fir::FirOpBuilder &getFirOpBuilder() override final { 
+    CHECK(builder && "builder is not set before calling getFirOpBuilder");
+    return *builder; 
+  }
 
   mlir::ModuleOp getModuleOp() override final { return bridge.getModule(); }
 
@@ -5617,6 +5616,10 @@ private:
     LLVM_DEBUG(llvm::dbgs() << "\n[bridge - startNewFunction]";
                if (auto *sym = scope.symbol()) llvm::dbgs() << " " << *sym;
                llvm::dbgs() << "\n");
+    // I don't think setting the builder is necessary here, because callee 
+    // always looks up the FuncOp from the module. If there was a function that
+    // was not declared yet. This call to callee will cause an assertion
+    //failure.
     Fortran::lower::CalleeInterface callee(funit, *this);
     mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
     builder =
