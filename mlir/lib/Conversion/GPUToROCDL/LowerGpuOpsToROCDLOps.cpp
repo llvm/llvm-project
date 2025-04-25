@@ -149,10 +149,13 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value widthOrZeroIfOutside =
         rewriter.create<LLVM::AndOp>(loc, int32Type, add, negwidth);
     Value dstLane;
-    // TODO: Add support for gpu::ShuffleMode::UP and gpu::ShuffleMode::DOWN.
     // TODO: Use ds_swizzle for XOR when step/offsets are constants for better
     // perf.
     switch (op.getMode()) {
+    case gpu::ShuffleMode::UP:
+      dstLane = rewriter.create<LLVM::SubOp>(loc, int32Type, srcLaneId,
+                                             adaptor.getOffset());
+      break;
     case gpu::ShuffleMode::DOWN:
       dstLane = rewriter.create<LLVM::AddOp>(loc, int32Type, srcLaneId,
                                              adaptor.getOffset());
