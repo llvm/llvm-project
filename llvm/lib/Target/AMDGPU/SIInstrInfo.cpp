@@ -9758,10 +9758,8 @@ bool execMayBeModifiedBeforeUseUtil(
     if (I->isDebugInstr())
       continue;
 
-    if (++NumInst > MaxInstScan) {
-      dbgs() << "## maxinst\n";
+    if (++NumInst > MaxInstScan)
       return true;
-    }
 
     if (I->modifiesRegister(AMDGPU::EXEC, TRI))
       return true;
@@ -9774,8 +9772,7 @@ bool execMayBeModifiedBeforeUseUtil(
 // in the predecessor BB of the single BB loop where UseMI resides.
 bool llvm::checkIfExecMayBeModifiedBeforeUseAcrossBB(
     const MachineRegisterInfo &MRI, Register VReg, const MachineInstr &DefMI,
-    const MachineInstr &UseMI, const bool SIFoldOperandsPreheader,
-    const int SIFoldOperandsPreheaderThreshold) {
+    const MachineInstr &UseMI, const int SIFoldOperandsPreheaderThreshold) {
 
   assert(MRI.isSSA() && "Must be run on SSA");
   auto *TRI = MRI.getTargetRegisterInfo();
@@ -9792,39 +9789,34 @@ bool llvm::checkIfExecMayBeModifiedBeforeUseAcrossBB(
   // 3. check if EXEC is modified
   auto *UseBB = UseMI.getParent();
   if (UseBB != DefBB) {
-    if (SIFoldOperandsPreheader) {
-      if (!(DefBB->isSuccessor(UseBB) && (DefBB->succ_size() == 1)))
-        return true;
+    if (!(DefBB->isSuccessor(UseBB) && (DefBB->succ_size() == 1)))
+      return true;
 
-      if (!((UseBB->pred_size() == 2) && UseBB->isPredecessor(UseBB) &&
-            UseBB->isPredecessor(DefBB)))
-        return true;
+    if (!((UseBB->pred_size() == 2) && UseBB->isPredecessor(UseBB) &&
+          UseBB->isPredecessor(DefBB)))
+      return true;
 
-      bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
-          TRI, UseBB->begin(), UseBB->end(), MaxInstScan);
-      if (canExecBeModifiedBeforeUse)
-        return true;
+    bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
+        TRI, UseBB->begin(), UseBB->end(), MaxInstScan);
+    if (canExecBeModifiedBeforeUse)
+      return true;
 
-      // Stop scan at the end of the DEF basic block.
-      // If we are here, we know for sure that the instructions in focus are in
-      // the same basic block. Scan them to be safe.
-      canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
-          TRI, std::next(DefMI.getIterator()), DefBB->end(), MaxInstScan);
-      if (canExecBeModifiedBeforeUse)
-        return true;
+    // Stop scan at the end of the DEF basic block.
+    // If we are here, we know for sure that the instructions in focus are in
+    // the same basic block. Scan them to be safe.
+    canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
+        TRI, std::next(DefMI.getIterator()), DefBB->end(), MaxInstScan);
+    if (canExecBeModifiedBeforeUse)
+      return true;
 
-      return false;
-    }
-    return true;
   } else {
     // Stop scan at the use.
     bool canExecBeModifiedBeforeUse = execMayBeModifiedBeforeUseUtil(
         TRI, std::next(DefMI.getIterator()), UseMI.getIterator(), MaxInstScan);
     if (canExecBeModifiedBeforeUse)
       return true;
-
-    return false;
   }
+  return false;
 }
 
 bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,

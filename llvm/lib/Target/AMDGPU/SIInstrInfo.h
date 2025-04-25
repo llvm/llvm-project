@@ -1533,8 +1533,7 @@ bool execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
 
 bool checkIfExecMayBeModifiedBeforeUseAcrossBB(
     const MachineRegisterInfo &MRI, Register VReg, const MachineInstr &DefMI,
-    const MachineInstr &UseMI, const bool SIFoldOperandsPreheader,
-    const int SIFoldOperandsPreheaderThreshold);
+    const MachineInstr &UseMI, const int SIFoldOperandsPreheaderThreshold);
 
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
 /// DefMI and all its uses. Should be run on SSA. Currently does not attempt to
