@@ -202,3 +202,9 @@ namespace GlobalInitializer {
                // both-note {{initializer of 'g' is unknown}}
   };
 }
+
+namespace ExternPointer {
+  struct S { int a; };
+  extern const S pu;
+  constexpr const int *pua = &pu.a; // Ok.
+}

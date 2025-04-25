@@ -1323,8 +1323,6 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckArray(S, OpPC, Ptr))
