@@ -1182,6 +1182,8 @@ Experimental extensions
     xqcisync             0.2
     xrivosvisni          0.1
     xrivosvizip          0.1
+    xsfmclic             0.1
+    xsfsclic             0.1
 
 Supported Profiles
     rva20s64

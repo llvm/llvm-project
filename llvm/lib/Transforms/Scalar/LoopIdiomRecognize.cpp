@@ -1656,7 +1656,7 @@ public:
       // We only want RecAddExpr with recurrence step that is constant. This
       // is good enough for all the idioms we want to recognize. Later we expand
       // and materialize the recurrence as {base,+,a} -> (base + a * strlen)
-      if (!dyn_cast<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
+      if (!isa<SCEVConstant>(AddRecEv->getStepRecurrence(*SE)))
         return false;
     }
 

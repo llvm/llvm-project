@@ -1411,20 +1411,22 @@ static void printWaitClause(mlir::OpAsmPrinter &p, mlir::Operation *op,
   if (hasDeviceTypeValues(keywordOnly) && hasDeviceTypeValues(deviceTypes))
     p << ", ";
 
-  unsigned opIdx = 0;
-  llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
-    p << "{";
-    auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasDevNum)[it.index()]);
-    if (boolAttr && boolAttr.getValue())
-      p << "devnum: ";
-    llvm::interleaveComma(
-        llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
-          p << operands[opIdx] << " : " << operands[opIdx].getType();
-          ++opIdx;
-        });
-    p << "}";
-    printSingleDeviceType(p, it.value());
-  });
+  if (hasDeviceTypeValues(deviceTypes)) {
+    unsigned opIdx = 0;
+    llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
+      p << "{";
+      auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasDevNum)[it.index()]);
+      if (boolAttr && boolAttr.getValue())
+        p << "devnum: ";
+      llvm::interleaveComma(
+          llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
+            p << operands[opIdx] << " : " << operands[opIdx].getType();
+            ++opIdx;
+          });
+      p << "}";
+      printSingleDeviceType(p, it.value());
+    });
+  }
 
   p << ")";
 }
@@ -2952,6 +2954,16 @@ LogicalResult acc::InitOp::verify() {
   return success();
 }
 
+void acc::InitOp::addDeviceType(MLIRContext *context,
+                                mlir::acc::DeviceType deviceType) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (getDeviceTypesAttr())
+    llvm::copy(getDeviceTypesAttr(), std::back_inserter(deviceTypes));
+
+  deviceTypes.push_back(acc::DeviceTypeAttr::get(context, deviceType));
+  setDeviceTypesAttr(mlir::ArrayAttr::get(context, deviceTypes));
+}
+
 //===----------------------------------------------------------------------===//
 // ShutdownOp
 //===----------------------------------------------------------------------===//
@@ -2962,6 +2974,16 @@ LogicalResult acc::ShutdownOp::verify() {
     if (isComputeOperation(currOp))
       return emitOpError("cannot be nested in a compute operation");
   return success();
+}
+
+void acc::ShutdownOp::addDeviceType(MLIRContext *context,
+                                    mlir::acc::DeviceType deviceType) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (getDeviceTypesAttr())
+    llvm::copy(getDeviceTypesAttr(), std::back_inserter(deviceTypes));
+
+  deviceTypes.push_back(acc::DeviceTypeAttr::get(context, deviceType));
+  setDeviceTypesAttr(mlir::ArrayAttr::get(context, deviceTypes));
 }
 
 //===----------------------------------------------------------------------===//

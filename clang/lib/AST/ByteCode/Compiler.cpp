@@ -3012,6 +3012,17 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
+
+  if (!Ctx.getLangOpts().CPlusPlus20) {
+    if (!this->emitInvalidCast(CastKind::Dynamic, /*Fatal=*/false, E))
+      return false;
+  }
+
+  return this->VisitCastExpr(E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
   assert(E->getType()->isBooleanType());
 
@@ -4933,6 +4944,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
   } else if (const auto *PD =
                  dyn_cast<CXXPseudoDestructorExpr>(E->getCallee())) {
+    if (!this->emitCheckPseudoDtor(E))
+      return false;
     const Expr *Base = PD->getBase();
     if (!Base->isGLValue())
       return this->discard(Base);

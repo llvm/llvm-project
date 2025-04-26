@@ -8197,6 +8197,16 @@ def err_address_space_qualified_new : Error<
 def err_address_space_qualified_delete : Error<
   "'delete' cannot delete objects of type %0 in address space '%1'">;
 
+def note_default_init_const_member : Note<
+  "member %0 declared 'const' here">;
+def warn_default_init_const : Warning<
+  "default initialization of an object of type %0%select{| with const member}1 "
+  "is incompatible with C++">,
+  InGroup<DefaultConstInit>, DefaultIgnore;
+def warn_default_init_const_unsafe : Warning<
+  "default initialization of an object of type %0%select{| with const member}1 "
+  "leaves the object uninitialized and is incompatible with C++">,
+  InGroup<DefaultConstInitUnsafe>;
 def err_default_init_const : Error<
   "default initialization of an object of const type %0"
   "%select{| without a user-provided default constructor}1">;
@@ -12753,7 +12763,9 @@ def err_riscv_builtin_invalid_lmul : Error<
 def err_riscv_type_requires_extension : Error<
   "RISC-V type %0 requires the '%1' extension">;
 def err_riscv_attribute_interrupt_requires_extension : Error<
-  "RISC-V interrupt attribute '%0' requires extension '%1'">;
+  "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
+def err_riscv_attribute_interrupt_invalid_combination : Error<
+  "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
