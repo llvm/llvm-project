@@ -18,6 +18,7 @@
 #include <flat_set>
 #include <functional>
 #include <ranges>
+#include <sstream>
 #include <vector>
 
 #include "MinSequenceContainer.h"
@@ -95,6 +96,15 @@ void test() {
     m.insert_range(a | std::views::as_rvalue);
     MoveOnly expected[] = {1, 3, 4, 5};
     assert(std::ranges::equal(m, expected));
+  }
+  {
+    // https://github.com/llvm/llvm-project/issues/136656
+    MinSequenceContainer<int> v;
+    std::flat_set s(v);
+    std::istringstream ints("0 1 1 0");
+    auto r = std::ranges::subrange(std::istream_iterator<int>(ints), std::istream_iterator<int>()) |
+             std::views::transform([](int i) { return i * i; });
+    s.insert_range(r);
   }
 }
 
