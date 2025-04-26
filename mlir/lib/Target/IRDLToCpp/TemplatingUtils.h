@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef IRDLTOCPP_TEMPLATE_UTILS_H
-#define IRDLTOCPP_TEMPLATE_UTILS_H
+#ifndef MLIR_LIB_TARGET_IRDLTOCPP_TEMPLATINGUTILS_H
+#define MLIR_LIB_TARGET_IRDLTOCPP_TEMPLATINGUTILS_H
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -18,13 +18,13 @@
 
 namespace mlir::irdl::detail {
 
-/// A dictionary stores a mapping of template variables to their assigned
-/// variables
+/// A dictionary stores a mapping of template variable names to their assigned
+/// string values.
 using dictionary = llvm::StringMap<llvm::SmallString<8>>;
 
 /// Template Code as used by IRDL-to-Cpp.
 ///
-/// For efficiency, produces a bytecode representation of an input string
+/// For efficiency, produces a bytecode representation of an input template.
 ///   - LiteralToken: A contiguous stream of characters to be printed
 ///   - ReplacementToken: A template variable that will be replaced
 class Template {
@@ -47,30 +47,28 @@ public:
     }
   }
 
-  // Render will apply a dictionary to the Template
-  // and send it to the specified output stream
+  /// Render will apply a dictionary to the Template and send the rendered
+  /// result to the specified output stream.
   void render(llvm::raw_ostream &out, const dictionary &replacements) const {
     for (auto instruction : bytecode) {
-      std::visit(
-          [&](auto &&inst) {
-            using T = std::decay_t<decltype(inst)>;
-            if constexpr (std::is_same_v<T, LiteralToken>) {
-              out << inst.text;
-            } else if constexpr (std::is_same_v<T, ReplacementToken>) {
-              auto replacement = replacements.find(inst.keyName);
+      if (auto *inst = std::get_if<LiteralToken>(&instruction)) {
+        out << inst->text;
+        continue;
+      }
+
+      if (auto *inst = std::get_if<ReplacementToken>(&instruction)) {
+        auto replacement = replacements.find(inst->keyName);
 #ifndef NDEBUG
-              if (replacement == replacements.end()) {
-                llvm::errs()
-                    << "Missing template key: " << inst.keyName << "\n";
-                llvm_unreachable("Missing template key");
-              }
+        if (replacement == replacements.end()) {
+          llvm::errs() << "Missing template key: " << inst->keyName << "\n";
+          llvm_unreachable("Missing template key");
+        }
 #endif
-              out << replacement->second;
-            } else {
-              static_assert(false, "non-exhaustive visitor!");
-            }
-          },
-          instruction);
+        out << replacement->second;
+        continue;
+      }
+
+      llvm_unreachable("non-exhaustive bytecode visit");
     }
   }
 
@@ -88,4 +86,4 @@ private:
 
 } // namespace mlir::irdl::detail
 
-#endif // #ifndef IRDLTOCPP_TEMPLATE_UTILS_H
+#endif // MLIR_LIB_TARGET_IRDLTOCPP_TEMPLATINGUTILS_H
