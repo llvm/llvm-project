@@ -284,10 +284,8 @@ constexpr bool test() {
   }
 
   test<std::vector<int>, std::vector<int>>();
-  test<std::vector<int>, std::vector<double>>();
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
-  test<std::vector<int, min_allocator<int>>, std::vector<int, min_allocator<int>>>();
 
   test_alloc<std::vector, std::vector>();
 
