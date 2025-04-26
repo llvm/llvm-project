@@ -1,5 +1,3 @@
-# XFAIL: system-windows
-
 # Test the plugin.cplusplus.display.function-name-format setting.
 
 # RUN: split-file %s %t
