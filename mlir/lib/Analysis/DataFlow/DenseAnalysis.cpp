@@ -636,6 +636,9 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
   branch.getSuccessorRegions(branchPoint, successors);
   LDBG() << "  Processing " << successors.size() << " successor regions";
   for (const RegionSuccessor &successor : successors) {
+    RegionBranchOpInterface successorOwner =
+        getRegionBranchSuccessorOwner(successor);
+    assert(successorOwner && "expected RegionBranchOpInterface owner");
     const AbstractDenseLattice *after;
     if (successor.isOperation()) {
       LDBG() << "    Successor is operation";
@@ -643,7 +646,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
                             getProgramPointAfter(successor.getSuccessorOp()));
     } else if (successor.getSuccessor()->empty()) {
       LDBG() << "    Successor is empty region";
-      after = getLatticeFor(point, getProgramPointAfter(branch));
+      after = getLatticeFor(point, getProgramPointAfter(successorOwner));
     } else {
       Region *successorRegion = successor.getSuccessor();
       assert(!successorRegion->empty() && "unexpected empty successor region");
@@ -662,7 +665,7 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
     }
     LDBG() << "    After state: " << *after;
 
-    visitRegionBranchControlFlowTransfer(branch, branchPoint, successor, *after,
-                                         before);
+    visitRegionBranchControlFlowTransfer(successorOwner, branchPoint, successor,
+                                         *after, before);
   }
 }

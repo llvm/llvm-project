@@ -192,8 +192,22 @@ struct IfOpInterface
                              std::optional<int64_t> dim,
                              ValueBoundsConstraintSet &cstr) {
     unsigned int resultNum = cast<OpResult>(value).getResultNumber();
-    Value thenValue = ifOp.thenYield().getResults()[resultNum];
-    Value elseValue = ifOp.elseYield().getResults()[resultNum];
+    auto thenYield = dyn_cast<YieldOp>(ifOp.thenTerminator());
+    auto elseYield = dyn_cast<YieldOp>(ifOp.elseTerminator());
+    // A branch that exits an enclosing loop contributes no value to the if.
+    if (!thenYield || !elseYield) {
+      auto yield = thenYield ? thenYield : elseYield;
+      if (!yield)
+        return;
+      Value yielded = yield.getOperand(resultNum);
+      if (dim)
+        cstr.bound(value)[*dim] == cstr.getExpr(yielded, dim);
+      else
+        cstr.bound(value) == yielded;
+      return;
+    }
+    Value thenValue = thenYield.getOperand(resultNum);
+    Value elseValue = elseYield.getOperand(resultNum);
 
     auto boundsBuilder = cstr.bound(value);
     if (dim)

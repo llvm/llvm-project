@@ -227,10 +227,12 @@ struct IfOpInterface
     auto ifOp = cast<scf::IfOp>(op);
     size_t resultNum = std::distance(op->getOpResults().begin(),
                                      llvm::find(op->getOpResults(), value));
-    OpOperand *thenOperand = &ifOp.thenYield()->getOpOperand(resultNum);
-    OpOperand *elseOperand = &ifOp.elseYield()->getOpOperand(resultNum);
-    return {{thenOperand, BufferRelation::Equivalent, /*isDefinite=*/false},
-            {elseOperand, BufferRelation::Equivalent, /*isDefinite=*/false}};
+    AliasingOpOperandList aliases;
+    for (Operation *terminator : {ifOp.thenTerminator(), ifOp.elseTerminator()})
+      if (auto yield = dyn_cast<scf::YieldOp>(terminator))
+        aliases.addAlias({&yield->getOpOperand(resultNum),
+                          BufferRelation::Equivalent, /*isDefinite=*/false});
+    return aliases;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -273,35 +275,30 @@ struct IfOpInterface
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto ifOp = cast<scf::IfOp>(op);
-    auto thenYieldOp = cast<scf::YieldOp>(ifOp.thenBlock()->getTerminator());
-    auto elseYieldOp = cast<scf::YieldOp>(ifOp.elseBlock()->getTerminator());
-    assert(value.getDefiningOp() == op && "invalid valid");
-
-    // Determine buffer types of the true/false branches.
+    assert(value.getDefiningOp() == op && "invalid value");
     auto opResult = cast<OpResult>(value);
-    auto thenValue = thenYieldOp.getOperand(opResult.getResultNumber());
-    auto elseValue = elseYieldOp.getOperand(opResult.getResultNumber());
-    BufferLikeType thenBufferType, elseBufferType;
-    if (isa<BufferLikeType>(thenValue.getType())) {
-      // True branch was already bufferized.
-      thenBufferType = cast<BufferLikeType>(thenValue.getType());
-    } else {
-      auto maybeBufferType = bufferization::getBufferType(
-          thenValue, options, state, invocationStack);
-      if (failed(maybeBufferType))
+    SmallVector<BufferLikeType> bufferTypes;
+    for (Operation *terminator :
+         {ifOp.thenTerminator(), ifOp.elseTerminator()}) {
+      auto yield = dyn_cast<scf::YieldOp>(terminator);
+      if (!yield)
+        continue;
+      Value yielded = yield.getOperand(opResult.getResultNumber());
+      if (auto type = dyn_cast<BufferLikeType>(yielded.getType())) {
+        bufferTypes.push_back(type);
+        continue;
+      }
+      auto type = bufferization::getBufferType(yielded, options, state,
+                                               invocationStack);
+      if (failed(type))
         return failure();
-      thenBufferType = *maybeBufferType;
+      bufferTypes.push_back(*type);
     }
-    if (isa<BufferLikeType>(elseValue.getType())) {
-      // False branch was already bufferized.
-      elseBufferType = cast<BufferLikeType>(elseValue.getType());
-    } else {
-      auto maybeBufferType = bufferization::getBufferType(
-          elseValue, options, state, invocationStack);
-      if (failed(maybeBufferType))
-        return failure();
-      elseBufferType = *maybeBufferType;
-    }
+    if (bufferTypes.empty())
+      return failure();
+    if (bufferTypes.size() == 1)
+      return bufferTypes.front();
+    auto thenBufferType = bufferTypes[0], elseBufferType = bufferTypes[1];
 
     // Best case: Both branches have the exact same buffer type.
     if (thenBufferType == elseBufferType)

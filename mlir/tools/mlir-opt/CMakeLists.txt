@@ -22,6 +22,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRGPUTestPasses
     MLIRLinalgTestPasses
     MLIRLoopLikeInterfaceTestPasses
+    MLIRTestRegionBranchOpInterface
     MLIRMathTestPasses
     MLIRTestMathToVCIX
     MLIRMemRefTestPasses

@@ -58,6 +58,9 @@ class RewritePatternSet;
 #include "TestOpsDialect.h.inc"
 
 namespace test {
+/// Return the payload forwarded by a dynamic break/continue terminator.
+mlir::OperandRange
+getBreakableLoopTerminatorPayload(mlir::Operation *terminator);
 
 //===----------------------------------------------------------------------===//
 // TestDialect version utilities

@@ -33,6 +33,7 @@ add_mlir_library(MLIRIR
   PatternMatch.cpp
   QuantStorageTypeInterface.cpp
   Region.cpp
+  RegionExitInterfaces.cpp
   RegionKindInterface.cpp
   Remarks.cpp
   SymbolTable.cpp
@@ -69,6 +70,7 @@ add_mlir_library(MLIRIR
   MLIRDialectFoldInterfaceIncGen
   MLIROpAsmInterfaceIncGen
   MLIRQuantStorageTypeInterfaceIncGen
+  MLIRRegionExitInterfacesIncGen
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen

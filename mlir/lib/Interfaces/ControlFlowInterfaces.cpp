@@ -13,6 +13,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionExitInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -169,11 +170,17 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
     SmallVector<RegionSuccessor> successors;
     regionInterface.getSuccessorRegions(branchPoint, successors);
     for (const RegionSuccessor &successor : successors) {
+      RegionBranchOpInterface successorOwner =
+          getRegionBranchSuccessorOwner(successor);
+      if (!successorOwner)
+        return regionInterface->emitOpError()
+               << "has region successor not owned by a "
+                  "RegionBranchOpInterface";
       // Helper function that print the region branch point and the region
       // successor.
       auto emitRegionEdgeError = [&]() {
         InFlightDiagnostic diag =
-            regionInterface->emitOpError("along control flow edge from ");
+            successorOwner->emitOpError("along control flow edge from ");
         if (branchPoint.isParent()) {
           diag << "parent";
           diag.attachNote(op->getLoc()) << "region branch point";
@@ -196,7 +203,7 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
       // Verify number of successor operands and successor inputs.
       OperandRange succOperands =
           regionInterface.getSuccessorOperands(branchPoint, successor);
-      ValueRange succInputs = regionInterface.getSuccessorInputs(successor);
+      ValueRange succInputs = successorOwner.getSuccessorInputs(successor);
       if (succOperands.size() != succInputs.size()) {
         return emitRegionEdgeError()
                << ": region branch point has " << succOperands.size()
@@ -211,7 +218,7 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
            llvm::enumerate(llvm::zip(succOperandTypes, succInputTypes))) {
         Type succOperandType = std::get<0>(typesIdx.value());
         Type succInputType = std::get<1>(typesIdx.value());
-        if (!regionInterface.areTypesCompatible(succOperandType, succInputType))
+        if (!successorOwner.areTypesCompatible(succOperandType, succInputType))
           return emitRegionEdgeError()
                  << ": successor operand type #" << typesIdx.index() << " "
                  << succOperandType << " should match successor input type #"
@@ -486,6 +493,14 @@ RegionBranchOpInterface::getNonSuccessorInputs(RegionSuccessor successor) {
   return results;
 }
 
+RegionBranchOpInterface
+mlir::getRegionBranchSuccessorOwner(RegionSuccessor successor) {
+  if (Operation *successorOp = successor.getSuccessorOp())
+    return dyn_cast<RegionBranchOpInterface>(successorOp);
+  return dyn_cast<RegionBranchOpInterface>(
+      successor.getSuccessor()->getParentOp());
+}
+
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
   return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
 }
@@ -497,11 +512,14 @@ getSuccessorOperandInputMapping(RegionBranchOpInterface branchOp,
   SmallVector<RegionSuccessor> successors;
   branchOp.getSuccessorRegions(src, successors);
   for (RegionSuccessor dst : successors) {
+    RegionBranchOpInterface successorOwner = getRegionBranchSuccessorOwner(dst);
+    assert(successorOwner && "expected RegionBranchOpInterface owner");
     OperandRange operands = branchOp.getSuccessorOperands(src, dst);
-    assert(operands.size() == branchOp.getSuccessorInputs(dst).size() &&
+    ValueRange inputs = successorOwner.getSuccessorInputs(dst);
+    assert(operands.size() == inputs.size() &&
            "expected the same number of operands and inputs");
-    for (const auto &[operand, input] : llvm::zip_equal(
-             operandsToOpOperands(operands), branchOp.getSuccessorInputs(dst)))
+    for (const auto &[operand, input] :
+         llvm::zip_equal(operandsToOpOperands(operands), inputs))
       mapping[&operand].push_back(input);
   }
 }
@@ -548,6 +566,26 @@ RegionBranchOpInterface::getAllRegionBranchPoints() {
         branchPoints.push_back(RegionBranchPoint(terminator));
     }
   }
+
+  Operation *op = getOperation();
+  if (!isa<HasBreakingControlFlowOpInterface>(op))
+    return branchPoints;
+
+  // Only receivers need nested branch points. Intermediate propagators do not
+  // receive values from nested exits: the addressed receiver verifies those
+  // edges and enumerates their predecessors.
+  visitNestedBreakingControlFlowOps(
+      op, [&](Operation *nestedTerminator, int nestedLevel) {
+        // Immediate region terminators are already covered above. Deeper
+        // terminators may add a propagated control-flow edge through this op.
+        if (nestedLevel <= 1)
+          return;
+        auto terminator =
+            dyn_cast<RegionBranchTerminatorOpInterface>(nestedTerminator);
+        if (!terminator)
+          return;
+        branchPoints.push_back(RegionBranchPoint(terminator));
+      });
   return branchPoints;
 }
 
@@ -652,6 +690,12 @@ static bool isDefinedBefore(Operation *regionBranchOp, Value a, Value b) {
   return true;
 }
 
+static bool isSuccessorInputOwnedBy(Operation *regionBranchOp, Value value) {
+  if (Operation *definingOp = value.getDefiningOp())
+    return definingOp == regionBranchOp;
+  return value.getParentRegion()->getParentOp() == regionBranchOp;
+}
+
 /// Compute all non-successor-input values that a successor input could have
 /// based on the given successor input to successor operand mapping.
 ///
@@ -708,8 +752,8 @@ static LogicalResult computeReachableValuesFromSuccessorInput(
       if (visited.insert(operand->get()).second)
         worklist.push_back(operand->get());
   }
-  // Note: The result does not contain any successor inputs. (Therefore,
-  // `value` is also guaranteed to be excluded.)
+  // The result does not contain any keys in inputToOperands. In particular,
+  // `value` is guaranteed to be excluded.
   return success();
 }
 
@@ -750,11 +794,19 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
     auto regionBranchOp = cast<RegionBranchOpInterface>(op);
     RegionBranchInverseSuccessorMapping inputToOperands;
     regionBranchOp.getSuccessorInputOperandMapping(inputToOperands);
+    // An ancestor input's predecessor set is incomplete here. Treat that input
+    // as an incoming value instead of following its partial mapping, including
+    // when it is reached transitively from one of this op's own inputs.
+    inputToOperands.remove_if([&](const auto &entry) {
+      return !isSuccessorInputOwnedBy(op, entry.first);
+    });
 
     // Try to replace the uses of each successor input one-by-one.
     bool changed = false;
     const bool isIsolated = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
     for (Value value : inputToOperands.keys()) {
+      if (!isSuccessorInputOwnedBy(regionBranchOp, value))
+        continue;
       // Nothing to do for successor inputs that are already dead.
       if (value.use_empty())
         continue;
@@ -911,8 +963,9 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
       bool allDead = true;
       for (auto memberIt = tiedSuccessorInputs.member_begin(**it);
            memberIt != tiedSuccessorInputs.member_end(); ++memberIt) {
-        // Iterate over all values in the set and check their liveness.
-        if (!memberIt->use_empty()) {
+        // A tied set can only be removed if all inputs belong to this op.
+        // An ancestor-owned input may have other predecessors we cannot edit.
+        if (!isSuccessorInputOwnedBy(op, *memberIt) || !memberIt->use_empty()) {
           allDead = false;
           break;
         }
@@ -1082,6 +1135,10 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
     // Total complexity: O(n * k * max(log k, log n)). For each input, sorting
     // the signature costs O(k log k) and the std::map lookup costs O(k log n).
     for (Value input : inputs) {
+      // Propagated exits expose inputs owned by an ancestor. Their complete
+      // predecessor set is only known to that owner.
+      if (!isSuccessorInputOwnedBy(op, input))
+        continue;
       // Gather the predecessor value for each predecessor (region branch
       // point) and sort them to form this input's signature.
       Signature sig;
@@ -1171,6 +1228,9 @@ computeSingleAcyclicRegionBranchPath(RegionBranchOpInterface op) {
       // through the region branch op.
       return {};
     }
+    // Never inline or rewrite regions/results owned by another operation.
+    if (getRegionBranchSuccessorOwner(successors.front()) != op)
+      return {};
     path.push_back(successors.front());
     if (successors.front().isOperation()) {
       // Found path that ends after an operation.

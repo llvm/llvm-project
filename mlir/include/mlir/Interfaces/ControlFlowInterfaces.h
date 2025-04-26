@@ -193,9 +193,10 @@ using RegionBranchInverseSuccessorMapping =
     DenseMap<Value, SmallVector<OpOperand *>>;
 
 /// This class represents a successor of a region. A region successor can either
-/// target another region or target an ancestor operation (at the moment,
-/// limited to the immediate parent operation). In the latter case, the control
-/// flow branches after/out of the target operation.
+/// target a region or an ancestor operation. In the latter case, control flow
+/// branches after/out of the target operation. Propagated exits may target an
+/// operation other than the immediate parent, or a region owned by such an
+/// ancestor. Query getRegionBranchSuccessorOwner to identify that owner.
 class RegionSuccessor {
 public:
   /// Initialize a successor that branches to a region of the parent operation.
@@ -446,6 +447,11 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                            OpPrintingFlags().skipRegions())
             << ">";
 }
+
+/// Return the RegionBranchOpInterface operation that owns `successor` and
+/// defines its successor inputs.
+RegionBranchOpInterface
+getRegionBranchSuccessorOwner(RegionSuccessor successor);
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H
