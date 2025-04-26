@@ -808,16 +808,14 @@ void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
-  auto Splat = getAArch64VectorSplat(MI, MRI);
-  if (!Splat)
-    return false;
-  if (Splat->isReg())
-    return true;
+
   // Later, during selection, we'll try to match imported patterns using
   // immAllOnesV and immAllZerosV. These require G_BUILD_VECTOR. Don't lower
   // G_BUILD_VECTORs which could match those patterns.
-  int64_t Cst = Splat->getCst();
-  return (Cst != 0 && Cst != -1);
+  if (isBuildVectorAllZeros(MI, MRI) || isBuildVectorAllOnes(MI, MRI))
+    return false;
+
+  return getAArch64VectorSplat(MI, MRI).has_value();
 }
 
 void applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -933,11 +931,10 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 
 /// \returns a function which builds a vector floating point compare instruction
 /// for a condition code \p CC.
-/// \param [in] IsZero - True if the comparison is against 0.
 /// \param [in] NoNans - True if the target has NoNansFPMath.
 std::function<Register(MachineIRBuilder &)>
-getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool IsZero,
-              bool NoNans, MachineRegisterInfo &MRI) {
+getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
+              MachineRegisterInfo &MRI) {
   LLT DstTy = MRI.getType(LHS);
   assert(DstTy.isVector() && "Expected vector types only?");
   assert(DstTy == MRI.getType(RHS) && "Src and Dst types must match!");
@@ -945,46 +942,29 @@ getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool IsZero,
   default:
     llvm_unreachable("Unexpected condition code!");
   case AArch64CC::NE:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      auto FCmp = IsZero
-                      ? MIB.buildInstr(AArch64::G_FCMEQZ, {DstTy}, {LHS})
-                      : MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS});
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      auto FCmp = MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS});
       return MIB.buildNot(DstTy, FCmp).getReg(0);
     };
   case AArch64CC::EQ:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMEQZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMEQ, {DstTy}, {LHS, RHS}).getReg(0);
     };
   case AArch64CC::GE:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMGEZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {LHS, RHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {LHS, RHS}).getReg(0);
     };
   case AArch64CC::GT:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMGTZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {LHS, RHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {LHS, RHS}).getReg(0);
     };
   case AArch64CC::LS:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMLEZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {RHS, LHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGE, {DstTy}, {RHS, LHS}).getReg(0);
     };
   case AArch64CC::MI:
-    return [LHS, RHS, IsZero, DstTy](MachineIRBuilder &MIB) {
-      return IsZero
-                 ? MIB.buildInstr(AArch64::G_FCMLTZ, {DstTy}, {LHS}).getReg(0)
-                 : MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {RHS, LHS})
-                       .getReg(0);
+    return [LHS, RHS, DstTy](MachineIRBuilder &MIB) {
+      return MIB.buildInstr(AArch64::G_FCMGT, {DstTy}, {RHS, LHS}).getReg(0);
     };
   }
 }
@@ -1024,23 +1004,17 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   LLT DstTy = MRI.getType(Dst);
 
-  auto Splat = getAArch64VectorSplat(*MRI.getVRegDef(RHS), MRI);
-
-  // Compares against 0 have special target-specific pseudos.
-  bool IsZero = Splat && Splat->isCst() && Splat->getCst() == 0;
-
   bool Invert = false;
   AArch64CC::CondCode CC, CC2 = AArch64CC::AL;
   if ((Pred == CmpInst::Predicate::FCMP_ORD ||
        Pred == CmpInst::Predicate::FCMP_UNO) &&
-      IsZero) {
+      isBuildVectorAllZeros(*MRI.getVRegDef(RHS), MRI)) {
     // The special case "fcmp ord %a, 0" is the canonical check that LHS isn't
     // NaN, so equivalent to a == a and doesn't need the two comparisons an
     // "ord" normally would.
     // Similarly, "fcmp uno %a, 0" is the canonical check that LHS is NaN and is
     // thus equivalent to a != a.
     RHS = LHS;
-    IsZero = false;
     CC = Pred == CmpInst::Predicate::FCMP_ORD ? AArch64CC::EQ : AArch64CC::NE;
   } else
     changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
@@ -1051,12 +1025,12 @@ void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   const bool NoNans =
       ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
 
-  auto Cmp = getVectorFCMP(CC, LHS, RHS, IsZero, NoNans, MRI);
+  auto Cmp = getVectorFCMP(CC, LHS, RHS, NoNans, MRI);
   Register CmpRes;
   if (CC2 == AArch64CC::AL)
     CmpRes = Cmp(MIB);
   else {
-    auto Cmp2 = getVectorFCMP(CC2, LHS, RHS, IsZero, NoNans, MRI);
+    auto Cmp2 = getVectorFCMP(CC2, LHS, RHS, NoNans, MRI);
     auto Cmp2Dst = Cmp2(MIB);
     auto Cmp1Dst = Cmp(MIB);
     CmpRes = MIB.buildOr(DstTy, Cmp1Dst, Cmp2Dst).getReg(0);

@@ -1697,13 +1697,13 @@ def : T1Pat<(sextloadi16 t_addrmode_is2:$addr),
 def : T1Pat<(sextloadi16 t_addrmode_rr:$addr),
             (tASRri (tLSLri (tLDRHr t_addrmode_rr:$addr), 16), 16)>;
 
-def : T1Pat<(atomic_load_8 t_addrmode_is1:$src),
+def : T1Pat<(atomic_load_azext_8 t_addrmode_is1:$src),
              (tLDRBi t_addrmode_is1:$src)>;
-def : T1Pat<(atomic_load_8 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_azext_8 t_addrmode_rr:$src),
              (tLDRBr t_addrmode_rr:$src)>;
-def : T1Pat<(atomic_load_16 t_addrmode_is2:$src),
+def : T1Pat<(atomic_load_azext_16 t_addrmode_is2:$src),
              (tLDRHi t_addrmode_is2:$src)>;
-def : T1Pat<(atomic_load_16 t_addrmode_rr:$src),
+def : T1Pat<(atomic_load_azext_16 t_addrmode_rr:$src),
              (tLDRHr t_addrmode_rr:$src)>;
 def : T1Pat<(atomic_load_32 t_addrmode_is4:$src),
              (tLDRi t_addrmode_is4:$src)>;

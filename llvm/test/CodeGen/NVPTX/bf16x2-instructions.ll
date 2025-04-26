@@ -131,7 +131,7 @@ define <2 x bfloat> @test_fdiv(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<5>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .f32 %f<7>;
+; CHECK-NEXT:    .reg .b32 %f<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_fdiv_param_0];
@@ -259,7 +259,7 @@ define <2 x bfloat> @test_select_cc(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloa
 ; SM80-NEXT:    .reg .pred %p<3>;
 ; SM80-NEXT:    .reg .b16 %rs<11>;
 ; SM80-NEXT:    .reg .b32 %r<6>;
-; SM80-NEXT:    .reg .f32 %f<5>;
+; SM80-NEXT:    .reg .b32 %f<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_select_cc_param_0];
@@ -312,7 +312,7 @@ define <2 x float> @test_select_cc_f32_bf16(<2 x float> %a, <2 x float> %b,
 ; SM80-NEXT:    .reg .pred %p<3>;
 ; SM80-NEXT:    .reg .b16 %rs<5>;
 ; SM80-NEXT:    .reg .b32 %r<3>;
-; SM80-NEXT:    .reg .f32 %f<11>;
+; SM80-NEXT:    .reg .b32 %f<11>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_select_cc_f32_bf16_param_0];
@@ -336,7 +336,7 @@ define <2 x float> @test_select_cc_f32_bf16(<2 x float> %a, <2 x float> %b,
 ; SM90:       {
 ; SM90-NEXT:    .reg .pred %p<3>;
 ; SM90-NEXT:    .reg .b32 %r<3>;
-; SM90-NEXT:    .reg .f32 %f<7>;
+; SM90-NEXT:    .reg .b32 %f<7>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_select_cc_f32_bf16_param_0];
@@ -360,7 +360,7 @@ define <2 x bfloat> @test_select_cc_bf16_f32(<2 x bfloat> %a, <2 x bfloat> %b,
 ; CHECK-NEXT:    .reg .pred %p<3>;
 ; CHECK-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_select_cc_bf16_f32_param_0];
@@ -386,7 +386,7 @@ define <2 x bfloat> @test_fptrunc_2xfloat(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_fptrunc_2xfloat(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.f32 {%f1, %f2}, [test_fptrunc_2xfloat_param_0];
@@ -402,7 +402,7 @@ define <2 x float> @test_fpext_2xfloat(<2 x bfloat> %a) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<3>;
+; CHECK-NEXT:    .reg .b32 %f<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_fpext_2xfloat_param_0];
@@ -469,7 +469,7 @@ define <2 x bfloat> @test_sqrt(<2 x bfloat> %a) #0 {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-NEXT:    .reg .b32 %f<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_sqrt_param_0];
@@ -583,7 +583,7 @@ define <2 x bfloat> @test_floor(<2 x bfloat> %a) #0 {
 ; SM80:       {
 ; SM80-NEXT:    .reg .b16 %rs<3>;
 ; SM80-NEXT:    .reg .b32 %r<3>;
-; SM80-NEXT:    .reg .f32 %f<5>;
+; SM80-NEXT:    .reg .b32 %f<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_floor_param_0];
@@ -618,7 +618,7 @@ define <2 x bfloat> @test_ceil(<2 x bfloat> %a) #0 {
 ; SM80:       {
 ; SM80-NEXT:    .reg .b16 %rs<3>;
 ; SM80-NEXT:    .reg .b32 %r<3>;
-; SM80-NEXT:    .reg .f32 %f<5>;
+; SM80-NEXT:    .reg .b32 %f<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_ceil_param_0];
@@ -653,7 +653,7 @@ define <2 x bfloat> @test_trunc(<2 x bfloat> %a) #0 {
 ; SM80:       {
 ; SM80-NEXT:    .reg .b16 %rs<3>;
 ; SM80-NEXT:    .reg .b32 %r<3>;
-; SM80-NEXT:    .reg .f32 %f<5>;
+; SM80-NEXT:    .reg .b32 %f<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_trunc_param_0];
@@ -688,7 +688,7 @@ define <2 x bfloat> @test_rint(<2 x bfloat> %a) #0 {
 ; SM80:       {
 ; SM80-NEXT:    .reg .b16 %rs<3>;
 ; SM80-NEXT:    .reg .b32 %r<3>;
-; SM80-NEXT:    .reg .f32 %f<5>;
+; SM80-NEXT:    .reg .b32 %f<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_rint_param_0];
@@ -724,7 +724,7 @@ define <2 x bfloat> @test_round(<2 x bfloat> %a) #0 {
 ; CHECK-NEXT:    .reg .pred %p<5>;
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<9>;
-; CHECK-NEXT:    .reg .f32 %f<17>;
+; CHECK-NEXT:    .reg .b32 %f<17>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_round_param_0];

@@ -1787,3 +1787,26 @@ namespace IntegralBaseCast {
 
   static_assert(f() == 0, "");
 }
+
+namespace AccessMismatch {
+  struct A {
+  public:
+    constexpr A() : a(0), b(0) {}
+    int a;
+    constexpr bool cmp() const { return &a < &b; } // both-note {{comparison of address of fields 'a' and 'b' of 'A' with differing access specifiers (public vs private) has unspecified value}}
+  private:
+    int b;
+  };
+  static_assert(A().cmp(), ""); // both-error {{constant expression}} \
+                                // both-note {{in call}}
+
+  class B {
+  public:
+    A a;
+    constexpr bool cmp() const { return &a.a < &b.a; } // both-note {{comparison of address of fields 'a' and 'b' of 'B' with differing access specifiers (public vs protected) has unspecified value}}
+  protected:
+    A b;
+  };
+  static_assert(B().cmp(), ""); // both-error {{constant expression}} \
+                                // both-note {{in call}}
+}

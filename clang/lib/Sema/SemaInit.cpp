@@ -4844,8 +4844,7 @@ static void TryListInitialization(Sema &S,
                                   bool TreatUnavailableAsInvalid) {
   QualType DestType = Entity.getType();
 
-  if (S.getLangOpts().HLSL &&
-      !S.HLSL().TransformInitList(Entity, Kind, InitList))
+  if (S.getLangOpts().HLSL && !S.HLSL().transformInitList(Entity, InitList))
     return;
 
   // C++ doesn't allow scalar initialization with more than one argument.
@@ -6496,6 +6495,20 @@ static bool canPerformArrayCopy(const InitializedEntity &Entity) {
   return false;
 }
 
+static const FieldDecl *getConstField(const RecordDecl *RD) {
+  assert(!isa<CXXRecordDecl>(RD) && "Only expect to call this in C mode");
+  for (const FieldDecl *FD : RD->fields()) {
+    QualType QT = FD->getType();
+    if (QT.isConstQualified())
+      return FD;
+    if (const auto *RD = QT->getAsRecordDecl()) {
+      if (const FieldDecl *FD = getConstField(RD))
+        return FD;
+    }
+  }
+  return nullptr;
+}
+
 void InitializationSequence::InitializeFrom(Sema &S,
                                             const InitializedEntity &Entity,
                                             const InitializationKind &Kind,
@@ -6563,13 +6576,28 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
   if (!S.getLangOpts().CPlusPlus &&
       Kind.getKind() == InitializationKind::IK_Default) {
-    RecordDecl *Rec = DestType->getAsRecordDecl();
-    if (Rec && Rec->hasUninitializedExplicitInitFields()) {
+    if (RecordDecl *Rec = DestType->getAsRecordDecl()) {
       VarDecl *Var = dyn_cast_or_null<VarDecl>(Entity.getDecl());
-      if (Var && !Initializer) {
-        S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
-            << /* Var-in-Record */ 1 << Rec;
-        emitUninitializedExplicitInitFields(S, Rec);
+      if (Rec->hasUninitializedExplicitInitFields()) {
+        if (Var && !Initializer) {
+          S.Diag(Var->getLocation(), diag::warn_field_requires_explicit_init)
+              << /* Var-in-Record */ 1 << Rec;
+          emitUninitializedExplicitInitFields(S, Rec);
+        }
+      }
+      // If the record has any members which are const (recursively checked),
+      // then we want to diagnose those as being uninitialized if there is no
+      // initializer present.
+      if (!Initializer) {
+        if (const FieldDecl *FD = getConstField(Rec)) {
+          unsigned DiagID = diag::warn_default_init_const_unsafe;
+          if (Var->getStorageDuration() == SD_Static ||
+              Var->getStorageDuration() == SD_Thread)
+            DiagID = diag::warn_default_init_const;
+
+          S.Diag(Var->getLocation(), DiagID) << Var->getType() << /*member*/ 1;
+          S.Diag(FD->getLocation(), diag::note_default_init_const_member) << FD;
+        }
       }
     }
   }
@@ -8328,10 +8356,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
       // If this is a call, allow conversion to a transparent union.
       ExprResult CurInitExprRes = CurInit;
-      if (ConvTy != Sema::Compatible &&
-          Entity.isParameterKind() &&
-          S.CheckTransparentUnionArgumentConstraints(Step->Type, CurInitExprRes)
-            == Sema::Compatible)
+      if (!S.IsAssignConvertCompatible(ConvTy) && Entity.isParameterKind() &&
+          S.CheckTransparentUnionArgumentConstraints(
+              Step->Type, CurInitExprRes) == Sema::Compatible)
         ConvTy = Sema::Compatible;
       if (CurInitExprRes.isInvalid())
         return ExprError();

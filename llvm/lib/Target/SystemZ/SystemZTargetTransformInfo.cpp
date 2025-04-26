@@ -380,7 +380,7 @@ void SystemZTTIImpl::getUnrollingPreferences(
   // The z13 processor will run out of store tags if too many stores
   // are fed into it too quickly. Therefore make sure there are not
   // too many stores in the resulting unrolled loop.
-  unsigned const NumStoresVal = *NumStores.getValue();
+  unsigned const NumStoresVal = NumStores.getValue();
   unsigned const Max = (NumStoresVal ? (12 / NumStoresVal) : UINT_MAX);
 
   if (HasCall) {

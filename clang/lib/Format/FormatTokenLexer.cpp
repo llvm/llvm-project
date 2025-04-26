@@ -128,6 +128,12 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (Style.isCpp() && tryTransformTryUsageForC())
     return;
 
+  if ((Style.Language == FormatStyle::LK_Cpp ||
+       Style.Language == FormatStyle::LK_ObjC) &&
+      tryMergeUserDefinedLiteral()) {
+    return;
+  }
+
   if (Style.isJavaScript() || Style.isCSharp()) {
     static const tok::TokenKind NullishCoalescingOperator[] = {tok::question,
                                                                tok::question};
@@ -556,6 +562,29 @@ bool FormatTokenLexer::tryMergeGreaterGreater() {
   First[0]->TokenText = ">>";
   First[0]->ColumnWidth += 1;
   Tokens.erase(Tokens.end() - 1);
+  return true;
+}
+
+bool FormatTokenLexer::tryMergeUserDefinedLiteral() {
+  if (Tokens.size() < 2)
+    return false;
+
+  auto *First = Tokens.end() - 2;
+  auto &Suffix = First[1];
+  if (Suffix->hasWhitespaceBefore() || Suffix->TokenText != "$")
+    return false;
+
+  auto &Literal = First[0];
+  if (!Literal->Tok.isLiteral())
+    return false;
+
+  auto &Text = Literal->TokenText;
+  if (!Text.ends_with("_"))
+    return false;
+
+  Text = StringRef(Text.data(), Text.size() + 1);
+  ++Literal->ColumnWidth;
+  Tokens.erase(&Suffix);
   return true;
 }
 

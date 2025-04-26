@@ -2085,32 +2085,31 @@ bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause,
       }
     } else {
       const auto *DRE = cast<DeclRefExpr>(VarExpr);
-      const VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl());
-      if (Var)
+      if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
         CurDecl = Var->getCanonicalDecl();
 
-      // OpenACC3.3 2.13:
-      // A 'declare' directive must be in the same scope as the declaration of
-      // any var that appears in the clauses of the directive or any scope
-      // within a C/C++ function.
-      // We can't really check 'scope' here, so we check declaration context,
-      // which is a reasonable approximation, but misses scopes inside of
-      // functions.
-      if (removeLinkageSpecDC(Var->getCanonicalDecl()
-                                  ->getLexicalDeclContext()
-                                  ->getPrimaryContext()) != DC) {
-        Diag(VarExpr->getBeginLoc(), diag::err_acc_declare_same_scope)
-            << Clause.getClauseKind();
-        continue;
-      }
-      // OpenACC3.3 2.13:
-      // C and C++ extern variables may only appear in 'create',
-      // 'copyin', 'deviceptr', 'device_resident', or 'link' clauses on a
-      // 'declare' directive.
-      if (!IsSpecialClause && Var && Var->hasExternalStorage()) {
-        Diag(VarExpr->getBeginLoc(), diag::err_acc_declare_extern)
-            << Clause.getClauseKind();
-        continue;
+        // OpenACC3.3 2.13:
+        // A 'declare' directive must be in the same scope as the declaration of
+        // any var that appears in the clauses of the directive or any scope
+        // within a C/C++ function.
+        // We can't really check 'scope' here, so we check declaration context,
+        // which is a reasonable approximation, but misses scopes inside of
+        // functions.
+        if (removeLinkageSpecDC(
+                Var->getLexicalDeclContext()->getPrimaryContext()) != DC) {
+          Diag(VarExpr->getBeginLoc(), diag::err_acc_declare_same_scope)
+              << Clause.getClauseKind();
+          continue;
+        }
+        // OpenACC3.3 2.13:
+        // C and C++ extern variables may only appear in 'create',
+        // 'copyin', 'deviceptr', 'device_resident', or 'link' clauses on a
+        // 'declare' directive.
+        if (!IsSpecialClause && Var->hasExternalStorage()) {
+          Diag(VarExpr->getBeginLoc(), diag::err_acc_declare_extern)
+              << Clause.getClauseKind();
+          continue;
+        }
       }
 
       // OpenACC3.3 2.13:

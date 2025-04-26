@@ -104,7 +104,7 @@ define ptr @test_ldu_p(ptr addrspace(1) %ptr) {
 define float @test_ldu_f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -120,7 +120,7 @@ define double @test_ldu_f64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldu_f64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldu_f64_param_0];
@@ -241,7 +241,7 @@ define ptr @test_ldg_p(ptr addrspace(1) %ptr) {
 define float @test_ldg_f32(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -257,7 +257,7 @@ define double @test_ldg_f64(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: test_ldg_f64(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldg_f64_param_0];

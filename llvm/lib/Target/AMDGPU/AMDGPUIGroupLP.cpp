@@ -1885,7 +1885,6 @@ private:
         }
       }
 
-      assert(Cache->size());
       auto *DAG = SyncPipe[0].DAG;
       for (auto &Elt : *Cache) {
         if (DAG->IsReachable(Elt, const_cast<SUnit *>(SU)))
@@ -1921,8 +1920,6 @@ private:
         }
         return FitsInGroup;
       }
-
-      assert(Cache->size());
 
       // Does the VALU have a DS_WRITE successor that is the same as other
       // VALU already in the group. The V_PERMs will all share 1 DS_W succ
