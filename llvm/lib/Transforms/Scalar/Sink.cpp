@@ -79,7 +79,7 @@ static bool hasStoreConflict(BasicBlock *LoadBB, BasicBlock *BB,
     StoreCnt += Accesses->size();
     if (StoreCnt > SinkLoadStoreLimit)
       return true;
-    for (auto &MA : *Accesses)
+    for (auto &MA : *Accesses) {
       if (auto *MD = dyn_cast<MemoryDef>(&MA)) {
         Instruction *S = MD->getMemoryInst();
         if (LoadInst *L = dyn_cast<LoadInst>(ReadMemInst)) {
@@ -91,11 +91,13 @@ static bool hasStoreConflict(BasicBlock *LoadBB, BasicBlock *BB,
             return true;
         }
       }
+    }
   }
-  for (BasicBlock *Pred : predecessors(BB))
+  for (BasicBlock *Pred : predecessors(BB)) {
     if (hasStoreConflict(LoadBB, Pred, VisitedBlocksSet, MSSAU, BAA,
                          ReadMemInst, StoreCnt))
       return true;
+  }
   return false;
 }
 
