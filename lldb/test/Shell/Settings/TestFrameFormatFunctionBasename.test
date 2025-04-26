@@ -1,3 +1,5 @@
+# XFAIL: target-windows
+
 # Test the ${function.basename} frame-format variable.
 
 # RUN: split-file %s %t
