@@ -1041,9 +1041,8 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
       if (const auto *dTypeClause =
               std::get_if<Fortran::parser::AccClause::DeviceType>(&clause.u)) {
         currentDevices.clear();
-        for (const auto &deviceTypeExpr : dTypeClause->v.v) {
+        for (const auto &deviceTypeExpr : dTypeClause->v.v)
           currentDevices.push_back(&info.add_deviceTypeInfo(deviceTypeExpr.v));
-        }
       } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
         info.set_isNohost();
       } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
@@ -1080,9 +1079,8 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
                 std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
           if (Symbol *sym = ResolveFctName(*name)) {
             Symbol &ultimate{sym->GetUltimate()};
-            for (auto &device : currentDevices) {
+            for (auto &device : currentDevices)
               device->set_bindName(SymbolRef(ultimate));
-            }
           } else {
             context_.Say((*name).source,
                 "No function or subroutine declared for '%s'"_err_en_US,
@@ -1095,16 +1093,12 @@ void AccAttributeVisitor::AddRoutineInfoToSymbol(
               Fortran::parser::Unwrap<Fortran::parser::CharLiteralConstant>(
                   *charExpr);
           std::string str{std::get<std::string>(charConst->t)};
-          for (auto &device : currentDevices) {
+          for (auto &device : currentDevices)
             device->set_bindName(std::string(str));
-          }
         }
       }
     }
     symbol.get<SubprogramDetails>().add_openACCRoutineInfo(info);
-  } else {
-    llvm::errs() << "Couldnot add routine info to symbol: " << symbol.name()
-                 << "\n";
   }
 }
 

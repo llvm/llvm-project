@@ -458,15 +458,25 @@ public:
                                   Fortran::common::LanguageFeature::CUDA));
       });
 
-    finalizeOpenACCLowering();
     finalizeOpenMPLowering(globalOmpRequiresSymbol);
   }
 
   /// Declare a function.
   void declareFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
+    // Since this is a recursive function, we only need to create a new builder
+    // for each top-level declaration. It would be simpler to have a single
+    // builder for the entire translation unit, but that requires a lot of
+    // changes to the code.
+    // FIXME: Once createGlobalOutsideOfFunctionLowering is fixed, we can
+    // remove this code and share the module builder.
+    bool newBuilder = false;
+    if (!builder) {
+      newBuilder = true;
+      builder = new fir::FirOpBuilder(bridge.getModule(), bridge.getKindMap(),
+                                      &mlirSymbolTable);
+    }
+    CHECK(builder && "FirOpBuilder did not instantiate");
     setCurrentPosition(funit.getStartingSourceLoc());
-    builder = new fir::FirOpBuilder(bridge.getModule(), bridge.getKindMap(),
-                                    &mlirSymbolTable);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -493,7 +503,11 @@ public:
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         declareFunction(*f);
-    builder = nullptr;
+
+    if (newBuilder) {
+      delete builder;
+      builder = nullptr;
+    }
   }
 
   /// Get the scope that is defining or using \p sym. The returned scope is not
@@ -3017,8 +3031,7 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   bridge.openAccCtx(), accDecl,
-                                   accRoutineInfos);
+                                   bridge.openAccCtx(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
   }
@@ -4284,11 +4297,6 @@ private:
       return Fortran::lower::convertExprToMutableBox(loc, *this, expr,
                                                      localSymbols);
     return Fortran::lower::createMutableBox(loc, *this, expr, localSymbols);
-  }
-
-  Fortran::lower::AccRoutineInfoMappingList &
-  getAccDelayedRoutines() override final {
-    return accRoutineInfos;
   }
 
   // Create the [newRank] array with the lower bounds to be passed to the
@@ -5889,7 +5897,7 @@ private:
   /// Helper to generate GlobalOps when the builder is not positioned in any
   /// region block. This is required because the FirOpBuilder assumes it is
   /// always positioned inside a region block when creating globals, the easiest
-  /// way comply is to create a dummy function and to throw it afterwards.
+  /// way comply is to create a dummy function and to throw it away afterwards.
   void createGlobalOutsideOfFunctionLowering(
       const std::function<void()> &createGlobals) {
     // FIXME: get rid of the bogus function context and instantiate the
@@ -5902,6 +5910,7 @@ private:
         mlir::FunctionType::get(context, std::nullopt, std::nullopt),
         symbolTable);
     func.addEntryBlock();
+    CHECK(!builder && "Expected builder to be uninitialized");
     builder = new fir::FirOpBuilder(func, bridge.getKindMap(), symbolTable);
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
@@ -6331,13 +6340,6 @@ private:
         expr.u);
   }
 
-  /// Performing OpenACC lowering action that were deferred to the end of
-  /// lowering.
-  void finalizeOpenACCLowering() {
-    Fortran::lower::finalizeOpenACCRoutineAttachment(getModuleOp(),
-                                                     accRoutineInfos);
-  }
-
   /// Performing OpenMP lowering actions that were deferred to the end of
   /// lowering.
   void finalizeOpenMPLowering(
@@ -6428,9 +6430,6 @@ private:
 
   /// A counter for uniquing names in `literalNamesMap`.
   std::uint64_t uniqueLitId = 0;
-
-  /// Deferred OpenACC routine attachment.
-  Fortran::lower::AccRoutineInfoMappingList accRoutineInfos;
 
   /// Whether an OpenMP target region or declare target function/subroutine
   /// intended for device offloading has been detected

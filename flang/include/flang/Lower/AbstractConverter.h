@@ -358,9 +358,6 @@ public:
   /// functions in order to be in sync).
   virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
 
-  virtual Fortran::lower::AccRoutineInfoMappingList &
-  getAccDelayedRoutines() = 0;
-
 private:
   /// Options controlling lowering behavior.
   const Fortran::lower::LoweringOptions &loweringOptions;

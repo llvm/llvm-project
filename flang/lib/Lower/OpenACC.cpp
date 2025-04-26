@@ -4163,9 +4163,6 @@ void createOpenACCRoutineConstruct(
     llvm::SmallVector<mlir::Attribute> &workerDeviceTypes,
     llvm::SmallVector<mlir::Attribute> &vectorDeviceTypes) {
 
-  std::stringstream routineOpName;
-  routineOpName << accRoutinePrefix.str() << routineCounter++;
-
   for (auto routineOp : mod.getOps<mlir::acc::RoutineOp>()) {
     if (routineOp.getFuncName().str().compare(funcName) == 0) {
       // If the routine is already specified with the same clauses, just skip
@@ -4179,6 +4176,8 @@ void createOpenACCRoutineConstruct(
       mlir::emitError(loc, "Routine already specified with different clauses");
     }
   }
+  std::stringstream routineOpName;
+  routineOpName << accRoutinePrefix.str() << routineCounter++;
   std::string routineOpStr = routineOpName.str();
   mlir::OpBuilder modBuilder(mod.getBodyRegion());
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -4192,16 +4191,7 @@ void createOpenACCRoutineConstruct(
       getArrayAttrOrNull(builder, gangDimValues),
       getArrayAttrOrNull(builder, gangDimDeviceTypes));
 
-  auto symbolRefAttr = builder.getSymbolRefAttr(routineOpStr);
-  if (funcOp) {
-
-    attachRoutineInfo(funcOp, symbolRefAttr);
-  } else {
-    // FuncOp is not lowered yet. Keep the information so the routine info
-    // can be attached later to the funcOp.
-    converter.getAccDelayedRoutines().push_back(
-        std::make_pair(funcName, symbolRefAttr));
-  }
+  attachRoutineInfo(funcOp, builder.getSymbolRefAttr(routineOpStr));
 }
 
 static void interpretRoutineDeviceInfo(
@@ -4297,145 +4287,6 @@ void Fortran::lower::genOpenACCRoutineConstruct(
       converter, loc, mod, funcOp, funcName, hasNohost, bindNames,
       bindNameDeviceTypes, gangDeviceTypes, gangDimValues, gangDimDeviceTypes,
       seqDeviceTypes, workerDeviceTypes, vectorDeviceTypes);
-}
-
-void Fortran::lower::genOpenACCRoutineConstruct(
-    Fortran::lower::AbstractConverter &converter,
-    Fortran::semantics::SemanticsContext &semanticsContext, mlir::ModuleOp mod,
-    const Fortran::parser::OpenACCRoutineConstruct &routineConstruct) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::Location loc = converter.genLocation(routineConstruct.source);
-  std::optional<Fortran::parser::Name> name =
-      std::get<std::optional<Fortran::parser::Name>>(routineConstruct.t);
-  const auto &clauses =
-      std::get<Fortran::parser::AccClauseList>(routineConstruct.t);
-  mlir::func::FuncOp funcOp;
-  std::string funcName;
-  if (name) {
-    funcName = converter.mangleName(*name->symbol);
-    funcOp =
-        builder.getNamedFunction(mod, builder.getMLIRSymbolTable(), funcName);
-  } else {
-    Fortran::semantics::Scope &scope =
-        semanticsContext.FindScope(routineConstruct.source);
-    const Fortran::semantics::Scope &progUnit{GetProgramUnitContaining(scope)};
-    const auto *subpDetails{
-        progUnit.symbol()
-            ? progUnit.symbol()
-                  ->detailsIf<Fortran::semantics::SubprogramDetails>()
-            : nullptr};
-    if (subpDetails && subpDetails->isInterface()) {
-      funcName = converter.mangleName(*progUnit.symbol());
-      funcOp =
-          builder.getNamedFunction(mod, builder.getMLIRSymbolTable(), funcName);
-    } else {
-      funcOp = builder.getFunction();
-      funcName = funcOp.getName();
-    }
-  }
-  // TODO: Refactor this to use the OpenACCRoutineInfo
-  bool hasNohost = false;
-
-  llvm::SmallVector<mlir::Attribute> seqDeviceTypes, vectorDeviceTypes,
-      workerDeviceTypes, bindNameDeviceTypes, bindNames, gangDeviceTypes,
-      gangDimDeviceTypes, gangDimValues;
-
-  // device_type attribute is set to `none` until a device_type clause is
-  // encountered.
-  llvm::SmallVector<mlir::Attribute> crtDeviceTypes;
-  crtDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
-      builder.getContext(), mlir::acc::DeviceType::None));
-
-  for (const Fortran::parser::AccClause &clause : clauses.v) {
-    if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-      for (auto crtDeviceTypeAttr : crtDeviceTypes)
-        seqDeviceTypes.push_back(crtDeviceTypeAttr);
-    } else if (const auto *gangClause =
-                   std::get_if<Fortran::parser::AccClause::Gang>(&clause.u)) {
-      if (gangClause->v) {
-        const Fortran::parser::AccGangArgList &x = *gangClause->v;
-        for (const Fortran::parser::AccGangArg &gangArg : x.v) {
-          if (const auto *dim =
-                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)) {
-            const std::optional<int64_t> dimValue = Fortran::evaluate::ToInt64(
-                *Fortran::semantics::GetExpr(dim->v));
-            if (!dimValue)
-              mlir::emitError(loc,
-                              "dim value must be a constant positive integer");
-            mlir::Attribute gangDimAttr =
-                builder.getIntegerAttr(builder.getI64Type(), *dimValue);
-            for (auto crtDeviceTypeAttr : crtDeviceTypes) {
-              gangDimValues.push_back(gangDimAttr);
-              gangDimDeviceTypes.push_back(crtDeviceTypeAttr);
-            }
-          }
-        }
-      } else {
-        for (auto crtDeviceTypeAttr : crtDeviceTypes)
-          gangDeviceTypes.push_back(crtDeviceTypeAttr);
-      }
-    } else if (std::get_if<Fortran::parser::AccClause::Vector>(&clause.u)) {
-      for (auto crtDeviceTypeAttr : crtDeviceTypes)
-        vectorDeviceTypes.push_back(crtDeviceTypeAttr);
-    } else if (std::get_if<Fortran::parser::AccClause::Worker>(&clause.u)) {
-      for (auto crtDeviceTypeAttr : crtDeviceTypes)
-        workerDeviceTypes.push_back(crtDeviceTypeAttr);
-    } else if (std::get_if<Fortran::parser::AccClause::Nohost>(&clause.u)) {
-      hasNohost = true;
-    } else if (const auto *bindClause =
-                   std::get_if<Fortran::parser::AccClause::Bind>(&clause.u)) {
-      if (const auto *name =
-              std::get_if<Fortran::parser::Name>(&bindClause->v.u)) {
-        mlir::Attribute bindNameAttr =
-            builder.getStringAttr(converter.mangleName(*name->symbol));
-        for (auto crtDeviceTypeAttr : crtDeviceTypes) {
-          bindNames.push_back(bindNameAttr);
-          bindNameDeviceTypes.push_back(crtDeviceTypeAttr);
-        }
-      } else if (const auto charExpr =
-                     std::get_if<Fortran::parser::ScalarDefaultCharExpr>(
-                         &bindClause->v.u)) {
-        const std::optional<std::string> name =
-            Fortran::semantics::GetConstExpr<std::string>(semanticsContext,
-                                                          *charExpr);
-        if (!name)
-          mlir::emitError(loc, "Could not retrieve the bind name");
-
-        mlir::Attribute bindNameAttr = builder.getStringAttr(*name);
-        for (auto crtDeviceTypeAttr : crtDeviceTypes) {
-          bindNames.push_back(bindNameAttr);
-          bindNameDeviceTypes.push_back(crtDeviceTypeAttr);
-        }
-      }
-    } else if (const auto *deviceTypeClause =
-                   std::get_if<Fortran::parser::AccClause::DeviceType>(
-                       &clause.u)) {
-      crtDeviceTypes.clear();
-      gatherDeviceTypeAttrs(builder, deviceTypeClause, crtDeviceTypes);
-    }
-  }
-
-  createOpenACCRoutineConstruct(
-      converter, loc, mod, funcOp, funcName, hasNohost, bindNames,
-      bindNameDeviceTypes, gangDeviceTypes, gangDimValues, gangDimDeviceTypes,
-      seqDeviceTypes, workerDeviceTypes, vectorDeviceTypes);
-}
-
-void Fortran::lower::finalizeOpenACCRoutineAttachment(
-    mlir::ModuleOp mod,
-    Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
-  for (auto &mapping : accRoutineInfos) {
-    mlir::func::FuncOp funcOp =
-        mod.lookupSymbol<mlir::func::FuncOp>(mapping.first);
-    if (!funcOp)
-      mlir::emitWarning(mod.getLoc(),
-                        llvm::Twine("function '") + llvm::Twine(mapping.first) +
-                            llvm::Twine("' in acc routine directive is not "
-                                        "found in this translation unit."));
-    else
-      attachRoutineInfo(funcOp, mapping.second);
-  }
-  accRoutineInfos.clear();
 }
 
 static void
@@ -4551,8 +4402,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::StatementContext &openAccCtx,
-    const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct,
-    Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
+    const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct) {
 
   Fortran::common::visit(
       common::visitors{
@@ -4561,13 +4411,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
             genACC(converter, semanticsContext, openAccCtx,
                    standaloneDeclarativeConstruct);
           },
-          [&](const Fortran::parser::OpenACCRoutineConstruct
-                  &routineConstruct) {
-            fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-            mlir::ModuleOp mod = builder.getModule();
-            Fortran::lower::genOpenACCRoutineConstruct(
-                converter, semanticsContext, mod, routineConstruct);
-          },
+          [&](const Fortran::parser::OpenACCRoutineConstruct &x) {},
       },
       accDeclConstruct.u);
 }

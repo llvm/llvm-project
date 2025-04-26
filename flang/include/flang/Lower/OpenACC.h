@@ -63,9 +63,6 @@ namespace pft {
 struct Evaluation;
 } // namespace pft
 
-using AccRoutineInfoMappingList =
-    llvm::SmallVector<std::pair<std::string, mlir::SymbolRefAttr>>;
-
 static constexpr llvm::StringRef declarePostAllocSuffix =
     "_acc_declare_update_desc_post_alloc";
 static constexpr llvm::StringRef declarePreDeallocSuffix =
@@ -82,21 +79,12 @@ mlir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 pft::Evaluation &,
                                 const parser::OpenACCConstruct &);
-void genOpenACCDeclarativeConstruct(AbstractConverter &,
-                                    Fortran::semantics::SemanticsContext &,
-                                    StatementContext &,
-                                    const parser::OpenACCDeclarativeConstruct &,
-                                    AccRoutineInfoMappingList &);
-void genOpenACCRoutineConstruct(AbstractConverter &,
-                                Fortran::semantics::SemanticsContext &,
-                                mlir::ModuleOp,
-                                const parser::OpenACCRoutineConstruct &);
+void genOpenACCDeclarativeConstruct(
+    AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    StatementContext &, const parser::OpenACCDeclarativeConstruct &);
 void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
-
-void finalizeOpenACCRoutineAttachment(mlir::ModuleOp,
-                                      AccRoutineInfoMappingList &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
