@@ -300,6 +300,94 @@ void ConstArrayAttr::print(AsmPrinter &printer) const {
 }
 
 //===----------------------------------------------------------------------===//
+// CIR ConstVectorAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ConstVectorAttr::verify(
+    function_ref<::mlir::InFlightDiagnostic()> emitError, Type type,
+    ArrayAttr elts) {
+
+  if (!mlir::isa<cir::VectorType>(type)) {
+    return emitError() << "type of cir::ConstVectorAttr is not a "
+                          "cir::VectorType: "
+                       << type;
+  }
+
+  const auto vecType = mlir::cast<cir::VectorType>(type);
+
+  if (vecType.getSize() != elts.size()) {
+    return emitError()
+           << "number of constant elements should match vector size";
+  }
+
+  // Check if the types of the elements match
+  LogicalResult elementTypeCheck = success();
+  elts.walkImmediateSubElements(
+      [&](Attribute element) {
+        if (elementTypeCheck.failed()) {
+          // An earlier element didn't match
+          return;
+        }
+        auto typedElement = mlir::dyn_cast<TypedAttr>(element);
+        if (!typedElement ||
+            typedElement.getType() != vecType.getElementType()) {
+          elementTypeCheck = failure();
+          emitError() << "constant type should match vector element type";
+        }
+      },
+      [&](Type) {});
+
+  return elementTypeCheck;
+}
+
+Attribute cir::ConstVectorAttr::parse(AsmParser &parser, Type type) {
+  FailureOr<Type> resultType;
+  FailureOr<ArrayAttr> resultValue;
+
+  const SMLoc loc = parser.getCurrentLocation();
+
+  // Parse literal '<'
+  if (parser.parseLess()) {
+    return {};
+  }
+
+  // Parse variable 'value'
+  resultValue = FieldParser<ArrayAttr>::parse(parser);
+  if (failed(resultValue)) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "failed to parse ConstVectorAttr parameter 'value' as "
+                     "an attribute");
+    return {};
+  }
+
+  if (parser.parseOptionalColon().failed()) {
+    resultType = type;
+  } else {
+    resultType = ::mlir::FieldParser<Type>::parse(parser);
+    if (failed(resultType)) {
+      parser.emitError(parser.getCurrentLocation(),
+                       "failed to parse ConstVectorAttr parameter 'type' as "
+                       "an MLIR type");
+      return {};
+    }
+  }
+
+  // Parse literal '>'
+  if (parser.parseGreater()) {
+    return {};
+  }
+
+  return parser.getChecked<ConstVectorAttr>(
+      loc, parser.getContext(), resultType.value(), resultValue.value());
+}
+
+void cir::ConstVectorAttr::print(AsmPrinter &printer) const {
+  printer << "<";
+  printer.printStrippedAttrOrType(getElts());
+  printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 
