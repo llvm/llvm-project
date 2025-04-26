@@ -773,6 +773,58 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
     bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,
     mlir::ArrayAttr extraAttrs) {
+  const Decl *d = gd.getDecl();
+
+  if (isThunk)
+    errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: thunk");
+
+  // In what follows, we continue past 'errorNYI' as if nothing happened because
+  // the rest of the implementation is better than doing nothing.
+
+  if (const auto *fd = cast_or_null<FunctionDecl>(d)) {
+    // For the device mark the function as one that should be emitted.
+    if (getLangOpts().OpenMPIsTargetDevice && fd->isDefined() && !dontDefer &&
+        !isForDefinition)
+      errorNYI(fd->getSourceRange(),
+               "getOrCreateCIRFunction: OpenMP target function");
+
+    // Any attempts to use a MultiVersion function should result in retrieving
+    // the iFunc instead. Name mangling will handle the rest of the changes.
+    if (fd->isMultiVersion())
+      errorNYI(fd->getSourceRange(), "getOrCreateCIRFunction: multi-version");
+  }
+
+  // Lookup the entry, lazily creating it if necessary.
+  mlir::Operation *entry = getGlobalValue(mangledName);
+  if (entry) {
+    if (!isa<cir::FuncOp>(entry))
+      errorNYI(d->getSourceRange(), "getOrCreateCIRFunction: non-FuncOp");
+
+    assert(!cir::MissingFeatures::weakRefReference());
+
+    // Handle dropped DLL attributes.
+    if (d && !d->hasAttr<DLLImportAttr>() && !d->hasAttr<DLLExportAttr>()) {
+      assert(!cir::MissingFeatures::setDLLStorageClass());
+      assert(!cir::MissingFeatures::setDSOLocal());
+    }
+
+    // If there are two attempts to define the same mangled name, issue an
+    // error.
+    auto fn = cast<cir::FuncOp>(entry);
+    assert((!isForDefinition || !fn || !fn.isDeclaration()) &&
+           "Duplicate function definition");
+    if (fn && fn.getFunctionType() == funcType) {
+      return fn;
+    }
+
+    if (!isForDefinition) {
+      return fn;
+    }
+
+    // TODO(cir): classic codegen checks here if this is a llvm::GlobalAlias.
+    // How will we support this?
+  }
+
   auto *funcDecl = llvm::cast_or_null<FunctionDecl>(gd.getDecl());
   bool invalidLoc = !funcDecl ||
                     funcDecl->getSourceRange().getBegin().isInvalid() ||
