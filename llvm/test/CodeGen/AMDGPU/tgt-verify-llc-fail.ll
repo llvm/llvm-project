@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -enable-new-pm -o - < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-tgt -o - < %s 2>&1 | FileCheck %s
 
 define amdgpu_cs i32 @nonvoid_shader() {
 ; CHECK: Shaders must return void

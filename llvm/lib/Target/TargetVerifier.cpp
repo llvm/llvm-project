@@ -94,8 +94,10 @@ struct TargetVerifierLegacyPass : public FunctionPass {
   static char ID;
 
   std::unique_ptr<TargetVerify> TV;
+  bool FatalErrors = false;
 
-  TargetVerifierLegacyPass() : FunctionPass(ID) {
+  TargetVerifierLegacyPass(bool FatalErrors) : FunctionPass(ID),
+    FatalErrors(FatalErrors) {
     initializeTargetVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -107,7 +109,10 @@ struct TargetVerifierLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override {
     if (!TV->run(F)) {
       errs() << "in function " << F.getName() << '\n';
-      report_fatal_error("broken function found, compilation aborted!");
+      if (FatalErrors)
+        report_fatal_error("broken function found, compilation aborted!");
+      else
+        errs() << "broken function found, compilation aborted!\n";
     }
     return false;
   }
@@ -119,7 +124,10 @@ struct TargetVerifierLegacyPass : public FunctionPass {
         IsValid &= TV->run(F);
 
     if (!IsValid)
-      report_fatal_error("broken module found, compilation aborted!");
+      if (FatalErrors)
+        report_fatal_error("broken module found, compilation aborted!");
+      else
+        errs() << "broken module found, compilation aborted!\n";
     return false;
   }
 
@@ -128,8 +136,8 @@ struct TargetVerifierLegacyPass : public FunctionPass {
   }
 };
 char TargetVerifierLegacyPass::ID = 0;
-FunctionPass *createTargetVerifierLegacyPass() {
-  return new TargetVerifierLegacyPass();
+FunctionPass *createTargetVerifierLegacyPass(bool FatalErrors) {
+  return new TargetVerifierLegacyPass(FatalErrors);
 }
 } // namespace llvm
 using namespace llvm;
