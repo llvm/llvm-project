@@ -1014,7 +1014,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     PushCFIBuilder.buildDefCFAOffset(QCIInterruptPushAmount);
     for (const CalleeSavedInfo &CS : getQCISavedInfo(MF, CSI))
       PushCFIBuilder.buildOffset(CS.getReg(),
-                             MFI.getObjectOffset(CS.getFrameIdx()));
+                                 MFI.getObjectOffset(CS.getFrameIdx()));
   }
 
   if (RVFI->isPushable(MF) && PossiblePush != MBB.end() &&
@@ -2008,8 +2008,7 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
   }
 
   if (RVFI->isPushable(MF)) {
-    int64_t QCIOffset =
-          RVFI->useQCIInterrupt(MF) ? QCIInterruptPushAmount : 0;
+    int64_t QCIOffset = RVFI->useQCIInterrupt(MF) ? QCIInterruptPushAmount : 0;
     // Allocate a fixed object that covers the full push.
     if (int64_t PushSize = RVFI->getRVPushStackSize())
       MFI.CreateFixedSpillStackObject(PushSize, -PushSize - QCIOffset);
@@ -2054,7 +2053,8 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
-      unsigned Opcode = getPushOpcode(RVFI->getPushPopKind(*MF), hasFP(*MF) && !RVFI->useQCIInterrupt(*MF));
+      unsigned Opcode = getPushOpcode(
+          RVFI->getPushPopKind(*MF), hasFP(*MF) && !RVFI->useQCIInterrupt(*MF));
       unsigned RegEnc = RISCVZC::encodeRegListNumRegs(PushedRegNum);
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
