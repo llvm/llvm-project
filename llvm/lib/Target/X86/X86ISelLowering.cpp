@@ -8785,28 +8785,37 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
   return LowerShift(Res, Subtarget, DAG);
 }
 
+static bool isShuffleFoldableLoad(SDValue);
+
 /// Attempt to lower a BUILD_VECTOR of scalar values to a shuffle of splats
 /// representing a blend.
 static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
                                        X86Subtarget const &Subtarget,
                                        SelectionDAG &DAG) {
   MVT VT = BVOp->getSimpleValueType(0u);
-  auto const NumElems = VT.getVectorNumElements();
 
-  if (VT == MVT::v4f64) {
-    // Collect unique operands.
-    auto UniqueOps = SmallSet<SDValue, 16u>();
-    for (SDValue Op : BVOp->ops()) {
-      if (isIntOrFPConstant(Op) || Op.isUndef())
-        return SDValue();
-      UniqueOps.insert(Op);
-    }
-    // Candidate BUILD_VECTOR must have 2 unique operands.
-    if (UniqueOps.size() != 2u)
+  if (VT != MVT::v4f64)
+    return SDValue();
+
+  // Collect unique operands.
+  auto UniqueOps = SmallSet<SDValue, 16u>();
+  for (SDValue Op : BVOp->ops()) {
+    if (isIntOrFPConstant(Op) || Op.isUndef())
       return SDValue();
+    UniqueOps.insert(Op);
+  }
+
+  // Candidate BUILD_VECTOR must have 2 unique operands.
+  if (UniqueOps.size() != 2u)
+    return SDValue();
+  
+  SDValue Op0 = *(UniqueOps.begin());
+  SDValue Op1 = *(++UniqueOps.begin());
+
+  if (isShuffleFoldableLoad(Op0) || isShuffleFoldableLoad(Op1) || 
+      Subtarget.hasAVX2()) {
     // Create shuffle mask.
-    SDValue Op0 = *(UniqueOps.begin());
-    SDValue Op1 = *(++UniqueOps.begin());
+    auto const NumElems = VT.getVectorNumElements();
     SmallVector<int, 16u> Mask(NumElems);
     for (auto I = 0u; I < NumElems; ++I) {
       SDValue Op = BVOp->getOperand(I);
@@ -8818,7 +8827,7 @@ static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
     return DAG.getVectorShuffle(VT, DL, NewOp0, NewOp1, Mask);
   }
 
-  return {};
+  return SDValue();
 }
 
 /// Create a vector constant without a load. SSE/AVX provide the bare minimum
