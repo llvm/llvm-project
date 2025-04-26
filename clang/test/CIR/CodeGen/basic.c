@@ -247,6 +247,10 @@ size_type max_size(void) {
 // CIR:   %3 = cir.cast(integral, %2 : !s32i), !u64i
 // CIR:   %4 = cir.const #cir.int<8> : !u64i
 // CIR:   %5 = cir.binop(div, %3, %4) : !u64i
+// CIR:   cir.store %5, %0 : !u64i, !cir.ptr<!u64i>
+// CIR:   %6 = cir.load %0 : !cir.ptr<!u64i>, !u64i
+// CIR:   cir.return %6 : !u64i
+// CIR:   }
 
 // LLVM: define i64 @max_size()
 // LLVM:   store i64 2305843009213693951, ptr
@@ -260,13 +264,18 @@ enum A {
 };
 enum A a;
 
-// CHECK:   cir.store %5, %0 : !u64i, !cir.ptr<!u64i>
-// CHECK:   %6 = cir.load %0 : !cir.ptr<!u64i>, !u64i
-// CHECK:   cir.return %6 : !u64i
-// CHECK:   }
-// CHECK:   cir.global external @a = #cir.int<0> : !u32i
-// CHECK:   }
+// CIR:   cir.global external @a = #cir.int<0> : !u32i
 
-enum E : int;
+enum B : int;
+enum B b;
 
-// CHECK-NOT: cir.global {{.*}} @E
+// CIR:   cir.global external @b = #cir.int<0> : !s32i
+
+enum C : int {
+  C_one,
+  C_two
+};
+enum C c;
+
+// CIR:   cir.global external @c = #cir.int<0> : !s32i
+
