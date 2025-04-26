@@ -3588,13 +3588,8 @@ bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
 
 bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                        bool ForCodeSize) const {
-  if (VT != MVT::f32 && VT != MVT::f64)
-    return false;
-  if (Imm.isZero())
-    return Subtarget->isVIS();
-  if (Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5))
-    return Subtarget->isVIS3();
-  return false;
+  return Subtarget->isVIS() && (VT == MVT::f32 || VT == MVT::f64) &&
+         Imm.isZero();
 }
 
 bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }
