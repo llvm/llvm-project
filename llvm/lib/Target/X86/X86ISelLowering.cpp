@@ -21,6 +21,7 @@
 #include "X86TargetMachine.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -37,6 +38,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/CallingConv.h"
@@ -8788,23 +8790,33 @@ static SDValue lowerBuildVectorToBitOp(BuildVectorSDNode *Op, const SDLoc &DL,
 static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
                                        X86Subtarget const &Subtarget,
                                        SelectionDAG &DAG) {
-  if (!Subtarget.hasAVX())
-    return {};
+  MVT VT = BVOp->getSimpleValueType(0u);
+  auto const NumElems = VT.getVectorNumElements();
 
-  auto VT = BVOp->getSimpleValueType(0u);
-
-  if (VT == MVT::v4f64 && BVOp->getNumOperands() == 4u) {
-    SDValue Op0 = BVOp->getOperand(0u);
-    SDValue Op1 = BVOp->getOperand(1u);
-    SDValue Op2 = BVOp->getOperand(2u);
-    SDValue Op3 = BVOp->getOperand(3u);
-
-    // Match X,Y,Y,X inputs.
-    if (Op0 == Op3 && Op1 == Op2 && Op0 != Op1) {
-      auto NewOp0 = DAG.getSplatBuildVector(VT, DL, Op0);
-      auto NewOp1 = DAG.getSplatBuildVector(VT, DL, Op1);
-      return DAG.getVectorShuffle(VT, DL, NewOp0, NewOp1, {0, 5, 6, 3});
+  if (Subtarget.hasAVX() && VT == MVT::v4f64) {
+    // Collect unique operands.
+    auto UniqueOps = SmallSet<SDValue, 16u>();
+    for (auto &Op : BVOp->ops()) {
+      if (isIntOrFPConstant(Op) || Op.get()->isUndef())
+        return {};
+      UniqueOps.insert(Op);
     }
+    // Candidate BUILD_VECTOR must have 2 unique operands.
+    if (UniqueOps.size() != 2u)
+      return {};
+    // Create shuffle mask.
+    auto Op0 = BVOp->getOperand(0u);
+    auto Mask = std::vector<int>();
+    Mask.reserve(NumElems);
+    for (auto I = 0u; I < NumElems; ++I) {
+      auto &Op = BVOp->getOperand(I);
+      Mask.push_back(Op == Op0 ? I : I + NumElems);
+    }
+    // Create shuffle of splats.
+    UniqueOps.erase(Op0);
+    auto NewOp0 = DAG.getSplatBuildVector(VT, DL, Op0);
+    auto NewOp1 = DAG.getSplatBuildVector(VT, DL, *UniqueOps.begin());
+    return DAG.getVectorShuffle(VT, DL, NewOp0, NewOp1, Mask);
   }
 
   return {};
