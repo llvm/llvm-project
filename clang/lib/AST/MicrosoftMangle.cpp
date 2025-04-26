@@ -3553,7 +3553,6 @@ void MicrosoftCXXNameMangler::mangleType(const DependentSizedExtVectorType *T,
 void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
                                          Qualifiers quals, SourceRange Range) {
   QualType EltTy = T->getElementType();
-  const BuiltinType *ET = EltTy->getAs<BuiltinType>();
 
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
