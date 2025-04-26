@@ -21,7 +21,7 @@
 namespace llvm {
 
 class InstructionSelector;
-class GISelKnownBits;
+class GISelValueTracking;
 class BlockFrequencyInfo;
 class ProfileSummaryInfo;
 
@@ -62,7 +62,7 @@ protected:
   class MIIteratorMaintainer;
 
   InstructionSelector *ISel = nullptr;
-  GISelKnownBits *KB = nullptr;
+  GISelValueTracking *VT = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
 

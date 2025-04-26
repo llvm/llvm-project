@@ -5,6 +5,11 @@ LLVM's Analysis and Transform Passes
 .. contents::
     :local:
 
+.. toctree::
+   :hidden:
+
+   KernelInfo
+
 Introduction
 ============
 .. warning:: This document is not updated frequently, and the list of passes
@@ -147,6 +152,12 @@ This pass collects the count of all instructions and reports them.
 
 Bookkeeping for "interesting" users of expressions computed from induction
 variables.
+
+``kernel-info``: GPU Kernel Info
+--------------------------------
+
+Reports various statistics for codes compiled for GPUs.  This pass is
+:doc:`documented separately<KernelInfo>`.
 
 ``lazy-value-info``: Lazy Value Information Analysis
 ----------------------------------------------------
@@ -542,6 +553,14 @@ variables with initializers are marked as internal.
 
 An interprocedural variant of :ref:`Sparse Conditional Constant Propagation
 <passes-sccp>`.
+
+``ir-normalizer``: Transforms IR into a normal form that's easier to diff
+----------------------------------------------------------------------------
+
+This pass aims to transform LLVM Modules into a normal form by reordering and
+renaming instructions while preserving the same semantics. The normalizer makes
+it easier to spot semantic differences while diffing two modules which have
+undergone two different passes.
 
 ``jump-threading``: Jump Threading
 ----------------------------------

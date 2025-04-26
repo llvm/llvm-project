@@ -21,10 +21,8 @@ end subroutine
 !CHECK-LABEL: func @_QPtest_implicit_use2
 !CHECK:         %[[IEXP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_use2Eiexp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:         %[[IIMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_use2Eiimp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:         omp.task
+!CHECK:         omp.task private({{.*firstprivate.*}} %[[IEXP]]#0 -> %[[PRIV_IEXP:[^,]+]] : !fir.ref<i32>) {
 !CHECK:           %[[PRIV_IEXP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_use2Eiexp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK:           %[[TEMP0:.*]] = fir.load %[[IEXP]]#0 : !fir.ref<i32>
-!CHECK:           hlfir.assign %[[TEMP0]] to %[[PRIV_IEXP]]#0 : i32, !fir.ref<i32>
 !CHECK-NOT:       %[[PRIV_IIMP:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_implicit_use2Eiimp"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 subroutine test_implicit_use2()
   implicit none

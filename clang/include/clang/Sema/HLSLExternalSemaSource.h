@@ -12,9 +12,8 @@
 #ifndef CLANG_SEMA_HLSLEXTERNALSEMASOURCE_H
 #define CLANG_SEMA_HLSLEXTERNALSEMASOURCE_H
 
-#include "llvm/ADT/DenseMap.h"
-
 #include "clang/Sema/ExternalSemaSource.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace clang {
 class NamespaceDecl;
@@ -27,14 +26,8 @@ class HLSLExternalSemaSource : public ExternalSemaSource {
   using CompletionFunction = std::function<void(CXXRecordDecl *)>;
   llvm::DenseMap<CXXRecordDecl *, CompletionFunction> Completions;
 
-  void defineHLSLVectorAlias();
-  void defineTrivialHLSLTypes();
-  void defineHLSLTypesWithForwardDeclarations();
-
-  void onCompletion(CXXRecordDecl *Record, CompletionFunction Fn);
-
 public:
-  ~HLSLExternalSemaSource() override;
+  ~HLSLExternalSemaSource() override {}
 
   /// Initialize the semantic source with the Sema instance
   /// being used to perform semantic analysis on the abstract syntax
@@ -47,6 +40,12 @@ public:
   using ExternalASTSource::CompleteType;
   /// Complete an incomplete HLSL builtin type
   void CompleteType(TagDecl *Tag) override;
+
+private:
+  void defineTrivialHLSLTypes();
+  void defineHLSLVectorAlias();
+  void defineHLSLTypesWithForwardDeclarations();
+  void onCompletion(CXXRecordDecl *Record, CompletionFunction Fn);
 };
 
 } // namespace clang

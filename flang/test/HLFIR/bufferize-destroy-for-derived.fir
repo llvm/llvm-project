@@ -25,7 +25,7 @@ func.func @_QPtest1(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.bo
 // CHECK:           hlfir.assign %[[VAL_7:.*]]#0 to %{{.*}}#0 : !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>>
 // CHECK-NEXT:      %[[VAL_18:.*]] = fir.box_addr %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>>) -> !fir.heap<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>>
 // CHECK-NEXT:      %[[VAL_19:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>>) -> !fir.box<none>
-// CHECK-NEXT:      %[[VAL_20:.*]] = fir.call @_FortranADestroyWithoutFinalization(%[[VAL_19]]) : (!fir.box<none>) -> none
+// CHECK-NEXT:      fir.call @_FortranADestroyWithoutFinalization(%[[VAL_19]]) : (!fir.box<none>) -> ()
 // CHECK-NEXT:      fir.freemem %[[VAL_18]] : !fir.heap<!fir.array<?x!fir.type<_QMtypesTt1{x:!fir.box<!fir.heap<f32>>}>>>
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
@@ -57,9 +57,9 @@ func.func @_QPtest2(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.bo
 // CHECK-NEXT:      %[[VAL_21:.*]] = arith.constant {{[0-9]*}} : i32
 // CHECK-NEXT:      %[[VAL_22:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>) -> !fir.box<none>
 // CHECK-NEXT:      %[[VAL_23:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
-// CHECK-NEXT:      %[[VAL_24:.*]] = fir.call @_FortranAFinalize(%[[VAL_22]], %[[VAL_23]], %[[VAL_21]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK-NEXT:      fir.call @_FortranAFinalize(%[[VAL_22]], %[[VAL_23]], %[[VAL_21]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK-NEXT:      %[[VAL_25:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>) -> !fir.box<none>
-// CHECK-NEXT:      %[[VAL_26:.*]] = fir.call @_FortranADestroyWithoutFinalization(%[[VAL_25]]) : (!fir.box<none>) -> none
+// CHECK-NEXT:      fir.call @_FortranADestroyWithoutFinalization(%[[VAL_25]]) : (!fir.box<none>) -> ()
 // CHECK-NEXT:      fir.freemem %[[VAL_18]] : !fir.heap<!fir.array<?x!fir.type<_QMtypesTt2{x:!fir.box<!fir.heap<f32>>}>>>
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }
@@ -91,7 +91,7 @@ func.func @_QPtest3(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>
 // CHECK-NEXT:      %[[VAL_21:.*]] = arith.constant {{[0-9]*}} : i32
 // CHECK-NEXT:      %[[VAL_22:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>) -> !fir.box<none>
 // CHECK-NEXT:      %[[VAL_23:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
-// CHECK-NEXT:      %[[VAL_24:.*]] = fir.call @_FortranAFinalize(%[[VAL_22]], %[[VAL_23]], %[[VAL_21]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK-NEXT:      fir.call @_FortranAFinalize(%[[VAL_22]], %[[VAL_23]], %[[VAL_21]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK-NEXT:      fir.freemem %[[VAL_18]] : !fir.heap<!fir.array<?x!fir.type<_QMtypesTt3{x:f32}>>>
 // CHECK-NEXT:      return
 // CHECK-NEXT:    }

@@ -45,11 +45,11 @@ define void @fold_strncpy_overlap(ptr %dst, i64 %n) {
 define void @call_strncpy_overlap(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @call_strncpy_overlap(
 ; CHECK-NEXT:    [[ED_2:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) [[DST]], i64 2)
-; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_2]])
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ED_2]])
 ; CHECK-NEXT:    [[ED_3:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST]], ptr noundef nonnull dereferenceable(1) [[DST]], i64 3)
-; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_3]])
-; CHECK-NEXT:    [[ED_N:%.*]] = call ptr @strncpy(ptr [[DST]], ptr [[DST]], i64 [[N:%.*]])
-; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_N]])
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ED_3]])
+; CHECK-NEXT:    [[ED_N:%.*]] = call ptr @strncpy(ptr nonnull [[DST]], ptr nonnull [[DST]], i64 [[N:%.*]])
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ED_N]])
 ; CHECK-NEXT:    ret void
 ;
 
@@ -141,11 +141,11 @@ define void @fold_strncpy_s(ptr %dst, ptr %src, i64 %n) {
 define void @call_strncpy_s(ptr %dst, ptr %src, i64 %n) {
 ; CHECK-LABEL: @call_strncpy_s(
 ; CHECK-NEXT:    [[ED_2:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) [[SRC:%.*]], i64 2)
-; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_2]])
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ED_2]])
 ; CHECK-NEXT:    [[ED_9:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST]], ptr noundef nonnull dereferenceable(1) [[SRC]], i64 9)
-; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_9]])
-; CHECK-NEXT:    [[ED_N:%.*]] = call ptr @strncpy(ptr [[DST]], ptr [[SRC]], i64 [[N:%.*]])
-; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_N]])
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ED_9]])
+; CHECK-NEXT:    [[ED_N:%.*]] = call ptr @strncpy(ptr nonnull [[DST]], ptr nonnull [[SRC]], i64 [[N:%.*]])
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[ED_N]])
 ; CHECK-NEXT:    ret void
 ;
 ; Do not transform strncpy(D, S, 2) when S is unknown.  Both *D and *S must

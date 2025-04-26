@@ -76,6 +76,7 @@ add_clang_library(clangBasic
   MakeSupport.cpp
   Module.cpp
   ObjCRuntime.cpp
+  OffloadArch.cpp
   OpenCLOptions.cpp
   OpenMPKinds.cpp
   OperatorPrecedence.cpp
@@ -120,6 +121,7 @@ add_clang_library(clangBasic
   Targets/WebAssembly.cpp
   Targets/X86.cpp
   Targets/XCore.cpp
+  Targets/Xtensa.cpp
   TokenKinds.cpp
   TypeTraits.cpp
   Version.cpp

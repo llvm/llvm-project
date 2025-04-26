@@ -316,6 +316,7 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
+    IK_InstancesOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -448,7 +449,7 @@ public:
 };
 
 /// '?' - Represents an uninitialized value.
-class UnsetInit : public Init {
+class UnsetInit final : public Init {
   friend detail::RecordKeeperImpl;
 
   /// The record keeper that initialized this Init.
@@ -486,7 +487,7 @@ public:
 
 // Represent an argument.
 using ArgAuxType = std::variant<unsigned, const Init *>;
-class ArgumentInit : public Init, public FoldingSetNode {
+class ArgumentInit final : public Init, public FoldingSetNode {
 public:
   enum Kind {
     Positional,
@@ -638,7 +639,7 @@ public:
 };
 
 /// '7' - Represent an initialization by a literal integer value.
-class IntInit : public TypedInit {
+class IntInit final : public TypedInit {
   int64_t Value;
 
   explicit IntInit(RecordKeeper &RK, int64_t V)
@@ -669,7 +670,7 @@ public:
 };
 
 /// "anonymous_n" - Represent an anonymous record name
-class AnonymousNameInit : public TypedInit {
+class AnonymousNameInit final : public TypedInit {
   unsigned Value;
 
   explicit AnonymousNameInit(RecordKeeper &RK, unsigned V)
@@ -699,7 +700,7 @@ public:
 };
 
 /// "foo" - Represent an initialization by a string value.
-class StringInit : public TypedInit {
+class StringInit final : public TypedInit {
 public:
   enum StringFormat {
     SF_String, // Format as "text"
@@ -834,18 +835,12 @@ public:
            I->getKind() <= IK_LastOpInit;
   }
 
-  // Clone - Clone this operator, replacing arguments with the new list
-  virtual const OpInit *clone(ArrayRef<const Init *> Operands) const = 0;
-
-  virtual unsigned getNumOperands() const = 0;
-  virtual const Init *getOperand(unsigned i) const = 0;
-
-  const Init *getBit(unsigned Bit) const override;
+  const Init *getBit(unsigned Bit) const final;
 };
 
 /// !op (X) - Transform an init.
 ///
-class UnOpInit : public OpInit, public FoldingSetNode {
+class UnOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum UnaryOp : uint8_t {
     TOLOWER,
@@ -860,6 +855,7 @@ public:
     LOG2,
     REPR,
     LISTFLATTEN,
+    INITIALIZED,
   };
 
 private:
@@ -880,20 +876,6 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 1 &&
-           "Wrong number of operands for unary operation");
-    return UnOpInit::get(getOpcode(), *Operands.begin(), getType());
-  }
-
-  unsigned getNumOperands() const override { return 1; }
-
-  const Init *getOperand(unsigned i) const override {
-    assert(i == 0 && "Invalid operand id for unary operator");
-    return getOperand();
-  }
-
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
 
@@ -907,7 +889,7 @@ public:
 };
 
 /// !op (X, Y) - Combine two inits.
-class BinOpInit : public OpInit, public FoldingSetNode {
+class BinOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum BinaryOp : uint8_t {
     ADD,
@@ -929,6 +911,7 @@ public:
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
+    MATCH,
     EQ,
     NE,
     LE,
@@ -961,22 +944,6 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 2 &&
-           "Wrong number of operands for binary operation");
-    return BinOpInit::get(getOpcode(), Operands[0], Operands[1], getType());
-  }
-
-  unsigned getNumOperands() const override { return 2; }
-  const Init *getOperand(unsigned i) const override {
-    switch (i) {
-    default: llvm_unreachable("Invalid operand id for binary operator");
-    case 0: return getLHS();
-    case 1: return getRHS();
-    }
-  }
-
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getRHS() const { return RHS; }
@@ -994,7 +961,7 @@ public:
 };
 
 /// !op (X, Y, Z) - Combine two inits.
-class TernOpInit : public OpInit, public FoldingSetNode {
+class TernOpInit final : public OpInit, public FoldingSetNode {
 public:
   enum TernaryOp : uint8_t {
     SUBST,
@@ -1028,24 +995,6 @@ public:
                                const Init *rhs, const RecTy *Type);
 
   void Profile(FoldingSetNodeID &ID) const;
-
-  // Clone - Clone this operator, replacing arguments with the new list
-  const OpInit *clone(ArrayRef<const Init *> Operands) const override {
-    assert(Operands.size() == 3 &&
-           "Wrong number of operands for ternary operation");
-    return TernOpInit::get(getOpcode(), Operands[0], Operands[1], Operands[2],
-                           getType());
-  }
-
-  unsigned getNumOperands() const override { return 3; }
-  const Init *getOperand(unsigned i) const override {
-    switch (i) {
-    default: llvm_unreachable("Invalid operand id for ternary operator");
-    case 0: return getLHS();
-    case 1: return getMHS();
-    case 2: return getRHS();
-    }
-  }
 
   TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
@@ -1143,7 +1092,7 @@ public:
 };
 
 /// !foldl (a, b, expr, start, lst) - Fold over a list.
-class FoldOpInit : public TypedInit, public FoldingSetNode {
+class FoldOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const Init *Start, *List, *A, *B, *Expr;
 
@@ -1178,7 +1127,7 @@ public:
 };
 
 /// !isa<type>(expr) - Dynamically determine the type of an expression.
-class IsAOpInit : public TypedInit, public FoldingSetNode {
+class IsAOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *CheckType;
   const Init *Expr;
@@ -1212,7 +1161,7 @@ public:
 
 /// !exists<type>(expr) - Dynamically determine if a record of `type` named
 /// `expr` exists.
-class ExistsOpInit : public TypedInit, public FoldingSetNode {
+class ExistsOpInit final : public TypedInit, public FoldingSetNode {
 private:
   const RecTy *CheckType;
   const Init *Expr;
@@ -1244,8 +1193,43 @@ public:
   std::string getAsString() const override;
 };
 
+/// !instances<type>([regex]) - Produces a list of records whose type is `type`.
+/// If `regex` is provided, only records whose name matches the regular
+/// expression `regex` will be included.
+class InstancesOpInit final : public TypedInit, public FoldingSetNode {
+private:
+  const RecTy *Type;
+  const Init *Regex;
+
+  InstancesOpInit(const RecTy *Type, const Init *Regex)
+      : TypedInit(IK_InstancesOpInit, ListRecTy::get(Type)), Type(Type),
+        Regex(Regex) {}
+
+public:
+  InstancesOpInit(const InstancesOpInit &) = delete;
+  InstancesOpInit &operator=(const InstancesOpInit &) = delete;
+
+  static bool classof(const Init *I) {
+    return I->getKind() == IK_InstancesOpInit;
+  }
+
+  static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
+
+  bool isComplete() const override { return false; }
+
+  const Init *resolveReferences(Resolver &R) const override;
+
+  const Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
 /// 'Opcode' - Represent a reference to an entire variable object.
-class VarInit : public TypedInit {
+class VarInit final : public TypedInit {
   const Init *VarName;
 
   explicit VarInit(const Init *VN, const RecTy *T)
@@ -1319,7 +1303,7 @@ public:
 };
 
 /// AL - Represent a reference to a 'def' in the description
-class DefInit : public TypedInit {
+class DefInit final : public TypedInit {
   friend class Record;
 
   const Record *Def;
@@ -1408,7 +1392,7 @@ public:
 };
 
 /// X.Y - Represent a reference to a subfield of a variable
-class FieldInit : public TypedInit {
+class FieldInit final : public TypedInit {
   const Init *Rec;             // Record we are referring to
   const StringInit *FieldName; // Field we are accessing
 
@@ -1576,7 +1560,7 @@ private:
   bool IsUsed = false;
 
   /// Reference locations to this record value.
-  SmallVector<SMRange> ReferenceLocs;
+  SmallVector<SMRange, 0> ReferenceLocs;
 
 public:
   RecordVal(const Init *N, const RecTy *T, FieldKind K);
@@ -1683,9 +1667,9 @@ private:
   SmallVector<AssertionInfo, 0> Assertions;
   SmallVector<DumpInfo, 0> Dumps;
 
-  // All superclasses in the inheritance forest in post-order (yes, it
+  // Direct superclasses, which are roots of the inheritance forest (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
-  SmallVector<std::pair<const Record *, SMRange>, 0> SuperClasses;
+  SmallVector<std::pair<const Record *, SMRange>, 0> DirectSuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
@@ -1719,8 +1703,9 @@ public:
   Record(const Record &O)
       : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
         Values(O.Values), Assertions(O.Assertions),
-        SuperClasses(O.SuperClasses), TrackedRecords(O.TrackedRecords),
-        ID(getNewUID(O.getRecords())), Kind(O.Kind) {}
+        DirectSuperClasses(O.DirectSuperClasses),
+        TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
+        Kind(O.Kind) {}
 
   static unsigned getNewUID(RecordKeeper &RK);
 
@@ -1771,15 +1756,30 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  ArrayRef<std::pair<const Record *, SMRange>> getSuperClasses() const {
-    return SuperClasses;
+  /// Append all superclasses in post-order to \p Classes.
+  void getSuperClasses(std::vector<const Record *> &Classes) const {
+    for (const Record *SC : make_first_range(DirectSuperClasses)) {
+      SC->getSuperClasses(Classes);
+      Classes.push_back(SC);
+    }
+  }
+
+  /// Return all superclasses in post-order.
+  std::vector<const Record *> getSuperClasses() const {
+    std::vector<const Record *> Classes;
+    getSuperClasses(Classes);
+    return Classes;
   }
 
   /// Determine whether this record has the specified direct superclass.
-  bool hasDirectSuperClass(const Record *SuperClass) const;
+  bool hasDirectSuperClass(const Record *SuperClass) const {
+    return is_contained(make_first_range(DirectSuperClasses), SuperClass);
+  }
 
-  /// Append the direct superclasses of this record to Classes.
-  void getDirectSuperClasses(SmallVectorImpl<const Record *> &Classes) const;
+  /// Return the direct superclasses of this record.
+  ArrayRef<std::pair<const Record *, SMRange>> getDirectSuperClasses() const {
+    return DirectSuperClasses;
+  }
 
   bool isTemplateArg(const Init *Name) const {
     return llvm::is_contained(TemplateArgs, Name);
@@ -1847,29 +1847,32 @@ public:
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
-    for (const auto &[SC, _] : SuperClasses)
-      if (SC == R)
+    for (const Record *SC : make_first_range(DirectSuperClasses)) {
+      if (SC == R || SC->isSubClassOf(R))
         return true;
+    }
     return false;
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const auto &[SC, _] : SuperClasses) {
+    for (const Record *SC : make_first_range(DirectSuperClasses)) {
       if (const auto *SI = dyn_cast<StringInit>(SC->getNameInit())) {
         if (SI->getValue() == Name)
           return true;
       } else if (SC->getNameInitAsString() == Name) {
         return true;
       }
+      if (SC->isSubClassOf(Name))
+        return true;
     }
     return false;
   }
 
-  void addSuperClass(const Record *R, SMRange Range) {
+  void addDirectSuperClass(const Record *R, SMRange Range) {
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
-    SuperClasses.push_back(std::make_pair(R, Range));
+    DirectSuperClasses.emplace_back(R, Range);
   }
 
   /// If there are any field references that refer to fields that have been
@@ -2020,25 +2023,27 @@ public:
   }
 
   void saveInputFilename(std::string Filename) {
-    InputFilename = Filename;
+    InputFilename = std::move(Filename);
   }
 
   void addClass(std::unique_ptr<Record> R) {
-    bool Ins = Classes.insert(std::make_pair(std::string(R->getName()),
-                                             std::move(R))).second;
+    bool Ins =
+        Classes.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
 
   void addDef(std::unique_ptr<Record> R) {
-    bool Ins = Defs.insert(std::make_pair(std::string(R->getName()),
-                                          std::move(R))).second;
+    bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
+    // Clear cache
+    if (!Cache.empty())
+      Cache.clear();
   }
 
   void addExtraGlobal(StringRef Name, const Init *I) {
-    bool Ins = ExtraGlobals.insert(std::make_pair(std::string(Name), I)).second;
+    bool Ins = ExtraGlobals.try_emplace(std::string(Name), I).second;
     (void)Ins;
     assert(!getDef(Name));
     assert(Ins && "Global already exists");
@@ -2124,14 +2129,14 @@ struct LessRecordRegister {
       for (size_t I = 0, E = Rec.size(); I != E; ++I, ++Len) {
         bool IsDigit = isDigit(Curr[I]);
         if (IsDigit != IsDigitPart) {
-          Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+          Parts.emplace_back(IsDigitPart, StringRef(Start, Len));
           Len = 0;
           Start = &Curr[I];
           IsDigitPart = isDigit(Curr[I]);
         }
       }
       // Push the last part.
-      Parts.push_back(std::make_pair(IsDigitPart, StringRef(Start, Len)));
+      Parts.emplace_back(IsDigitPart, StringRef(Start, Len));
     }
 
     size_t size() { return Parts.size(); }

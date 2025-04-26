@@ -19,7 +19,7 @@ namespace llvm {
 template <typename T, unsigned N>
 class SmallVector;
 class StringRef;
-}
+} // namespace llvm
 
 namespace mlir {
 class Location;
@@ -44,7 +44,7 @@ struct OpenACCRoutineConstruct;
 namespace semantics {
 class SemanticsContext;
 class Symbol;
-}
+} // namespace semantics
 
 namespace lower {
 
@@ -78,11 +78,11 @@ void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     AccRoutineInfoMappingList &);
 void genOpenACCRoutineConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
-                                mlir::ModuleOp &,
+                                mlir::ModuleOp,
                                 const parser::OpenACCRoutineConstruct &,
                                 AccRoutineInfoMappingList &);
 
-void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
+void finalizeOpenACCRoutineAttachment(mlir::ModuleOp,
                                       AccRoutineInfoMappingList &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not

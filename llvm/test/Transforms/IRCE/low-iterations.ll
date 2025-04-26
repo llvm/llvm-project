@@ -1,5 +1,5 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -irce-min-runtime-iterations=3 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-NO
-; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -irce-min-runtime-iterations=0 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-YES
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -irce-min-eliminated-checks=3 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-NO
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -irce-min-eliminated-checks=0 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-YES
 
 ; CHECK-YES: constrained Loop
 ; CHECK-NO-NOT: constrained Loop

@@ -22,6 +22,7 @@ using namespace mlir;
 namespace fir {
 namespace test {
 void registerTestFIRAliasAnalysisPass();
+void registerTestFIROpenACCInterfacesPass();
 } // namespace test
 } // namespace fir
 
@@ -38,12 +39,11 @@ int main(int argc, char **argv) {
   flangomp::registerFlangOpenMPPasses();
 #ifdef FLANG_INCLUDE_TESTS
   fir::test::registerTestFIRAliasAnalysisPass();
+  fir::test::registerTestFIROpenACCInterfacesPass();
   mlir::registerSideEffectTestPasses();
 #endif
   DialectRegistry registry;
   fir::support::registerDialects(registry);
-  registry.insert<mlir::gpu::GPUDialect>();
-  registry.insert<mlir::NVVM::NVVMDialect>();
   fir::support::addFIRExtensions(registry);
   return failed(MlirOptMain(argc, argv, "FIR modular optimizer driver\n",
       registry));

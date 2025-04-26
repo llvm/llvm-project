@@ -35,6 +35,24 @@ def TypedAttrInterface : AttrInterface<"TypedAttr"> {
 }
 
 //===----------------------------------------------------------------------===//
+// BlobAttrInterface
+//===----------------------------------------------------------------------===//
+
+def BlobAttrInterface : AttrInterface<"BlobAttr"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    This interface allows an attribute to expose a blob of data without more
+    information. The data must be stored so that it can be accessed as a
+    contiguous ArrayRef.
+  }];
+
+  let methods = [InterfaceMethod<
+    "Get the attribute's data",
+    "::llvm::ArrayRef<char>", "getData"
+  >];
+}
+
+//===----------------------------------------------------------------------===//
 // ElementsAttrInterface
 //===----------------------------------------------------------------------===//
 
@@ -463,7 +481,7 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
     Note: the MemRef type's layout is assumed to represent simple strided buffer
     layout. For more complicated case, like sparse storage buffers,
     it is preferable to use separate type with more specic layout, rather then
-    introducing extra complexity to the builin MemRef type.
+    introducing extra complexity to the builtin MemRef type.
   }];
 
   let methods = [

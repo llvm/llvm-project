@@ -109,7 +109,7 @@ public:
   /// \param implicitTrunc allow implicit truncation of non-zero/sign bits of
   ///                      val beyond the range of numBits
   APInt(unsigned numBits, uint64_t val, bool isSigned = false,
-        bool implicitTrunc = true)
+        bool implicitTrunc = false)
       : BitWidth(numBits) {
     if (!implicitTrunc) {
       if (isSigned) {
@@ -512,7 +512,7 @@ public:
       return isShiftedMask_64(U.VAL);
     unsigned Ones = countPopulationSlowCase();
     unsigned LeadZ = countLeadingZerosSlowCase();
-    return (Ones + LeadZ + countr_zero()) == BitWidth;
+    return (Ones + LeadZ + countTrailingZerosSlowCase()) == BitWidth;
   }
 
   /// Return true if this APInt value contains a non-empty sequence of ones with
@@ -2262,6 +2262,10 @@ APInt mulhs(const APInt &C1, const APInt &C2);
 /// Performs (2*N)-bit multiplication on zero-extended operands.
 /// Returns the high N bits of the multiplication result.
 APInt mulhu(const APInt &C1, const APInt &C2);
+
+/// Compute X^N for N>=0.
+/// 0^0 is supported and returns 1.
+APInt pow(const APInt &X, int64_t N);
 
 /// Compute GCD of two unsigned APInt values.
 ///

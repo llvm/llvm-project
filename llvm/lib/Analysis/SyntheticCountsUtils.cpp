@@ -23,11 +23,8 @@ template <typename CallGraphType>
 void SyntheticCountsUtils<CallGraphType>::propagateFromSCC(
     const SccTy &SCC, GetProfCountTy GetProfCount, AddCountTy AddCount) {
 
-  DenseSet<NodeRef> SCCNodes;
+  DenseSet<NodeRef> SCCNodes(llvm::from_range, SCC);
   SmallVector<std::pair<NodeRef, EdgeRef>, 8> SCCEdges, NonSCCEdges;
-
-  for (auto &Node : SCC)
-    SCCNodes.insert(Node);
 
   // Partition the edges coming out of the SCC into those whose destination is
   // in the SCC and the rest.

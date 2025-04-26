@@ -36,7 +36,9 @@ public:
   unsigned getMinVectorRegisterBitWidth() const { return 32; }
   bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
-                                          unsigned ScalarOpdIdx);
+                                          unsigned ScalarOpdIdx) const;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const;
 };
 } // namespace llvm
 

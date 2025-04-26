@@ -31,6 +31,9 @@ class Module;
 /// to true includes instruction and operand type information.
 stable_hash StructuralHash(const Function &F, bool DetailedHash = false);
 
+/// Returns a hash of the global variable \p G.
+stable_hash StructuralHash(const GlobalVariable &G);
+
 /// Returns a hash of the module \p M by hashing all functions and global
 /// variables contained within. \param M The module to hash. \param DetailedHash
 /// Whether or not to encode additional information in the function hashes that

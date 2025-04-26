@@ -67,6 +67,10 @@ void initializeFlags() XRAY_NEVER_INSTRUMENT {
   const char *XRayCompileFlags = useCompilerDefinedFlags();
   XRayParser.ParseString(XRayCompileFlags);
 
+  // Use options provided at build time of the instrumented program.
+  const char *XRayDefaultOptions = __xray_default_options();
+  XRayParser.ParseString(XRayDefaultOptions);
+
   // Override from environment variables.
   XRayParser.ParseStringFromEnv("XRAY_OPTIONS");
 
@@ -82,3 +86,7 @@ void initializeFlags() XRAY_NEVER_INSTRUMENT {
 }
 
 } // namespace __xray
+
+SANITIZER_INTERFACE_WEAK_DEF(const char *, __xray_default_options, void) {
+  return "";
+}

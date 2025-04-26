@@ -40,7 +40,7 @@ SUBROUTINE NESTED_BAD(N)
       !$OMP ORDERED SIMD
       DO J = 1,N
         print *, "Hi"
-        !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+        !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
         !ERROR: TEAMS region can only be strictly nested within the implicit parallel region or TARGET region
         !$omp teams 
          DO K = 1,N
@@ -58,25 +58,25 @@ SUBROUTINE NESTED_BAD(N)
     !$OMP ATOMIC
     K =  K + 1
     IF (I <= 10) THEN
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp task 
       do J = 1, N
         K = 2
       end do
       !$omp end task
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp target 
       do J = 1, N
         K = 2
       end do
       !$omp end target
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$OMP DO
       DO J = 1,N
         A(J) = J
       END DO
       !$OMP END DO
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$OMP PARALLEL DO
       DO J = 1,N
         A(J) = J
@@ -91,26 +91,26 @@ SUBROUTINE NESTED_BAD(N)
     !$OMP ATOMIC
     K =  K + 1
     IF (I <= 10) THEN
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp task 
       do J = 1, N
         K = 2
       end do
       !$omp end task
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp target 
       do J = 1, N
         K = 2
       end do
       !$omp end target
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
       !$OMP DO
       DO J = 1,N
         A(J) = J
       END DO
       !$OMP END DO
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$OMP PARALLEL DO
       DO J = 1,N
         A(J) = J
@@ -125,26 +125,26 @@ SUBROUTINE NESTED_BAD(N)
     !$OMP ATOMIC
     K =  K + 1
     IF (I <= 10) THEN
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp task 
       do J = 1, N
         K = 2
       end do
       !$omp end task
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp target 
       do J = 1, N
         K = 2
       end do
       !$omp end target
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !ERROR: A worksharing region may not be closely nested inside a worksharing, explicit task, taskloop, critical, ordered, atomic, or master region
       !$OMP DO
       DO J = 1,N
         A(J) = J
       END DO
       !$OMP END DO
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$OMP PARALLEL DO
       DO J = 1,N
         A(J) = J
@@ -159,25 +159,25 @@ SUBROUTINE NESTED_BAD(N)
     !$OMP ATOMIC
     K =  K + 1
     IF (I <= 10) THEN
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp task 
       do J = 1, N
         K = 2
       end do
       !$omp end task
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$omp target 
       do J = 1, N
         K = 2
       end do
       !$omp end target
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$OMP DO
       DO J = 1,N
         A(J) = J
       END DO
       !$OMP END DO
-      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct and the `ORDERED` construct with the `SIMD` clause.
+      !ERROR: The only OpenMP constructs that can be encountered during execution of a 'SIMD' region are the `ATOMIC` construct, the `LOOP` construct, the `SIMD` construct, the `SCAN` construct and the `ORDERED` construct with the `SIMD` clause.
       !$OMP PARALLEL DO
       DO J = 1,N
         A(J) = J

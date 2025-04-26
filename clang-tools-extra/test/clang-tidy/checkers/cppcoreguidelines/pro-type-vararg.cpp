@@ -51,8 +51,8 @@ void my_printf(const char* format, ...) {
 
 int my_vprintf(const char* format, va_list arg ); // OK to declare function taking va_list
 
-void ignoredBuiltinsTest() {
-  (void)__builtin_assume_aligned(0, 8);
+void ignoredBuiltinsTest(void *ptr) {
+  (void)__builtin_assume_aligned(ptr, 8);
   (void)__builtin_constant_p(0);
   (void)__builtin_fpclassify(0, 0, 0, 0, 0, 0.f);
   (void)__builtin_isinf_sign(0.f);

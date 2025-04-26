@@ -17,7 +17,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/SCCP.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -27,27 +26,20 @@
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
-#include <utility>
 
 using namespace llvm;
 
@@ -110,7 +102,7 @@ static bool runSCCP(Function &F, const DataLayout &DL,
 
   // Remove unreachable blocks and non-feasible edges.
   for (BasicBlock *DeadBB : BlocksToErase)
-    NumInstRemoved += changeToUnreachable(DeadBB->getFirstNonPHI(),
+    NumInstRemoved += changeToUnreachable(&*DeadBB->getFirstNonPHIIt(),
                                           /*PreserveLCSSA=*/false, &DTU);
 
   BasicBlock *NewUnreachableBB = nullptr;

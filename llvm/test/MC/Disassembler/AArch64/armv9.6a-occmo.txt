@@ -5,8 +5,7 @@
 [0x0d,0x7b,0x0b,0xd5]
 [0xe1,0x7b,0x0b,0xd5]
 
-# CHECK:      	.text
-# CHECK-NEXT: 	dc	civaoc, x12
+# CHECK:      	dc	civaoc, x12
 # CHECK-NEXT: 	dc	cigdvaoc, x0
 # CHECK-NEXT: 	dc	cvaoc, x13
 # CHECK-NEXT: 	dc	cgdvaoc, x1

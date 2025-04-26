@@ -7,30 +7,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
-#define _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
+#ifndef _LIBCPP___CXX03___MEMORY_ALLOCATOR_TRAITS_H
+#define _LIBCPP___CXX03___MEMORY_ALLOCATOR_TRAITS_H
 
-#include <__config>
-#include <__memory/construct_at.h>
-#include <__memory/pointer_traits.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_constructible.h>
-#include <__type_traits/is_empty.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/make_unsigned.h>
-#include <__type_traits/remove_reference.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
-#include <__utility/forward.h>
-#include <cstddef>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/construct_at.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_constructible.h>
+#include <__cxx03/__type_traits/is_empty.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/__type_traits/remove_reference.h>
+#include <__cxx03/__type_traits/void_t.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -421,4 +421,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
+#endif // _LIBCPP___CXX03___MEMORY_ALLOCATOR_TRAITS_H

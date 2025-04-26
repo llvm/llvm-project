@@ -283,6 +283,12 @@ TEST(HasDeclaration, HasDeclarationOfTypeAlias) {
           hasDeclaration(typeAliasTemplateDecl()))))))));
 }
 
+TEST(HasDeclaration, HasDeclarationOfObjCInterface) {
+  EXPECT_TRUE(matchesObjC("@interface BaseClass @end void f() {BaseClass* b;}",
+                          varDecl(hasType(objcObjectPointerType(
+                              pointee(hasDeclaration(objcInterfaceDecl())))))));
+}
+
 TEST(HasUnqualifiedDesugaredType, DesugarsUsing) {
   EXPECT_TRUE(
       matches("struct A {}; using B = A; B b;",
@@ -659,6 +665,7 @@ void check_match_co_return() {
 #include <coro_header>
 void check_match_co_await() {
   co_await a;
+  co_return 1;
 }
 )cpp";
   EXPECT_TRUE(matchesConditionally(CoAwaitCode,
@@ -668,6 +675,7 @@ void check_match_co_await() {
 #include <coro_header>
 void check_match_co_yield() {
   co_yield 1.0;
+  co_return 1;
 }
 )cpp";
   EXPECT_TRUE(matchesConditionally(CoYieldCode,
@@ -708,7 +716,7 @@ void coro() {
 void coro() try {
   int thevar;
   co_return 1;
-} catch (...) {}
+} catch (...) { co_return 1; }
 )cpp";
   EXPECT_TRUE(matchesConditionally(
       CoroWithTryCatchDeclCode,
@@ -5752,10 +5760,10 @@ TEST(ElaboratedTypeNarrowing, namesType) {
 
 TEST(NNS, BindsNestedNameSpecifiers) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
-    nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
-    std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>(
-      "nns", "ns::struct E::")));
+      "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
+      nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
+      std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("nns",
+                                                               "ns::E::")));
 }
 
 TEST(NNS, BindsNestedNameSpecifierLocs) {

@@ -29,7 +29,9 @@ def IndexTypePred : Constraint<CPred<
 def MonotonicTypePred
     : Constraint<CPred<"((mlir::isa<mlir::IntegerType>($0.getType()) && "
                        "  mlir::isa<mlir::IntegerType>($1.getType()) && "
-                       "  mlir::isa<mlir::IntegerType>($2.getType())) || "
+                       "  mlir::isa<mlir::IntegerType>($2.getType()) && "
+                       "  $0.getType().isUnsignedInteger() == $1.getType().isUnsignedInteger() && "
+                       "  $1.getType().isUnsignedInteger() == $2.getType().isUnsignedInteger()) || "
                        " (mlir::isa<mlir::FloatType>($0.getType()) && "
                        "  mlir::isa<mlir::FloatType>($1.getType()) && "
                        "  mlir::isa<mlir::FloatType>($2.getType()))) && "
@@ -54,6 +56,9 @@ def SmallerWidthPred : Constraint<CPred<
 def StrictSmallerWidthPred : Constraint<CPred<
                        "$0.getType().getIntOrFloatBitWidth() < "
                        "$1.getType().getIntOrFloatBitWidth()">>;
+
+def PointerCompatiblePred
+    : Constraint<CPred<"fir::ConvertOp::isPointerCompatible($0.getType())">>;
 
 // floats or ints that undergo successive extensions or successive truncations.
 def ConvertConvertOptPattern
@@ -109,5 +114,19 @@ def ForwardConstantConvertPattern
     : Pat<(fir_ConvertOp:$res (Arith_ConstantOp:$cnt $attr)),
           (createConstantOp $res, $attr),
           [(IndexTypePred $res), (IntegerTypePred $cnt)]>;
+
+// Optimize redundant pointer conversions, e.g.:
+// %1 = fir.convert %0 :
+//     (!fir.heap<!fir.array<2xf32>>) -> !fir.ref<!fir.array<2xf32>>
+// %2 = fir.convert %1 :
+//     (!fir.ref<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>>
+// Will be optimized into:
+// %2 = fir.convert %0 :
+//     (!fir.heap<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2xf32>>
+// which is redundant due to RedundantConvertOptPattern.
+def ChainedPointerConvertsPattern
+    : Pat<(fir_ConvertOp:$res(fir_ConvertOp:$irm $arg)), (fir_ConvertOp $arg),
+          [(PointerCompatiblePred $arg), (PointerCompatiblePred $irm),
+           (PointerCompatiblePred $res)]>;
 
 #endif // FORTRAN_FIR_REWRITE_PATTERNS

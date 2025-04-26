@@ -24,12 +24,10 @@
 ; CHECK-SPIRV: OpName %[[#sample_kernel_float:]] "sample_kernel_float"
 ; CHECK-SPIRV: OpName %[[#sample_kernel_int:]] "sample_kernel_int"
 
-; CHECK-SPIRV:     %[[#TypeSampler:]] = OpTypeSampler
+; CHECK-SPIRV-DAG: %[[#TypeSampler:]] = OpTypeSampler
 ; CHECK-SPIRV-DAG: %[[#SampledImageTy:]] = OpTypeSampledImage
 ; CHECK-SPIRV-DAG: %[[#ConstSampler1:]] = OpConstantSampler %[[#TypeSampler]] None 0 Linear
 ; CHECK-SPIRV-DAG: %[[#ConstSampler2:]] = OpConstantSampler %[[#TypeSampler]] Repeat 0 Nearest
-; CHECK-SPIRV-DAG: %[[#ConstSampler3:]] = OpConstantSampler %[[#TypeSampler]] None 0 Linear
-; CHECK-SPIRV-DAG: %[[#ConstSampler4:]] = OpConstantSampler %[[#TypeSampler]] Repeat 0 Nearest
 
 ; CHECK-SPIRV: %[[#sample_kernel_float]] = OpFunction %{{.*}}
 ; CHECK-SPIRV: %[[#InputImage:]] = OpFunctionParameter %{{.*}}
@@ -65,13 +63,13 @@ declare spir_func target("spirv.Sampler") @__translate_sampler_initializer(i32) 
 ; CHECK-SPIRV: %[[#InputImage:]] = OpFunctionParameter %{{.*}}
 ; CHECK-SPIRV: %[[#argSampl:]] = OpFunctionParameter %[[#TypeSampler]]
 
-; CHECK-SPIRV: %[[#SampledImage4:]] = OpSampledImage %[[#SampledImageTy]] %[[#InputImage]] %[[#ConstSampler3]]
+; CHECK-SPIRV: %[[#SampledImage4:]] = OpSampledImage %[[#SampledImageTy]] %[[#InputImage]] %[[#ConstSampler1]]
 ; CHECK-SPIRV: %[[#]] = OpImageSampleExplicitLod %[[#]] %[[#SampledImage4]]
 
 ; CHECK-SPIRV: %[[#SampledImage5:]] = OpSampledImage %[[#SampledImageTy]] %[[#InputImage]] %[[#argSampl]]
 ; CHECK-SPIRV: %[[#]] = OpImageSampleExplicitLod %[[#]] %[[#SampledImage5]]
 
-; CHECK-SPIRV: %[[#SampledImage6:]] = OpSampledImage %[[#SampledImageTy]] %[[#InputImage]] %[[#ConstSampler4]]
+; CHECK-SPIRV: %[[#SampledImage6:]] = OpSampledImage %[[#SampledImageTy]] %[[#InputImage]] %[[#ConstSampler2]]
 ; CHECK-SPIRV: %[[#]] = OpImageSampleExplicitLod %[[#]] %[[#SampledImage6]]
 
 define dso_local spir_kernel void @sample_kernel_int(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 0) %input, <2 x float> noundef %coords, <4 x i32> addrspace(1)* nocapture noundef writeonly %results, target("spirv.Sampler") %argSampl) local_unnamed_addr {

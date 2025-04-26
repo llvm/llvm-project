@@ -6,19 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
+#include "hdr/func/realloc.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
-#include <stdlib.h> // malloc, realloc, free
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 LIBC_INLINE int resize_overflow_hook(cpp::string_view new_str, void *target) {
-  printf_core::WriteBuffer *wb =
-      reinterpret_cast<printf_core::WriteBuffer *>(target);
+  WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> *wb =
+      reinterpret_cast<
+          WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> *>(target);
   size_t new_size = new_str.size() + wb->buff_cur;
   const bool isBuffOnStack = (wb->buff == wb->init_buff);
   char *new_buff = static_cast<char *>(
@@ -43,9 +46,9 @@ constexpr size_t DEFAULT_BUFFER_SIZE = 200;
 LIBC_INLINE int vasprintf_internal(char **ret, const char *__restrict format,
                                    internal::ArgList args) {
   char init_buff_on_stack[DEFAULT_BUFFER_SIZE];
-  printf_core::WriteBuffer wb(init_buff_on_stack, DEFAULT_BUFFER_SIZE,
-                              resize_overflow_hook);
-  printf_core::Writer writer(&wb);
+  printf_core::WriteBuffer<Mode<WriteMode::RESIZE_AND_FILL_BUFF>::value> wb(
+      init_buff_on_stack, DEFAULT_BUFFER_SIZE, resize_overflow_hook);
+  printf_core::Writer writer(wb);
 
   auto ret_val = printf_core::printf_main(&writer, format, args);
   if (ret_val < 0) {

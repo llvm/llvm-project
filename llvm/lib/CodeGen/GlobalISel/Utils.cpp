@@ -15,7 +15,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -214,8 +214,8 @@ bool llvm::canReplaceReg(Register DstReg, Register SrcReg,
 
   // Otherwise match if the Src is already a regclass that is covered by the Dst
   // RegBank.
-  return DstRBC.is<const RegisterBank *>() && MRI.getRegClassOrNull(SrcReg) &&
-         DstRBC.get<const RegisterBank *>()->covers(
+  return isa<const RegisterBank *>(DstRBC) && MRI.getRegClassOrNull(SrcReg) &&
+         cast<const RegisterBank *>(DstRBC)->covers(
              *MRI.getRegClassOrNull(SrcReg));
 }
 
@@ -276,6 +276,21 @@ void llvm::reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
   reportGISelFailure(MF, TPC, MORE, R);
 }
 
+unsigned llvm::getInverseGMinMaxOpcode(unsigned MinMaxOpc) {
+  switch (MinMaxOpc) {
+  case TargetOpcode::G_SMIN:
+    return TargetOpcode::G_SMAX;
+  case TargetOpcode::G_SMAX:
+    return TargetOpcode::G_SMIN;
+  case TargetOpcode::G_UMIN:
+    return TargetOpcode::G_UMAX;
+  case TargetOpcode::G_UMAX:
+    return TargetOpcode::G_UMIN;
+  default:
+    llvm_unreachable("unrecognized opcode");
+  }
+}
+
 std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
                                                const MachineRegisterInfo &MRI) {
   std::optional<ValueAndVReg> ValAndVReg = getIConstantVRegValWithLookThrough(
@@ -287,7 +302,8 @@ std::optional<APInt> llvm::getIConstantVRegVal(Register VReg,
   return ValAndVReg->Value;
 }
 
-APInt llvm::getIConstantFromReg(Register Reg, const MachineRegisterInfo &MRI) {
+const APInt &llvm::getIConstantFromReg(Register Reg,
+                                       const MachineRegisterInfo &MRI) {
   MachineInstr *Const = MRI.getVRegDef(Reg);
   assert((Const && Const->getOpcode() == TargetOpcode::G_CONSTANT) &&
          "expected a G_CONSTANT on Reg");
@@ -524,8 +540,7 @@ bool llvm::extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
         RegNumElts % LeftoverNumElts == 0 &&
         RegTy.getScalarSizeInBits() == MainTy.getScalarSizeInBits() &&
         LeftoverNumElts > 1) {
-      LeftoverTy =
-          LLT::fixed_vector(LeftoverNumElts, RegTy.getScalarSizeInBits());
+      LeftoverTy = LLT::fixed_vector(LeftoverNumElts, RegTy.getElementType());
 
       // Unmerge the SrcReg to LeftoverTy vectors
       SmallVector<Register, 4> UnmergeValues;
@@ -1079,7 +1094,7 @@ llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 }
 
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
-                                  GISelKnownBits *KB) {
+                                  GISelValueTracking *VT) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   if (!DefSrcReg)
@@ -1118,7 +1133,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // TODO: Probably should have a recursion depth guard since you could have
     // bitcasted vector elements.
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
-      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, KB))
+      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT))
         return false;
 
     return true;
@@ -1139,14 +1154,14 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     break;
   }
 
-  if (!KB)
+  if (!VT)
     return false;
 
   // More could be done here, though the above checks are enough
   // to handle some common cases.
 
   // Fall back to computeKnownBits to catch other known cases.
-  KnownBits Known = KB->getKnownBits(Reg);
+  KnownBits Known = VT->getKnownBits(Reg);
   return (Known.countMaxPopulation() == 1) && (Known.countMinPopulation() == 1);
 }
 
@@ -1370,7 +1385,8 @@ bool llvm::isBuildVectorConstantSplat(const Register Reg,
                                       const MachineRegisterInfo &MRI,
                                       int64_t SplatValue, bool AllowUndef) {
   if (auto SplatValAndReg = getAnyConstantSplat(Reg, MRI, AllowUndef))
-    return mi_match(SplatValAndReg->VReg, MRI, m_SpecificICst(SplatValue));
+    return SplatValAndReg->Value.getSExtValue() == SplatValue;
+
   return false;
 }
 
@@ -1517,6 +1533,18 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
   return APInt(ScalarSize, *MaybeCst, true);
 }
 
+std::optional<APFloat>
+llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+                                        const MachineRegisterInfo &MRI) {
+  Register Def = MI.getOperand(0).getReg();
+  if (auto FpConst = getFConstantVRegValWithLookThrough(Def, MRI))
+    return FpConst->Value;
+  auto MaybeCstFP = getFConstantSplat(Def, MRI, /*allowUndef=*/false);
+  if (!MaybeCstFP)
+    return std::nullopt;
+  return MaybeCstFP->Value;
+}
+
 bool llvm::isNullOrNullSplat(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI, bool AllowUndefs) {
   switch (MI.getOpcode()) {
@@ -1617,13 +1645,6 @@ int64_t llvm::getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
     return -1;
   }
   llvm_unreachable("Invalid boolean contents");
-}
-
-bool llvm::shouldOptForSize(const MachineBasicBlock &MBB,
-                            ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI) {
-  const auto &F = MBB.getParent()->getFunction();
-  return F.hasOptSize() || F.hasMinSize() ||
-         llvm::shouldOptimizeForSize(MBB.getBasicBlock(), PSI, BFI);
 }
 
 void llvm::saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,

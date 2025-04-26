@@ -13,7 +13,6 @@
 #include "AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -59,12 +58,12 @@ bool AArch64InstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   markup(OS, Markup::Register) << getRegisterName(Reg);
 }
 
 void AArch64InstPrinter::printRegName(raw_ostream &OS, MCRegister Reg,
-                                      unsigned AltIdx) const {
+                                      unsigned AltIdx) {
   markup(OS, Markup::Register) << getRegisterName(Reg, AltIdx);
 }
 
@@ -1875,26 +1874,25 @@ void AArch64InstPrinter::printBarriernXSOption(const MCInst *MI, unsigned OpNo,
     markup(O, Markup::Immediate) << "#" << Val;
 }
 
-static bool isValidSysReg(const AArch64SysReg::SysReg *Reg, bool Read,
+static bool isValidSysReg(const AArch64SysReg::SysReg &Reg, bool Read,
                           const MCSubtargetInfo &STI) {
-  return (Reg && (Read ? Reg->Readable : Reg->Writeable) &&
-          Reg->haveFeatures(STI.getFeatureBits()));
+  return (Read ? Reg.Readable : Reg.Writeable) &&
+         Reg.haveFeatures(STI.getFeatureBits());
 }
 
-// Looks up a system register either by encoding or by name. Some system
+// Looks up a system register either by encoding. Some system
 // registers share the same encoding between different architectures,
-// therefore a tablegen lookup by encoding will return an entry regardless
-// of the register's predication on a specific subtarget feature. To work
-// around this problem we keep an alternative name for such registers and
-// look them up by that name if the first lookup was unsuccessful.
+// to work around this tablegen will return a range of registers with the same
+// encodings. We need to check each register in the range to see if it valid.
 static const AArch64SysReg::SysReg *lookupSysReg(unsigned Val, bool Read,
                                                  const MCSubtargetInfo &STI) {
-  const AArch64SysReg::SysReg *Reg = AArch64SysReg::lookupSysRegByEncoding(Val);
+  auto Range = AArch64SysReg::lookupSysRegByEncoding(Val);
+  for (auto &Reg : Range) {
+    if (isValidSysReg(Reg, Read, STI))
+      return &Reg;
+  }
 
-  if (Reg && !isValidSysReg(Reg, Read, STI))
-    Reg = AArch64SysReg::lookupSysRegByName(Reg->AltName);
-
-  return Reg;
+  return nullptr;
 }
 
 void AArch64InstPrinter::printMRSSystemRegister(const MCInst *MI, unsigned OpNo,
@@ -1918,7 +1916,7 @@ void AArch64InstPrinter::printMRSSystemRegister(const MCInst *MI, unsigned OpNo,
 
   const AArch64SysReg::SysReg *Reg = lookupSysReg(Val, true /*Read*/, STI);
 
-  if (isValidSysReg(Reg, true /*Read*/, STI))
+  if (Reg)
     O << Reg->Name;
   else
     O << AArch64SysReg::genericRegisterString(Val);
@@ -1945,7 +1943,7 @@ void AArch64InstPrinter::printMSRSystemRegister(const MCInst *MI, unsigned OpNo,
 
   const AArch64SysReg::SysReg *Reg = lookupSysReg(Val, false /*Read*/, STI);
 
-  if (isValidSysReg(Reg, false /*Read*/, STI))
+  if (Reg)
     O << Reg->Name;
   else
     O << AArch64SysReg::genericRegisterString(Val);

@@ -41,29 +41,29 @@
 
 // Calculated expected size of an mdspan
 // Note this expects that only default_accessor is empty
-template<class MDS>
+template <class MDS>
 constexpr size_t expected_size() {
   size_t sizeof_dht = sizeof(typename MDS::data_handle_type);
-  size_t result = sizeof_dht;
-  if(MDS::rank_dynamic() > 0) {
+  size_t result     = sizeof_dht;
+  if (MDS::rank_dynamic() > 0) {
     size_t alignof_idx = alignof(typename MDS::index_type);
-    size_t sizeof_idx = sizeof(typename MDS::index_type);
+    size_t sizeof_idx  = sizeof(typename MDS::index_type);
     // add alignment if necessary
-    result += sizeof_dht%alignof_idx == 0?0:alignof_idx - (sizeof_dht%alignof_idx);
+    result += sizeof_dht % alignof_idx == 0 ? 0 : alignof_idx - (sizeof_dht % alignof_idx);
     // add sizeof stored extents
     result += MDS::rank_dynamic() * sizeof_idx;
   }
   using A = typename MDS::accessor_type;
-  if(!std::is_same_v<A, std::default_accessor<typename MDS::element_type>>) {
+  if (!std::is_same_v<A, std::default_accessor<typename MDS::element_type>>) {
     size_t alignof_acc = alignof(A);
-    size_t sizeof_acc = sizeof(A);
+    size_t sizeof_acc  = sizeof(A);
     // add alignment if necessary
-    result += result%alignof_acc == 0?0:alignof_acc - (result%alignof_acc);
+    result += result % alignof_acc == 0 ? 0 : alignof_acc - (result % alignof_acc);
     // add sizeof stored accessor
     result += sizeof_acc;
   }
   // add alignment of the mdspan itself
-  result += result%alignof(MDS) == 0?0:alignof(MDS) - (result%alignof(MDS));
+  result += result % alignof(MDS) == 0 ? 0 : alignof(MDS) - (result % alignof(MDS));
   return result;
 }
 

@@ -41,7 +41,7 @@ void TwoVectorOps() {
   // CHECK: [[RHS:%.+]] = load <2 x i32>
   // CHECK: [[NEG:%.+]] = icmp slt <2 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <2 x i1> [[NEG]] to <2 x i32>
-  // CHECK: [[XOR:%.+]] = xor <2 x i32> [[SEXT]], <i32 -1, i32 -1>
+  // CHECK: [[XOR:%.+]] = xor <2 x i32> [[SEXT]], splat (i32 -1)
   // CHECK: [[RHS_AND:%.+]] = and <2 x i32> [[RHS]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <2 x i32> [[LHS]], [[SEXT]]
   // CHECK: = or <2 x i32> [[RHS_AND]], [[LHS_AND]]
@@ -52,7 +52,7 @@ void TwoVectorOps() {
   // CHECK: [[RHS:%.+]] = load <2 x float>
   // CHECK: [[NEG:%.+]] = icmp slt <2 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <2 x i1> [[NEG]] to <2 x i32>
-  // CHECK: [[XOR:%.+]] = xor <2 x i32> [[SEXT]], <i32 -1, i32 -1>
+  // CHECK: [[XOR:%.+]] = xor <2 x i32> [[SEXT]], splat (i32 -1)
   // CHECK: [[RHS_EXT:%.+]] = bitcast <2 x float> [[RHS]] to <2 x i32>
   // CHECK: [[LHS_EXT:%.+]] = bitcast <2 x float> [[LHS]] to <2 x i32>
   // CHECK: [[RHS_AND:%.+]] = and <2 x i32> [[RHS_EXT]], [[XOR]]
@@ -66,7 +66,7 @@ void TwoVectorOps() {
   // CHECK: [[RHS:%.+]] = load <2 x double>
   // CHECK: [[NEG:%.+]] = icmp slt <2 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <2 x i1> [[NEG]] to <2 x i64>
-  // CHECK: [[XOR:%.+]] = xor <2 x i64> [[SEXT]], <i64 -1, i64 -1>
+  // CHECK: [[XOR:%.+]] = xor <2 x i64> [[SEXT]], splat (i64 -1)
   // CHECK: [[RHS_EXT:%.+]] = bitcast <2 x double> [[RHS]] to <2 x i64>
   // CHECK: [[LHS_EXT:%.+]] = bitcast <2 x double> [[LHS]] to <2 x i64>
   // CHECK: [[RHS_AND:%.+]] = and <2 x i64> [[RHS_EXT]], [[XOR]]
@@ -87,7 +87,7 @@ void TwoScalarOps() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i16> [[RHS_SPLAT_INSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i16> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i16>
-  // CHECK: [[XOR:%.+]] = xor <4 x i16> [[SEXT]], <i16 -1, i16 -1, i16 -1, i16 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i16> [[SEXT]], splat (i16 -1)
   // CHECK: [[RHS_AND:%.+]] = and <4 x i16> [[RHS_SPLAT]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i16> [[LHS_SPLAT]], [[SEXT]]
   // CHECK: = or <4 x i16> [[RHS_AND]], [[LHS_AND]]
@@ -102,7 +102,7 @@ void TwoScalarOps() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i16> [[RHS_SPLAT_INSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i16> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i16>
-  // CHECK: [[XOR:%.+]] = xor <4 x i16> [[SEXT]], <i16 -1, i16 -1, i16 -1, i16 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i16> [[SEXT]], splat (i16 -1)
   // CHECK: [[RHS_AND:%.+]] = and <4 x i16> [[RHS_SPLAT]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i16> [[LHS_SPLAT]], [[SEXT]]
   // CHECK: = or <4 x i16> [[RHS_AND]], [[LHS_AND]]
@@ -119,7 +119,7 @@ void TwoScalarOps() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i32> [[RHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
-  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], splat (i32 -1)
   // CHECK: [[RHS_AND:%.+]] = and <4 x i32> [[RHS_SPLAT]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i32> [[LHS_SPLAT]], [[SEXT]]
   // CHECK: = or <4 x i32> [[RHS_AND]], [[LHS_AND]]
@@ -135,7 +135,7 @@ void TwoScalarOps() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x float> [[RHS_SPLAT_INSERT]], <4 x float> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
-  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], splat (i32 -1)
   // CHECK: [[RHS_CAST:%.+]] = bitcast <4 x float> [[RHS_SPLAT]] to <4 x i32>
   // CHECK: [[LHS_CAST:%.+]] = bitcast <4 x float> [[LHS_SPLAT]] to <4 x i32>
   // CHECK: [[RHS_AND:%.+]] = and <4 x i32> [[RHS_CAST]], [[XOR]]
@@ -153,7 +153,7 @@ void TwoScalarOps() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x double> [[RHS_SPLAT_INSERT]], <4 x double> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
-  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], splat (i64 -1)
   // CHECK: [[RHS_CAST:%.+]] = bitcast <4 x double> [[RHS_SPLAT]] to <4 x i64>
   // CHECK: [[LHS_CAST:%.+]] = bitcast <4 x double> [[LHS_SPLAT]] to <4 x i64>
   // CHECK: [[RHS_AND:%.+]] = and <4 x i64> [[RHS_CAST]], [[XOR]]
@@ -171,7 +171,7 @@ void TwoScalarOps() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i32> [[RHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
-  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], splat (i32 -1)
   // CHECK: [[RHS_AND:%.+]] = and <4 x i32> [[RHS_SPLAT]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i32> [[LHS_SPLAT]], [[SEXT]]
   // CHECK: = or <4 x i32> [[RHS_AND]], [[LHS_AND]]
@@ -187,7 +187,7 @@ void OneScalarOp() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i32> [[RHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
-  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], splat (i32 -1)
   // CHECK: [[RHS_AND:%.+]] = and <4 x i32> [[RHS_SPLAT]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i32> [[LHS]], [[SEXT]]
   // CHECK: = or <4 x i32> [[RHS_AND]], [[LHS_AND]]
@@ -197,8 +197,8 @@ void OneScalarOp() {
   // CHECK: [[LHS:%.+]] = load <4 x i32>
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
-  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
-  // CHECK: [[RHS_AND:%.+]] = and <4 x i32> <i32 5, i32 5, i32 5, i32 5>, [[XOR]]
+  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], splat (i32 -1)
+  // CHECK: [[RHS_AND:%.+]] = and <4 x i32> splat (i32 5), [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i32> [[LHS]], [[SEXT]]
   // CHECK: = or <4 x i32> [[RHS_AND]], [[LHS_AND]]
 
@@ -210,7 +210,7 @@ void OneScalarOp() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x float> [[RHS_SPLAT_INSERT]], <4 x float> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
-  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i32> [[SEXT]], splat (i32 -1)
   // CHECK: [[RHS_CAST:%.+]] = bitcast <4 x float> [[RHS_SPLAT]] to <4 x i32>
   // CHECK: [[LHS_CAST:%.+]] = bitcast <4 x float> [[LHS]] to <4 x i32>
   // CHECK: [[RHS_AND:%.+]] = and <4 x i32> [[RHS_CAST]], [[XOR]]
@@ -222,9 +222,9 @@ void OneScalarOp() {
   // CHECK: [[LHS:%.+]] = load <4 x double>
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
-  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], splat (i64 -1)
   // CHECK: [[LHS_CAST:%.+]] = bitcast <4 x double> [[LHS]] to <4 x i64>
-  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> <i64 4618441417868443648, i64 4618441417868443648, i64 4618441417868443648, i64 4618441417868443648>, [[XOR]]
+  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> splat (i64 4618441417868443648), [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i64> [[LHS_CAST]], [[SEXT]]
   // CHECK: = or <4 x i64> [[RHS_AND]], [[LHS_AND]]
 
@@ -233,8 +233,8 @@ void OneScalarOp() {
   // CHECK: [[LHS:%.+]] = load <4 x i64>
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
-  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], <i64 -1, i64 -1, i64 -1, i64 -1>
-  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> <i64 6, i64 6, i64 6, i64 6>, [[XOR]]
+  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], splat (i64 -1)
+  // CHECK: [[RHS_AND:%.+]] = and <4 x i64> splat (i64 6), [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i64> [[LHS]], [[SEXT]]
   // CHECK: [[OR:%.+]] = or <4 x i64> [[RHS_AND]], [[LHS_AND]]
 
@@ -247,7 +247,7 @@ void OneScalarOp() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i64> [[RHS_SPLAT_INSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
-  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], splat (i64 -1)
   // CHECK: [[RHS_AND:%.+]] = and <4 x i64> [[RHS_SPLAT]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i64> [[LHS]], [[SEXT]]
   // CHECK: [[OR:%.+]] = or <4 x i64> [[RHS_AND]], [[LHS_AND]]
@@ -260,7 +260,7 @@ void OneScalarOp() {
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i64> [[RHS_SPLAT_INSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
-  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], <i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: [[XOR:%.+]] = xor <4 x i64> [[SEXT]], splat (i64 -1)
   // CHECK: [[RHS_AND:%.+]] = and <4 x i64> [[RHS_SPLAT]], [[XOR]]
   // CHECK: [[LHS_AND:%.+]] = and <4 x i64> [[LHS]], [[SEXT]]
   // CHECK: [[OR:%.+]] = or <4 x i64> [[RHS_AND]], [[LHS_AND]]

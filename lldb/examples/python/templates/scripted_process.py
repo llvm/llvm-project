@@ -5,7 +5,6 @@ import json, struct, signal
 
 
 class ScriptedProcess(metaclass=ABCMeta):
-
     """
     The base class for a scripted process.
 
@@ -229,7 +228,6 @@ class ScriptedProcess(metaclass=ABCMeta):
 
 
 class ScriptedThread(metaclass=ABCMeta):
-
     """
     The base class for a scripted thread.
 
@@ -357,7 +355,10 @@ class ScriptedThread(metaclass=ABCMeta):
             if self.originating_process.arch == "x86_64":
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = INTEL64_GPR
-            elif "arm64" in self.originating_process.arch:
+            elif (
+                "arm64" in self.originating_process.arch
+                or self.originating_process.arch == "aarch64"
+            ):
                 self.register_info["sets"] = ["General Purpose Registers"]
                 self.register_info["registers"] = ARM64_GPR
             else:
@@ -411,9 +412,9 @@ class PassthroughScriptedProcess(ScriptedProcess):
                         )
                     )
 
-                    self.threads[
-                        driving_thread.GetThreadID()
-                    ] = PassthroughScriptedThread(self, structured_data)
+                    self.threads[driving_thread.GetThreadID()] = (
+                        PassthroughScriptedThread(self, structured_data)
+                    )
 
                 for module in self.driving_target.modules:
                     path = module.file.fullpath
@@ -507,9 +508,9 @@ class PassthroughScriptedThread(ScriptedThread):
             if self.driving_thread.GetStopReason() != lldb.eStopReasonNone:
                 if "arm64" in self.originating_process.arch:
                     stop_reason["type"] = lldb.eStopReasonException
-                    stop_reason["data"][
-                        "desc"
-                    ] = self.driving_thread.GetStopDescription(100)
+                    stop_reason["data"]["desc"] = (
+                        self.driving_thread.GetStopDescription(100)
+                    )
                 elif self.originating_process.arch == "x86_64":
                     stop_reason["type"] = lldb.eStopReasonSignal
                     stop_reason["data"]["signal"] = signal.SIGTRAP

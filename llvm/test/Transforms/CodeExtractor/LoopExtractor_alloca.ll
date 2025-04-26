@@ -1,5 +1,4 @@
 ; RUN: opt -passes=debugify,loop-simplify,loop-extract -S < %s | FileCheck %s
-; RUN: opt -passes=debugify,loop-simplify,loop-extract -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 ; This tests 2 cases:
 ; 1. loop1 should be extracted into a function, without extracting %v1 alloca.

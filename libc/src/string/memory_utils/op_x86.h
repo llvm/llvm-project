@@ -12,7 +12,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
@@ -29,12 +30,15 @@
 // Define fake functions to prevent the compiler from failing on undefined
 // functions in case the CPU extension is not present.
 #if !defined(__AVX512BW__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm512_cmpneq_epi8_mask
 #define _mm512_cmpneq_epi8_mask(A, B) 0
 #endif
 #if !defined(__AVX2__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm256_movemask_epi8
 #define _mm256_movemask_epi8(A) 0
 #endif
 #if !defined(__SSE2__) && (defined(_MSC_VER) || defined(__SCE__))
+#undef _mm_movemask_epi8
 #define _mm_movemask_epi8(A) 0
 #endif
 

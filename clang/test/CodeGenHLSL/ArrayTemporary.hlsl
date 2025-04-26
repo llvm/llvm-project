@@ -1,3 +1,4 @@
+
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 void fn(float x[2]) { }
@@ -27,7 +28,7 @@ void fn2(Obj O[4]) { }
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[Tmp]], ptr align 4 [[Arr]], i32 32, i1 false)
 // CHECK: call void {{.*}}fn2{{.*}}(ptr noundef byval([4 x %struct.Obj]) align 4 [[Tmp]])
 void call2() {
-  Obj Arr[4] = {};
+  Obj Arr[4] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}};
   fn2(Arr);
 }
 
@@ -90,11 +91,11 @@ void template_call(float FA2[2], float FA4[4], int IA3[3]) {
 
 // CHECK: [[Addr:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Tmp:%.*]] = load float, ptr [[Addr]]
-// CHECK: call void @_Z11template_fnIfEvT_(float noundef [[Tmp]])
+// CHECK: call void @_Z11template_fnIfEvT_(float noundef nofpclass(nan inf) [[Tmp]])
 
 // CHECK: [[Idx0:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 0
 // CHECK: [[Val0:%.*]] = load float, ptr [[Idx0]]
-// CHECK: [[Sum:%.*]] = fadd float [[Val0]], 5.000000e+00
+// CHECK: [[Sum:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[Val0]], 5.000000e+00
 // CHECK: [[Idx1:%.*]] = getelementptr inbounds [2 x float], ptr [[FA2]], i32 0, i32 1
 // CHECK: store float [[Sum]], ptr [[Idx1]]
 

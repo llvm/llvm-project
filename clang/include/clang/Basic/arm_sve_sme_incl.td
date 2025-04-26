@@ -52,6 +52,7 @@ include "arm_immcheck_incl.td"
 // h: half-float
 // d: double
 // b: bfloat
+// m: mfloat8
 
 // Typespec modifiers
 // ------------------
@@ -69,6 +70,7 @@ include "arm_immcheck_incl.td"
 // x: vector of signed integers
 // u: vector of unsigned integers
 // d: default
+// p: pointer type
 // c: const pointer type
 // P: predicate type
 // s: scalar of element type
@@ -88,21 +90,25 @@ include "arm_immcheck_incl.td"
 // j: element type promoted to 64bits (splat to vector type)
 // K: element type bitcast to a signed integer (splat to vector type)
 // L: element type bitcast to an unsigned integer (splat to vector type)
+// !: mfloat8_t (splat to svmfloat8_t)
 //
 // i: constant uint64_t
 // k: int32_t
 // l: int64_t
 // m: uint32_t
 // n: uint64_t
+// >: fpm_t
 
 // [: svuint8_t
 // t: svint32_t
 // z: svuint32_t
+// #: svint64_t
 // g: svuint64_t
 // O: svfloat16_t
 // M: svfloat32_t
 // N: svfloat64_t
 // $: svbfloat16_t
+// ~: svmfloat8_t
 
 // J: Prefetch type (sv_prfop)
 
@@ -235,6 +241,7 @@ def IsInOutZA                       : FlagType<0x200000000000>;
 def IsInZT0                         : FlagType<0x400000000000>;
 def IsOutZT0                        : FlagType<0x800000000000>;
 def IsInOutZT0                      : FlagType<0x1000000000000>;
+def SetsFPMR                        : FlagType<0x2000000000000>;
 
 defvar InvalidMode = "";
 

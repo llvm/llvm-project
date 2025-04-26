@@ -4,8 +4,8 @@
 
 @a = external global i32, align 4
 @patatino = external unnamed_addr constant [2 x i8], align 1
-define void @tinkywinky() {
-; CHECK-LABEL: define void @tinkywinky() {
+define void @tinkywinky(i1 %arg) {
+; CHECK-LABEL: define void @tinkywinky(i1 %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[D:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr null, align 4
@@ -27,7 +27,7 @@ define void @tinkywinky() {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       while.cond:
-; CHECK-NEXT:    br i1 undef, label [[WHILE_BODY:%.*]], label [[WHILE_END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[WHILE_BODY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    call void (ptr, ...) @printf(ptr @patatino)
 ; CHECK-NEXT:    br label [[WHILE_COND]]
@@ -58,7 +58,7 @@ if.then:
 if.end:
   br label %for.cond
 while.cond:
-  br i1 undef, label %while.body, label %while.end
+  br i1 %arg, label %while.body, label %while.end
 while.body:
   call void (ptr, ...) @printf(ptr @patatino)
   br label %while.cond

@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=bpfel -mcpu=v2 -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfel -mcpu=v2 -mattr=+alu32 < %s | FileCheck %s
 ;
 ; For the below test case, 'b' in 'ret == b' needs SLL/SLR.
 ; 'ret' in 'ret == b' does not need SLL/SLR as all 'ret' values

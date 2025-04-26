@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ;; These tests should run for all targets
 
@@ -316,4 +316,27 @@ define i16 @lshr_i16(i16 %a, i16 %b) {
 ; CHECK: ret
   %ret = lshr i16 %a, %b
   ret i16 %ret
+}
+
+;; Immediate cases
+
+define i16 @srem_i16_ir(i16 %a) {
+; CHECK: rem.s16 %rs{{[0-9]+}}, 12, %rs{{[0-9]+}}
+; CHECK: ret
+  %ret = srem i16 12, %a
+  ret i16 %ret
+}
+
+define i32 @udiv_i32_ir(i32 %a) {
+; CHECK: div.u32 %r{{[0-9]+}}, 34, %r{{[0-9]+}}
+; CHECK: ret
+  %ret = udiv i32 34, %a
+  ret i32 %ret
+}
+
+define i64 @sub_i64_ir(i64 %a) {
+; CHECK: sub.s64 %rd{{[0-9]+}}, 56, %rd{{[0-9]+}}
+; CHECK: ret
+  %ret = sub i64 56, %a
+  ret i64 %ret
 }

@@ -203,13 +203,13 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   }
 
-  Opts.RenderScript = Lang == Language::RenderScript;
-
   // OpenCL, C++ and C23 have bool, true, false keywords.
   Opts.Bool = Opts.OpenCL || Opts.CPlusPlus || Opts.C23;
 
   // OpenCL and HLSL have half keyword
   Opts.Half = Opts.OpenCL || Opts.HLSL;
+
+  Opts.PreserveVec3Type = Opts.HLSL;
 }
 
 FPOptions FPOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {

@@ -62,8 +62,9 @@ enum ModuleKind {
 
 /// The input file info that has been loaded from an AST file.
 struct InputFileInfo {
-  std::string FilenameAsRequested;
-  std::string Filename;
+  StringRef UnresolvedImportedFilenameAsRequested;
+  StringRef UnresolvedImportedFilename;
+
   uint64_t ContentHash;
   off_t StoredSize;
   time_t StoredTime;
@@ -71,6 +72,10 @@ struct InputFileInfo {
   bool Transient;
   bool TopLevel;
   bool ModuleMap;
+
+  bool isValid() const {
+    return !UnresolvedImportedFilenameAsRequested.empty();
+  }
 };
 
 /// The input file that has been loaded from this AST file, along with

@@ -1,36 +1,15 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/clc.h>
-#include "relational.h"
+#include <clc/relational/clc_isgreaterequal.h>
 
-//Note: It would be nice to use __builtin_isgreaterequal with vector inputs, but it seems to only take scalar values as
-//      input, which will produce incorrect output for vector input types.
+#define FUNCTION isgreaterequal
+#define __CLC_BODY "binary_def.inc"
 
-_CLC_DEFINE_RELATIONAL_BINARY(int, isgreaterequal, __builtin_isgreaterequal, float, float)
-
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-// The scalar version of isgreaterequal(double, double) returns an int, but the vector versions
-// return long.
-
-_CLC_DEF _CLC_OVERLOAD int isgreaterequal(double x, double y){
-	return __builtin_isgreaterequal(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(long, isgreaterequal, double, double)
-
-#endif
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-// The scalar version of isgreaterequal(half, half) returns an int, but the vector versions
-// return short.
-
-_CLC_DEF _CLC_OVERLOAD int isgreaterequal(half x, half y){
-	return __builtin_isgreaterequal(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(short, isgreaterequal, half, half)
-
-#endif
+#include <clc/relational/floatn.inc>

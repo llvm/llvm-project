@@ -17,6 +17,9 @@ export namespace std {
   // [ptr.align], pointer alignment
   using std::align;
   using std::assume_aligned;
+#if _LIBCPP_STD_VER >= 26
+  using std::is_sufficiently_aligned;
+#endif
 
   // [obj.lifetime], explicit lifetime management
   //  using std::start_lifetime_as;
@@ -191,7 +194,7 @@ export namespace std {
   using std::inout_ptr;
 #endif // _LIBCPP_STD_VER >= 23
 
-#ifndef _LIBCPP_HAS_NO_THREADS
+#if _LIBCPP_HAS_THREADS
   // [depr.util.smartptr.shared.atomic]
   using std::atomic_is_lock_free;
 
@@ -208,5 +211,5 @@ export namespace std {
   using std::atomic_compare_exchange_strong_explicit;
   using std::atomic_compare_exchange_weak;
   using std::atomic_compare_exchange_weak_explicit;
-#endif // _LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_HAS_THREADS
 } // namespace std

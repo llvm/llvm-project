@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that we are able to predicate instructions.
 
 ; CHECK: if ({{!?}}p{{[0-3]}}{{(.new)?}}) r{{[0-9]+}} = {{and|aslh}}

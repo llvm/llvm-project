@@ -49,6 +49,10 @@ public:
 
   /// Get a `%dx.types.ResRet` type with the given element type.
   StructType *getResRetType(Type *ElementTy);
+
+  /// Get a `%dx.types.CBufRet` type with the given element type.
+  StructType *getCBufRetType(Type *ElementTy);
+
   /// Get the `%dx.types.Handle` type.
   StructType *getHandleType();
 

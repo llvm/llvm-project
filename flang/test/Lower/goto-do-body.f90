@@ -90,9 +90,9 @@ subroutine sub2()
 ! CHECK:    %[[C2_2:.*]] = arith.constant 2 : i32
 ! CHECK:    %[[C3_2:.*]] = arith.constant 3 : i32
 ! CHECK:    %[[TMP2:.*]] = fir.load %[[J]] : !fir.ref<i32>
-! CHECK:    %[[TMP3:.*]] = arith.muli %[[C3_2]], %[[TMP2]] : i32
+! CHECK:    %[[TMP3:.*]] = arith.muli %[[C3_2]], %[[TMP2]] overflow<nsw> : i32
 ! CHECK:    %[[C8_1:.*]] = arith.constant 8 : i32
-! CHECK:    %[[STEP:.*]] = arith.subi %[[TMP3]], %[[C8_1]] : i32
+! CHECK:    %[[STEP:.*]] = arith.subi %[[TMP3]], %[[C8_1]] overflow<nsw> : i32
 ! CHECK:    fir.store %[[STEP]] to %[[STEP_VAR:.*]] : !fir.ref<i32>
 ! CHECK:    %[[TMP4:.*]] = arith.subi %[[C2_2]], %[[C1_1]] : i32
 ! CHECK:    %[[TMP5:.*]] = arith.addi %[[TMP4]], %[[STEP]] : i32

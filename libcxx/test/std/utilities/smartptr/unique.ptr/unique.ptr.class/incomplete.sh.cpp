@@ -23,19 +23,19 @@
 #include <memory>
 #include <cassert>
 
-struct T;
-extern void use(std::unique_ptr<T>& ptr);
-extern void use(std::unique_ptr<T[]>& ptr);
+struct Foo;
+extern void use(std::unique_ptr<Foo>& ptr);
+extern void use(std::unique_ptr<Foo[]>& ptr);
 
 #ifdef INCOMPLETE
 
-void use(std::unique_ptr<T>& ptr) {
+void use(std::unique_ptr<Foo>& ptr) {
   {
-    T* x = ptr.get();
+    Foo* x = ptr.get();
     assert(x != nullptr);
   }
   {
-    T& ref = *ptr;
+    Foo& ref = *ptr;
     assert(&ref == ptr.get());
   }
   {
@@ -52,9 +52,9 @@ void use(std::unique_ptr<T>& ptr) {
   }
 }
 
-void use(std::unique_ptr<T[]>& ptr) {
+void use(std::unique_ptr<Foo[]>& ptr) {
   {
-    T* x = ptr.get();
+    Foo* x = ptr.get();
     assert(x != nullptr);
   }
   {
@@ -75,16 +75,16 @@ void use(std::unique_ptr<T[]>& ptr) {
 
 #ifdef COMPLETE
 
-struct T {}; // complete the type
+struct Foo {}; // complete the type
 
 int main(int, char**) {
   {
-    std::unique_ptr<T> ptr(new T());
+    std::unique_ptr<Foo> ptr(new Foo());
     use(ptr);
   }
 
   {
-    std::unique_ptr<T[]> ptr(new T[3]());
+    std::unique_ptr<Foo[]> ptr(new Foo[3]());
     use(ptr);
   }
   return 0;

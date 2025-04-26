@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
-#define _LIBCPP___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
+#define _LIBCPP___CXX03___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
 
-#include <__config>
-#include <__functional/binary_function.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/binary_function.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -41,4 +41,4 @@ ptr_fun(_Result (*__f)(_Arg1, _Arg2)) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_POINTER_TO_BINARY_FUNCTION_H

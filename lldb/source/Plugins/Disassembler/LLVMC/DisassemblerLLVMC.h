@@ -22,8 +22,8 @@ class InstructionLLVMC;
 
 class DisassemblerLLVMC : public lldb_private::Disassembler {
 public:
-  DisassemblerLLVMC(const lldb_private::ArchSpec &arch,
-                    const char *flavor /* = NULL */);
+  DisassemblerLLVMC(const lldb_private::ArchSpec &arch, const char *flavor,
+                    const char *cpu, const char *features);
 
   ~DisassemblerLLVMC() override;
 
@@ -35,7 +35,9 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "llvm-mc"; }
 
   static lldb::DisassemblerSP CreateInstance(const lldb_private::ArchSpec &arch,
-                                             const char *flavor);
+                                             const char *flavor,
+                                             const char *cpu,
+                                             const char *features);
 
   size_t DecodeInstructions(const lldb_private::Address &base_addr,
                             const lldb_private::DataExtractor &data,

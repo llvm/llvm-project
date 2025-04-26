@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STRING_EXTERN_TEMPLATE_LISTS_H
-#define _LIBCPP___STRING_EXTERN_TEMPLATE_LISTS_H
+#ifndef _LIBCPP___CXX03___STRING_EXTERN_TEMPLATE_LISTS_H
+#define _LIBCPP___CXX03___STRING_EXTERN_TEMPLATE_LISTS_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -130,4 +130,4 @@
 
 // clang-format on
 
-#endif // _LIBCPP___STRING_EXTERN_TEMPLATE_LISTS_H
+#endif // _LIBCPP___CXX03___STRING_EXTERN_TEMPLATE_LISTS_H

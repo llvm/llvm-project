@@ -41,7 +41,7 @@ INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperLegacy, "liveregmatrix",
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(LiveRegMatrixWrapperLegacy, "liveregmatrix",
-                    "Live Register Matrix", false, false)
+                    "Live Register Matrix", false, true)
 
 void LiveRegMatrixWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
@@ -66,7 +66,7 @@ void LiveRegMatrix::init(MachineFunction &MF, LiveIntervals &pLIS,
   unsigned NumRegUnits = TRI->getNumRegUnits();
   if (NumRegUnits != Matrix.size())
     Queries.reset(new LiveIntervalUnion::Query[NumRegUnits]);
-  Matrix.init(LIUAlloc, NumRegUnits);
+  Matrix.init(*LIUAlloc, NumRegUnits);
 
   // Make sure no stale queries get reused.
   invalidateVirtRegs();
@@ -165,7 +165,8 @@ bool LiveRegMatrix::checkRegMaskInterference(const LiveInterval &VirtReg,
   // The BitVector is indexed by PhysReg, not register unit.
   // Regmask interference is more fine grained than regunits.
   // For example, a Win64 call can clobber %ymm8 yet preserve %xmm8.
-  return !RegMaskUsable.empty() && (!PhysReg || !RegMaskUsable.test(PhysReg));
+  return !RegMaskUsable.empty() &&
+         (!PhysReg || !RegMaskUsable.test(PhysReg.id()));
 }
 
 bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
@@ -183,7 +184,7 @@ bool LiveRegMatrix::checkRegUnitInterference(const LiveInterval &VirtReg,
 }
 
 LiveIntervalUnion::Query &LiveRegMatrix::query(const LiveRange &LR,
-                                               MCRegister RegUnit) {
+                                               MCRegUnit RegUnit) {
   LiveIntervalUnion::Query &Q = Queries[RegUnit];
   Q.init(UserTag, LR, Matrix[RegUnit]);
   return Q;
@@ -205,7 +206,7 @@ LiveRegMatrix::checkInterference(const LiveInterval &VirtReg,
 
   // Check the matrix for virtual register interference.
   bool Interference = foreachUnit(TRI, VirtReg, PhysReg,
-                                  [&](MCRegister Unit, const LiveRange &LR) {
+                                  [&](MCRegUnit Unit, const LiveRange &LR) {
                                     return query(LR, Unit).checkInterference();
                                   });
   if (Interference)
@@ -242,6 +243,41 @@ bool LiveRegMatrix::checkInterference(SlotIndex Start, SlotIndex End,
       return true;
   }
   return false;
+}
+
+LaneBitmask LiveRegMatrix::checkInterferenceLanes(SlotIndex Start,
+                                                  SlotIndex End,
+                                                  MCRegister PhysReg) {
+  // Construct artificial live range containing only one segment [Start, End).
+  VNInfo valno(0, Start);
+  LiveRange::Segment Seg(Start, End, &valno);
+  LiveRange LR;
+  LR.addSegment(Seg);
+
+  LaneBitmask InterferingLanes;
+
+  // Check for interference with that segment
+  for (MCRegUnitMaskIterator MCRU(PhysReg, TRI); MCRU.isValid(); ++MCRU) {
+    auto [Unit, Lanes] = *MCRU;
+    // LR is stack-allocated. LiveRegMatrix caches queries by a key that
+    // includes the address of the live range. If (for the same reg unit) this
+    // checkInterference overload is called twice, without any other query()
+    // calls in between (on heap-allocated LiveRanges)  - which would invalidate
+    // the cached query - the LR address seen the second time may well be the
+    // same as that seen the first time, while the Start/End/valno may not - yet
+    // the same cached result would be fetched. To avoid that, we don't cache
+    // this query.
+    //
+    // FIXME: the usability of the Query API needs to be improved to avoid
+    // subtle bugs due to query identity. Avoiding caching, for example, would
+    // greatly simplify things.
+    LiveIntervalUnion::Query Q;
+    Q.reset(UserTag, LR, Matrix[Unit]);
+    if (Q.checkInterference())
+      InterferingLanes |= Lanes;
+  }
+
+  return InterferingLanes;
 }
 
 Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {

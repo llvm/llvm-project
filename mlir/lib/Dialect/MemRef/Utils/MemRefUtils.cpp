@@ -27,7 +27,7 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type) {
 
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(getStridesAndOffset(type, strides, offset)))
+  if (failed(type.getStridesAndOffset(strides, offset)))
     return false;
 
   // MemRef is contiguous if outer dimensions are size-1 and inner
@@ -81,11 +81,10 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 
   // Adjust linearizedIndices and size by the scale factor (dstBits / srcBits).
   int64_t scaler = dstBits / srcBits;
-  addMulMap = addMulMap.floorDiv(scaler);
   mulMap = mulMap.floorDiv(scaler);
 
   OpFoldResult linearizedIndices = affine::makeComposedFoldedAffineApply(
-      builder, loc, addMulMap, offsetValues);
+      builder, loc, addMulMap.floorDiv(scaler), offsetValues);
   OpFoldResult linearizedSize =
       affine::makeComposedFoldedAffineApply(builder, loc, mulMap, sizes);
 
@@ -95,7 +94,11 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
   OpFoldResult adjustBaseOffset = affine::makeComposedFoldedAffineApply(
       builder, loc, s0.floorDiv(scaler), {offset});
 
-  return {{adjustBaseOffset, linearizedSize}, linearizedIndices};
+  OpFoldResult intraVectorOffset = affine::makeComposedFoldedAffineApply(
+      builder, loc, addMulMap % scaler, offsetValues);
+
+  return {{adjustBaseOffset, linearizedSize, intraVectorOffset},
+          linearizedIndices};
 }
 
 LinearizedMemRefInfo
@@ -138,7 +141,7 @@ static bool resultIsNotRead(Operation *op, std::vector<Operation *> &uses) {
     }
     return false;
   }
-  uses.insert(uses.end(), opUses.begin(), opUses.end());
+  llvm::append_range(uses, opUses);
   return true;
 }
 
@@ -147,7 +150,7 @@ void eraseDeadAllocAndStores(RewriterBase &rewriter, Operation *parentOp) {
   parentOp->walk([&](memref::AllocOp op) {
     std::vector<Operation *> candidates;
     if (resultIsNotRead(op, candidates)) {
-      opToErase.insert(opToErase.end(), candidates.begin(), candidates.end());
+      llvm::append_range(opToErase, candidates);
       opToErase.push_back(op.getOperation());
     }
   });

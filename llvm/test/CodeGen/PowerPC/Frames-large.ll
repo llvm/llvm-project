@@ -4,10 +4,10 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu \
 ; RUN: -frame-pointer=all | FileCheck %s -check-prefix=PPC32-LINUX-FP
 
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu | \
+; RUN: llc -verify-machineinstrs < %s -mcpu=ppc -mtriple=powerpc64-unknown-linux-gnu | \
 ; RUN: FileCheck %s -check-prefix=PPC64-LINUX-NOFP
 
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu \
+; RUN: llc -verify-machineinstrs < %s -mcpu=ppc -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN: -frame-pointer=all | FileCheck %s -check-prefix=PPC64-LINUX-FP
 
 ; RUN: llc -verify-machineinstrs < %s -mcpu=pwr4 -mattr=-altivec \

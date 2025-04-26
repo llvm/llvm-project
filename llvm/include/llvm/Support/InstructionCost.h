@@ -20,7 +20,6 @@
 
 #include "llvm/Support/MathExtras.h"
 #include <limits>
-#include <optional>
 
 namespace llvm {
 
@@ -84,10 +83,9 @@ public:
   /// This function is intended to be used as sparingly as possible, since the
   /// class provides the full range of operator support required for arithmetic
   /// and comparisons.
-  std::optional<CostType> getValue() const {
-    if (isValid())
-      return Value;
-    return std::nullopt;
+  CostType getValue() const {
+    assert(isValid());
+    return Value;
   }
 
   /// For all of the arithmetic operators provided here any invalid state is
@@ -198,10 +196,8 @@ public:
     return Value < RHS.Value;
   }
 
-  // Implement in terms of operator< to ensure that the two comparisons stay in
-  // sync
   bool operator==(const InstructionCost &RHS) const {
-    return !(*this < RHS) && !(RHS < *this);
+    return State == RHS.State && Value == RHS.Value;
   }
 
   bool operator!=(const InstructionCost &RHS) const { return !(*this == RHS); }

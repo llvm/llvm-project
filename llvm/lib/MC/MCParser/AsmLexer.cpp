@@ -21,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cctype>
 #include <cstdio>
@@ -31,12 +32,94 @@
 
 using namespace llvm;
 
-AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
-  AllowAtInIdentifier = !StringRef(MAI.getCommentString()).starts_with("@");
-  LexMotorolaIntegers = MAI.shouldUseMotorolaIntegers();
+SMLoc AsmToken::getLoc() const { return SMLoc::getFromPointer(Str.data()); }
+
+SMLoc AsmToken::getEndLoc() const {
+  return SMLoc::getFromPointer(Str.data() + Str.size());
 }
 
-AsmLexer::~AsmLexer() = default;
+SMRange AsmToken::getLocRange() const { return SMRange(getLoc(), getEndLoc()); }
+
+void AsmToken::dump(raw_ostream &OS) const {
+  switch (Kind) {
+  case AsmToken::Error:
+    OS << "error";
+    break;
+  case AsmToken::Identifier:
+    OS << "identifier: " << getString();
+    break;
+  case AsmToken::Integer:
+    OS << "int: " << getString();
+    break;
+  case AsmToken::Real:
+    OS << "real: " << getString();
+    break;
+  case AsmToken::String:
+    OS << "string: " << getString();
+    break;
+
+    // clang-format off
+  case AsmToken::Amp:                OS << "Amp"; break;
+  case AsmToken::AmpAmp:             OS << "AmpAmp"; break;
+  case AsmToken::At:                 OS << "At"; break;
+  case AsmToken::BackSlash:          OS << "BackSlash"; break;
+  case AsmToken::BigNum:             OS << "BigNum"; break;
+  case AsmToken::Caret:              OS << "Caret"; break;
+  case AsmToken::Colon:              OS << "Colon"; break;
+  case AsmToken::Comma:              OS << "Comma"; break;
+  case AsmToken::Comment:            OS << "Comment"; break;
+  case AsmToken::Dollar:             OS << "Dollar"; break;
+  case AsmToken::Dot:                OS << "Dot"; break;
+  case AsmToken::EndOfStatement:     OS << "EndOfStatement"; break;
+  case AsmToken::Eof:                OS << "Eof"; break;
+  case AsmToken::Equal:              OS << "Equal"; break;
+  case AsmToken::EqualEqual:         OS << "EqualEqual"; break;
+  case AsmToken::Exclaim:            OS << "Exclaim"; break;
+  case AsmToken::ExclaimEqual:       OS << "ExclaimEqual"; break;
+  case AsmToken::Greater:            OS << "Greater"; break;
+  case AsmToken::GreaterEqual:       OS << "GreaterEqual"; break;
+  case AsmToken::GreaterGreater:     OS << "GreaterGreater"; break;
+  case AsmToken::Hash:               OS << "Hash"; break;
+  case AsmToken::HashDirective:      OS << "HashDirective"; break;
+  case AsmToken::LBrac:              OS << "LBrac"; break;
+  case AsmToken::LCurly:             OS << "LCurly"; break;
+  case AsmToken::LParen:             OS << "LParen"; break;
+  case AsmToken::Less:               OS << "Less"; break;
+  case AsmToken::LessEqual:          OS << "LessEqual"; break;
+  case AsmToken::LessGreater:        OS << "LessGreater"; break;
+  case AsmToken::LessLess:           OS << "LessLess"; break;
+  case AsmToken::Minus:              OS << "Minus"; break;
+  case AsmToken::MinusGreater:       OS << "MinusGreater"; break;
+  case AsmToken::Percent:            OS << "Percent"; break;
+  case AsmToken::Pipe:               OS << "Pipe"; break;
+  case AsmToken::PipePipe:           OS << "PipePipe"; break;
+  case AsmToken::Plus:               OS << "Plus"; break;
+  case AsmToken::Question:           OS << "Question"; break;
+  case AsmToken::RBrac:              OS << "RBrac"; break;
+  case AsmToken::RCurly:             OS << "RCurly"; break;
+  case AsmToken::RParen:             OS << "RParen"; break;
+  case AsmToken::Slash:              OS << "Slash"; break;
+  case AsmToken::Space:              OS << "Space"; break;
+  case AsmToken::Star:               OS << "Star"; break;
+  case AsmToken::Tilde:              OS << "Tilde"; break;
+    // clang-format on
+  }
+
+  // Print the token string.
+  OS << " (\"";
+  OS.write_escaped(getString());
+  OS << "\")";
+}
+
+AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
+  // For COFF targets, this is true, while for ELF targets, it should be false.
+  // Currently, @specifier parsing depends on '@' being included in the token.
+  AllowAtInIdentifier = !StringRef(MAI.getCommentString()).starts_with("@") &&
+                        MAI.useAtForSpecifier();
+  LexMotorolaIntegers = MAI.shouldUseMotorolaIntegers();
+
+  CurTok.emplace_back(AsmToken::Space, StringRef());
+}
 
 void AsmLexer::setBuffer(StringRef Buf, const char *ptr,
                          bool EndStatementAtEOF) {
@@ -698,8 +781,10 @@ size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
 
     Buf[ReadCount] = Token;
 
-    if (Token.is(AsmToken::Eof))
+    if (Token.is(AsmToken::Eof)) {
+      ReadCount++;
       break;
+    }
   }
 
   SetError(SavedErrLoc, SavedErr);
@@ -707,7 +792,7 @@ size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
 }
 
 bool AsmLexer::isAtStartOfComment(const char *Ptr) {
-  if (MAI.getRestrictCommentStringToStartOfStatement() && !IsAtStartOfStatement)
+  if (MAI.isHLASM() && !IsAtStartOfStatement)
     return false;
 
   StringRef CommentString = MAI.getCommentString();
@@ -836,7 +921,7 @@ AsmToken AsmLexer::LexToken() {
       return LexIdentifier();
     return AsmToken(AsmToken::At, StringRef(TokStart, 1));
   case '#':
-    if (MAI.doesAllowHashAtStartOfIdentifier())
+    if (MAI.isHLASM())
       return LexIdentifier();
     return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
   case '?':
@@ -878,45 +963,6 @@ AsmToken AsmLexer::LexToken() {
   case '%':
     if (LexMotorolaIntegers && (*CurPtr == '0' || *CurPtr == '1')) {
       return LexDigit();
-    }
-
-    if (MAI.hasMipsExpressions()) {
-      AsmToken::TokenKind Operator;
-      unsigned OperatorLength;
-
-      std::tie(Operator, OperatorLength) =
-          StringSwitch<std::pair<AsmToken::TokenKind, unsigned>>(
-              StringRef(CurPtr))
-              .StartsWith("call16", {AsmToken::PercentCall16, 7})
-              .StartsWith("call_hi", {AsmToken::PercentCall_Hi, 8})
-              .StartsWith("call_lo", {AsmToken::PercentCall_Lo, 8})
-              .StartsWith("dtprel_hi", {AsmToken::PercentDtprel_Hi, 10})
-              .StartsWith("dtprel_lo", {AsmToken::PercentDtprel_Lo, 10})
-              .StartsWith("got_disp", {AsmToken::PercentGot_Disp, 9})
-              .StartsWith("got_hi", {AsmToken::PercentGot_Hi, 7})
-              .StartsWith("got_lo", {AsmToken::PercentGot_Lo, 7})
-              .StartsWith("got_ofst", {AsmToken::PercentGot_Ofst, 9})
-              .StartsWith("got_page", {AsmToken::PercentGot_Page, 9})
-              .StartsWith("gottprel", {AsmToken::PercentGottprel, 9})
-              .StartsWith("got", {AsmToken::PercentGot, 4})
-              .StartsWith("gp_rel", {AsmToken::PercentGp_Rel, 7})
-              .StartsWith("higher", {AsmToken::PercentHigher, 7})
-              .StartsWith("highest", {AsmToken::PercentHighest, 8})
-              .StartsWith("hi", {AsmToken::PercentHi, 3})
-              .StartsWith("lo", {AsmToken::PercentLo, 3})
-              .StartsWith("neg", {AsmToken::PercentNeg, 4})
-              .StartsWith("pcrel_hi", {AsmToken::PercentPcrel_Hi, 9})
-              .StartsWith("pcrel_lo", {AsmToken::PercentPcrel_Lo, 9})
-              .StartsWith("tlsgd", {AsmToken::PercentTlsgd, 6})
-              .StartsWith("tlsldm", {AsmToken::PercentTlsldm, 7})
-              .StartsWith("tprel_hi", {AsmToken::PercentTprel_Hi, 9})
-              .StartsWith("tprel_lo", {AsmToken::PercentTprel_Lo, 9})
-              .Default({AsmToken::Percent, 1});
-
-      if (Operator != AsmToken::Percent) {
-        CurPtr += OperatorLength - 1;
-        return AsmToken(Operator, StringRef(TokStart, OperatorLength));
-      }
     }
     return AsmToken(AsmToken::Percent, StringRef(TokStart, 1));
   case '/':

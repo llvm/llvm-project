@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ALIASES_H
-#define _LIBCPP___ATOMIC_ALIASES_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ALIASES_H
+#define _LIBCPP___CXX03___ATOMIC_ALIASES_H
 
-#include <__atomic/atomic.h>
-#include <__atomic/atomic_lock_free.h>
-#include <__atomic/contention_t.h>
-#include <__atomic/is_always_lock_free.h>
-#include <__config>
-#include <__type_traits/conditional.h>
-#include <__type_traits/make_unsigned.h>
-#include <cstddef>
-#include <cstdint>
+#include <__cxx03/__atomic/atomic.h>
+#include <__cxx03/__atomic/atomic_lock_free.h>
+#include <__cxx03/__atomic/contention_t.h>
+#include <__cxx03/__atomic/is_always_lock_free.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -107,4 +107,4 @@ using atomic_unsigned_lock_free = atomic<make_unsigned_t<__contention_t_or_large
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ALIASES_H
+#endif // _LIBCPP___CXX03___ATOMIC_ALIASES_H

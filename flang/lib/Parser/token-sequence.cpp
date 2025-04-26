@@ -61,6 +61,16 @@ std::size_t TokenSequence::SkipBlanks(std::size_t at) const {
   return tokens; // even if at > tokens
 }
 
+std::optional<std::size_t> TokenSequence::SkipBlanksBackwards(
+    std::size_t at) const {
+  while (at-- > 0) {
+    if (!TokenAt(at).IsBlank()) {
+      return at;
+    }
+  }
+  return std::nullopt;
+}
+
 // C-style /*comments*/ are removed from preprocessing directive
 // token sequences by the prescanner, but not C++ or Fortran
 // free-form line-ending comments (//...  and !...) because
@@ -86,7 +96,7 @@ bool TokenSequence::IsAnythingLeft(std::size_t at) const {
   return false;
 }
 
-void TokenSequence::Put(const TokenSequence &that) {
+void TokenSequence::CopyAll(const TokenSequence &that) {
   if (nextStart_ < char_.size()) {
     start_.push_back(nextStart_);
   }
@@ -99,7 +109,8 @@ void TokenSequence::Put(const TokenSequence &that) {
   provenances_.Put(that.provenances_);
 }
 
-void TokenSequence::Put(const TokenSequence &that, ProvenanceRange range) {
+void TokenSequence::CopyWithProvenance(
+    const TokenSequence &that, ProvenanceRange range) {
   std::size_t offset{0};
   std::size_t tokens{that.SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
@@ -110,7 +121,7 @@ void TokenSequence::Put(const TokenSequence &that, ProvenanceRange range) {
   CHECK(offset == range.size());
 }
 
-void TokenSequence::Put(
+void TokenSequence::AppendRange(
     const TokenSequence &that, std::size_t at, std::size_t tokens) {
   ProvenanceRange provenance;
   std::size_t offset{0};
@@ -177,7 +188,7 @@ TokenSequence &TokenSequence::ToLowerCase() {
       } else if (*p == 'h' || *p == 'H') {
         // Hollerith
         *p = 'h';
-      } else if (*p == '_') {
+      } else if (*p == '_' && p + 1 < limit && (p[1] == '"' || p[1] == '\'')) {
         // kind-prefixed character literal (e.g., 1_"ABC")
       } else {
         // exponent
@@ -236,7 +247,7 @@ TokenSequence &TokenSequence::RemoveBlanks(std::size_t firstChar) {
   TokenSequence result;
   for (std::size_t j{0}; j < tokens; ++j) {
     if (!TokenAt(j).IsBlank() || start_[j] < firstChar) {
-      result.Put(*this, j);
+      result.AppendRange(*this, j);
     }
   }
   swap(result);
@@ -250,7 +261,7 @@ TokenSequence &TokenSequence::RemoveRedundantBlanks(std::size_t firstChar) {
   for (std::size_t j{0}; j < tokens; ++j) {
     bool isBlank{TokenAt(j).IsBlank()};
     if (!isBlank || !lastWasBlank || start_[j] < firstChar) {
-      result.Put(*this, j);
+      result.AppendRange(*this, j);
     }
     lastWasBlank = isBlank;
   }
@@ -284,7 +295,7 @@ TokenSequence &TokenSequence::ClipComment(
       } else {
         TokenSequence result;
         if (j > 0) {
-          result.Put(*this, 0, j - 1);
+          result.AppendRange(*this, 0, j - 1);
         }
         swap(result);
         return *this;
@@ -308,6 +319,7 @@ llvm::raw_ostream &TokenSequence::Dump(llvm::raw_ostream &o) const {
     o << '[' << j << "] @ " << start_[j] << " '" << TokenAt(j).ToString()
       << "'\n";
   }
+  provenances_.Dump(o << "provenances_:\n");
   return o;
 }
 

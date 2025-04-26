@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+f -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+f -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+c,+f < %s \
 # RUN:     | llvm-objdump --mattr=+c,+f --no-print-imm-hex -M no-aliases -d - \

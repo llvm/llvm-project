@@ -96,7 +96,7 @@ void NVVMOptimizeForTarget::runOnOperation() {
   MLIRContext *ctx = getOperation()->getContext();
   RewritePatternSet patterns(ctx);
   patterns.add<ExpandDivF16>(ctx);
-  if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
 }
 

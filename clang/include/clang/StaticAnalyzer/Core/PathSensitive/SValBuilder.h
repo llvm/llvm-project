@@ -46,10 +46,10 @@ class Stmt;
 
 namespace ento {
 
+class CallEvent;
 class ConditionTruthVal;
 class ProgramStateManager;
 class StoreRef;
-
 class SValBuilder {
   virtual void anchor();
 
@@ -209,6 +209,12 @@ public:
                                         const LocationContext *LCtx,
                                         QualType type,
                                         unsigned visitCount);
+  DefinedOrUnknownSVal conjureSymbolVal(const CallEvent &call, QualType type,
+                                        unsigned visitCount,
+                                        const void *symbolTag = nullptr);
+  DefinedOrUnknownSVal conjureSymbolVal(const CallEvent &call,
+                                        unsigned visitCount,
+                                        const void *symbolTag = nullptr);
 
   /// Conjure a symbol representing heap allocated memory region.
   ///
@@ -329,11 +335,10 @@ public:
   }
 
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
-                               const llvm::APSInt &rhs, QualType type);
+                               APSIntPtr rhs, QualType type);
 
-  nonloc::SymbolVal makeNonLoc(const llvm::APSInt &rhs,
-                               BinaryOperator::Opcode op, const SymExpr *lhs,
-                               QualType type);
+  nonloc::SymbolVal makeNonLoc(APSIntPtr rhs, BinaryOperator::Opcode op,
+                               const SymExpr *lhs, QualType type);
 
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
                                const SymExpr *rhs, QualType type);

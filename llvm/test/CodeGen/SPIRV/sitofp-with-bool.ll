@@ -3,7 +3,7 @@
 ; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#bool:]] = OpTypeBool
-; CHECK-DAG: %[[#zero:]] = OpConstant %[[#int_32]] 0
+; CHECK-DAG: %[[#zero:]] = OpConstantNull %[[#int_32]]
 ; CHECK-DAG: %[[#one:]] = OpConstant %[[#int_32]] 1
 ; CHECK-DAG: %[[#ptr:]] = OpTypePointer CrossWorkgroup %[[#float]]
 

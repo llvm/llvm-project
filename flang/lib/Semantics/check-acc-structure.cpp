@@ -374,7 +374,6 @@ void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {
 
 // Clause checkers
 CHECK_SIMPLE_CLAUSE(Auto, ACCC_auto)
-CHECK_SIMPLE_CLAUSE(Async, ACCC_async)
 CHECK_SIMPLE_CLAUSE(Attach, ACCC_attach)
 CHECK_SIMPLE_CLAUSE(Bind, ACCC_bind)
 CHECK_SIMPLE_CLAUSE(Capture, ACCC_capture)
@@ -442,6 +441,12 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
     const parser::AccObjectListWithModifier &list, llvm::acc::Clause clause) {
   const auto &objectList = std::get<Fortran::parser::AccObjectList>(list.t);
   CheckMultipleOccurrenceInDeclare(objectList, clause);
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::Async &c) {
+  llvm::acc::Clause crtClause = llvm::acc::Clause::ACCC_async;
+  CheckAllowed(crtClause);
+  CheckAllowedOncePerGroup(crtClause, llvm::acc::Clause::ACCC_device_type);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Create &c) {
@@ -674,26 +679,28 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
-                const auto *type{name->symbol->GetType()};
-                if (type->IsNumeric(TypeCategory::Integer) &&
-                    !reductionIntegerSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for integer type"_err_en_US);
-                } else if (type->IsNumeric(TypeCategory::Real) &&
-                    !reductionRealSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for real type"_err_en_US);
-                } else if (type->IsNumeric(TypeCategory::Complex) &&
-                    !reductionComplexSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for complex type"_err_en_US);
-                } else if (type->category() ==
-                        Fortran::semantics::DeclTypeSpec::Category::Logical &&
-                    !reductionLogicalSet.test(op.v)) {
-                  context_.Say(GetContext().clauseSource,
-                      "reduction operator not supported for logical type"_err_en_US);
+                if (name->symbol) {
+                  const auto *type{name->symbol->GetType()};
+                  if (type->IsNumeric(TypeCategory::Integer) &&
+                      !reductionIntegerSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for integer type"_err_en_US);
+                  } else if (type->IsNumeric(TypeCategory::Real) &&
+                      !reductionRealSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for real type"_err_en_US);
+                  } else if (type->IsNumeric(TypeCategory::Complex) &&
+                      !reductionComplexSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for complex type"_err_en_US);
+                  } else if (type->category() ==
+                          Fortran::semantics::DeclTypeSpec::Category::Logical &&
+                      !reductionLogicalSet.test(op.v)) {
+                    context_.Say(GetContext().clauseSource,
+                        "reduction operator not supported for logical type"_err_en_US);
+                  }
+                  // TODO: check composite type.
                 }
-                // TODO: check composite type.
               }
             },
             [&](const Fortran::parser::Name &name) {

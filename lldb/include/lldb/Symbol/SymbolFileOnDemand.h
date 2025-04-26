@@ -182,9 +182,13 @@ public:
   lldb_private::StatsDuration::Duration GetDebugInfoParseTime() override;
   lldb_private::StatsDuration::Duration GetDebugInfoIndexTime() override;
 
+  void ResetStatistics() override;
+
   uint32_t GetAbilities() override;
 
-  Symtab *GetSymtab() override { return m_sym_file_impl->GetSymtab(); }
+  Symtab *GetSymtab(bool can_create = true) override {
+    return m_sym_file_impl->GetSymtab(can_create);
+  }
 
   ObjectFile *GetObjectFile() override {
     return m_sym_file_impl->GetObjectFile();

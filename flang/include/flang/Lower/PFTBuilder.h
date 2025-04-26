@@ -693,6 +693,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Return the host associations for this function like unit. The list of host
   /// associations are kept in the host procedure.
   HostAssociations &getHostAssoc() { return hostAssociations; }
+  const HostAssociations &getHostAssoc() const { return hostAssociations; };
 
   LLVM_DUMP_METHOD void dump() const;
 
@@ -722,6 +723,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   bool hasIeeeAccess{false};
   bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
+  bool mayModifyUnderflowMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;

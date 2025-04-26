@@ -345,6 +345,16 @@ instruction is available.
       f[i] = floorf(f[i]);
   }
 
+Many of these math functions are only vectorizable if the file has been built
+with a specified target vector library that provides a vector implemention
+of that math function. Using clang, this is handled by the "-fveclib" command
+line option with one of the following vector libraries:
+"accelerate,libmvec,massv,svml,sleef,darwin_libsystem_m,armpl,amdlibm"
+
+.. code-block:: console
+
+   $ clang ... -fno-math-errno -fveclib=libmvec file.c
+
 Partial unrolling during vectorization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -388,6 +398,21 @@ runtime pointer checks and optimizes the path length for loops that have very
 small trip counts.
 
 .. image:: epilogue-vectorization-cfg.png
+
+Early Exit Vectorization
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+When vectorizing a loop with a single early exit, the loop blocks following the
+early exit are predicated and the vector loop will always exit via the latch.
+If the early exit has been taken, the vector loop's successor block
+(``middle.split`` below) branches to the early exit block via an intermediate
+block (``vector.early.exit`` below). This intermediate block is responsible for
+calculating any exit values of loop-defined variables that are used in the
+early exit block. Otherwise, ``middle.block`` selects between the exit block
+from the latch or the scalar remainder loop.
+
+.. image:: vplan-early-exit.png
+
 
 Performance
 -----------
@@ -454,3 +479,12 @@ through clang using the command line flag:
 .. code-block:: console
 
    $ clang -fno-slp-vectorize file.c
+
+The Sandbox Vectorizer
+======================
+.. toctree::
+   :hidden:
+
+   SandboxVectorizer
+
+The :doc:`Sandbox Vectorizer <SandboxVectorizer>` is an experimental framework for building modular vectorization pipelines on top of :doc:`Sandbox IR <SandboxIR>`, with a focus on ease of testing and ease of development.

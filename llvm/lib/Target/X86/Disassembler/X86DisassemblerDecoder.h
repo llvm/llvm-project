@@ -535,6 +535,12 @@ namespace X86Disassembler {
   ENTRY(TMM6)                                                                  \
   ENTRY(TMM7)
 
+#define REGS_TMM_PAIRS                                                         \
+  ENTRY(TMM0_TMM1)                                                             \
+  ENTRY(TMM2_TMM3)                                                             \
+  ENTRY(TMM4_TMM5)                                                             \
+  ENTRY(TMM6_TMM7)
+
 #define ALL_EA_BASES                                                           \
   EA_BASES_16BIT                                                               \
   EA_BASES_32BIT                                                               \
@@ -559,6 +565,7 @@ namespace X86Disassembler {
   REGS_DEBUG                                                                   \
   REGS_CONTROL                                                                 \
   REGS_TMM                                                                     \
+  REGS_TMM_PAIRS                                                               \
   ENTRY(RIP)
 
 /// All possible values of the base field for effective-address

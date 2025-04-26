@@ -95,7 +95,8 @@ bool IncludeFixerActionFactory::runInvocation(
 
   // Create the compiler's actual diagnostics engine. We want to drop all
   // diagnostics here.
-  Compiler.createDiagnostics(new clang::IgnoringDiagConsumer,
+  Compiler.createDiagnostics(Files->getVirtualFileSystem(),
+                             new clang::IgnoringDiagConsumer,
                              /*ShouldOwnClient=*/true);
   Compiler.createSourceManager(*Files);
 

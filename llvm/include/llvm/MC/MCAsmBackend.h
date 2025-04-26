@@ -41,7 +41,7 @@ class raw_ostream;
 /// Generic interface to target specific assembler backends.
 class MCAsmBackend {
 protected: // Can only create subclasses.
-  MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind = MaxFixupKind);
+  MCAsmBackend(llvm::endianness Endian, unsigned RelaxFixupKind = 0);
 
 public:
   MCAsmBackend(const MCAsmBackend &) = delete;
@@ -53,7 +53,7 @@ public:
   /// Fixup kind used for linker relaxation. Currently only used by RISC-V
   /// and LoongArch.
   const unsigned RelaxFixupKind;
-  bool allowLinkerRelaxation() const { return RelaxFixupKind != MaxFixupKind; }
+  bool allowLinkerRelaxation() const { return RelaxFixupKind != 0; }
 
   /// Return true if this target might automatically pad instructions and thus
   /// need to emit padding enable/disable directives around sensative code.
@@ -83,22 +83,16 @@ public:
   /// \name Target Fixup Interfaces
   /// @{
 
-  /// Get the number of target specific fixup kinds.
-  virtual unsigned getNumFixupKinds() const = 0;
-
   /// Map a relocation name used in .reloc to a fixup kind.
   virtual std::optional<MCFixupKind> getFixupKind(StringRef Name) const;
 
   /// Get information on a fixup kind.
-  virtual const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const;
+  virtual MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const;
 
-  /// Hook to check if a relocation is needed for some target specific reason.
-  virtual bool shouldForceRelocation(const MCAssembler &Asm,
-                                     const MCFixup &Fixup,
-                                     const MCValue &Target,
-                                     const MCSubtargetInfo *STI) {
-    return false;
-  }
+  // Hook to check if a relocation is needed. The default implementation tests
+  // whether the MCValue has a relocation specifier.
+  virtual bool shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                                     const MCValue &, const MCSubtargetInfo *);
 
   /// Hook to check if extra nop bytes must be inserted for alignment directive.
   /// For some targets this may be necessary in order to support linker
@@ -115,11 +109,10 @@ public:
     return false;
   }
 
-  virtual bool evaluateTargetFixup(const MCAssembler &Asm,
-                                   const MCFixup &Fixup, const MCFragment *DF,
-                                   const MCValue &Target,
-                                   const MCSubtargetInfo *STI, uint64_t &Value,
-                                   bool &WasForced) {
+  virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                   const MCFragment *DF, const MCValue &Target,
+                                   const MCSubtargetInfo *STI,
+                                   uint64_t &Value) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
@@ -159,11 +152,9 @@ public:
 
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
-  virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                            const MCFixup &Fixup, bool Resolved,
-                                            uint64_t Value,
-                                            const MCRelaxableFragment *DF,
-                                            const bool WasForced) const;
+  virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                            const MCFixup &, const MCValue &,
+                                            uint64_t, bool Resolved) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -229,11 +220,6 @@ public:
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                                  const MCContext *Ctxt) const {
     return 0;
-  }
-
-  /// Check whether a given symbol has been flagged with MICROMIPS flag.
-  virtual bool isMicroMips(const MCSymbol *Sym) const {
-    return false;
   }
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;

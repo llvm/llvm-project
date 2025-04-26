@@ -25,7 +25,7 @@ end subroutine
 ! CHECK:    hlfir.yield_element %[[VAL_15]] : i32
 ! CHECK:  }
 ! CHECK:  %[[VAL_16:.*]]:3 = hlfir.associate %[[VAL_17:.*]](%[[VAL_9]]) {adapt.valuebyref} : (!hlfir.expr<20xi32>, !fir.shape<1>) -> (!fir.ref<!fir.array<20xi32>>, !fir.ref<!fir.array<20xi32>>, i1)
-! CHECK:  fir.call @_QPbar(%[[VAL_16]]#1) fastmath<contract> : (!fir.ref<!fir.array<20xi32>>) -> ()
+! CHECK:  fir.call @_QPbar(%[[VAL_16]]#0) fastmath<contract> : (!fir.ref<!fir.array<20xi32>>) -> ()
 ! CHECK:  hlfir.end_associate %[[VAL_16]]#1, %[[VAL_16]]#2 : !fir.ref<!fir.array<20xi32>>, i1
 ! CHECK:  hlfir.destroy %[[VAL_17]] : !hlfir.expr<20xi32>
 

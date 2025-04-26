@@ -12,7 +12,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -47,19 +46,7 @@ public:
     return createMSP430ELFObjectWriter(OSABI);
   }
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
-                                    uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override {
-    return false;
-  }
-
-  unsigned getNumFixupKinds() const override {
-    return MSP430::NumTargetFixupKinds;
-  }
-
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[MSP430::NumTargetFixupKinds] = {
       // This table must be in the same order of enum in MSP430FixupKinds.h.
       //

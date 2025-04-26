@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_SWAP_ALLOCATOR_H
-#define _LIBCPP___MEMORY_SWAP_ALLOCATOR_H
+#ifndef _LIBCPP___CXX03___MEMORY_SWAP_ALLOCATOR_H
+#define _LIBCPP___CXX03___MEMORY_SWAP_ALLOCATOR_H
 
-#include <__config>
-#include <__memory/allocator_traits.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_swappable.h>
-#include <__utility/swap.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__utility/swap.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,4 +51,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __swap_allocator
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_SWAP_ALLOCATOR_H
+#endif // _LIBCPP___CXX03___MEMORY_SWAP_ALLOCATOR_H

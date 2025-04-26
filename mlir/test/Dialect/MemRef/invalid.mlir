@@ -245,16 +245,6 @@ func.func @memref_reinterpret_cast_no_map_but_strides(%in: memref<?x?xf32>) {
 
 // -----
 
-func.func @memref_reinterpret_cast_non_strided_layout(%in: memref<?x?xf32>) {
-  // expected-error @+1 {{expected result type to have strided layout but found 'memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>}}
-  %out = memref.reinterpret_cast %in to
-           offset: [0], sizes: [9, 10], strides: [42, 1]
-         : memref<?x?xf32> to memref<9x10xf32, affine_map<(d0, d1) -> (d0)>>
-  return
-}
-
-// -----
-
 func.func @memref_reshape_element_type_mismatch(
        %buf: memref<*xf32>, %shape: memref<1xi32>) {
   // expected-error @+1 {{element types of source and destination memref types should be the same}}
@@ -728,6 +718,22 @@ func.func @invalid_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
   %1 = memref.subview %0[0, 0, 0][8, 16, 4][1, 1, 1]
     : memref<8x16x4xf32> to
       memref<8x16x4x3xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_subview(%arg0: memref<10xf32>) {
+  // expected-error@+1 {{offset 0 is out-of-bounds: 10 >= 10}}
+  %0 = memref.subview %arg0 [10][1][1] : memref<10xf32> to memref<1xf32, strided<[1], offset: 10>>
+  return
+}
+
+// -----
+
+func.func @invalid_subview(%arg0: memref<9xf32>) {
+  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds: 9 >= 9}}
+  %0 = memref.subview %arg0 [3][4][2] : memref<9xf32> to memref<4xf32, strided<[2], offset: 3>>
   return
 }
 

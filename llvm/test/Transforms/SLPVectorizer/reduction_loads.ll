@@ -27,7 +27,7 @@ define i32 @test(ptr nocapture readonly %p) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_RDX:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> [[TMP1]], <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> [[TMP1]], splat (i32 42)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], [[SUM]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[FOR_BODY]]

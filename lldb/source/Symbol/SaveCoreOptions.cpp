@@ -114,9 +114,8 @@ void SaveCoreOptions::AddMemoryRegionToSave(
 const MemoryRanges &SaveCoreOptions::GetCoreFileMemoryRanges() const {
   return m_regions_to_save;
 }
-
-Status SaveCoreOptions::EnsureValidConfiguration(
-    lldb::ProcessSP process_sp) const {
+Status
+SaveCoreOptions::EnsureValidConfiguration(lldb::ProcessSP process_sp) const {
   Status error;
   std::string error_str;
   if (!m_threads_to_save.empty() && GetStyle() == lldb::eSaveCoreFull)
@@ -132,10 +131,24 @@ Status SaveCoreOptions::EnsureValidConfiguration(
   return error;
 }
 
-void SaveCoreOptions::ClearProcessSpecificData() { 
+lldb_private::ThreadCollection::collection
+SaveCoreOptions::GetThreadsToSave() const {
+  lldb_private::ThreadCollection::collection thread_collection;
+  // In cases where no process is set, such as when no threads are specified.
+  if (!m_process_sp)
+    return thread_collection;
+
+  ThreadList &thread_list = m_process_sp->GetThreadList();
+  for (const auto &tid : m_threads_to_save)
+    thread_collection.push_back(thread_list.FindThreadByID(tid));
+
+  return thread_collection;
+}
+
+void SaveCoreOptions::ClearProcessSpecificData() {
   // Deliberately not following the formatter style here to indicate that
   // this method will be expanded in the future.
-  m_threads_to_save.clear(); 
+  m_threads_to_save.clear();
 }
 
 void SaveCoreOptions::Clear() {

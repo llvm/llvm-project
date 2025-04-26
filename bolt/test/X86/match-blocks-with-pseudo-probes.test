@@ -1,0 +1,63 @@
+## Tests stale block matching with pseudo probes.
+
+# REQUIRES: system-linux
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
+# RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml -v=2 \
+# RUN:   --print-cfg --funcs=main --infer-stale-profile \
+# RUN:   --stale-matching-with-pseudo-probes 2>&1 | FileCheck %s
+
+# CHECK: BOLT-INFO: inference found an exact pseudo probe match for 100.00% of basic blocks (1 out of 1 stale)
+
+#--- main.s
+ .text
+  .globl  main                            # -- Begin function main
+  .p2align        4, 0x90
+  .type   main,@function
+main:                                   # @main
+# %bb.0:
+  pushq   %rbp
+  movq    %rsp, %rbp
+  movl    $0, -4(%rbp)
+  .pseudoprobe    15822663052811949562 1 0 0 main
+  xorl    %eax, %eax
+  popq    %rbp
+  retq
+.Lfunc_end0:
+  .size   main, .Lfunc_end0-main
+                                  # -- End function
+  .section        .pseudo_probe_desc,"",@progbits
+  .quad   -2624081020897602054
+  .quad   4294967295
+  .byte   4
+  .ascii  "main"
+
+#--- yaml
+---
+header:
+  profile-version: 1
+  binary-name:     'match-blocks-with-pseudo-probes.s.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:                   main
+    fid:                    0
+    hash:                   0x0000000000000001
+    exec:                   1
+    nblocks:                6
+    blocks:
+      - bid:             1
+        hash:            0xFFFFFFFFFFFFFFF1
+        insns:           1
+        succ:            [ { bid: 3, cnt: 1} ]
+        probes:          [ { blx: 1 } ]
+    inline_tree:         [ { g: 0 } ]
+pseudo_probe_desc:
+  gs:              [ 0xDB956436E78DD5FA ]
+  gh:              [ 0 ]
+  hs:              [ 0xFFFFFFFF ]

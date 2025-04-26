@@ -42,7 +42,7 @@ define void @Store(ptr %p, <4 x i64> %v, <4 x i1> %mask) sanitize_memory {
 ; ADDR-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP2]] to i4
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP6]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0:![0-9]+]]
+; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1:![0-9]+]]
 ; ADDR:       7:
 ; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7:[0-9]+]]
 ; ADDR-NEXT:    unreachable
@@ -112,7 +112,7 @@ define <4 x double> @Load(ptr %p, <4 x double> %v, <4 x i1> %mask) sanitize_memo
 ; ADDR-NEXT:    [[TMP6:%.*]] = bitcast <4 x i1> [[TMP1]] to i4
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i4 [[TMP6]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
+; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1]]
 ; ADDR:       7:
 ; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; ADDR-NEXT:    unreachable
@@ -238,7 +238,7 @@ define <16 x float> @Gather(<16 x ptr> %ptrs, <16 x i1> %mask, <16 x float> %pas
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 136) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <16 x ptr> [[PTRS:%.*]] to <16 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <16 x i64> [[TMP2]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <16 x i64> [[TMP2]], splat (i64 87960930222080)
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr <16 x i64> [[TMP3]] to <16 x ptr>
 ; CHECK-NEXT:    [[_MSMASKEDGATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP4]], i32 4, <16 x i1> [[MASK:%.*]], <16 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[RET:%.*]] = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> [[PTRS]], i32 4, <16 x i1> [[MASK]], <16 x float> [[PASSTHRU:%.*]])
@@ -252,7 +252,7 @@ define <16 x float> @Gather(<16 x ptr> %ptrs, <16 x i1> %mask, <16 x float> %pas
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[_MSMASKEDPTRS:%.*]] = select <16 x i1> [[MASK:%.*]], <16 x i64> [[TMP2]], <16 x i64> zeroinitializer
 ; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint <16 x ptr> [[PTRS:%.*]] to <16 x i64>
-; ADDR-NEXT:    [[TMP5:%.*]] = xor <16 x i64> [[TMP4]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; ADDR-NEXT:    [[TMP5:%.*]] = xor <16 x i64> [[TMP4]], splat (i64 87960930222080)
 ; ADDR-NEXT:    [[TMP6:%.*]] = inttoptr <16 x i64> [[TMP5]] to <16 x ptr>
 ; ADDR-NEXT:    [[_MSMASKEDGATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP6]], i32 4, <16 x i1> [[MASK]], <16 x i32> [[TMP3]])
 ; ADDR-NEXT:    [[TMP7:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
@@ -260,7 +260,7 @@ define <16 x float> @Gather(<16 x ptr> %ptrs, <16 x i1> %mask, <16 x float> %pas
 ; ADDR-NEXT:    [[TMP8:%.*]] = bitcast <16 x i64> [[_MSMASKEDPTRS]] to i1024
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i1024 [[TMP8]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; ADDR:       9:
 ; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; ADDR-NEXT:    unreachable
@@ -274,9 +274,9 @@ define <16 x float> @Gather(<16 x ptr> %ptrs, <16 x i1> %mask, <16 x float> %pas
 ; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 136) to ptr), align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = ptrtoint <16 x ptr> [[PTRS:%.*]] to <16 x i64>
-; ORIGINS-NEXT:    [[TMP4:%.*]] = xor <16 x i64> [[TMP3]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; ORIGINS-NEXT:    [[TMP4:%.*]] = xor <16 x i64> [[TMP3]], splat (i64 87960930222080)
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = inttoptr <16 x i64> [[TMP4]] to <16 x ptr>
-; ORIGINS-NEXT:    [[TMP6:%.*]] = add <16 x i64> [[TMP4]], <i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416>
+; ORIGINS-NEXT:    [[TMP6:%.*]] = add <16 x i64> [[TMP4]], splat (i64 17592186044416)
 ; ORIGINS-NEXT:    [[TMP7:%.*]] = inttoptr <16 x i64> [[TMP6]] to <16 x ptr>
 ; ORIGINS-NEXT:    [[_MSMASKEDGATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP5]], i32 4, <16 x i1> [[MASK:%.*]], <16 x i32> [[TMP1]])
 ; ORIGINS-NEXT:    [[RET:%.*]] = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> [[PTRS]], i32 4, <16 x i1> [[MASK]], <16 x float> [[PASSTHRU:%.*]])
@@ -319,7 +319,7 @@ define void @Scatter(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask) sanitize
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <8 x ptr> [[PTRS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i64> [[TMP2]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; CHECK-NEXT:    [[TMP3:%.*]] = xor <8 x i64> [[TMP2]], splat (i64 87960930222080)
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr <8 x i64> [[TMP3]] to <8 x ptr>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP1]], <8 x ptr> [[TMP4]], i32 8, <8 x i1> [[MASK:%.*]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[VALUE:%.*]], <8 x ptr> [[PTRS]], i32 8, <8 x i1> [[MASK]])
@@ -332,7 +332,7 @@ define void @Scatter(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask) sanitize
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[_MSMASKEDPTRS:%.*]] = select <8 x i1> [[MASK:%.*]], <8 x i64> [[TMP2]], <8 x i64> zeroinitializer
 ; ADDR-NEXT:    [[TMP4:%.*]] = ptrtoint <8 x ptr> [[PTRS:%.*]] to <8 x i64>
-; ADDR-NEXT:    [[TMP5:%.*]] = xor <8 x i64> [[TMP4]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; ADDR-NEXT:    [[TMP5:%.*]] = xor <8 x i64> [[TMP4]], splat (i64 87960930222080)
 ; ADDR-NEXT:    [[TMP6:%.*]] = inttoptr <8 x i64> [[TMP5]] to <8 x ptr>
 ; ADDR-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP3]], <8 x ptr> [[TMP6]], i32 8, <8 x i1> [[MASK]])
 ; ADDR-NEXT:    [[TMP7:%.*]] = bitcast <8 x i1> [[TMP1]] to i8
@@ -340,7 +340,7 @@ define void @Scatter(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask) sanitize
 ; ADDR-NEXT:    [[TMP8:%.*]] = bitcast <8 x i64> [[_MSMASKEDPTRS]] to i512
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i512 [[TMP8]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF1]]
 ; ADDR:       9:
 ; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; ADDR-NEXT:    unreachable
@@ -353,9 +353,9 @@ define void @Scatter(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask) sanitize
 ; ORIGINS-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = ptrtoint <8 x ptr> [[PTRS:%.*]] to <8 x i64>
-; ORIGINS-NEXT:    [[TMP4:%.*]] = xor <8 x i64> [[TMP3]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; ORIGINS-NEXT:    [[TMP4:%.*]] = xor <8 x i64> [[TMP3]], splat (i64 87960930222080)
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = inttoptr <8 x i64> [[TMP4]] to <8 x ptr>
-; ORIGINS-NEXT:    [[TMP6:%.*]] = add <8 x i64> [[TMP4]], <i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416>
+; ORIGINS-NEXT:    [[TMP6:%.*]] = add <8 x i64> [[TMP4]], splat (i64 17592186044416)
 ; ORIGINS-NEXT:    [[TMP7:%.*]] = inttoptr <8 x i64> [[TMP6]] to <8 x ptr>
 ; ORIGINS-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP1]], <8 x ptr> [[TMP5]], i32 8, <8 x i1> [[MASK:%.*]])
 ; ORIGINS-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[VALUE:%.*]], <8 x ptr> [[PTRS]], i32 8, <8 x i1> [[MASK]])
@@ -369,7 +369,7 @@ define void @ScatterNoSanitize(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask
 ; CHECK-LABEL: @ScatterNoSanitize(
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <8 x ptr> [[PTRS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <8 x i64> [[TMP1]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <8 x i64> [[TMP1]], splat (i64 87960930222080)
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr <8 x i64> [[TMP2]] to <8 x ptr>
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> zeroinitializer, <8 x ptr> [[TMP3]], i32 8, <8 x i1> [[MASK:%.*]])
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[VALUE:%.*]], <8 x ptr> [[PTRS]], i32 8, <8 x i1> [[MASK]])
@@ -379,7 +379,7 @@ define void @ScatterNoSanitize(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask
 ; ADDR-NEXT:    call void @llvm.donothing()
 ; ADDR-NEXT:    [[_MSMASKEDPTRS:%.*]] = select <8 x i1> [[MASK:%.*]], <8 x i64> zeroinitializer, <8 x i64> zeroinitializer
 ; ADDR-NEXT:    [[TMP1:%.*]] = ptrtoint <8 x ptr> [[PTRS:%.*]] to <8 x i64>
-; ADDR-NEXT:    [[TMP2:%.*]] = xor <8 x i64> [[TMP1]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; ADDR-NEXT:    [[TMP2:%.*]] = xor <8 x i64> [[TMP1]], splat (i64 87960930222080)
 ; ADDR-NEXT:    [[TMP3:%.*]] = inttoptr <8 x i64> [[TMP2]] to <8 x ptr>
 ; ADDR-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> zeroinitializer, <8 x ptr> [[TMP3]], i32 8, <8 x i1> [[MASK]])
 ; ADDR-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[VALUE:%.*]], <8 x ptr> [[PTRS]], i32 8, <8 x i1> [[MASK]])
@@ -388,9 +388,9 @@ define void @ScatterNoSanitize(<8 x i32> %value, <8 x ptr> %ptrs, <8 x i1> %mask
 ; ORIGINS-LABEL: @ScatterNoSanitize(
 ; ORIGINS-NEXT:    call void @llvm.donothing()
 ; ORIGINS-NEXT:    [[TMP1:%.*]] = ptrtoint <8 x ptr> [[PTRS:%.*]] to <8 x i64>
-; ORIGINS-NEXT:    [[TMP2:%.*]] = xor <8 x i64> [[TMP1]], <i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080, i64 87960930222080>
+; ORIGINS-NEXT:    [[TMP2:%.*]] = xor <8 x i64> [[TMP1]], splat (i64 87960930222080)
 ; ORIGINS-NEXT:    [[TMP3:%.*]] = inttoptr <8 x i64> [[TMP2]] to <8 x ptr>
-; ORIGINS-NEXT:    [[TMP4:%.*]] = add <8 x i64> [[TMP2]], <i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416, i64 17592186044416>
+; ORIGINS-NEXT:    [[TMP4:%.*]] = add <8 x i64> [[TMP2]], splat (i64 17592186044416)
 ; ORIGINS-NEXT:    [[TMP5:%.*]] = inttoptr <8 x i64> [[TMP4]] to <8 x ptr>
 ; ORIGINS-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> zeroinitializer, <8 x ptr> [[TMP3]], i32 8, <8 x i1> [[MASK:%.*]])
 ; ORIGINS-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[VALUE:%.*]], <8 x ptr> [[PTRS]], i32 8, <8 x i1> [[MASK]])
@@ -426,7 +426,7 @@ define <16 x float> @ExpandLoad(ptr %ptr, <16 x i1> %mask, <16 x float> %passthr
 ; ADDR-NEXT:    [[TMP7:%.*]] = bitcast <16 x i1> [[TMP2]] to i16
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i16 [[TMP7]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; ADDR:       8:
 ; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; ADDR-NEXT:    unreachable
@@ -504,7 +504,7 @@ define void @CompressStore(<16 x float> %value, ptr %ptr, <16 x i1> %mask) sanit
 ; ADDR-NEXT:    [[TMP7:%.*]] = bitcast <16 x i1> [[TMP2]] to i16
 ; ADDR-NEXT:    [[_MSCMP1:%.*]] = icmp ne i16 [[TMP7]], 0
 ; ADDR-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; ADDR-NEXT:    br i1 [[_MSOR]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF1]]
 ; ADDR:       8:
 ; ADDR-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; ADDR-NEXT:    unreachable

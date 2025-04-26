@@ -13,12 +13,13 @@ using namespace lldb_private;
 llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
                                             const MemoryRegionInfo &Info) {
   return OS << llvm::formatv("MemoryRegionInfo([{0}, {1}), {2:r}{3:w}{4:x}, "
-                             "{5}, `{6}`, {7}, {8}, {9})",
+                             "{5}, `{6}`, {7}, {8}, {9}, {10}, {11})",
                              Info.GetRange().GetRangeBase(),
                              Info.GetRange().GetRangeEnd(), Info.GetReadable(),
                              Info.GetWritable(), Info.GetExecutable(),
                              Info.GetMapped(), Info.GetName(), Info.GetFlash(),
-                             Info.GetBlocksize(), Info.GetMemoryTagged());
+                             Info.GetBlocksize(), Info.GetMemoryTagged(),
+                             Info.IsStackMemory(), Info.IsShadowStack());
 }
 
 void llvm::format_provider<MemoryRegionInfo::OptionalBool>::format(

@@ -7,6 +7,6 @@ module {
 // CHECK: module attributes {
 // CHECK-SAME: dlti.dl_spec = #dlti.dl_spec<
 // ...
-// CHECK-SAME:    #dlti.dl_entry<i64, dense<[32, 64]> : vector<2xi64>>,
+// CHECK-SAME:    i64 = dense<[32, 64]> : vector<2xi64>,
 // ...
 // CHECK-SAME:    llvm.data_layout = ""

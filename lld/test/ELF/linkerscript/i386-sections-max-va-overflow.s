@@ -7,7 +7,7 @@
 
 ## .bar section has data in [0xfffffff1, 0xfffffff1 + 0x10] == [0xfffffff1, 0x1].
 ## Check we can catch this overflow.
-# ERR: error: section .bar at 0xFFFFFFF1 of size 0x10 exceeds available address space
+# ERR: error: section .bar at 0xfffffff1 of size 0x10 exceeds available address space
 
 ## [0xfffffff1, 0x100000000) is allowed.
 # RUN: echo "SECTIONS { . = 0xfffffff0;" > %t.script

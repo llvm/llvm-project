@@ -30,6 +30,7 @@ static constexpr llvm::StringRef kProcPtrSeparator = ".p.";
 static constexpr llvm::StringRef kSpecialBindingSeparator = ".s.";
 static constexpr llvm::StringRef kBindingTableSeparator = ".v.";
 static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
+static constexpr llvm::StringRef kDerivedTypeInitSuffix = "DerivedInit";
 
 /// Internal name mangling of identifiers
 ///

@@ -274,7 +274,7 @@ TEST(RegisterFlagsTest, DumpEnums) {
                 .DumpEnums(5),
             "A: 0 = an_enumerator");
 
-  // Mutliple values can go on the same line, up to the width.
+  // Multiple values can go on the same line, up to the width.
   FieldEnum more_enum("long_enum",
                       {{0, "an_enumerator"},
                        {1, "another_enumerator"},

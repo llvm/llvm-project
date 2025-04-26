@@ -672,12 +672,9 @@ define void @test_atomic_load_min_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
-; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movwge [[CMP:r[0-9]+|lr]], #1
-; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movne [[MINHI]], [[OLD2]]
+; CHECK-ARM: movge [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
-; CHECK-ARM: movne [[MINLO]], [[OLD1]]
+; CHECK-ARM: movge [[MINLO]], [[OLD1]]
 ; CHECK-ARM: stlexd [[STATUS:r[0-9]+]], [[MINLO]], [[MINHI]], [r[[ADDR]]]
 ; CHECK-THUMB: stlexd [[STATUS:r[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
@@ -785,12 +782,9 @@ define void @test_atomic_load_max_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
-; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movwlt [[CMP:r[0-9]+|lr]], #1
-; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movne [[MINHI]], [[OLD2]]
+; CHECK-ARM: movlt [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
-; CHECK-ARM: movne [[MINLO]], [[OLD1]]
+; CHECK-ARM: movlt [[MINLO]], [[OLD1]]
 ; CHECK-ARM: strexd [[STATUS:r[0-9]+]], [[MINLO]], [[MINHI]], [r[[ADDR]]]
 ; CHECK-THUMB: strexd [[STATUS:r[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
@@ -898,12 +892,9 @@ define void @test_atomic_load_umin_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
-; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movwhs [[CMP:r[0-9]+|lr]], #1
-; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movne [[MINHI]], [[OLD2]]
+; CHECK-ARM: movhs [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
-; CHECK-ARM: movne [[MINLO]], [[OLD1]]
+; CHECK-ARM: movhs [[MINLO]], [[OLD1]]
 ; CHECK-ARM: stlexd [[STATUS:r[0-9]+]], [[MINLO]], [[MINHI]], [r[[ADDR]]]
 ; CHECK-THUMB: stlexd [[STATUS:r[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0
@@ -1011,12 +1002,9 @@ define void @test_atomic_load_umax_i64(i64 %offset) nounwind {
 ; CHECK-ARM-LE: sbcs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: subs {{[^,]+}}, r1, [[OLD2]]
 ; CHECK-ARM-BE: sbcs {{[^,]+}}, r0, [[OLD1]]
-; CHECK-ARM: mov [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movwlo [[CMP:r[0-9]+|lr]], #1
-; CHECK-ARM: cmp [[CMP:r[0-9]+|lr]], #0
-; CHECK-ARM: movne [[MINHI]], [[OLD2]]
+; CHECK-ARM: movlo [[MINHI]], [[OLD2]]
 ; CHECK-ARM: mov [[MINLO:r[0-9]+]], r0
-; CHECK-ARM: movne [[MINLO]], [[OLD1]]
+; CHECK-ARM: movlo [[MINLO]], [[OLD1]]
 ; CHECK-ARM: stlexd [[STATUS:r[0-9]+]], [[MINLO]], [[MINHI]], [r[[ADDR]]]
 ; CHECK-THUMB: stlexd [[STATUS:r[0-9]+]], {{r[0-9]+}}, {{r[0-9]+}}, [r[[ADDR]]]
 ; CHECK-NEXT: cmp [[STATUS]], #0

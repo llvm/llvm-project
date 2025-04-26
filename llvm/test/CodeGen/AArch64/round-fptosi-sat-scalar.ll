@@ -7,19 +7,17 @@
 define i32 @testmswbf(bfloat %a) {
 ; CHECK-LABEL: testmswbf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    frintm s0, s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    lsl w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzs w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -31,19 +29,17 @@ entry:
 define i64 @testmsxbf(bfloat %a) {
 ; CHECK-LABEL: testmsxbf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    frintm s0, s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    lsl w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzs x0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -141,19 +137,17 @@ entry:
 define i32 @testpswbf(bfloat %a) {
 ; CHECK-LABEL: testpswbf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    frintp s0, s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    lsl w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzs w0, s0
 ; CHECK-NEXT:    ret
 entry:
@@ -165,19 +159,17 @@ entry:
 define i64 @testpsxbf(bfloat %a) {
 ; CHECK-LABEL: testpsxbf:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
-; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
 ; CHECK-NEXT:    mov w8, #32767 // =0x7fff
-; CHECK-NEXT:    lsl w9, w9, #16
-; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    frintp s0, s0
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    ubfx w10, w9, #16, #1
 ; CHECK-NEXT:    add w8, w9, w8
 ; CHECK-NEXT:    add w8, w10, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    lsl w8, w8, #16
 ; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    fcvtzs x0, s0
 ; CHECK-NEXT:    ret
 entry:

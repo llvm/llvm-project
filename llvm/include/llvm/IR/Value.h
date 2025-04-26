@@ -131,7 +131,7 @@ private:
 
   public:
     using iterator_category = std::forward_iterator_tag;
-    using value_type = UseT *;
+    using value_type = UseT;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type *;
     using reference = value_type &;
@@ -290,9 +290,7 @@ public:
   /// \note It is an error to call V->takeName(V).
   void takeName(Value *V);
 
-#ifndef NDEBUG
   std::string getNameOrAsOperand() const;
-#endif
 
   /// Change all uses of this to point to a new Value.
   ///
@@ -710,6 +708,10 @@ public:
   /// For example, for a value \p ExternalAnalysis might try to calculate a
   /// lower bound. If \p ExternalAnalysis is successful, it should return true.
   ///
+  /// If \p LookThroughIntToPtr is true then this method also looks through
+  /// IntToPtr and PtrToInt constant expressions. The returned pointer may not
+  /// have the same provenance as this value.
+  ///
   /// If this is called on a non-pointer value, it returns 'this' and the
   /// \p Offset is not modified.
   ///
@@ -722,13 +724,19 @@ public:
       const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
       bool AllowInvariantGroup = false,
       function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
-          nullptr) const;
-  Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
-                                           bool AllowNonInbounds,
-                                           bool AllowInvariantGroup = false) {
+          nullptr,
+      bool LookThroughIntToPtr = false) const;
+
+  Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false) {
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
-            DL, Offset, AllowNonInbounds, AllowInvariantGroup));
+            DL, Offset, AllowNonInbounds, AllowInvariantGroup, ExternalAnalysis,
+            LookThroughIntToPtr));
   }
 
   /// This is a wrapper around stripAndAccumulateConstantOffsets with the

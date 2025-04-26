@@ -1,4 +1,4 @@
-; RUN: llc -fp-contract=fast -O3 -march=hexagon -mcpu=hexagonv5 < %s
+; RUN: llc -fp-contract=fast -O3 -mtriple=hexagon -mcpu=hexagonv5 < %s
 ; REQUIRES: asserts
 
 ; Test that the pipeliner doesn't ICE due because the PHI generation

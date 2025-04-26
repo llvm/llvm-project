@@ -54,12 +54,12 @@ define arm_aapcs_vfpcc float @float128(float %a0) local_unnamed_addr {
 ; NEON-LABEL: float128:
 ; NEON:       @ %bb.0:
 ; NEON-NEXT:    mov.w r0, #1124073472
-; NEON-NEXT:    vmov.f32 s2, #5.000000e-01
-; NEON-NEXT:    vmov d3, r0, r0
-; NEON-NEXT:    vmov.f32 s4, #-5.000000e-01
-; NEON-NEXT:    vcmp.f32 s6, s0
+; NEON-NEXT:    vmov.f32 s4, #5.000000e-01
+; NEON-NEXT:    vmov d1, r0, r0
+; NEON-NEXT:    vmov.f32 s6, #-5.000000e-01
+; NEON-NEXT:    vcmp.f32 s2, s0
 ; NEON-NEXT:    vmrs APSR_nzcv, fpscr
-; NEON-NEXT:    vselgt.f32 s0, s4, s2
+; NEON-NEXT:    vselgt.f32 s0, s6, s4
 ; NEON-NEXT:    bx lr
   %1 = fcmp nsz olt float %a0, 128.000000e+00
   %2 = select i1 %1, float -5.000000e-01, float 5.000000e-01
@@ -69,12 +69,12 @@ define arm_aapcs_vfpcc float @float128(float %a0) local_unnamed_addr {
 define arm_aapcs_vfpcc double @double1(double %a0) local_unnamed_addr {
 ; CHECK-LABEL: double1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.f64 d18, #1.000000e+00
-; CHECK-NEXT:    vcmp.f64 d18, d0
+; CHECK-NEXT:    vmov.f64 d16, #1.000000e+00
+; CHECK-NEXT:    vcmp.f64 d16, d0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.f64 d16, #5.000000e-01
-; CHECK-NEXT:    vmov.f64 d17, #-5.000000e-01
-; CHECK-NEXT:    vselgt.f64 d0, d17, d16
+; CHECK-NEXT:    vmov.f64 d17, #5.000000e-01
+; CHECK-NEXT:    vmov.f64 d18, #-5.000000e-01
+; CHECK-NEXT:    vselgt.f64 d0, d18, d17
 ; CHECK-NEXT:    bx lr
   %1 = fcmp nsz olt double %a0, 1.000000e+00
   %2 = select i1 %1, double -5.000000e-01, double 5.000000e-01
@@ -87,12 +87,12 @@ define arm_aapcs_vfpcc double @double128(double %a0) local_unnamed_addr {
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    movt r0, #16480
-; CHECK-NEXT:    vmov.f64 d16, #5.000000e-01
-; CHECK-NEXT:    vmov d18, r1, r0
-; CHECK-NEXT:    vcmp.f64 d18, d0
+; CHECK-NEXT:    vmov.f64 d17, #5.000000e-01
+; CHECK-NEXT:    vmov d16, r1, r0
+; CHECK-NEXT:    vcmp.f64 d16, d0
 ; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    vmov.f64 d17, #-5.000000e-01
-; CHECK-NEXT:    vselgt.f64 d0, d17, d16
+; CHECK-NEXT:    vmov.f64 d18, #-5.000000e-01
+; CHECK-NEXT:    vselgt.f64 d0, d18, d17
 ; CHECK-NEXT:    bx lr
   %1 = fcmp nsz olt double %a0, 128.000000e+00
   %2 = select i1 %1, double -5.000000e-01, double 5.000000e-01

@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_SWAP_RANGES_H
-#define _LIBCPP___ALGORITHM_SWAP_RANGES_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_SWAP_RANGES_H
+#define _LIBCPP___CXX03___ALGORITHM_SWAP_RANGES_H
 
-#include <__algorithm/iterator_operations.h>
-#include <__config>
-#include <__utility/move.h>
-#include <__utility/pair.h>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__config>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -59,4 +59,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_SWAP_RANGES_H
+#endif // _LIBCPP___CXX03___ALGORITHM_SWAP_RANGES_H

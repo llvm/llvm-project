@@ -40,6 +40,9 @@ void __memprof_record_access_range(void const volatile *addr, uptr size);
 
 SANITIZER_INTERFACE_ATTRIBUTE void __memprof_print_accumulated_stats();
 
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE extern char
+    __memprof_default_options_str[1];
+
 SANITIZER_INTERFACE_ATTRIBUTE
 const char *__memprof_default_options();
 

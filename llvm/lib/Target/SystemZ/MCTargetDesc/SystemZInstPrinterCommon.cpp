@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZInstPrinterCommon.h"
+#include "MCTargetDesc/SystemZMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegister.h"
@@ -57,8 +58,7 @@ void SystemZInstPrinterCommon::printOperand(const MCOperand &MO,
     llvm_unreachable("Invalid operand");
 }
 
-void SystemZInstPrinterCommon::printRegName(raw_ostream &O,
-                                            MCRegister Reg) const {
+void SystemZInstPrinterCommon::printRegName(raw_ostream &O, MCRegister Reg) {
   printFormattedRegName(&MAI, Reg, O);
 }
 
@@ -169,11 +169,11 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
   if ((unsigned)OpNum + 1 < MI->getNumOperands()) {
     const MCOperand &MO = MI->getOperand(OpNum + 1);
     const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
-    switch (refExp.getKind()) {
-    case MCSymbolRefExpr::VK_TLSGD:
+    switch (getSpecifier(&refExp)) {
+    case SystemZMCExpr::VK_TLSGD:
       O << ":tls_gdcall:";
       break;
-    case MCSymbolRefExpr::VK_TLSLDM:
+    case SystemZMCExpr::VK_TLSLDM:
       O << ":tls_ldcall:";
       break;
     default:
@@ -231,6 +231,12 @@ void SystemZInstPrinterCommon::printBDRAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDVAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
+  printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
+               MI->getOperand(OpNum + 2).getReg(), O);
+}
+
+void SystemZInstPrinterCommon::printLXAAddrOperand(const MCInst *MI, int OpNum,
+                                             raw_ostream &O) {
   printAddress(&MAI, MI->getOperand(OpNum).getReg(), MI->getOperand(OpNum + 1),
                MI->getOperand(OpNum + 2).getReg(), O);
 }

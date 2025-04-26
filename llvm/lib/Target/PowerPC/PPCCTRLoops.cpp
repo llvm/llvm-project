@@ -42,8 +42,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -59,9 +57,7 @@ class PPCCTRLoops : public MachineFunctionPass {
 public:
   static char ID;
 
-  PPCCTRLoops() : MachineFunctionPass(ID) {
-    initializePPCCTRLoopsPass(*PassRegistry::getPassRegistry());
-  }
+  PPCCTRLoops() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfoWrapperPass>();

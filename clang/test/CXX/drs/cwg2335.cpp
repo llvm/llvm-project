@@ -1,14 +1,12 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx14 -fexceptions -fcxx-exceptions -pedantic-errors
 
-#if __cplusplus <= 201103L
-// expected-no-diagnostics
-#endif
+// cxx98-11-no-diagnostics
 
 namespace cwg2335 { // cwg2335: no drafting 2018-06
 // FIXME: current consensus is that the examples are well-formed.

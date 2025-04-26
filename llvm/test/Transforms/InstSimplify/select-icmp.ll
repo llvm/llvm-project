@@ -244,3 +244,35 @@ cond.true:                                        ; preds = %entry
 cond.end:                                         ; preds = %entry, %cond.true
   ret i8 0
 }
+
+define ptr @icmp_ptr_eq_replace(ptr %a, ptr %b) {
+; CHECK-LABEL: @icmp_ptr_eq_replace(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[A:%.*]], [[B1:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[CMP]], ptr [[A]], ptr [[B1]]
+; CHECK-NEXT:    ret ptr [[B]]
+;
+  %cmp = icmp eq ptr %a, %b
+  %sel = select i1 %cmp, ptr %a, ptr %b
+  ret ptr %sel
+}
+
+define ptr @icmp_ptr_eq_replace_null(ptr %a) {
+; CHECK-LABEL: @icmp_ptr_eq_replace_null(
+; CHECK-NEXT:    ret ptr [[A:%.*]]
+;
+  %cmp = icmp eq ptr %a, null
+  %sel = select i1 %cmp, ptr null, ptr %a
+  ret ptr %sel
+}
+
+define ptr @ptr_eq_replace_same_underlying_object(ptr %st, i64 %i, i64 %j) {
+; CHECK-LABEL: @ptr_eq_replace_same_underlying_object(
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds i8, ptr [[ST:%.*]], i64 [[J:%.*]]
+; CHECK-NEXT:    ret ptr [[B]]
+;
+  %a = getelementptr inbounds i8, ptr %st, i64 %i
+  %b = getelementptr inbounds i8, ptr %st, i64 %j
+  %cmp = icmp eq ptr %a, %b
+  %sel = select i1 %cmp, ptr %a, ptr %b
+  ret ptr %sel
+}

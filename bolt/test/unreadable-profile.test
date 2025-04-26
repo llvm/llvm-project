@@ -1,4 +1,4 @@
-REQUIRES: system-linux
+REQUIRES: system-linux, non-root-user
 
 RUN: touch %t.profile && chmod 000 %t.profile
 RUN: %clang %S/Inputs/hello.c -o %t

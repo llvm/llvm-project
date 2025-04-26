@@ -329,7 +329,7 @@ size_t SBValue::GetByteSize() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    result = value_sp->GetByteSize().value_or(0);
+    result = llvm::expectedToOptional(value_sp->GetByteSize()).value_or(0);
   }
 
   return result;
@@ -380,8 +380,10 @@ const char *SBValue::GetObjectDescription() {
     return nullptr;
 
   llvm::Expected<std::string> str = value_sp->GetObjectDescription();
-  if (!str)
-    return ConstString("error: " + toString(str.takeError())).AsCString();
+  if (!str) {
+    llvm::consumeError(str.takeError());
+    return nullptr;
+  }
   return ConstString(*str).AsCString();
 }
 

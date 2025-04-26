@@ -250,21 +250,21 @@ define i64 @ashr_by_masked_complemented_64(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    li a2, 63
 ; RV32I-NEXT:    sub a2, a2, a0
-; RV32I-NEXT:    andi a3, a2, 63
-; RV32I-NEXT:    addi a4, a3, -32
-; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    bltz a4, .LBB9_2
+; RV32I-NEXT:    andi a2, a2, 63
+; RV32I-NEXT:    addi a3, a2, -32
+; RV32I-NEXT:    bltz a3, .LBB9_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    srai a1, a2, 31
-; RV32I-NEXT:    sra a0, a2, a3
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    srai a1, a1, 31
+; RV32I-NEXT:    sra a0, a0, a2
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB9_2:
-; RV32I-NEXT:    not a4, a0
-; RV32I-NEXT:    sra a1, a2, a4
-; RV32I-NEXT:    srl a0, a0, a4
-; RV32I-NEXT:    not a3, a3
-; RV32I-NEXT:    slli a2, a2, 1
-; RV32I-NEXT:    sll a2, a2, a3
+; RV32I-NEXT:    not a3, a0
+; RV32I-NEXT:    not a2, a2
+; RV32I-NEXT:    slli a4, a1, 1
+; RV32I-NEXT:    sra a1, a1, a3
+; RV32I-NEXT:    srl a0, a0, a3
+; RV32I-NEXT:    sll a2, a4, a2
 ; RV32I-NEXT:    or a0, a0, a2
 ; RV32I-NEXT:    ret
 ;

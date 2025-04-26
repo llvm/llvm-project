@@ -61,12 +61,21 @@ static LogicalResult lowerToLLVMDialect(ModuleOp module) {
 }
 
 TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(AddInteger)) {
+#ifdef __s390__
+  std::string moduleStr = R"mlir(
+  func.func @foo(%arg0 : i32 {llvm.signext}) -> (i32 {llvm.signext}) attributes { llvm.emit_c_interface } {
+    %res = arith.addi %arg0, %arg0 : i32
+    return %res : i32
+  }
+  )mlir";
+#else
   std::string moduleStr = R"mlir(
   func.func @foo(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {
     %res = arith.addi %arg0, %arg0 : i32
     return %res : i32
   }
   )mlir";
+#endif
   DialectRegistry registry;
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);
@@ -259,6 +268,16 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
   for (float &elt : *a)
     elt = count++;
 
+#ifdef __s390__
+  std::string moduleStr = R"mlir(
+  func.func private @callback(%arg0: memref<?x?xf32>, %coefficient: i32 {llvm.signext})  attributes { llvm.emit_c_interface }
+  func.func @caller_for_callback(%arg0: memref<?x?xf32>, %coefficient: i32 {llvm.signext}) attributes { llvm.emit_c_interface } {
+    %unranked = memref.cast %arg0: memref<?x?xf32> to memref<*xf32>
+    call @callback(%arg0, %coefficient) : (memref<?x?xf32>, i32) -> ()
+    return
+  }
+  )mlir";
+#else
   std::string moduleStr = R"mlir(
   func.func private @callback(%arg0: memref<?x?xf32>, %coefficient: i32)  attributes { llvm.emit_c_interface }
   func.func @caller_for_callback(%arg0: memref<?x?xf32>, %coefficient: i32) attributes { llvm.emit_c_interface } {
@@ -267,6 +286,8 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
     return
   }
   )mlir";
+#endif
+
   DialectRegistry registry;
   registerAllDialects(registry);
   registerBuiltinDialectTranslation(registry);

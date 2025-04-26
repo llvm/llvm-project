@@ -6,30 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
-#define _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#ifndef _LIBCPP___CXX03___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#define _LIBCPP___CXX03___CONDITION_VARIABLE_CONDITION_VARIABLE_H
 
-#include <__chrono/duration.h>
-#include <__chrono/steady_clock.h>
-#include <__chrono/system_clock.h>
-#include <__chrono/time_point.h>
-#include <__config>
-#include <__mutex/mutex.h>
-#include <__mutex/unique_lock.h>
-#include <__system_error/system_error.h>
-#include <__thread/support.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_floating_point.h>
-#include <__utility/move.h>
-#include <limits>
-#include <ratio>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__chrono/steady_clock.h>
+#include <__cxx03/__chrono/system_clock.h>
+#include <__cxx03/__chrono/time_point.h>
+#include <__cxx03/__config>
+#include <__cxx03/__mutex/mutex.h>
+#include <__cxx03/__mutex/unique_lock.h>
+#include <__cxx03/__system_error/system_error.h>
+#include <__cxx03/__thread/support.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/limits>
+#include <__cxx03/ratio>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -241,4 +241,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___CONDITION_VARIABLE_CONDITION_VARIABLE_H
+#endif // _LIBCPP___CXX03___CONDITION_VARIABLE_CONDITION_VARIABLE_H

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-const64=1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-const64=1 < %s | FileCheck %s
 ; CHECK: combine(##4917,#88)
 
 target triple = "hexagon"

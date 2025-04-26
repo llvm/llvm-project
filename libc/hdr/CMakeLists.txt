@@ -51,10 +51,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.generic_error_number_macros
 )
 
+add_header_library(fcntl_overlay HDRS fcntl_overlay.h)
 add_proxy_header_library(
   fcntl_macros
   HDRS
     fcntl_macros.h
+  DEPENDS
+    .fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.fcntl_macros
     libc.include.fcntl
@@ -70,12 +73,34 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sched_macros
+  HDRS
+    sched_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sched
+    libc.include.llvm-libc-macros.sched_macros
+)
+
+add_proxy_header_library(
   signal_macros
   HDRS
     signal_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.signal_macros
     libc.include.signal
+)
+
+add_header_library(stdlib_overlay HDRS stdlib_overlay.h)
+
+add_proxy_header_library(
+  stdlib_macros
+  HDRS
+    stdlib_macros.h
+  DEPENDS
+    .stdlib_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.stdlib
+    libc.include.llvm-libc-macros.stdlib_macros
 )
 
 add_header_library(stdio_overlay HDRS stdio_overlay.h)
@@ -110,19 +135,30 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.sys_stat_macros
 )
 
+add_header_library(unistd_overlay HDRS unistd_overlay.h)
 add_proxy_header_library(
   unistd_macros
   HDRS
     unistd_macros.h
+  DEPENDS
+    .unistd_overlay
   FULL_BUILD_DEPENDS
     libc.include.unistd
     libc.include.llvm-libc-macros.unistd_macros
 )
 
+if (WIN32)
+  set(windows_addtional_time_macros libc.include.llvm-libc-macros.windows.time_macros_ext)
+else()
+  set(windows_addtional_time_macros "")
+endif()
+
 add_proxy_header_library(
   time_macros
   HDRS
     time_macros.h
+  DEPENDS
+    ${windows_addtional_time_macros}
   FULL_BUILD_DEPENDS
     libc.include.time
     libc.include.llvm-libc-macros.time_macros
@@ -157,6 +193,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  locale_macros
+  HDRS
+    locale_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.locale_macros
+    libc.include.locale
+)
+
+add_proxy_header_library(
   sys_auxv_macros
   HDRS
     sys_auxv_macros.h
@@ -179,3 +224,4 @@ add_proxy_header_library(
 )
 
 add_subdirectory(types)
+add_subdirectory(func)

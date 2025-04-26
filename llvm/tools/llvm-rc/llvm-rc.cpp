@@ -57,12 +57,13 @@ enum ID {
 };
 
 namespace rc_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -73,7 +74,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class RcOptTable : public opt::GenericOptTable {
 public:
-  RcOptTable() : GenericOptTable(rc_opt::InfoTable, /* IgnoreCase = */ true) {}
+  RcOptTable()
+      : GenericOptTable(rc_opt::OptionStrTable, rc_opt::OptionPrefixesTable,
+                        rc_opt::InfoTable,
+                        /* IgnoreCase = */ true) {}
 };
 
 enum Windres_ID {
@@ -84,12 +88,13 @@ enum Windres_ID {
 };
 
 namespace windres_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "WindresOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "WindresOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(...)                                                            \
@@ -102,7 +107,10 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 class WindresOptTable : public opt::GenericOptTable {
 public:
   WindresOptTable()
-      : GenericOptTable(windres_opt::InfoTable, /* IgnoreCase = */ false) {}
+      : GenericOptTable(windres_opt::OptionStrTable,
+                        windres_opt::OptionPrefixesTable,
+                        windres_opt::InfoTable,
+                        /* IgnoreCase = */ false) {}
 };
 
 static ExitOnError ExitOnErr;
@@ -258,8 +266,7 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
       }
     }
   }
-  for (const auto &S : Opts.PreprocessArgs)
-    Args.push_back(S);
+  llvm::append_range(Args, Opts.PreprocessArgs);
   Args.push_back(Src);
   Args.push_back("-o");
   Args.push_back(Dst);
@@ -364,7 +371,7 @@ RcOptions parseWindresOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> FileArgs = InputArgs.getAllArgValues(WINDRES_INPUT);
-  FileArgs.insert(FileArgs.end(), InputArgsArray.begin(), InputArgsArray.end());
+  llvm::append_range(FileArgs, InputArgsArray);
 
   if (InputArgs.hasArg(WINDRES_input)) {
     Opts.InputFile = InputArgs.getLastArgValue(WINDRES_input).str();
@@ -512,8 +519,7 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
   }
 
   std::vector<std::string> InArgsInfo = InputArgs.getAllArgValues(OPT_INPUT);
-  InArgsInfo.insert(InArgsInfo.end(), InputArgsArray.begin(),
-                    InputArgsArray.end());
+  llvm::append_range(InArgsInfo, InputArgsArray);
   if (InArgsInfo.size() != 1) {
     fatalError("Exactly one input file should be provided.");
   }

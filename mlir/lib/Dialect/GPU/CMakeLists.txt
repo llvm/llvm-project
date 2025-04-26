@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRGPUDialect
   IR/GPUDialect.cpp
   IR/InferIntRangeInterfaceImpls.cpp
+  IR/ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -40,8 +41,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/ShuffleRewriter.cpp
   Transforms/SPIRVAttachTarget.cpp
   Transforms/SubgroupReduceLowering.cpp
-  Transforms/Utils.cpp
-  
+
   OBJECT
 
   ADDITIONAL_HEADER_DIRS
@@ -53,12 +53,14 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineUtils
+  MLIRAMDGPUDialect
   MLIRArithDialect
   MLIRAsyncDialect
   MLIRBufferizationDialect
   MLIRDataLayoutInterfaces
   MLIRExecutionEngineUtils
   MLIRGPUDialect
+  MLIRGPUUtils
   MLIRIR
   MLIRIndexDialect
   MLIRLLVMDialect
@@ -69,6 +71,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRSideEffectInterfaces
   MLIRSPIRVTarget
   MLIRSupport
+  MLIRROCDLDialect
   MLIRROCDLTarget
   MLIRTransformUtils
   MLIRVectorDialect
@@ -76,3 +79,4 @@ add_mlir_dialect_library(MLIRGPUTransforms
 
 add_subdirectory(TransformOps)
 add_subdirectory(Pipelines)
+add_subdirectory(Utils)

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_ROTATE_COPY_H
-#define _LIBCPP___ALGORITHM_ROTATE_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_ROTATE_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_ROTATE_COPY_H
 
-#include <__algorithm/copy.h>
-#include <__config>
+#include <__cxx03/__algorithm/copy.h>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,4 +26,4 @@ rotate_copy(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterato
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_ROTATE_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_ROTATE_COPY_H

@@ -32,14 +32,14 @@ define void @vec_add(ptr %dest, ptr %p) {
 ; CHECK-LABEL: @vec_add(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], <i16 1, i16 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], splat (i16 1)
 ; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: @vec_add(
 ; DEFAULT-NEXT:  entry:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P:%.*]], align 4
-; DEFAULT-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], <i16 1, i16 1>
+; DEFAULT-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], splat (i16 1)
 ; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
@@ -179,12 +179,12 @@ entry:
 define void @splat_store_i32_one(ptr %dest) {
 ; CHECK-LABEL: @splat_store_i32_one(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[DEST:%.*]], align 4
+; CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[DEST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: @splat_store_i32_one(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr [[DEST:%.*]], align 4
+; DEFAULT-NEXT:    store <4 x i32> splat (i32 1), ptr [[DEST:%.*]], align 4
 ; DEFAULT-NEXT:    ret void
 ;
 entry:

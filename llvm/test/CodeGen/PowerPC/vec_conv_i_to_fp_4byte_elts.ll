@@ -68,8 +68,8 @@ define void @test8elt(ptr noalias nocapture sret(<8 x float>) %agg.result, ptr n
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    xvcvuxwsp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvuxwsp vs0, vs0
-; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt:
@@ -215,8 +215,8 @@ define void @test8elt_signed(ptr noalias nocapture sret(<8 x float>) %agg.result
 ; CHECK-P8-NEXT:    lxvd2x vs0, r4, r5
 ; CHECK-P8-NEXT:    xvcvsxwsp vs1, vs1
 ; CHECK-P8-NEXT:    xvcvsxwsp vs0, vs0
-; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
+; CHECK-P8-NEXT:    stxvd2x vs0, r3, r5
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test8elt_signed:

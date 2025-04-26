@@ -269,13 +269,6 @@ public:
   /// @{
   using CompilerInvocationBase::LangOpts;
   using CompilerInvocationBase::TargetOpts;
-  using CompilerInvocationBase::DiagnosticOpts;
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
-    return HSOpts;
-  }
-  std::shared_ptr<PreprocessorOptions> getPreprocessorOptsPtr() {
-    return PPOpts;
-  }
   std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
   /// @}
 

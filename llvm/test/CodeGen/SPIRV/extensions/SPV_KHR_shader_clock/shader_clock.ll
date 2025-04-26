@@ -6,9 +6,11 @@
 
 ; CHECK: OpCapability ShaderClockKHR
 ; CHECK: OpExtension "SPV_KHR_shader_clock"
-; CHECK-DAG: [[uint:%[a-z0-9_]+]] = OpTypeInt 32
+; CHECK-DAG: [[uint:%[a-z0-9_]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[ulong:%[a-z0-9_]+]] = OpTypeInt 64
 ; CHECK-DAG: [[v2uint:%[a-z0-9_]+]] = OpTypeVector [[uint]] 2
+; CHECK-DAG: OpConstant [[uint]] 8
+; CHECK-DAG: OpConstant [[uint]] 16
 ; CHECK-DAG: [[uint_1:%[a-z0-9_]+]] = OpConstant [[uint]] 1
 ; CHECK-DAG: [[uint_2:%[a-z0-9_]+]] = OpConstant [[uint]] 2
 ; CHECK-DAG: [[uint_3:%[a-z0-9_]+]] = OpConstant [[uint]] 3

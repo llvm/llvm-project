@@ -13,18 +13,18 @@ target triple = "x86_64-apple-darwin8"
 
 @__clz_tab = external constant [256 x i8]
 
-define hidden i128 @__divti3(i128 %u, i128 %v) nounwind readnone !dbg !9 {
+define hidden i128 @__divti3(i128 %u, i128 %v, i1 %arg) nounwind readnone !dbg !9 {
 entry:
   tail call void @llvm.dbg.value(metadata i128 %u, metadata !14, metadata !DIExpression()), !dbg !15
   tail call void @llvm.dbg.value(metadata i64 0, metadata !17, metadata !DIExpression()), !dbg !21
-  br i1 undef, label %bb2, label %bb4, !dbg !22
+  br i1 %arg, label %bb2, label %bb4, !dbg !22
 
 bb2:                                              ; preds = %entry
   tail call void @llvm.dbg.value(metadata i128 %u, metadata !14, metadata !DIExpression()), !dbg !15
   br label %bb4, !dbg !23
 
 bb4:                                              ; preds = %bb2, %entry
-  br i1 undef, label %__udivmodti4.exit, label %bb82.i, !dbg !24
+  br i1 %arg, label %__udivmodti4.exit, label %bb82.i, !dbg !24
 
 bb82.i:                                           ; preds = %bb4
   unreachable

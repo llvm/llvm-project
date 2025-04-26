@@ -23,8 +23,8 @@ canonicalFormulaPair(const Formula &LHS, const Formula &RHS) {
 }
 
 template <class Key, class ComputeFunc>
-const Formula &cached(llvm::DenseMap<Key, const Formula *> &Cache, Key K,
-                      ComputeFunc &&Compute) {
+static const Formula &cached(llvm::DenseMap<Key, const Formula *> &Cache, Key K,
+                             ComputeFunc &&Compute) {
   auto [It, Inserted] = Cache.try_emplace(std::forward<Key>(K));
   if (Inserted)
     It->second = Compute();

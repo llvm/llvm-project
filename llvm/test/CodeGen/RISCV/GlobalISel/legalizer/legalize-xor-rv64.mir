@@ -8,11 +8,8 @@ body:             |
     ; CHECK-LABEL: name: xor_i8
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -31,11 +28,8 @@ body:             |
     ; CHECK-LABEL: name: xor_i15
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -54,11 +48,8 @@ body:             |
     ; CHECK-LABEL: name: xor_i16
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -77,11 +68,8 @@ body:             |
     ; CHECK-LABEL: name: xor_i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[XOR]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11

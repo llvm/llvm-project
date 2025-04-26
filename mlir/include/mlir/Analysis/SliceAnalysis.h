@@ -10,7 +10,6 @@
 #define MLIR_ANALYSIS_SLICEANALYSIS_H_
 
 #include <functional>
-#include <vector>
 
 #include "mlir/Support/LLVM.h"
 
@@ -47,6 +46,11 @@ struct BackwardSliceOptions : public SliceOptions {
   /// backward slice computation traverses block arguments and asserts that the
   /// parent op has a single region with a single block.
   bool omitBlockArguments = false;
+
+  /// When omitUsesFromAbove is true, the backward slice computation omits
+  /// traversing values that are captured from above.
+  /// TODO: this should default to `false` after users have been updated.
+  bool omitUsesFromAbove = true;
 };
 
 using ForwardSliceOptions = SliceOptions;

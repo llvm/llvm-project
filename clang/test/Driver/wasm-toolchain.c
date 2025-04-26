@@ -75,11 +75,16 @@
 // Thread-related command line tests.
 
 // '-pthread' sets +atomics, +bulk-memory, +mutable-globals, +sign-ext, and --shared-memory
-// RUN: %clang -### --target=wasm32-unknown-unknown \
-// RUN:    --sysroot=/foo %s -pthread 2>&1 \
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD %s
 // PTHREAD: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
-// PTHREAD: wasm-ld{{.*}}" "-lpthread" "--shared-memory"
+// PTHREAD: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
+//
+// '-pthread' with '-nostdlib' should still set '--shared-memory' but not include '-lpthread'
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread -nostdlib 2>&1 \
+// RUN:  | FileCheck -check-prefix=PTHREAD-NOSTDLIB %s
+// PTHREAD-NOSTDLIB: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// PTHREAD-NOSTDLIB: wasm-ld{{.*}}" "--shared-memory" "-o" "a.out"
 
 // '-pthread' not allowed with '-mno-atomics'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
@@ -105,6 +110,12 @@
 // RUN:   | FileCheck -check-prefix=PTHREAD_NO_SIGN_EXT %s
 // PTHREAD_NO_SIGN_EXT: invalid argument '-pthread' not allowed with '-mno-sign-ext'
 
+// 'wasm32-wasi-threads' does the same thing as '-pthread'
+// RUN: %clang -### --target=wasm32-wasi-threads --sysroot=/foo %s 2>&1 \
+// RUN:  | FileCheck -check-prefix=WASI_THREADS %s
+// WASI_THREADS: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// WASI_THREADS: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
+
 // '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
 // '-mllvm --force-attribute=foo:noinline -mllvm --force-attribute=bar:noinline'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
@@ -120,18 +131,12 @@
 // RUN:   | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_WO_ENABLE %s
 // EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-mllvm -enable-emscripten-cxx-exceptions'
 
-// '-fwasm-exceptions' sets +exception-handling, -multivalue, -reference-types
-// and '-mllvm -wasm-enable-eh'
+// '-fwasm-exceptions' sets +exception-handling, -multivalue, -reference-types,
+// "-exception-model=wasm", and '-mllvm -wasm-enable-eh'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -fwasm-exceptions 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASM_EXCEPTIONS %s
-// WASM_EXCEPTIONS: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-mllvm" "-wasm-enable-eh" "-target-feature" "+multivalue" "-target-feature" "+reference-types"
-
-// '-fwasm-exceptions' not allowed with '-mno-exception-handling'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -fwasm-exceptions -mno-exception-handling 2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_NO_EH %s
-// WASM_EXCEPTIONS_NO_EH: invalid argument '-fwasm-exceptions' not allowed with '-mno-exception-handling'
+// WASM_EXCEPTIONS: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm" "-mllvm" "-wasm-enable-eh"
 
 // '-fwasm-exceptions' not allowed with
 // '-mllvm -enable-emscripten-cxx-exceptions'
@@ -139,7 +144,20 @@
 // RUN:     --sysroot=/foo %s -fwasm-exceptions \
 // RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_EMSCRIPTEN_EH %s
-// WASM_EXCEPTIONS_EMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+// WASM_EXCEPTIONS_EMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-enable-emscripten-cxx-exceptions'
+
+// '-fwasm-exceptions' not allowed with '-mllvm -enable-emscripten-sjlj'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -fwasm-exceptions \
+// RUN:     -mllvm -enable-emscripten-sjlj 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_EMSCRIPTEN_SJLJ %s
+// WASM_EXCEPTIONS_EMSCRIPTEN_SJLJ: invalid argument '-fwasm-exceptions' not allowed with '-enable-emscripten-sjlj'
+
+// '-fwasm-exceptions' not allowed with '-mno-exception-handling'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -fwasm-exceptions -mno-exception-handling 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_NO_EH %s
+// WASM_EXCEPTIONS_NO_EH: invalid argument '-fwasm-exceptions' not allowed with '-mno-exception-handling'
 
 // '-fwasm-exceptions' not allowed with '-mno-multivalue'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
@@ -154,18 +172,11 @@
 // WASM_EXCEPTIONS_NO_REFERENCE_TYPES: invalid argument '-fwasm-exceptions' not allowed with '-mno-reference-types'
 
 // '-mllvm -wasm-enable-sjlj' sets +exception-handling, +multivalue,
-// +reference-types  and '-exception-model=wasm'
+// +reference-types and '-exception-model=wasm'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -mllvm -wasm-enable-sjlj 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASM_SJLJ %s
-// WASM_SJLJ: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-exception-model=wasm" "-target-feature" "+multivalue" "-target-feature" "+reference-types"
-
-// '-mllvm -wasm-enable-sjlj' not allowed with '-mno-exception-handling'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj -mno-exception-handling \
-// RUN:     2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_EH %s
-// WASM_SJLJ_NO_EH: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mno-exception-handling'
+// WASM_SJLJ: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
 
 // '-mllvm -wasm-enable-sjlj' not allowed with
 // '-mllvm -enable-emscripten-cxx-exceptions'
@@ -173,27 +184,64 @@
 // RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
 // RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_SJLJ_EMSCRIPTEN_EH %s
-// WASM_SJLJ_EMSCRIPTEN_EH: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+// WASM_SJLJ_EMSCRIPTEN_EH: invalid argument '-wasm-enable-sjlj' not allowed with '-enable-emscripten-cxx-exceptions'
 
 // '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
 // RUN:     -mllvm -enable-emscripten-sjlj 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_SJLJ_EMSCRIPTEN_SJLJ %s
-// WASM_SJLJ_EMSCRIPTEN_SJLJ: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-sjlj'
+// WASM_SJLJ_EMSCRIPTEN_SJLJ: invalid argument '-wasm-enable-sjlj' not allowed with '-enable-emscripten-sjlj'
+
+// '-mllvm -wasm-enable-sjlj' not allowed with '-mno-exception-handling'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj -mno-exception-handling \
+// RUN:     2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_EH %s
+// WASM_SJLJ_NO_EH: invalid argument '-wasm-enable-sjlj' not allowed with '-mno-exception-handling'
 
 // '-mllvm -wasm-enable-sjlj' not allowed with '-mno-multivalue'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj -mno-multivalue 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_MULTIVALUE %s
-// WASM_SJLJ_NO_MULTIVALUE: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mno-multivalue'
+// WASM_SJLJ_NO_MULTIVALUE: invalid argument '-wasm-enable-sjlj' not allowed with '-mno-multivalue'
 
 // '-mllvm -wasm-enable-sjlj' not allowed with '-mno-reference-types'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
 // RUN:     -mno-reference-types 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_REFERENCE_TYPES %s
-// WASM_SJLJ_NO_REFERENCE_TYPES: invalid argument '-mllvm -wasm-enable-sjlj' not allowed with '-mno-reference-types'
+// WASM_SJLJ_NO_REFERENCE_TYPES: invalid argument '-wasm-enable-sjlj' not allowed with '-mno-reference-types'
+
+// '-mllvm -wasm-use-legacy-eh' not allowed with
+// '-mllvm -enable-emscripten-cxx-exceptions'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
+// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_EMSCRIPTEN_EH %s
+// WASM_LEGACY_EH_EMSCRIPTEN_EH: invalid argument '-wasm-use-legacy-eh' not allowed with '-enable-emscripten-cxx-exceptions'
+
+// '-mllvm -wasm-use-legacy-eh' not allowed with '-mllvm -enable-emscripten-sjlj'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
+// RUN:     -mllvm -enable-emscripten-sjlj 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_EMSCRIPTEN_SJLJ %s
+// WASM_LEGACY_EH_EMSCRIPTEN_SJLJ: invalid argument '-wasm-use-legacy-eh' not allowed with '-enable-emscripten-sjlj'
+
+// '-mllvm -wasm-use-legacy-eh' not allowed with '-mno-exception-handling'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
+// RUN:     -mno-exception-handling 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_NO_EH %s
+// WASM_LEGACY_EH_NO_EH: invalid argument '-wasm-use-legacy-eh' not allowed with '-mno-exception-handling'
+
+// When invoking clang with multiple files in a single command line, target
+// feature flags should be equally added to the multiple clang-cc1 command lines
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s %s -mllvm -wasm-enable-sjlj 2>&1 \
+// RUN:  | FileCheck -check-prefix=WASM_SJLJ_MULTI_FILES %s
+// WASM_SJLJ_MULTI_FILES: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
+// WASM_SJLJ_MULTI_FILES: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
 
 // RUN: %clang -### %s -fsanitize=address --target=wasm32-unknown-emscripten 2>&1 | FileCheck -check-prefix=CHECK-ASAN-EMSCRIPTEN %s
 // CHECK-ASAN-EMSCRIPTEN: "-fsanitize=address"

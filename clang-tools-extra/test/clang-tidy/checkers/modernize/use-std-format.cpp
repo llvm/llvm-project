@@ -1,12 +1,12 @@
-// RUN: %check_clang_tidy \
+// RUN: %check_clang_tidy --match-partial-fixes \
 // RUN:   -std=c++20 %s modernize-use-std-format %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: true}}" \
+// RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: true}}" \
 // RUN:   -- -isystem %clang_tidy_headers \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
-// RUN: %check_clang_tidy \
+// RUN: %check_clang_tidy --match-partial-fixes \
 // RUN:   -std=c++20 %s modernize-use-std-format %t -- \
-// RUN:   -config="{CheckOptions: {StrictMode: false}}" \
+// RUN:   -config="{CheckOptions: {modernize-use-std-format.StrictMode: false}}" \
 // RUN:   -- -isystem %clang_tidy_headers \
 // RUN:      -DPRI_CMDLINE_MACRO="\"s\"" \
 // RUN:      -D__PRI_CMDLINE_MACRO="\"s\""
@@ -100,7 +100,7 @@ std::string StrFormat_field_width_and_precision() {
   return s1 + s2 + s3 + s4 + s5 + s6;
 }
 
-std::string StrFormat_macros() {
+void StrFormat_macros() {
   // The function call is replaced even though it comes from a macro.
 #define FORMAT absl::StrFormat
   auto s1 = FORMAT("Hello %d", 42);

@@ -19,6 +19,10 @@ template <class T>
 struct is_trivially_copyable
     : public integral_constant<bool, __is_trivially_copyable(T)> {};
 
+template <class T>
+LIBC_INLINE_VAR constexpr bool is_trivially_copyable_v =
+    is_trivially_copyable<T>::value;
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 

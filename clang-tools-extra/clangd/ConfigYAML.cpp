@@ -104,6 +104,10 @@ private:
       if (auto Values = scalarValues(N))
         F.Remove = std::move(*Values);
     });
+    Dict.handle("BuiltinHeaders", [&](Node &N) {
+      if (auto BuiltinHeaders = scalarValue(N, "BuiltinHeaders"))
+        F.BuiltinHeaders = *BuiltinHeaders;
+    });
     Dict.handle("CompilationDatabase", [&](Node &N) {
       F.CompilationDatabase = scalarValue(N, "CompilationDatabase");
     });
@@ -115,6 +119,14 @@ private:
     Dict.handle("FullyQualifiedNamespaces", [&](Node &N) {
       if (auto Values = scalarValues(N))
         F.FullyQualifiedNamespaces = std::move(*Values);
+    });
+    Dict.handle("QuotedHeaders", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.QuotedHeaders = std::move(*Values);
+    });
+    Dict.handle("AngledHeaders", [&](Node &N) {
+      if (auto Values = scalarValues(N))
+        F.AngledHeaders = std::move(*Values);
     });
     Dict.parse(N);
   }
@@ -232,6 +244,10 @@ private:
     Dict.handle("ArgumentLists", [&](Node &N) {
       if (auto ArgumentLists = scalarValue(N, "ArgumentLists"))
         F.ArgumentLists = *ArgumentLists;
+    });
+    Dict.handle("HeaderInsertion", [&](Node &N) {
+      if (auto HeaderInsertion = scalarValue(N, "HeaderInsertion"))
+        F.HeaderInsertion = *HeaderInsertion;
     });
     Dict.parse(N);
   }

@@ -39,12 +39,13 @@ enum ObjcopyID {
 };
 
 namespace objcopy_opt {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "ObjcopyOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "ObjcopyOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -56,8 +57,12 @@ static constexpr opt::OptTable::Info ObjcopyInfoTable[] = {
 
 class ObjcopyOptTable : public opt::GenericOptTable {
 public:
-  ObjcopyOptTable() : opt::GenericOptTable(objcopy_opt::ObjcopyInfoTable) {
+  ObjcopyOptTable()
+      : opt::GenericOptTable(objcopy_opt::OptionStrTable,
+                             objcopy_opt::OptionPrefixesTable,
+                             objcopy_opt::ObjcopyInfoTable) {
     setGroupedShortOptions(true);
+    setDashDashParsing(true);
   }
 };
 
@@ -70,13 +75,13 @@ enum InstallNameToolID {
 };
 
 namespace install_name_tool {
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "InstallNameToolOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "InstallNameToolOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -89,7 +94,9 @@ static constexpr opt::OptTable::Info InstallNameToolInfoTable[] = {
 class InstallNameToolOptTable : public opt::GenericOptTable {
 public:
   InstallNameToolOptTable()
-      : GenericOptTable(install_name_tool::InstallNameToolInfoTable) {}
+      : GenericOptTable(install_name_tool::OptionStrTable,
+                        install_name_tool::OptionPrefixesTable,
+                        install_name_tool::InstallNameToolInfoTable) {}
 };
 
 enum BitcodeStripID {
@@ -101,13 +108,13 @@ enum BitcodeStripID {
 };
 
 namespace bitcode_strip {
-
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "BitcodeStripOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "BitcodeStripOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 #define OPTION(...)                                                            \
@@ -120,7 +127,9 @@ static constexpr opt::OptTable::Info BitcodeStripInfoTable[] = {
 class BitcodeStripOptTable : public opt::GenericOptTable {
 public:
   BitcodeStripOptTable()
-      : opt::GenericOptTable(bitcode_strip::BitcodeStripInfoTable) {}
+      : opt::GenericOptTable(bitcode_strip::OptionStrTable,
+                             bitcode_strip::OptionPrefixesTable,
+                             bitcode_strip::BitcodeStripInfoTable) {}
 };
 
 enum StripID {
@@ -131,12 +140,13 @@ enum StripID {
 };
 
 namespace strip {
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "StripOpts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "StripOpts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 static constexpr opt::OptTable::Info StripInfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(STRIP_, __VA_ARGS__),
@@ -147,7 +157,9 @@ static constexpr opt::OptTable::Info StripInfoTable[] = {
 
 class StripOptTable : public opt::GenericOptTable {
 public:
-  StripOptTable() : GenericOptTable(strip::StripInfoTable) {
+  StripOptTable()
+      : GenericOptTable(strip::OptionStrTable, strip::OptionPrefixesTable,
+                        strip::StripInfoTable) {
     setGroupedShortOptions(true);
   }
 };
@@ -526,6 +538,38 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   return SI;
 }
 
+static Expected<RemoveNoteInfo> parseRemoveNoteInfo(StringRef FlagValue) {
+  // Parse value given with --remove-note option. The format is:
+  //
+  // [name/]type_id
+  //
+  // where:
+  // <name>    - optional note name. If not given, all notes with the specified
+  //             <type_id> are removed.
+  // <type_id> - note type value, can be decimal or hexadecimal number prefixed
+  //             with 0x.
+  RemoveNoteInfo NI;
+  StringRef TypeIdStr;
+  if (auto Idx = FlagValue.find('/'); Idx != StringRef::npos) {
+    if (Idx == 0)
+      return createStringError(
+          errc::invalid_argument,
+          "bad format for --remove-note, note name is empty");
+    NI.Name = FlagValue.slice(0, Idx);
+    TypeIdStr = FlagValue.substr(Idx + 1);
+  } else {
+    TypeIdStr = FlagValue;
+  }
+  if (TypeIdStr.empty())
+    return createStringError(errc::invalid_argument,
+                             "bad format for --remove-note, missing type_id");
+  if (TypeIdStr.getAsInteger(0, NI.TypeId))
+    return createStringError(errc::invalid_argument,
+                             "bad note type_id for --remove-note: '%s'",
+                             TypeIdStr.str().c_str());
+  return NI;
+}
+
 // Parse input option \p ArgValue and load section data. This function
 // extracts section name and name of the file keeping section data from
 // ArgValue, loads data from the file, and stores section name and data
@@ -650,16 +694,10 @@ parseChangeSectionAddr(StringRef ArgValue, StringRef OptionName,
 // help flag is set then parseObjcopyOptions will print the help messege and
 // exit.
 Expected<DriverConfig>
-objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
+objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
                              function_ref<Error(Error)> ErrorCallback) {
   DriverConfig DC;
   ObjcopyOptTable T;
-
-  const char *const *DashDash =
-      llvm::find_if(RawArgsArr, [](StringRef Str) { return Str == "--"; });
-  ArrayRef<const char *> ArgsArr = ArrayRef(RawArgsArr.begin(), DashDash);
-  if (DashDash != RawArgsArr.end())
-    DashDash = std::next(DashDash);
 
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -671,7 +709,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         "argument to '%s' is missing (expected %d value(s))",
         InputArgs.getArgString(MissingArgumentIndex), MissingArgumentCount);
 
-  if (InputArgs.size() == 0 && DashDash == RawArgsArr.end()) {
+  if (InputArgs.size() == 0) {
     printHelp(T, errs(), ToolType::Objcopy);
     exit(1);
   }
@@ -695,7 +733,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_INPUT))
     Positional.push_back(Arg->getValue());
-  std::copy(DashDash, RawArgsArr.end(), std::back_inserter(Positional));
 
   if (Positional.empty())
     return createStringError(errc::invalid_argument, "no input file specified");
@@ -1215,6 +1252,29 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         return Expr(EAddr) + *EIncr;
       };
     }
+
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_remove_note)) {
+    Expected<RemoveNoteInfo> NoteInfo = parseRemoveNoteInfo(Arg->getValue());
+    if (!NoteInfo)
+      return NoteInfo.takeError();
+
+    ELFConfig.NotesToRemove.push_back(*NoteInfo);
+  }
+
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (!Config.ToRemove.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --remove-section");
+    if (!Config.AddSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --add-section");
+    if (!Config.UpdateSection.empty())
+      return createStringError(
+          errc::invalid_argument,
+          "cannot specify both --remove-note and --update-section");
+  }
 
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {

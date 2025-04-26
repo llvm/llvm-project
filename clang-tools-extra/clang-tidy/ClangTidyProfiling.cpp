@@ -36,23 +36,25 @@ ClangTidyProfiling::StorageParams::StorageParams(llvm::StringRef ProfilePrefix,
                       .str();
 }
 
-void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS) {
-  TG->print(OS);
+void ClangTidyProfiling::printUserFriendlyTable(llvm::raw_ostream &OS,
+                                                llvm::TimerGroup &TG) {
+  TG.print(OS);
   OS.flush();
 }
 
-void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS) {
+void ClangTidyProfiling::printAsJSON(llvm::raw_ostream &OS,
+                                     llvm::TimerGroup &TG) {
   OS << "{\n";
   OS << R"("file": ")" << Storage->SourceFilename << "\",\n";
   OS << R"("timestamp": ")" << Storage->Timestamp << "\",\n";
   OS << "\"profile\": {\n";
-  TG->printJSONValues(OS, "");
+  TG.printJSONValues(OS, "");
   OS << "\n}\n";
   OS << "}\n";
   OS.flush();
 }
 
-void ClangTidyProfiling::storeProfileData() {
+void ClangTidyProfiling::storeProfileData(llvm::TimerGroup &TG) {
   assert(Storage && "We should have a filename.");
 
   llvm::SmallString<256> OutputDirectory(Storage->StoreFilename);
@@ -71,19 +73,18 @@ void ClangTidyProfiling::storeProfileData() {
     return;
   }
 
-  printAsJSON(OS);
+  printAsJSON(OS, TG);
 }
 
 ClangTidyProfiling::ClangTidyProfiling(std::optional<StorageParams> Storage)
     : Storage(std::move(Storage)) {}
 
 ClangTidyProfiling::~ClangTidyProfiling() {
-  TG.emplace("clang-tidy", "clang-tidy checks profiling", Records);
-
+  llvm::TimerGroup TG{"clang-tidy", "clang-tidy checks profiling", Records};
   if (!Storage)
-    printUserFriendlyTable(llvm::errs());
+    printUserFriendlyTable(llvm::errs(), TG);
   else
-    storeProfileData();
+    storeProfileData(TG);
 }
 
 } // namespace clang::tidy

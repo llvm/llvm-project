@@ -57,9 +57,9 @@ int main(int, char**) {
     const T to[3] = {0, 1, 2};
 
     C c2(std::begin(to), std::end(to));
-    I io[3] = {c2.begin(), ++c2.begin(), ++ ++c2.begin()};
+    I io[3]                         = {c2.begin(), ++c2.begin(), ++ ++c2.begin()};
     std::reference_wrapper<T> ro[3] = {*io[0], *io[1], *io[2]};
-    P po[3] = {&*io[0], &*io[1], &*io[2]};
+    P po[3]                         = {&*io[0], &*io[1], &*io[2]};
 
     C c1;
     c1.merge(std::move(c2));
@@ -100,6 +100,13 @@ int main(int, char**) {
 
     C c3(std::begin(t3), std::end(t3));
     assert(c1 == c3);
+  }
+
+  { // LWG3088: Make sure self-merging does nothing.
+    int a[] = {1, 2, 3, 4, 5};
+    std::forward_list<int> c(std::begin(a), std::end(a));
+    c.merge(std::move(c));
+    assert(c == std::forward_list<int>(std::begin(a), std::end(a)));
   }
 
   return 0;

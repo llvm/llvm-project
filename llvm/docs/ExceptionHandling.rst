@@ -374,10 +374,12 @@ overall functioning of this intrinsic is compatible with the GCC
 to interoperate.
 
 The single parameter is a pointer to a five word buffer in which the calling
-context is saved. The front end places the frame pointer in the first word, and
-the target implementation of this intrinsic should place the destination address
-for a `llvm.eh.sjlj.longjmp`_ in the second word. The following three words are
-available for use in a target-specific manner.
+context is saved. The format and contents of the buffer are target-specific.
+On certain targets (ARM, PowerPC, VE, X86), the front end places the 
+frame pointer in the first word and the stack pointer in the third word, 
+while the target implementation of this intrinsic fills in the remaining 
+words.  On other targets (SystemZ), saving the calling context to the buffer 
+is left completely to the target implementation. 
 
 .. _llvm.eh.sjlj.longjmp:
 

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-linux-gnu -march=mipsel -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -O0    < %s | FileCheck %s -check-prefix=lcb
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=mips16 -mattr=+soft-float -mips16-hard-float -relocation-model=static -O0 < %s | FileCheck %s -check-prefix=lcb
 
 @i = global i32 0, align 4
 @j = common global i32 0, align 4

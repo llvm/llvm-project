@@ -1,12 +1,12 @@
-; RUN: llc -march=mipsel -mcpu=mips32 < %s \
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32 < %s \
 ; RUN:   | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
-; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+nooddspreg < %s \
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32 -mattr=+nooddspreg < %s \
 ; RUN:   | FileCheck %s -check-prefixes=ALL,NOODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64 < %s \
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32r6 -mattr=fp64 < %s \
 ; RUN:   | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64,+nooddspreg < %s \
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32r6 -mattr=fp64,+nooddspreg < %s \
 ; RUN:   | FileCheck %s -check-prefixes=ALL,NOODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fpxx,-nooddspreg < %s \
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32r6 -mattr=fpxx,-nooddspreg < %s \
 ; RUN:   | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-EMIT
 
 ; We don't emit a directive unless we need to. This is to support versions of

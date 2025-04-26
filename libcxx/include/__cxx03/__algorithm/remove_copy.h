@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_REMOVE_COPY_H
-#define _LIBCPP___ALGORITHM_REMOVE_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_REMOVE_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_REMOVE_COPY_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,4 +31,4 @@ remove_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_REMOVE_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_REMOVE_COPY_H

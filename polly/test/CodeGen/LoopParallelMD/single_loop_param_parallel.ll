@@ -36,7 +36,6 @@ ret:
 ; SEQUENTIAL-LABEL: @test-one
 ; SEQUENTIAL-NOT: !llvm.mem.parallel_loop_access
 ; SEQUENTIAL-NOT: !llvm.access.group
-; SEQUENTIAL-NOT: !llvm.loop
 
 ; PARALLEL: @test-one
 ; PARALLEL: store i32 1, ptr %scevgep1, {{[ ._!,a-zA-Z0-9]*}}, !llvm.access.group ![[GROUPID3:[0-9]+]]
@@ -81,13 +80,11 @@ ret:
 ; SEQUENTIAL-LABEL: @test-two
 ; SEQUENTIAL-NOT: !llvm.mem.parallel_loop_access
 ; SEQUENTIAL-NOT: !llvm.access.group
-; SEQUENTIAL-NOT: !llvm.loop
 
 ; PARALLEL: @test-two
 ; PARALLEL: %val_p_scalar_ = load i32, ptr %scevgep, {{[ ._!,a-zA-Z0-9]*}}, !llvm.access.group ![[GROUPID8:[0-9]*]]
 ; PARALLEL: store i32 %val_p_scalar_, ptr %scevgep1, {{[ ._!,a-zA-Z0-9]*}}, !llvm.access.group ![[GROUPID8]]
 ; PARALLEL:  br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit, !llvm.loop ![[LoopID9:[0-9]*]]
-
 
 ; PARALLEL: ![[LoopID4]] = distinct !{![[LoopID4]], ![[PARACC5:[0-9]+]]}
 ; PARALLEL: ![[PARACC5]] = !{!"llvm.loop.parallel_accesses", ![[GROUPID3]]}

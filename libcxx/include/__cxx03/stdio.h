@@ -15,8 +15,8 @@
 
 #  include_next <stdio.h>
 
-#elif !defined(_LIBCPP_STDIO_H)
-#  define _LIBCPP_STDIO_H
+#elif !defined(_LIBCPP___CXX03_STDIO_H)
+#  define _LIBCPP___CXX03_STDIO_H
 
 /*
     stdio.h synopsis
@@ -98,7 +98,7 @@ int ferror(FILE* stream);
 void perror(const char* s);
 */
 
-#  include <__config>
+#  include <__cxx03/__config>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
@@ -120,4 +120,4 @@ void perror(const char* s);
 
 #  endif
 
-#endif // _LIBCPP_STDIO_H
+#endif // _LIBCPP___CXX03_STDIO_H

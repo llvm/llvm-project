@@ -26,7 +26,9 @@ define i32 @vscale_known_nonzero() {
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    lbu a0, 0(a0)
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %x = call i32 @llvm.vscale()
   %r = call i32 @llvm.cttz.i32(i32 %x, i1 false)

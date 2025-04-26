@@ -15,9 +15,10 @@
 
 // class synchronized_pool_resource
 
-#include <memory_resource>
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <memory_resource>
 #include <new>
 #include <vector>
 

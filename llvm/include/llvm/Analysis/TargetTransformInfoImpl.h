@@ -47,6 +47,8 @@ public:
 
   const DataLayout &getDataLayout() const { return DL; }
 
+  // FIXME: It looks like this implementation is dead. All clients appear to
+  //  use the (non-const) version from `TargetTransformInfoImplCRTPBase`.
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                              ArrayRef<const Value *> Operands, Type *AccessType,
                              TTI::TargetCostKind CostKind) const {
@@ -174,10 +176,12 @@ public:
         Name == "asin"  || Name == "asinf"  || Name == "asinl" ||
         Name == "acos"  || Name == "acosf"  || Name == "acosl" ||
         Name == "atan"  || Name == "atanf"  || Name == "atanl" ||
+        Name == "atan2" || Name == "atan2f" || Name == "atan2l"||
         Name == "sinh"  || Name == "sinhf"  || Name == "sinhl" ||
         Name == "cosh"  || Name == "coshf"  || Name == "coshl" ||
         Name == "tanh"  || Name == "tanhf"  || Name == "tanhl" ||
-        Name == "sqrt" || Name == "sqrtf" || Name == "sqrtl")
+        Name == "sqrt"  || Name == "sqrtf"  || Name == "sqrtl" ||
+        Name == "exp10"  || Name == "exp10l"  || Name == "exp10f")
       return false;
     // clang-format on
     // These are all likely to be optimized into something smaller.
@@ -196,6 +200,8 @@ public:
                                 HardwareLoopInfo &HWLoopInfo) const {
     return false;
   }
+
+  unsigned getEpilogueVectorizationMinVF() const { return 16; }
 
   bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const { return false; }
 
@@ -272,11 +278,13 @@ public:
     return TTI::AMK_None;
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) const {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace) const {
     return false;
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) const {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace) const {
     return false;
   }
 
@@ -333,7 +341,7 @@ public:
   }
 
   bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
-                                    Align Alignment, unsigned AddrSpace) {
+                                    Align Alignment, unsigned AddrSpace) const {
     return false;
   }
 
@@ -360,7 +368,7 @@ public:
                               Scale, AddrSpace, /*I=*/nullptr,
                               BaseOffset.getScalable()))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool LSRWithInstrQueries() const { return false; }
@@ -392,10 +400,21 @@ public:
     return false;
   }
 
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const {
+    return OpdIdx == -1;
+  }
+
+  bool isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
+                                                        int RetIdx) const {
+    return RetIdx == 0;
+  }
+
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind) const {
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {}) const {
     return 0;
   }
 
@@ -421,7 +440,7 @@ public:
 
   bool enableSelectOptimize() const { return true; }
 
-  bool shouldTreatInstructionLikeSelect(const Instruction *I) {
+  bool shouldTreatInstructionLikeSelect(const Instruction *I) const {
     // A select with two constant operands will usually be better left as a
     // select.
     using namespace llvm::PatternMatch;
@@ -452,7 +471,9 @@ public:
 
   bool haveFastSqrt(Type *Ty) const { return false; }
 
-  bool isExpensiveToSpeculativelyExecute(const Instruction *I) { return true; }
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
+    return true;
+  }
 
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const { return true; }
 
@@ -489,11 +510,13 @@ public:
   }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const { return 8; }
-  bool hasConditionalLoadStoreForType(Type *Ty) const { return false; }
+  bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
+    return false;
+  }
 
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const {
     return Vector ? 1 : 0;
-  };
+  }
 
   const char *getRegisterClassName(unsigned ClassID) const {
     switch (ClassID) {
@@ -569,6 +592,15 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const { return UINT_MAX; }
   bool enableWritePrefetching() const { return false; }
   bool shouldPrefetchAddressSpace(unsigned AS) const { return !AS; }
+
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          TTI::PartialReductionExtendKind OpAExtend,
+                          TTI::PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp = std::nullopt) const {
+    return InstructionCost::getInvalid();
+  }
 
   unsigned getMaxInterleaveFactor(ElementCount VF) const { return 1; }
 
@@ -668,8 +700,8 @@ public:
   }
 
   InstructionCost getExtractWithExtendCost(unsigned Opcode, Type *Dst,
-                                           VectorType *VecTy,
-                                           unsigned Index) const {
+                                           VectorType *VecTy, unsigned Index,
+                                           TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -698,16 +730,39 @@ public:
     return 1;
   }
 
+  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  /// vector with 'Scalar' being the value being extracted,'User' being the user
+  /// of the extract(nullptr if user is not known before vectorization) and
+  /// 'Idx' being the extract lane.
+  InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      Value *Scalar,
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+    return 1;
+  }
+
   InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index) const {
     return 1;
   }
 
-  unsigned getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
-                                     const APInt &DemandedDstElts,
-                                     TTI::TargetCostKind CostKind) {
+  InstructionCost
+  getReplicationShuffleCost(Type *EltTy, int ReplicationFactor, int VF,
+                            const APInt &DemandedDstElts,
+                            TTI::TargetCostKind CostKind) const {
     return 1;
+  }
+
+  InstructionCost
+  getInsertExtractValueCost(unsigned Opcode,
+                            TTI::TargetCostKind CostKind) const {
+    // Note: The `insertvalue` cost here is chosen to match the default case of
+    // getInstructionCost() -- as pior to adding this helper `insertvalue` was
+    // not handled.
+    if (Opcode == Instruction::InsertValue)
+      return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
+    return TTI::TCC_Free;
   }
 
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
@@ -739,6 +794,12 @@ public:
     return 1;
   }
 
+  InstructionCost getExpandCompressMemoryOpCost(
+      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
+      TTI::TargetCostKind CostKind, const Instruction *I = nullptr) const {
+    return 1;
+  }
+
   InstructionCost getStridedMemoryOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
@@ -747,7 +808,7 @@ public:
     return InstructionCost::getInvalid();
   }
 
-  unsigned getInterleavedMemoryOpCost(
+  InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond, bool UseMaskForGaps) const {
@@ -833,7 +894,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *Ty,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind) const {
     return 1;
   }
@@ -907,13 +968,11 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
-  bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                          const DataLayout &DL) const {
+  bool isIndexedLoadLegal(TTI::MemIndexedMode Mode, Type *Ty) const {
     return false;
   }
 
-  bool isIndexedStoreLegal(TTI::MemIndexedMode Mode, Type *Ty,
-                           const DataLayout &DL) const {
+  bool isIndexedStoreLegal(TTI::MemIndexedMode Mode, Type *Ty) const {
     return false;
   }
 
@@ -954,13 +1013,10 @@ public:
 
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
-  bool preferInLoopReduction(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const {
-    return false;
-  }
+  bool preferInLoopReduction(RecurKind Kind, Type *Ty) const { return false; }
+  bool preferAlternateOpcodeVectorization() const { return true; }
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
     return false;
   }
 
@@ -1004,11 +1060,19 @@ public:
 
   bool hasArmWideBranch(bool) const { return false; }
 
+  uint64_t getFeatureMask(const Function &F) const { return 0; }
+
+  bool isMultiversionedFunction(const Function &F) const { return false; }
+
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
   unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
     return 0;
   }
+
+  void collectKernelLaunchBounds(
+      const Function &F,
+      SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
@@ -1107,7 +1171,7 @@ public:
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                              ArrayRef<const Value *> Operands, Type *AccessType,
-                             TTI::TargetCostKind CostKind) {
+                             TTI::TargetCostKind CostKind) const {
     assert(PointeeType && Ptr && "can't get GEPCost of nullptr");
     auto *BaseGV = dyn_cast<GlobalValue>(Ptr->stripPointerCasts());
     bool HasBaseReg = (BaseGV == nullptr);
@@ -1171,7 +1235,7 @@ public:
 
     // If the final address of the GEP is a legal addressing mode for the given
     // access type, then we can fold it into its users.
-    if (static_cast<T *>(this)->isLegalAddressingMode(
+    if (static_cast<const T *>(this)->isLegalAddressingMode(
             AccessType, const_cast<GlobalValue *>(BaseGV),
             BaseOffset.sextOrTrunc(64).getSExtValue(), HasBaseReg, Scale,
             Ptr->getType()->getPointerAddressSpace()))
@@ -1187,7 +1251,7 @@ public:
                                        const Value *Base,
                                        const TTI::PointersChainInfo &Info,
                                        Type *AccessTy,
-                                       TTI::TargetCostKind CostKind) {
+                                       TTI::TargetCostKind CostKind) const {
     InstructionCost Cost = TTI::TCC_Free;
     // In the basic model we take into account GEP instructions only
     // (although here can come alloca instruction, a value, constants and/or
@@ -1206,15 +1270,15 @@ public:
       if (Info.isSameBase() && V != Base) {
         if (GEP->hasAllConstantIndices())
           continue;
-        Cost += static_cast<T *>(this)->getArithmeticInstrCost(
+        Cost += static_cast<const T *>(this)->getArithmeticInstrCost(
             Instruction::Add, GEP->getType(), CostKind,
             {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None},
             {});
       } else {
         SmallVector<const Value *> Indices(GEP->indices());
-        Cost += static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),
-                                                   GEP->getPointerOperand(),
-                                                   Indices, AccessTy, CostKind);
+        Cost += static_cast<const T *>(this)->getGEPCost(
+            GEP->getSourceElementType(), GEP->getPointerOperand(), Indices,
+            AccessTy, CostKind);
       }
     }
     return Cost;
@@ -1222,10 +1286,10 @@ public:
 
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind) {
+                                     TTI::TargetCostKind CostKind) const {
     using namespace llvm::PatternMatch;
 
-    auto *TargetTTI = static_cast<T *>(this);
+    auto *TargetTTI = static_cast<const T *>(this);
     // Handle non-intrinsic calls, invokes, and callbr.
     // FIXME: Unlikely to be true for anything but CodeSize.
     auto *CB = dyn_cast<CallBase>(U);
@@ -1257,9 +1321,11 @@ public:
     case Instruction::PHI:
     case Instruction::Switch:
       return TargetTTI->getCFInstrCost(Opcode, CostKind, I);
-    case Instruction::ExtractValue:
     case Instruction::Freeze:
       return TTI::TCC_Free;
+    case Instruction::ExtractValue:
+    case Instruction::InsertValue:
+      return TargetTTI->getInsertExtractValueCost(Opcode, CostKind);
     case Instruction::Alloca:
       if (cast<AllocaInst>(U)->isStaticAlloca())
         return TTI::TCC_Free;
@@ -1520,8 +1586,8 @@ public:
     return CostKind == TTI::TCK_RecipThroughput ? -1 : TTI::TCC_Basic;
   }
 
-  bool isExpensiveToSpeculativelyExecute(const Instruction *I) {
-    auto *TargetTTI = static_cast<T *>(this);
+  bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
+    auto *TargetTTI = static_cast<const T *>(this);
     SmallVector<const Value *, 4> Ops(I->operand_values());
     InstructionCost Cost = TargetTTI->getInstructionCost(
         I, Ops, TargetTransformInfo::TCK_SizeAndLatency);

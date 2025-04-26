@@ -42,6 +42,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -258,6 +259,46 @@ std::string InstrProfError::message() const {
 
 char InstrProfError::ID = 0;
 
+ProfOStream::ProfOStream(raw_fd_ostream &FD)
+    : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}
+
+ProfOStream::ProfOStream(raw_string_ostream &STR)
+    : IsFDOStream(false), OS(STR), LE(STR, llvm::endianness::little) {}
+
+uint64_t ProfOStream::tell() const { return OS.tell(); }
+void ProfOStream::write(uint64_t V) { LE.write<uint64_t>(V); }
+void ProfOStream::write32(uint32_t V) { LE.write<uint32_t>(V); }
+void ProfOStream::writeByte(uint8_t V) { LE.write<uint8_t>(V); }
+
+void ProfOStream::patch(ArrayRef<PatchItem> P) {
+  using namespace support;
+
+  if (IsFDOStream) {
+    raw_fd_ostream &FDOStream = static_cast<raw_fd_ostream &>(OS);
+    const uint64_t LastPos = FDOStream.tell();
+    for (const auto &K : P) {
+      FDOStream.seek(K.Pos);
+      for (uint64_t Elem : K.D)
+        write(Elem);
+    }
+    // Reset the stream to the last position after patching so that users
+    // don't accidentally overwrite data. This makes it consistent with
+    // the string stream below which replaces the data directly.
+    FDOStream.seek(LastPos);
+  } else {
+    raw_string_ostream &SOStream = static_cast<raw_string_ostream &>(OS);
+    std::string &Data = SOStream.str(); // with flush
+    for (const auto &K : P) {
+      for (int I = 0, E = K.D.size(); I != E; I++) {
+        uint64_t Bytes =
+            endian::byte_swap<uint64_t, llvm::endianness::little>(K.D[I]);
+        Data.replace(K.Pos + I * sizeof(uint64_t), sizeof(uint64_t),
+                     (const char *)&Bytes, sizeof(uint64_t));
+      }
+    }
+  }
+}
+
 std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
                            StringRef FileName,
                            uint64_t Version LLVM_ATTRIBUTE_UNUSED) {
@@ -438,8 +479,8 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
 }
 
 bool isGPUProfTarget(const Module &M) {
-  const auto &T = Triple(M.getTargetTriple());
-  return T.isAMDGPU() || T.isNVPTX();
+  const Triple &T = M.getTargetTriple();
+  return T.isGPU();
 }
 
 void setPGOFuncVisibility(Module &M, GlobalVariable *FuncNameVar) {
@@ -483,16 +524,16 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
-Error InstrProfSymtab::create(Module &M, bool InLTO) {
+Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
   for (Function &F : M) {
     // Function may not have a name: like using asm("") to overwrite the name.
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO), AddCanonical))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
-    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
+    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO), AddCanonical))
       return E;
   }
 
@@ -630,7 +671,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   return PGOName;
 }
 
-Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
+                                       bool AddCanonical) {
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
@@ -639,6 +681,9 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
   };
   if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
+
+  if (!AddCanonical)
+    return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
   if (CanonicalFuncName != PGOFuncName)
@@ -1072,7 +1117,8 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     // BalancedPartitioning more effective.
     for (auto &[Id, UNs] : IdToUNs)
       llvm::erase_if(UNs, [&](auto &UN) {
-        return UNFrequency[UN] <= 1 || 2 * UNFrequency[UN] > IdToUNs.size();
+        unsigned Freq = UNFrequency[UN];
+        return Freq <= 1 || 2 * Freq > IdToUNs.size();
       });
   }
 
@@ -1432,7 +1478,7 @@ bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {
   if (GO.hasComdat())
     return true;
 
-  if (!Triple(M.getTargetTriple()).supportsCOMDAT())
+  if (!M.getTargetTriple().supportsCOMDAT())
     return false;
 
   // See createPGOFuncNameVar for more details. To avoid link errors, profile

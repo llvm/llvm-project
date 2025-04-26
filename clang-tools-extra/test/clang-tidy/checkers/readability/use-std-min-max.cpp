@@ -252,3 +252,24 @@ void testVectorSizeType() {
   if (value < v.size())
     value = v.size();
 }
+
+namespace gh121676 {
+
+void useLeft() {
+  using U16 = unsigned short;
+  U16 I = 0;
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::max` instead of `<` [readability-use-std-min-max]
+  // CHECK-FIXES: I = std::max<U16>(I, 16U);
+  if (I < 16U)
+    I = 16U;
+}
+void useRight() {
+  using U16 = unsigned short;
+  U16 I = 0;
+  // CHECK-MESSAGES: :[[@LINE+2]]:3: warning: use `std::min` instead of `<` [readability-use-std-min-max]
+  // CHECK-FIXES: I = std::min<U16>(16U, I);
+  if (16U < I)
+    I = 16U;
+}
+
+} // namespace gh121676
