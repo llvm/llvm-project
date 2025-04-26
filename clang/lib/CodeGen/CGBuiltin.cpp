@@ -576,19 +576,23 @@ Value *emitUnaryMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 // Depending on mode, this may be a constrained floating-point intrinsic.
 static Value *emitBinaryMaybeConstrainedFPBuiltin(
     CodeGenFunction &CGF, const CallExpr *E, unsigned IntrinsicID,
-    unsigned ConstrainedIntrinsicID, llvm::FastMathFlags *FMF = nullptr) {
+    unsigned ConstrainedIntrinsicID,
+    llvm::FastMathFlags FMF = llvm::FastMathFlags()) {
   llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
   llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
 
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
+  CallInst *CI;
   if (CGF.Builder.getIsFPConstrained()) {
     Function *F = CGF.CGM.getIntrinsic(ConstrainedIntrinsicID, Src0->getType());
-    return CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1}, "",
-                                               std::nullopt, std::nullopt, FMF);
+    CI = CGF.Builder.CreateConstrainedFPCall(F, {Src0, Src1});
   } else {
     Function *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-    return CGF.Builder.CreateCall(F, {Src0, Src1}, "", nullptr, FMF);
+    CI = CGF.Builder.CreateCall(F, {Src0, Src1});
   }
+  if (isa<FPMathOperator>(CI))
+    CI->setFastMathFlags(FMF);
+  return CI;
 }
 
 // Has second type mangled argument.
@@ -2618,7 +2622,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       FMF.setNoSignedZeros();
       return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::maxnum,
-          Intrinsic::experimental_constrained_maxnum, &FMF));
+          Intrinsic::experimental_constrained_maxnum, FMF));
     }
 
     case Builtin::BIfmin:
@@ -2633,7 +2637,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       FMF.setNoSignedZeros();
       return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::minnum,
-          Intrinsic::experimental_constrained_minnum, &FMF));
+          Intrinsic::experimental_constrained_minnum, FMF));
     }
 
     case Builtin::BIfmaximum_num:
