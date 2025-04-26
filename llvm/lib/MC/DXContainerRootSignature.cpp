@@ -92,19 +92,13 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      if (Version == 1) {
-        support::endian::write(BOS, P.Descriptor_V10.ShaderRegister,
+      support::endian::write(BOS, P.Descriptor.ShaderRegister,
+                             llvm::endianness::little);
+      support::endian::write(BOS, P.Descriptor.RegisterSpace,
+                             llvm::endianness::little);
+      if (Version > 1)
+        support::endian::write(BOS, P.Descriptor.Flags,
                                llvm::endianness::little);
-        support::endian::write(BOS, P.Descriptor_V10.RegisterSpace,
-                               llvm::endianness::little);
-      } else {
-        support::endian::write(BOS, P.Descriptor_V11.ShaderRegister,
-                               llvm::endianness::little);
-        support::endian::write(BOS, P.Descriptor_V11.RegisterSpace,
-                               llvm::endianness::little);
-        support::endian::write(BOS, P.Descriptor_V11.Flags,
-                               llvm::endianness::little);
-      }
     }
   }
   assert(Storage.size() == getSize());
