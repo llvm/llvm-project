@@ -455,9 +455,7 @@ void mlir::populateGpuToROCDLConversionPatterns(
   // TODO: Add alignment for workgroup memory
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
-  patterns
-      .add<GPUShuffleOpLowering, GPULaneIdOpToROCDL, GPUSubgroupSizeOpToROCDL>(
-          converter);
+  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
