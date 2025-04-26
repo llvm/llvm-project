@@ -6323,12 +6323,12 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static bool arebothOperandsNotSNan(SDValue Operand1, SDValue Operand2,
+static bool areBothOperandsNotSNan(SDValue Operand1, SDValue Operand2,
                                    SelectionDAG &DAG) {
   return DAG.isKnownNeverSNaN(Operand2) && DAG.isKnownNeverSNaN(Operand1);
 }
 
-static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
+static bool areBothOperandsNotNan(SDValue Operand1, SDValue Operand2,
                                   SelectionDAG &DAG) {
   return DAG.isKnownNeverNaN(Operand2) && DAG.isKnownNeverNaN(Operand1);
 }
@@ -6336,8 +6336,8 @@ static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
 static unsigned
 getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2, ISD::CondCode CC,
                      unsigned OrAndOpcode, SelectionDAG &DAG,
-                     bool isFMAXNUMFMINNUM_IEEE, bool isFMAXNUMFMINNUM,
-                     bool isFMAXIMUMFMINIMUM, bool isFMAXIMUMNUMFMINIMUMNUM) {
+                     bool hasFMAXNUMFMINNUM_IEEE, bool hasFMAXNUMFMINNUM,
+                     bool hasFMAXIMUMFMINIMUM, bool hasFMAXIMUMNUMFMINIMUMNUM) {
   bool isMax = true;
   // SETLT/SETLE/SETGT/SETGE are undefined if any Operand is NaN. We
   // treat them as SETOLT/SETOLE/SETOGT/SETOGE.
@@ -6346,12 +6346,12 @@ getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2, ISD::CondCode CC,
        (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETUGT || CC == ISD::SETUGE) && (OrAndOpcode == ISD::AND))) {
     isMax = false;
-    if (arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
-        isFMAXNUMFMINNUM_IEEE)
+    if (hasFMAXNUMFMINNUM_IEEE &&
+        areBothOperandsNotSNan(Operand1, Operand2, DAG))
       return ISD::FMINNUM_IEEE;
-    if (arebothOperandsNotSNan(Operand1, Operand2, DAG) && isFMAXNUMFMINNUM)
+    if (hasFMAXNUMFMINNUM && areBothOperandsNotSNan(Operand1, Operand2, DAG))
       return ISD::FMINNUM;
-    if (isFMAXIMUMNUMFMINIMUMNUM)
+    if (hasFMAXIMUMNUMFMINIMUMNUM)
       return ISD::FMINIMUMNUM;
   } else if (((CC == ISD::SETLT || CC == ISD::SETLE || CC == ISD::SETOLT ||
                CC == ISD::SETOLE) &&
@@ -6359,7 +6359,7 @@ getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2, ISD::CondCode CC,
              ((CC == ISD::SETUGT || CC == ISD::SETUGE) &&
               (OrAndOpcode == ISD::OR))) {
     isMax = true;
-    if (isFMAXIMUMFMINIMUM)
+    if (hasFMAXIMUMFMINIMUM)
       return ISD::FMAXIMUM;
   } else if (((CC == ISD::SETGT || CC == ISD::SETGE || CC == ISD::SETOGT ||
                CC == ISD::SETOGE) &&
@@ -6367,12 +6367,12 @@ getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2, ISD::CondCode CC,
              ((CC == ISD::SETULT || CC == ISD::SETULE) &&
               (OrAndOpcode == ISD::AND))) {
     isMax = true;
-    if (arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
-        isFMAXNUMFMINNUM_IEEE)
+    if (hasFMAXNUMFMINNUM_IEEE &&
+        areBothOperandsNotSNan(Operand1, Operand2, DAG))
       return ISD::FMAXNUM_IEEE;
-    if (arebothOperandsNotSNan(Operand1, Operand2, DAG) && isFMAXNUMFMINNUM)
+    if (hasFMAXNUMFMINNUM && areBothOperandsNotSNan(Operand1, Operand2, DAG))
       return ISD::FMAXNUM;
-    if (isFMAXIMUMNUMFMINIMUMNUM)
+    if (hasFMAXIMUMNUMFMINIMUMNUM)
       return ISD::FMAXIMUMNUM;
   } else if (((CC == ISD::SETGT || CC == ISD::SETGE || CC == ISD::SETOGT ||
                CC == ISD::SETOGE) &&
@@ -6380,21 +6380,21 @@ getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2, ISD::CondCode CC,
              ((CC == ISD::SETULT || CC == ISD::SETULE) &&
               (OrAndOpcode == ISD::OR))) {
     isMax = false;
-    if (isFMAXIMUMFMINIMUM)
+    if (hasFMAXIMUMFMINIMUM)
       return ISD::FMINIMUM;
   }
-  if (arebothOperandsNotNan(Operand1, Operand2, DAG)) {
+  if (areBothOperandsNotNan(Operand1, Operand2, DAG)) {
     // Keep this order to help unittest easy:
     //     AArch64 has FMAXNUM_IEEE, while not FMAXIMUMNUM
     //     RISCV64 has FMAXIMUMNUM,  while not FMAXNUM_IEEE
     //     Both has FMAXIMUM (RISCV64 has a switch for it)
-    if (isFMAXIMUMFMINIMUM)
+    if (hasFMAXIMUMFMINIMUM)
       return isMax ? ISD::FMAXIMUM : ISD::FMINIMUM;
-    if (isFMAXNUMFMINNUM_IEEE)
+    if (hasFMAXNUMFMINNUM_IEEE)
       return isMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-    if (isFMAXIMUMNUMFMINIMUMNUM)
+    if (hasFMAXIMUMNUMFMINIMUMNUM)
       return isMax ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
-    if (isFMAXNUMFMINNUM)
+    if (hasFMAXNUMFMINNUM)
       return isMax ? ISD::FMAXNUM : ISD::FMINNUM;
   }
   return ISD::DELETED_NODE;
@@ -6441,13 +6441,13 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   // The optimization does not work for `==` or `!=` .
   // The two comparisons should have either the same predicate or the
   // predicate of one of the comparisons is the opposite of the other one.
-  bool isFMAXNUMFMINNUM_IEEE = TLI.isOperationLegal(ISD::FMAXNUM_IEEE, OpVT) &&
-                               TLI.isOperationLegal(ISD::FMINNUM_IEEE, OpVT);
-  bool isFMAXNUMFMINNUM = TLI.isOperationLegal(ISD::FMAXNUM, OpVT) &&
-                          TLI.isOperationLegal(ISD::FMINNUM, OpVT);
-  bool isFMAXIMUMFMINIMUM = TLI.isOperationLegal(ISD::FMAXIMUM, OpVT) &&
-                            TLI.isOperationLegal(ISD::FMINIMUM, OpVT);
-  bool isFMAXIMUMNUMFMINIMUMNUM =
+  bool hasFMAXNUMFMINNUM_IEEE = TLI.isOperationLegal(ISD::FMAXNUM_IEEE, OpVT) &&
+                                TLI.isOperationLegal(ISD::FMINNUM_IEEE, OpVT);
+  bool hasFMAXNUMFMINNUM = TLI.isOperationLegal(ISD::FMAXNUM, OpVT) &&
+                           TLI.isOperationLegal(ISD::FMINNUM, OpVT);
+  bool hasFMAXIMUMFMINIMUM = TLI.isOperationLegal(ISD::FMAXIMUM, OpVT) &&
+                             TLI.isOperationLegal(ISD::FMINIMUM, OpVT);
+  bool hasFMAXIMUMNUMFMINIMUMNUM =
       TLI.isOperationLegal(ISD::FMAXIMUMNUM, OpVT) &&
       TLI.isOperationLegal(ISD::FMINIMUMNUM, OpVT);
   if (((OpVT.isInteger() && TLI.isOperationLegal(ISD::UMAX, OpVT) &&
@@ -6455,8 +6455,8 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
         TLI.isOperationLegal(ISD::UMIN, OpVT) &&
         TLI.isOperationLegal(ISD::SMIN, OpVT)) ||
        (OpVT.isFloatingPoint() &&
-        (isFMAXNUMFMINNUM_IEEE || isFMAXNUMFMINNUM || isFMAXIMUMFMINIMUM ||
-         isFMAXIMUMNUMFMINIMUMNUM))) &&
+        (hasFMAXNUMFMINNUM_IEEE || hasFMAXNUMFMINNUM || hasFMAXIMUMFMINIMUM ||
+         hasFMAXIMUMNUMFMINIMUMNUM))) &&
       !ISD::isIntEqualitySetCC(CCL) && !ISD::isFPEqualitySetCC(CCL) &&
       CCL != ISD::SETFALSE && CCL != ISD::SETO && CCL != ISD::SETUO &&
       CCL != ISD::SETTRUE &&
@@ -6510,10 +6510,10 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
         else
           NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
       } else if (OpVT.isFloatingPoint())
-        NewOpcode =
-            getMinMaxOpcodeForFP(Operand1, Operand2, CC, LogicOp->getOpcode(),
-                                 DAG, isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM,
-                                 isFMAXIMUMFMINIMUM, isFMAXIMUMNUMFMINIMUMNUM);
+        NewOpcode = getMinMaxOpcodeForFP(
+            Operand1, Operand2, CC, LogicOp->getOpcode(), DAG,
+            hasFMAXNUMFMINNUM_IEEE, hasFMAXNUMFMINNUM, hasFMAXIMUMFMINIMUM,
+            hasFMAXIMUMNUMFMINIMUMNUM);
 
       if (NewOpcode != ISD::DELETED_NODE) {
         SDValue MinMaxValue =
