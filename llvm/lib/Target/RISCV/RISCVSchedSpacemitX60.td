@@ -69,12 +69,12 @@ let Latency = 4 in {
 
 // Integer division/remainder
 // Worst case latency is used.
-let Latency = 12, ReleaseAtCycles = [12] in {
+let Latency = 15, ReleaseAtCycles = [15] in {
   def : WriteRes<WriteIDiv32, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem32, [SMX60_IEUA]>;
 }
 
-let Latency = 20, ReleaseAtCycles = [20] in {
+let Latency = 23, ReleaseAtCycles = [23] in {
   def : WriteRes<WriteIDiv, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem, [SMX60_IEUA]>;
 }
