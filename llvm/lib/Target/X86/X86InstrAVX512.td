@@ -11585,6 +11585,13 @@ let Predicates = [HasBWI], AddedComplexity = -10 in {
 def : Pat<(f16 (bitconvert (bf16 FR16X:$src))), (f16 FR16X:$src)>;
 def : Pat<(bf16 (bitconvert (f16 FR16X:$src))), (bf16 FR16X:$src)>;
 
+let Predicates = [HasBWI, HasBF16] in {
+  def : Pat<(bf16 (load addr:$src)), (COPY_TO_REGCLASS (VPINSRWZrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16X)>;
+  def : Pat<(store bf16:$src, addr:$dst), (VPEXTRWZmri addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16X:$src, VR128)), 0)>;
+  def : Pat<(i16 (bitconvert bf16:$src)), (EXTRACT_SUBREG (VPEXTRWZrri (v8i16 (COPY_TO_REGCLASS FR16X:$src, VR128X)), 0), sub_16bit)>;
+  def : Pat<(bf16 (bitconvert i16:$src)), (COPY_TO_REGCLASS (VPINSRWZrri (v8i16 (IMPLICIT_DEF)), (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit), 0), FR16X)>;
+}
+
 //===----------------------------------------------------------------------===//
 // VSHUFPS - VSHUFPD Operations
 //===----------------------------------------------------------------------===//
@@ -12809,9 +12816,17 @@ let Predicates = [HasBF16, HasVLX] in {
 }
 
 let Predicates = [HasBF16] in {
+  def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
+            (VPBROADCASTWrm addr:$src)>;
+  def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
+            (VPBROADCASTWYrm addr:$src)>;
   def : Pat<(v32bf16 (X86VBroadcastld16 addr:$src)),
             (VPBROADCASTWZrm addr:$src)>;
 
+  def : Pat<(v8bf16 (X86VBroadcast (v8bf16 VR128:$src))),
+            (VPBROADCASTWrr VR128:$src)>;
+  def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128:$src))),
+            (VPBROADCASTWYrr VR128:$src)>;
   def : Pat<(v32bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
             (VPBROADCASTWZrr VR128X:$src)>;
 
@@ -12819,7 +12834,13 @@ let Predicates = [HasBF16] in {
             (VCVTNEPS2BF16Zrr VR512:$src)>;
   def : Pat<(v16bf16 (X86vfpround (loadv16f32 addr:$src))),
             (VCVTNEPS2BF16Zrm addr:$src)>;
-  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
+
+  def : Pat<(v8bf16 (X86VBroadcast (bf16 FR16X:$src))),
+            (VPBROADCASTWrr (COPY_TO_REGCLASS FR16X:$src, VR128))>;
+  def : Pat<(v16bf16 (X86VBroadcast (bf16 FR16X:$src))),
+            (VPBROADCASTWYrr (COPY_TO_REGCLASS FR16X:$src, VR128))>;
+  def : Pat<(v32bf16 (X86VBroadcast (bf16 FR16X:$src))),
+            (VPBROADCASTWZrr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
 }
 
 let Constraints = "$src1 = $dst" in {

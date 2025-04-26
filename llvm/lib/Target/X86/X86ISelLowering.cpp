@@ -678,9 +678,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // non-optsize case.
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
 
-    // Set the operation action Custom for bitcast to do the customization
-    // later.
+    // Set the operation action Custom for bitcast and conversion, and fall-back
+    // to software libcalls for the latter for the now.
     setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
+    setOperationAction(ISD::FP_EXTEND, MVT::bf16, Custom);
+    setOperationAction(ISD::FP_ROUND, MVT::bf16, Custom);
 
     for (auto VT : { MVT::f32, MVT::f64 }) {
       // Use ANDPD to simulate FABS.
@@ -22066,6 +22068,31 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
     return Res;
   }
 
+  if (SVT == MVT::bf16 && VT == MVT::f32) {
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
+
+    TargetLowering::ArgListTy Args;
+    TargetLowering::ArgListEntry Entry;
+    Entry.Node = In;
+    Entry.Ty = EVT(SVT).getTypeForEVT(*DAG.getContext());
+    Args.push_back(Entry);
+
+    SDValue Callee =
+        DAG.getExternalSymbol(getLibcallName(RTLIB::FPEXT_BF16_F32),
+                              getPointerTy(DAG.getDataLayout()));
+    CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+        CallingConv::C, EVT(VT).getTypeForEVT(*DAG.getContext()), Callee,
+        std::move(Args));
+
+    SDValue Res;
+    std::tie(Res, Chain) = LowerCallTo(CLI);
+    if (IsStrict)
+      Res = DAG.getMergeValues({Res, Chain}, DL);
+
+    return Res;
+  }
+
   if (!SVT.isVector() || SVT.getVectorElementType() == MVT::bf16)
     return Op;
 
@@ -22149,6 +22176,30 @@ SDValue X86TargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
         ((Subtarget.hasBF16() && Subtarget.hasVLX()) ||
          Subtarget.hasAVXNECONVERT()))
       return Op;
+
+    // Need a soft libcall if the target has not BF16.
+    if (SVT.getScalarType() == MVT::f32 || SVT.getScalarType() == MVT::f64) {
+      TargetLowering::CallLoweringInfo CLI(DAG);
+      Chain = IsStrict ? Op.getOperand(0) : DAG.getEntryNode();
+
+      TargetLowering::ArgListTy Args;
+      TargetLowering::ArgListEntry Entry;
+      Entry.Node = In;
+      Entry.Ty = EVT(SVT).getTypeForEVT(*DAG.getContext());
+      Args.push_back(Entry);
+      SDValue Callee = DAG.getExternalSymbol(
+          getLibcallName(SVT == MVT::f64 ? RTLIB::FPROUND_F64_BF16
+                                         : RTLIB::FPROUND_F32_BF16),
+          getPointerTy(DAG.getDataLayout()));
+      CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+          CallingConv::C, EVT(MVT::bf16).getTypeForEVT(*DAG.getContext()),
+          Callee, std::move(Args));
+
+      SDValue Res;
+      std::tie(Res, Chain) = LowerCallTo(CLI);
+      return IsStrict ? DAG.getMergeValues({Res, Chain}, DL) : Res;
+    }
+
     return SDValue();
   }
 
