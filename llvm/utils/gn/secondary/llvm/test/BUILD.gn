@@ -320,6 +320,7 @@ group("test") {
     "//llvm/tools/llvm-strings",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/llvm-tli-checker",
+    "//llvm/tools/llvm-tgt-verify",
     "//llvm/tools/llvm-undname",
     "//llvm/tools/llvm-xray",
     "//llvm/tools/lto",

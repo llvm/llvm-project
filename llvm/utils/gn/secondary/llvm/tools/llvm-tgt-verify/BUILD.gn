@@ -1,0 +1,25 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tgtverifier("llvm-tgt-verify") {
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/AsmPrinter",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGenTypes",
+    "//llvm/lib/Core",
+    "//llvm/lib/IRPrinter",
+    "//llvm/lib/IRReader",
+    "//llvm/lib/MC",
+    "//llvm/lib/MIRParser",
+    "//llvm/lib/Passes",
+    "//llvm/lib/Remarks",
+    "//llvm/lib/ScalarOpts",
+    "//llvm/lib/SelectionDAG",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
+    "//llvm/lib/TransformUtils",
+    "//llvm/lib/Vectorize",
+  ]
+  sources = [ "llvm-tgt-verify.cpp" ]
+}
