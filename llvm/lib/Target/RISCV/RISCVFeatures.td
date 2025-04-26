@@ -182,7 +182,8 @@ def NoHasStdExtZicfiss : Predicate<"!Subtarget->hasStdExtZicfiss()">;
 
 def FeatureStdExtZilsd
     : RISCVExtension<1, 0,
-                     "Load/Store Pair Instructions">;
+                     "Load/Store Pair Instructions">,
+      RISCVExtensionBitmask<1, 8>;
 def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
@@ -420,7 +421,8 @@ def FeatureStdExtZcf
 def FeatureStdExtZclsd
     : RISCVExtension<1, 0,
                      "Compressed Load/Store Pair Instructions",
-                     [FeatureStdExtZilsd, FeatureStdExtZca]>;
+                     [FeatureStdExtZilsd, FeatureStdExtZca]>,
+      RISCVExtensionBitmask<1, 9>;
 def HasStdExtZclsd : Predicate<"Subtarget->hasStdExtZclsd()">,
                     AssemblerPredicate<(all_of FeatureStdExtZclsd),
                         "'Zclsd' (Compressed Load/Store pair instructions)">;
@@ -428,7 +430,8 @@ def HasStdExtZclsd : Predicate<"Subtarget->hasStdExtZclsd()">,
 def FeatureStdExtZcmp
     : RISCVExtension<1, 0,
                      "sequenced instructions for code-size reduction",
-                     [FeatureStdExtZca]>;
+                     [FeatureStdExtZca]>,
+      RISCVExtensionBitmask<1, 10>;
 def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
                     AssemblerPredicate<(all_of FeatureStdExtZcmp),
                         "'Zcmp' (sequenced instructions for code-size reduction)">;
@@ -1253,6 +1256,14 @@ def HasVendorXSfcease
     : Predicate<"Subtarget->hasVendorXSfcease()">,
       AssemblerPredicate<(all_of FeatureVendorXSfcease),
                          "'XSfcease' (SiFive sf.cease Instruction)">;
+
+def FeatureVendorXSfmclic
+    : RISCVExperimentalExtension<0, 1,
+                                 "SiFive CLIC Machine-mode CSRs">;
+
+def FeatureVendorXSfsclic
+    : RISCVExperimentalExtension<0, 1,
+                                 "SiFive CLIC Supervisor-mode CSRs">;
 
 // Core-V Extensions
 

@@ -1320,6 +1320,8 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 static inline bool Kill(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
   Ptr.endLifetime();
   return true;
 }
@@ -2197,6 +2199,21 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 
 inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(S.Current->getFunction());
+
+  // FIXME: We iterate the scope once here and then again in the destroy() call
+  // below.
+  for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
+    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
+
+    if (Ptr.getLifetime() == Lifetime::Ended) {
+      auto *D = cast<NamedDecl>(Ptr.getFieldDesc()->asDecl());
+      S.FFDiag(D->getLocation(), diag::note_constexpr_destroy_out_of_lifetime)
+          << D->getNameAsString();
+      return false;
+    }
+  }
+
   S.Current->destroy(I);
   return true;
 }
