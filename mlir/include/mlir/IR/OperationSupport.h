@@ -971,6 +971,7 @@ private:
   llvm::function_ref<void(OpaqueProperties)> propertiesDeleter;
   llvm::function_ref<void(OpaqueProperties, const OpaqueProperties)>
       propertiesSetter;
+  unsigned numBreakingControlRegions = 0;
   friend class Operation;
 
 public:
@@ -1095,6 +1096,10 @@ public:
     successors.push_back(successor);
   }
   void addSuccessors(BlockRange newSuccessors);
+
+  void setNumBreakingControlRegions(int numBreakingControlRegions) {
+    this->numBreakingControlRegions = numBreakingControlRegions;
+  }
 
   /// Create a region that should be attached to the operation.  These regions
   /// can be filled in immediately without waiting for Operation to be

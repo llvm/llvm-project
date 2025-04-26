@@ -61,4 +61,41 @@ def GraphRegionNoTerminator : TraitList<[
     HasOnlyGraphRegion
   ]>;
 
+// Op can break ControlFlow.
+def PropagateControlFlowBreak : NativeOpTrait<"PropagateControlFlowBreak">;
+
+// OpInterface for operation accepting predecessors that are potentially
+// in nested regions (not the immediately enclosed ones).
+def HasBreakingControlFlowOpInterface : OpInterface<"HasBreakingControlFlowOpInterface"> {
+  let description = [{
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    StaticInterfaceMethod<
+      /*desc=*/[{
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"acceptsTerminator",
+      /*args=*/(ins "Operation *":$op),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return true;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasNestedPredecessors",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        return ::mlir::hasNestedPredecessors(this->getOperation());
+      }]
+    >
+  ];
+}
+
+
 #endif // MLIR_IR_REGIONKINDINTERFACE

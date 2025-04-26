@@ -431,6 +431,151 @@ void ConditionOp::getSuccessorRegions(
 }
 
 //===----------------------------------------------------------------------===//
+// LoopOp
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// Control Flow Op Utilies
+//===----------------------------------------------------------------------===//
+
+template <typename OpT>
+static ParseResult
+parseControlFlowRegion(OpAsmParser &p, Region &region,
+                       ArrayRef<OpAsmParser::Argument> arguments = {}) {
+  if (failed(p.parseRegion(region, arguments)))
+    return failure();
+  OpT::ensureTerminator(region, p.getBuilder(),
+                        p.getEncodedSourceLoc(p.getNameLoc()));
+  return success();
+}
+
+template <typename ImplicitTerminatorOpT, typename OpT>
+static void printControlFlowRegion(OpAsmPrinter &p, OpT op, Region &region) {
+  // We do not print the terminator if it is implicit and has no operands.
+  bool printBlockTerminators =
+      region.front().getTerminator()->getNumOperands() != 0 ||
+      !isa<ImplicitTerminatorOpT>(region.front().getTerminator());
+  p.printRegion(region, /*printEntryBlockArgs=*/false, printBlockTerminators);
+}
+
+LogicalResult ContinueOp::verify() {
+  if (getOperation()->getNumBreakingControlRegions() == 0)
+    return emitOpError(
+        "continue op must have at least one breaking control region");
+  return success();
+}
+
+MutableOperandRange
+ContinueOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  return MutableOperandRange(getOperation());
+}
+
+LogicalResult LoopOp::verifyRegions() {
+  // Check matching between the operands and the region arguments.
+  if (getRegion().empty())
+    return emitOpError("region cannot be empty");
+  if (getRegion().front().getNumArguments() != getNumOperands())
+    return emitOpError(
+        "mismatch in number of loop-carried values and defined values");
+  for (auto [index, argAndOperand] : llvm::enumerate(
+           llvm::zip(getRegion().front().getArguments(), getOperands()))) {
+    auto argType = std::get<0>(argAndOperand).getType();
+    auto operandType = std::get<1>(argAndOperand).getType();
+    if (argType != operandType)
+      return emitOpError() << "types mismatch between " << index
+                           << "th iter operand (" << argType
+                           << ") and defined region argument (" << operandType
+                           << ")";
+  }
+  return success();
+}
+
+void LoopOp::print(OpAsmPrinter &p) {
+  p << " ";
+  bool hasIters = !getInitValues().empty();
+  bool hasReturn = !getResultTypes().empty();
+
+  if (hasIters) {
+    p << "iter_args(";
+    llvm::interleaveComma(
+        llvm::zip(getRegionIterValues(), getInitValues()), p,
+        [&](auto it) { p << std::get<0>(it) << " = " << std::get<1>(it); });
+    p << ") : ";
+    p << getInitValues().getTypes();
+    p << " ";
+  }
+  if (hasReturn) {
+    p << "-> ";
+    p << getResultTypes();
+    p << " ";
+  }
+
+  printControlFlowRegion<ContinueOp>(p, *this, getRegion());
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> iterOperands;
+  SmallVector<Type, 4> iterTypes;
+
+  if (failed(parser.parseOptionalKeyword("iter_args"))) {
+    // no iter_args, but can still have a return type
+    if (succeeded(parser.parseOptionalArrow()))
+      if (parser.parseTypeList(result.types))
+        return failure();
+  } else {
+    // iter_args are present and must have colon followed by types
+    if (parser.parseAssignmentList(regionArgs, iterOperands) ||
+        parser.parseColon() || parser.parseTypeList(iterTypes))
+      return failure();
+    if (regionArgs.size() != iterTypes.size())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "found different number of iter_args and types");
+    // check for optional result type(s)
+    if (succeeded(parser.parseOptionalArrow()))
+      if (parser.parseTypeList(result.types))
+        return failure();
+    // Set region argument types for loop body
+    for (auto [regionArg, type] : llvm::zip_equal(regionArgs, iterTypes)) {
+      regionArg.type = type;
+    }
+  }
+
+  // Parse region and attr dict.
+  if (parseControlFlowRegion<LoopOp>(parser, *result.addRegion(), regionArgs) ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  // Resolve operands.
+  if (parser.resolveOperands(iterOperands, iterTypes, parser.getNameLoc(),
+                             result.operands))
+    return failure();
+
+  return success();
+}
+
+void LoopOp::getSuccessorRegions(RegionBranchPoint point,
+                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent()) {
+    regions.push_back(RegionSuccessor(&getRegion()));
+    return;
+  }
+
+  // Otherwise, it depends on the terminator: a continue branches brack to the
+  // body and a break to the parent.
+  if (isa<ContinueOp>(point.getTerminatorPredecessorOrNull())) {
+    regions.push_back(
+        RegionSuccessor(&getRegion(), getRegion().getArguments()));
+    return;
+  }
+  assert(isa<BreakOp>(point.getTerminatorPredecessorOrNull()) &&
+         "expected continue or break terminator");
+
+  regions.push_back(RegionSuccessor(getOperation(), getResults()));
+}
+
+//===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
 
@@ -2177,13 +2322,21 @@ IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   Region *r = &adaptor.getThenRegion();
   if (r->empty())
     return failure();
-  Block &b = r->front();
-  if (b.empty())
+  Block *b = &r->front();
+  if (b->empty())
     return failure();
-  auto yieldOp = llvm::dyn_cast<YieldOp>(b.back());
-  if (!yieldOp)
-    return failure();
-  TypeRange types = yieldOp.getOperandTypes();
+  Operation *terminator = &b->back();
+  if (terminator->getNumBreakingControlRegions() > 1) {
+    if (adaptor.getElseRegion().empty())
+      return success();
+    b = &adaptor.getElseRegion().front();
+    if (b->empty())
+      return success();
+    terminator = &b->back();
+    if (terminator->getNumBreakingControlRegions() > 1)
+      return success();
+  }
+  TypeRange types = terminator->getOperandTypes();
   llvm::append_range(inferredReturnTypes, types);
   return success();
 }
@@ -2308,7 +2461,9 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void IfOp::print(OpAsmPrinter &p) {
-  bool printBlockTerminators = false;
+  bool printBlockTerminators =
+      !isa<YieldOp>(thenBlock()->back()) ||
+      (elseBlock() && !isa<YieldOp>(elseBlock()->back()));
 
   p << " " << getCondition();
   if (!getResults().empty()) {

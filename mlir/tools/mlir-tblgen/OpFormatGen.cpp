@@ -222,6 +222,14 @@ private:
   bool shouldBeQualifiedFlag = false;
 };
 
+/// This class represents the `num-breaking-regions` directive. This directive
+/// represents the number of breaking regions of an operation.
+class NumBreakingRegionsDirective
+    : public DirectiveElementBase<DirectiveElement::NumBreakingRegions> {
+public:
+  NumBreakingRegionsDirective() = default;
+};
+
 /// This class represents a group of order-independent optional clauses. Each
 /// clause starts with a literal element and has a coressponding parsing
 /// element. A parsing element is a continous sequence of format elements.
@@ -1691,6 +1699,16 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     body << formatv(functionalTypeParserCode,
                     getTypeListName(dir->getInputs(), ignored),
                     getTypeListName(dir->getResults(), ignored));
+  } else if (isa<NumBreakingRegionsDirective>(element)) {
+    body.indent() << "{\n";
+    body.indent()
+        << "auto loc = parser.getCurrentLocation();(void)loc;\n"
+        << "int32_t numBreakingRegions = 0;\n"
+        << "if (parser.parseInteger(numBreakingRegions))\n"
+        << "  return ::mlir::failure();\n"
+        << "result.setNumBreakingControlRegions(numBreakingRegions);\n";
+    body.unindent() << "}\n";
+    body.unindent();
   } else {
     llvm_unreachable("unknown format element");
   }
@@ -2547,6 +2565,13 @@ void OperationFormat::genElementPrinter(FormatElement *element,
     return;
   }
 
+  // Emit the num-breaking-regions.
+  if (isa<NumBreakingRegionsDirective>(element)) {
+    body << "  _odsPrinter << \" \" << "
+            "getOperation()->getNumBreakingControlRegions();\n";
+    return;
+  }
+
   // Optionally insert a space before the next element. The AttrDict printer
   // already adds a space as necessary.
   if (shouldEmitSpace || !lastWasPunctuation)
@@ -2813,6 +2838,8 @@ private:
   FailureOr<FormatElement *> parseTypeDirective(SMLoc loc, Context context);
   FailureOr<FormatElement *> parseTypeDirectiveOperand(SMLoc loc,
                                                        bool isRefChild = false);
+  FailureOr<FormatElement *> parseNumBreakingRegionsDirective(SMLoc loc,
+                                                              Context context);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -3440,6 +3467,8 @@ OpFormatParser::parseDirectiveImpl(SMLoc loc, FormatToken::Kind kind,
     return parseTypeDirective(loc, ctx);
   case FormatToken::kw_oilist:
     return parseOIListDirective(loc, ctx);
+  case FormatToken::kw_num_breaking_regions:
+    return parseNumBreakingRegionsDirective(loc, ctx);
 
   default:
     return emitError(loc, "unsupported directive kind");
@@ -3688,6 +3717,14 @@ FailureOr<FormatElement *> OpFormatParser::parseTypeDirective(SMLoc loc,
     return failure();
 
   return create<TypeDirective>(*operand);
+}
+
+FailureOr<FormatElement *>
+OpFormatParser::parseNumBreakingRegionsDirective(SMLoc loc, Context context) {
+  if (context != TopLevelContext)
+    return emitError(
+        loc, "'num-breaking-regions' is only valid as a top-level directive");
+  return create<NumBreakingRegionsDirective>();
 }
 
 LogicalResult OpFormatParser::markQualified(SMLoc loc, FormatElement *element) {

@@ -72,14 +72,14 @@ detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
 LogicalResult
 detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                                       const SuccessorOperands &operands) {
-  LDBG() << "Verifying branch successor operands for successor #" << succNo
-         << " in operation " << op->getName();
+  LDBG(3) << "Verifying branch successor operands for successor #" << succNo
+          << " in operation " << op->getName();
 
   // Check the count.
   unsigned operandCount = operands.size();
   Block *destBB = op->getSuccessor(succNo);
-  LDBG() << "Branch has " << operandCount << " operands, target block has "
-         << destBB->getNumArguments() << " arguments";
+  LDBG(3) << "Branch has " << operandCount << " operands, target block has "
+          << destBB->getNumArguments() << " arguments";
 
   if (operandCount != destBB->getNumArguments())
     return op->emitError() << "branch has " << operandCount
@@ -88,22 +88,22 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                            << destBB->getNumArguments();
 
   // Check the types.
-  LDBG() << "Checking type compatibility for "
-         << (operandCount - operands.getProducedOperandCount())
-         << " forwarded operands";
+  LDBG(3) << "Checking type compatibility for "
+          << (operandCount - operands.getProducedOperandCount())
+          << " forwarded operands";
   for (unsigned i = operands.getProducedOperandCount(); i != operandCount;
        ++i) {
     Type operandType = operands[i].getType();
     Type argType = destBB->getArgument(i).getType();
-    LDBG() << "Checking type compatibility: operand type " << operandType
-           << " vs argument type " << argType;
+    LDBG(3) << "Checking type compatibility: operand type " << operandType
+            << " vs argument type " << argType;
 
     if (!cast<BranchOpInterface>(op).areTypesCompatible(operandType, argType))
       return op->emitError() << "type mismatch for bb argument #" << i
                              << " of successor #" << succNo;
   }
 
-  LDBG() << "Branch successor operand verification successful";
+  LDBG(3) << "Branch successor operand verification successful";
   return success();
 }
 
@@ -234,12 +234,15 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   for (Region &region : op->getRegions()) {
     // Collect all return-like terminators in the region.
     SmallVector<RegionBranchTerminatorOpInterface> regionReturnOps;
-    for (Block &block : region)
-      if (!block.empty())
-        if (auto terminator =
-                dyn_cast<RegionBranchTerminatorOpInterface>(block.back()))
+    for (Block &block : region) {
+      if (!block.empty()) {
+        Operation *op = &block.back();
+        if (op->getNumBreakingControlRegions() > 1)
+          continue;
+        if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op))
           regionReturnOps.push_back(terminator);
-
+      }
+    }
     // If there is no return-like terminator, the op itself should verify
     // type consistency.
     if (regionReturnOps.empty())

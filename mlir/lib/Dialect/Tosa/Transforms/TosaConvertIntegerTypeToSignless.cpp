@@ -85,7 +85,8 @@ public:
     // Create new op with replaced operands and results
     auto *newOp = Operation::create(
         op->getLoc(), op->getName(), resultTypes, operands, op->getAttrs(),
-        op->getPropertiesStorage(), op->getSuccessors(), op->getNumRegions());
+        op->getPropertiesStorage(), op->getSuccessors(), op->getNumRegions(),
+        op->getNumBreakingControlRegions());
 
     // Handle regions in e.g. tosa.cond_if and tosa.while_loop
     for (auto regions : llvm::zip(op->getRegions(), newOp->getRegions())) {

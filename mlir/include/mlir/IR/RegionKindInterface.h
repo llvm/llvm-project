@@ -36,6 +36,18 @@ public:
   static RegionKind getRegionKind(unsigned index) { return RegionKind::Graph; }
   static bool hasSSADominance(unsigned index) { return false; }
 };
+
+/// Indicates that this operation may break control flow, by propagating the
+/// control flow break from a nested region.
+template <typename ConcreteType>
+class PropagateControlFlowBreak
+    : public TraitBase<ConcreteType, PropagateControlFlowBreak> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return success(); // TODO
+  }
+};
+
 } // namespace OpTrait
 
 /// Return "true" if the given region may have SSA dominance. This function also
@@ -49,8 +61,28 @@ bool mayHaveSSADominance(Region &region);
 /// implement the RegionKindInterface.
 bool mayBeGraphRegion(Region &region);
 
+bool hasNestedPredecessors(Operation *op);
+
+/// Return "true" if the given operation may break control flow and contains
+/// nested operations that have a successor above this operation.
+bool hasBreakingControlFlowOps(Operation *op);
+
+void collectAllNestedPredecessors(Operation *op,
+                                  SmallVector<Operation *> &predecessors);
+
 } // namespace mlir
 
 #include "mlir/IR/RegionKindInterface.h.inc"
+
+namespace mlir {
+
+// Return true if the given region may break control flow.
+inline bool hasBreakingControlFlow(Region *region) {
+  return region->getParentOp()
+             ->hasTrait<OpTrait::PropagateControlFlowBreak>() ||
+         isa<HasBreakingControlFlowOpInterface>(region->getParentOp());
+}
+
+} // namespace mlir
 
 #endif // MLIR_IR_REGIONKINDINTERFACE_H_
