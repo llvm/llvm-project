@@ -449,7 +449,7 @@ private:
   ///
   /// \returns true on success
   bool
-  ParseObjCMethod(const lldb_private::ObjCLanguage::MethodName &objc_method,
+  ParseObjCMethod(const lldb_private::ObjCLanguage::ObjCMethodName &objc_method,
                   const lldb_private::plugin::dwarf::DWARFDIE &die,
                   lldb_private::CompilerType clang_type,
                   const ParsedDWARFTypeAttributes &attrs, bool is_variadic);
@@ -568,6 +568,10 @@ struct ParsedDWARFTypeAttributes {
   ///< Indicates ref-qualifier of C++ member function if present.
   ///< Is RQ_None otherwise.
   clang::RefQualifierKind ref_qual = clang::RQ_None;
+
+  ///< Has a value if this DIE represents an enum that was declared
+  ///< with enum_extensibility.
+  std::optional<clang::EnumExtensibilityAttr::Kind> enum_kind;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H

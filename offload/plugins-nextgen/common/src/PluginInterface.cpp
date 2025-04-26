@@ -440,18 +440,19 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   ImagePtr = &Image;
 
   // Retrieve kernel environment object for the kernel.
-  GlobalTy KernelEnv(std::string(Name) + "_kernel_environment",
-                     sizeof(KernelEnvironment), &KernelEnvironment);
+  std::string EnvironmentName = std::string(Name) + "_kernel_environment";
   GenericGlobalHandlerTy &GHandler = GenericDevice.Plugin.getGlobalHandler();
-  if (auto Err =
-          GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv)) {
-    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
-    DP("Failed to read kernel environment for '%s': %s\n"
-       "Using default SPMD (2) execution mode\n",
-       Name, ErrStr.data());
-    assert(KernelEnvironment.Configuration.ReductionDataSize == 0 &&
-           "Default initialization failed.");
-    IsBareKernel = true;
+  if (GHandler.isSymbolInImage(GenericDevice, Image, EnvironmentName)) {
+    GlobalTy KernelEnv(EnvironmentName, sizeof(KernelEnvironment),
+                       &KernelEnvironment);
+    if (auto Err =
+            GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv))
+      return Err;
+  } else {
+    KernelEnvironment = KernelEnvironmentTy{};
+    DP("Failed to read kernel environment for '%s' Using default Bare (0) "
+       "execution mode\n",
+       Name);
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -573,7 +574,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                             KernelArgs.ThreadLimit[2]};
   uint32_t NumBlocks[3] = {KernelArgs.NumTeams[0], KernelArgs.NumTeams[1],
                            KernelArgs.NumTeams[2]};
-  if (!IsBareKernel) {
+  if (!isBareMode()) {
     NumThreads[0] = getNumThreads(GenericDevice, NumThreads);
     NumBlocks[0] = getNumBlocks(GenericDevice, NumBlocks, KernelArgs.Tripcount,
                                 NumThreads[0], KernelArgs.ThreadLimit[0] > 0);
@@ -627,7 +628,7 @@ KernelLaunchParamsTy GenericKernelTy::prepareArgs(
 
 uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
                                         uint32_t ThreadLimitClause[3]) const {
-  assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(ThreadLimitClause[1] == 1 && ThreadLimitClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");
@@ -645,7 +646,7 @@ uint32_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint64_t LoopTripCount,
                                        uint32_t &NumThreads,
                                        bool IsNumThreadsFromUser) const {
-  assert(!IsBareKernel && "bare kernel should not call this function");
+  assert(!isBareMode() && "bare kernel should not call this function");
 
   assert(NumTeamsClause[1] == 1 && NumTeamsClause[2] == 1 &&
          "Multi dimensional launch not supported yet.");
@@ -861,8 +862,14 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (!ProfOrErr)
       return ProfOrErr.takeError();
 
-    // TODO: write data to profiling file
-    ProfOrErr->dump();
+    // Dump out profdata
+    if ((OMPX_DebugKind.get() & uint32_t(DeviceDebugKind::PGODump)) ==
+        uint32_t(DeviceDebugKind::PGODump))
+      ProfOrErr->dump();
+
+    // Write data to profiling file
+    if (auto Err = ProfOrErr->write())
+      return Err;
   }
 
   // Delete the memory manager before deinitializing the device. Otherwise,
@@ -1705,7 +1712,7 @@ Expected<bool> GenericPluginTy::checkBitcodeImage(StringRef Image) const {
     return ModuleOrErr.takeError();
   Module &M = **ModuleOrErr;
 
-  return Triple(M.getTargetTriple()).getArch() == getTripleArch();
+  return M.getTargetTriple().getArch() == getTripleArch();
 }
 
 int32_t GenericPluginTy::is_initialized() const { return Initialized; }

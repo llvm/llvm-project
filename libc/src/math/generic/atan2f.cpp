@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/atan2f.h"
+#include "hdr/fenv_macros.h"
 #include "inv_trigf_utils.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -16,6 +18,14 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
+
+// We use float-float implementation to reduce size.
+#include "src/math/generic/atan2f_float.h"
+
+#else
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -123,7 +133,7 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
     num_r = num_d;
     den_r = den_d;
   }
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   q.lo = fputil::multiply_add(q.hi, -den_r, num_r) / den_r;
 #else
   // Compute `(num_r - q.hi * den_r) / den_r` accurately without FMA
@@ -132,7 +142,7 @@ float atan2f_double_double(double num_d, double den_d, double q_d, int idx,
   double t1 = fputil::multiply_add(q_hi_dd.hi, -den_r, num_r); // Exact
   double t2 = fputil::multiply_add(q_hi_dd.lo, -den_r, t1);
   q.lo = t2 / den_r;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
   // Taylor polynomial, evaluating using Horner's scheme:
   //   P = x - x^3/3 + x^5/5 -x^7/7 + x^9/9 - x^11/11 + x^13/13 - x^15/15
@@ -256,8 +266,11 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
   double den_d = static_cast<double>(den_f);
 
   if (LIBC_UNLIKELY(max_abs >= 0x7f80'0000U || num_d == 0.0)) {
-    if (x_bits.is_nan() || y_bits.is_nan())
+    if (x_bits.is_nan() || y_bits.is_nan()) {
+      if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
+        fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
+    }
     double x_d = static_cast<double>(x);
     double y_d = static_cast<double>(y);
     size_t x_except = (x_d == 0.0) ? 0 : (x_abs == 0x7f80'0000 ? 2 : 1);
@@ -324,3 +337,5 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif

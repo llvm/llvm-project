@@ -296,6 +296,8 @@
 
 /* HAVE_PROC_PID_RUSAGE defined in Bazel */
 
+/* HAVE_GETAUXVAL defined in Bazel */
+
 /* Directly provide definitions here behind platform preprocessor definitions.
  * The preprocessor conditions are sufficient to handle all of the configuration
  * on platforms targeted by Bazel, and defining these here more faithfully

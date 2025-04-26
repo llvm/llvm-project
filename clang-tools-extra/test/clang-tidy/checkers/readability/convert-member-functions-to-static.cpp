@@ -32,6 +32,7 @@ class A {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: method 'call_static_member' can be made static
     // CHECK-FIXES: {{^}}  static int call_static_member() {
     already_static();
+    return 0;
   }
 
   int read_static() {

@@ -64,6 +64,7 @@ private:
   void sortOrphanSections();
   void finalizeSections();
   void checkExecuteOnly();
+  void checkExecuteOnlyReport();
   void setReservedSymbolSections();
 
   SmallVector<std::unique_ptr<PhdrEntry>, 0> createPhdrs(Partition &part);
@@ -284,7 +285,6 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
   DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  bool hasDynsym = ctx.hasDynsym;
   bool maybePreemptible = ctx.sharedFiles.size() || ctx.arg.shared;
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     if (auto *d = dyn_cast<Defined>(sym)) {
@@ -301,9 +301,8 @@ static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
       }
     }
 
-    if (hasDynsym)
-      sym->isPreemptible = maybePreemptible &&
-                           (sym->isUndefined() || sym->isExported) &&
+    if (maybePreemptible)
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
                            computeIsPreemptible(ctx, *sym);
   }
 }
@@ -325,6 +324,7 @@ template <class ELFT> void Writer<ELFT>::run() {
   // finalizeSections does that.
   finalizeSections();
   checkExecuteOnly();
+  checkExecuteOnlyReport();
 
   // If --compressed-debug-sections is specified, compress .debug_* sections.
   // Do it right now because it changes the size of output sections.
@@ -1533,8 +1533,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     // With Thunk Size much smaller than branch range we expect to
     // converge quickly; if we get to 30 something has gone wrong.
     if (changed && pass >= 30) {
-      Err(ctx) << (ctx.target->needsThunks ? "thunk creation not converged"
-                                           : "relaxation not converged");
+      Err(ctx) << "address assignment did not converge";
       break;
     }
 
@@ -1853,7 +1852,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // If the previous code block defines any non-hidden symbols (e.g.
   // __global_pointer$), they may be exported.
-  if (ctx.hasDynsym && ctx.arg.exportDynamic)
+  if (ctx.arg.exportDynamic)
     for (Symbol *sym : ctx.synthesizedSymbols)
       if (sym->computeBinding(ctx) != STB_LOCAL)
         sym->isExported = true;
@@ -2179,6 +2178,37 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
                             "data and code";
 }
 
+// Check which input sections of RX output sections don't have the
+// SHF_AARCH64_PURECODE or SHF_ARM_PURECODE flag set.
+template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
+  if (ctx.arg.zExecuteOnlyReport == ReportPolicy::None)
+    return;
+
+  auto reportUnless = [&](bool cond) -> ELFSyncStream {
+    if (cond)
+      return {ctx, DiagLevel::None};
+    return {ctx, toDiagLevel(ctx.arg.zExecuteOnlyReport)};
+  };
+
+  uint64_t purecodeFlag =
+      ctx.arg.emachine == EM_AARCH64 ? SHF_AARCH64_PURECODE : SHF_ARM_PURECODE;
+  StringRef purecodeFlagName = ctx.arg.emachine == EM_AARCH64
+                                   ? "SHF_AARCH64_PURECODE"
+                                   : "SHF_ARM_PURECODE";
+  SmallVector<InputSection *, 0> storage;
+  for (OutputSection *osec : ctx.outputSections) {
+    if (osec->getPhdrFlags() != (PF_R | PF_X))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (isa<SyntheticSection>(sec))
+        continue;
+      reportUnless(sec->flags & purecodeFlag)
+          << "-z execute-only-report: " << sec << " does not have "
+          << purecodeFlagName << " flag set";
+    }
+  }
+}
+
 // The linker is expected to define SECNAME_start and SECNAME_end
 // symbols for a few sections. This function defines them.
 template <class ELFT> void Writer<ELFT>::addStartEndSymbols() {
@@ -2349,10 +2379,16 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(ctx, sec->getPhdrFlags());
-    // When --no-rosegment is specified, RO and RX sections are compatible.
-    uint32_t incompatible = flags ^ newFlags;
-    if (ctx.arg.singleRoRx && !(newFlags & PF_W))
-      incompatible &= ~PF_X;
+    uint64_t incompatible = flags ^ newFlags;
+    if (!(newFlags & PF_W)) {
+      // When --no-rosegment is specified, RO and RX sections are compatible.
+      if (ctx.arg.singleRoRx)
+        incompatible &= ~PF_X;
+      // When --no-xosegment is specified (the default), XO and RX sections are
+      // compatible.
+      if (ctx.arg.singleXoRx)
+        incompatible &= ~PF_R;
+    }
     if (incompatible)
       load = nullptr;
 

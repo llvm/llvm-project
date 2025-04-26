@@ -917,9 +917,10 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
 
   // Fixup the incoming path in case the path points to a valid file, yet the
   // arch or UUID (if one was passed in) don't match.
-  ModuleSpec located_binary_modulespec =
-      PluginManager::LocateExecutableObjectFile(module_spec);
-
+  ModuleSpec located_binary_modulespec;
+  StatisticsMap symbol_locator_map;
+  located_binary_modulespec = PluginManager::LocateExecutableObjectFile(
+      module_spec, symbol_locator_map);
   // Don't look for the file if it appears to be the same one we already
   // checked for above...
   if (located_binary_modulespec.GetFileSpec() != module_file_spec) {
@@ -992,6 +993,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
       // By getting the object file we can guarantee that the architecture
       // matches
       if (module_sp && module_sp->GetObjectFile()) {
+        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
         if (module_sp->GetObjectFile()->GetType() ==
             ObjectFile::eTypeStubLibrary) {
           module_sp.reset();

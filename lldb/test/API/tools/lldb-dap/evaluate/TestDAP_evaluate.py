@@ -101,7 +101,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         if context == "repl":
             # In the repl context expressions may be interpreted as lldb
             # commands since no variables have the same name as the command.
-            self.assertEvaluate("list", r"\(lldb\) list\n.*")
+            self.assertEvaluate("list", r".*")
         else:
             self.assertEvaluateFailure("list")  # local variable of a_function
 

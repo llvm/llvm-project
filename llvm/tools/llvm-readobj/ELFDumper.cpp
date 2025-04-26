@@ -39,6 +39,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include "llvm/Object/StackMapParser.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
@@ -1337,6 +1338,10 @@ const EnumEntry<unsigned> ElfXCoreSectionFlags[] = {
   ENUM_ENT(XCORE_SHF_DP_SECTION, "")
 };
 
+const EnumEntry<unsigned> ElfAArch64SectionFlags[] = {
+  ENUM_ENT(SHF_AARCH64_PURECODE, "y")
+};
+
 const EnumEntry<unsigned> ElfARMSectionFlags[] = {
   ENUM_ENT(SHF_ARM_PURECODE, "y")
 };
@@ -1366,34 +1371,30 @@ getSectionFlagsForTarget(unsigned EOSAbi, unsigned EMachine) {
                                        std::end(ElfSectionFlags));
   switch (EOSAbi) {
   case ELFOSABI_SOLARIS:
-    Ret.insert(Ret.end(), std::begin(ElfSolarisSectionFlags),
-               std::end(ElfSolarisSectionFlags));
+    llvm::append_range(Ret, ElfSolarisSectionFlags);
     break;
   default:
-    Ret.insert(Ret.end(), std::begin(ElfGNUSectionFlags),
-               std::end(ElfGNUSectionFlags));
+    llvm::append_range(Ret, ElfGNUSectionFlags);
     break;
   }
   switch (EMachine) {
+  case EM_AARCH64:
+    llvm::append_range(Ret, ElfAArch64SectionFlags);
+    break;
   case EM_ARM:
-    Ret.insert(Ret.end(), std::begin(ElfARMSectionFlags),
-               std::end(ElfARMSectionFlags));
+    llvm::append_range(Ret, ElfARMSectionFlags);
     break;
   case EM_HEXAGON:
-    Ret.insert(Ret.end(), std::begin(ElfHexagonSectionFlags),
-               std::end(ElfHexagonSectionFlags));
+    llvm::append_range(Ret, ElfHexagonSectionFlags);
     break;
   case EM_MIPS:
-    Ret.insert(Ret.end(), std::begin(ElfMipsSectionFlags),
-               std::end(ElfMipsSectionFlags));
+    llvm::append_range(Ret, ElfMipsSectionFlags);
     break;
   case EM_X86_64:
-    Ret.insert(Ret.end(), std::begin(ElfX86_64SectionFlags),
-               std::end(ElfX86_64SectionFlags));
+    llvm::append_range(Ret, ElfX86_64SectionFlags);
     break;
   case EM_XCORE:
-    Ret.insert(Ret.end(), std::begin(ElfXCoreSectionFlags),
-               std::end(ElfXCoreSectionFlags));
+    llvm::append_range(Ret, ElfXCoreSectionFlags);
     break;
   default:
     break;
@@ -1616,8 +1617,6 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
@@ -2872,6 +2871,12 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
         ELF::SHT_ARM_ATTRIBUTES, std::make_unique<ARMAttributeParser>(&W),
         Obj.isLE() ? llvm::endianness::little : llvm::endianness::big);
     break;
+  case EM_AARCH64:
+    printAttributes(ELF::SHT_AARCH64_ATTRIBUTES,
+                    std::make_unique<AArch64AttributeParser>(&W),
+                    Obj.isLE() ? llvm::endianness::little
+                               : llvm::endianness::big);
+    break;
   case EM_RISCV:
     if (Obj.isLE())
       printAttributes(ELF::SHT_RISCV_ATTRIBUTES,
@@ -3484,20 +3489,13 @@ ELFDumper<ELFT>::getOtherFlagsFromSymbol(const Elf_Ehdr &Header,
     // flag overlap with other ST_MIPS_xxx flags. So consider both
     // cases separately.
     if ((Symbol.st_other & STO_MIPS_MIPS16) == STO_MIPS_MIPS16)
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfMips16SymOtherFlags),
-                           std::end(ElfMips16SymOtherFlags));
+      llvm::append_range(SymOtherFlags, ElfMips16SymOtherFlags);
     else
-      SymOtherFlags.insert(SymOtherFlags.end(),
-                           std::begin(ElfMipsSymOtherFlags),
-                           std::end(ElfMipsSymOtherFlags));
+      llvm::append_range(SymOtherFlags, ElfMipsSymOtherFlags);
   } else if (Header.e_machine == EM_AARCH64) {
-    SymOtherFlags.insert(SymOtherFlags.end(),
-                         std::begin(ElfAArch64SymOtherFlags),
-                         std::end(ElfAArch64SymOtherFlags));
+    llvm::append_range(SymOtherFlags, ElfAArch64SymOtherFlags);
   } else if (Header.e_machine == EM_RISCV) {
-    SymOtherFlags.insert(SymOtherFlags.end(), std::begin(ElfRISCVSymOtherFlags),
-                         std::end(ElfRISCVSymOtherFlags));
+    llvm::append_range(SymOtherFlags, ElfRISCVSymOtherFlags);
   }
   return SymOtherFlags;
 }
@@ -4104,7 +4102,7 @@ static void printSectionDescription(formatted_raw_ostream &OS,
 
   if (EMachine == EM_X86_64)
     OS << ", l (large)";
-  else if (EMachine == EM_ARM)
+  else if (EMachine == EM_ARM || EMachine == EM_AARCH64)
     OS << ", y (purecode)";
 
   OS << ", p (processor specific)\n";
@@ -6833,6 +6831,16 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
       continue;
     }
 
+    // We might end up with relocations in CREL here. If we do, report a
+    // warning since we do not currently support them.
+    if (RelocSec->sh_type == ELF::SHT_CREL) {
+      reportWarning(createError(".stack_sizes (" + describe(*StackSizesELFSec) +
+                                ") has a corresponding CREL relocation "
+                                "section, which is not currently supported"),
+                    FileName);
+      continue;
+    }
+
     // A .stack_sizes section header's sh_link field is supposed to point
     // to the section that contains the functions whose stack sizes are
     // described in it.
@@ -7652,7 +7660,7 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
     W.printFlags("Flags", D.Flags, ArrayRef(SymVersionFlags));
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
-    W.printString("Name", D.Name.c_str());
+    W.printString("Name", D.Name);
     W.printList(
         "Predecessors", D.AuxV,
         [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });

@@ -116,7 +116,8 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
     type_system->SetIsPacked(fields_type);
 
     // This should be true if RegisterFlags padded correctly.
-    assert(*fields_type.GetByteSize(nullptr) == flags.GetSize());
+    assert(llvm::expectedToOptional(fields_type.GetByteSize(nullptr))
+               .value_or(0) == flags.GetSize());
   }
 
   return fields_type;

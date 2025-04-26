@@ -264,7 +264,7 @@ struct Qptr {
   }
 };
 
-int func(Qptr qp) {
+void func(Qptr qp) {
   qp->y = 10;
   qp->K = 10;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: static member accessed through instance [readability-static-accessed-through-instance]

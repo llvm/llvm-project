@@ -68,7 +68,7 @@ omp.target map_entries(%12 -> %arg1, %13 -> %arg2 : !fir.ref<!fir.box<!fir.ptr<!
 
 ...
 %12 = fir.box_offset %1#1 base_addr : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-%13 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.array<?xi32>) var_ptr_ptr(%12 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%11) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
+%13 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.array<?xi32>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%12 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%11) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 %14 = omp.map.info var_ptr(%1#1 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) members(%13 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "arg_alloc"}
 ...
 omp.target map_entries(%13 -> %arg1, %14 -> %arg2, %15 -> %arg3 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<i32>) {

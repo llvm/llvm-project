@@ -143,7 +143,7 @@ define i64 @udiv64_constant_add(i64 %a) nounwind {
 define i8 @udiv8_constant_no_add(i8 %a) nounwind {
 ; RV32-LABEL: udiv8_constant_no_add:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a0, a0, 255
+; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    li a1, 205
 ; RV32-NEXT:    mul a0, a0, a1
 ; RV32-NEXT:    srli a0, a0, 10
@@ -151,7 +151,7 @@ define i8 @udiv8_constant_no_add(i8 %a) nounwind {
 ;
 ; RV64-LABEL: udiv8_constant_no_add:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    li a1, 205
 ; RV64-NEXT:    mul a0, a0, a1
 ; RV64-NEXT:    srli a0, a0, 10
@@ -163,7 +163,7 @@ define i8 @udiv8_constant_no_add(i8 %a) nounwind {
 define i8 @udiv8_constant_add(i8 %a) nounwind {
 ; RV32IM-LABEL: udiv8_constant_add:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    andi a1, a0, 255
+; RV32IM-NEXT:    zext.b a1, a0
 ; RV32IM-NEXT:    li a2, 37
 ; RV32IM-NEXT:    mul a1, a1, a2
 ; RV32IM-NEXT:    srli a1, a1, 8
@@ -176,7 +176,7 @@ define i8 @udiv8_constant_add(i8 %a) nounwind {
 ;
 ; RV32IMZB-LABEL: udiv8_constant_add:
 ; RV32IMZB:       # %bb.0:
-; RV32IMZB-NEXT:    andi a1, a0, 255
+; RV32IMZB-NEXT:    zext.b a1, a0
 ; RV32IMZB-NEXT:    sh3add a2, a1, a1
 ; RV32IMZB-NEXT:    sh2add a1, a2, a1
 ; RV32IMZB-NEXT:    srli a1, a1, 8
@@ -189,7 +189,7 @@ define i8 @udiv8_constant_add(i8 %a) nounwind {
 ;
 ; RV64IM-LABEL: udiv8_constant_add:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    andi a1, a0, 255
+; RV64IM-NEXT:    zext.b a1, a0
 ; RV64IM-NEXT:    li a2, 37
 ; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    srli a1, a1, 8
@@ -202,7 +202,7 @@ define i8 @udiv8_constant_add(i8 %a) nounwind {
 ;
 ; RV64IMZB-LABEL: udiv8_constant_add:
 ; RV64IMZB:       # %bb.0:
-; RV64IMZB-NEXT:    andi a1, a0, 255
+; RV64IMZB-NEXT:    zext.b a1, a0
 ; RV64IMZB-NEXT:    sh3add a2, a1, a1
 ; RV64IMZB-NEXT:    sh2add a1, a2, a1
 ; RV64IMZB-NEXT:    srli a1, a1, 8

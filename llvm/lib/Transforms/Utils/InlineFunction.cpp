@@ -241,7 +241,8 @@ void LandingPadInliningInfo::forwardResume(
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
-  BranchInst::Create(Dest, Src);
+  auto *BI = BranchInst::Create(Dest, Src);
+  BI->setDebugLoc(RI->getDebugLoc());
 
   // Update the PHIs in the destination. They were inserted in an order which
   // makes this work.
@@ -1245,8 +1246,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         SmallVector<const Value *, 4> Objects;
         getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
 
-        for (const Value *O : Objects)
-          ObjSet.insert(O);
+        ObjSet.insert_range(Objects);
       }
 
       // Figure out if we're derived from anything that is not a noalias
@@ -1313,8 +1313,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         // nocapture only guarantees that no copies outlive the function, not
         // that the value cannot be locally captured.
         if (!RequiresNoCaptureBefore ||
-            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false,
-                                        /* StoreCaptures */ false, I, &DT))
+            !PointerMayBeCapturedBefore(A, /* ReturnCaptures */ false, I, &DT))
           NoAliases.push_back(NewScopes[A]);
       }
 
@@ -1383,7 +1382,8 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   // behavior was just using a poison value.
   static const Attribute::AttrKind ExactAttrsToPropagate[] = {
       Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
-      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
+      Attribute::NonNull,         Attribute::NoFPClass,
+      Attribute::Alignment,       Attribute::Range};
 
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
     ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
@@ -1465,6 +1465,10 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
               NewAB.addRangeAttr(CombinedRange);
             }
           }
+
+          if (FPClassTest ExistingNoFP = AL.getParamNoFPClass(I))
+            NewAB.addNoFPClassAttr(ExistingNoFP | NewAB.getNoFPClass());
+
           AL = AL.addParamAttributes(Context, I, NewAB);
         } else if (NewInnerCB->getArgOperand(I)->getType()->isPointerTy()) {
           // Check if the underlying value for the parameter is an argument.
@@ -1676,7 +1680,7 @@ static void AddAlignmentAssumptions(CallBase &CB, InlineFunctionInfo &IFI) {
   Function *CalledFunc = CB.getCalledFunction();
   for (Argument &Arg : CalledFunc->args()) {
     if (!Arg.getType()->isPointerTy() || Arg.hasPassPointeeByValueCopyAttr() ||
-        Arg.hasNUses(0))
+        Arg.use_empty())
       continue;
     MaybeAlign Alignment = Arg.getParamAlign();
     if (!Alignment)
@@ -2150,7 +2154,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() != Intrinsic::objc_autoreleaseReturnValue ||
-            !II->hasNUses(0) ||
+            !II->use_empty() ||
             objcarc::GetRCIdentityRoot(II->getOperand(0)) != RetOpnd)
           break;
 
@@ -2161,7 +2165,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
+          Builder.CreateIntrinsic(Intrinsic::objc_release, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2195,7 +2199,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, RetOpnd);
     }
   }
 }
@@ -2358,7 +2362,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
                                         Function *ForwardVarArgsTo) {
-  if (!CtxProf)
+  if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
                           ForwardVarArgsTo);
 

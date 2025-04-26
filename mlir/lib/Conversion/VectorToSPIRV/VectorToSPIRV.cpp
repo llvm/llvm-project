@@ -287,16 +287,16 @@ struct VectorInsertOpConvert final
   LogicalResult
   matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (isa<VectorType>(insertOp.getSourceType()))
+    if (isa<VectorType>(insertOp.getValueToStoreType()))
       return rewriter.notifyMatchFailure(insertOp, "unsupported vector source");
     if (!getTypeConverter()->convertType(insertOp.getDestVectorType()))
       return rewriter.notifyMatchFailure(insertOp,
                                          "unsupported dest vector type");
 
     // Special case for inserting scalar values into size-1 vectors.
-    if (insertOp.getSourceType().isIntOrFloat() &&
+    if (insertOp.getValueToStoreType().isIntOrFloat() &&
         insertOp.getDestVectorType().getNumElements() == 1) {
-      rewriter.replaceOp(insertOp, adaptor.getSource());
+      rewriter.replaceOp(insertOp, adaptor.getValueToStore());
       return success();
     }
 
@@ -307,14 +307,15 @@ struct VectorInsertOpConvert final
             insertOp,
             "Static use of poison index handled elsewhere (folded to poison)");
       rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(
-          insertOp, adaptor.getSource(), adaptor.getDest(), id.value());
+          insertOp, adaptor.getValueToStore(), adaptor.getDest(), id.value());
     } else {
       Value sanitizedIndex = sanitizeDynamicIndex(
           rewriter, insertOp.getLoc(), adaptor.getDynamicPosition()[0],
           vector::InsertOp::kPoisonIndex,
           insertOp.getDestVectorType().getNumElements());
       rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
-          insertOp, insertOp.getDest(), adaptor.getSource(), sanitizedIndex);
+          insertOp, insertOp.getDest(), adaptor.getValueToStore(),
+          sanitizedIndex);
     }
     return success();
   }
@@ -770,10 +771,20 @@ struct VectorLoadOpConverter final
 
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = loadOp.getVectorType();
-    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
-    Value castedAccessChain =
-        rewriter.create<spirv::BitcastOp>(loc, vectorPtrType, accessChain);
-    rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, vectorType,
+    // Use the converted vector type instead of original (single element vector
+    // would get converted to scalar).
+    auto spirvVectorType = typeConverter.convertType(vectorType);
+    auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
+
+    // For single element vectors, we don't need to bitcast the access chain to
+    // the original vector type. Both is going to be the same, a pointer
+    // to a scalar.
+    Value castedAccessChain = (vectorType.getNumElements() == 1)
+                                  ? accessChain
+                                  : rewriter.create<spirv::BitcastOp>(
+                                        loc, vectorPtrType, accessChain);
+
+    rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, spirvVectorType,
                                                castedAccessChain);
 
     return success();
@@ -806,8 +817,15 @@ struct VectorStoreOpConverter final
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = storeOp.getVectorType();
     auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
-    Value castedAccessChain =
-        rewriter.create<spirv::BitcastOp>(loc, vectorPtrType, accessChain);
+
+    // For single element vectors, we don't need to bitcast the access chain to
+    // the original vector type. Both is going to be the same, a pointer
+    // to a scalar.
+    Value castedAccessChain = (vectorType.getNumElements() == 1)
+                                  ? accessChain
+                                  : rewriter.create<spirv::BitcastOp>(
+                                        loc, vectorPtrType, accessChain);
+
     rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, castedAccessChain,
                                                 adaptor.getValueToStore());
 

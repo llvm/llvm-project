@@ -323,7 +323,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_ [AMD-GCN-GFX940-GFX942-CDNA3]_
+     **GCN GFX9 (Vega)** [AMD-GCN-GFX900-GFX904-VEGA]_ [AMD-GCN-GFX906-VEGA7NM]_ [AMD-GCN-GFX908-CDNA1]_ [AMD-GCN-GFX90A-CDNA2]_ [AMD-GCN-GFX942-CDNA3]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx900``                  ``amdgcn``   dGPU  - xnack           - Absolute      - *rocm-amdhsa* - Radeon Vega
                                                                         flat          - *pal-amdhsa*    Frontier Edition
@@ -377,20 +377,6 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                       - Ryzen 5 Pro 4650GE
                                                                                                       - Ryzen 3 Pro 4350G
                                                                                                       - Ryzen 3 Pro 4350GE
-
-     ``gfx940``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
-                                                    - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
-
-     ``gfx941``                  ``amdgcn``   dGPU  - sramecc         - Architected                   *TBA*
-                                                    - tgsplit           flat
-                                                    - xnack             scratch                       .. TODO::
-                                                    - kernarg preload - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
 
      ``gfx942``                  ``amdgcn``   dGPU  - sramecc         - Architected                   - AMD Instinct MI300X
                                                     - tgsplit           flat                          - AMD Instinct MI300A
@@ -529,6 +515,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
+     **GCN GFX12 (RDNA 4)** [AMD-GCN-GFX12-RDNA4]_
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1200``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -583,10 +571,10 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                   - ``v_dot2_f32_f16``
 
 
-     ``gfx9-4-generic``   ``amdgcn``     - ``gfx940``      - sramecc          - Architected     FP8 and BF8 instructions,
-                                         - ``gfx941``      - tgsplit            flat scratch    FP8 and BF8 conversion
-                                         - ``gfx942``      - xnack            - Packed          instructions, as well as
-                                         - ``gfx950``      - kernarg preload    work-item       instructions with XF32 format
+     ``gfx9-4-generic``   ``amdgcn``     - ``gfx942``      - sramecc          - Architected     FP8 and BF8 instructions,
+                                         - ``gfx950``      - tgsplit            flat scratch    FP8 and BF8 conversion
+                                                           - xnack            - Packed          instructions, as well as
+                                                           - kernarg preload    work-item       instructions with XF32 format
                                                                                 IDs             support are not available.
 
      ``gfx10-1-generic``  ``amdgcn``     - ``gfx1010``     - xnack            - Absolute flat   - The following instructions are
@@ -633,18 +621,18 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 SALU floating point instructions
                                                                                                 are not available on:
 
-                                                                                                - ``gfx1150``
-                                                                                                - ``gfx1151``
-                                                                                                - ``gfx1152``
-                                                                                                - ``gfx1153``
+                                                                                                - ``gfx1100``
+                                                                                                - ``gfx1101``
+                                                                                                - ``gfx1102``
+                                                                                                - ``gfx1103``
 
                                                                                                 SGPRs are not supported for src1
                                                                                                 in dpp instructions for:
 
-                                                                                                - ``gfx1150``
-                                                                                                - ``gfx1151``
-                                                                                                - ``gfx1152``
-                                                                                                - ``gfx1153``
+                                                                                                - ``gfx1100``
+                                                                                                - ``gfx1101``
+                                                                                                - ``gfx1102``
+                                                                                                - ``gfx1103``
 
 
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
@@ -772,6 +760,12 @@ For example:
                                                   enabled will execute correctly but may be less
                                                   performant than code generated for XNACK replay
                                                   disabled.
+
+     dynamic-vgpr    TODO                         Represents the "Dynamic VGPR" hardware mode, introduced in GFX12.
+                                                  Waves launched in this mode may allocate or deallocate the VGPRs
+                                                  using dedicated instructions, but may not send the DEALLOC_VGPRS
+                                                  message.
+
      =============== ============================ ==================================================
 
 .. _amdgpu-target-id:
@@ -990,7 +984,12 @@ supported for the ``amdgcn`` target.
   the stride must be 0, the "add tid" flag must be 0, the swizzle enable bits
   must be off, and the extent must be measured in bytes. (On subtargets where
   bounds checking may be disabled, buffer fat pointers may choose to enable
-  it or not).
+  it or not). The cache swizzle support introduced in gfx942 may be used.
+
+  These pointers can be created by `addrspacecast` from a buffer resource
+  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  `ptr addrspace(7)` directly, which produces a buffer fat pointer with an initial
+  offset of 0 and prevents the address space cast from being rewritten away.
 
 **Buffer Resource**
   The buffer resource pointer, in address space 8, is the newer form
@@ -1026,6 +1025,12 @@ supported for the ``amdgcn`` target.
   The bits in the buffer descriptor must meet the following requirements:
   the stride is the size of a structured element, the "add tid" flag must be 0,
   and the swizzle enable bits must be off.
+
+  These pointers can be created by `addrspacecast` from a buffer resource
+  (`ptr addrspace(8)`) or by using `llvm.amdgcn.make.buffer.rsrc` to produce a
+  `ptr addrspace(9)` directly, which produces a buffer strided pointer whose initial
+  index and offset values are both 0. This prevents the address space cast from
+  being rewritten away.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
@@ -1549,180 +1554,198 @@ The AMDGPU backend supports the following LLVM IR attributes.
   .. table:: AMDGPU LLVM IR Attributes
      :name: amdgpu-llvm-ir-attributes-table
 
-     ============================================ ==========================================================
-     LLVM Attribute                               Description
-     ============================================ ==========================================================
-     "amdgpu-flat-work-group-size"="min,max"      Specify the minimum and maximum flat work group sizes that
-                                                  will be specified when the kernel is dispatched. Generated
-                                                  by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
-                                                  The IR implied default value is 1,1024. Clang may emit this attribute
-                                                  with more restrictive bounds depending on language defaults.
-                                                  If the actual block or workgroup size exceeds the limit at any point during
-                                                  the execution, the behavior is undefined. For example, even if there is
-                                                  only one active thread but the thread local id exceeds the limit, the
-                                                  behavior is undefined.
+     ================================================ ==========================================================
+     LLVM Attribute                                   Description
+     ================================================ ==========================================================
+     "amdgpu-flat-work-group-size"="min,max"          Specify the minimum and maximum flat work group sizes that
+                                                      will be specified when the kernel is dispatched. Generated
+                                                      by the ``amdgpu_flat_work_group_size`` CLANG attribute [CLANG-ATTR]_.
+                                                      The IR implied default value is 1,1024. Clang may emit this attribute
+                                                      with more restrictive bounds depending on language defaults.
+                                                      If the actual block or workgroup size exceeds the limit at any point during
+                                                      the execution, the behavior is undefined. For example, even if there is
+                                                      only one active thread but the thread local id exceeds the limit, the
+                                                      behavior is undefined.
 
-     "amdgpu-implicitarg-num-bytes"="n"           Number of kernel argument bytes to add to the kernel
-                                                  argument block size for the implicit arguments. This
-                                                  varies by OS and language (for OpenCL see
-                                                  :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
-     "amdgpu-num-sgpr"="n"                        Specifies the number of SGPRs to use. Generated by
-                                                  the ``amdgpu_num_sgpr`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-num-vgpr"="n"                        Specifies the number of VGPRs to use. Generated by the
-                                                  ``amdgpu_num_vgpr`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-waves-per-eu"="m,n"                  Specify the minimum and maximum number of waves per
-                                                  execution unit. Generated by the ``amdgpu_waves_per_eu``
-                                                  CLANG attribute [CLANG-ATTR]_. This is an optimization hint,
-                                                  and the backend may not be able to satisfy the request. If
-                                                  the specified range is incompatible with the function's
-                                                  "amdgpu-flat-work-group-size" value, the implied occupancy
-                                                  bounds by the workgroup size takes precedence.
+     "amdgpu-implicitarg-num-bytes"="n"               Number of kernel argument bytes to add to the kernel
+                                                      argument block size for the implicit arguments. This
+                                                      varies by OS and language (for OpenCL see
+                                                      :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
+     "amdgpu-num-sgpr"="n"                            Specifies the number of SGPRs to use. Generated by
+                                                      the ``amdgpu_num_sgpr`` CLANG attribute [CLANG-ATTR]_.
+     "amdgpu-num-vgpr"="n"                            Specifies the number of VGPRs to use. Generated by the
+                                                      ``amdgpu_num_vgpr`` CLANG attribute [CLANG-ATTR]_.
+     "amdgpu-waves-per-eu"="m,n"                      Specify the minimum and maximum number of waves per
+                                                      execution unit. Generated by the ``amdgpu_waves_per_eu``
+                                                      CLANG attribute [CLANG-ATTR]_. This is an optimization hint,
+                                                      and the backend may not be able to satisfy the request. If
+                                                      the specified range is incompatible with the function's
+                                                      "amdgpu-flat-work-group-size" value, the implied occupancy
+                                                      bounds by the workgroup size takes precedence.
 
-     "amdgpu-ieee" true/false.                    GFX6-GFX11 Only
-                                                  Specify whether the function expects the IEEE field of the
-                                                  mode register to be set on entry. Overrides the default for
-                                                  the calling convention.
-     "amdgpu-dx10-clamp" true/false.              GFX6-GFX11 Only
-                                                  Specify whether the function expects the DX10_CLAMP field of
-                                                  the mode register to be set on entry. Overrides the default
-                                                  for the calling convention.
+     "amdgpu-ieee" true/false.                        GFX6-GFX11 Only
+                                                      Specify whether the function expects the IEEE field of the
+                                                      mode register to be set on entry. Overrides the default for
+                                                      the calling convention.
+     "amdgpu-dx10-clamp" true/false.                  GFX6-GFX11 Only
+                                                      Specify whether the function expects the DX10_CLAMP field of
+                                                      the mode register to be set on entry. Overrides the default
+                                                      for the calling convention.
 
-     "amdgpu-no-workitem-id-x"                    Indicates the function does not depend on the value of the
-                                                  llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
-                                                  attribute, or reached through a call site marked with this attribute, and
-                                                  that intrinsic is called, the behavior of the program is undefined. (Whole-program
-                                                  undefined behavior is used here because, for example, the absence of a required workitem
-                                                  ID in the preloaded register set can mean that all other preloaded registers
-                                                  are earlier than the compilation assumed they would be.) The backend can
-                                                  generally infer this during code generation, so typically there is no
-                                                  benefit to frontends marking functions with this.
+     "amdgpu-no-workitem-id-x"                        Indicates the function does not depend on the value of the
+                                                      llvm.amdgcn.workitem.id.x intrinsic. If a function is marked with this
+                                                      attribute, or reached through a call site marked with this attribute,
+                                                      and that intrinsic is called, the behavior of the program is undefined.
+                                                      (Whole-program undefined behavior is used here because, for example,
+                                                      the absence of a required workitem ID in the preloaded register set can
+                                                      mean that all other preloaded registers are earlier than the compilation
+                                                      assumed they would be.) The backend can generally infer this during code
+                                                      generation, so typically there is no benefit to frontends marking
+                                                      functions with this.
 
-     "amdgpu-no-workitem-id-y"                    The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.workitem.id.y intrinsic.
+     "amdgpu-no-workitem-id-y"                        The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.workitem.id.y intrinsic.
 
-     "amdgpu-no-workitem-id-z"                    The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.workitem.id.z intrinsic.
+     "amdgpu-no-workitem-id-z"                        The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.workitem.id.z intrinsic.
 
-     "amdgpu-no-workgroup-id-x"                   The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.workgroup.id.x intrinsic.
+     "amdgpu-no-workgroup-id-x"                       The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.workgroup.id.x intrinsic.
 
-     "amdgpu-no-workgroup-id-y"                   The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.workgroup.id.y intrinsic.
+     "amdgpu-no-workgroup-id-y"                       The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.workgroup.id.y intrinsic.
 
-     "amdgpu-no-workgroup-id-z"                   The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.workgroup.id.z intrinsic.
+     "amdgpu-no-workgroup-id-z"                       The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.workgroup.id.z intrinsic.
 
-     "amdgpu-no-dispatch-ptr"                     The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.dispatch.ptr intrinsic.
+     "amdgpu-no-dispatch-ptr"                         The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.dispatch.ptr intrinsic.
 
-     "amdgpu-no-implicitarg-ptr"                  The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.implicitarg.ptr intrinsic.
+     "amdgpu-no-implicitarg-ptr"                      The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.implicitarg.ptr intrinsic.
 
-     "amdgpu-no-dispatch-id"                      The same as amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.dispatch.id intrinsic.
+     "amdgpu-no-dispatch-id"                          The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.dispatch.id intrinsic.
 
-     "amdgpu-no-queue-ptr"                        Similar to amdgpu-no-workitem-id-x, except for the
-                                                  llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
-                                                  attributes, the queue pointer may be required in situations where the
-                                                  intrinsic call does not directly appear in the program. Some subtargets
-                                                  require the queue pointer for to handle some addrspacecasts, as well
-                                                  as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and
-                                                  llvm.debug intrinsics.
+     "amdgpu-no-queue-ptr"                            Similar to amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
+                                                      attributes, the queue pointer may be required in situations where the
+                                                      intrinsic call does not directly appear in the program. Some subtargets
+                                                      require the queue pointer for to handle some addrspacecasts, as well
+                                                      as the llvm.amdgcn.is.shared, llvm.amdgcn.is.private, llvm.trap, and
+                                                      llvm.debug intrinsics.
 
-     "amdgpu-no-hostcall-ptr"                     Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                                  kernel argument that holds the pointer to the hostcall buffer. If this
-                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-hostcall-ptr"                         Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                      kernel argument that holds the pointer to the hostcall buffer. If this
+                                                      attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-heap-ptr"                         Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                                  kernel argument that holds the pointer to an initialized memory buffer
-                                                  that conforms to the requirements of the malloc/free device library V1
-                                                  version implementation. If this attribute is absent, then the
-                                                  amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-heap-ptr"                             Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                      kernel argument that holds the pointer to an initialized memory buffer
+                                                      that conforms to the requirements of the malloc/free device library V1
+                                                      version implementation. If this attribute is absent, then the
+                                                      amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-multigrid-sync-arg"               Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                                  kernel argument that holds the multigrid synchronization pointer. If this
-                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-multigrid-sync-arg"                   Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                      kernel argument that holds the multigrid synchronization pointer. If this
+                                                      attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-default-queue"                    Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                                  kernel argument that holds the default queue pointer. If this
-                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-default-queue"                        Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                      kernel argument that holds the default queue pointer. If this
+                                                      attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-no-completion-action"                Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
-                                                  kernel argument that holds the completion action pointer. If this
-                                                  attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
+     "amdgpu-no-completion-action"                    Similar to amdgpu-no-implicitarg-ptr, except specific to the implicit
+                                                      kernel argument that holds the completion action pointer. If this
+                                                      attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
-     "amdgpu-lds-size"="min[,max]"                Min is the minimum number of bytes that will be allocated in the Local
-                                                  Data Store at address zero. Variables are allocated within this frame
-                                                  using absolute symbol metadata, primarily by the AMDGPULowerModuleLDS
-                                                  pass. Optional max is the maximum number of bytes that will be allocated.
-                                                  Note that min==max indicates that no further variables can be added to
-                                                  the frame. This is an internal detail of how LDS variables are lowered,
-                                                  language front ends should not set this attribute.
+     "amdgpu-lds-size"="min[,max]"                    Min is the minimum number of bytes that will be allocated in the Local
+                                                      Data Store at address zero. Variables are allocated within this frame
+                                                      using absolute symbol metadata, primarily by the AMDGPULowerModuleLDS
+                                                      pass. Optional max is the maximum number of bytes that will be allocated.
+                                                      Note that min==max indicates that no further variables can be added to
+                                                      the frame. This is an internal detail of how LDS variables are lowered,
+                                                      language front ends should not set this attribute.
 
-     "amdgpu-gds-size"                            Bytes expected to be allocated at the start of GDS memory at entry.
+     "amdgpu-gds-size"                                Bytes expected to be allocated at the start of GDS memory at entry.
 
-     "amdgpu-git-ptr-high"                        The hard-wired high half of the address of the global information table
-                                                  for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
-                                                  current hardware only allows a 16 bit value.
+     "amdgpu-git-ptr-high"                            The hard-wired high half of the address of the global information table
+                                                      for AMDPAL OS type. 0xffffffff represents no hard-wired high half, since
+                                                      current hardware only allows a 16 bit value.
 
-     "amdgpu-32bit-address-high-bits"             Assumed high 32-bits for 32-bit address spaces which are really truncated
-                                                  64-bit addresses (i.e., addrspace(6))
+     "amdgpu-32bit-address-high-bits"                 Assumed high 32-bits for 32-bit address spaces which are really truncated
+                                                      64-bit addresses (i.e., addrspace(6))
 
-     "amdgpu-color-export"                        Indicates shader exports color information if set to 1.
-                                                  Defaults to 1 for :ref:`amdgpu_ps <amdgpu-cc>`, and 0 for other calling
-                                                  conventions. Determines the necessity and type of null exports when a shader
-                                                  terminates early by killing lanes.
+     "amdgpu-color-export"                            Indicates shader exports color information if set to 1.
+                                                      Defaults to 1 for :ref:`amdgpu_ps <amdgpu-cc>`, and 0 for other calling
+                                                      conventions. Determines the necessity and type of null exports when a shader
+                                                      terminates early by killing lanes.
 
-     "amdgpu-depth-export"                        Indicates shader exports depth information if set to 1. Determines the
-                                                  necessity and type of null exports when a shader terminates early by killing
-                                                  lanes. A depth-only shader will export to depth channel when no null export
-                                                  target is available (GFX11+).
+     "amdgpu-depth-export"                            Indicates shader exports depth information if set to 1. Determines the
+                                                      necessity and type of null exports when a shader terminates early by killing
+                                                      lanes. A depth-only shader will export to depth channel when no null export
+                                                      target is available (GFX11+).
 
-     "InitialPSInputAddr"                         Set the initial value of the `spi_ps_input_addr` register for
-                                                  :ref:`amdgpu_ps <amdgpu-cc>` shaders. Any bits enabled by this value will
-                                                  be enabled in the final register value.
+     "InitialPSInputAddr"                             Set the initial value of the `spi_ps_input_addr` register for
+                                                      :ref:`amdgpu_ps <amdgpu-cc>` shaders. Any bits enabled by this value will
+                                                      be enabled in the final register value.
 
-     "amdgpu-wave-priority-threshold"             VALU instruction count threshold for adjusting wave priority. If exceeded,
-                                                  temporarily raise the wave priority at the start of the shader function
-                                                  until its last VMEM instructions to allow younger waves to issue their VMEM
-                                                  instructions as well.
+     "amdgpu-wave-priority-threshold"                 VALU instruction count threshold for adjusting wave priority. If exceeded,
+                                                      temporarily raise the wave priority at the start of the shader function
+                                                      until its last VMEM instructions to allow younger waves to issue their VMEM
+                                                      instructions as well.
 
-     "amdgpu-memory-bound"                        Set internally by backend
+     "amdgpu-memory-bound"                            Set internally by backend
 
-     "amdgpu-wave-limiter"                        Set internally by backend
+     "amdgpu-wave-limiter"                            Set internally by backend
 
-     "amdgpu-unroll-threshold"                    Set base cost threshold preference for loop unrolling within this function,
-                                                  default is 300. Actual threshold may be varied by per-loop metadata or
-                                                  reduced by heuristics.
+     "amdgpu-unroll-threshold"                        Set base cost threshold preference for loop unrolling within this function,
+                                                      default is 300. Actual threshold may be varied by per-loop metadata or
+                                                      reduced by heuristics.
 
-     "amdgpu-max-num-workgroups"="x,y,z"          Specify the maximum number of work groups for the kernel dispatch in the
-                                                  X, Y, and Z dimensions. Each number must be >= 1. Generated by the
-                                                  ``amdgpu_max_num_work_groups`` CLANG attribute [CLANG-ATTR]_. Clang only
-                                                  emits this attribute when all the three numbers are >= 1.
+     "amdgpu-max-num-workgroups"="x,y,z"              Specify the maximum number of work groups for the kernel dispatch in the
+                                                      X, Y, and Z dimensions. Each number must be >= 1. Generated by the
+                                                      ``amdgpu_max_num_work_groups`` CLANG attribute [CLANG-ATTR]_. Clang only
+                                                      emits this attribute when all the three numbers are >= 1.
 
-     "amdgpu-no-agpr"                             Indicates the function will not require allocating AGPRs. This is only
-                                                  relevant on subtargets with AGPRs. The behavior is undefined if a
-                                                  function which requires AGPRs is reached through any function marked
-                                                  with this attribute.
+     "amdgpu-hidden-argument"                         This attribute is used internally by the backend to mark function arguments
+                                                      as hidden. Hidden arguments are managed by the compiler and are not part of
+                                                      the explicit arguments supplied by the user.
 
-     "amdgpu-hidden-argument"                     This attribute is used internally by the backend to mark function arguments
-                                                  as hidden. Hidden arguments are managed by the compiler and are not part of
-                                                  the explicit arguments supplied by the user.
+     "amdgpu-agpr-alloc"="min(,max)"                  Indicates a minimum and maximum range for the number of AGPRs to make
+                                                      available to allocate. The values will be rounded up to the next multiple
+                                                      of the allocation granularity (4). The minimum value is interpreted as the
+                                                      minimum required number of AGPRs for the function to allocate (that is, the
+                                                      function requires no more than min registers). If only one value is specified,
+                                                      it is interpreted as the minimum register budget. The maximum will restrict
+                                                      allocation to use no more than max AGPRs.
 
-     "amdgpu-sgpr-hazard-wait"                    Disabled SGPR hazard wait insertion if set to 0.
-                                                  Exists for testing performance impact of SGPR hazard waits only.
+                                                      The values may be ignored if satisfying it would violate other allocation
+                                                      constraints.
 
-     "amdgpu-sgpr-hazard-boundary-cull"           Enable insertion of SGPR hazard cull sequences at function call boundaries.
-                                                  Cull sequence reduces future hazard waits, but has a performance cost.
+                                                      The behavior is undefined if a function which requires more AGPRs than the
+                                                      lower bound is reached through any function marked with a higher value of this
+                                                      attribute. A minimum value of 0 indicates the function does not require
+                                                      any AGPRs.
 
-     "amdgpu-sgpr-hazard-mem-wait-cull"           Enable insertion of SGPR hazard cull sequences before memory waits.
-                                                  Cull sequence reduces future hazard waits, but has a performance cost.
-                                                  Attempt to amortize cost by overlapping with memory accesses.
+                                                      This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
 
-     "amdgpu-sgpr-hazard-mem-wait-cull-threshold" Sets the number of active SGPR hazards that must be present before
-                                                  inserting a cull sequence at a memory wait.
+     "amdgpu-sgpr-hazard-wait"                        Disabled SGPR hazard wait insertion if set to 0.
+                                                      Exists for testing performance impact of SGPR hazard waits only.
 
-     ============================================ ==========================================================
+     "amdgpu-sgpr-hazard-boundary-cull"               Enable insertion of SGPR hazard cull sequences at function call boundaries.
+                                                      Cull sequence reduces future hazard waits, but has a performance cost.
+
+     "amdgpu-sgpr-hazard-mem-wait-cull"               Enable insertion of SGPR hazard cull sequences before memory waits.
+                                                      Cull sequence reduces future hazard waits, but has a performance cost.
+                                                      Attempt to amortize cost by overlapping with memory accesses.
+
+     "amdgpu-sgpr-hazard-mem-wait-cull-threshold"     Sets the number of active SGPR hazards that must be present before
+                                                      inserting a cull sequence at a memory wait.
+
+     "amdgpu-promote-alloca-to-vector-max-regs"       Maximum vector size (in 32b registers) to create when promoting alloca.
+
+     "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
+
+     ================================================ ==========================================================
 
 Calling Conventions
 ===================
@@ -2221,7 +2244,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1035``          0x03d      ``gfx1035``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1034``          0x03e      ``gfx1034``
      ``EF_AMDGPU_MACH_AMDGCN_GFX90A``           0x03f      ``gfx90a``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX940``           0x040      ``gfx940``
+     *reserved*                                 0x040      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1100``          0x041      ``gfx1100``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1013``          0x042      ``gfx1013``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1150``          0x043      ``gfx1150``
@@ -2232,7 +2255,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1200``          0x048      ``gfx1200``
      *reserved*                                 0x049      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1151``          0x04a      ``gfx1151``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX941``           0x04b      ``gfx941``
+     *reserved*                                 0x04b      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX942``           0x04c      ``gfx942``
      *reserved*                                 0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
@@ -2308,6 +2331,9 @@ if needed.
   The executable machine code for the kernels and functions they call. Generated
   as position independent code. See :ref:`amdgpu-code-conventions` for
   information on conventions used in the isa generation.
+
+``.amdgpu.kernel.runtime.handle``
+  Symbols used for device enqueue.
 
 .. _amdgpu-note-records:
 
@@ -4974,7 +5000,7 @@ The fields used by CP for code objects before V3 also match those specified in
              bytes
      383:352 4 bytes COMPUTE_PGM_RSRC3               GFX6-GFX9
                                                        Reserved, must be 0.
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        Compute Shader (CS)
                                                        program settings used by
                                                        CP to set up
@@ -5059,7 +5085,7 @@ The fields used by CP for code objects before V3 also match those specified in
      463:460 4 bits                                  Reserved, must be 0.
      470:464 7 bits  KERNARG_PRELOAD_SPEC_LENGTH     GFX6-GFX9
                                                        - Reserved, must be 0.
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        - The number of dwords from
                                                          the kernarg segment to preload
                                                          into User SGPRs before kernel
@@ -5067,7 +5093,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                          :ref:`amdgpu-amdhsa-kernarg-preload`).
      479:471 9 bits  KERNARG_PRELOAD_SPEC_OFFSET     GFX6-GFX9
                                                        - Reserved, must be 0.
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        - An offset in dwords into the
                                                          kernarg segment to begin
                                                          preloading data into User
@@ -5093,7 +5119,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX6-GFX9
                                                        - vgprs_used 0..256
                                                        - max(0, ceil(vgprs_used / 4) - 1)
-                                                     GFX90A, GFX940
+                                                     GFX90A, GFX942
                                                        - vgprs_used 0..512
                                                        - vgprs_used = align(arch_vgprs, 4)
                                                                       + acc_vgprs
@@ -5559,7 +5585,7 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX90A, GFX940
+  .. table:: compute_pgm_rsrc3 for GFX90A, GFX942
      :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table
 
      ======= ======= =============================== ===========================================================================
@@ -6003,8 +6029,13 @@ Frame Pointer
 
 If the kernel needs a frame pointer for the reasons defined in
 ``SIFrameLowering`` then SGPR33 is used and is always set to ``0`` in the
-kernel prolog. If a frame pointer is not required then all uses of the frame
-pointer are replaced with immediate ``0`` offsets.
+kernel prolog. On GFX12+, when dynamic VGPRs are enabled, the prologue will
+check if the kernel is running on a compute queue, and if so it will reserve
+some scratch space for any dynamic VGPRs that might need to be saved by the
+CWSR trap handler. In this case, the frame pointer will be initialized to
+a suitably aligned offset above this reserved area. If a frame pointer is not
+required then all uses of the frame pointer are replaced with immediate ``0``
+offsets.
 
 .. _amdgpu-amdhsa-kernel-prolog-flat-scratch:
 
@@ -9970,15 +10001,15 @@ only accessed by a single thread, and is always write-before-read, there is
 never a need to invalidate these entries from the L1 cache. Hence all cache
 invalidates are done as ``*_vol`` to only invalidate the volatile cache lines.
 
-The code sequences used to implement the memory model for GFX940, GFX941, GFX942
-are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table`.
+The code sequences used to implement the memory model for GFX942 are defined in
+table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx942-table`.
 
-  .. table:: AMDHSA Memory Model Code Sequences GFX940, GFX941, GFX942
-     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table
+  .. table:: AMDHSA Memory Model Code Sequences GFX942
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx942-table
 
      ============ ============ ============== ========== ================================
      LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
-                  Ordering     Sync Scope     Address    GFX940, GFX941, GFX942
+                  Ordering     Sync Scope     Address    GFX942
                                               Space
      ============ ============ ============== ========== ================================
      **Non-Atomic**
@@ -10013,18 +10044,12 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
-                                              - private    1. GFX940, GFX941
+                                              - private    1. GFX942
                                               - constant        buffer/global/flat_store
-                                                                sc0=1 sc1=1
-                                                              GFX942
-                                                                buffer/global/flat_store
 
                                                          - !volatile & nontemporal
 
-                                                           1. GFX940, GFX941
-                                                                buffer/global/flat_store
-                                                                nt=1 sc0=1 sc1=1
-                                                              GFX942
+                                                           1. GFX942
                                                                 buffer/global/flat_store
                                                                 nt=1
 
@@ -10696,11 +10721,8 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
 
      **Release Atomic**
      ------------------------------------------------------------------------------------
-     store atomic release      - singlethread - global   1. GFX940, GFX941
+     store atomic release      - singlethread - global   1. GFX942
                                - wavefront    - generic       buffer/global/flat_store
-                                                              sc0=1 sc1=1
-                                                            GFX942
-                                                              buffer/global/flat_store
 
      store atomic release      - singlethread - local    *If TgSplit execution mode,
                                - wavefront               local address space cannot
@@ -10738,10 +10760,7 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              store that is being
                                                              released.
 
-                                                         2. GFX940, GFX941
-                                                              buffer/global/flat_store
-                                                              sc0=1 sc1=1
-                                                            GFX942
+                                                         2. GFX942
                                                               buffer/global/flat_store
                                                               sc0=1
      store atomic release      - workgroup    - local    *If TgSplit execution mode,
@@ -10802,10 +10821,7 @@ are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx9
                                                              store that is being
                                                              released.
 
-                                                         3. GFX940, GFX941
-                                                              buffer/global/flat_store
-                                                              sc0=1 sc1=1
-                                                            GFX942
+                                                         3. GFX942
                                                               buffer/global/flat_store
                                                               sc1=1
      store atomic release      - system       - global   1. buffer_wbl2 sc0=1 sc1=1
@@ -17131,33 +17147,35 @@ within a map that has been added by the same *vendor-name*.
   .. table:: AMDPAL Code Object Hardware Stage Metadata Map
      :name: amdgpu-amdpal-code-object-hardware-stage-metadata-map-table
 
-     ========================== ============== ========= ===============================================================
-     String Key                 Value Type     Required? Description
-     ========================== ============== ========= ===============================================================
-     ".entry_point"             string                   The ELF symbol pointing to this pipeline's stage entry point.
-     ".scratch_memory_size"     integer                  Scratch memory size in bytes.
-     ".lds_size"                integer                  Local Data Share size in bytes.
-     ".perf_data_buffer_size"   integer                  Performance data buffer size in bytes.
-     ".vgpr_count"              integer                  Number of VGPRs used.
-     ".agpr_count"              integer                  Number of AGPRs used.
-     ".sgpr_count"              integer                  Number of SGPRs used.
-     ".vgpr_limit"              integer                  If non-zero, indicates the shader was compiled with a
-                                                         directive to instruct the compiler to limit the VGPR usage to
-                                                         be less than or equal to the specified value (only set if
-                                                         different from HW default).
-     ".sgpr_limit"              integer                  SGPR count upper limit (only set if different from HW
-                                                         default).
-     ".threadgroup_dimensions"  sequence of              Thread-group X/Y/Z dimensions (Compute only).
-                                3 integers
-     ".wavefront_size"          integer                  Wavefront size (only set if different from HW default).
-     ".uses_uavs"               boolean                  The shader reads or writes UAVs.
-     ".uses_rovs"               boolean                  The shader reads or writes ROVs.
-     ".writes_uavs"             boolean                  The shader writes to one or more UAVs.
-     ".writes_depth"            boolean                  The shader writes out a depth value.
-     ".uses_append_consume"     boolean                  The shader uses append and/or consume operations, either
-                                                         memory or GDS.
-     ".uses_prim_id"            boolean                  The shader uses PrimID.
-     ========================== ============== ========= ===============================================================
+     =========================== ============== ========= ===============================================================
+     String Key                  Value Type     Required? Description
+     =========================== ============== ========= ===============================================================
+     ".entry_point"              string                   The ELF symbol pointing to this pipeline's stage entry point.
+     ".scratch_memory_size"      integer                  Scratch memory size in bytes.
+     ".lds_size"                 integer                  Local Data Share size in bytes.
+     ".perf_data_buffer_size"    integer                  Performance data buffer size in bytes.
+     ".vgpr_count"               integer                  Number of VGPRs used.
+     ".agpr_count"               integer                  Number of AGPRs used.
+     ".sgpr_count"               integer                  Number of SGPRs used.
+     ".dynamic_vgpr_saved_count" integer        No        Number of dynamic VGPRs that can be stored in scratch by the
+                                                          CWSR trap handler. Only used on GFX12+.
+     ".vgpr_limit"               integer                  If non-zero, indicates the shader was compiled with a
+                                                          directive to instruct the compiler to limit the VGPR usage to
+                                                          be less than or equal to the specified value (only set if
+                                                          different from HW default).
+     ".sgpr_limit"               integer                  SGPR count upper limit (only set if different from HW
+                                                          default).
+     ".threadgroup_dimensions"   sequence of              Thread-group X/Y/Z dimensions (Compute only).
+                                 3 integers
+     ".wavefront_size"           integer                  Wavefront size (only set if different from HW default).
+     ".uses_uavs"                boolean                  The shader reads or writes UAVs.
+     ".uses_rovs"                boolean                  The shader reads or writes ROVs.
+     ".writes_uavs"              boolean                  The shader writes to one or more UAVs.
+     ".writes_depth"             boolean                  The shader writes out a depth value.
+     ".uses_append_consume"      boolean                  The shader uses append and/or consume operations, either
+                                                          memory or GDS.
+     ".uses_prim_id"             boolean                  The shader uses PrimID.
+     =========================== ============== ========= ===============================================================
 
 ..
 
@@ -17563,11 +17581,7 @@ in this description.
 
     CDNA 2        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx90a<AMDGPU/AMDGPUAsmGFX90a>`
 
-    CDNA 3        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx940<AMDGPU/AMDGPUAsmGFX940>`
-
-                                                                :doc:`gfx941<AMDGPU/AMDGPUAsmGFX940>`
-
-                                                                :doc:`gfx942<AMDGPU/AMDGPUAsmGFX940>`
+    CDNA 3        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx942<AMDGPU/AMDGPUAsmGFX940>`
 
     RDNA 1        :doc:`GFX10 RDNA1<AMDGPU/AMDGPUAsmGFX10>`     :doc:`gfx1010<AMDGPU/AMDGPUAsmGFX10>`
 
@@ -17605,8 +17619,8 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_,
 [AMD-GCN-GFX900-GFX904-VEGA]_, [AMD-GCN-GFX906-VEGA7NM]_,
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
-[AMD-GCN-GFX940-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
-[AMD-GCN-GFX11-RDNA3]_ and [AMD-GCN-GFX11-RDNA3.5]_.
+[AMD-GCN-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
+[AMD-GCN-GFX11-RDNA3]_, [AMD-GCN-GFX11-RDNA3.5]_ and [AMD-GCN-GFX12-RDNA4]_.
 
 Operands
 ~~~~~~~~
@@ -18118,7 +18132,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`
      ``.amdhsa_user_sgpr_private_segment_buffer``             0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-                                                                                  GFX940)
+                                                                                  GFX942)
      ``.amdhsa_user_sgpr_dispatch_ptr``                       0                   GFX6-GFX12   Controls ENABLE_SGPR_DISPATCH_PTR in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_queue_ptr``                          0                   GFX6-GFX12   Controls ENABLE_SGPR_QUEUE_PTR in
@@ -18129,7 +18143,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_flat_scratch_init``                  0                   GFX6-GFX10   Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-                                                                                  GFX940)
+                                                                                  GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
@@ -18140,8 +18154,8 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
-                                                                                  GFX940)
-     ``.amdhsa_enable_private_segment``                       0                   GFX940,      Controls ENABLE_PRIVATE_SEGMENT in
+                                                                                  GFX942)
+     ``.amdhsa_enable_private_segment``                       0                   GFX942,      Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   GFX11-GFX12  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_X in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
@@ -18162,14 +18176,14 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_accum_offset``                                 Required            GFX90A,      Offset of a first AccVGPR in the unified register file.
-                                                                                  GFX940       Used to calculate ACCUM_OFFSET in
+                                                                                  GFX942       Used to calculate ACCUM_OFFSET in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
      ``.amdhsa_reserve_vcc``                                  1                   GFX6-GFX12   Whether the kernel may use the special VCC SGPR.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_reserve_flat_scratch``                         1                   GFX7-GFX10   Whether the kernel may use flat instructions to access
                                                                                   (except      scratch memory. Used to calculate
-                                                                                  GFX940)      GRANULATED_WAVEFRONT_SGPR_COUNT in
+                                                                                  GFX942)      GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_reserve_xnack_mask``                           Target              GFX8-GFX10   Whether the kernel may trigger XNACK replay.
                                                               Feature                          Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
@@ -18200,7 +18214,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX12   Controls FP16_OVFL in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_tg_split``                                     Target              GFX90A,      Controls TG_SPLIT in
-                                                              Feature             GFX940,      :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
+                                                              Feature             GFX942,      :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
                                                               Specific            GFX11-GFX12
                                                               (tgsplit)
      ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-GFX12  Controls ENABLE_WGP_MODE in
@@ -18209,10 +18223,13 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               (cumode)
      ``.amdhsa_memory_ordered``                               1                   GFX10-GFX12  Controls MEM_ORDERED in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
+     ``.amdhsa_forward_progress``                             1                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+     ``.amdhsa_inst_pref_size``                               0                   GFX11-GFX12  Controls INST_PREF_SIZE in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table` or
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`
      ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
@@ -18228,9 +18245,9 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_exception_int_div_zero``                       0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ``.amdhsa_user_sgpr_kernarg_preload_length``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_LENGTH in
-                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  GFX942       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_kernarg_preload_offset``             0                   GFX90A,      Controls KERNARG_PRELOAD_SPEC_OFFSET in
-                                                                                  GFX940       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+                                                                                  GFX942       :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ======================================================== =================== ============ ===================
 
 .amdgpu_metadata
@@ -18400,11 +18417,12 @@ Additional Documentation
 .. [AMD-GCN-GFX906-VEGA7NM] `AMD Vega 7nm Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/11/Vega_7nm_Shader_ISA_26November2019.pdf>`__
 .. [AMD-GCN-GFX908-CDNA1] `AMD Instinct MI100 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA1_Shader_ISA_14December2020.pdf>`__
 .. [AMD-GCN-GFX90A-CDNA2] `AMD Instinct MI200 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA2_Shader_ISA_4February2022.pdf>`__
-.. [AMD-GCN-GFX940-GFX942-CDNA3] `AMD Instinct MI300 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/amd-instinct-mi300-cdna3-instruction-set-architecture.pdf>`__
+.. [AMD-GCN-GFX942-CDNA3] `AMD Instinct MI300 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/instinct-tech-docs/instruction-set-architectures/amd-instinct-mi300-cdna3-instruction-set-architecture.pdf>`__
 .. [AMD-GCN-GFX10-RDNA1] `AMD RDNA 1.0 Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-GCN-GFX10-RDNA2] `AMD RDNA 2 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3] `AMD RDNA 3 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA3_Shader_ISA_December2022.pdf>`__
 .. [AMD-GCN-GFX11-RDNA3.5] `AMD RDNA 3.5 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna35_instruction_set_architecture.pdf>`__
+.. [AMD-GCN-GFX12-RDNA4] `AMD RDNA 4 Instruction Set Architecture <https://www.amd.com/content/dam/amd/en/documents/radeon-tech-docs/instruction-set-architectures/rdna4-instruction-set-architecture.pdf>`__
 .. [AMD-RADEON-HD-2000-3000] `AMD R6xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R600_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-4000] `AMD R7xx shader ISA <http://developer.amd.com/wordpress/media/2012/10/R700-Family_Instruction_Set_Architecture.pdf>`__
 .. [AMD-RADEON-HD-5000] `AMD Evergreen shader ISA <http://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf>`__

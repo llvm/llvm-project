@@ -233,7 +233,7 @@ subroutine acc_serial_loop
     a(i) = b(i)
   END DO
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.serial {{.*}} self(%[[SELF2]]) {
 ! CHECK:        acc.loop {{.*}} {
 ! CHECK:          acc.yield
@@ -334,6 +334,8 @@ subroutine acc_serial_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[NOCREATE_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
 
   !$acc serial loop present(a, b)
   DO i = 1, n
@@ -348,6 +350,8 @@ subroutine acc_serial_loop
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+! CHECK:      acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+! CHECK:      acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
 
   !$acc serial loop deviceptr(a) deviceptr(b)
   DO i = 1, n
@@ -385,7 +389,7 @@ subroutine acc_serial_loop
 ! CHECK:      %[[ACC_FPRIVATE_B:.*]] = acc.firstprivate varPtr(%[[DECLB]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "b"}
 ! CHECK:      acc.serial {{.*}} firstprivate(@firstprivatization_ref_10xf32 -> %[[ACC_FPRIVATE_B]] : !fir.ref<!fir.array<10xf32>>) {
 ! CHECK:      %[[ACC_PRIVATE_A:.*]] = acc.private varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK:        acc.loop {{.*}} private({{.*}}@privatization_ref_10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK:        acc.loop {{.*}} private({{.*}}@privatization_ref_10xf32 -> %[[ACC_PRIVATE_A]] : !fir.ref<!fir.array<10xf32>>{{.*}})
 ! CHECK-NOT:          fir.do_loop
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
@@ -447,7 +451,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield
@@ -460,7 +464,7 @@ subroutine acc_serial_loop
 
 ! CHECK:      acc.serial {{.*}} {
 ! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK-NEXT:   acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
+! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32}) {{.*}} {
 ! CHECK:          acc.yield
 ! CHECK-NEXT:   }{{$}}
 ! CHECK:        acc.yield

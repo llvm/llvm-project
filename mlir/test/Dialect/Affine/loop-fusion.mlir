@@ -748,7 +748,7 @@ func.func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 
 //
 // CHECK-LABEL: func @R6_to_R2_reshape
-// CHECK:       memref.alloc() : memref<1x2x3x3x16x1xi32>
+// CHECK:       memref.alloc() : memref<1x1x1x1x1x1xi32>
 // CHECK:       memref.alloc() : memref<1x1xi32>
 // CHECK:       memref.alloc() : memref<64x9xi32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 64 {
@@ -759,7 +759,7 @@ func.func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 // CHECK-NEXT:      affine.apply [[$MAP3]](%{{.*}}, %{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP4]](%{{.*}}, %{{.*}})
 // CHECK-NEXT:      "foo"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (index, index, index, index, index, index) -> i32
-// CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[0, ((%{{.*}} * 9 + %{{.*}}) mod 288) floordiv 144, ((%{{.*}} * 9 + %{{.*}}) mod 144) floordiv 48, ((%{{.*}} * 9 + %{{.*}}) mod 48) floordiv 16, (%{{.*}} * 9 + %{{.*}}) mod 16, 0] : memref<1x2x3x3x16x1xi32>
+// CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[0, 0, 0, 0, 0, 0] : memref<1x1x1x1x1x1xi32>
 // CHECK-NEXT:      affine.apply [[$MAP11]](%{{.*}}, %{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP12]](%{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP13]](%{{.*}})
@@ -767,7 +767,7 @@ func.func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 // CHECK-NEXT:      affine.apply [[$MAP15]](%{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP16]](%{{.*}})
 // CHECK-NEXT:      affine.apply [[$MAP17]](%{{.*}})
-// CHECK-NEXT:      affine.load %{{.*}}[0, ((%{{.*}} * 9 + %{{.*}}) mod 288) floordiv 144, ((%{{.*}} * 9 + %{{.*}}) mod 144) floordiv 48, ((%{{.*}} * 9 + %{{.*}}) mod 48) floordiv 16, (%{{.*}} * 9 + %{{.*}}) mod 16, 0] : memref<1x2x3x3x16x1xi32>
+// CHECK-NEXT:      affine.load %{{.*}}[0, 0, 0, 0, 0, 0] : memref<1x1x1x1x1x1xi32>
 // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[0, 0] : memref<1x1xi32>
 // CHECK-NEXT:      affine.load %{{.*}}[0, 0] : memref<1x1xi32>
 // CHECK-NEXT:      arith.muli %{{.*}}, %{{.*}} : i32
@@ -1206,6 +1206,9 @@ func.func @should_fuse_with_private_memref() {
   // CHECK:      affine.for %{{.*}} = 0 to 17 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT: }
+  // CHECK:      affine.for %{{.*}} = 0 to 82 {
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
   // CHECK-NEXT: return

@@ -15,16 +15,11 @@
 // EXP-NEXT: AddressSize: 64bit
 // EXP-NEXT: Export {
 // EXP-NEXT:   Ordinal: 1
-// EXP-NEXT:   Name: _load_config_used
-// EXP-NEXT:   RVA:
-// EXP-NEXT: }
-// EXP-NEXT: Export {
-// EXP-NEXT:   Ordinal: 2
 // EXP-NEXT:   Name: sym
 // EXP-NEXT:   RVA: 0x2000
 // EXP-NEXT: }
 // EXP-NEXT: Export {
-// EXP-NEXT:   Ordinal: 3
+// EXP-NEXT:   Ordinal: 2
 // EXP-NEXT:   Name: sym2
 // EXP-NEXT:   RVA: 0x2004
 // EXP-NEXT: }
@@ -34,31 +29,11 @@
 // EXP-NEXT:   AddressSize: 64bit
 // EXP-NEXT:   Export {
 // EXP-NEXT:     Ordinal: 1
-// EXP-NEXT:     Name: __chpe_metadata
-// EXP-NEXT:     RVA:
-// EXP-NEXT:   }
-// EXP-NEXT:   Export {
-// EXP-NEXT:     Ordinal: 2
-// EXP-NEXT:     Name: __os_arm64x_dispatch_icall
-// EXP-NEXT:     RVA: 0x12B0
-// EXP-NEXT:   }
-// EXP-NEXT:   Export {
-// EXP-NEXT:     Ordinal: 3
-// EXP-NEXT:     Name: __os_arm64x_dispatch_ret
-// EXP-NEXT:     RVA:
-// EXP-NEXT:   }
-// EXP-NEXT:   Export {
-// EXP-NEXT:     Ordinal: 4
-// EXP-NEXT:     Name: _load_config_used
-// EXP-NEXT:     RVA:
-// EXP-NEXT:   }
-// EXP-NEXT:   Export {
-// EXP-NEXT:     Ordinal: 5
 // EXP-NEXT:     Name: sym
 // EXP-NEXT:     RVA: 0x2008
 // EXP-NEXT:   }
 // EXP-NEXT:   Export {
-// EXP-NEXT:     Ordinal: 6
+// EXP-NEXT:     Ordinal: 2
 // EXP-NEXT:     Name: sym2
 // EXP-NEXT:     RVA: 0x200C
 // EXP-NEXT:   }

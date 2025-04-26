@@ -32,11 +32,42 @@ using namespace acc;
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.cpp.inc"
 
 namespace {
+
+static bool isScalarLikeType(Type type) {
+  return type.isIntOrIndexOrFloat() || isa<ComplexType>(type);
+}
+
 struct MemRefPointerLikeModel
     : public PointerLikeType::ExternalModel<MemRefPointerLikeModel,
                                             MemRefType> {
   Type getElementType(Type pointer) const {
-    return llvm::cast<MemRefType>(pointer).getElementType();
+    return cast<MemRefType>(pointer).getElementType();
+  }
+  mlir::acc::VariableTypeCategory
+  getPointeeTypeCategory(Type pointer, TypedValue<PointerLikeType> varPtr,
+                         Type varType) const {
+    if (auto mappableTy = dyn_cast<MappableType>(varType)) {
+      return mappableTy.getTypeCategory(varPtr);
+    }
+    auto memrefTy = cast<MemRefType>(pointer);
+    if (!memrefTy.hasRank()) {
+      // This memref is unranked - aka it could have any rank, including a
+      // rank of 0 which could mean scalar. For now, return uncategorized.
+      return mlir::acc::VariableTypeCategory::uncategorized;
+    }
+
+    if (memrefTy.getRank() == 0) {
+      if (isScalarLikeType(memrefTy.getElementType())) {
+        return mlir::acc::VariableTypeCategory::scalar;
+      }
+      // Zero-rank non-scalar - need further analysis to determine the type
+      // category. For now, return uncategorized.
+      return mlir::acc::VariableTypeCategory::uncategorized;
+    }
+
+    // It has a rank - must be an array.
+    assert(memrefTy.getRank() > 0 && "rank expected to be positive");
+    return mlir::acc::VariableTypeCategory::array;
   }
 };
 
@@ -549,6 +580,7 @@ LogicalResult acc::DeleteOp::verify() {
       getDataClause() != acc::DataClause::acc_copyin &&
       getDataClause() != acc::DataClause::acc_copyin_readonly &&
       getDataClause() != acc::DataClause::acc_present &&
+      getDataClause() != acc::DataClause::acc_no_create &&
       getDataClause() != acc::DataClause::acc_declare_device_resident &&
       getDataClause() != acc::DataClause::acc_declare_link)
     return emitError(
@@ -1379,20 +1411,22 @@ static void printWaitClause(mlir::OpAsmPrinter &p, mlir::Operation *op,
   if (hasDeviceTypeValues(keywordOnly) && hasDeviceTypeValues(deviceTypes))
     p << ", ";
 
-  unsigned opIdx = 0;
-  llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
-    p << "{";
-    auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasDevNum)[it.index()]);
-    if (boolAttr && boolAttr.getValue())
-      p << "devnum: ";
-    llvm::interleaveComma(
-        llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
-          p << operands[opIdx] << " : " << operands[opIdx].getType();
-          ++opIdx;
-        });
-    p << "}";
-    printSingleDeviceType(p, it.value());
-  });
+  if (hasDeviceTypeValues(deviceTypes)) {
+    unsigned opIdx = 0;
+    llvm::interleaveComma(llvm::enumerate(*deviceTypes), p, [&](auto it) {
+      p << "{";
+      auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>((*hasDevNum)[it.index()]);
+      if (boolAttr && boolAttr.getValue())
+        p << "devnum: ";
+      llvm::interleaveComma(
+          llvm::seq<int32_t>(0, (*segments)[it.index()]), p, [&](auto it) {
+            p << operands[opIdx] << " : " << operands[opIdx].getType();
+            ++opIdx;
+          });
+      p << "}";
+      printSingleDeviceType(p, it.value());
+    });
+  }
 
   p << ")";
 }
@@ -2920,6 +2954,16 @@ LogicalResult acc::InitOp::verify() {
   return success();
 }
 
+void acc::InitOp::addDeviceType(MLIRContext *context,
+                                mlir::acc::DeviceType deviceType) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (getDeviceTypesAttr())
+    llvm::copy(getDeviceTypesAttr(), std::back_inserter(deviceTypes));
+
+  deviceTypes.push_back(acc::DeviceTypeAttr::get(context, deviceType));
+  setDeviceTypesAttr(mlir::ArrayAttr::get(context, deviceTypes));
+}
+
 //===----------------------------------------------------------------------===//
 // ShutdownOp
 //===----------------------------------------------------------------------===//
@@ -2930,6 +2974,16 @@ LogicalResult acc::ShutdownOp::verify() {
     if (isComputeOperation(currOp))
       return emitOpError("cannot be nested in a compute operation");
   return success();
+}
+
+void acc::ShutdownOp::addDeviceType(MLIRContext *context,
+                                    mlir::acc::DeviceType deviceType) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (getDeviceTypesAttr())
+    llvm::copy(getDeviceTypesAttr(), std::back_inserter(deviceTypes));
+
+  deviceTypes.push_back(acc::DeviceTypeAttr::get(context, deviceType));
+  setDeviceTypesAttr(mlir::ArrayAttr::get(context, deviceTypes));
 }
 
 //===----------------------------------------------------------------------===//

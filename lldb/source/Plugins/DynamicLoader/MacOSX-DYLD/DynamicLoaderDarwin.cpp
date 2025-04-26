@@ -8,7 +8,6 @@
 
 #include "DynamicLoaderDarwin.h"
 
-#include "DynamicLoaderDarwinProperties.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -77,17 +76,6 @@ void DynamicLoaderDarwin::DidLaunch() {
   PrivateInitialize(m_process);
   DoInitialImageFetch();
   SetNotificationBreakpoint();
-}
-
-void DynamicLoaderDarwin::CreateSettings(lldb_private::Debugger &debugger) {
-  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
-          debugger, DynamicLoaderDarwinProperties::GetSettingName())) {
-    const bool is_global_setting = true;
-    PluginManager::CreateSettingForDynamicLoaderPlugin(
-        debugger,
-        DynamicLoaderDarwinProperties::GetGlobal().GetValueProperties(),
-        "Properties for the DynamicLoaderDarwin plug-in.", is_global_setting);
-  }
 }
 
 // Clear out the state of this class.
@@ -419,6 +407,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_type = llvm::Triple::WatchOS;
       else if (os_name == "bridgeos")
         image_infos[i].os_type = llvm::Triple::BridgeOS;
+      else if (os_name == "driverkit")
+        image_infos[i].os_type = llvm::Triple::DriverKit;
+      else if (os_name == "xros")
+        image_infos[i].os_type = llvm::Triple::XROS;
       else if (os_name == "maccatalyst") {
         image_infos[i].os_type = llvm::Triple::IOS;
         image_infos[i].os_env = llvm::Triple::MacABI;
@@ -430,6 +422,9 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         image_infos[i].os_env = llvm::Triple::Simulator;
       } else if (os_name == "watchossimulator") {
         image_infos[i].os_type = llvm::Triple::WatchOS;
+        image_infos[i].os_env = llvm::Triple::Simulator;
+      } else if (os_name == "xrsimulator") {
+        image_infos[i].os_type = llvm::Triple::XROS;
         image_infos[i].os_env = llvm::Triple::Simulator;
       }
     }
@@ -663,8 +658,7 @@ DynamicLoaderDarwin::PreloadModulesFromImageInfos(
         image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
   };
   auto it = image_infos.begin();
-  bool is_parallel_load =
-      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
+  bool is_parallel_load = m_process->GetTarget().GetParallelModuleLoad();
   if (is_parallel_load) {
     llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
     for (size_t i = 0; i < size; ++i, ++it) {
@@ -765,7 +759,8 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
           (dyld_triple.getEnvironment() == llvm::Triple::Simulator &&
            (dyld_triple.getOS() == llvm::Triple::IOS ||
             dyld_triple.getOS() == llvm::Triple::TvOS ||
-            dyld_triple.getOS() == llvm::Triple::WatchOS)))
+            dyld_triple.getOS() == llvm::Triple::WatchOS ||
+            dyld_triple.getOS() == llvm::Triple::XROS)))
         image_module_sp->MergeArchitecture(dyld_spec);
     }
   }
@@ -835,7 +830,7 @@ lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
   }
   if (os_env == llvm::Triple::Simulator &&
       (os_type == llvm::Triple::IOS || os_type == llvm::Triple::TvOS ||
-       os_type == llvm::Triple::WatchOS)) {
+       os_type == llvm::Triple::WatchOS || os_type == llvm::Triple::XROS)) {
     llvm::Triple triple(llvm::Twine(arch_spec.GetArchitectureName()) +
                         "-apple-" + llvm::Triple::getOSTypeName(os_type) +
                         min_version_os_sdk + "-simulator");
