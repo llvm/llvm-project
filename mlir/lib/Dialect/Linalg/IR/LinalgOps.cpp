@@ -2284,7 +2284,10 @@ LogicalResult IndexOp::verify() {
 }
 
 OpFoldResult IndexOp::fold(FoldAdaptor adaptor) {
-  auto linalgOp = cast<LinalgOp>((*this)->getParentOp());
+  auto linalgOp = dyn_cast_or_null<LinalgOp>((*this)->getParentOp());
+  // Early exit if parent op is not linalgOp.
+  if (!linalgOp)
+    return OpFoldResult{};
 
   // Index of unit dims is always 0.
   SmallVector<int64_t, 4> loopBounds = linalgOp.getStaticLoopRanges();
