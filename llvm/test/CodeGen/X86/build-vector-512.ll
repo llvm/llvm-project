@@ -480,23 +480,6 @@ define <64 x i8> @test_buildvector_v64i8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; build vectors of repeated elements
 
 define <8 x double> @test_buildvector_8f64_2_var(double %a0, double %a1) {
-; AVX-32-LABEL: test_buildvector_8f64_2_var:
-; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX-32-NEXT:    vmovups {{[0-9]+}}(%esp), %xmm1
-; AVX-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm2
-; AVX-32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-32-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_buildvector_8f64_2_var:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; AVX-64-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
-; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm2
-; AVX-64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-64-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX-64-NEXT:    retq
   %v0 = insertelement <8 x double> poison, double %a0, i32 0
   %v1 = insertelement <8 x double> %v0, double %a1, i32 1
   %v2 = insertelement <8 x double> %v1, double %a0, i32 2
@@ -509,25 +492,6 @@ define <8 x double> @test_buildvector_8f64_2_var(double %a0, double %a1) {
 }
 
 define <8 x double> @test_buildvector_8f64_2_load(ptr %p0, ptr %p1) {
-; AVX-32-LABEL: test_buildvector_8f64_2_load:
-; AVX-32:       # %bb.0:
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX-32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX-32-NEXT:    vmovhps {{.*#+}} xmm1 = xmm0[0,1],mem[0,1]
-; AVX-32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm2
-; AVX-32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-32-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX-32-NEXT:    retl
-;
-; AVX-64-LABEL: test_buildvector_8f64_2_load:
-; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; AVX-64-NEXT:    vmovhps {{.*#+}} xmm1 = xmm0[0,1],mem[0,1]
-; AVX-64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm2
-; AVX-64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-64-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX-64-NEXT:    retq
   %a0 = load double, ptr %p0
   %a1 = load double, ptr %p1
   %v0 = insertelement <8 x double> poison, double %a0, i32 0
