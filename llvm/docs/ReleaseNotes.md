@@ -210,6 +210,9 @@ Changes to the C API
   reading `ConstantDataArray` values without needing extra `LLVMValueRef`s for
   individual elements.
 
+* Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
+  debugging metadata of enumerators larger than 64 bits.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
