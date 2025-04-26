@@ -43,7 +43,7 @@ system header files and the ``std`` namespace.
     pthread_mutex_t Mutex;
   };
 
-The ``pthread_mutex_t`` type may be defined as a union behind a typedef,
+The ``pthread_mutex_t`` type may be defined as a union behind a ``typedef``,
 in which case the check could mistake this type as a user-defined tagged union.
 After all it has exactly one enum data member and exactly one union data member.
 To avoid false-positive cases originating from this, unions and enums from
