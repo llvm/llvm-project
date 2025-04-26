@@ -889,13 +889,62 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       } else if (evaluate::IsArrayElement(*object.ref())) {
         // Array Section
         SomeExpr expr = *object.ref();
-        if (isVectorSubscript(expr))
-          TODO(converter.getCurrentLocation(),
-               "Vector subscripted array section for task dependency");
 
-        hlfir::EntityWithAttributes entity = convertExprToHLFIR(
-            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
-        dependVar = entity.getBase();
+        if (isVectorSubscript(expr)) {
+          // OpenMP needs the address of the first indexed element (required by
+          // the standard to be the lowest index) to identify the dependency. We
+          // don't need an accurate length for the array section because the
+          // OpenMP standard forbids overlapping array sections.
+
+          // Get a hlfir.elemental_addr op describing the address of the value
+          // indexed from the original array.
+          // Note: the hlfir.elemental_addr op verifier requires it to be inside
+          // of a hlfir.region_assign op. This is because the only place in base
+          // Fortran where you need the address of a vector subscript would be
+          // in an assignment operation. We are not doing an assignment here
+          // but we do want the address (without having to duplicate all of
+          // Fortran designation lowering!). This operation is never seen by the
+          // verifier because it is immediately inlined.
+          hlfir::ElementalAddrOp addrOp =
+              convertVectorSubscriptedExprToElementalAddr(
+                  converter.getCurrentLocation(), converter, expr, symMap,
+                  stmtCtx);
+          if (!addrOp.getCleanup().empty())
+            TODO(converter.getCurrentLocation(),
+                 "Vector subscript in DEPEND clause requring a cleanup region");
+
+          // hlfir.elemental_addr doesn't have a normal lowering because it
+          // can't return a value. Instead we need to inline it here using
+          // values for the first element. Similar to hlfir::inlineElementalOp.
+
+          mlir::Value one = builder.createIntegerConstant(
+              converter.getCurrentLocation(), builder.getIndexType(), 1);
+          mlir::SmallVector<mlir::Value> oneBasedIndices;
+          oneBasedIndices.resize(addrOp.getIndices().size(), one);
+
+          mlir::IRMapping mapper;
+          mapper.map(addrOp.getIndices(), oneBasedIndices);
+          assert(addrOp.getElementalRegion().hasOneBlock());
+          mlir::Operation *newOp;
+          for (mlir::Operation &op :
+               addrOp.getElementalRegion().back().getOperations())
+            newOp = builder.clone(op, mapper);
+          auto yield = mlir::cast<hlfir::YieldOp>(newOp);
+
+          addrOp->erase();
+
+          if (!yield.getCleanup().empty())
+            TODO(converter.getCurrentLocation(),
+                 "Vector subscript in DEPEND clause requring element cleanup");
+
+          dependVar = yield.getEntity();
+          yield->erase();
+        } else {
+          // Ordinary array section e.g. A(1:512:2)
+          hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+          dependVar = entity.getBase();
+        }
       } else {
         semantics::Symbol *sym = object.sym();
         dependVar = converter.getSymbolAddress(*sym);

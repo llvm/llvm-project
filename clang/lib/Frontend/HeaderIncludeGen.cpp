@@ -260,8 +260,11 @@ void HeaderIncludesCallback::FileSkipped(const FileEntryRef &SkippedFile, const
 
 void HeaderIncludesJSONCallback::EndOfMainFile() {
   OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID());
-  SmallString<256> MainFile(FE->getName());
-  SM.getFileManager().makeAbsolutePath(MainFile);
+  SmallString<256> MainFile;
+  if (FE) {
+    MainFile += FE->getName();
+    SM.getFileManager().makeAbsolutePath(MainFile);
+  }
 
   std::string Str;
   llvm::raw_string_ostream OS(Str);

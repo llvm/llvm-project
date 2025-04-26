@@ -908,9 +908,8 @@ private:
   // Internal Implementation Details
   //===------------------------------------------------------------------===//
 
-  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                         ArrayRef<unsigned> JumpTableIndices,
-                         bool JTInDiffSection);
+  virtual void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                 ArrayRef<unsigned> JumpTableIndices);
 
   void emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
                                  const Function &F) const;

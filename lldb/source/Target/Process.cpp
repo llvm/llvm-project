@@ -1047,10 +1047,11 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
     info->exit_desc = {status, exit_string.str()};
   });
 
-  helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
-    info->module_uuid = module_uuid;
-    info->pid = m_pid;
-  });
+  helper.DispatchOnExit(
+      [module_uuid, pid = m_pid](telemetry::ProcessExitInfo *info) {
+        info->module_uuid = module_uuid;
+        info->pid = pid;
+      });
 
   m_exit_status = status;
   if (!exit_string.empty())

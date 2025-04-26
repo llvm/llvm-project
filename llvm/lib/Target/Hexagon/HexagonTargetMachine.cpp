@@ -286,7 +286,7 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 TargetTransformInfo
 HexagonTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(HexagonTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<HexagonTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(

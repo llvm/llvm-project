@@ -2964,7 +2964,11 @@ CallInst *llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
 
   // Follow the call by a branch to the normal destination.
   BasicBlock *NormalDestBB = II->getNormalDest();
-  BranchInst::Create(NormalDestBB, II->getIterator());
+  auto *BI = BranchInst::Create(NormalDestBB, II->getIterator());
+  // Although it takes place after the call itself, the new branch is still
+  // performing part of the control-flow functionality of the invoke, so we use
+  // II's DebugLoc.
+  BI->setDebugLoc(II->getDebugLoc());
 
   // Update PHI nodes in the unwind destination
   BasicBlock *BB = II->getParent();
@@ -3353,9 +3357,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
         break;
-      // Keep empty cases for mmra, memprof, and callsite to prevent them from
-      // being removed as unknown metadata. The actual merging is handled
+      // Keep empty cases for prof, mmra, memprof, and callsite to prevent them
+      // from being removed as unknown metadata. The actual merging is handled
       // separately below.
+      case LLVMContext::MD_prof:
       case LLVMContext::MD_mmra:
       case LLVMContext::MD_memprof:
       case LLVMContext::MD_callsite:
@@ -3383,10 +3388,6 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         // Preserve !nontemporal if it is present on both instructions.
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
-        break;
-      case LLVMContext::MD_prof:
-        if (!AAOnly && DoesKMove)
-          K->setMetadata(Kind, MDNode::getMergedProfMetadata(KMD, JMD, K, J));
         break;
       case LLVMContext::MD_noalias_addrspace:
         if (DoesKMove)
@@ -3433,6 +3434,16 @@ static void combineMetadata(Instruction *K, const Instruction *J,
   if (!AAOnly && (JCallSite || KCallSite)) {
     K->setMetadata(LLVMContext::MD_callsite,
                    MDNode::getMergedCallsiteMetadata(KCallSite, JCallSite));
+  }
+
+  // Merge prof metadata.
+  // Handle separately to support cases where only one instruction has the
+  // metadata.
+  auto *JProf = J->getMetadata(LLVMContext::MD_prof);
+  auto *KProf = K->getMetadata(LLVMContext::MD_prof);
+  if (!AAOnly && (JProf || KProf)) {
+    K->setMetadata(LLVMContext::MD_prof,
+                   MDNode::getMergedProfMetadata(KProf, JProf, K, J));
   }
 }
 

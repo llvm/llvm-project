@@ -67,7 +67,8 @@ define i32 @test_debug_loc_on_branch_in_loop(ptr noalias %src, ptr noalias %dst)
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
-; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 {{.+}}
+; CHECK-NEXT:   [[IDX:%.+]] = add i64 %index, 0
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 [[IDX]]
 ; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC3]]
 ; CHECK-EMPTY:
@@ -106,7 +107,8 @@ define i32 @test_different_debug_loc_on_replicate_recipe(ptr noalias %src, ptr n
 ; CHECK-NEXT:   br i1 [[EXT]], label %pred.store.if, label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:
 ; CHECK-NEXT: pred.store.if:
-; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 {{.+}}, !dbg [[LOC5:!.+]]
+; CHECK-NEXT:   [[IDX:%.+]] = add i64 %index, 0
+; CHECK-NEXT:   [[GEP:%.+]] = getelementptr inbounds i32, ptr %dst, i64 [[IDX]], !dbg [[LOC5:!.+]]
 ; CHECK-NEXT:   store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:   br label %pred.store.continue, !dbg [[LOC4]]
 ; CHECK-EMPTY:

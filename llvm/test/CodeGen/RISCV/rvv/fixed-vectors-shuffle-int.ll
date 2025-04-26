@@ -1448,13 +1448,11 @@ define <8 x i8> @vmerge_vxm(<8 x i8> %v, i8 %s) {
 ; CHECK-LABEL: vmerge_vxm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 25
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vrgather.vi v9, v8, 0, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %ins = insertelement <8 x i8> %v, i8 %s, i32 0
   %shuf = shufflevector <8 x i8> %ins, <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 0, i32 5, i32 6, i32 7>
@@ -1465,12 +1463,9 @@ define <8 x i8> @vmerge_vxm2(<8 x i8> %v, i8 %s) {
 ; CHECK-LABEL: vmerge_vxm2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 25
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vmv.s.x v9, a0
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vrgather.vi v8, v9, 0, v0.t
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %ins = insertelement <8 x i8> %v, i8 %s, i32 0
   %shuf = shufflevector <8 x i8> %v, <8 x i8> %ins, <8 x i32> <i32 8, i32 1, i32 2, i32 8, i32 8, i32 5, i32 6, i32 7>

@@ -35,9 +35,11 @@ define float @loadSRV() #0 {
 }
 
 !llvm.module.flags = !{!0}
+!dx.valver = !{!1}
 
 ; dx.resmayalias should never appear with a value of 0.
 ; But if it does, ensure that it has no effect.
 !0 = !{i32 1, !"dx.resmayalias", i32 0}
+!1 = !{i32 1, i32 8}
 
 attributes #0 = { convergent norecurse nounwind "hlsl.export"}

@@ -51,6 +51,7 @@ executable("lldb-dap") {
     "FunctionBreakpoint.cpp",
     "Handler/AttachRequestHandler.cpp",
     "Handler/BreakpointLocationsHandler.cpp",
+    "Handler/CancelRequestHandler.cpp",
     "Handler/CompileUnitsRequestHandler.cpp",
     "Handler/CompletionsHandler.cpp",
     "Handler/ConfigurationDoneRequestHandler.cpp",

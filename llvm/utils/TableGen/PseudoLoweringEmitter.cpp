@@ -51,10 +51,11 @@ class PseudoLoweringEmitter {
 
   SmallVector<PseudoExpansion, 64> Expansions;
 
-  unsigned addDagOperandMapping(const Record *Rec, const DagInit *Dag,
-                                const CodeGenInstruction &Insn,
-                                IndexedMap<OpData> &OperandMap,
-                                unsigned BaseIdx);
+  void addOperandMapping(unsigned MIOpNo, unsigned NumOps, const Record *Rec,
+                         const DagInit *Dag, unsigned DagIdx,
+                         const Record *OpRec, IndexedMap<OpData> &OperandMap,
+                         const StringMap<unsigned> &SourceOperands,
+                         const CodeGenInstruction &SourceInsn);
   void evaluateExpansion(const Record *Pseudo);
   void emitLoweringEmitter(raw_ostream &o);
 
@@ -66,66 +67,67 @@ public:
 };
 } // End anonymous namespace
 
-// FIXME: This pass currently can only expand a pseudo to a single instruction.
-//        The pseudo expansion really should take a list of dags, not just
-//        a single dag, so we can do fancier things.
-unsigned PseudoLoweringEmitter::addDagOperandMapping(
-    const Record *Rec, const DagInit *Dag, const CodeGenInstruction &Insn,
-    IndexedMap<OpData> &OperandMap, unsigned BaseIdx) {
-  unsigned OpsAdded = 0;
-  for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
-    if (const DefInit *DI = dyn_cast<DefInit>(Dag->getArg(i))) {
-      // Physical register reference. Explicit check for the special case
-      // "zero_reg" definition.
-      if (DI->getDef()->isSubClassOf("Register") ||
-          DI->getDef()->getName() == "zero_reg") {
-        auto &Entry = OperandMap[BaseIdx + i];
-        Entry.Kind = OpData::Reg;
-        Entry.Data.Reg = DI->getDef();
-        ++OpsAdded;
-        continue;
-      }
+void PseudoLoweringEmitter::addOperandMapping(
+    unsigned MIOpNo, unsigned NumOps, const Record *Rec, const DagInit *Dag,
+    unsigned DagIdx, const Record *OpRec, IndexedMap<OpData> &OperandMap,
+    const StringMap<unsigned> &SourceOperands,
+    const CodeGenInstruction &SourceInsn) {
+  const Init *DagArg = Dag->getArg(DagIdx);
+  if (const DefInit *DI = dyn_cast<DefInit>(DagArg)) {
+    // Physical register reference. Explicit check for the special case
+    // "zero_reg" definition.
+    if (DI->getDef()->isSubClassOf("Register") ||
+        DI->getDef()->getName() == "zero_reg") {
+      auto &Entry = OperandMap[MIOpNo];
+      Entry.Kind = OpData::Reg;
+      Entry.Data.Reg = DI->getDef();
+      return;
+    }
 
-      // Normal operands should always have the same type, or we have a
-      // problem.
-      // FIXME: We probably shouldn't ever get a non-zero BaseIdx here.
-      assert(BaseIdx == 0 && "Named subargument in pseudo expansion?!");
-      if (DI->getDef() != Insn.Operands[BaseIdx + i].Rec) {
-        PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                            "', operand type '" + DI->getDef()->getName() +
-                            "' does not match expansion operand type '" +
-                            Insn.Operands[BaseIdx + i].Rec->getName() + "'");
-        PrintFatalNote(DI->getDef(),
-                       "Value was assigned at the following location:");
-      }
-      // Source operand maps to destination operand. The Data element
-      // will be filled in later, just set the Kind for now. Do it
-      // for each corresponding MachineInstr operand, not just the first.
-      for (unsigned I = 0, E = Insn.Operands[i].MINumOperands; I != E; ++I)
-        OperandMap[BaseIdx + i + I].Kind = OpData::Operand;
-      OpsAdded += Insn.Operands[i].MINumOperands;
-    } else if (const IntInit *II = dyn_cast<IntInit>(Dag->getArg(i))) {
-      auto &Entry = OperandMap[BaseIdx + i];
-      Entry.Kind = OpData::Imm;
-      Entry.Data.Imm = II->getValue();
-      ++OpsAdded;
-    } else if (const auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
-      auto &Entry = OperandMap[BaseIdx + i];
-      Entry.Kind = OpData::Imm;
-      Entry.Data.Imm = *BI->convertInitializerToInt();
-      ++OpsAdded;
-    } else if (const DagInit *SubDag = dyn_cast<DagInit>(Dag->getArg(i))) {
-      // Just add the operands recursively. This is almost certainly
-      // a constant value for a complex operand (> 1 MI operand).
-      unsigned NewOps =
-          addDagOperandMapping(Rec, SubDag, Insn, OperandMap, BaseIdx + i);
-      OpsAdded += NewOps;
-      // Since we added more than one, we also need to adjust the base.
-      BaseIdx += NewOps - 1;
-    } else
-      llvm_unreachable("Unhandled pseudo-expansion argument type!");
-  }
-  return OpsAdded;
+    if (DI->getDef() != OpRec)
+      PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                               "', operand type '" + DI->getDef()->getName() +
+                               "' does not match expansion operand type '" +
+                               OpRec->getName() + "'");
+
+    StringMap<unsigned>::const_iterator SourceOp =
+        SourceOperands.find(Dag->getArgNameStr(DagIdx));
+    if (SourceOp == SourceOperands.end())
+      PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                               "', output operand '" +
+                               Dag->getArgNameStr(DagIdx) +
+                               "' has no matching source operand");
+    const auto &SrcOpnd = SourceInsn.Operands[SourceOp->getValue()];
+    if (NumOps != SrcOpnd.MINumOperands)
+      PrintFatalError(
+          Rec,
+          "In pseudo instruction '" + Rec->getName() + "', output operand '" +
+              OpRec->getName() +
+              "' has a different number of sub operands than source operand '" +
+              SrcOpnd.Rec->getName() + "'");
+
+    // Source operand maps to destination operand. Do it for each corresponding
+    // MachineInstr operand, not just the first.
+    for (unsigned I = 0, E = NumOps; I != E; ++I) {
+      auto &Entry = OperandMap[MIOpNo + I];
+      Entry.Kind = OpData::Operand;
+      Entry.Data.Operand = SrcOpnd.MIOperandNo + I;
+    }
+
+    LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ==> " << DagIdx
+                      << "\n");
+  } else if (const auto *II = dyn_cast<IntInit>(DagArg)) {
+    assert(NumOps == 1);
+    auto &Entry = OperandMap[MIOpNo];
+    Entry.Kind = OpData::Imm;
+    Entry.Data.Imm = II->getValue();
+  } else if (const auto *BI = dyn_cast<BitsInit>(DagArg)) {
+    assert(NumOps == 1);
+    auto &Entry = OperandMap[MIOpNo];
+    Entry.Kind = OpData::Imm;
+    Entry.Data.Imm = *BI->convertInitializerToInt();
+  } else
+    llvm_unreachable("Unhandled pseudo-expansion argument type!");
 }
 
 void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
@@ -138,46 +140,26 @@ void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
   LLVM_DEBUG(dbgs() << "  Result: " << *Dag << "\n");
 
   const DefInit *OpDef = dyn_cast<DefInit>(Dag->getOperator());
-  if (!OpDef) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator is not a record");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
+  if (!OpDef)
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator is not a record");
   const Record *Operator = OpDef->getDef();
-  if (!Operator->isSubClassOf("Instruction")) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator '" + Operator->getName() +
-                        "' is not an instruction");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
+  if (!Operator->isSubClassOf("Instruction"))
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator '" + Operator->getName() +
+                             "' is not an instruction");
 
   CodeGenInstruction Insn(Operator);
 
-  if (Insn.isCodeGenOnly || Insn.isPseudo) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator '" + Operator->getName() +
-                        "' cannot be a pseudo instruction");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
+  if (Insn.isCodeGenOnly || Insn.isPseudo)
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator '" + Operator->getName() +
+                             "' cannot be a pseudo instruction");
 
-  if (Insn.Operands.size() != Dag->getNumArgs()) {
-    PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                        "', result operator '" + Operator->getName() +
-                        "' has the wrong number of operands");
-    PrintFatalNote(Rec->getValue("ResultInst"),
-                   "Result was assigned at the following location:");
-  }
-
-  unsigned NumMIOperands = 0;
-  for (const auto &Op : Insn.Operands)
-    NumMIOperands += Op.MINumOperands;
-  IndexedMap<OpData> OperandMap;
-  OperandMap.grow(NumMIOperands);
-
-  addDagOperandMapping(Rec, Dag, Insn, OperandMap, 0);
+  if (Insn.Operands.size() != Dag->getNumArgs())
+    PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                             "', result operator '" + Operator->getName() +
+                             "' has the wrong number of operands");
 
   // If there are more operands that weren't in the DAG, they have to
   // be operands that have default values, or we have an error. Currently,
@@ -194,32 +176,43 @@ void PseudoLoweringEmitter::evaluateExpansion(const Record *Rec) {
   for (const auto &[Idx, SrcOp] : enumerate(SourceInsn.Operands))
     SourceOperands[SrcOp.Name] = Idx;
 
-  LLVM_DEBUG(dbgs() << "  Operand mapping:\n");
-  for (unsigned i = 0, e = Insn.Operands.size(); i != e; ++i) {
-    // We've already handled constant values. Just map instruction operands
-    // here.
-    if (OperandMap[Insn.Operands[i].MIOperandNo].Kind != OpData::Operand)
-      continue;
-    StringMap<unsigned>::iterator SourceOp =
-        SourceOperands.find(Dag->getArgNameStr(i));
-    if (SourceOp == SourceOperands.end()) {
-      PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
-                          "', output operand '" + Dag->getArgNameStr(i) +
-                          "' has no matching source operand");
-      PrintFatalNote(Rec->getValue("ResultInst"),
-                     "Value was assigned at the following location:");
-    }
-    // Map the source operand to the destination operand index for each
-    // MachineInstr operand.
-    for (unsigned I = 0, E = Insn.Operands[i].MINumOperands; I != E; ++I)
-      OperandMap[Insn.Operands[i].MIOperandNo + I].Data.Operand =
-          SourceOp->getValue();
+  unsigned NumMIOperands = 0;
+  for (const auto &Op : Insn.Operands)
+    NumMIOperands += Op.MINumOperands;
+  IndexedMap<OpData> OperandMap;
+  OperandMap.grow(NumMIOperands);
 
-    LLVM_DEBUG(dbgs() << "    " << SourceOp->getValue() << " ==> " << i
-                      << "\n");
+  // FIXME: This pass currently can only expand a pseudo to a single
+  // instruction. The pseudo expansion really should take a list of dags, not
+  // just a single dag, so we can do fancier things.
+  LLVM_DEBUG(dbgs() << "  Operand mapping:\n");
+  for (const auto &[Idx, DstOp] : enumerate(Insn.Operands)) {
+    unsigned MIOpNo = DstOp.MIOperandNo;
+
+    if (const auto *SubDag = dyn_cast<DagInit>(Dag->getArg(Idx))) {
+      if (!DstOp.MIOperandInfo || DstOp.MIOperandInfo->getNumArgs() == 0)
+        PrintFatalError(Rec, "In pseudo instruction '" + Rec->getName() +
+                                 "', operand '" + DstOp.Rec->getName() +
+                                 "' does not have suboperands");
+      if (DstOp.MINumOperands != SubDag->getNumArgs()) {
+        PrintFatalError(
+            Rec, "In pseudo instruction '" + Rec->getName() + "', '" +
+                     SubDag->getAsString() +
+                     "' has wrong number of operands for operand type '" +
+                     DstOp.Rec->getName() + "'");
+      }
+      for (unsigned I = 0, E = DstOp.MINumOperands; I != E; ++I) {
+        auto *OpndRec = cast<DefInit>(DstOp.MIOperandInfo->getArg(I))->getDef();
+        addOperandMapping(MIOpNo + I, 1, Rec, SubDag, I, OpndRec, OperandMap,
+                          SourceOperands, SourceInsn);
+      }
+    } else {
+      addOperandMapping(MIOpNo, DstOp.MINumOperands, Rec, Dag, Idx, DstOp.Rec,
+                        OperandMap, SourceOperands, SourceInsn);
+    }
   }
 
-  Expansions.push_back(PseudoExpansion(SourceInsn, Insn, OperandMap));
+  Expansions.emplace_back(SourceInsn, Insn, OperandMap);
 }
 
 void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
@@ -253,10 +246,7 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
           switch (Expansion.OperandMap[MIOpNo + i].Kind) {
           case OpData::Operand:
             o << "    lowerOperand(MI->getOperand("
-              << Source.Operands[Expansion.OperandMap[MIOpNo].Data.Operand]
-                         .MIOperandNo +
-                     i
-              << "), MCOp);\n"
+              << Expansion.OperandMap[MIOpNo + i].Data.Operand << "), MCOp);\n"
               << "    Inst.addOperand(MCOp);\n";
             break;
           case OpData::Imm:

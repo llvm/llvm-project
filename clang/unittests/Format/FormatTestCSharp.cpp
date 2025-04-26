@@ -1315,6 +1315,12 @@ TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
                "}",
                Style);
 
+  verifyFormat("namespace A {\n"
+               "  delegate T MyDelegate<T>()\n"
+               "      where T : new();\n"
+               "}",
+               Style);
+
   // When the "where" line is not to be formatted, following lines should not
   // take on its indentation.
   verifyFormat("class ItemFactory<T>\n"

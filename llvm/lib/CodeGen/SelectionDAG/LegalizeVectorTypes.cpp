@@ -129,6 +129,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:
   case ISD::ZERO_EXTEND:
   case ISD::FCANONICALIZE:
+  case ISD::AssertNoFPClass:
     R = ScalarizeVecRes_UnaryOp(N);
     break;
   case ISD::ADDRSPACECAST:
@@ -400,9 +401,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
   SDValue Op = N->getOperand(0);
-  if (Op.getValueType().isVector()
-      && Op.getValueType().getVectorNumElements() == 1
-      && !isSimpleLegalType(Op.getValueType()))
+  if (getTypeAction(Op.getValueType()) == TargetLowering::TypeScalarizeVector)
     Op = GetScalarizedVector(Op);
   EVT NewVT = N->getValueType(0).getVectorElementType();
   return DAG.getNode(ISD::BITCAST, SDLoc(N),
@@ -1278,6 +1277,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UINT_TO_FP:
   case ISD::VP_UINT_TO_FP:
   case ISD::FCANONICALIZE:
+  case ISD::AssertNoFPClass:
     SplitVecRes_UnaryOp(N, Lo, Hi);
     break;
   case ISD::ADDRSPACECAST:
@@ -4846,6 +4846,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FREEZE:
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
+  case ISD::AssertNoFPClass:
     Res = WidenVecRes_Unary(N);
     break;
   case ISD::FMA: case ISD::VP_FMA:

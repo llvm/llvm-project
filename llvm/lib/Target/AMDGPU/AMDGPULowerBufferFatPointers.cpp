@@ -2261,11 +2261,10 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
 
 void SplitPtrStructs::processFunction(Function &F) {
   ST = &TM->getSubtarget<GCNSubtarget>(F);
-  SmallVector<Instruction *, 0> Originals;
+  SmallVector<Instruction *, 0> Originals(
+      llvm::make_pointer_range(instructions(F)));
   LLVM_DEBUG(dbgs() << "Splitting pointer structs in function: " << F.getName()
                     << "\n");
-  for (Instruction &I : instructions(F))
-    Originals.push_back(&I);
   for (Instruction *I : Originals) {
     auto [Rsrc, Off] = visit(I);
     assert(((Rsrc && Off) || (!Rsrc && !Off)) &&
@@ -2409,7 +2408,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
     for (Function &F : M.functions())
       for (Instruction &I : instructions(F))
         for (Value *Op : I.operands())
-          if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+          if (isa<ConstantExpr, ConstantAggregate>(Op))
             Worklist.push_back(cast<Constant>(Op));
 
     // Recursively look for any referenced buffer pointer constants.
@@ -2422,7 +2421,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
       if (isBufferFatPtrOrVector(C->getType()))
         BufferFatPtrConsts.insert(C);
       for (Value *Op : C->operands())
-        if (isa<ConstantExpr>(Op) || isa<ConstantAggregate>(Op))
+        if (isa<ConstantExpr, ConstantAggregate>(Op))
           Worklist.push_back(cast<Constant>(Op));
     }
 

@@ -87,9 +87,8 @@ void RISCVInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) {
 }
 
 void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI, raw_ostream &O,
-                                    const char *Modifier) {
-  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
 
   if (MO.isReg()) {

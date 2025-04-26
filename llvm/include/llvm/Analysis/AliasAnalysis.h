@@ -521,6 +521,10 @@ public:
   /// the same memory locations.
   ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
 
+  /// Return information about whether two instructions may refer to the same
+  /// memory locations.
+  ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2);
+
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
   /// in a BasicBlock.
@@ -600,6 +604,8 @@ public:
   ModRefInfo getModRefInfo(const Instruction *I,
                            const std::optional<MemoryLocation> &OptLoc,
                            AAQueryInfo &AAQIP);
+  ModRefInfo getModRefInfo(const Instruction *I1, const Instruction *I2,
+                           AAQueryInfo &AAQI);
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc, DominatorTree *DT,
                                 AAQueryInfo &AAQIP);

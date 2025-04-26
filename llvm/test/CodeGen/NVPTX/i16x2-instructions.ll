@@ -714,7 +714,7 @@ define <2 x i16> @test_select(<2 x i16> %a, <2 x i16> %b, i1 zeroext %c) #0 {
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.u8 %rs1, [test_select_param_2];
 ; COMMON-NEXT:    and.b16 %rs2, %rs1, 1;
-; COMMON-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; COMMON-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; COMMON-NEXT:    ld.param.u32 %r2, [test_select_param_1];
 ; COMMON-NEXT:    ld.param.u32 %r1, [test_select_param_0];
 ; COMMON-NEXT:    selp.b32 %r3, %r1, %r2, %p1;

@@ -1342,11 +1342,11 @@ let Predicates = [BPFHasALU32] in {
 
   let Predicates = [BPFHasLoadAcqStoreRel] in {
     foreach P = [[relaxed_load<atomic_load_32>, LDW32],
-                 [relaxed_load<atomic_load_az_16>, LDH32],
-                 [relaxed_load<atomic_load_az_8>, LDB32],
+                 [relaxed_load<atomic_load_azext_16>, LDH32],
+                 [relaxed_load<atomic_load_azext_8>, LDB32],
                  [acquiring_load<atomic_load_32>, LDWACQ32],
-                 [acquiring_load<atomic_load_az_16>, LDHACQ32],
-                 [acquiring_load<atomic_load_az_8>, LDBACQ32],
+                 [acquiring_load<atomic_load_azext_16>, LDHACQ32],
+                 [acquiring_load<atomic_load_azext_8>, LDBACQ32],
                 ] in {
       def : Pat<(P[0] ADDRri:$addr), (P[1] ADDRri:$addr)>;
     }

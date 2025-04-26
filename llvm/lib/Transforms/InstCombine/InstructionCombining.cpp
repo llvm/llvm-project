@@ -2500,9 +2500,8 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
       return nullptr;
 
     GEPNoWrapFlags NW = getMergedGEPNoWrapFlags(*Src, *cast<GEPOperator>(&GEP));
-    SmallVector<Value *> Indices;
-    append_range(Indices, drop_end(Src->indices(),
-                                   Src->getNumIndices() - NumVarIndices));
+    SmallVector<Value *> Indices(
+        drop_end(Src->indices(), Src->getNumIndices() - NumVarIndices));
     for (const APInt &Idx : drop_begin(ConstIndices, !IsFirstType)) {
       Indices.push_back(ConstantInt::get(GEP.getContext(), Idx));
       // Even if the total offset is inbounds, we may end up representing it
@@ -3132,7 +3131,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // Try to replace ADD + GEP with GEP + GEP.
     Value *Idx1, *Idx2;
     if (match(GEP.getOperand(1),
-              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
+              m_OneUse(m_AddLike(m_Value(Idx1), m_Value(Idx2))))) {
       //   %idx = add i64 %idx1, %idx2
       //   %gep = getelementptr i32, ptr %ptr, i64 %idx
       // as:
@@ -3148,7 +3147,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                                    NewPtr, Idx2, "", NWFlags));
     }
     ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAddLike(
                                      m_Value(Idx1), m_ConstantInt(C))))))) {
       // %add = add nsw i32 %idx1, idx2
       // %sidx = sext i32 %add to i64

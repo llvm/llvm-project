@@ -114,9 +114,8 @@ struct _LIBCPP_HIDDEN __integral<2> {
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
     // If value == 0 still need one digit. If the value != this has no
-    // effect since the code scans for the most significant bit set. (Note
-    // that __libcpp_clz doesn't work for 0.)
-    return numeric_limits<_Tp>::digits - std::__libcpp_clz(__value | 1);
+    // effect since the code scans for the most significant bit set.
+    return numeric_limits<_Tp>::digits - std::__countl_zero(__value | 1);
   }
 
   template <typename _Tp>
@@ -150,9 +149,8 @@ struct _LIBCPP_HIDDEN __integral<8> {
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
     // If value == 0 still need one digit. If the value != this has no
-    // effect since the code scans for the most significat bit set. (Note
-    // that __libcpp_clz doesn't work for 0.)
-    return ((numeric_limits<_Tp>::digits - std::__libcpp_clz(__value | 1)) + 2) / 3;
+    // effect since the code scans for the most significat bit set.
+    return ((numeric_limits<_Tp>::digits - std::__countl_zero(__value | 1)) + 2) / 3;
   }
 
   template <typename _Tp>
@@ -186,9 +184,8 @@ struct _LIBCPP_HIDDEN __integral<16> {
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR int __width(_Tp __value) _NOEXCEPT {
     // If value == 0 still need one digit. If the value != this has no
-    // effect since the code scans for the most significat bit set. (Note
-    // that __libcpp_clz doesn't work for 0.)
-    return (numeric_limits<_Tp>::digits - std::__libcpp_clz(__value | 1) + 3) / 4;
+    // effect since the code scans for the most significat bit set.
+    return (numeric_limits<_Tp>::digits - std::__countl_zero(__value | 1) + 3) / 4;
   }
 
   template <typename _Tp>

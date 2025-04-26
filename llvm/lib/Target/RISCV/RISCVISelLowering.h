@@ -404,12 +404,25 @@ enum NodeType : unsigned {
   //  vfirst.m with additional mask and VL operands.
   VFIRST_VL,
 
+  // XRivosVisni
+  // VINSERT matches the semantics of ri.vinsert.v.x. It carries a VL operand.
+  RI_VINSERT_VL,
+
   // XRivosVizip
   RI_VZIPEVEN_VL,
   RI_VZIPODD_VL,
   RI_VZIP2A_VL,
+  RI_VZIP2B_VL,
+  RI_VUNZIP2A_VL,
+  RI_VUNZIP2B_VL,
 
-  LAST_VL_VECTOR_OP = RI_VZIP2A_VL,
+  LAST_VL_VECTOR_OP = RI_VUNZIP2B_VL,
+
+  // XRivosVisni
+  // VEXTRACT matches the semantics of ri.vextract.x.v. The result is always
+  // XLenVT sign extended from the vector element size.  VEXTRACT does *not*
+  // have a VL operand.
+  RI_VEXTRACT,
 
   // Read VLENB CSR
   READ_VLENB,

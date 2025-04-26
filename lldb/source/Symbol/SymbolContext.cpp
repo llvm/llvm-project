@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
@@ -872,34 +873,36 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
   return nullptr; // no error; we just didn't find anything
 }
 
-char const *SymbolContext::GetPossiblyInlinedFunctionName(
-    Mangled::NamePreference mangling_preference) const {
-  const char *name = nullptr;
-  if (function)
-    name = function->GetMangled().GetName(mangling_preference).AsCString();
-  else if (symbol)
-    name = symbol->GetMangled().GetName(mangling_preference).AsCString();
+Mangled SymbolContext::GetPossiblyInlinedFunctionName() const {
+  auto get_mangled = [this]() {
+    if (function)
+      return function->GetMangled();
+
+    if (symbol)
+      return symbol->GetMangled();
+
+    return Mangled{};
+  };
 
   if (!block)
-    return name;
+    return get_mangled();
 
   const Block *inline_block = block->GetContainingInlinedBlock();
   if (!inline_block)
-    return name;
+    return get_mangled();
 
   const InlineFunctionInfo *inline_info =
       inline_block->GetInlinedFunctionInfo();
   if (!inline_info)
-    return name;
+    return get_mangled();
 
   // If we do have an inlined frame name, return that.
-  if (char const *inline_name =
-          inline_info->GetMangled().GetName(mangling_preference).AsCString())
+  if (const Mangled &inline_name = inline_info->GetMangled())
     return inline_name;
 
   // Sometimes an inline frame may not have mangling information,
   // but does have a valid name.
-  return inline_info->GetName().AsCString();
+  return Mangled{inline_info->GetName().AsCString()};
 }
 
 //

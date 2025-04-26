@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -DEMPTY \
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer -check-prefix=EMPTY %s
 //
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
+// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump \
 // RUN:   -DRESOURCE=RWBuffer %s | FileCheck -DRESOURCE=RWBuffer \
 // RUN:   -check-prefixes=CHECK,CHECK-UAV %s
 
@@ -56,32 +56,32 @@ RESOURCE<float> Buffer;
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 
-// CHECK: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
+// CHECK: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: ' lvalue .__handle {{.*}} 
+// CHECK-SAME: ' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} 'const [[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} operator[] 'element_type &(unsigned int)'
+// CHECK-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: ' lvalue .__handle {{.*}} 
+// CHECK-SAME: ' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
@@ -90,13 +90,13 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
-// CHECK-SAME: ' lvalue .__handle {{.*}} 
+// CHECK-SAME: ' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline

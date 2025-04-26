@@ -196,7 +196,7 @@ bool LoongArchPassConfig::addInstSelector() {
 
 TargetTransformInfo
 LoongArchTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(LoongArchTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<LoongArchTTIImpl>(this, F));
 }
 
 void LoongArchPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }

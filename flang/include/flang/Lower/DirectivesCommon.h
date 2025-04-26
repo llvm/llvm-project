@@ -55,39 +55,42 @@ static inline void genOmpAtomicHintAndMemoryOrderClauses(
     mlir::omp::ClauseMemoryOrderKindAttr &memoryOrder) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   for (const Fortran::parser::OmpAtomicClause &clause : clauseList.v) {
-    if (const auto *ompClause =
-            std::get_if<Fortran::parser::OmpClause>(&clause.u)) {
-      if (const auto *hintClause =
-              std::get_if<Fortran::parser::OmpClause::Hint>(&ompClause->u)) {
-        const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
-        uint64_t hintExprValue = *Fortran::evaluate::ToInt64(*expr);
-        hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
-      }
-    } else if (const auto *ompMemoryOrderClause =
-                   std::get_if<Fortran::parser::OmpMemoryOrderClause>(
-                       &clause.u)) {
-      if (std::get_if<Fortran::parser::OmpClause::Acquire>(
-              &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Acquire);
-      } else if (std::get_if<Fortran::parser::OmpClause::Relaxed>(
-                     &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Relaxed);
-      } else if (std::get_if<Fortran::parser::OmpClause::SeqCst>(
-                     &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Seq_cst);
-      } else if (std::get_if<Fortran::parser::OmpClause::Release>(
-                     &ompMemoryOrderClause->v.u)) {
-        memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
-            firOpBuilder.getContext(),
-            mlir::omp::ClauseMemoryOrderKind::Release);
-      }
-    }
+    common::visit(
+        common::visitors{
+            [&](const parser::OmpMemoryOrderClause &s) {
+              auto kind = common::visit(
+                  common::visitors{
+                      [&](const parser::OmpClause::AcqRel &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Acq_rel;
+                      },
+                      [&](const parser::OmpClause::Acquire &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Acquire;
+                      },
+                      [&](const parser::OmpClause::Relaxed &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Relaxed;
+                      },
+                      [&](const parser::OmpClause::Release &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Release;
+                      },
+                      [&](const parser::OmpClause::SeqCst &) {
+                        return mlir::omp::ClauseMemoryOrderKind::Seq_cst;
+                      },
+                      [&](auto &&) -> mlir::omp::ClauseMemoryOrderKind {
+                        llvm_unreachable("Unexpected clause");
+                      },
+                  },
+                  s.v.u);
+              memoryOrder = mlir::omp::ClauseMemoryOrderKindAttr::get(
+                  firOpBuilder.getContext(), kind);
+            },
+            [&](const parser::OmpHintClause &s) {
+              const auto *expr = Fortran::semantics::GetExpr(s.v);
+              uint64_t hintExprValue = *Fortran::evaluate::ToInt64(*expr);
+              hint = firOpBuilder.getI64IntegerAttr(hintExprValue);
+            },
+            [&](const parser::OmpFailClause &) {},
+        },
+        clause.u);
   }
 }
 
@@ -670,7 +673,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
              const std::vector<Fortran::evaluate::Subscript> &subscripts,
              std::stringstream &asFortran, fir::ExtendedValue &dataExv,
              bool dataExvIsAssumedSize, fir::factory::AddrAndBoundsInfo &info,
-             bool treatIndexAsSection = false) {
+             bool treatIndexAsSection = false,
+             bool strideIncludeLowerExtent = false) {
   int dimension = 0;
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
@@ -679,6 +683,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
   const int dataExvRank = static_cast<int>(dataExv.rank());
+  mlir::Value cumulativeExtent = one;
   for (const auto &subscript : subscripts) {
     const auto *triplet{std::get_if<Fortran::evaluate::Triplet>(&subscript.u)};
     if (triplet || treatIndexAsSection) {
@@ -847,6 +852,15 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
         }
       }
+
+      // When the strideInBytes is true, it means the stride is from descriptor
+      // and this already includes the lower extents.
+      if (strideIncludeLowerExtent && !strideInBytes) {
+        stride = cumulativeExtent;
+        cumulativeExtent = builder.createOrFold<mlir::arith::MulIOp>(
+            loc, cumulativeExtent, extent);
+      }
+
       mlir::Value bound = builder.create<BoundsOp>(
           loc, boundTy, lbound, ubound, extent, stride, strideInBytes, baseLb);
       bounds.push_back(bound);
@@ -882,7 +896,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
     const Fortran::semantics::MaybeExpr &maybeDesignator,
     mlir::Location operandLocation, std::stringstream &asFortran,
     llvm::SmallVector<mlir::Value> &bounds, bool treatIndexAsSection = false,
-    bool unwrapFirBox = true, bool genDefaultBounds = true) {
+    bool unwrapFirBox = true, bool genDefaultBounds = true,
+    bool strideIncludeLowerExtent = false) {
   using namespace Fortran;
 
   fir::factory::AddrAndBoundsInfo info;
@@ -943,7 +958,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       asFortran << '(';
       bounds = genBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, converter, stmtCtx, arrayRef->subscript(),
-          asFortran, dataExv, dataExvIsAssumedSize, info, treatIndexAsSection);
+          asFortran, dataExv, dataExvIsAssumedSize, info, treatIndexAsSection,
+          strideIncludeLowerExtent);
     }
     asFortran << ')';
   } else if (auto compRef = detail::getRef<evaluate::Component>(designator)) {
@@ -955,7 +971,7 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
         mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
       bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, compExv,
-          /*isAssumedSize=*/false);
+          /*isAssumedSize=*/false, strideIncludeLowerExtent);
     asFortran << designator.AsFortran();
 
     if (semantics::IsOptional(compRef->GetLastSymbol())) {
@@ -1012,7 +1028,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       if (genDefaultBounds &&
           mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
-            builder, operandLocation, dataExv, dataExvIsAssumedSize);
+            builder, operandLocation, dataExv, dataExvIsAssumedSize,
+            strideIncludeLowerExtent);
       asFortran << symRef->get().name().ToString();
     } else { // Unsupported
       llvm::report_fatal_error("Unsupported type of OpenACC operand");

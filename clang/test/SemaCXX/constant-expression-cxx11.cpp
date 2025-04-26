@@ -409,6 +409,10 @@ constexpr int a = 0;
 constexpr int b = 1;
 constexpr int n = &b - &a; // expected-error {{must be initialized by a constant expression}} \
                            // expected-note {{arithmetic involving unrelated objects '&b' and '&a' has unspecified value}}
+constexpr static int arrk[2] = {1,2};
+constexpr static int arrk2[2] = {3,4};
+constexpr int k2 = &arrk[1] - &arrk2[0]; // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{arithmetic involving unrelated objects}}
 
 namespace MaterializeTemporary {
 
@@ -2199,6 +2203,8 @@ namespace BuiltinStrlen {
   static_assert(__builtin_strlen("foo") == 3, "");
   static_assert(__builtin_strlen("foo\0quux") == 3, "");
   static_assert(__builtin_strlen("foo\0quux" + 4) == 4, "");
+  static_assert(__builtin_strlen("foo") + 1 + "foo" == "foo", ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  // expected-note@-1 {{comparison against pointer '&"foo"[4]' that points past the end of a complete object has unspecified value}}
 
   constexpr bool check(const char *p) {
     return __builtin_strlen(p) == 3 &&

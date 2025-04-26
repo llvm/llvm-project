@@ -18,8 +18,17 @@ namespace llvm {
 class MCExpr;
 
 /// Extensible enumeration to represent the type of a fixup.
-enum MCFixupKind {
-  FK_NONE = 0,    ///< A no-op fixup.
+enum MCFixupKind : uint16_t {
+  // [0, FirstLiteralRelocationKind) encodes raw relocation types.
+
+  // [FirstLiteralRelocationKind, FK_NONE) encodes raw relocation types coming
+  // from .reloc directives. Fixup kind
+  // FirstLiteralRelocationKind+t encodes relocation type t.
+  FirstLiteralRelocationKind = 2000,
+
+  // Other kinds indicate the fixup may resolve to a constant, allowing the
+  // assembler to update the instruction or data directly without a relocation.
+  FK_NONE = 4000, ///< A no-op fixup.
   FK_Data_1,      ///< A one-byte fixup.
   FK_Data_2,      ///< A two-byte fixup.
   FK_Data_4,      ///< A four-byte fixup.
@@ -34,16 +43,7 @@ enum MCFixupKind {
   FK_SecRel_4,    ///< A four-byte section relative fixup.
   FK_SecRel_8,    ///< A eight-byte section relative fixup.
 
-  FirstTargetFixupKind = 128,
-
-  /// The range [FirstLiteralRelocationKind, MaxTargetFixupKind) is used for
-  /// relocations coming from .reloc directive. Fixup kind
-  /// FirstLiteralRelocationKind+V represents the relocation type with number V.
-  FirstLiteralRelocationKind = 256,
-
-  /// Set limit to accommodate the highest reloc type in use for all Targets,
-  /// currently R_AARCH64_IRELATIVE at 1032, including room for expansion.
-  MaxFixupKind = FirstLiteralRelocationKind + 1032 + 32,
+  FirstTargetFixupKind,
 };
 
 /// Encode information on a single operation to perform on a byte
@@ -78,13 +78,16 @@ class MCFixup {
 public:
   static MCFixup create(uint32_t Offset, const MCExpr *Value,
                         MCFixupKind Kind, SMLoc Loc = SMLoc()) {
-    assert(Kind <= MaxFixupKind && "Kind out of range!");
     MCFixup FI;
     FI.Value = Value;
     FI.Offset = Offset;
     FI.Kind = Kind;
     FI.Loc = Loc;
     return FI;
+  }
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, unsigned Kind,
+                        SMLoc Loc = SMLoc()) {
+    return create(Offset, Value, MCFixupKind(Kind), Loc);
   }
 
   MCFixupKind getKind() const { return Kind; }
@@ -114,6 +117,19 @@ public:
 
   SMLoc getLoc() const { return Loc; }
 };
+
+namespace mc {
+// Check if the fixup kind is a relocation type. Return false if the fixup can
+// be resolved without a relocation.
+inline bool isRelocation(MCFixupKind FixupKind) { return FixupKind < FK_NONE; }
+
+// Check if the fixup kind represents a relocation type from a .reloc directive.
+// In ELF, this skips STT_SECTION adjustment and STT_TLS symbol type setting for
+// TLS relocations.
+inline bool isRelocRelocation(MCFixupKind FixupKind) {
+  return FirstLiteralRelocationKind <= FixupKind && FixupKind < FK_NONE;
+}
+} // namespace mc
 
 } // End llvm namespace
 

@@ -33,6 +33,14 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
+    if (auto recordType = dyn_cast<cir::RecordType>(type)) {
+      StringAttr nameAttr = recordType.getName();
+      if (!nameAttr)
+        os << "rec_anon_" << recordType.getKindAsStr();
+      else
+        os << "rec_" << nameAttr.getValue();
+      return AliasResult::OverridableAlias;
+    }
     if (auto intType = dyn_cast<cir::IntType>(type)) {
       // We only provide alias for standard integer types (i.e. integer types
       // whose width is a power of 2 and at least 8).
@@ -212,7 +220,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (::mlir::isa<cir::ArrayType>(opType))
+    if (isa<cir::RecordType, cir::ArrayType>(opType))
       return success();
     return op->emitOpError("zero expects struct or array type");
   }
@@ -449,6 +457,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
                                          mlir::OperationState &result) {
   mlir::FlatSymbolRefAttr calleeAttr;
+  llvm::ArrayRef<mlir::Type> allResultTypes;
 
   if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
            .has_value())
@@ -472,6 +481,9 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   mlir::FunctionType opsFnTy;
   if (parser.parseType(opsFnTy))
     return mlir::failure();
+
+  allResultTypes = opsFnTy.getResults();
+  result.addTypes(allResultTypes);
 
   return mlir::success();
 }
@@ -515,8 +527,31 @@ verifyCallCommInSymbolUses(mlir::Operation *op,
     return op->emitOpError() << "'" << fnAttr.getValue()
                              << "' does not reference a valid function";
 
-  // TODO(cir): verify function arguments and return type
+  auto callIf = dyn_cast<cir::CIRCallOpInterface>(op);
+  assert(callIf && "expected CIR call interface to be always available");
+
+  // Verify that the operand and result types match the callee. Note that
+  // argument-checking is disabled for functions without a prototype.
+  auto fnType = fn.getFunctionType();
+
+  // TODO(cir): verify function arguments
   assert(!cir::MissingFeatures::opCallArgs());
+
+  // Void function must not return any results.
+  if (fnType.hasVoidReturn() && op->getNumResults() != 0)
+    return op->emitOpError("callee returns void but call has results");
+
+  // Non-void function calls must return exactly one result.
+  if (!fnType.hasVoidReturn() && op->getNumResults() != 1)
+    return op->emitOpError("incorrect number of results for callee");
+
+  // Parent function and return value types must match.
+  if (!fnType.hasVoidReturn() &&
+      op->getResultTypes().front() != fnType.getReturnType()) {
+    return op->emitOpError("result type mismatch: expected ")
+           << fnType.getReturnType() << ", but provided "
+           << op->getResult(0).getType();
+  }
 
   return mlir::success();
 }
@@ -997,6 +1032,9 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
 
+//===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
 LogicalResult cir::BinOp::verify() {
   bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
   bool saturated = getSaturated();
@@ -1025,6 +1063,24 @@ LogicalResult cir::BinOp::verify() {
   assert(!cir::MissingFeatures::complexType());
   // TODO(cir): verify for complex binops
 
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ShiftOp
+//===----------------------------------------------------------------------===//
+LogicalResult cir::ShiftOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Type resType = getResult().getType();
+  assert(!cir::MissingFeatures::vectorType());
+  bool isOp0Vec = false;
+  bool isOp1Vec = false;
+  if (isOp0Vec != isOp1Vec)
+    return emitOpError() << "input types cannot be one vector and one scalar";
+  if (isOp1Vec && op->getOperand(1).getType() != resType) {
+    return emitOpError() << "shift amount must have the type of the result "
+                         << "if it is vector shift";
+  }
   return mlir::success();
 }
 
@@ -1067,6 +1123,24 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
         return previous.getInput();
 
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// GetMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::GetMemberOp::verify() {
+  const auto recordTy = dyn_cast<RecordType>(getAddrTy().getPointee());
+  if (!recordTy)
+    return emitError() << "expected pointer to a record type";
+
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+
+  if (recordTy.getMembers()[getIndex()] != getResultTy().getPointee())
+    return emitError() << "member type mismatch";
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

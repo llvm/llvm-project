@@ -25,14 +25,29 @@
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_89 -target-feature +ptx81 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_89 -target-feature +ptx81 -DPTX=81\
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM89 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_90 -target-feature +ptx78 -DPTX=78 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX78_SM90 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100 -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM100 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100a -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM100a %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_101a -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM101a %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_120a -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM120a %s
 // ###  The last run to check with the highest SM and PTX version available
 // ###  to make sure target builtins are still accepted.
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100a -target-feature +ptx87 \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_120a -target-feature +ptx87 -DPTX=87 \
 // RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
-// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM89 %s
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM120a %s
 
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
@@ -229,6 +244,14 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
   double td3 = __nvvm_sqrt_rn_d(d1);
 // CHECK: call double @llvm.nvvm.rcp.rn.d
   double td4 = __nvvm_rcp_rn_d(d2);
+
+// CHECK: call float @llvm.nvvm.fabs.f32
+  float t6 = __nvvm_fabs_f(f1);
+// CHECK: call float @llvm.nvvm.fabs.ftz.f32
+  float t7 = __nvvm_fabs_ftz_f(f2);
+
+// CHECK: call double @llvm.fabs.f64
+  double td5 = __nvvm_fabs_d(d1);
 
 // CHECK: call void @llvm.nvvm.membar.cta()
   __nvvm_membar_cta();
@@ -995,7 +1018,7 @@ __device__ void nvvm_cvt_sm80() {
 
 // CHECK-LABEL: nvvm_cvt_sm89
 __device__ void nvvm_cvt_sm89() {
-#if __CUDA_ARCH__ >= 890
+#if (PTX >= 81) && (__CUDA_ARCH__ >= 890)
   // CHECK_PTX81_SM89: call i16 @llvm.nvvm.ff.to.e4m3x2.rn(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff_to_e4m3x2_rn(1.0f, 1.0f);
   // CHECK_PTX81_SM89: call i16 @llvm.nvvm.ff.to.e4m3x2.rn.relu(float 1.000000e+00, float 1.000000e+00)
@@ -1022,6 +1045,133 @@ __device__ void nvvm_cvt_sm89() {
   __nvvm_e5m2x2_to_f16x2_rn(0x4c4c);
   // CHECK_PTX81_SM89: call <2 x half> @llvm.nvvm.e5m2x2.to.f16x2.rn.relu(i16 19532)
   __nvvm_e5m2x2_to_f16x2_rn_relu(0x4c4c);
+
+  // CHECK_PTX81_SM89: call i32 @llvm.nvvm.f2tf32.rna.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rna_satfinite(1.0f);
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_cvt_sm90
+__device__ void nvvm_cvt_sm90() {
+#if (PTX >= 78) && (__CUDA_ARCH__ >= 900)
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rn(float 1.000000e+00)
+  __nvvm_f2tf32_rn(1.0f); 
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rn.relu(float 1.000000e+00)
+  __nvvm_f2tf32_rn_relu(1.0f); 
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rz(float 1.000000e+00)
+  __nvvm_f2tf32_rz(1.0f); 
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rz.relu(float 1.000000e+00)
+  __nvvm_f2tf32_rz_relu(1.0f); 
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_cvt_sm100
+__device__ void nvvm_cvt_sm100() {
+#if (PTX >= 86) && (__CUDA_ARCH__ >= 1000)
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rn.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rn_satfinite(1.0f); 
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rn.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rn_relu_satfinite(1.0f); 
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rz.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rz_satfinite(1.0f); 
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rz.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rz_relu_satfinite(1.0f); 
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_cvt_sm100a_sm101a_sm120a
+__device__ void nvvm_cvt_sm100a_sm101a_sm120a() {
+#if (PTX >= 86) && \
+    (__CUDA_ARCH_FEAT_SM100_ALL || __CUDA_ARCH_FEAT_SM101_ALL || \
+     __CUDA_ARCH_FEAT_SM120_ALL)
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e2m3x2_rn_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e2m3x2_rn_relu_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e3m2x2_rn_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e3m2x2_rn_relu_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn(i16 19532)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn(i16 19532)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn(i16 19532)
+  __nvvm_e2m3x2_to_f16x2_rn(0x4C4C);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn.relu(i16 18504)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn.relu(i16 18504)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn.relu(i16 18504)
+  __nvvm_e2m3x2_to_f16x2_rn_relu(0x4848);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn(i16 18504)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn(i16 18504)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn(i16 18504)
+  __nvvm_e3m2x2_to_f16x2_rn(0x4848);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
+  __nvvm_e3m2x2_to_f16x2_rn_relu(0x4C4C);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rz(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rz_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rp(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rp_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rz({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rz_satfinite({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rp({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rp_satfinite({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
+  // CHECK_PTX86_SM101a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
+  // CHECK_PTX86_SM120a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
+  __nvvm_ue8m0x2_to_bf16x2(0x4C4C);
+  
 #endif
   // CHECK: ret void
 }
@@ -1039,9 +1189,9 @@ __device__ void nvvm_cvt_sm89() {
 __device__ void nvvm_abs_neg_bf16_bf16x2_sm80() {
 #if __CUDA_ARCH__ >= 800
 
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.abs.bf16(bfloat 0xR3DCD)
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fabs.bf16(bfloat 0xR3DCD)
   __nvvm_abs_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.abs.bf16x2(<2 x bfloat> splat (bfloat 0xR3DCD))
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> splat (bfloat 0xR3DCD))
   __nvvm_abs_bf16x2(BF16X2);
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.neg.bf16(bfloat 0xR3DCD)

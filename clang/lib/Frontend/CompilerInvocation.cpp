@@ -2078,7 +2078,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     A->render(Args, ASL);
     for (const auto &arg : ASL) {
       StringRef ArgStr(arg);
-      Opts.CmdArgs.insert(Opts.CmdArgs.end(), ArgStr.begin(), ArgStr.end());
+      llvm::append_range(Opts.CmdArgs, ArgStr);
       // using \00 to separate each commandline options.
       Opts.CmdArgs.push_back('\0');
     }
@@ -2435,13 +2435,25 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
 
   // Check for invalid combinations of header-include-format
   // and header-include-filtering.
-  if ((Opts.HeaderIncludeFormat == HIFMT_Textual &&
-       Opts.HeaderIncludeFiltering != HIFIL_None) ||
-      (Opts.HeaderIncludeFormat == HIFMT_JSON &&
-       Opts.HeaderIncludeFiltering != HIFIL_Only_Direct_System))
-    Diags.Report(diag::err_drv_print_header_env_var_combination_cc1)
-        << Args.getLastArg(OPT_header_include_format_EQ)->getValue()
-        << Args.getLastArg(OPT_header_include_filtering_EQ)->getValue();
+  if (Opts.HeaderIncludeFormat == HIFMT_Textual &&
+      Opts.HeaderIncludeFiltering != HIFIL_None) {
+    if (Args.hasArg(OPT_header_include_format_EQ))
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_combination)
+          << headerIncludeFormatKindToString(Opts.HeaderIncludeFormat)
+          << headerIncludeFilteringKindToString(Opts.HeaderIncludeFiltering);
+    else
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_filtering)
+          << headerIncludeFilteringKindToString(Opts.HeaderIncludeFiltering);
+  } else if (Opts.HeaderIncludeFormat == HIFMT_JSON &&
+             Opts.HeaderIncludeFiltering == HIFIL_None) {
+    if (Args.hasArg(OPT_header_include_filtering_EQ))
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_combination)
+          << headerIncludeFormatKindToString(Opts.HeaderIncludeFormat)
+          << headerIncludeFilteringKindToString(Opts.HeaderIncludeFiltering);
+    else
+      Diags.Report(diag::err_drv_print_header_cc1_invalid_format)
+          << headerIncludeFormatKindToString(Opts.HeaderIncludeFormat);
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

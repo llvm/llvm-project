@@ -118,6 +118,7 @@ public:
 static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
+  dap.RegisterRequest<CancelRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
   dap.RegisterRequest<ConfigurationDoneRequestHandler>();
   dap.RegisterRequest<ContinueRequestHandler>();
@@ -603,8 +604,10 @@ int main(int argc, char *argv[]) {
     redirection_test();
 
   if (auto Err = dap.Loop()) {
+    DAP_LOG(log.get(), "({0}) DAP session error: {1}", client_name,
+            llvm::toStringWithoutConsuming(Err));
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                "DAP session (" + client_name + ") error: ");
+                                "DAP session error: ");
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

@@ -74,7 +74,10 @@ write_cmake_config("abi-breaking") {
 }
 
 write_cmake_config("config") {
-  public_deps = [ ":llvm-config" ]
+  public_deps = [
+    ":Targets",
+    ":llvm-config",
+  ]
 
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
@@ -384,6 +387,12 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
+}
+
+write_cmake_config("Targets") {
+  input = "Targets.h.cmake"
+  output = "$target_gen_dir/Targets.h"
+  values = []
 
   if (llvm_build_AArch64) {
     values += [ "LLVM_HAS_AARCH64_TARGET=1" ]

@@ -32,47 +32,54 @@ constexpr bool isOneOfTypes =
 template <typename ToTest, typename T>
 constexpr bool isOneOfTypes<ToTest, T> = std::is_same_v<ToTest, T>;
 
+template <typename OpTy>
 class OpenACCClauseCIREmitter final
-    : public OpenACCClauseVisitor<OpenACCClauseCIREmitter> {
-  CIRGenModule &cgm;
+    : public OpenACCClauseVisitor<OpenACCClauseCIREmitter<OpTy>> {
+  OpTy &operation;
+  CIRGenFunction &cgf;
+  CIRGenBuilderTy &builder;
+
   // This is necessary since a few of the clauses emit differently based on the
   // directive kind they are attached to.
   OpenACCDirectiveKind dirKind;
+  // TODO(cir): This source location should be able to go away once the NYI
+  // diagnostics are gone.
   SourceLocation dirLoc;
 
-  struct AttributeData {
-    // Value of the 'default' attribute, added on 'data' and 'compute'/etc
-    // constructs as a 'default-attr'.
-    std::optional<ClauseDefaultValue> defaultVal = std::nullopt;
-    // For directives that have their device type architectures listed in
-    // attributes (init/shutdown/etc), the list of architectures to be emitted.
-    llvm::SmallVector<mlir::acc::DeviceType> deviceTypeArchs{};
-  } attrData;
+  const OpenACCDeviceTypeClause *lastDeviceTypeClause = nullptr;
 
   void clauseNotImplemented(const OpenACCClause &c) {
-    cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
+    cgf.cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
   }
 
-public:
-  OpenACCClauseCIREmitter(CIRGenModule &cgm, OpenACCDirectiveKind dirKind,
-                          SourceLocation dirLoc)
-      : cgm(cgm), dirKind(dirKind), dirLoc(dirLoc) {}
+  mlir::Value createIntExpr(const Expr *intExpr) {
+    mlir::Value expr = cgf.emitScalarExpr(intExpr);
+    mlir::Location exprLoc = cgf.cgm.getLoc(intExpr->getBeginLoc());
 
-  void VisitClause(const OpenACCClause &clause) {
-    clauseNotImplemented(clause);
+    mlir::IntegerType targetType = mlir::IntegerType::get(
+        &cgf.getMLIRContext(), cgf.getContext().getIntWidth(intExpr->getType()),
+        intExpr->getType()->isSignedIntegerOrEnumerationType()
+            ? mlir::IntegerType::SignednessSemantics::Signed
+            : mlir::IntegerType::SignednessSemantics::Unsigned);
+
+    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+        exprLoc, targetType, expr);
+    return conversionOp.getResult(0);
   }
 
-  void VisitDefaultClause(const OpenACCDefaultClause &clause) {
-    switch (clause.getDefaultClauseKind()) {
-    case OpenACCDefaultClauseKind::None:
-      attrData.defaultVal = ClauseDefaultValue::None;
-      break;
-    case OpenACCDefaultClauseKind::Present:
-      attrData.defaultVal = ClauseDefaultValue::Present;
-      break;
-    case OpenACCDefaultClauseKind::Invalid:
-      break;
-    }
+  // 'condition' as an OpenACC grammar production is used for 'if' and (some
+  // variants of) 'self'.  It needs to be emitted as a signless-1-bit value, so
+  // this function emits the expression, then sets the unrealized conversion
+  // cast correctly, and returns the completed value.
+  mlir::Value createCondition(const Expr *condExpr) {
+    mlir::Value condition = cgf.evaluateExprAsBool(condExpr);
+    mlir::Location exprLoc = cgf.cgm.getLoc(condExpr->getBeginLoc());
+    mlir::IntegerType targetType = mlir::IntegerType::get(
+        &cgf.getMLIRContext(), /*width=*/1,
+        mlir::IntegerType::SignednessSemantics::Signless);
+    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+        exprLoc, targetType, condition);
+    return conversionOp.getResult(0);
   }
 
   mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
@@ -88,64 +95,359 @@ public:
         .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
 
-  void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
+  // Overload of this function that only returns the device-types list.
+  mlir::ArrayAttr
+  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes) {
+    mlir::ValueRange argument;
+    mlir::MutableOperandRange range{operation};
 
-    switch (dirKind) {
-    case OpenACCDirectiveKind::Init:
-    case OpenACCDirectiveKind::Set:
-    case OpenACCDirectiveKind::Shutdown: {
-      // Device type has a list that is either a 'star' (emitted as 'star'),
-      // or an identifer list, all of which get added for attributes.
+    return handleDeviceTypeAffectedClause(existingDeviceTypes, argument, range);
+  }
+  // Overload of this function for when 'segments' aren't necessary.
+  mlir::ArrayAttr
+  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes,
+                                 mlir::ValueRange argument,
+                                 mlir::MutableOperandRange argCollection) {
+    llvm::SmallVector<int32_t> segments;
+    assert(argument.size() <= 1 &&
+           "Overload only for cases where segments don't need to be added");
+    return handleDeviceTypeAffectedClause(existingDeviceTypes, argument,
+                                          argCollection, segments);
+  }
 
-      for (const DeviceTypeArgument &arg : clause.getArchitectures())
-        attrData.deviceTypeArchs.push_back(decodeDeviceType(arg.first));
-      break;
+  // Handle a clause affected by the 'device_type' to the point that they need
+  // to have attributes added in the correct/corresponding order, such as
+  // 'num_workers' or 'vector_length' on a compute construct. The 'argument' is
+  // a collection of operands that need to be appended to the `argCollection` as
+  // we're adding a 'device_type' entry.  If there is more than 0 elements in
+  // the 'argument', the collection must be non-null, as it is needed to add to
+  // it.
+  // As some clauses, such as 'num_gangs' or 'wait' require a 'segments' list to
+  // be maintained, this takes a list of segments that will be updated with the
+  // proper counts as 'argument' elements are added.
+  //
+  // In MLIR, the 'operands' are stored as a large array, with a separate array
+  // of 'segments' that show which 'operand' applies to which 'operand-kind'.
+  // That is, a 'num_workers' operand-kind or 'num_vectors' operand-kind.
+  //
+  // So the operands array might have 4 elements, but the 'segments' array will
+  // be something like:
+  //
+  // {0, 0, 0, 2, 0, 1, 1, 0, 0...}
+  //
+  // Where each position belongs to a specific 'operand-kind'.  So that
+  // specifies that whichever operand-kind corresponds with index '3' has 2
+  // elements, and should take the 1st 2 operands off the list (since all
+  // preceding values are 0). operand-kinds corresponding to 5 and 6 each have
+  // 1 element.
+  //
+  // Fortunately, the `MutableOperandRange` append function actually takes care
+  // of that for us at the 'top level'.
+  //
+  // However, in cases like `num_gangs' or 'wait', where each individual
+  // 'element' might be itself array-like, there is a separate 'segments' array
+  // for them. So in the case of:
+  //
+  // device_type(nvidia, radeon) num_gangs(1, 2, 3)
+  //
+  // We have to emit that as TWO arrays into the IR (where the device_type is an
+  // attribute), so they look like:
+  //
+  // num_gangs({One : i32, Two : i32, Three : i32} [#acc.device_type<nvidia>],\
+  //           {One : i32, Two : i32, Three : i32} [#acc.device_type<radeon>])
+  //
+  // When stored in the 'operands' list, the top-level 'segment' for
+  // 'num_gangs' just shows 6 elements. In order to get the array-like
+  // apperance, the 'numGangsSegments' list is kept as well. In the above case,
+  // we've inserted 6 operands, so the 'numGangsSegments' must contain 2
+  // elements, 1 per array, and each will have a value of 3.  The verifier will
+  // ensure that the collections counts are correct.
+  mlir::ArrayAttr
+  handleDeviceTypeAffectedClause(mlir::ArrayAttr existingDeviceTypes,
+                                 mlir::ValueRange argument,
+                                 mlir::MutableOperandRange argCollection,
+                                 llvm::SmallVector<int32_t> &segments) {
+    llvm::SmallVector<mlir::Attribute> deviceTypes;
+
+    // Collect the 'existing' device-type attributes so we can re-create them
+    // and insert them.
+    if (existingDeviceTypes) {
+      for (const mlir::Attribute &Attr : existingDeviceTypes)
+        deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+            builder.getContext(),
+            cast<mlir::acc::DeviceTypeAttr>(Attr).getValue()));
     }
-    default:
+
+    // Insert 1 version of the 'expr' to the NumWorkers list per-current
+    // device type.
+    if (lastDeviceTypeClause) {
+      for (const DeviceTypeArgument &arch :
+           lastDeviceTypeClause->getArchitectures()) {
+        deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+            builder.getContext(), decodeDeviceType(arch.getIdentifierInfo())));
+        if (!argument.empty()) {
+          argCollection.append(argument);
+          segments.push_back(argument.size());
+        }
+      }
+    } else {
+      // Else, we just add a single for 'none'.
+      deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
+      if (!argument.empty()) {
+        argCollection.append(argument);
+        segments.push_back(argument.size());
+      }
+    }
+
+    return mlir::ArrayAttr::get(builder.getContext(), deviceTypes);
+  }
+
+public:
+  OpenACCClauseCIREmitter(OpTy &operation, CIRGenFunction &cgf,
+                          CIRGenBuilderTy &builder,
+                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc)
+      : operation(operation), cgf(cgf), builder(builder), dirKind(dirKind),
+        dirLoc(dirLoc) {}
+
+  void VisitClause(const OpenACCClause &clause) {
+    clauseNotImplemented(clause);
+  }
+
+  void VisitDefaultClause(const OpenACCDefaultClause &clause) {
+    // This type-trait checks if 'op'(the first arg) is one of the mlir::acc
+    // operations listed in the rest of the arguments.
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, DataOp>) {
+      switch (clause.getDefaultClauseKind()) {
+      case OpenACCDefaultClauseKind::None:
+        operation.setDefaultAttr(ClauseDefaultValue::None);
+        break;
+      case OpenACCDefaultClauseKind::Present:
+        operation.setDefaultAttr(ClauseDefaultValue::Present);
+        break;
+      case OpenACCDefaultClauseKind::Invalid:
+        break;
+      }
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
       return clauseNotImplemented(clause);
     }
   }
 
-  // Apply any of the clauses that resulted in an 'attribute'.
-  template <typename Op>
-  void applyAttributes(CIRGenBuilderTy &builder, Op &op) {
+  void VisitDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
+    lastDeviceTypeClause = &clause;
+    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp>) {
+      llvm::for_each(
+          clause.getArchitectures(), [this](const DeviceTypeArgument &arg) {
+            operation.addDeviceType(builder.getContext(),
+                                    decodeDeviceType(arg.getIdentifierInfo()));
+          });
+    } else if constexpr (isOneOfTypes<OpTy, SetOp>) {
+      assert(!operation.getDeviceTypeAttr() && "already have device-type?");
+      assert(clause.getArchitectures().size() <= 1);
 
-    if (attrData.defaultVal.has_value()) {
-      // FIXME: OpenACC: as we implement this for other directive kinds, we have
-      // to expand this list.
-      // This type-trait checks if 'op'(the first arg) is one of the mlir::acc
-      // operations listed in the rest of the arguments.
-      if constexpr (isOneOfTypes<Op, ParallelOp, SerialOp, KernelsOp, DataOp>)
-        op.setDefaultAttr(*attrData.defaultVal);
-      else
-        cgm.errorNYI(dirLoc, "OpenACC 'default' clause lowering for ", dirKind);
+      if (!clause.getArchitectures().empty())
+        operation.setDeviceType(
+            decodeDeviceType(clause.getArchitectures()[0].getIdentifierInfo()));
+    } else if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp,
+                                      DataOp>) {
+      // Nothing to do here, these constructs don't have any IR for these, as
+      // they just modify the other clauses IR.  So setting of `lastDeviceType`
+      // (done above) is all we need.
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. update, data, loop, routine, combined constructs remain.
+      return clauseNotImplemented(clause);
     }
+  }
 
-    if (!attrData.deviceTypeArchs.empty()) {
-      // FIXME: OpenACC: as we implement this for other directive kinds, we have
-      // to expand this list, or more likely, have a 'noop' branch as most other
-      // uses of this apply to the operands instead.
-      // This type-trait checks if 'op'(the first arg) is one of the mlir::acc
-      if constexpr (isOneOfTypes<Op, InitOp, ShutdownOp>) {
-        llvm::SmallVector<mlir::Attribute> deviceTypes;
-        for (mlir::acc::DeviceType DT : attrData.deviceTypeArchs)
-          deviceTypes.push_back(
-              mlir::acc::DeviceTypeAttr::get(builder.getContext(), DT));
+  void VisitNumWorkersClause(const OpenACCNumWorkersClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, KernelsOp>) {
+      mlir::MutableOperandRange range = operation.getNumWorkersMutable();
+      operation.setNumWorkersDeviceTypeAttr(handleDeviceTypeAffectedClause(
+          operation.getNumWorkersDeviceTypeAttr(),
+          createIntExpr(clause.getIntExpr()), range));
+    } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
+      llvm_unreachable("num_workers not valid on serial");
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
 
-        op.setDeviceTypesAttr(
-            mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
-      } else if constexpr (isOneOfTypes<Op, SetOp>) {
-        assert(attrData.deviceTypeArchs.size() <= 1 &&
-               "Set can only have a single architecture");
-        if (!attrData.deviceTypeArchs.empty())
-          op.setDeviceType(attrData.deviceTypeArchs[0]);
+  void VisitVectorLengthClause(const OpenACCVectorLengthClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, KernelsOp>) {
+      mlir::MutableOperandRange range = operation.getVectorLengthMutable();
+      operation.setVectorLengthDeviceTypeAttr(handleDeviceTypeAffectedClause(
+          operation.getVectorLengthDeviceTypeAttr(),
+          createIntExpr(clause.getIntExpr()), range));
+    } else if constexpr (isOneOfTypes<OpTy, SerialOp>) {
+      llvm_unreachable("vector_length not valid on serial");
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitAsyncClause(const OpenACCAsyncClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, DataOp>) {
+      if (!clause.hasIntExpr()) {
+        operation.setAsyncOnlyAttr(
+            handleDeviceTypeAffectedClause(operation.getAsyncOnlyAttr()));
       } else {
-        cgm.errorNYI(dirLoc, "OpenACC 'device_type' clause lowering for ",
-                     dirKind);
+        mlir::MutableOperandRange range = operation.getAsyncOperandsMutable();
+        operation.setAsyncOperandsDeviceTypeAttr(handleDeviceTypeAffectedClause(
+            operation.getAsyncOperandsDeviceTypeAttr(),
+            createIntExpr(clause.getIntExpr()), range));
       }
+    } else if constexpr (isOneOfTypes<OpTy, WaitOp>) {
+      // Wait doesn't have a device_type, so its handling here is slightly
+      // different.
+      if (!clause.hasIntExpr())
+        operation.setAsync(true);
+      else
+        operation.getAsyncOperandMutable().append(
+            createIntExpr(clause.getIntExpr()));
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain. Data, enter data, exit data,
+      // update, combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitSelfClause(const OpenACCSelfClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp>) {
+      if (clause.isEmptySelfClause()) {
+        operation.setSelfAttr(true);
+      } else if (clause.isConditionExprClause()) {
+        assert(clause.hasConditionExpr());
+        operation.getSelfCondMutable().append(
+            createCondition(clause.getConditionExpr()));
+      } else {
+        llvm_unreachable("var-list version of self shouldn't get here");
+      }
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. If, combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitIfClause(const OpenACCIfClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, InitOp,
+                               ShutdownOp, SetOp, DataOp, WaitOp>) {
+      operation.getIfCondMutable().append(
+          createCondition(clause.getConditionExpr()));
+    } else {
+      // 'if' applies to most of the constructs, but hold off on lowering them
+      // until we can write tests/know what we're doing with codegen to make
+      // sure we get it right.
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Enter data, exit data, host_data, update, combined 
+      // constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitDeviceNumClause(const OpenACCDeviceNumClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, InitOp, ShutdownOp, SetOp>) {
+      operation.getDeviceNumMutable().append(
+          createIntExpr(clause.getIntExpr()));
+    } else {
+      llvm_unreachable(
+          "init, shutdown, set, are only valid device_num constructs");
+    }
+  }
+
+  void VisitNumGangsClause(const OpenACCNumGangsClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, KernelsOp>) {
+      llvm::SmallVector<mlir::Value> values;
+
+      for (const Expr *E : clause.getIntExprs())
+        values.push_back(createIntExpr(E));
+
+      llvm::SmallVector<int32_t> segments;
+      if (operation.getNumGangsSegments())
+        llvm::copy(*operation.getNumGangsSegments(),
+                   std::back_inserter(segments));
+
+      mlir::MutableOperandRange range = operation.getNumGangsMutable();
+      operation.setNumGangsDeviceTypeAttr(handleDeviceTypeAffectedClause(
+          operation.getNumGangsDeviceTypeAttr(), values, range, segments));
+      operation.setNumGangsSegments(llvm::ArrayRef<int32_t>{segments});
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitWaitClause(const OpenACCWaitClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, ParallelOp, SerialOp, KernelsOp, DataOp>) {
+      if (!clause.hasExprs()) {
+        operation.setWaitOnlyAttr(
+            handleDeviceTypeAffectedClause(operation.getWaitOnlyAttr()));
+      } else {
+        llvm::SmallVector<mlir::Value> values;
+
+        if (clause.hasDevNumExpr())
+          values.push_back(createIntExpr(clause.getDevNumExpr()));
+        for (const Expr *E : clause.getQueueIdExprs())
+          values.push_back(createIntExpr(E));
+
+        llvm::SmallVector<int32_t> segments;
+        if (operation.getWaitOperandsSegments())
+          llvm::copy(*operation.getWaitOperandsSegments(),
+                     std::back_inserter(segments));
+
+        unsigned beforeSegmentSize = segments.size();
+
+        mlir::MutableOperandRange range = operation.getWaitOperandsMutable();
+        operation.setWaitOperandsDeviceTypeAttr(handleDeviceTypeAffectedClause(
+            operation.getWaitOperandsDeviceTypeAttr(), values, range,
+            segments));
+        operation.setWaitOperandsSegments(segments);
+
+        // In addition to having to set the 'segments', wait also has a list of
+        // bool attributes whether it is annotated with 'devnum'.  We can use
+        // our knowledge of how much the 'segments' array grew to determine how
+        // many we need to add.
+        llvm::SmallVector<bool> hasDevNums;
+        if (operation.getHasWaitDevnumAttr())
+          for (mlir::Attribute A : operation.getHasWaitDevnumAttr())
+            hasDevNums.push_back(cast<mlir::BoolAttr>(A).getValue());
+
+        hasDevNums.insert(hasDevNums.end(), segments.size() - beforeSegmentSize,
+                          clause.hasDevNumExpr());
+
+        operation.setHasWaitDevnumAttr(builder.getBoolArrayAttr(hasDevNums));
+      }
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. Enter data, exit data, update, Combined constructs remain.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitDefaultAsyncClause(const OpenACCDefaultAsyncClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, SetOp>) {
+      operation.getDefaultAsyncMutable().append(
+          createIntExpr(clause.getIntExpr()));
+    } else {
+      llvm_unreachable("set, is only valid device_num constructs");
     }
   }
 };
+
+template <typename OpTy>
+auto makeClauseEmitter(OpTy &op, CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                       OpenACCDirectiveKind dirKind, SourceLocation dirLoc) {
+  return OpenACCClauseCIREmitter<OpTy>(op, cgf, builder, dirKind, dirLoc);
+}
 
 } // namespace
 
@@ -158,44 +460,47 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
 
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-
-  // Clause-emitter must be here because it might modify operands.
-  OpenACCClauseCIREmitter clauseEmitter(getCIRGenModule(), dirKind, dirLoc);
-  clauseEmitter.VisitClauseList(clauses);
-
   auto op = builder.create<Op>(start, retTy, operands);
 
-  // Apply the attributes derived from the clauses.
-  clauseEmitter.applyAttributes(builder, op);
+  {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    // Sets insertion point before the 'op', since every new expression needs to
+    // be before the operation.
+    builder.setInsertionPoint(op);
+    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
+        .VisitClauseList(clauses);
+  }
 
-  mlir::Block &block = op.getRegion().emplaceBlock();
-  mlir::OpBuilder::InsertionGuard guardCase(builder);
-  builder.setInsertionPointToEnd(&block);
+  {
+    mlir::Block &block = op.getRegion().emplaceBlock();
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPointToEnd(&block);
 
-  LexicalScope ls{*this, start, builder.getInsertionBlock()};
-  res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
+    LexicalScope ls{*this, start, builder.getInsertionBlock()};
+    res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
 
-  builder.create<TermOp>(end);
+    builder.create<TermOp>(end);
+  }
   return res;
 }
 
 template <typename Op>
-mlir::LogicalResult CIRGenFunction::emitOpenACCOp(
+Op CIRGenFunction::emitOpenACCOp(
     mlir::Location start, OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
     llvm::ArrayRef<const OpenACCClause *> clauses) {
-  mlir::LogicalResult res = mlir::success();
-
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-
-  // Clause-emitter must be here because it might modify operands.
-  OpenACCClauseCIREmitter clauseEmitter(getCIRGenModule(), dirKind, dirLoc);
-  clauseEmitter.VisitClauseList(clauses);
-
   auto op = builder.create<Op>(start, retTy, operands);
-  // Apply the attributes derived from the clauses.
-  clauseEmitter.applyAttributes(builder, op);
-  return res;
+
+  {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    // Sets insertion point before the 'op', since every new expression needs to
+    // be before the operation.
+    builder.setInsertionPoint(op);
+    makeClauseEmitter(op, *this, builder, dirKind, dirLoc)
+        .VisitClauseList(clauses);
+  }
+  return op;
 }
 
 mlir::LogicalResult
@@ -234,66 +539,100 @@ CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  return emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+  emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                                s.clauses());
+  return mlir::success();
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCSetConstruct(const OpenACCSetConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  return emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+  emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                               s.clauses());
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
-  return emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
+  emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
                                    s.getDirectiveLoc(), s.clauses());
+  return mlir::success();
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  auto waitOp = emitOpenACCOp<WaitOp>(start, s.getDirectiveKind(),
+                                   s.getDirectiveLoc(), s.clauses());
+
+  auto createIntExpr = [this](const Expr *intExpr) {
+    mlir::Value expr = emitScalarExpr(intExpr);
+    mlir::Location exprLoc = cgm.getLoc(intExpr->getBeginLoc());
+
+    mlir::IntegerType targetType = mlir::IntegerType::get(
+        &getMLIRContext(), getContext().getIntWidth(intExpr->getType()),
+        intExpr->getType()->isSignedIntegerOrEnumerationType()
+            ? mlir::IntegerType::SignednessSemantics::Signed
+            : mlir::IntegerType::SignednessSemantics::Unsigned);
+
+    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+        exprLoc, targetType, expr);
+    return conversionOp.getResult(0);
+  };
+
+  // Emit the correct 'wait' clauses.
+  {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPoint(waitOp);
+
+    if (s.hasDevNumExpr())
+      waitOp.getWaitDevnumMutable().append(createIntExpr(s.getDevNumExpr()));
+
+    for (Expr *QueueExpr  : s.getQueueIdExprs())
+      waitOp.getWaitOperandsMutable().append(createIntExpr(QueueExpr));
+  }
+
+  return mlir::success();
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Loop Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Loop Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Combined Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Combined Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult
-CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Wait Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Update Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Update Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Cache Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Cache Construct");
   return mlir::failure();
 }

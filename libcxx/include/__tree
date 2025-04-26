@@ -1411,8 +1411,9 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _
       __cache.__advance();
     }
   }
+  const_iterator __e = end();
   for (; __first != __last; ++__first)
-    __insert_multi(_NodeTypes::__get_value(*__first));
+    __insert_multi(__e, _NodeTypes::__get_value(*__first));
 }
 
 template <class _Tp, class _Compare, class _Allocator>
