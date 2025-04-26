@@ -48,7 +48,6 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "llvm/Support/CommandLine.h"
@@ -262,7 +261,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
     {"all_sync",
-     &I::genVoteAllSync,
+     &I::genVoteSync<mlir::NVVM::VoteSyncKind::all>,
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"allocated",
@@ -275,7 +274,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"mask", asAddr}, {"dim", asValue}}},
      /*isElemental=*/false},
     {"any_sync",
-     &I::genVoteAnySync,
+     &I::genVoteSync<mlir::NVVM::VoteSyncKind::any>,
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"asind", &I::genAsind},
@@ -341,7 +340,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"atomicsubl", &I::genAtomicSub, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"atomicxori", &I::genAtomicXor, {{{"a", asAddr}, {"v", asValue}}}, false},
     {"ballot_sync",
-     &I::genVoteBallotSync,
+     &I::genVoteSync<mlir::NVVM::VoteSyncKind::ballot>,
      {{{"mask", asValue}, {"pred", asValue}}},
      /*isElemental=*/false},
     {"bessel_jn",
@@ -462,6 +461,17 @@ static constexpr IntrinsicHandler handlers[]{
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
     {"free", &I::genFree},
+    {"fseek",
+     &I::genFseek,
+     {{{"unit", asValue},
+       {"offset", asValue},
+       {"whence", asValue},
+       {"status", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"ftell",
+     &I::genFtell,
+     {{{"unit", asValue}, {"offset", asAddr}}},
+     /*isElemental=*/false},
     {"get_command",
      &I::genGetCommand,
      {{{"command", asBox, handleDynamicOptional},
@@ -781,6 +791,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"putenv",
+     &I::genPutenv,
+     {{{"str", asAddr}, {"status", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"random_init",
      &I::genRandomInit,
@@ -4139,6 +4153,69 @@ void IntrinsicLibrary::genFree(llvm::ArrayRef<fir::ExtendedValue> args) {
   fir::runtime::genFree(builder, loc, fir::getBase(args[0]));
 }
 
+// FSEEK
+fir::ExtendedValue
+IntrinsicLibrary::genFseek(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 4 && !resultType.has_value()) ||
+         (args.size() == 3 && resultType.has_value()));
+  mlir::Value unit = fir::getBase(args[0]);
+  mlir::Value offset = fir::getBase(args[1]);
+  mlir::Value whence = fir::getBase(args[2]);
+  if (!unit)
+    fir::emitFatalError(loc, "expected UNIT argument");
+  if (!offset)
+    fir::emitFatalError(loc, "expected OFFSET argument");
+  if (!whence)
+    fir::emitFatalError(loc, "expected WHENCE argument");
+  mlir::Value statusValue =
+      fir::runtime::genFseek(builder, loc, unit, offset, whence);
+  if (resultType.has_value()) { // function
+    return builder.createConvert(loc, *resultType, statusValue);
+  } else { // subroutine
+    const fir::ExtendedValue &statusVar = args[3];
+    if (!isStaticallyAbsent(statusVar)) {
+      mlir::Value statusAddr = fir::getBase(statusVar);
+      mlir::Value statusIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, statusAddr);
+      builder.genIfThen(loc, statusIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, statusValue, statusAddr);
+          })
+          .end();
+    }
+    return {};
+  }
+}
+
+// FTELL
+fir::ExtendedValue
+IntrinsicLibrary::genFtell(std::optional<mlir::Type> resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 2 && !resultType.has_value()) ||
+         (args.size() == 1 && resultType.has_value()));
+  mlir::Value unit = fir::getBase(args[0]);
+  if (!unit)
+    fir::emitFatalError(loc, "expected UNIT argument");
+  mlir::Value offsetValue = fir::runtime::genFtell(builder, loc, unit);
+  if (resultType.has_value()) { // function
+    return offsetValue;
+  } else { // subroutine
+    const fir::ExtendedValue &offsetVar = args[1];
+    if (!isStaticallyAbsent(offsetVar)) {
+      mlir::Value offsetAddr = fir::getBase(offsetVar);
+      mlir::Value offsetIsPresentAtRuntime =
+          builder.genIsNotNullAddr(loc, offsetAddr);
+      builder.genIfThen(loc, offsetIsPresentAtRuntime)
+          .genThen([&]() {
+            builder.createStoreWithConvert(loc, offsetValue, offsetAddr);
+          })
+          .end();
+    }
+    return {};
+  }
+}
+
 // GETCWD
 fir::ExtendedValue
 IntrinsicLibrary::genGetCwd(std::optional<mlir::Type> resultType,
@@ -5891,8 +5968,10 @@ IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
   bool mayBeSupported = false;
   if (mlir::Value arg1 = getBase(args[1])) {
     mlir::Type arg1Ty = arg1.getType();
-    if (fir::ReferenceType refTy = mlir::dyn_cast<fir::ReferenceType>(arg1Ty))
-      arg1Ty = refTy.getEleTy();
+    if (auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(arg1.getType()))
+      arg1Ty = eleTy;
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(arg1Ty))
+      arg1Ty = seqTy.getEleTy();
     switch (mlir::dyn_cast<mlir::FloatType>(arg1Ty).getWidth()) {
     case 16:
       mayBeSupported = arg1Ty.isBF16(); // kind=3
@@ -6505,45 +6584,20 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
   return value;
 }
 
-static mlir::Value genVoteSync(fir::FirOpBuilder &builder, mlir::Location loc,
-                               llvm::StringRef funcName, mlir::Type resTy,
-                               llvm::ArrayRef<mlir::Value> args) {
-  mlir::MLIRContext *context = builder.getContext();
-  mlir::Type i32Ty = builder.getI32Type();
-  mlir::Type i1Ty = builder.getI1Type();
-  mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {i32Ty, i1Ty}, {resTy});
-  auto funcOp = builder.createFunction(loc, funcName, ftype);
-  llvm::SmallVector<mlir::Value> filteredArgs;
-  return builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
-}
-
-// ALL_SYNC
-mlir::Value IntrinsicLibrary::genVoteAllSync(mlir::Type resultType,
-                                             llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  return genVoteSync(builder, loc, "llvm.nvvm.vote.all.sync",
-                     builder.getI1Type(), args);
-}
-
-// ANY_SYNC
-mlir::Value IntrinsicLibrary::genVoteAnySync(mlir::Type resultType,
-                                             llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  return genVoteSync(builder, loc, "llvm.nvvm.vote.any.sync",
-                     builder.getI1Type(), args);
-}
-
-// BALLOT_SYNC
-mlir::Value
-IntrinsicLibrary::genVoteBallotSync(mlir::Type resultType,
-                                    llvm::ArrayRef<mlir::Value> args) {
+// ALL_SYNC, ANY_SYNC, BALLOT_SYNC
+template <mlir::NVVM::VoteSyncKind kind>
+mlir::Value IntrinsicLibrary::genVoteSync(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   mlir::Value arg1 =
       builder.create<fir::ConvertOp>(loc, builder.getI1Type(), args[1]);
-  return builder
-      .create<mlir::NVVM::VoteBallotOp>(loc, resultType, args[0], arg1)
-      .getResult();
+  mlir::Type resTy = kind == mlir::NVVM::VoteSyncKind::ballot
+                         ? builder.getI32Type()
+                         : builder.getI1Type();
+  auto voteRes =
+      builder.create<mlir::NVVM::VoteSyncOp>(loc, resTy, args[0], arg1, kind)
+          .getResult();
+  return builder.create<fir::ConvertOp>(loc, resultType, voteRes);
 }
 
 // MATCH_ANY_SYNC
@@ -7254,6 +7308,39 @@ IntrinsicLibrary::genProduct(mlir::Type resultType,
                       "PRODUCT", resultType, args);
 }
 
+// PUTENV
+fir::ExtendedValue
+IntrinsicLibrary::genPutenv(std::optional<mlir::Type> resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert((resultType.has_value() && args.size() == 1) ||
+         (!resultType.has_value() && args.size() >= 1 && args.size() <= 2));
+
+  mlir::Value str = fir::getBase(args[0]);
+  mlir::Value strLength = fir::getLen(args[0]);
+  mlir::Value statusValue =
+      fir::runtime::genPutEnv(builder, loc, str, strLength);
+
+  if (resultType.has_value()) {
+    // Function form, return status.
+    return builder.createConvert(loc, *resultType, statusValue);
+  }
+
+  // Subroutine form, store status and return none.
+  const fir::ExtendedValue &status = args[1];
+  if (!isStaticallyAbsent(status)) {
+    mlir::Value statusAddr = fir::getBase(status);
+    mlir::Value statusIsPresentAtRuntime =
+        builder.genIsNotNullAddr(loc, statusAddr);
+    builder.genIfThen(loc, statusIsPresentAtRuntime)
+        .genThen([&]() {
+          builder.createStoreWithConvert(loc, statusValue, statusAddr);
+        })
+        .end();
+  }
+
+  return {};
+}
+
 // RANDOM_INIT
 void IntrinsicLibrary::genRandomInit(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
@@ -7506,12 +7593,46 @@ IntrinsicLibrary::genSameTypeAs(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genScale(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
+  mlir::FloatType floatTy = mlir::dyn_cast<mlir::FloatType>(resultType);
+  if (!floatTy.isF16() && !floatTy.isBF16()) // kind=4,8,10,16
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genScale(builder, loc, args[0], args[1]));
 
-  mlir::Value realX = fir::getBase(args[0]);
-  mlir::Value intI = fir::getBase(args[1]);
+  // Convert kind=2,3 arg X to kind=4. Convert kind=4 result back to kind=2,3.
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
+  mlir::Value result = builder.createConvert(
+      loc, resultType,
+      fir::runtime::genScale(
+          builder, loc, builder.createConvert(loc, f32Ty, args[0]), args[1]));
 
-  return builder.createConvert(
-      loc, resultType, fir::runtime::genScale(builder, loc, realX, intI));
+  // kind=4 runtime::genScale call may not signal kind=2,3 exceptions.
+  // If X is finite and result is infinite, signal IEEE_OVERFLOW
+  // If X is finite and scale(result, -I) != X, signal IEEE_UNDERFLOW
+  fir::IfOp outerIfOp =
+      builder.create<fir::IfOp>(loc, genIsFPClass(i1Ty, args[0], finiteTest),
+                                /*withElseRegion=*/false);
+  builder.setInsertionPointToStart(&outerIfOp.getThenRegion().front());
+  fir::IfOp innerIfOp =
+      builder.create<fir::IfOp>(loc, genIsFPClass(i1Ty, result, infiniteTest),
+                                /*withElseRegion=*/true);
+  builder.setInsertionPointToStart(&innerIfOp.getThenRegion().front());
+  genRaiseExcept(_FORTRAN_RUNTIME_IEEE_OVERFLOW |
+                 _FORTRAN_RUNTIME_IEEE_INEXACT);
+  builder.setInsertionPointToStart(&innerIfOp.getElseRegion().front());
+  mlir::Value minusI = builder.create<mlir::arith::MulIOp>(
+      loc, args[1], builder.createAllOnesInteger(loc, args[1].getType()));
+  mlir::Value reverseResult = builder.createConvert(
+      loc, resultType,
+      fir::runtime::genScale(
+          builder, loc, builder.createConvert(loc, f32Ty, result), minusI));
+  genRaiseExcept(
+      _FORTRAN_RUNTIME_IEEE_UNDERFLOW | _FORTRAN_RUNTIME_IEEE_INEXACT,
+      builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::ONE,
+                                          args[0], reverseResult));
+  builder.setInsertionPointAfter(outerIfOp);
+  return result;
 }
 
 // SCAN

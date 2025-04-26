@@ -1186,22 +1186,24 @@ void OpenACCDeclClauseInstantiator::VisitVectorClause(
 void OpenACCDeclClauseInstantiator::VisitCopyClause(
     const OpenACCCopyClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+                                 C.getModifierList());
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCopyClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.getVarList(), ParsedClause.getEndLoc());
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
 }
 
 void OpenACCDeclClauseInstantiator::VisitLinkClause(
     const OpenACCLinkClause &C) {
   ParsedClause.setVarListDetails(
       SemaRef.OpenACC().CheckLinkClauseVarList(VisitVarList(C.getVarList())),
-      /*IsReadOnly=*/false, /*IsZero=*/false);
+      OpenACCModifierKind::Invalid);
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
 
   NewClause = OpenACCLinkClause::Create(
@@ -1213,8 +1215,9 @@ void OpenACCDeclClauseInstantiator::VisitLinkClause(
 void OpenACCDeclClauseInstantiator::VisitDeviceResidentClause(
     const OpenACCDeviceResidentClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+                                 OpenACCModifierKind::Invalid);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
   NewClause = OpenACCDeviceResidentClause::Create(
       SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
@@ -1224,48 +1227,49 @@ void OpenACCDeclClauseInstantiator::VisitDeviceResidentClause(
 
 void OpenACCDeclClauseInstantiator::VisitCopyInClause(
     const OpenACCCopyInClause &C) {
-  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()), C.isReadOnly(),
-                                 /*IsZero=*/false);
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 C.getModifierList());
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCopyInClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isReadOnly(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 void OpenACCDeclClauseInstantiator::VisitCopyOutClause(
     const OpenACCCopyOutClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, C.isZero());
+                                 C.getModifierList());
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCopyOutClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 void OpenACCDeclClauseInstantiator::VisitCreateClause(
     const OpenACCCreateClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, C.isZero());
+                                 C.getModifierList());
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCreateClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 void OpenACCDeclClauseInstantiator::VisitPresentClause(
     const OpenACCPresentClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+                                 OpenACCModifierKind::Invalid);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
   NewClause = OpenACCPresentClause::Create(
       SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
@@ -1276,15 +1280,13 @@ void OpenACCDeclClauseInstantiator::VisitDevicePtrClause(
     const OpenACCDevicePtrClause &C) {
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
   // Ensure each var is a pointer type.
-  VarList.erase(std::remove_if(VarList.begin(), VarList.end(),
-                               [&](Expr *E) {
-                                 return SemaRef.OpenACC().CheckVarIsPointerType(
-                                     OpenACCClauseKind::DevicePtr, E);
-                               }),
-                VarList.end());
-  ParsedClause.setVarListDetails(VarList,
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return SemaRef.OpenACC().CheckVarIsPointerType(OpenACCClauseKind::DevicePtr,
+                                                   E);
+  });
+  ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
   NewClause = OpenACCDevicePtrClause::Create(
       SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
@@ -1593,11 +1595,10 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   auto *NewDD = cast_if_present<DecompositionDecl>(
       VisitVarDecl(D, /*InstantiatingVarTemplate=*/false, &NewBindingArray));
 
-  if (!NewDD || NewDD->isInvalidDecl())
+  if (!NewDD || NewDD->isInvalidDecl()) {
     for (auto *NewBD : NewBindings)
       NewBD->setInvalidDecl();
-
-  if (OldBindingPack) {
+  } else if (OldBindingPack) {
     // Mark the bindings in the pack as instantiated.
     auto Bindings = NewDD->bindings();
     BindingDecl *NewBindingPack = *llvm::find_if(
@@ -2735,6 +2736,9 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     LexicalDC = SemaRef.CurContext;
   }
 
+  Function->setIsDestroyingOperatorDelete(D->isDestroyingOperatorDelete());
+  Function->setIsTypeAwareOperatorNewOrDelete(
+      D->isTypeAwareOperatorNewOrDelete());
   Function->setLexicalDeclContext(LexicalDC);
 
   // Attach the parameters
@@ -4785,17 +4789,18 @@ TemplateDeclInstantiator::InstantiateClassTemplatePartialSpecialization(
       ClassTemplate->findPartialSpecialization(CTAI.CanonicalConverted,
                                                InstParams, InsertPos);
 
-  // Build the canonical type that describes the converted template
-  // arguments of the class template partial specialization.
-  QualType CanonType = SemaRef.Context.getTemplateSpecializationType(
-      TemplateName(ClassTemplate), CTAI.CanonicalConverted);
+  // Build the type that describes the converted template arguments of the class
+  // template partial specialization.
+  TypeSourceInfo *WrittenTy = SemaRef.Context.getTemplateSpecializationTypeInfo(
+      TemplateName(ClassTemplate), TemplArgInfo->getLAngleLoc(),
+      InstTemplateArgs, CTAI.CanonicalConverted);
 
   // Create the class template partial specialization declaration.
   ClassTemplatePartialSpecializationDecl *InstPartialSpec =
       ClassTemplatePartialSpecializationDecl::Create(
           SemaRef.Context, PartialSpec->getTagKind(), Owner,
           PartialSpec->getBeginLoc(), PartialSpec->getLocation(), InstParams,
-          ClassTemplate, CTAI.CanonicalConverted, CanonType,
+          ClassTemplate, CTAI.CanonicalConverted, WrittenTy->getType(),
           /*PrevDecl=*/nullptr);
 
   InstPartialSpec->setTemplateArgsAsWritten(InstTemplateArgs);
@@ -5592,7 +5597,64 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
-  Function->setDeclarationNameLoc(PatternDecl->getNameInfo().getInfo());
+  // Let the instantiation use the Pattern's DeclarationNameLoc, due to the
+  // following awkwardness:
+  //
+  //   1. There are out-of-tree users of getNameInfo().getSourceRange(), who
+  //   expect the source range of the instantiated declaration to be set to
+  //   point to the definition.
+  //
+  //   2. That getNameInfo().getSourceRange() might return the TypeLocInfo's
+  //   location it tracked.
+  //
+  //   3. Function might come from an (implicit) declaration, while the pattern
+  //   comes from a definition. In these cases, we need the PatternDecl's source
+  //   location.
+  //
+  // To that end, we need to more or less tweak the DeclarationNameLoc. However,
+  // we can't blindly copy the DeclarationNameLoc from the PatternDecl to the
+  // function, since it contains associated TypeLocs that should have already
+  // been transformed. So, we rebuild the TypeLoc for that purpose. Technically,
+  // we should create a new function declaration and assign everything we need,
+  // but InstantiateFunctionDefinition updates the declaration in place.
+  auto NameLocPointsToPattern = [&] {
+    DeclarationNameInfo PatternName = PatternDecl->getNameInfo();
+    DeclarationNameLoc PatternNameLoc = PatternName.getInfo();
+    switch (PatternName.getName().getNameKind()) {
+    case DeclarationName::CXXConstructorName:
+    case DeclarationName::CXXDestructorName:
+    case DeclarationName::CXXConversionFunctionName:
+      break;
+    default:
+      // Cases where DeclarationNameLoc doesn't matter, as it merely contains a
+      // source range.
+      return PatternNameLoc;
+    }
+
+    TypeSourceInfo *TSI = Function->getNameInfo().getNamedTypeInfo();
+    // TSI might be null if the function is named by a constructor template id.
+    // E.g. S<T>() {} for class template S with a template parameter T.
+    if (!TSI) {
+      // We don't care about the DeclarationName of the instantiated function,
+      // but only the DeclarationNameLoc. So if the TypeLoc is absent, we do
+      // nothing.
+      return PatternNameLoc;
+    }
+
+    QualType InstT = TSI->getType();
+    // We want to use a TypeLoc that reflects the transformed type while
+    // preserving the source location from the pattern.
+    TypeLocBuilder TLB;
+    TypeSourceInfo *PatternTSI = PatternName.getNamedTypeInfo();
+    assert(PatternTSI && "Pattern is supposed to have an associated TSI");
+    // FIXME: PatternTSI is not trivial. We should copy the source location
+    // along the TypeLoc chain. However a trivial TypeLoc is sufficient for
+    // getNameInfo().getSourceRange().
+    TLB.pushTrivial(Context, InstT, PatternTSI->getTypeLoc().getBeginLoc());
+    return DeclarationNameLoc::makeNamedTypeLoc(
+        TLB.getTypeSourceInfo(Context, InstT));
+  };
+  Function->setDeclarationNameLoc(NameLocPointsToPattern());
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);

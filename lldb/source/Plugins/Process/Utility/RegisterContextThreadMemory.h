@@ -99,6 +99,8 @@ private:
   RegisterContextThreadMemory(const RegisterContextThreadMemory &) = delete;
   const RegisterContextThreadMemory &
   operator=(const RegisterContextThreadMemory &) = delete;
+
+  std::mutex m_update_register_ctx_lock;
 };
 
 } // namespace lldb_private

@@ -179,6 +179,7 @@ public:
   virtual std::optional<bool> isUnsafePtr(const QualType T) const = 0;
   virtual bool isSafePtr(const CXXRecordDecl *) const = 0;
   virtual bool isSafePtrType(const QualType) const = 0;
+  virtual bool isSafeExpr(const Expr *) const { return false; }
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -260,6 +261,12 @@ public:
           return DynamicRecursiveASTVisitor::TraverseCompoundStmt(CS);
         return true;
       }
+
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
+        if (isSmartPtrClass(safeGetName(Decl)))
+          return true;
+        return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
+      }
     };
 
     LocalVisitor visitor(this);
@@ -298,6 +305,9 @@ public:
                   return true;
 
                 if (EFA.isACallToEnsureFn(InitArgOrigin))
+                  return true;
+
+                if (isSafeExpr(InitArgOrigin))
                   return true;
 
                 if (auto *Ref = llvm::dyn_cast<DeclRefExpr>(InitArgOrigin)) {
@@ -425,6 +435,10 @@ public:
   }
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrType(type);
+  }
+  bool isSafeExpr(const Expr *E) const final {
+    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
+           isa<ObjCMessageExpr>(E);
   }
   const char *ptrKind() const final { return "unretained"; }
 };

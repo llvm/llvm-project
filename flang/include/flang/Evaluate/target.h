@@ -15,6 +15,7 @@
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/target-rounding.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Support/Fortran.h"
 #include <cstdint>
@@ -131,7 +132,7 @@ public:
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
 private:
-  static constexpr int maxKind{16};
+  static constexpr int maxKind{common::maxKind};
   std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind + 1]{};
   std::uint8_t align_[common::TypeCategory_enumSize][maxKind + 1]{};
   bool isBigEndian_{false};

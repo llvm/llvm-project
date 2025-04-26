@@ -221,3 +221,10 @@ subroutine ieee_test
     ll(i) = ieee_is_finite(y(i)) ! allow ieee_arithmetic functions on the device.
   end do
 end subroutine
+
+attributes(host,device) subroutine do2(a,b,c,i)
+  integer a(*), b(*), c(*)
+  integer, value :: i  
+  c(i) = a(i) - b(i) ! ok. Should not error with Host array 
+                     ! cannot be present in device context
+end
