@@ -3109,6 +3109,17 @@ TEST_F(TokenAnnotatorTest, CSharpGenericTypeConstraint) {
   EXPECT_TOKEN(Tokens[18], tok::r_brace, TT_NamespaceRBrace);
 }
 
+TEST_F(TokenAnnotatorTest, CSharpNewModifier) {
+  auto Tokens = annotate("new public class NestedC {\n"
+                         "  public int x = 100;\n"
+                         "}",
+                         getGoogleStyle(FormatStyle::LK_CSharp));
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_ClassHeadName);
+  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_ClassLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::r_brace, TT_ClassRBrace);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsLabels) {
   auto Tokens = annotate("{ x: break; }");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
