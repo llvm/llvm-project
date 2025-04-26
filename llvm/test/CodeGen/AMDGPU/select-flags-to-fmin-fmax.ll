@@ -119,7 +119,7 @@ define float @v_test_fmin_legacy_ule_f32_nnan_nsz_flag(float %a, float %b) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_min_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule float %a, %b
   %val = select nnan nsz i1 %cmp, float %a, float %b
@@ -236,7 +236,7 @@ define float @v_test_fmax_legacy_uge_f32_nnan_nsz_flag(float %a, float %b) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_maximum_f32 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp uge float %a, %b
   %val = select nnan nsz i1 %cmp, float %a, float %b
@@ -693,7 +693,7 @@ define half @v_test_fmin_legacy_ule_f16_nnan_nsz_flag(half %a, half %b) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v1.l
+; GFX12-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_test_fmin_legacy_ule_f16_nnan_nsz_flag:
@@ -703,7 +703,7 @@ define half @v_test_fmin_legacy_ule_f16_nnan_nsz_flag(half %a, half %b) {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_min_num_f16_e32 v0, v0, v1
+; GFX12-FAKE16-NEXT:    v_minimum_f16 v0, v0, v1
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule half %a, %b
   %val = select nnan nsz i1 %cmp, half %a, half %b
@@ -872,7 +872,7 @@ define half @v_test_fmax_legacy_uge_f16_nnan_nsz_flag(half %a, half %b) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v1.l
+; GFX12-TRUE16-NEXT:    v_maximum_f16 v0.l, v0.l, v1.l
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: v_test_fmax_legacy_uge_f16_nnan_nsz_flag:
@@ -882,7 +882,7 @@ define half @v_test_fmax_legacy_uge_f16_nnan_nsz_flag(half %a, half %b) {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v1
+; GFX12-FAKE16-NEXT:    v_maximum_f16 v0, v0, v1
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp uge half %a, %b
   %val = select nnan nsz i1 %cmp, half %a, half %b
@@ -1122,7 +1122,7 @@ define <2 x half> @v_test_fmin_legacy_ule_v2f16_nnan_nsz_flag(<2 x half> %a, <2 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v1
+; GFX12-NEXT:    v_pk_minimum_f16 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp ule <2 x half> %a, %b
   %val = select nnan nsz <2 x i1> %cmp, <2 x half> %a, <2 x half> %b
@@ -1362,7 +1362,7 @@ define <2 x half> @v_test_fmax_legacy_uge_v2f16_nnan_nsz_flag(<2 x half> %a, <2 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v1
+; GFX12-NEXT:    v_pk_maximum_f16 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %cmp = fcmp uge <2 x half> %a, %b
   %val = select nnan nsz <2 x i1> %cmp, <2 x half> %a, <2 x half> %b
@@ -1692,8 +1692,12 @@ define <4 x half> @v_test_fmin_legacy_ule_v4f16_nnan_nsz_flag(<4 x half> %a, <4 
 ; GFX9-LABEL: v_test_fmin_legacy_ule_v4f16_nnan_nsz_flag:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_pk_min_f16 v0, v0, v2
-; GFX9-NEXT:    v_pk_min_f16 v1, v1, v3
+; GFX9-NEXT:    v_pk_max_f16 v2, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_min_f16 v1, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_fmin_legacy_ule_v4f16_nnan_nsz_flag:
@@ -1703,6 +1707,11 @@ define <4 x half> @v_test_fmin_legacy_ule_v4f16_nnan_nsz_flag(<4 x half> %a, <4 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v2, v2, v2
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v0
+; GFX12-NEXT:    v_pk_max_num_f16 v3, v3, v3
+; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_min_num_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_min_num_f16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -2034,8 +2043,12 @@ define <4 x half> @v_test_fmax_legacy_uge_v4f16_nnan_nsz_flag(<4 x half> %a, <4 
 ; GFX9-LABEL: v_test_fmax_legacy_uge_v4f16_nnan_nsz_flag:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
+; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX9-NEXT:    v_pk_max_f16 v0, v0, v2
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v3
+; GFX9-NEXT:    v_pk_max_f16 v2, v3, v3
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT:    v_pk_max_f16 v1, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_test_fmax_legacy_uge_v4f16_nnan_nsz_flag:
@@ -2045,6 +2058,11 @@ define <4 x half> @v_test_fmax_legacy_uge_v4f16_nnan_nsz_flag(<4 x half> %a, <4 
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_pk_max_num_f16 v2, v2, v2
+; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v0
+; GFX12-NEXT:    v_pk_max_num_f16 v3, v3, v3
+; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_pk_max_num_f16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_max_num_f16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -2079,7 +2097,7 @@ define float @v_test_fmin_legacy_uge_f32_nsz_flag__nnan_srcs(float %arg0, float 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_add_f32 v0, v0, v0 :: v_dual_add_f32 v1, v1, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %a = fadd nnan float %arg0, %arg0
   %b = fadd nnan float %arg1, %arg1
@@ -2114,7 +2132,7 @@ define float @v_test_fmax_legacy_uge_f32_nsz_flag__nnan_srcs(float %arg0, float 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_add_f32 v0, v0, v0 :: v_dual_add_f32 v1, v1, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_maximum_f32 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %a = fadd nnan float %arg0, %arg0
   %b = fadd nnan float %arg1, %arg1
