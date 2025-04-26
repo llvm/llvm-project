@@ -920,10 +920,6 @@ public:
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
 
-  StatisticsMap &GetSymbolLocatorStatistics() {
-    return m_symbol_locator_duration_map;
-  }
-
   void ResetStatistics();
 
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
