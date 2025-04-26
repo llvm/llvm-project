@@ -134,6 +134,13 @@ class SingleBlockImplicitTerminatorImpl<string op>
 class SingleBlockImplicitTerminator<string op>
     : TraitList<[SingleBlock, SingleBlockImplicitTerminatorImpl<op>]>;
 
+// This operation has nested regions with the supplied list of terminator
+// operations.
+class HasNestedTerminator<list<string> ops>
+    : ParamNativeOpTrait<"HasNestedTerminators", !interleave(ops, ", ")>,
+      StructuralOpTrait;
+
+
 // Op's regions don't have terminator.
 def NoTerminator : NativeOpTrait<"NoTerminator">, StructuralOpTrait;
 

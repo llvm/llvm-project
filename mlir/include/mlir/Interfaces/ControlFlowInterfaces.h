@@ -446,6 +446,12 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                            OpPrintingFlags().skipRegions())
             << ">";
 }
+
+/// Return the RegionBranchOpInterface operation that owns `successor` and
+/// defines its successor inputs.
+RegionBranchOpInterface
+getRegionBranchSuccessorOwner(RegionSuccessor successor);
+
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H

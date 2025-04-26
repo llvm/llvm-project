@@ -13,6 +13,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionKindInterface.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/Support/DebugLog.h"
@@ -76,14 +77,14 @@ detail::getBranchSuccessorArgument(const SuccessorOperands &operands,
 LogicalResult
 detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                                       const SuccessorOperands &operands) {
-  LDBG() << "Verifying branch successor operands for successor #" << succNo
-         << " in operation " << op->getName();
+  LDBG(3) << "Verifying branch successor operands for successor #" << succNo
+          << " in operation " << op->getName();
 
   // Check the count.
   unsigned operandCount = operands.size();
   Block *destBB = op->getSuccessor(succNo);
-  LDBG() << "Branch has " << operandCount << " operands, target block has "
-         << destBB->getNumArguments() << " arguments";
+  LDBG(3) << "Branch has " << operandCount << " operands, target block has "
+          << destBB->getNumArguments() << " arguments";
 
   if (operandCount != destBB->getNumArguments())
     return op->emitError() << "branch has " << operandCount
@@ -92,22 +93,22 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                            << destBB->getNumArguments();
 
   // Check the types.
-  LDBG() << "Checking type compatibility for "
-         << (operandCount - operands.getProducedOperandCount())
-         << " forwarded operands";
+  LDBG(3) << "Checking type compatibility for "
+          << (operandCount - operands.getProducedOperandCount())
+          << " forwarded operands";
   for (unsigned i = operands.getProducedOperandCount(); i != operandCount;
        ++i) {
     Type operandType = operands[i].getType();
     Type argType = destBB->getArgument(i).getType();
-    LDBG() << "Checking type compatibility: operand type " << operandType
-           << " vs argument type " << argType;
+    LDBG(3) << "Checking type compatibility: operand type " << operandType
+            << " vs argument type " << argType;
 
     if (!cast<BranchOpInterface>(op).areTypesCompatible(operandType, argType))
       return op->emitError() << "type mismatch for bb argument #" << i
                              << " of successor #" << succNo;
   }
 
-  LDBG() << "Branch successor operand verification successful";
+  LDBG(3) << "Branch successor operand verification successful";
   return success();
 }
 
@@ -168,11 +169,17 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
     SmallVector<RegionSuccessor> successors;
     regionInterface.getSuccessorRegions(branchPoint, successors);
     for (const RegionSuccessor &successor : successors) {
+      RegionBranchOpInterface successorOwner =
+          getRegionBranchSuccessorOwner(successor);
+      if (!successorOwner)
+        return regionInterface->emitOpError()
+               << "has region successor not owned by a "
+                  "RegionBranchOpInterface";
       // Helper function that print the region branch point and the region
       // successor.
       auto emitRegionEdgeError = [&]() {
         InFlightDiagnostic diag =
-            regionInterface->emitOpError("along control flow edge from ");
+            successorOwner->emitOpError("along control flow edge from ");
         if (branchPoint.isParent()) {
           diag << "parent";
           diag.attachNote(op->getLoc()) << "region branch point";
@@ -195,7 +202,7 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
       // Verify number of successor operands and successor inputs.
       OperandRange succOperands =
           regionInterface.getSuccessorOperands(branchPoint, successor);
-      ValueRange succInputs = regionInterface.getSuccessorInputs(successor);
+      ValueRange succInputs = successorOwner.getSuccessorInputs(successor);
       if (succOperands.size() != succInputs.size()) {
         return emitRegionEdgeError()
                << ": region branch point has " << succOperands.size()
@@ -210,7 +217,7 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
            llvm::enumerate(llvm::zip(succOperandTypes, succInputTypes))) {
         Type succOperandType = std::get<0>(typesIdx.value());
         Type succInputType = std::get<1>(typesIdx.value());
-        if (!regionInterface.areTypesCompatible(succOperandType, succInputType))
+        if (!successorOwner.areTypesCompatible(succOperandType, succInputType))
           return emitRegionEdgeError()
                  << ": successor operand type #" << typesIdx.index() << " "
                  << succOperandType << " should match successor input type #"
@@ -226,6 +233,17 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
 /// the successor region. The second parameter indicates all already visited
 /// regions.
 using StopConditionFn = function_ref<bool(Region *, ArrayRef<bool> visited)>;
+
+/// Given a range of values, return a vector of attributes of the same size,
+/// where the i-th attribute is the constant value of the i-th value. If a
+/// value is not constant, the corresponding attribute is null.
+static SmallVector<Attribute> extractConstants(ValueRange values) {
+  return llvm::map_to_vector(values, [](Value value) {
+    Attribute attr;
+    matchPattern(value, m_Constant(&attr));
+    return attr;
+  });
+}
 
 /// Traverse the region graph starting at `begin`. The traversal is interrupted
 /// if `stopCondition` evaluates to "true" for a successor region. In that case,
@@ -246,7 +264,6 @@ static bool traverseRegionGraph(Region *begin,
   SmallVector<Region *> worklist;
   auto enqueueAllSuccessors = [&](Region *region) {
     LDBG() << "Enqueuing successors for region #" << region->getRegionNumber();
-    SmallVector<Attribute> operandAttributes(op->getNumOperands());
     for (Block &block : *region) {
       if (block.empty())
         continue;
@@ -255,8 +272,8 @@ static bool traverseRegionGraph(Region *begin,
       if (!terminator)
         continue;
       SmallVector<RegionSuccessor> successors;
-      operandAttributes.resize(terminator->getNumOperands());
-      terminator.getSuccessorRegions(operandAttributes, successors);
+      terminator.getSuccessorRegions(
+          extractConstants(terminator->getOperands()), successors);
       LDBG() << "Found " << successors.size()
              << " successors from terminator in block";
       for (RegionSuccessor successor : successors) {
@@ -462,6 +479,14 @@ RegionBranchOpInterface::getNonSuccessorInputs(RegionSuccessor successor) {
   return results;
 }
 
+RegionBranchOpInterface
+mlir::getRegionBranchSuccessorOwner(RegionSuccessor successor) {
+  if (Operation *successorOp = successor.getSuccessorOp())
+    return dyn_cast<RegionBranchOpInterface>(successorOp);
+  return dyn_cast<RegionBranchOpInterface>(
+      successor.getSuccessor()->getParentOp());
+}
+
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
   return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
 }
@@ -473,11 +498,14 @@ getSuccessorOperandInputMapping(RegionBranchOpInterface branchOp,
   SmallVector<RegionSuccessor> successors;
   branchOp.getSuccessorRegions(src, successors);
   for (RegionSuccessor dst : successors) {
+    RegionBranchOpInterface successorOwner = getRegionBranchSuccessorOwner(dst);
+    assert(successorOwner && "expected RegionBranchOpInterface owner");
     OperandRange operands = branchOp.getSuccessorOperands(src, dst);
-    assert(operands.size() == branchOp.getSuccessorInputs(dst).size() &&
+    ValueRange inputs = successorOwner.getSuccessorInputs(dst);
+    assert(operands.size() == inputs.size() &&
            "expected the same number of operands and inputs");
-    for (const auto &[operand, input] : llvm::zip_equal(
-             operandsToOpOperands(operands), branchOp.getSuccessorInputs(dst)))
+    for (const auto &[operand, input] :
+         llvm::zip_equal(operandsToOpOperands(operands), inputs))
       mapping[&operand].push_back(input);
   }
 }
@@ -524,6 +552,62 @@ RegionBranchOpInterface::getAllRegionBranchPoints() {
         branchPoints.push_back(RegionBranchPoint(terminator));
     }
   }
+
+  Operation *op = getOperation();
+  if (!op->hasTrait<OpTrait::PropagateControlFlowBreak>() &&
+      !isa<HasBreakingControlFlowOpInterface>(op))
+    return branchPoints;
+
+  // The loop above only records terminators that are immediate branch points of
+  // this op: terminators ending blocks directly contained in one of this op's
+  // regions. Breaking control flow adds another class of branch points. A
+  // nested RegionBranchOpInterface that defines PropagateControlFlowBreak can
+  // contain a breaking terminator whose addressed receiver is this op or one of
+  // this op's ancestors. Even though the terminator is not directly contained
+  // in this op's region, it can still create a control-flow edge that leaves or
+  // propagates through this op.
+  //
+  // For example, consider:
+  //
+  //   scf.loop token(%outer) {
+  //     scf.loop token(%inner) {
+  //       scf.if %cond {
+  //         scf.break [%outer]
+  //       }
+  //       scf.continue [%inner]
+  //     }
+  //     scf.continue [%outer]
+  //   }
+  //
+  // When enumerating branch points for the inner loop, its direct body
+  // terminator is only `scf.continue [%inner]`. The `scf.break [%outer]` is
+  // hidden behind the immediately nested `scf.if`, but the inner loop must
+  // still expose a possible edge for that break: the break request propagates
+  // through `scf.if`, then through the inner loop, and is ultimately handled by
+  // the outer loop. Without adding the nested break as a branch point of the
+  // inner loop, generic RegionBranchOpInterface verification and data-flow
+  // consumers only see the continue edge and miss the propagated exit edge.
+  //
+  // This is intentionally broader than collectAllNestedPredecessors(op). That
+  // helper collects only terminators that directly target `op`, which is enough
+  // for a receiver to find incoming breaks but insufficient for an intermediate
+  // PropagateControlFlowBreak op: an escaping terminator targets an ancestor,
+  // not the intermediate op it propagates through.
+  // visitNestedBreakingControlFlowOps reports both nested terminators that
+  // target `op` and those that target an ancestor of `op`, which is exactly the
+  // set that may affect this op's RegionBranchOpInterface edges.
+  visitNestedBreakingControlFlowOps(
+      op, [&](Operation *nestedTerminator, int nestedLevel) {
+        // Immediate region terminators are already covered above. Deeper
+        // terminators may add a propagated control-flow edge through this op.
+        if (nestedLevel <= 1)
+          return;
+        auto terminator =
+            dyn_cast<RegionBranchTerminatorOpInterface>(nestedTerminator);
+        if (!terminator)
+          return;
+        branchPoints.push_back(RegionBranchPoint(terminator));
+      });
   return branchPoints;
 }
 
@@ -626,6 +710,12 @@ static bool isDefinedBefore(Operation *regionBranchOp, Value a, Value b) {
   //   })
   // }
   return true;
+}
+
+static bool isSuccessorInputOwnedBy(Operation *regionBranchOp, Value value) {
+  if (Operation *definingOp = value.getDefiningOp())
+    return definingOp == regionBranchOp;
+  return value.getParentRegion()->getParentOp() == regionBranchOp;
 }
 
 /// Compute all non-successor-input values that a successor input could have
@@ -733,6 +823,8 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
     // Try to replace the uses of each successor input one-by-one.
     bool changed = false;
     for (Value value : inputToOperands.keys()) {
+      if (!isSuccessorInputOwnedBy(regionBranchOp, value))
+        continue;
       // Nothing to do for successor inputs that are already dead.
       if (value.use_empty())
         continue;
@@ -1069,17 +1161,6 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
     return success(changed);
   }
 };
-
-/// Given a range of values, return a vector of attributes of the same size,
-/// where the i-th attribute is the constant value of the i-th value. If a
-/// value is not constant, the corresponding attribute is null.
-static SmallVector<Attribute> extractConstants(ValueRange values) {
-  return llvm::map_to_vector(values, [](Value value) {
-    Attribute attr;
-    matchPattern(value, m_Constant(&attr));
-    return attr;
-  });
-}
 
 /// Return all successor regions when branching from the given region branch
 /// point. This helper functions extracts all constant operand values and
