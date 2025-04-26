@@ -81,4 +81,10 @@ namespace PseudoDtor {
     }
     return true;
   }
+
+  int k;
+  struct T {
+    int n : (k.~I(), 1); // both-error {{constant expression}} \
+                         // both-note {{visible outside that expression}}
+  };
 }
