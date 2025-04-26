@@ -3759,6 +3759,10 @@ void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
   interleaveComma(op->getOperands(), [&](Value value) { printValueID(value); });
   os << ')';
 
+  if (op->getNumBreakingControlRegions() != 0) {
+    os << " [" << op->getNumBreakingControlRegions() << "]";
+  }
+
   // For terminators, print the list of successors and their operands.
   if (op->getNumSuccessors() != 0) {
     os << '[';

@@ -121,6 +121,6 @@ def OpInterfaceB : OpInterface<"OpInterfaceB"> {
   let dependentTraits = [OpTraitA];
 }
 
-// ERROR13: error: OpInterfaceB::Trait requires OpTraitA to precede it in traits list
+// ERROR13: error: OpInterfaceB requires OpTraitA to precede it in traits list
 def OpInterfaceWithoutDependentTrait : Op<Test_Dialect, "default_value", [OpInterfaceB]> {}
 #endif

@@ -14,6 +14,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 
@@ -21,6 +22,14 @@ using namespace mlir;
 
 /// Overloaded helper to call the right function based on whether we are testing
 /// dominance or post-dominance.
+static bool dominatesOrPostDominates(DominanceInfo &dominanceInfo, Operation *a,
+                                     Operation *b) {
+  return dominanceInfo.dominates(a, b);
+}
+static bool dominatesOrPostDominates(PostDominanceInfo &dominanceInfo,
+                                     Operation *a, Operation *b) {
+  return dominanceInfo.postDominates(a, b);
+}
 static bool dominatesOrPostDominates(DominanceInfo &dominanceInfo, Block *a,
                                      Block *b) {
   return dominanceInfo.dominates(a, b);
@@ -72,6 +81,30 @@ public:
   template <typename DominanceT>
   void printDominance(DominanceT &dominanceInfo,
                       bool printCommonDominatorInfo) {
+    if (printCommonDominatorInfo) {
+      operation->walk([&](Operation *op) {
+        if (!op->getDiscardableAttr("test.print_dominance"))
+          return;
+        operation->walk([&](Operation *nested) {
+          if (std::is_same<DominanceInfo, DominanceT>::value)
+            llvm::outs() << "dominates(";
+          else
+            llvm::outs() << "postdominates(";
+          bool isDominated =
+              dominatesOrPostDominates(dominanceInfo, op, nested);
+          llvm::outs() << OpWithFlags(op, OpPrintingFlags()
+                                              .skipRegions()
+                                              .enableDebugInfo()
+                                              .assumeVerified())
+                       << ", "
+                       << OpWithFlags(nested, OpPrintingFlags()
+                                                  .skipRegions()
+                                                  .enableDebugInfo()
+                                                  .assumeVerified())
+                       << ") = " << std::to_string(isDominated) << "\n";
+        });
+      });
+    }
     DenseSet<Block *> parentVisited;
     operation->walk([&](Operation *op) {
       Block *block = op->getBlock();

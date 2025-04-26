@@ -29,6 +29,11 @@
 namespace mlir {
 namespace scf {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
+
+namespace op_impl {
+struct IfOpImplicitTerminatorType;
+struct LoopOpImplicitTerminatorType;
+} // namespace op_impl
 } // namespace scf
 } // namespace mlir
 
@@ -111,6 +116,46 @@ SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               OpOperand &operand,
                                               Value replacement,
                                               const ValueTypeCastFnTy &castFn);
+namespace op_impl {
+
+//===----------------------------------------------------------------------===//
+// ControlFlowImplicitTerminatorOperation
+//===----------------------------------------------------------------------===//
+
+/// This class provides an interface compatible with
+/// SingleBlockImplicitTerminator, but allows multiple types of potential
+/// terminators aside from just one. If a terminator isn't present, this will
+/// generate a `ImplicitOpT` operation.
+template <typename ImplicitOpT, typename... OtherTerminatorOpTs>
+struct ControlFlowImplicitTerminatorOpType {
+  /// Implementation of `classof` that supports all of the potential terminator
+  /// operations.
+  static bool classof(Operation *op) {
+    return isa<ImplicitOpT, OtherTerminatorOpTs...>(op);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Implicit Terminator Methods
+
+  /// The following methods are all used when interacting with the "implicit"
+  /// terminator.
+
+  template <typename... Args>
+  static void build(Args &&...args) {
+    ImplicitOpT::build(std::forward<Args>(args)...);
+  }
+  static constexpr StringLiteral getOperationName() {
+    return ImplicitOpT::getOperationName();
+  }
+};
+/// An implicit terminator type for `if` operations, which can contain:
+/// break, continue, yield.
+struct IfOpImplicitTerminatorType
+    : public ControlFlowImplicitTerminatorOpType<YieldOp, BreakOp, ContinueOp> {
+};
+struct LoopOpImplicitTerminatorType
+    : public ControlFlowImplicitTerminatorOpType<ContinueOp, BreakOp> {};
+} // namespace op_impl
 
 /// Helper function to compute the difference between two values. This is used
 /// by the loop implementations to compute the trip count.
