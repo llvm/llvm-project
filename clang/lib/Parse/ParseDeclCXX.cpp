@@ -3043,6 +3043,16 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
          MaybeParseMicrosoftAttributes(DeclSpecAttrs))
     ;
 
+  SourceLocation DeclStart;
+  if (DeclAttrs.Range.isValid()) {
+    DeclStart = DeclSpecAttrs.Range.isInvalid()
+                    ? DeclAttrs.Range.getBegin()
+                    : std::min(DeclAttrs.Range.getBegin(),
+                               DeclSpecAttrs.Range.getBegin());
+  } else {
+    DeclStart = DeclSpecAttrs.Range.getBegin();
+  }
+
   // decl-specifier-seq:
   // Parse the common declaration-specifiers piece.
   ParsingDeclSpec DS(*this, TemplateDiags);
@@ -3069,6 +3079,9 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   // Turn off colon protection that was set for declspec.
   X.restore();
+
+  if (DeclStart.isValid())
+    DS.SetRangeStart(DeclStart);
 
   // If we had a free-standing type definition with a missing semicolon, we
   // may get this far before the problem becomes obvious.
