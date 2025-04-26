@@ -22,16 +22,16 @@ struct PartialTranslationUnit;
 class CompilerInstance;
 class CodeGenOptions;
 class TargetOptions;
+class IncrementalAction;
 
 class IncrementalCUDADeviceParser : public IncrementalParser {
-  const std::list<PartialTranslationUnit> &PTUs;
 
 public:
   IncrementalCUDADeviceParser(
       std::unique_ptr<CompilerInstance> DeviceInstance,
-      CompilerInstance &HostInstance,
+      CompilerInstance &HostInstance, IncrementalAction *DeviceAct,
       llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS,
-      llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs);
+      llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs);
 
   // Generate PTX for the last PTU.
   llvm::Expected<llvm::StringRef> GeneratePTX();

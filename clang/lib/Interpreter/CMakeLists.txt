@@ -22,6 +22,7 @@ endif()
 add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
+  IncrementalAction.cpp
   IncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp

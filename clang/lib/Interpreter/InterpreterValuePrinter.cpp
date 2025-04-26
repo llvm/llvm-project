@@ -45,7 +45,7 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) {
       getCompilerInstance()->getSema().LookupDestructor(CXXRD);
 
   llvm::StringRef Name =
-      getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
+      IncrParser->getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
   auto AddrOrErr = getSymbolAddress(Name);
   if (!AddrOrErr)
     return AddrOrErr.takeError();
