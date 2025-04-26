@@ -39,8 +39,9 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     const object::DirectX::RootSignature &Data) {
 
   RootSignatureYamlDesc RootSigDesc;
+  uint32_t Version = Data.getVersion();
 
-  RootSigDesc.Version = Data.getVersion();
+  RootSigDesc.Version = Version;
   RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();
   RootSigDesc.StaticSamplersOffset = Data.getStaticSamplersOffset();
   RootSigDesc.NumRootParameters = Data.getNumRootParameters();
@@ -82,17 +83,19 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     } else if (auto *RDV =
                    dyn_cast<object::DirectX::RootDescriptorView>(&ParamView)) {
       llvm::Expected<dxbc::RST0::v1::RootDescriptor> DescriptorOrErr =
-          RDV->read(Data.getVersion());
+          RDV->read(Version);
       if (Error E = DescriptorOrErr.takeError())
         return std::move(E);
       auto Descriptor = *DescriptorOrErr;
       NewP.Descriptor.ShaderRegister = Descriptor.ShaderRegister;
       NewP.Descriptor.RegisterSpace = Descriptor.RegisterSpace;
+      if (Version > 1) {
 #define ROOT_DESCRIPTOR_FLAG(Num, Val)                                         \
   NewP.Descriptor.Val =                                                        \
       (Descriptor.Flags &                                                      \
        llvm::to_underlying(dxbc::RootDescriptorFlag::Val)) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+      }
     }
 
     RootSigDesc.Parameters.push_back(NewP);

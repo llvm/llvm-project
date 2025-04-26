@@ -27,7 +27,7 @@ Parts:
       AllowInputAssemblerInputLayout: true
       DenyGeometryShaderRootAccess: true
 
-# CHECK:  - Name:            RTS0
+# CHECK: - Name:            RTS0
 # CHECK-NEXT:    Size:            96
 # CHECK-NEXT:    RootSignature:
 # CHECK-NEXT:      Version: 1
