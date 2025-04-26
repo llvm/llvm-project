@@ -53,12 +53,16 @@ namespace lldb_dap {
 ///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
 ///     each command is executed verbatim.
 ///
+/// \param[in] echo_commands
+///     If \b true, the command are echoed to the stream.
+///
 /// \return
 ///     \b true, unless a command prefixed with \b ! fails and parsing of
 ///     command directives is enabled.
 bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives);
+                     llvm::raw_ostream &strm, bool parse_command_directives,
+                     bool echo_commands);
 
 /// Run a list of LLDB commands in the LLDB command interpreter.
 ///
@@ -83,18 +87,17 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 ///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
 ///     each command is executed verbatim.
 ///
+/// \param[in] echo_commands
+///     If \b true, the command are echoed to the stream.
+///
 /// \return
 ///     A std::string that contains the prefix and all commands and
 ///     command output.
 std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
-                            bool parse_command_directives = true);
-
-/// Similar to the method above, but without parsing command directives.
-std::string
-RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                        const llvm::ArrayRef<std::string> &commands);
+                            bool parse_command_directives = true,
+                            bool echo_commands = false);
 
 /// Check if a thread has a stop reason.
 ///
@@ -195,8 +198,21 @@ private:
   lldb::SBDebugger *debugger;
 };
 
+/// Get the stop-disassembly-display settings
+///
+/// \param[in] debugger
+///     The debugger that will execute the lldb commands.
+///
+/// \return
+///     The value of the stop-disassembly-display setting
+lldb::StopDisassemblyType GetStopDisassemblyDisplay(lldb::SBDebugger &debugger);
+
+
 /// Take ownership of the stored error.
 llvm::Error ToError(const lldb::SBError &error);
+
+/// Provides the string value if this data structure is a string type.
+std::string GetStringValue(const lldb::SBStructuredData &data);
 
 } // namespace lldb_dap
 

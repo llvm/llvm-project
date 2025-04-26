@@ -396,10 +396,12 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
       (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
     return true;
 
-  if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
-    const auto *VD = Ptr.getDeclDesc()->asValueDecl();
-    diagnoseNonConstVariable(S, OpPC, VD);
-  }
+  if (S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus &&
+      Ptr.isConst())
+    return false;
+
+  const auto *VD = Ptr.getDeclDesc()->asValueDecl();
+  diagnoseNonConstVariable(S, OpPC, VD);
   return false;
 }
 
@@ -632,32 +634,35 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                           AccessKinds AK) {
   assert(Ptr.isLive());
 
-  // FIXME: This check here might be kinda expensive. Maybe it would be better
-  // to have another field in InlineDescriptor for this?
-  if (!Ptr.isBlockPointer())
-    return true;
-
-  QualType PtrType = Ptr.getType();
-  if (!PtrType.isVolatileQualified())
+  if (!Ptr.isVolatile())
     return true;
 
   if (!S.getLangOpts().CPlusPlus)
     return Invalid(S, OpPC);
 
+  // The reason why Ptr is volatile might be further up the hierarchy.
+  // Find that pointer.
+  Pointer P = Ptr;
+  while (!P.isRoot()) {
+    if (P.getType().isVolatileQualified())
+      break;
+    P = P.getBase();
+  }
+
   const NamedDecl *ND = nullptr;
   int DiagKind;
   SourceLocation Loc;
-  if (const auto *F = Ptr.getField()) {
+  if (const auto *F = P.getField()) {
     DiagKind = 2;
     Loc = F->getLocation();
     ND = F;
-  } else if (auto *VD = Ptr.getFieldDesc()->asValueDecl()) {
+  } else if (auto *VD = P.getFieldDesc()->asValueDecl()) {
     DiagKind = 1;
     Loc = VD->getLocation();
     ND = VD;
   } else {
     DiagKind = 0;
-    if (const auto *E = Ptr.getFieldDesc()->asExpr())
+    if (const auto *E = P.getFieldDesc()->asExpr())
       Loc = E->getExprLoc();
   }
 
@@ -740,11 +745,11 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK) {
   if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
   if (!CheckDummy(S, OpPC, Ptr, AK))
-    return false;
-  if (!CheckExtern(S, OpPC, Ptr))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
@@ -1323,8 +1328,6 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       !CheckNull(S, OpPC, Ptr, CSK_Field))
     return false;
 
-  if (!CheckExtern(S, OpPC, Ptr))
-    return false;
   if (!CheckRange(S, OpPC, Ptr, CSK_Field))
     return false;
   if (!CheckArray(S, OpPC, Ptr))

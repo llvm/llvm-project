@@ -237,14 +237,6 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
-  // Properties Functions
-  enum StopDisassemblyType {
-    eStopDisassemblyTypeNever = 0,
-    eStopDisassemblyTypeNoDebugInfo,
-    eStopDisassemblyTypeNoSource,
-    eStopDisassemblyTypeAlways
-  };
-
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
                           llvm::StringRef value) override;
@@ -341,7 +333,7 @@ public:
 
   uint64_t GetStopSourceLineCount(bool before) const;
 
-  StopDisassemblyType GetStopDisassemblyDisplay() const;
+  lldb::StopDisassemblyType GetStopDisassemblyDisplay() const;
 
   uint64_t GetDisassemblyLineCount() const;
 
