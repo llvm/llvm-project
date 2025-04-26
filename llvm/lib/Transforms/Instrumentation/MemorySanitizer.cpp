@@ -4312,6 +4312,65 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // For sh compiler intrinsics:
+  // llvm.x86.avx512fp16.mask.{add/sub/mul/div/max/min}.sh.round
+  //   (<8 x half>, <8 x half>, <8 x half>, i8,  i32)
+  //    A           B           WriteThru   Mask RoundingMode
+  //
+  // if (Mask[0])
+  //   DstShadow[0] = AShadow[0] | BShadow[0]
+  // else
+  //   DstShadow[0] = WriteThruShadow[0]
+  //
+  // DstShadow[1..7] = AShadow[1..7]
+  void visitGenericScalarHalfwordInst(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 5);
+    Value *A = I.getOperand(0);
+    Value *B = I.getOperand(1);
+    Value *WriteThrough = I.getOperand(2);
+    Value *Mask = I.getOperand(3);
+    Value *RoundingMode = I.getOperand(4);
+
+    // Technically, we could probably just check whether the LSB is initialized
+    insertShadowCheck(Mask, &I);
+    insertShadowCheck(RoundingMode, &I);
+
+    assert(isa<FixedVectorType>(A->getType()));
+    unsigned NumElements =
+        cast<FixedVectorType>(A->getType())->getNumElements();
+    assert(NumElements == 8);
+    assert(A->getType() == B->getType());
+    assert(B->getType() == WriteThrough->getType());
+    assert(Mask->getType()->getPrimitiveSizeInBits() == NumElements);
+    assert(RoundingMode->getType()->isIntegerTy());
+
+    Mask = IRB.CreateBitCast(
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), NumElements));
+
+    Value *AShadow = getShadow(A);
+    Value *BShadow = getShadow(B);
+    Value *ABLowerShadow =
+        IRB.CreateOr(IRB.CreateExtractElement(
+                         AShadow, ConstantInt::get(IRB.getInt32Ty(), 0)),
+                     IRB.CreateExtractElement(
+                         BShadow, ConstantInt::get(IRB.getInt32Ty(), 0)));
+    Value *WriteThroughShadow = getShadow(WriteThrough);
+    Value *WriteThroughLowerShadow = IRB.CreateExtractElement(
+        WriteThroughShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+
+    Value *DstLowerShadow = IRB.CreateSelect(
+        IRB.CreateExtractElement(Mask, ConstantInt::get(IRB.getInt32Ty(), 0)),
+        ABLowerShadow, WriteThroughLowerShadow);
+    Value *DstShadow = IRB.CreateInsertElement(
+        AShadow, DstLowerShadow, ConstantInt::get(IRB.getInt32Ty(), 0),
+        "_msprop");
+
+    setShadow(&I, DstShadow);
+    setOriginForNaryOp(I);
+  }
+
   // Handle Arm NEON vector load intrinsics (vld*).
   //
   // The WithLane instructions (ld[234]lane) are similar to:
@@ -5038,6 +5097,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       [[maybe_unused]] bool Success =
           maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
+      break;
+    }
+
+    case Intrinsic::x86_avx512fp16_mask_add_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_mul_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_div_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_max_sh_round:
+    case Intrinsic::x86_avx512fp16_mask_min_sh_round: {
+      visitGenericScalarHalfwordInst(I);
       break;
     }
 
