@@ -37,6 +37,17 @@ program openacc_kernels_validity
   !$acc kernels async(async1)
   !$acc end kernels
 
+  !ERROR: At most one ASYNC clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels async(async1) async(2)
+  !$acc end kernels
+
+  !$acc kernels async(async1) device_type(multicore) async(2) ! ok
+  !$acc end kernels
+
+  !ERROR: At most one ASYNC clause can appear on the KERNELS directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels async(async1) device_type(multicore) async(2) async(3)
+  !$acc end kernels
+
   !$acc kernels wait(wait1)
   !$acc end kernels
 

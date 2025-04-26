@@ -4205,7 +4205,7 @@ public:
       ArrayRef<OpenACCClause *> Clauses) {
     llvm::SmallVector<Expr *> Exprs;
     Exprs.push_back(DevNumExpr);
-    Exprs.insert(Exprs.end(), QueueIdExprs.begin(), QueueIdExprs.end());
+    llvm::append_range(Exprs, QueueIdExprs);
     return getSema().OpenACC().ActOnEndStmtDirective(
         OpenACCDirectiveKind::Wait, BeginLoc, DirLoc, LParenLoc, QueuesLoc,
         Exprs, OpenACCAtomicKind::None, RParenLoc, EndLoc, Clauses, {});
@@ -12228,7 +12228,7 @@ void OpenACCClauseTransform<Derived>::VisitVectorClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitWaitClause(
     const OpenACCWaitClause &C) {
-  if (!C.getLParenLoc().isInvalid()) {
+  if (C.hasExprs()) {
     Expr *DevNumExpr = nullptr;
     llvm::SmallVector<Expr *> InstantiatedQueueIdExprs;
 

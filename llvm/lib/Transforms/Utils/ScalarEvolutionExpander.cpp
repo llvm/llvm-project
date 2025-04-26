@@ -1633,13 +1633,13 @@ void SCEVExpander::replaceCongruentIVInc(
   // If this phi has the same width but is more canonical, replace the
   // original with it. As part of the "more canonical" determination,
   // respect a prior decision to use an IV chain.
-  if (OrigPhi->getType() == Phi->getType() &&
-      !(ChainedPhis.count(Phi) ||
-        isExpandedAddRecExprPHI(OrigPhi, OrigInc, L)) &&
-      (ChainedPhis.count(Phi) ||
-       isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
-    std::swap(OrigPhi, Phi);
-    std::swap(OrigInc, IsomorphicInc);
+  if (OrigPhi->getType() == Phi->getType()) {
+    bool Chained = ChainedPhis.contains(Phi);
+    if (!(Chained || isExpandedAddRecExprPHI(OrigPhi, OrigInc, L)) &&
+        (Chained || isExpandedAddRecExprPHI(Phi, IsomorphicInc, L))) {
+      std::swap(OrigPhi, Phi);
+      std::swap(OrigInc, IsomorphicInc);
+    }
   }
 
   // Replacing the congruent phi is sufficient because acyclic
