@@ -1985,7 +1985,7 @@ extern "C" __device__ double test_fma_rn(double x, double y, double z) {
 //
 // NCRDIV-LABEL: @test_fmaxf(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fmaxf(
@@ -2014,7 +2014,7 @@ extern "C" __device__ float test_fmaxf(float x, float y) {
 //
 // NCRDIV-LABEL: @test_fmax(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // NCRDIV-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fmax(
@@ -2043,7 +2043,7 @@ extern "C" __device__ double test_fmax(double x, double y) {
 //
 // NCRDIV-LABEL: @test_fminf(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fminf(
@@ -2072,7 +2072,7 @@ extern "C" __device__ float test_fminf(float x, float y) {
 //
 // NCRDIV-LABEL: @test_fmin(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // NCRDIV-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_fmin(
@@ -8140,7 +8140,7 @@ extern "C" __device__ double test__fma_rn(double x, double y, double z) {
 //
 // NCRDIV-LABEL: @test_float_min(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_float_min(
@@ -8169,7 +8169,7 @@ extern "C" __device__ float test_float_min(float x, float y) {
 //
 // NCRDIV-LABEL: @test_float_max(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef float @llvm.maxnum.f32(float [[X:%.*]], float [[Y:%.*]])
 // NCRDIV-NEXT:    ret float [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_float_max(
@@ -8198,7 +8198,7 @@ extern "C" __device__ float test_float_max(float x, float y) {
 //
 // NCRDIV-LABEL: @test_double_min(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.minnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // NCRDIV-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_double_min(
@@ -8227,7 +8227,7 @@ extern "C" __device__ double test_double_min(double x, double y) {
 //
 // NCRDIV-LABEL: @test_double_max(
 // NCRDIV-NEXT:  entry:
-// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+// NCRDIV-NEXT:    [[TMP0:%.*]] = tail call nsz contract noundef double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
 // NCRDIV-NEXT:    ret double [[TMP0]]
 //
 // AMDGCNSPIRV-LABEL: @test_double_max(
