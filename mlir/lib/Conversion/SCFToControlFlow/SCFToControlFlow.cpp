@@ -24,6 +24,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/Support/DebugLog.h"
+
 namespace mlir {
 #define GEN_PASS_DEF_SCFTOCONTROLFLOWPASS
 #include "mlir/Conversion/Passes.h.inc"
@@ -311,6 +313,16 @@ struct ForallLowering : public OpRewritePattern<mlir::scf::ForallOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
+/// TODO
+struct LoopOpLowering : public OpConversionPattern<LoopOp> {
+  using OpConversionPattern<LoopOp>::OpConversionPattern;
+  void initialize() { setHasBoundedRewriteRecursion(); }
+
+  LogicalResult
+  matchAndRewrite(LoopOp loopOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 static void propagateLoopAttrs(Operation *scfOp, Operation *brOp) {
@@ -401,7 +413,12 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
 LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
                                           PatternRewriter &rewriter) const {
   auto loc = ifOp.getLoc();
-
+  visitNestedBreakingControlFlowOps(ifOp, [&](Operation *op, int nestedLevel) {
+    if (auto numBreakingControlRegions = op->getNumBreakingControlRegions()) {
+      if (numBreakingControlRegions > nestedLevel)
+        op->setNumBreakingControlRegions(numBreakingControlRegions - 1);
+    }
+  });
   // Start by splitting the block containing the 'scf.if' into two parts.
   // The part before will contain the condition, the part after will be the
   // continuation point.
@@ -425,8 +442,10 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
   Operation *thenTerminator = thenRegion.back().getTerminator();
   ValueRange thenTerminatorOperands = thenTerminator->getOperands();
   rewriter.setInsertionPointToEnd(&thenRegion.back());
-  cf::BranchOp::create(rewriter, loc, continueBlock, thenTerminatorOperands);
-  rewriter.eraseOp(thenTerminator);
+  if (isa<scf::YieldOp>(thenTerminator)) {
+    cf::BranchOp::create(rewriter, loc, continueBlock, thenTerminatorOperands);
+    rewriter.eraseOp(thenTerminator);
+  }
   rewriter.inlineRegionBefore(thenRegion, continueBlock);
 
   // Move blocks from the "else" region (if present) to the region containing
@@ -439,8 +458,11 @@ LogicalResult IfLowering::matchAndRewrite(IfOp ifOp,
     Operation *elseTerminator = elseRegion.back().getTerminator();
     ValueRange elseTerminatorOperands = elseTerminator->getOperands();
     rewriter.setInsertionPointToEnd(&elseRegion.back());
-    cf::BranchOp::create(rewriter, loc, continueBlock, elseTerminatorOperands);
-    rewriter.eraseOp(elseTerminator);
+    if (isa<scf::YieldOp>(thenTerminator)) {
+      cf::BranchOp::create(rewriter, loc, continueBlock,
+                           elseTerminatorOperands);
+      rewriter.eraseOp(elseTerminator);
+    }
     rewriter.inlineRegionBefore(elseRegion, continueBlock);
   }
 
@@ -720,11 +742,114 @@ LogicalResult ForallLowering::matchAndRewrite(ForallOp forallOp,
   return scf::forallToParallelLoop(rewriter, forallOp);
 }
 
+LogicalResult
+LoopOpLowering::matchAndRewrite(LoopOp loopOp, OpAdaptor adaptor,
+                                ConversionPatternRewriter &rewriter) const {
+  {
+    OpBuilder::InsertionGuard guard(rewriter);
+    if (failed(rewriter.legalize(&loopOp.getRegion())))
+      return rewriter.notifyMatchFailure(loopOp,
+                                         "failed to convert nested region");
+  }
+
+  SmallVector<Operation *> predecessors;
+  collectAllNestedPredecessors(loopOp, predecessors);
+  for (Operation *predecessor : predecessors) {
+    if (predecessor->getNumBreakingControlRegions() > 1) {
+      return rewriter.notifyMatchFailure(loopOp,
+                                         "loop op with nested predecessors");
+    }
+  }
+  visitNestedBreakingControlFlowOps(loopOp, [&](Operation *op,
+                                                int nestedLevel) {
+    if (auto numBreakingControlRegions = op->getNumBreakingControlRegions()) {
+      if (numBreakingControlRegions > nestedLevel)
+        op->setNumBreakingControlRegions(numBreakingControlRegions - 1);
+    }
+  });
+
+  // Lower `scf.loop` to CFG by converting breaks/continues to branches.
+  Location loc = loopOp.getLoc();
+  // Split the block containing loopOp into the init block and continuation.
+  Block *initBlock = rewriter.getInsertionBlock();
+  auto initPos = rewriter.getInsertionPoint();
+  Block *continueBlock = rewriter.splitBlock(initBlock, initPos);
+  continueBlock->addArguments(
+      loopOp.getResultTypes(),
+      SmallVector<Location>(loopOp.getNumResults(), loc));
+
+  // Inline the loop body region into the parent function just before
+  // continueBlock.
+  Region &bodyRegion = loopOp.getRegion();
+  if (bodyRegion.empty() || bodyRegion.front().empty()) {
+    // Degenerate case: no body. Just remove the op.
+    rewriter.eraseOp(loopOp);
+    return success();
+  }
+  Block *loopBody = &bodyRegion.front();
+
+  // Prepare the mapping of loop args to values.
+  SmallVector<Value> loopArgs;
+  for (auto arg : loopBody->getArguments())
+    loopArgs.push_back(arg);
+
+  // Create the loop entry block and move the body there.
+  rewriter.setInsertionPoint(initBlock, initBlock->end());
+  // Split out everything after loopOp into continueBlock.
+  // The block before loop is now initBlock.
+
+  // Move all blocks from the scf.loop region before continueBlock.
+  rewriter.inlineRegionBefore(bodyRegion, continueBlock);
+  // We will remember all break/continue ops to fix up after.
+  SmallVector<Operation *> toErase;
+
+  for (auto predecessor : predecessors) {
+    if (auto breakOp = dyn_cast<scf::BreakOp>(predecessor)) {
+      rewriter.setInsertionPointAfter(breakOp);
+      cf::BranchOp::create(rewriter, breakOp->getLoc(), continueBlock,
+                           ValueRange{breakOp.getOperands()});
+    } else if (auto contOp = dyn_cast<scf::ContinueOp>(predecessor)) {
+      rewriter.setInsertionPointAfter(contOp);
+      cf::BranchOp::create(rewriter, contOp->getLoc(), loopBody,
+                           ValueRange{contOp.getOperands()});
+    }
+    toErase.push_back(predecessor);
+  }
+
+  // Erase the old scf.break/scf.continue ops.
+  for (Operation *op : toErase)
+    rewriter.eraseOp(op);
+
+  // The loop region is now a CFG. Jump from initBlock to the loop body.
+  rewriter.setInsertionPointToEnd(initBlock);
+  cf::BranchOp::create(rewriter, loc, loopBody,
+                       ValueRange{loopOp.getOperands()});
+
+  // Replace the scf.yield with a branch to the loop header (unless it was
+  // replaced above).
+  for (Block &block :
+       llvm::make_early_inc_range(loopBody->getParent()->getBlocks())) {
+    if (auto yield = dyn_cast<scf::YieldOp>(block.getTerminator())) {
+      rewriter.setInsertionPoint(yield);
+      // For plain scf.yield at the end of the loop (i.e., loop-carried values),
+      // treat as continue.
+      cf::BranchOp::create(rewriter, yield.getLoc(), loopBody,
+                           yield.getOperands());
+      rewriter.eraseOp(yield);
+    }
+  }
+
+  // Replace the original scf.loop op with a branch to continueBlock assigning
+  // results.
+  rewriter.replaceOp(loopOp, continueBlock->getArguments());
+  return success();
+}
+
 void mlir::populateSCFToControlFlowConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<ForallLowering, ForLowering, IfLowering, ParallelLowering,
-               WhileLowering, ExecuteRegionLowering, IndexSwitchLowering>(
-      patterns.getContext());
+  patterns.add<ExecuteRegionLowering, ForallLowering, ForLowering, IfLowering,
+               IndexSwitchLowering, LoopOpLowering, ParallelLowering,
+               WhileLowering>(patterns.getContext());
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 
@@ -735,7 +860,8 @@ void SCFToControlFlowPass::runOnOperation() {
   // Configure conversion to lower out SCF operations.
   ConversionTarget target(getContext());
   target.addIllegalOp<scf::ForallOp, scf::ForOp, scf::IfOp, scf::IndexSwitchOp,
-                      scf::ParallelOp, scf::WhileOp, scf::ExecuteRegionOp>();
+                      scf::LoopOp, scf::ParallelOp, scf::WhileOp,
+                      scf::ExecuteRegionOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   ConversionConfig config;
   config.allowPatternRollback = allowPatternRollback;

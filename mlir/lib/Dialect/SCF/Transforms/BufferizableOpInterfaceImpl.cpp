@@ -232,8 +232,8 @@ struct IfOpInterface
     auto ifOp = cast<scf::IfOp>(op);
     size_t resultNum = std::distance(op->getOpResults().begin(),
                                      llvm::find(op->getOpResults(), value));
-    OpOperand *thenOperand = &ifOp.thenYield()->getOpOperand(resultNum);
-    OpOperand *elseOperand = &ifOp.elseYield()->getOpOperand(resultNum);
+    OpOperand *thenOperand = &ifOp.thenTerminator()->getOpOperand(resultNum);
+    OpOperand *elseOperand = &ifOp.elseTerminator()->getOpOperand(resultNum);
     return {{thenOperand, BufferRelation::Equivalent, /*isDefinite=*/false},
             {elseOperand, BufferRelation::Equivalent, /*isDefinite=*/false}};
   }

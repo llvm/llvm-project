@@ -10,6 +10,9 @@
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/DebugLog.h"
+
+#define DEBUG_TYPE "pattern-match"
 
 using namespace mlir;
 
@@ -225,7 +228,7 @@ void RewriterBase::eraseOp(Operation *op) {
     // Then erase the enclosing op.
     eraseSingleOp(op);
   };
-
+  LDBG() << "RewriterBase::eraseOp: " << *op;
   eraseTree(op);
 }
 

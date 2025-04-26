@@ -676,7 +676,8 @@ public:
   ParseResult parseSuccessor(Block *&dest);
 
   /// Parse a comma-separated list of operation successors in brackets.
-  ParseResult parseSuccessors(SmallVectorImpl<Block *> &destinations);
+  ParseResult parseSuccessors(SmallVectorImpl<Block *> &destinations,
+                              bool parseOpeningBracket = true);
 
   /// Parse an operation instance that is in the generic form.
   Operation *parseGenericOperation();
@@ -695,7 +696,8 @@ public:
           std::nullopt,
       std::optional<ArrayRef<NamedAttribute>> parsedAttributes = std::nullopt,
       std::optional<Attribute> propertiesAttribute = std::nullopt,
-      std::optional<FunctionType> parsedFnType = std::nullopt);
+      std::optional<FunctionType> parsedFnType = std::nullopt,
+      std::optional<int> parsedNumBreakingControlRegions = std::nullopt);
 
   /// Parse an operation instance that is in the generic form and insert it at
   /// the provided insertion point.
@@ -1237,7 +1239,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
       /*attributes=*/NamedAttrList(), /*properties=*/nullptr,
-      /*successors=*/{}, /*numRegions=*/0);
+      /*successors=*/{}, /*numRegions=*/0, /*numBreakingControlRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
   forwardRefOps.insert(op);
   return op->getResult(0);
@@ -1381,8 +1383,9 @@ ParseResult OperationParser::parseSuccessor(Block *&dest) {
 ///   successor-list ::= `[` successor (`,` successor )* `]`
 ///
 ParseResult
-OperationParser::parseSuccessors(SmallVectorImpl<Block *> &destinations) {
-  if (parseToken(Token::l_square, "expected '['"))
+OperationParser::parseSuccessors(SmallVectorImpl<Block *> &destinations,
+                                 bool parseOpeningBracket) {
+  if (parseOpeningBracket && parseToken(Token::l_square, "expected '['"))
     return failure();
 
   auto parseElt = [this, &destinations] {
@@ -1420,7 +1423,8 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
     std::optional<MutableArrayRef<std::unique_ptr<Region>>> parsedRegions,
     std::optional<ArrayRef<NamedAttribute>> parsedAttributes,
     std::optional<Attribute> propertiesAttribute,
-    std::optional<FunctionType> parsedFnType) {
+    std::optional<FunctionType> parsedFnType,
+    std::optional<int> parsedNumBreakingControlRegions) {
 
   // Parse the operand list, if not explicitly provided.
   SmallVector<UnresolvedOperand, 8> opInfo;
@@ -1434,19 +1438,38 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
   }
 
   // Parse the successor list, if not explicitly provided.
-  if (!parsedSuccessors) {
+  if (parsedSuccessors)
+    result.addSuccessors(*parsedSuccessors);
+  if (parsedNumBreakingControlRegions)
+    result.setNumBreakingControlRegions(*parsedNumBreakingControlRegions);
+  if (!parsedSuccessors || !parsedNumBreakingControlRegions) {
     if (getToken().is(Token::l_square)) {
+      consumeToken(Token::l_square);
+
       // Check if the operation is not a known terminator.
       if (!result.name.mightHaveTrait<OpTrait::IsTerminator>())
         return emitError("successors in non-terminator");
 
-      SmallVector<Block *, 2> successors;
-      if (parseSuccessors(successors))
-        return failure();
-      result.addSuccessors(successors);
+      // If we don't have a ^, then we expect a single integer for the number
+      // of breaking control regions.
+      if (!getToken().is(Token::caret_identifier)) {
+        APInt numBreakingControlRegions;
+        OptionalParseResult parseResult =
+            parseOptionalInteger(numBreakingControlRegions);
+        if (!parseResult.has_value() || failed(*parseResult))
+          return emitError("expected `^` or integer after '['");
+        result.setNumBreakingControlRegions(
+            numBreakingControlRegions.getZExtValue());
+        if (failed(parseToken(Token::r_square,
+                              "expected ']' to end breaking control regions")))
+          return failure();
+      } else {
+        SmallVector<Block *, 2> successors;
+        if (parseSuccessors(successors, /*parseOpeningBracket=*/false))
+          return failure();
+        result.addSuccessors(successors);
+      }
     }
-  } else {
-    result.addSuccessors(*parsedSuccessors);
   }
 
   // Parse the properties, if not explicitly provided.

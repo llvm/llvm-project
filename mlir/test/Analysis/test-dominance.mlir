@@ -680,3 +680,29 @@ func.func @func_loop_nested_region(
 // CHECK:   ^{{.*}}
 // CHECK:   }
 // CHECK: }
+
+
+// -----
+
+// CHECK-LABEL: Testing : func_loop_early_exit
+func.func @func_loop_early_exit(%cond : i1, %arg0 : index) -> index {
+  %0 = scf.loop -> index {
+    scf.loop {
+      scf.if %cond {
+        scf.break 3 %arg0 : index
+      }
+      "test.foo"() : () -> ()
+      scf.break 1 {test.print_dominance = true}
+    }
+  }
+  return %0 : index
+}
+
+// CHECK: postdominates(scf.break 1 {test.print_dominance = true} {{.*}} scf.break 3
+// CHECK-SAME: = 0
+// CHECK: postdominates(scf.break 1 {test.print_dominance = true} {{.*}} scf.if
+// CHECK-SAME: = 0
+// CHECK: postdominates(scf.break 1 {test.print_dominance = true} {{.*}} "test.foo"
+// CHECK-SAME: = 1
+// CHECK: postdominates(scf.break 1 {test.print_dominance = true} {{.*}} scf.break 1
+// CHECK-SAME: = 1

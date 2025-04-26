@@ -94,7 +94,7 @@ public:
                            TypeRange resultTypes, ValueRange operands,
                            NamedAttrList &&attributes,
                            OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           unsigned numRegions, int numBreakingControlRegions);
 
   /// Create a new Operation with the specific fields. This constructor uses an
   /// existing attribute dictionary to avoid uniquing a list of attributes.
@@ -102,7 +102,7 @@ public:
                            TypeRange resultTypes, ValueRange operands,
                            DictionaryAttr attributes,
                            OpaqueProperties properties, BlockRange successors,
-                           unsigned numRegions);
+                           unsigned numRegions, int numBreakingControlRegions);
 
   /// Create a new Operation from the fields stored in `state`.
   static Operation *create(const OperationState &state);
@@ -112,8 +112,8 @@ public:
                            TypeRange resultTypes, ValueRange operands,
                            NamedAttrList &&attributes,
                            OpaqueProperties properties,
-                           BlockRange successors = {},
-                           RegionRange regions = {});
+                           BlockRange successors = {}, RegionRange regions = {},
+                           int numBreakingControlRegions = 0);
 
   /// The name of an operation is the key identifier for it.
   OperationName getName() { return name; }
@@ -448,7 +448,7 @@ public:
   /// to use Properties instead.
   void setInherentAttr(StringAttr name, Attribute value);
 
-  /// Access a discardable attribute by name, returns a null Attribute if the
+  /// Access a discardable attribute by name, returns a null Attribute if theL
   /// discardable attribute does not exist.
   Attribute getDiscardableAttr(StringRef name) { return attrs.get(name); }
 
@@ -705,6 +705,33 @@ public:
   bool hasSuccessors() { return numSuccs != 0; }
   unsigned getNumSuccessors() { return numSuccs; }
 
+  /// Return true if this operation carries a num-breaking-regions value, i.e.
+  /// it is a RegionTerminator (scf.break, scf.continue, or similar) that can
+  /// exit one or more nested region levels in a single step.
+  bool isBreakingControlFlow() { return isBreakingControlFlowFlag; }
+
+  /// Return the number of nested region levels this terminator exits.
+  /// Returns 0 for ordinary operations that are not region terminators.
+  /// For a RegionTerminator, N = 1 means a normal yield to the immediate
+  /// parent; N = K means the terminator exits K region levels, bypassing K-1
+  /// intermediate PropagateControlFlowBreak ops on the way to the
+  /// HasBreakingControlFlowOpInterface ancestor at level K.
+  int getNumBreakingControlRegions() {
+    if (!isBreakingControlFlow())
+      return 0;
+    return *reinterpret_cast<int *>(getTrailingObjects<detail::OpProperties>());
+  }
+
+  /// Set the num-breaking-regions value on this RegionTerminator. The
+  /// operation must have been created with isBreakingControlFlow == true
+  /// (i.e. numBreakingControlRegions > 0 was passed to Operation::create).
+  void setNumBreakingControlRegions(int numBreakingControlRegions) {
+    assert(isBreakingControlFlow() &&
+           "operation is not a breaking control flow operation");
+    *reinterpret_cast<int *>(getTrailingObjects<detail::OpProperties>()) =
+        numBreakingControlRegions;
+  }
+
   Block *getSuccessor(unsigned index) {
     assert(index < getNumSuccessors());
     return getBlockOperands()[index].get();
@@ -898,14 +925,26 @@ public:
   }
   /// Returns the properties storage.
   OpaqueProperties getPropertiesStorage() {
-    if (propertiesStorageSize)
-      return getPropertiesStorageUnsafe();
+    if (propertiesStorageSize) {
+      void *properties =
+          reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>());
+      if (isBreakingControlFlowFlag)
+        properties =
+            reinterpret_cast<void *>(reinterpret_cast<char *>(properties) + 8);
+      return {properties};
+    }
     return {nullptr};
   }
   OpaqueProperties getPropertiesStorage() const {
-    if (propertiesStorageSize)
-      return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
-          getTrailingObjects<detail::OpProperties>()))};
+    if (propertiesStorageSize) {
+      void *properties =
+          reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+              getTrailingObjects<detail::OpProperties>()));
+      if (isBreakingControlFlowFlag)
+        properties =
+            reinterpret_cast<void *>(reinterpret_cast<char *>(properties) + 8);
+      return {properties};
+    }
     return {nullptr};
   }
   /// Returns the properties storage without checking whether properties are
@@ -960,8 +999,9 @@ private:
 private:
   Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
-            int propertiesStorageSize, DictionaryAttr attributes,
-            OpaqueProperties properties, bool hasOperandStorage);
+            int numBreakingControlRegions, int propertiesStorageSize,
+            DictionaryAttr attributes, OpaqueProperties properties,
+            bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
@@ -1048,12 +1088,18 @@ private:
 
   const unsigned numResults;
   const unsigned numSuccs;
-  const unsigned numRegions : 23;
+  const unsigned numRegions : 22;
 
   /// This bit signals whether this operation has an operand storage or not. The
   /// operand storage may be elided for operations that are known to never have
   /// operands.
   bool hasOperandStorage : 1;
+
+  /// Set when this operation carries a num-breaking-regions count (i.e. it is
+  /// a RegionTerminator). When true, the num-breaking-regions integer is stored
+  /// at the start of the trailing OpProperties storage area, ahead of any
+  /// dialect-specific properties.
+  bool isBreakingControlFlowFlag : 1;
 
   /// The size of the storage for properties (if any), divided by 8: since the
   /// Properties storage will always be rounded up to the next multiple of 8 we

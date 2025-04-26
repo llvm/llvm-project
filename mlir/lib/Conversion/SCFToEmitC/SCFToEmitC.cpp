@@ -56,7 +56,7 @@ void mlir::registerConvertSCFToEmitCInterface(DialectRegistry &registry) {
 
 namespace {
 
-struct SCFToEmitCPass : public impl::SCFToEmitCBase<SCFToEmitCPass> {
+struct SCFToEmitCPass : public ::mlir::impl::SCFToEmitCBase<SCFToEmitCPass> {
   void runOnOperation() override;
 };
 

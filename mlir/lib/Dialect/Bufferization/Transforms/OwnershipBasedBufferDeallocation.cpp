@@ -669,10 +669,10 @@ Operation *BufferDeallocation::appendOpResults(Operation *op,
                                                ArrayRef<Type> types) {
   SmallVector<Type> newTypes(op->getResultTypes());
   newTypes.append(types.begin(), types.end());
-  auto *newOp = Operation::create(op->getLoc(), op->getName(), newTypes,
-                                  op->getOperands(), op->getAttrDictionary(),
-                                  op->getPropertiesStorage(),
-                                  op->getSuccessors(), op->getNumRegions());
+  auto *newOp = Operation::create(
+      op->getLoc(), op->getName(), newTypes, op->getOperands(),
+      op->getAttrDictionary(), op->getPropertiesStorage(), op->getSuccessors(),
+      op->getNumRegions(), op->getNumBreakingControlRegions());
   for (auto [oldRegion, newRegion] :
        llvm::zip(op->getRegions(), newOp->getRegions()))
     newRegion.takeBody(oldRegion);

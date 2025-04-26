@@ -966,6 +966,12 @@ private:
   llvm::function_ref<void(OpaqueProperties)> propertiesDeleter;
   llvm::function_ref<void(OpaqueProperties, const OpaqueProperties)>
       propertiesSetter;
+  /// Number of nested region levels this operation exits as a RegionTerminator.
+  /// 0 means it is not a RegionTerminator. Values > 0 cause the Operation to
+  /// store this integer in its trailing OpProperties storage and set the
+  /// isBreakingControlFlowFlag bit. See
+  /// Operation::getNumBreakingControlRegions.
+  int numBreakingControlRegions = 0;
   friend class Operation;
 
 public:
@@ -1090,6 +1096,14 @@ public:
     successors.push_back(successor);
   }
   void addSuccessors(BlockRange newSuccessors);
+
+  /// Set the num-breaking-regions count for this operation state, marking the
+  /// resulting Operation as a RegionTerminator that exits `n` region levels.
+  /// Must be called from an op builder before the Operation is created; the
+  /// value is forwarded to Operation::create as numBreakingControlRegions.
+  void setNumBreakingControlRegions(int numBreakingControlRegions) {
+    this->numBreakingControlRegions = numBreakingControlRegions;
+  }
 
   /// Create a region that should be attached to the operation.  These regions
   /// can be filled in immediately without waiting for Operation to be
