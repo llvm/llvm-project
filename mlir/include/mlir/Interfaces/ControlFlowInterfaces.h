@@ -208,23 +208,31 @@ public:
     assert(operation && "Operation must not be null");
   }
 
+  /// Sentinel: the terminator propagates through this op to an ancestor.
+  /// The op is transparent to this break and does not consume it.
+  /// Use `resolveTerminatorSuccessors` to resolve to the actual target.
+  static RegionSuccessor propagating() { return RegionSuccessor(); }
+
   /// Return the given region successor. Returns nullptr if the successor is an
-  /// operation.
+  /// operation or a propagating-break sentinel.
   Region *getSuccessor() const {
     return dyn_cast_if_present<Region *>(successor);
   }
 
   /// Return the given operation successor. Returns nullptr if the successor is
-  /// a region.
+  /// a region or a propagating-break sentinel.
   Operation *getSuccessorOp() const {
     return dyn_cast_if_present<Operation *>(successor);
   }
 
   /// Return true if the successor is a region.
-  bool isRegion() const { return isa<Region *>(successor); }
+  bool isRegion() const { return getSuccessor() != nullptr; }
 
   /// Return true if the successor is an operation.
-  bool isOperation() const { return isa<Operation *>(successor); }
+  bool isOperation() const { return getSuccessorOp() != nullptr; }
+
+  /// Return true if this is a propagating-break sentinel.
+  bool isPropagating() const { return !successor; }
 
   bool operator==(RegionSuccessor rhs) const {
     return successor == rhs.successor;
@@ -243,6 +251,10 @@ public:
   }
 
 private:
+  /// Private constructor to encourage the use of
+  /// `RegionSuccessor::propagating`.
+  RegionSuccessor() : successor(nullptr) {}
+
   llvm::PointerUnion<Region *, Operation *> successor;
 };
 
@@ -439,6 +451,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                      RegionSuccessor successor) {
+  if (successor.isPropagating())
+    return os << "<propagating>";
   if (Region *region = successor.getSuccessor())
     return os << "<to region #" << region->getRegionNumber() << ">";
   return os << "<to operation "
@@ -446,6 +460,18 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                            OpPrintingFlags().skipRegions())
             << ">";
 }
+
+/// Get successor regions for a terminator, resolving propagating breaks.
+/// For a terminator with a single potential target that propagates a break to
+/// an ancestor (the immediate parent would return a
+/// `RegionSuccessor::propagating()` sentinel), this queries the addressed
+/// HasBreakingControlFlowOpInterface ancestor. Otherwise, this queries the
+/// terminator's immediate parent. Returns the RegionBranchOpInterface that owns
+/// the returned successors.
+RegionBranchOpInterface
+resolveTerminatorSuccessors(RegionBranchTerminatorOpInterface terminator,
+                            SmallVectorImpl<RegionSuccessor> &successors);
+
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES_H

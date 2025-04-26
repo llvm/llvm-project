@@ -30,6 +30,11 @@
 namespace mlir {
 namespace scf {
 void buildTerminatedBody(OpBuilder &builder, Location loc);
+
+namespace op_impl {
+struct IfOpImplicitTerminatorType;
+struct LoopOpImplicitTerminatorType;
+} // namespace op_impl
 } // namespace scf
 } // namespace mlir
 
@@ -112,6 +117,71 @@ SmallVector<Value> replaceAndCastForOpIterArg(RewriterBase &rewriter,
                                               OpOperand &operand,
                                               Value replacement,
                                               const ValueTypeCastFnTy &castFn);
+namespace op_impl {
+
+//===----------------------------------------------------------------------===//
+// ControlFlowImplicitTerminatorOperation
+//===----------------------------------------------------------------------===//
+
+/// This class provides an interface compatible with
+/// SingleBlockImplicitTerminator, but allows multiple types of potential
+/// terminators aside from just one. If a terminator isn't present, this will
+/// generate a `ImplicitOpT` operation.
+template <typename ImplicitOpT, typename... OtherTerminatorOpTs>
+struct ControlFlowImplicitTerminatorOpType {
+  /// Implementation of `classof` that supports all of the potential terminator
+  /// operations.
+  static bool classof(Operation *op) {
+    return isa<ImplicitOpT, OtherTerminatorOpTs...>(op);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Implicit Terminator Methods
+
+  /// The following methods are all used when interacting with the "implicit"
+  /// terminator.
+
+  template <typename... Args>
+  static void build(Args &&...args) {
+    ImplicitOpT::build(std::forward<Args>(args)...);
+  }
+  static constexpr StringLiteral getOperationName() {
+    return ImplicitOpT::getOperationName();
+  }
+};
+/// An implicit terminator type for `if` operations. Empty regions still receive
+/// an `scf.yield`, but explicitly terminated regions may use any terminator
+/// implementing RegionExitTerminatorOpInterface so dialect-defined exits can
+/// propagate through `scf.if`.
+struct IfOpImplicitTerminatorType {
+  static bool classof(Operation *op) {
+    return isa<RegionExitTerminatorOpInterface>(op);
+  }
+
+  template <typename... Args>
+  static void build(Args &&...args) {
+    YieldOp::build(std::forward<Args>(args)...);
+  }
+  static constexpr StringLiteral getOperationName() {
+    return YieldOp::getOperationName();
+  }
+};
+struct LoopOpImplicitTerminatorType
+    : public ControlFlowImplicitTerminatorOpType<ContinueOp, BreakOp> {
+  /// Build the implicit `scf.continue` terminator. The control token consumed
+  /// by the terminator is the loop body's entry block argument #0; the
+  /// insertion block is guaranteed to be that body when the implicit
+  /// terminator is materialized. This keeps `scf.continue`'s public builders
+  /// free of any hidden block-argument assumption.
+  static void build(OpBuilder &builder, OperationState &state) {
+    Block *block = builder.getInsertionBlock();
+    assert(block && block->getNumArguments() > 0 &&
+           isa<TokenType>(block->getArgument(0).getType()) &&
+           "expected insertion block with a token-typed loop control argument");
+    state.addOperands(block->getArgument(0));
+  }
+};
+} // namespace op_impl
 
 /// Helper function to compute the difference between two values. This is used
 /// by the loop implementations to compute the trip count.

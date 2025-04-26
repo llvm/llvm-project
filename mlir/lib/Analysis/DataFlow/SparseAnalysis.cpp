@@ -647,14 +647,30 @@ void AbstractSparseBackwardDataFlowAnalysis::
   // non-contiguous in the presence of multiple successors.
   BitVector unaccounted(terminator->getNumOperands(), true);
 
-  RegionBranchSuccessorMapping mapping;
-  branch.getSuccessorOperandInputMapping(mapping,
-                                         RegionBranchPoint(terminator));
-  for (const auto &[operand, inputs] : mapping) {
-    for (Value input : inputs) {
-      meet(getLatticeElement(operand->get()),
+  // For propagating breaks, the immediate parent is transparent. Resolve the
+  // concrete successor list together with the RegionBranchOpInterface that owns
+  // the corresponding successor inputs.
+  SmallVector<RegionSuccessor> successors;
+  RegionBranchOpInterface effectiveBranch =
+      resolveTerminatorSuccessors(terminator, successors);
+  if (!effectiveBranch) {
+    effectiveBranch = branch;
+    branch.getSuccessorRegions(RegionBranchPoint(terminator), successors);
+  }
+
+  for (RegionSuccessor successor : successors) {
+    if (successor.isPropagating())
+      continue;
+    OperandRange operands = effectiveBranch.getSuccessorOperands(
+        RegionBranchPoint(terminator), successor);
+    ValueRange inputs = effectiveBranch.getSuccessorInputs(successor);
+    assert(operands.size() == inputs.size() &&
+           "expected the same number of operands and inputs");
+    MutableArrayRef<OpOperand> opOperands(operands.getBase(), operands.size());
+    for (const auto &[operand, input] : llvm::zip_equal(opOperands, inputs)) {
+      meet(getLatticeElement(operand.get()),
            *getLatticeElementFor(getProgramPointAfter(terminator), input));
-      unaccounted.reset(operand->getOperandNumber());
+      unaccounted.reset(operand.getOperandNumber());
     }
   }
 

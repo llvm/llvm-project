@@ -2358,6 +2358,12 @@ def TestMergeBlocksOp : TEST_Op<"merge_blocks"> {
   let results = (outs Variadic<AnyType>:$result);
 }
 
+def TestPropagateControlFlowBreakOp
+    : TEST_Op<"propagate_control_flow_break", [PropagateControlFlowBreak]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "attr-dict-with-keyword $body";
+}
+
 def TestRemappedValueRegionOp : TEST_Op<"remapped_value_region",
                                         [SingleBlock]> {
   let summary = "remapped_value_region operation";
