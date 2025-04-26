@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file a TargetTransformInfo::Concept conforming object specific
+/// This file a TargetTransformInfoImplBase conforming object specific
 /// to the WebAssembly target machine.
 ///
 /// It uses the target's detailed information to provide more precise answers to
