@@ -307,6 +307,16 @@ def : Pat<(f64 fpnegimmhalf), (MOVXTOD (SLLXri (SETHIi 0x2FF800), 32))>;
 
 def : Pat<(i64 (adde i64:$lhs, i64:$rhs)), (ADDXCCC $lhs, $rhs)>;
 
+def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
+// Signed "MULXHI".
+// Based on the formula presented in OSA2011 §7.140, but with bitops to select
+// the values to be added.
+// TODO: This expansion should probably be moved to DAG legalization phase.
+def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
+      (SUBrr (UMULXHI $lhs, $rhs),
+             (ADDrr (ANDrr (SRAXri $lhs, 63), $rhs),
+                    (ANDrr (SRAXri $rhs, 63), $lhs)))>;
+
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
 def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
 // 32-bit LZCNT.
@@ -325,17 +335,12 @@ def : Pat<(i64 (bitconvert f64:$src)), (MOVDTOX $src)>;
 def : Pat<(f64 (bitconvert i64:$src)), (MOVXTOD $src)>;
 
 // OP-then-neg FP operations.
+// TODO handle equivalent patterns like `rs1*-rs2`.
 def : Pat<(f32 (fneg (fadd f32:$rs1, f32:$rs2))), (FNADDS $rs1, $rs2)>;
 def : Pat<(f64 (fneg (fadd f64:$rs1, f64:$rs2))), (FNADDD $rs1, $rs2)>;
 def : Pat<(f32 (fneg (fmul f32:$rs1, f32:$rs2))), (FNMULS $rs1, $rs2)>;
-def : Pat<(f32 (fmul (fneg f32:$rs1), f32:$rs2)), (FNMULS $rs1, $rs2)>;
-def : Pat<(f32 (fmul f32:$rs1, (fneg f32:$rs2))), (FNMULS $rs1, $rs2)>;
 def : Pat<(f64 (fneg (fmul f64:$rs1, f64:$rs2))), (FNMULD $rs1, $rs2)>;
-def : Pat<(f64 (fmul (fneg f64:$rs1), f64:$rs2)), (FNMULD $rs1, $rs2)>;
-def : Pat<(f64 (fmul f64:$rs1, (fneg f64:$rs2))), (FNMULD $rs1, $rs2)>;
 def : Pat<(f64 (fneg (fmul (fpextend f32:$rs1), (fpextend f32:$rs2)))), (FNSMULD $rs1, $rs2)>;
-def : Pat<(f64 (fmul (fneg (fpextend f32:$rs1)), (fpextend f32:$rs2))), (FNSMULD $rs1, $rs2)>;
-def : Pat<(f64 (fmul (fpextend f32:$rs1), (fneg (fpextend f32:$rs2)))), (FNSMULD $rs1, $rs2)>;
 
 // Op-then-halve FP operations.
 def : Pat<(f32 (fmul (fadd f32:$rs1, f32:$rs2), fpimmhalf)), (FHADDS $rs1, $rs2)>;

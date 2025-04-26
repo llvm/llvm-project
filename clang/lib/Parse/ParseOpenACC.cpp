@@ -537,6 +537,8 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::Tile:
     return ClauseParensKind::Required;
 
+  case OpenACCClauseKind::Shortloop:
+    llvm_unreachable("Shortloop shouldn't be generated in clang");
   case OpenACCClauseKind::Auto:
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:

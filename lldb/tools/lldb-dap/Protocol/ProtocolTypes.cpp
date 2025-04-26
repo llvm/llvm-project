@@ -233,4 +233,25 @@ json::Value toJSON(const Capabilities &C) {
   return result;
 }
 
+bool fromJSON(const llvm::json::Value &Params, SteppingGranularity &SG,
+              llvm::json::Path P) {
+  auto raw_granularity = Params.getAsString();
+  if (!raw_granularity) {
+    P.report("expected a string");
+    return false;
+  }
+  std::optional<SteppingGranularity> granularity =
+      StringSwitch<std::optional<SteppingGranularity>>(*raw_granularity)
+          .Case("statement", eSteppingGranularityStatement)
+          .Case("line", eSteppingGranularityLine)
+          .Case("instruction", eSteppingGranularityInstruction)
+          .Default(std::nullopt);
+  if (!granularity) {
+    P.report("unexpected value");
+    return false;
+  }
+  SG = *granularity;
+  return true;
+}
+
 } // namespace lldb_dap::protocol

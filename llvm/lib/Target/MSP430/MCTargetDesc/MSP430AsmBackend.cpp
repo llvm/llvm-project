@@ -46,8 +46,7 @@ public:
     return createMSP430ELFObjectWriter(OSABI);
   }
 
-
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[MSP430::NumTargetFixupKinds] = {
       // This table must be in the same order of enum in MSP430FixupKinds.h.
       //

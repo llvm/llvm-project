@@ -645,7 +645,7 @@ StmtResult Parser::ParseMicrosoftAsmStatement(SourceLocation AsmLoc) {
   });
 
   // Build the vector of clobber StringRefs.
-  ClobberRefs.insert(ClobberRefs.end(), Clobbers.begin(), Clobbers.end());
+  llvm::append_range(ClobberRefs, Clobbers);
 
   // Recast the void pointers and build the vector of constraint StringRefs.
   unsigned NumExprs = NumOutputs + NumInputs;

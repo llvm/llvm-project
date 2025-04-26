@@ -167,6 +167,33 @@ func.func @extract_scalar_poison_idx(%a: vector<4x5xf32>) -> f32 {
 
 // -----
 
+// Similar to the test above, but the index is not a static constant.
+
+// CHECK-LABEL: @extract_scalar_poison_idx_non_cst
+func.func @extract_scalar_poison_idx_non_cst(%a: vector<4x5xf32>) -> f32 {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : f32
+  //  CHECK-NOT: vector.extract
+  // CHECK-NEXT: return %[[UB]] : f32
+  %c_neg_1 = arith.constant -1 : index
+  %0 = vector.extract %a[%c_neg_1, 0] : f32 from vector<4x5xf32>
+  return %0 : f32
+}
+
+// -----
+
+// Similar to test above, but now the index is out-of-bounds.
+
+// CHECK-LABEL: @no_fold_extract_scalar_oob_idx
+func.func @no_fold_extract_scalar_oob_idx(%a: vector<4x5xf32>) -> f32 {
+  //  CHECK: vector.extract
+  %c_neg_2 = arith.constant -2 : index
+  %0 = vector.extract %a[%c_neg_2, 0] : f32 from vector<4x5xf32>
+  return %0 : f32
+}
+
+
+// -----
+
 // CHECK-LABEL: @extract_vector_poison_idx
 func.func @extract_vector_poison_idx(%a: vector<4x5xf32>) -> vector<5xf32> {
   // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<5xf32>
@@ -3057,6 +3084,34 @@ func.func @insert_vector_poison_idx(%a: vector<4x5xf32>, %b: vector<5xf32>)
   //  CHECK-NOT: vector.insert
   // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
   %0 = vector.insert %b, %a[-1] : vector<5xf32> into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// Similar to the test above, but the index is not a static constant.
+
+// CHECK-LABEL: @insert_vector_poison_idx_non_cst
+func.func @insert_vector_poison_idx_non_cst(%a: vector<4x5xf32>, %b: vector<5xf32>)
+    -> vector<4x5xf32> {
+  // CHECK-NEXT: %[[UB:.*]] = ub.poison : vector<4x5xf32>
+  //  CHECK-NOT: vector.insert
+  // CHECK-NEXT: return %[[UB]] : vector<4x5xf32>
+  %c_neg_1 = arith.constant -1 : index
+  %0 = vector.insert %b, %a[%c_neg_1] : vector<5xf32> into vector<4x5xf32>
+  return %0 : vector<4x5xf32>
+}
+
+// -----
+
+// Similar to test above, but now the index is out-of-bounds.
+
+// CHECK-LABEL: @no_fold_insert_scalar_idx_oob
+func.func @no_fold_insert_scalar_idx_oob(%a: vector<4x5xf32>, %b: vector<5xf32>)
+    -> vector<4x5xf32> {
+  //  CHECK: vector.insert
+  %c_neg_2 = arith.constant -2 : index
+  %0 = vector.insert %b, %a[%c_neg_2] : vector<5xf32> into vector<4x5xf32>
   return %0 : vector<4x5xf32>
 }
 

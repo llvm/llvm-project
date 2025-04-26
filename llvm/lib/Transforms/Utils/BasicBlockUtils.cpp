@@ -165,9 +165,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
                           MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : BB->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
