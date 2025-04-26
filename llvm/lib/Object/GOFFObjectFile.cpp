@@ -464,6 +464,7 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     return ArrayRef<uint8_t>(Buf);
   }
   uint64_t SectionSize = getSectionSize(Sec);
+  uint64_t SectionOffset = getSectionAddress(Sec);
   uint32_t DefEsdId = getSectionDefEsdId(Sec);
 
   const uint8_t *EdEsdRecord = getSectionEdEsdRecord(Sec);
@@ -492,7 +493,8 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     uint16_t TxtDataSize;
     TXTRecord::getDataLength(TxtRecordPtr, TxtDataSize);
 
-    LLVM_DEBUG(dbgs() << "Record offset " << TxtDataOffset << ", data size "
+    LLVM_DEBUG(dbgs() << "Section offset " << SectionOffset
+                      << ", Record offset " << TxtDataOffset << ", data size "
                       << TxtDataSize << "\n");
 
     SmallString<256> CompleteData;
@@ -500,7 +502,19 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     if (Error Err = TXTRecord::getData(TxtRecordPtr, CompleteData))
       return std::move(Err);
     assert(CompleteData.size() == TxtDataSize && "Wrong length of data");
-    std::copy(CompleteData.data(), CompleteData.data() + TxtDataSize,
+
+    if (SectionOffset > TxtDataOffset)
+      return createStringError(
+          object_error::parse_failed,
+          "TXT record offset too low for element with ESDID " +
+              Twine(TxtEsdId));
+    TxtDataOffset -= SectionOffset;
+    if (Data.size() < TxtDataOffset + TxtDataSize)
+      return createStringError(object_error::parse_failed,
+                               "TXT record overflows element with ESDID " +
+                                   Twine(TxtEsdId));
+
+    std::copy(CompleteData.begin(), CompleteData.end(),
               Data.begin() + TxtDataOffset);
   }
   auto &Cache = SectionDataCache[Sec.d.a];

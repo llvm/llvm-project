@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/GOFFObjectFile.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -16,45 +16,58 @@ using namespace llvm::object;
 using namespace llvm::GOFF;
 
 namespace {
-char GOFFData[GOFF::RecordLength * 3] = {0x00};
+struct TestData {
+  std::vector<uint8_t> Data;
 
-void constructValidGOFF(size_t Size) {
-  StringRef ValidSize(GOFFData, Size);
+  TestData() = default;
+  TestData(size_t Records) : Data(Records * GOFF::RecordLength, 0) {}
+  MemoryBufferRef getMemoryBuffer() const {
+    return MemoryBufferRef(toStringRef(Data), "dummyGOFF");
+  }
+  MutableArrayRef<uint8_t> operator[](size_t Index) {
+    return MutableArrayRef(Data.data() + (GOFF::RecordLength * Index),
+                           GOFF::RecordLength);
+  }
+};
+
+void assertValidGOFF(TestData Data) {
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
-      object::ObjectFile::createGOFFObjectFile(
-          MemoryBufferRef(ValidSize, "dummyGOFF"));
+      object::ObjectFile::createGOFFObjectFile(Data.getMemoryBuffer());
 
   ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
 }
 
-void constructInvalidGOFF(size_t Size) {
-  // Construct GOFFObject with record of length != multiple of 80.
-  StringRef InvalidData(GOFFData, Size);
+void assertInvalidGOFF(TestData Data) {
   Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
-      object::ObjectFile::createGOFFObjectFile(
-          MemoryBufferRef(InvalidData, "dummyGOFF"));
+      object::ObjectFile::createGOFFObjectFile(Data.getMemoryBuffer());
 
   ASSERT_THAT_EXPECTED(
       GOFFObjOrErr,
       FailedWithMessage("object file is not the right size. Must be a multiple "
                         "of 80 bytes, but is " +
-                        std::to_string(Size) + " bytes"));
+                        std::to_string(Data.Data.size()) + " bytes"));
 }
 } // namespace
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectValidSize) {
-  GOFFData[0] = (char)0x03;
-  GOFFData[1] = (char)0xF0;
-  GOFFData[80] = (char)0x03;
-  GOFFData[81] = (char)0x40;
-  constructValidGOFF(160);
-  constructValidGOFF(0);
+  TestData Records(2);
+  Records[0][0] = 0x03;
+  Records[0][1] = 0xF0;
+  Records[1][0] = 0x03;
+  Records[1][1] = 0x40;
+  assertValidGOFF(Records);
+  Records.Data.resize(0);
+  assertValidGOFF(Records);
 }
 
 TEST(GOFFObjectFileTest, ConstructGOFFObjectInvalidSize) {
-  constructInvalidGOFF(70);
-  constructInvalidGOFF(79);
-  constructInvalidGOFF(81);
+  TestData Records;
+  Records.Data.resize(70);
+  assertInvalidGOFF(Records);
+  Records.Data.resize(79);
+  assertInvalidGOFF(Records);
+  Records.Data.resize(81);
+  assertInvalidGOFF(Records);
 }
 
 TEST(GOFFObjectFileTest, MissingHDR) {
@@ -590,6 +603,93 @@ TEST(GOFFObjectFileTest, TXTConstruct) {
   ASSERT_THAT_EXPECTED(SymbolNameOrErr, Succeeded());
   StringRef SymbolName = SymbolNameOrErr.get();
   EXPECT_EQ(SymbolName, "var#c");
+
+  auto Sections = GOFFObj->sections();
+  ASSERT_EQ(std::distance(Sections.begin(), Sections.end()), 1);
+  SectionRef Section = *Sections.begin();
+  Expected<StringRef> SectionContent = Section.getContents();
+  ASSERT_THAT_EXPECTED(SectionContent, Succeeded());
+  StringRef Contents = SectionContent.get();
+  EXPECT_EQ(Contents, "\x12\x34\x56\x78\x9a\xbc\xde\xf0");
+}
+
+// Test elements with an offset as produced by HLASM.
+TEST(GOFFObjectFileTest, EdWithOffset) {
+  TestData Records(5);
+
+  // HDR record.
+  auto Hdr = Records[0];
+  Hdr[0] = 0x03;
+  Hdr[1] = 0xF0;
+  Hdr[50] = 0x01;
+
+  // SD ESD record.
+  auto Sd = Records[1];
+  Sd[0] = 0x03;
+  Sd[3] = 0x00;  // SD symbol type.
+  Sd[7] = 0x01;  // ESDID.
+  Sd[71] = 0x04; // Symbol name length.
+  Sd[72] = 0xa5; // Symbol name is T.
+  Sd[73] = 0x81; // Symbol name is E.
+  Sd[74] = 0x99; // Symbol name is S.
+  Sd[75] = 0x7b; // Symbol name is T.
+
+  // ED ESD record.
+  auto Ed = Records[2];
+  Ed[0] = 0x03;
+  Ed[3] = 0x01;  // ED symbol type.
+  Ed[7] = 0x02;  // ESDID.
+  Ed[11] = 0x01; // Parent ESDID.
+  Ed[18] = 0x01; // Offset is 4096.
+  Ed[19] = 0x00; // Offset is 4096.
+  Ed[27] = 0x08; // Element length is 8.
+  Ed[40] = 0x01; // Name Space ID.
+  Ed[41] = 0x80;
+  Ed[60] = 0x04;  // Addressing mode is AMODE(64).
+  Ed[61] = 0x03;  // Residence mode is AMODE(31).
+  Ed[63] |= 0x60; // Tasking behaviour is RENT.
+  Ed[63] |= 0x08; // Element is read-only.
+  Ed[63] |= 0x02; // Element is executable.
+  Ed[66] = 0x03;  // Element has doubleword alignment.
+  Ed[71] = 0x06;  // Size of symbol name.
+  Ed[72] = 0xc3;  // Symbol name is B.
+  Ed[73] = 0x6d;  // Symbol name is _.
+  Ed[74] = 0xc3;  // Symbol name is T.
+  Ed[75] = 0xd6;  // Symbol name is E.
+  Ed[76] = 0xc4;  // Symbol name is X.
+  Ed[77] = 0xc5;  // Symbol name is T.
+
+  // TXT record.
+  auto Txt = Records[3];
+  Txt[0] = 0x03;
+  Txt[1] = 0x10;
+  Txt[7] = 0x02;  // Owning ESDID is the ED.
+  Txt[14] = 0x01; // Offset is 4096.
+  Txt[15] = 0x00; // Offset is 4096.
+  Txt[23] = 0x08; // Data Length.
+  Txt[24] = 0x12;
+  Txt[25] = 0x34;
+  Txt[26] = 0x56;
+  Txt[27] = 0x78;
+  Txt[28] = 0x9a;
+  Txt[29] = 0xbc;
+  Txt[30] = 0xde;
+  Txt[31] = 0xf0;
+
+  // END record.
+  auto End = Records[4];
+  End[0] = 0x03;
+  End[1] = 0x40;
+  End[11] = 0x05;
+
+  Expected<std::unique_ptr<ObjectFile>> GOFFObjOrErr =
+      object::ObjectFile::createGOFFObjectFile(Records.getMemoryBuffer());
+
+  ASSERT_THAT_EXPECTED(GOFFObjOrErr, Succeeded());
+
+  GOFFObjectFile *GOFFObj = dyn_cast<GOFFObjectFile>((*GOFFObjOrErr).get());
+  auto Symbols = GOFFObj->symbols();
+  ASSERT_EQ(std::distance(Symbols.begin(), Symbols.end()), 0);
 
   auto Sections = GOFFObj->sections();
   ASSERT_EQ(std::distance(Sections.begin(), Sections.end()), 1);
