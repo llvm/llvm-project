@@ -12398,7 +12398,7 @@ void OpenACCClauseTransform<Derived>::VisitVectorClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitWaitClause(
     const OpenACCWaitClause &C) {
-  if (!C.getLParenLoc().isInvalid()) {
+  if (C.hasExprs()) {
     Expr *DevNumExpr = nullptr;
     llvm::SmallVector<Expr *> InstantiatedQueueIdExprs;
 
