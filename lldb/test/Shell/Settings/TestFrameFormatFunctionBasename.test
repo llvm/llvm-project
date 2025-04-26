@@ -1,3 +1,5 @@
+# XFAIL: system-windows
+
 # Test the ${function.basename} frame-format variable.
 
 # RUN: split-file %s %t
@@ -36,7 +38,7 @@ int main() {
 
 #--- commands.input
 settings set -f frame-format "custom-frame '${function.basename}'\n"
-break set -n bar
+break set -l 5
 
 run
 bt

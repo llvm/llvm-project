@@ -20,7 +20,7 @@ int main(int argc, const char *argv[]) {
 #--- commands.input
 settings set plugin.cplusplus.display.function-name-format "${function.basename}${script.target:invalid_func}"
 settings set -f frame-format "custom-frame '${function.name-with-args}'\n"
-break set -n gunc
+break set -l 2
 
 run
 bt
