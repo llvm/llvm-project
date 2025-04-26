@@ -725,10 +725,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return ReducedPartRdx;
   }
-  case VPInstruction::ExtractFromEnd: {
-    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
-    unsigned Offset = CI->getZExtValue();
-    assert(Offset > 0 && "Offset from end must be positive");
+  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractPenultimateElement: {
+    unsigned Offset = getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
     Value *Res;
     if (State.VF.isVector()) {
       assert(Offset <= State.VF.getKnownMinValue() &&
@@ -854,7 +853,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 }
 
 bool VPInstruction::isVectorToScalar() const {
-  return getOpcode() == VPInstruction::ExtractFromEnd ||
+  return getOpcode() == VPInstruction::ExtractLastElement ||
+         getOpcode() == VPInstruction::ExtractPenultimateElement ||
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeFindLastIVResult ||
@@ -924,7 +924,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::AnyOf:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::ExtractFromEnd:
+  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
@@ -1042,8 +1043,11 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Broadcast:
     O << "broadcast";
     break;
-  case VPInstruction::ExtractFromEnd:
-    O << "extract-from-end";
+  case VPInstruction::ExtractLastElement:
+    O << "extract-last-element";
+    break;
+  case VPInstruction::ExtractPenultimateElement:
+    O << "extract-penultimate-element";
     break;
   case VPInstruction::ComputeFindLastIVResult:
     O << "compute-find-last-iv-result";
@@ -1137,19 +1141,15 @@ InstructionCost VPIRInstruction::computeCost(ElementCount VF,
   return 0;
 }
 
-void VPIRInstruction::extractLastLaneOfOperand(VPBuilder &Builder) {
+void VPIRInstruction::extractLastLaneOfFirstOperand(VPBuilder &Builder) {
   assert(isa<PHINode>(getInstruction()) &&
-         "can only add exiting operands to phi nodes");
-  assert(getNumOperands() == 1 && "must have a single operand");
+         "can only update exiting operands to phi nodes");
+  assert(getNumOperands() > 0 && "must have at least one operand");
   VPValue *Exiting = getOperand(0);
-  if (!Exiting->isLiveIn()) {
-    LLVMContext &Ctx = getInstruction().getContext();
-    auto &Plan = *getParent()->getPlan();
-    Exiting = Builder.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {Exiting,
-         Plan.getOrAddLiveIn(ConstantInt::get(IntegerType::get(Ctx, 32), 1))});
-  }
+  if (Exiting->isLiveIn())
+    return;
+
+  Exiting = Builder.createNaryOp(VPInstruction::ExtractLastElement, {Exiting});
   setOperand(0, Exiting);
 }
 
@@ -1205,6 +1205,11 @@ void VPIRPhi::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+void VPIRMetadata::applyMetadata(Instruction &I) const {
+  for (const auto &[Kind, Node] : Metadata)
+    I.setMetadata(Kind, Node);
+}
+
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   assert(Variant != nullptr && "Can't create vector function.");
@@ -1231,11 +1236,11 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
 
   CallInst *V = State.Builder.CreateCall(Variant, Args, OpBundles);
   applyFlags(*V);
+  applyMetadata(*V);
   V->setCallingConv(Variant->getCallingConv());
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
-  State.addMetadata(V, CI);
 }
 
 InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
@@ -1311,10 +1316,10 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
 
   applyFlags(*V);
+  applyMetadata(*V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
-  State.addMetadata(V, CI);
 }
 
 InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
@@ -1509,9 +1514,11 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   Value *Op1 = State.get(getOperand(2));
   Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
   State.set(this, Sel);
-  if (isa<FPMathOperator>(Sel))
-    applyFlags(*cast<Instruction>(Sel));
-  State.addMetadata(Sel, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
+  if (auto *I = dyn_cast<Instruction>(Sel)) {
+    if (isa<FPMathOperator>(I))
+      applyFlags(*I);
+    applyMetadata(*I);
+  }
 }
 
 InstructionCost VPWidenSelectRecipe::computeCost(ElementCount VF,
@@ -1642,12 +1649,13 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 
     Value *V = Builder.CreateNAryOp(Opcode, Ops);
 
-    if (auto *VecOp = dyn_cast<Instruction>(V))
+    if (auto *VecOp = dyn_cast<Instruction>(V)) {
       applyFlags(*VecOp);
+      applyMetadata(*VecOp);
+    }
 
     // Use this vector value for all users of the original instruction.
     State.set(this, V);
-    State.addMetadata(V, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     break;
   }
   case Instruction::ExtractValue: {
@@ -1679,8 +1687,9 @@ void VPWidenRecipe::execute(VPTransformState &State) {
     } else {
       C = Builder.CreateICmp(getPredicate(), A, B);
     }
+    if (auto *I = dyn_cast<Instruction>(C))
+      applyMetadata(*I);
     State.set(this, C);
-    State.addMetadata(C, dyn_cast_or_null<Instruction>(getUnderlyingValue()));
     break;
   }
   default:
@@ -1796,9 +1805,10 @@ void VPWidenCastRecipe::execute(VPTransformState &State) {
   Value *A = State.get(Op);
   Value *Cast = Builder.CreateCast(Instruction::CastOps(Opcode), A, DestTy);
   State.set(this, Cast);
-  State.addMetadata(Cast, cast_or_null<Instruction>(getUnderlyingValue()));
-  if (auto *CastOp = dyn_cast<Instruction>(Cast))
+  if (auto *CastOp = dyn_cast<Instruction>(Cast)) {
     applyFlags(*CastOp);
+    applyMetadata(*CastOp);
+  }
 }
 
 InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
@@ -2722,7 +2732,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 }
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
@@ -2751,8 +2760,10 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   } else {
     NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
   }
-  // Add metadata to the load, but setVectorValue to the reverse shuffle.
-  State.addMetadata(NewLI, LI);
+  // Add metadata to the load, but set the result to the reverse shuffle, if
+  // needed.
+  State.addNewMetadata(cast<Instruction>(NewLI), &Ingredient);
+  applyMetadata(*cast<Instruction>(NewLI));
   if (Reverse)
     NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
   State.set(this, NewLI);
@@ -2780,7 +2791,6 @@ static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
 }
 
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
-  auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
@@ -2812,7 +2822,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
-  State.addMetadata(NewLI, LI);
+  State.addNewMetadata(NewLI, &Ingredient);
+  applyMetadata(*NewLI);
   Instruction *Res = NewLI;
   if (isReverse())
     Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
@@ -2855,8 +2866,6 @@ void VPWidenLoadEVLRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
-
   VPValue *StoredVPValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
@@ -2888,7 +2897,8 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
     NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
   else
     NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
-  State.addMetadata(NewSI, SI);
+  State.addNewMetadata(NewSI, &Ingredient);
+  applyMetadata(*NewSI);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2900,7 +2910,6 @@ void VPWidenStoreRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
-  auto *SI = cast<StoreInst>(&Ingredient);
 
   VPValue *StoredValue = getStoredValue();
   bool CreateScatter = !isConsecutive();
@@ -2935,7 +2944,8 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
-  State.addMetadata(NewSI, SI);
+  State.addNewMetadata(NewSI, &Ingredient);
+  applyMetadata(*NewSI);
 }
 
 InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,

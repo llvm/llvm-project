@@ -647,13 +647,15 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInst &MI, const MCOperand &MO, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  bool isLikeImm = false;
   int64_t Val;
-  if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
-    Op = Val;
-    return;
-  }
 
-  if (MO.isExpr() && MO.getExpr()->getKind() != MCExpr::Constant) {
+  if (MO.isImm()) {
+    Val = MO.getImm();
+    isLikeImm = true;
+  } else if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
+    isLikeImm = true;
+  } else if (MO.isExpr()) {
     // FIXME: If this is expression is PCRel or not should not depend on what
     // the expression looks like. Given that this is just a general expression,
     // it should probably be FK_Data_4 and whatever is producing
@@ -683,8 +685,12 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
       Op = *Enc;
       return;
     }
-  } else if (MO.isImm()) {
-    Op = MO.getImm();
+
+    llvm_unreachable("Operand not supported for SISrc");
+  }
+
+  if (isLikeImm) {
+    Op = Val;
     return;
   }
 

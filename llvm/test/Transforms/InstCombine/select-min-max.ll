@@ -216,8 +216,8 @@ define i32 @smax_smin(i32 %x) {
 
 define i32 @smin_smax(i32 %x) {
 ; CHECK-LABEL: @smin_smax(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], -2
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i32 -1, i32 -2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i32 -2, i32 -1
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %m = call i32 @llvm.smin.i32(i32 %x, i32 -1)
@@ -240,8 +240,8 @@ define i8 @umax_umin(i8 %x) {
 
 define i8 @umin_umax(i8 %x) {
 ; CHECK-LABEL: @umin_umax(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], 126
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i8 127, i8 126
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[TMP1]], i8 126, i8 127
 ; CHECK-NEXT:    ret i8 [[S]]
 ;
   %m = call i8 @llvm.umin.i8(i8 %x, i8 127)

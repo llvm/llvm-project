@@ -8,7 +8,7 @@ define i8 @cvt_u8_f32(float %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_u8_f32_param_0];
@@ -25,7 +25,7 @@ define i8 @cvt_u8_f64(double %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [cvt_u8_f64_param_0];
@@ -41,7 +41,7 @@ define float @cvt_f32_i8(i8 %x) {
 ; CHECK-LABEL: cvt_f32_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [cvt_f32_i8_param_0];
@@ -56,7 +56,7 @@ define double @cvt_f64_i8(i8 %x) {
 ; CHECK-LABEL: cvt_f64_i8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [cvt_f64_i8_param_0];
@@ -71,7 +71,7 @@ define float @cvt_f32_s8(i8 %x) {
 ; CHECK-LABEL: cvt_f32_s8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.s8 %rs1, [cvt_f32_s8_param_0];
@@ -86,7 +86,7 @@ define double @cvt_f64_s8(i8 %x) {
 ; CHECK-LABEL: cvt_f64_s8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.s8 %rs1, [cvt_f64_s8_param_0];
@@ -102,7 +102,7 @@ define i8 @cvt_s8_f32(float %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f32 %f<2>;
+; CHECK-NEXT:    .reg .b32 %f<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f32 %f1, [cvt_s8_f32_param_0];
@@ -120,7 +120,7 @@ define i8 @cvt_s8_f64(double %x) {
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .f64 %fd<2>;
+; CHECK-NEXT:    .reg .b64 %fd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.f64 %fd1, [cvt_s8_f64_param_0];

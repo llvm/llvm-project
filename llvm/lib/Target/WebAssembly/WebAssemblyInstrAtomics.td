@@ -150,10 +150,10 @@ defm ATOMIC_LOAD32_U_I64 : AtomicLoad<I64, "i64.atomic.load32_u", 0x16>;
 // zero-extending.
 def zext_aload_8_64 :
   PatFrag<(ops node:$addr),
-          (i64 (zext (i32 (atomic_load_8 node:$addr))))>;
+          (i64 (zext (i32 (atomic_load_azext_8 node:$addr))))>;
 def zext_aload_16_64 :
   PatFrag<(ops node:$addr),
-          (i64 (zext (i32 (atomic_load_16 node:$addr))))>;
+          (i64 (zext (i32 (atomic_load_azext_16 node:$addr))))>;
 def zext_aload_32_64 :
   PatFrag<(ops node:$addr),
           (i64 (zext (i32 (atomic_load_32 node:$addr))))>;
@@ -163,9 +163,9 @@ def zext_aload_32_64 :
 // results) and select a zext load; the next instruction will be sext_inreg
 // which is selected by itself.
 def sext_aload_8_64 :
-  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_8 node:$addr)))>;
+  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_azext_8 node:$addr)))>;
 def sext_aload_16_64 :
-  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_16 node:$addr)))>;
+  PatFrag<(ops node:$addr), (anyext (i32 (atomic_load_azext_16 node:$addr)))>;
 
 // Select zero-extending loads
 defm : LoadPat<i64, zext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
@@ -173,8 +173,8 @@ defm : LoadPat<i64, zext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 defm : LoadPat<i64, zext_aload_32_64, "ATOMIC_LOAD32_U_I64">;
 
 // Select sign-extending loads
-defm : LoadPat<i32, atomic_load_8, "ATOMIC_LOAD8_U_I32">;
-defm : LoadPat<i32, atomic_load_16, "ATOMIC_LOAD16_U_I32">;
+defm : LoadPat<i32, atomic_load_zext_8, "ATOMIC_LOAD8_U_I32">;
+defm : LoadPat<i32, atomic_load_zext_16, "ATOMIC_LOAD16_U_I32">;
 defm : LoadPat<i64, sext_aload_8_64, "ATOMIC_LOAD8_U_I64">;
 defm : LoadPat<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 // 32->64 sext load gets selected as i32.atomic.load, i64.extend_i32_s

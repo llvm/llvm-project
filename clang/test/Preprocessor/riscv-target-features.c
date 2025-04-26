@@ -125,6 +125,7 @@
 // CHECK-NOT: __riscv_zicbop {{.*$}}
 // CHECK-NOT: __riscv_zicboz {{.*$}}
 // CHECK-NOT: __riscv_ziccamoa {{.*$}}
+// CHECK-NOT: __riscv_ziccamoc {{.*$}}
 // CHECK-NOT: __riscv_ziccif {{.*$}}
 // CHECK-NOT: __riscv_zicclsm {{.*$}}
 // CHECK-NOT: __riscv_ziccrse {{.*$}}
@@ -1046,6 +1047,14 @@
 // RUN:   -march=rv64iziccamoa -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCAMOA-EXT %s
 // CHECK-ZICCAMOA-EXT: __riscv_ziccamoa 1000000{{$}}
+
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32iziccamoc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCAMOC-EXT %s
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64iziccamoc -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-ZICCAMOC-EXT %s
+// CHECK-ZICCAMOC-EXT: __riscv_ziccamoc 1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32iziccif -E -dM %s \

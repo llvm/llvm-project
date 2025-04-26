@@ -112,24 +112,24 @@ static llvm::DefaultThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
-        Debugger::eStopDisassemblyTypeNever,
+        lldb::eStopDisassemblyTypeNever,
         "never",
         "Never show disassembly when displaying a stop context.",
     },
     {
-        Debugger::eStopDisassemblyTypeNoDebugInfo,
+        lldb::eStopDisassemblyTypeNoDebugInfo,
         "no-debuginfo",
         "Show disassembly when there is no debug information.",
     },
     {
-        Debugger::eStopDisassemblyTypeNoSource,
+        lldb::eStopDisassemblyTypeNoSource,
         "no-source",
         "Show disassembly when there is no source information, or the source "
         "file "
         "is missing when displaying a stop context.",
     },
     {
-        Debugger::eStopDisassemblyTypeAlways,
+        lldb::eStopDisassemblyTypeAlways,
         "always",
         "Always show disassembly when displaying a stop context.",
     },
@@ -257,7 +257,9 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       else
         m_statusline.reset();
     } else if (property_path ==
-               g_debugger_properties[ePropertyStatuslineFormat].name) {
+                   g_debugger_properties[ePropertyStatuslineFormat].name ||
+               property_path ==
+                   g_debugger_properties[ePropertySeparator].name) {
       // Statusline format changed. Redraw the statusline.
       RedrawStatusline();
     } else if (property_path ==
@@ -502,6 +504,19 @@ bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
   return ret;
 }
 
+llvm::StringRef Debugger::GetSeparator() const {
+  constexpr uint32_t idx = ePropertySeparator;
+  return GetPropertyAtIndexAs<llvm::StringRef>(
+      idx, g_debugger_properties[idx].default_cstr_value);
+}
+
+bool Debugger::SetSeparator(llvm::StringRef s) {
+  constexpr uint32_t idx = ePropertySeparator;
+  bool ret = SetPropertyAtIndex(idx, s);
+  RedrawStatusline();
+  return ret;
+}
+
 bool Debugger::GetUseAutosuggestion() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
   return GetPropertyAtIndexAs<bool>(
@@ -596,10 +611,10 @@ uint64_t Debugger::GetStopSourceLineCount(bool before) const {
       idx, g_debugger_properties[idx].default_uint_value);
 }
 
-Debugger::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
+lldb::StopDisassemblyType Debugger::GetStopDisassemblyDisplay() const {
   const uint32_t idx = ePropertyStopDisassemblyDisplay;
-  return GetPropertyAtIndexAs<Debugger::StopDisassemblyType>(
-      idx, static_cast<Debugger::StopDisassemblyType>(
+  return GetPropertyAtIndexAs<lldb::StopDisassemblyType>(
+      idx, static_cast<lldb::StopDisassemblyType>(
                g_debugger_properties[idx].default_uint_value));
 }
 
@@ -826,6 +841,12 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
   return debugger_sp;
 }
 
+void Debugger::DispatchClientTelemetry(
+    const lldb_private::StructuredDataImpl &entry) {
+  lldb_private::telemetry::TelemetryManager::GetInstance()
+      ->DispatchClientTelemetry(entry, this);
+}
+
 void Debugger::HandleDestroyCallback() {
   const lldb::user_id_t user_id = GetID();
   // Invoke and remove all the callbacks in an FIFO order. Callbacks which are
@@ -1001,11 +1022,16 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
 
   // Turn off use-color if this is a dumb terminal.
   const char *term = getenv("TERM");
-  if (term && !strcmp(term, "dumb"))
+  auto disable_color = [&]() {
     SetUseColor(false);
+    SetSeparator("| ");
+  };
+
+  if (term && !strcmp(term, "dumb"))
+    disable_color();
   // Turn off use-color if we don't write to a terminal with color support.
   if (!GetOutputFileSP()->GetIsTerminalWithColors())
-    SetUseColor(false);
+    disable_color();
 
   if (Diagnostics::Enabled()) {
     m_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
