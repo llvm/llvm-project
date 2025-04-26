@@ -947,7 +947,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
                                     opts.DebugPassManager);
-  si.registerCallbacks(pic, &mam);
+  si.registerCallbacks(pic, &mam, &fam);
   if (ci.isTimingEnabled())
     si.getTimePasses().setOutStream(ci.getTimingStreamLLVM());
   pto.LoopUnrolling = opts.UnrollLoops;
