@@ -1412,6 +1412,14 @@ enum CommandReturnObjectCallbackResult {
   eCommandReturnObjectPrintCallbackHandled = 1,
 };
 
+/// Used to determine when to show disassembly.
+enum StopDisassemblyType {
+  eStopDisassemblyTypeNever = 0,
+  eStopDisassemblyTypeNoDebugInfo,
+  eStopDisassemblyTypeNoSource,
+  eStopDisassemblyTypeAlways
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H
