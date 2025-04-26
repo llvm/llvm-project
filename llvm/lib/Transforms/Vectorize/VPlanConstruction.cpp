@@ -451,10 +451,6 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
       createLoopRegion(Plan, HeaderVPB);
 
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
-  auto *OrigExiting = TopRegion->getExiting();
-  VPBasicBlock *LatchVPBB = Plan.createVPBasicBlock("vector.latch");
-  VPBlockUtils::insertBlockAfter(LatchVPBB, OrigExiting);
-  TopRegion->setExiting(LatchVPBB);
   TopRegion->setName("vector loop");
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 
@@ -472,7 +468,6 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
 
   VPBasicBlock *VecPreheader = Plan.createVPBasicBlock("vector.ph");
   VPBlockUtils::insertBlockAfter(VecPreheader, Plan.getEntry());
-
   VPBasicBlock *MiddleVPBB = Plan.createVPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
 
