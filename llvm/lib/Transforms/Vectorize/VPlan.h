@@ -1215,7 +1215,7 @@ public:
     return make_range(incoming_block_begin(), incoming_block_end());
   }
 
-  /// Returns an iterator range over pairs of incoming values and correspondingx
+  /// Returns an iterator range over pairs of incoming values and corresponding
   /// incoming blocks.
   detail::zippy<llvm::detail::zip_shortest, VPUser::const_operand_range,
                 const_incoming_blocks_range>
@@ -2028,6 +2028,7 @@ public:
 /// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe,
                          public VPPhiAccessors<VPWidenPHIRecipe> {
+  /// Name to use for the generated IR instruction for the widened phi.
   std::string Name;
 
 public:
