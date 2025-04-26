@@ -1,4 +1,4 @@
-# XFAIL: system-windows
+# XFAIL: target-windows
 
 # Test the plugin.cplusplus.display.function-name-format setting.
 
