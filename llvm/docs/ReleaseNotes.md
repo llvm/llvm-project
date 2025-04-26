@@ -167,11 +167,14 @@ Changes to the RISC-V Backend
 * Adds assembler support for ``.option exact``, which disables automatic compression,
   and branch and linker relaxation. This can be disabled with ``.option noexact``,
   which is also the default.
-<<<<<<< HEAD
 * `-mcpu=xiangshan-kunminghu` was added.
 * `-mcpu=andes-n45` and `-mcpu=andes-nx45` were added.
 * `-mcpu=andes-a45` and `-mcpu=andes-ax45` were added.
 * Adds support for the 'Ziccamoc` (Main Memory Supports Atomics in Zacas) extension, which was introduced as an optional extension of the RISC-V Profiles specification.
+* Adds experimental assembler support for SiFive CLIC CSRs, under the names
+  `Zsfmclic` for the M-mode registers and `Zsfsclic` for the S-mode registers.
+* Adds Support for SiFive CLIC interrupt attributes, which automate writing CLIC
+  interrupt handlers without using inline assembly.
 
 Changes to the WebAssembly Backend
 ----------------------------------

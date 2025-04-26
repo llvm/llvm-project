@@ -117,3 +117,17 @@ define <4 x i32> @masked_sub_v4i32(<4 x i32> %x) {
   %m = sub <4 x i32> <i32 511, i32 511, i32 511, i32 511>, %a
   ret <4 x i32>  %m
 }
+
+define i32 @pr137254(i32 %0) {
+; CHECK-LABEL: pr137254:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-NEXT:    add w8, w0, w8
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    cset w0, gt
+; CHECK-NEXT:    ret
+  %2 = sub nsw i32 %0, -2147483648
+  %3 = icmp sgt i32 %2, 0
+  %4 = select i1 %3, i32 1, i32 0
+  ret i32 %4
+}

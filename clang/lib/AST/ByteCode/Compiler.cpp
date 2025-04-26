@@ -3012,6 +3012,17 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXDynamicCastExpr(const CXXDynamicCastExpr *E) {
+
+  if (!Ctx.getLangOpts().CPlusPlus20) {
+    if (!this->emitInvalidCast(CastKind::Dynamic, /*Fatal=*/false, E))
+      return false;
+  }
+
+  return this->VisitCastExpr(E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
   assert(E->getType()->isBooleanType());
 
