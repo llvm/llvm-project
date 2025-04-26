@@ -72,7 +72,6 @@ json::Value ModuleStats::ToJSON() const {
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
-  module.try_emplace("symbolsLoaded", num_symbols_loaded);
 
   if (!symbol_locator_time.map.empty()) {
     json::Object obj;
