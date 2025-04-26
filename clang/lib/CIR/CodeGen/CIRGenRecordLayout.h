@@ -42,10 +42,10 @@ public:
   cir::RecordType getCIRType() const { return completeObjectType; }
 
   /// Return cir::RecordType element number that corresponds to the field FD.
-  unsigned getCIRFieldNo(const clang::FieldDecl *FD) const {
-    FD = FD->getCanonicalDecl();
-    assert(fieldInfo.count(FD) && "Invalid field for record!");
-    return fieldInfo.lookup(FD);
+  unsigned getCIRFieldNo(const clang::FieldDecl *fd) const {
+    fd = fd->getCanonicalDecl();
+    assert(fieldInfo.count(fd) && "Invalid field for record!");
+    return fieldInfo.lookup(fd);
   }
 };
 

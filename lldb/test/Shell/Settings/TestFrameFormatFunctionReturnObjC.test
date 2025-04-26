@@ -1,0 +1,31 @@
+# Check that we have an appropriate fallback for ${function.return-left} and
+# ${function.return-right} in languages that don't implement this frame
+# format variable (in this case Objective-C).
+#
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/main.m -o %t.objc.out
+# RUN: %lldb -x -b -s %t/commands.input %t.objc.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.m
+
+int qux() {}
+int bar() { qux(); }
+
+int main() { return bar(); }
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.return-left}'\n"
+break set -n qux
+
+run
+bt
+
+# CHECK: bt
+# CHECK-NOT: custom-frame
+
+settings set -f frame-format "other-frame '${function.return-right}'\n"
+bt
+
+# CHECK: bt
+# CHECK-NOT: other-frame

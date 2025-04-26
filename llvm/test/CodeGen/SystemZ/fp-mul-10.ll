@@ -30,10 +30,10 @@ define half @f3_half(half %f1, half %f2, half %acc) {
 ; CHECK: brasl %r14, __extendhfsf2@PLT
 ; CHECK: wfmasb %f0, %f0, %f8, %f10
 ; CHECK: brasl %r14, __truncsfhf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: lcdfr %f0, %f0
-; CHECK: brasl %r14, __truncsfhf2@PLT
-; CHECK: br %r14
+; CHECK-NOT: brasl
+; CHECK:      lcdfr %f0, %f0
+; CHECK-NEXT: lmg
+; CHECK-NEXT: br %r14
   %res = call half @llvm.fma.f16 (half %f1, half %f2, half %acc)
   %negres = fneg half %res
   ret half %negres
@@ -50,18 +50,17 @@ define float @f3(float %f1, float %f2, float %acc) {
 
 define half @f4_half(half %f1, half %f2, half %acc) {
 ; CHECK-LABEL: f4_half:
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: lcdfr %f0, %f0
-; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK-NOT: brasl
+; CHECK: lcdfr %f0, %f4
 ; CHECK: brasl %r14, __extendhfsf2@PLT
 ; CHECK: brasl %r14, __extendhfsf2@PLT
 ; CHECK: brasl %r14, __extendhfsf2@PLT
 ; CHECK: wfmasb %f0, %f0, %f8, %f10
 ; CHECK: brasl %r14, __truncsfhf2@PLT
-; CHECK: brasl %r14, __extendhfsf2@PLT
-; CHECK: lcdfr %f0, %f0
-; CHECK: brasl %r14, __truncsfhf2@PLT
-; CHECK: br %r14
+; CHECK-NOT: brasl
+; CHECK:      lcdfr %f0, %f0
+; CHECK-NEXT: lmg
+; CHECK-NEXT: br %r14
   %negacc = fneg half %acc
   %res = call half @llvm.fma.f16 (half %f1, half %f2, half %negacc)
   %negres = fneg half %res
