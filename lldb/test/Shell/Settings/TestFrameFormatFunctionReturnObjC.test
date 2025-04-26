@@ -3,7 +3,7 @@
 # format variable (in this case Objective-C).
 #
 # RUN: split-file %s %t
-# RUN: %build %t/main.m -o %t.objc.out
+# RUN: %clang_host -g -gdwarf %t/main.m -o %t.objc.out
 # RUN: %lldb -x -b -s %t/commands.input %t.objc.out -o exit 2>&1 \
 # RUN:       | FileCheck %s
 
