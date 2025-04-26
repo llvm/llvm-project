@@ -1320,6 +1320,8 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 static inline bool Kill(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
   Ptr.endLifetime();
   return true;
 }
