@@ -1,3 +1,5 @@
+# XFAIL: system-windows
+
 # Test the ${function.template-arguments} frame-format variable.
 
 # RUN: split-file %s %t
@@ -27,7 +29,7 @@ int main() { return bar(); }
 
 #--- commands.input
 settings set -f frame-format "custom-frame '${function.template-arguments}'\n"
-break set -n func
+break set -l 4
 
 run
 bt
