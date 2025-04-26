@@ -8793,29 +8793,28 @@ static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
   MVT VT = BVOp->getSimpleValueType(0u);
   auto const NumElems = VT.getVectorNumElements();
 
-  if (Subtarget.hasAVX() && VT == MVT::v4f64) {
+  if (VT == MVT::v4f64) {
     // Collect unique operands.
     auto UniqueOps = SmallSet<SDValue, 16u>();
-    for (auto &Op : BVOp->ops()) {
-      if (isIntOrFPConstant(Op) || Op.get()->isUndef())
-        return {};
+    for (SDValue Op : BVOp->ops()) {
+      if (isIntOrFPConstant(Op) || Op.isUndef())
+        return SDValue();
       UniqueOps.insert(Op);
     }
     // Candidate BUILD_VECTOR must have 2 unique operands.
     if (UniqueOps.size() != 2u)
-      return {};
+      return SDValue();
     // Create shuffle mask.
-    auto Op0 = BVOp->getOperand(0u);
-    auto Mask = std::vector<int>();
-    Mask.reserve(NumElems);
+    SDValue Op0 = BVOp->getOperand(0u);
+    SmallVector<int, 16u> Mask(NumElems);
     for (auto I = 0u; I < NumElems; ++I) {
-      auto &Op = BVOp->getOperand(I);
-      Mask.push_back(Op == Op0 ? I : I + NumElems);
+      SDValue Op = BVOp->getOperand(I);
+      Mask[I] = Op == Op0 ? I : I + NumElems;
     }
     // Create shuffle of splats.
-    UniqueOps.erase(Op0);
-    auto NewOp0 = DAG.getSplatBuildVector(VT, DL, Op0);
-    auto NewOp1 = DAG.getSplatBuildVector(VT, DL, *UniqueOps.begin());
+
+    SDValue NewOp0 = DAG.getSplatBuildVector(VT, DL, *UniqueOps.begin());
+    SDValue NewOp1 = DAG.getSplatBuildVector(VT, DL, *(++UniqueOps.begin()));
     return DAG.getVectorShuffle(VT, DL, NewOp0, NewOp1, Mask);
   }
 
