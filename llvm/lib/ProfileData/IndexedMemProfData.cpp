@@ -249,8 +249,7 @@ static Error writeMemProfRadixTreeBased(
 
   uint64_t RecordPayloadOffset = OS.tell();
   uint64_t RecordTableOffset = writeMemProfRecords(
-      OS, MemProfData.Records, &Schema, Version, // Pass Version
-      &MemProfCallStackIndexes);
+      OS, MemProfData.Records, &Schema, Version, &MemProfCallStackIndexes);
 
   // Verify that the computation for the number of elements in the call stack
   // array works.
