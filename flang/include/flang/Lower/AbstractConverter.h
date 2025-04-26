@@ -14,7 +14,6 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Lower/LoweringOptions.h"
-#include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"

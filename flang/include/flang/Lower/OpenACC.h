@@ -72,9 +72,6 @@ static constexpr llvm::StringRef declarePostDeallocSuffix =
 
 static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
 
-bool needsOpenACCRoutineConstruct(
-    const Fortran::evaluate::ProcedureDesignator *);
-
 mlir::Value genOpenACCConstruct(AbstractConverter &,
                                 Fortran::semantics::SemanticsContext &,
                                 pft::Evaluation &,
