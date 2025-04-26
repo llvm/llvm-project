@@ -179,7 +179,7 @@ void SPIRVPassConfig::addPostRegAlloc() {
 
 TargetTransformInfo
 SPIRVTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(SPIRVTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<SPIRVTTIImpl>(this, F));
 }
 
 TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {

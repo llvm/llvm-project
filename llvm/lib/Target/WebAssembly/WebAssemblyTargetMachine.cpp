@@ -385,7 +385,7 @@ MachineFunctionInfo *WebAssemblyTargetMachine::createMachineFunctionInfo(
 
 TargetTransformInfo
 WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(WebAssemblyTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<WebAssemblyTTIImpl>(this, F));
 }
 
 TargetPassConfig *

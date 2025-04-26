@@ -190,7 +190,7 @@ DirectXTargetMachine::getSubtargetImpl(const Function &) const {
 
 TargetTransformInfo
 DirectXTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(DirectXTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<DirectXTTIImpl>(this, F));
 }
 
 DirectXTargetLowering::DirectXTargetLowering(const DirectXTargetMachine &TM,

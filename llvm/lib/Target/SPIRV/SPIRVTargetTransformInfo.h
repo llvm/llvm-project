@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 // \file
-// This file contains a TargetTransformInfo::Concept conforming object specific
+// This file contains a TargetTransformInfoImplBase conforming object specific
 // to the SPIRV target machine. It uses the target's detailed information to
 // provide more precise answers to certain TTI queries, while letting the
 // target independent and default TTI implementations handle the rest.
@@ -39,7 +39,7 @@ public:
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const {
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override {
     // SPIR-V natively supports OpBitcount, per 3.53.14 in the spec, as such it
     // is reasonable to assume the Op is fast / preferable to the expanded loop.
     // Furthermore, this prevents information being lost if transforms are
