@@ -19,6 +19,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -1391,6 +1392,10 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     mlir::Type ty =
         convertTypeForMemory(converter, dataLayout, type.getEltType());
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
+  });
+  converter.addConversion([&](cir::VectorType type) -> mlir::Type {
+    const mlir::Type ty = converter.convertType(type.getElementType());
+    return mlir::VectorType::get(type.getSize(), ty);
   });
   converter.addConversion([&](cir::BoolType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 1,

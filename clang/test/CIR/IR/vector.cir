@@ -1,0 +1,40 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+cir.global external @vec_a = #cir.zero : !cir.vector<4 x !s32i>
+// CHECK: cir.global external @vec_a = #cir.zero : !cir.vector<4 x !s32i>
+
+cir.global external @vec_b = #cir.zero : !cir.vector<3 x !s32i>
+// CHECK: cir.global external @vec_b = #cir.zero : !cir.vector<3 x !s32i>
+
+cir.global external @vec_c = #cir.zero : !cir.vector<2 x !s32i>
+// CHECK: cir.global external @vec_c = #cir.zero : !cir.vector<2 x !s32i>
+
+cir.func @vec_int_test() {
+  %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+  %1 = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]
+  %2 = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["c"]
+  cir.return
+}
+
+// CHECK: cir.func @vec_int_test() {
+// CHECK:  %0 = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CHECK:  %1 = cir.alloca !cir.vector<3 x !s32i>, !cir.ptr<!cir.vector<3 x !s32i>>, ["b"]
+// CHECK:  %2 = cir.alloca !cir.vector<2 x !s32i>, !cir.ptr<!cir.vector<2 x !s32i>>, ["c"]
+// CHECK:  cir.return
+// CHECK: }
+
+cir.func @vec_double_test() {
+  %0 = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
+  cir.return
+}
+
+// CHECK: cir.func @vec_double_test() {
+// CHECK:  %0 = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
+// CHECK:  cir.return
+// CHECK: }
+
+}
