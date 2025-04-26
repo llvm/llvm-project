@@ -2252,10 +2252,23 @@ def NoMicroMips : InheritableAttr, TargetSpecificAttr<TargetMips32> {
 def RISCVInterrupt : InheritableAttr, TargetSpecificAttr<TargetRISCV> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
-  let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
-                           ["supervisor", "machine", "qci-nest", "qci-nonest"],
-                           ["supervisor", "machine", "qcinest", "qcinonest"],
-                           1>];
+  let Args = [VariadicEnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
+                                   [
+                                     "supervisor",
+                                     "machine",
+                                     "qci-nest",
+                                     "qci-nonest",
+                                     "SiFive-CLIC-preemptible",
+                                     "SiFive-CLIC-stack-swap",
+                                   ],
+                                   [
+                                     "supervisor",
+                                     "machine",
+                                     "qcinest",
+                                     "qcinonest",
+                                     "SiFiveCLICPreemptible",
+                                     "SiFiveCLICStackSwap",
+                                   ]>];
   let ParseKind = "Interrupt";
   let Documentation = [RISCVInterruptDocs];
 }

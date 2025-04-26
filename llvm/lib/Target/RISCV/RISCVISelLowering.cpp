@@ -21423,15 +21423,28 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
         "supervisor",
         "qci-nest",
         "qci-nonest",
+        "SiFive-CLIC-preemptible",
+        "SiFive-CLIC-stack-swap",
+        "SiFive-CLIC-preemptible-stack-swap",
     };
     if (llvm::find(SupportedInterruptKinds, Kind) ==
         std::end(SupportedInterruptKinds))
       report_fatal_error(
         "Function interrupt attribute argument not supported!");
 
-    if ((Kind == "qci-nest" || Kind == "qci-nonest") &&
-        !Subtarget.hasVendorXqciint())
+    if (Kind.starts_with("qci-") && !Subtarget.hasVendorXqciint())
       report_fatal_error("'qci-*' interrupt kinds require Xqciint extension");
+
+    if (Kind.starts_with("SiFive-CLIC-") && !Subtarget.hasVendorXSfmclic())
+      report_fatal_error(
+          "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension",
+          /*gen_crash_diag=*/false);
+
+    const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
+    if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
+      report_fatal_error("'SiFive-CLIC-preemptible' interrupt kinds cannot "
+                         "have a frame pointer",
+                         /*gen_crash_diag=*/false);
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

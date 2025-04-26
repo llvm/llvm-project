@@ -2900,8 +2900,9 @@ targets. This attribute may be attached to a function definition and instructs
 the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
-Permissible values for this parameter are ``supervisor``, ``machine``,
-``qci-nest`` and ``qci-nonest``. If there is no parameter, then it defaults to
+Permissible values for this parameter are ``machine``, ``supervisor``,
+``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
+``SiFive-CLIC-stack-swap``. If there is no parameter, then it defaults to
 ``machine``.
 
 The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
@@ -2912,6 +2913,15 @@ restore interrupt state to the stack -- the ``qci-nest`` value will use
 begin the interrupt handler. Both of these will use ``qc.c.mileaveret`` to
 restore the state and return to the previous context.
 
+The ``SiFive-CLIC-preemptible`` and ``SiFive-CLIC-stack-swap`` values are used
+for machine-mode interrupts. For ``SiFive-CLIC-preemptible`` interrupts, the
+values of ``mcause`` and ``mepc`` are saved onto the stack, and interrupts are
+re-enabled. For ``SiFive-CLIC-stack-swap`` interrupts, the stack pointer is
+swapped with ``mscratch`` before its first use and after its last use.
+
+The SiFive CLIC values may be combined with each other and with the ``machine``
+attribute value. Any other combination of different values is not allowed.
+
 Repeated interrupt attribute on the same declaration will cause a warning
 to be emitted. In case of repeated declarations, the last one prevails.
 
@@ -2921,6 +2931,7 @@ https://riscv.org/specifications/privileged-isa/
 The RISC-V Instruction Set Manual Volume II: Privileged Architecture
 Version 1.10.
 https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.7
+https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf
   }];
 }
 
