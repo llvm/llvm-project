@@ -270,13 +270,12 @@ struct AllocaInfo {
     DbgUserVec AllDbgUsers;
     SmallVector<DbgVariableRecord *> AllDPUsers;
     findDbgUsers(AllDbgUsers, AI, &AllDPUsers);
-    std::copy_if(AllDbgUsers.begin(), AllDbgUsers.end(),
-                 std::back_inserter(DbgUsers), [](DbgVariableIntrinsic *DII) {
-                   return !isa<DbgAssignIntrinsic>(DII);
-                 });
-    std::copy_if(AllDPUsers.begin(), AllDPUsers.end(),
-                 std::back_inserter(DPUsers),
-                 [](DbgVariableRecord *DVR) { return !DVR->isDbgAssign(); });
+    llvm::copy_if(AllDbgUsers, std::back_inserter(DbgUsers),
+                  [](DbgVariableIntrinsic *DII) {
+                    return !isa<DbgAssignIntrinsic>(DII);
+                  });
+    llvm::copy_if(AllDPUsers, std::back_inserter(DPUsers),
+                  [](DbgVariableRecord *DVR) { return !DVR->isDbgAssign(); });
     AssignmentTracking.init(AI);
   }
 };
