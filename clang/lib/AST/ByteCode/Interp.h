@@ -2935,6 +2935,11 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
       S.FFDiag(E);
 
     return false;
+  } else if (Kind == CastKind::Dynamic) {
+    assert(!S.getLangOpts().CPlusPlus20);
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::Dynamic;
+    return true;
   }
 
   return false;
