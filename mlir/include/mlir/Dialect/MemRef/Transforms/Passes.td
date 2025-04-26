@@ -250,8 +250,6 @@ def FlattenMemrefsPass : Pass<"flatten-memref"> {
   let description = [{
 
   }];
-
-  let constructor = "mlir::memref::createFlattenMemrefsPass()";
   let dependentDialects = [
       "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
   ];
