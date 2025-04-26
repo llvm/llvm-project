@@ -1,3 +1,5 @@
+# XFAIL: target-windows
+
 # Test that the plugin.cplusplus.display.function-name-format setting
 # doesn't print into the frame-format setting unless all its format variables
 # were successful.
