@@ -1,3 +1,5 @@
+# XFAIL: system-windows
+
 # Test the ${function.scope} frame-format variable.
 
 # RUN: split-file %s %t

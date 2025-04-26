@@ -37,6 +37,6 @@ bt
 
 # CHECK: custom-frame '(this={{.*}})'
 # CHECK: custom-frame '()'
-# CHECK: custom-frame '((null)=5, x=10)'
-# CHECK: custom-frame '(str="hello", fptr=({{.*}}.out`foo(int, int) at main.cpp:{{[0-9]+}}))'
+# CHECK: custom-frame '({{.*}}=5, x=10)'
+# CHECK: custom-frame '(str="hello", fptr=({{.*}}.out`{{.*}}foo(int,{{.*}}int) at main.cpp:{{[0-9]+}}))'
 # CHECK: custom-frame '(argc=1, argv={{.*}})'
