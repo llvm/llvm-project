@@ -806,15 +806,17 @@ def AMDGPU_GatherToLDSOp :
     Results<(outs)> {
   let summary = "MLIR wrapper for CDNA mfma instructions";
   let description = [{
-    The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
+    The `amdgpu.gather_to_lds` op is a wrapper around the `global_load_lds` instructions.
 
     Operands:
-    * `$src`: global memory memref to read from.
+    * `$src`: global memory (including fat buffer) memref to read from.
     * `$srcIndices`: indices into `$src` to read from for this thread.
     * `$dst`: LDS memory memref to write to.
     * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
-      The elements gathered by the subgroup will be written in order of lane ID will be written
-      into contiguously starting at `$dst[$dstIndices]`.
+      The elements gathered by the subgroup will be written contiguously in order of lane ID
+      starting at `$dst[$dstIndices]`. Byte-sized (ex. i8) or short-sized (ex. i16)
+      types will be zero-padded/extended to 32 bits before being written. 96-bit types
+      (ex. vector<3xf32>) will be zero-padded to 128 bits before being written.
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
@@ -822,7 +824,7 @@ def AMDGPU_GatherToLDSOp :
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
 
-    Note: only enabled for gfx942 and later.
+    Note: only supported on gfx9 and gfx10.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)

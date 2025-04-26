@@ -103,6 +103,14 @@ Changes to the AMDGPU Backend
 
 * Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
 
+* Add a new `amdgcn.load.to.lds` intrinsic that wraps the existing global.load.lds
+intrinsic and has the same semantics. This intrinsic allows using buffer fat pointers
+(`ptr addrspace(7)`) as arguments, allowing loads to LDS from these pointers to be
+represented in the IR without needing to use buffer resource intrinsics directly.
+This intrinsic is exposed to Clang as `__builtin_amdgcn_load_to_lds`, though
+buffer fat pointers are not yet enabled in Clang. Migration to this intrinsic is
+optional, and there are no plans to deprecate `amdgcn.global.load.lds`.
+
 Changes to the ARM Backend
 --------------------------
 
