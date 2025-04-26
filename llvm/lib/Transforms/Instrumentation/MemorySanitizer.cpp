@@ -4312,7 +4312,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // For sh compiler intrinsics:
+  // For sh.* compiler intrinsics:
   // llvm.x86.avx512fp16.mask.{add/sub/mul/div/max/min}.sh.round
   //   (<8 x half>, <8 x half>, <8 x half>, i8,  i32)
   //    A           B           WriteThru   Mask RoundingMode
