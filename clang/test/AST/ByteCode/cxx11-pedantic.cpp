@@ -20,3 +20,10 @@ namespace DynamicCast {
                                            // both-note {{dynamic_cast}}
   };
 }
+
+namespace NewDelete {
+  struct T {
+    int n : *new int(4); // both-warning {{constant expression}} \
+                         // both-note {{until C++20}}
+  };
+}
