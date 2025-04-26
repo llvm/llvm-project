@@ -1243,6 +1243,17 @@ public:
     return Islands->FunctionColdConstantIslandLabel;
   }
 
+  const FunctionFragment *
+  getFunctionFragmentForOutputAddress(uint64_t OutputAddress) const {
+    for (const FunctionFragment &FF : Layout.fragments()) {
+      uint64_t Address = FF.getAddress();
+      uint64_t Size = FF.getImageSize();
+      if (Address <= OutputAddress && OutputAddress < Address + Size)
+        return &FF;
+    }
+    return nullptr;
+  }
+
   /// Return true if this is a function representing a PLT entry.
   bool isPLTFunction() const { return PLTSymbol != nullptr; }
 

@@ -21,6 +21,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 
 #define DEBUG_TYPE "mcplus"
@@ -293,7 +294,9 @@ MCSymbol *MCPlusBuilder::getOrCreateInstLabel(MCInst &Inst, const Twine &Name,
   if (Label)
     return Label;
 
-  Label = Ctx->createNamedTempSymbol(Name);
+  static uint64_t ID = 0;
+  Label = Ctx->createLocalSymbol(formatv("__bolt.{0}_{1}", Name, ++ID).str());
+
   setAnnotationOpValue(Inst, MCAnnotation::kLabel,
                        reinterpret_cast<int64_t>(Label));
   return Label;

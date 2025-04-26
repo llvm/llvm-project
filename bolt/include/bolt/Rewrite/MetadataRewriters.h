@@ -19,13 +19,13 @@ class BinaryContext;
 
 // The list of rewriter build functions.
 
-std::unique_ptr<MetadataRewriter> createLinuxKernelRewriter(BinaryContext &);
+std::unique_ptr<MetadataRewriter> createLinuxKernelRewriter(RewriteInstance &);
 
-std::unique_ptr<MetadataRewriter> createBuildIDRewriter(BinaryContext &);
+std::unique_ptr<MetadataRewriter> createBuildIDRewriter(RewriteInstance &);
 
-std::unique_ptr<MetadataRewriter> createPseudoProbeRewriter(BinaryContext &);
+std::unique_ptr<MetadataRewriter> createPseudoProbeRewriter(RewriteInstance &);
 
-std::unique_ptr<MetadataRewriter> createSDTRewriter(BinaryContext &);
+std::unique_ptr<MetadataRewriter> createSDTRewriter(RewriteInstance &);
 
 } // namespace bolt
 } // namespace llvm
