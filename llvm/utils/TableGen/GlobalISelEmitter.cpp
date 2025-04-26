@@ -622,16 +622,17 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
   }
 
   // G_LOAD is used for both non-extending and any-extending loads.
-  if (Predicate.isLoad() && Predicate.isNonExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
-    return InsnMatcher;
-  }
-  if ((Predicate.isLoad() || Predicate.isAtomic()) &&
-      Predicate.isAnyExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
-    return InsnMatcher;
+  if (Predicate.isLoad() || Predicate.isAtomic()) {
+    if (Predicate.isNonExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+      return InsnMatcher;
+    }
+    if (Predicate.isAnyExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      return InsnMatcher;
+    }
   }
 
   if (Predicate.isStore()) {
