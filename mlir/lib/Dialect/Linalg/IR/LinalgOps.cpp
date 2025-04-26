@@ -2286,7 +2286,8 @@ LogicalResult IndexOp::verify() {
 OpFoldResult IndexOp::fold(FoldAdaptor adaptor) {
   auto linalgOp = dyn_cast_or_null<LinalgOp>((*this)->getParentOp());
   // Bail out if `linalg.index` does not have a proper parent yet at this
-  // point, e.g., when calling `createOrFold` during IR construction in `genericOp::build`.
+  // point, e.g., when calling `createOrFold` during IR construction in
+  // `genericOp::build`.
   if (!linalgOp)
     return OpFoldResult{};
 
