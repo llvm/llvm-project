@@ -101,8 +101,8 @@ constexpr void test() {
 
 template <template <class...> class KeyContainer, template <class...> class ValueContainer>
 constexpr void test_alloc() {
-  using P      = std::pair<int, short>;
-  P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
+  using P = std::pair<int, short>;
+  P ar[]  = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
 
   {
     // flat_map(InputIterator , InputIterator, const Allocator&)
