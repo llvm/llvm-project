@@ -395,6 +395,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[5], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionDeclarationLParen);
+
+  Tokens = annotate("int8_t *a = MacroCall(int8_t, width * height * length);");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[11], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
