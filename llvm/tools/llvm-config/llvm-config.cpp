@@ -142,9 +142,8 @@ static void VisitComponent(const std::string &Name,
   if (AC->Library) {
     if (Missing && GetComponentLibraryPath) {
       std::string path = (*GetComponentLibraryPath)(AC->Library);
-      if (DirSep == "\\") {
+      if (DirSep == "\\")
         llvm::replace(path, '/', '\\');
-      }
       if (!sys::fs::exists(path))
         Missing->push_back(path);
     }
@@ -436,9 +435,8 @@ int main(int argc, char **argv) {
 
   if (BuiltDyLib) {
     std::string path((SharedDir + DirSep + DyLibName).str());
-    if (DirSep == "\\") {
+    if (DirSep == "\\")
       llvm::replace(path, '/', '\\');
-    }
     DyLibExists = sys::fs::exists(path);
     if (!DyLibExists) {
       // The shared library does not exist: don't error unless the user
@@ -553,9 +551,8 @@ int main(int argc, char **argv) {
           Components.push_back(AC.Name);
           if (AC.Library && !IsInDevelopmentTree) {
             std::string path(GetComponentLibraryPath(AC.Library, false));
-            if (DirSep == "\\") {
+            if (DirSep == "\\")
               llvm::replace(path, '/', '\\');
-            }
             if (DyLibExists && !sys::fs::exists(path)) {
               Components =
                   GetAllDyLibComponents(IsInDevelopmentTree, true, DirSep);
