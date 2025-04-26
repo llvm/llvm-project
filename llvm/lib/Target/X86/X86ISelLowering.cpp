@@ -8805,16 +8805,16 @@ static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
     if (UniqueOps.size() != 2u)
       return SDValue();
     // Create shuffle mask.
-    SDValue Op0 = BVOp->getOperand(0u);
+    SDValue Op0 = *(UniqueOps.begin());
+    SDValue Op1 = *(++UniqueOps.begin());
     SmallVector<int, 16u> Mask(NumElems);
     for (auto I = 0u; I < NumElems; ++I) {
       SDValue Op = BVOp->getOperand(I);
       Mask[I] = Op == Op0 ? I : I + NumElems;
     }
     // Create shuffle of splats.
-
-    SDValue NewOp0 = DAG.getSplatBuildVector(VT, DL, *UniqueOps.begin());
-    SDValue NewOp1 = DAG.getSplatBuildVector(VT, DL, *(++UniqueOps.begin()));
+    SDValue NewOp0 = DAG.getSplatBuildVector(VT, DL, Op0);
+    SDValue NewOp1 = DAG.getSplatBuildVector(VT, DL, Op1);
     return DAG.getVectorShuffle(VT, DL, NewOp0, NewOp1, Mask);
   }
 
