@@ -1,3 +1,5 @@
+# UNSUPPORTED: system-windows
+
 # Check that we have an appropriate fallback for ${function.formatted-arguments} in languages that
 # don't implement this frame format variable (in this case Objective-C).
 #
