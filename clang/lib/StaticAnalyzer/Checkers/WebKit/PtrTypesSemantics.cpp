@@ -462,7 +462,7 @@ bool isPtrConversion(const FunctionDecl *F) {
   const auto FunctionName = safeGetName(F);
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
       FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
-      FunctionName == "checkedDowncast" ||
+      FunctionName == "checkedDowncast" || FunctionName == "bit_cast" ||
       FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast" ||
       FunctionName == "bridge_cast" || FunctionName == "bridge_id_cast" ||
       FunctionName == "dynamic_cf_cast" || FunctionName == "checked_cf_cast" ||
