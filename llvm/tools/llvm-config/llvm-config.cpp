@@ -143,7 +143,7 @@ static void VisitComponent(const std::string &Name,
     if (Missing && GetComponentLibraryPath) {
       std::string path = (*GetComponentLibraryPath)(AC->Library);
       if (DirSep == "\\") {
-        std::replace(path.begin(), path.end(), '/', '\\');
+        llvm::replace(path, '/', '\\');
       }
       if (!sys::fs::exists(path))
         Missing->push_back(path);
@@ -396,13 +396,12 @@ int main(int argc, char **argv) {
     } else {
       StaticExt = "lib";
       DirSep = "\\";
-      std::replace(ActiveObjRoot.begin(), ActiveObjRoot.end(), '/', '\\');
-      std::replace(ActivePrefix.begin(), ActivePrefix.end(), '/', '\\');
-      std::replace(ActiveBinDir.begin(), ActiveBinDir.end(), '/', '\\');
-      std::replace(ActiveLibDir.begin(), ActiveLibDir.end(), '/', '\\');
-      std::replace(ActiveCMakeDir.begin(), ActiveCMakeDir.end(), '/', '\\');
-      std::replace(ActiveIncludeOption.begin(), ActiveIncludeOption.end(), '/',
-                   '\\');
+      llvm::replace(ActiveObjRoot, '/', '\\');
+      llvm::replace(ActivePrefix, '/', '\\');
+      llvm::replace(ActiveBinDir, '/', '\\');
+      llvm::replace(ActiveLibDir, '/', '\\');
+      llvm::replace(ActiveCMakeDir, '/', '\\');
+      llvm::replace(ActiveIncludeOption, '/', '\\');
     }
     SharedDir = ActiveBinDir;
     StaticDir = ActiveLibDir;
@@ -438,7 +437,7 @@ int main(int argc, char **argv) {
   if (BuiltDyLib) {
     std::string path((SharedDir + DirSep + DyLibName).str());
     if (DirSep == "\\") {
-      std::replace(path.begin(), path.end(), '/', '\\');
+      llvm::replace(path, '/', '\\');
     }
     DyLibExists = sys::fs::exists(path);
     if (!DyLibExists) {
@@ -555,7 +554,7 @@ int main(int argc, char **argv) {
           if (AC.Library && !IsInDevelopmentTree) {
             std::string path(GetComponentLibraryPath(AC.Library, false));
             if (DirSep == "\\") {
-              std::replace(path.begin(), path.end(), '/', '\\');
+              llvm::replace(path, '/', '\\');
             }
             if (DyLibExists && !sys::fs::exists(path)) {
               Components =
