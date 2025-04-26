@@ -6258,8 +6258,7 @@ bool CFGBlock::isInevitablySinking() const {
 
   DFSWorkList.push_back(StartBlk);
   while (!DFSWorkList.empty()) {
-    const CFGBlock *Blk = DFSWorkList.back();
-    DFSWorkList.pop_back();
+    const CFGBlock *Blk = DFSWorkList.pop_back_val();
     Visited.insert(Blk);
 
     // If at least one path reaches the CFG exit, it means that control is

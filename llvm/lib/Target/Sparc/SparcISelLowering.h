@@ -207,6 +207,8 @@ namespace llvm {
       return VT != MVT::f128;
     }
 
+    bool isFNegFree(EVT VT) const override;
+
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
 
@@ -215,6 +217,8 @@ namespace llvm {
     bool isCheapToSpeculateCtlz(Type *Ty) const override {
       return isCtlzFast();
     }
+
+    bool isCheapToSpeculateCttz(Type *Ty) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       // FIXME: We insert fences for each atomics and generate

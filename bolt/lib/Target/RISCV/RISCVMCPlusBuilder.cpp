@@ -555,9 +555,9 @@ public:
                .addReg(RegCnt);
   }
 
-  InstructionListType createCmpJE(MCPhysReg RegNo, MCPhysReg RegTmp,
-                                  const MCSymbol *Target,
-                                  MCContext *Ctx) const {
+  InstructionListType createRegCmpJE(MCPhysReg RegNo, MCPhysReg RegTmp,
+                                     const MCSymbol *Target,
+                                     MCContext *Ctx) const {
     InstructionListType Insts;
     Insts.emplace_back(
         MCInstBuilder(RISCV::SUB).addReg(RegTmp).addReg(RegNo).addReg(RegNo));
@@ -718,7 +718,7 @@ public:
     Insts.emplace_back();
     loadReg(Insts.back(), RISCV::X10, RISCV::X10, 0);
     InstructionListType cmpJmp =
-        createCmpJE(RISCV::X10, RISCV::X11, IndCallHandler, Ctx);
+        createRegCmpJE(RISCV::X10, RISCV::X11, IndCallHandler, Ctx);
     Insts.insert(Insts.end(), cmpJmp.begin(), cmpJmp.end());
     Insts.emplace_back();
     createStackPointerIncrement(Insts.back(), 16);
@@ -777,14 +777,13 @@ public:
     return createGetter(Ctx, "__bolt_instr_num_funcs");
   }
 
-  void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg,
-                                 MCPhysReg ZeroReg) const {
+  void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
     bool IsTailCall = isTailCall(Inst);
     if (IsTailCall)
       removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
     Inst.setOpcode(RISCV::ADD);
     Inst.insert(Inst.begin(), MCOperand::createReg(Reg));
-    Inst.insert(Inst.begin() + 1, MCOperand::createReg(ZeroReg));
+    Inst.insert(Inst.begin() + 1, MCOperand::createReg(RISCV::X0));
     return;
   }
 
@@ -845,7 +844,7 @@ public:
     InstructionListType Insts;
     spillRegs(Insts, {RISCV::X10, RISCV::X11});
     Insts.emplace_back(CallInst);
-    convertIndirectCallToLoad(Insts.back(), RISCV::X10, RISCV::X0);
+    convertIndirectCallToLoad(Insts.back(), RISCV::X10);
     InstructionListType LoadImm = createLoadImmediate(RISCV::X11, CallSiteID);
     Insts.insert(Insts.end(), LoadImm.begin(), LoadImm.end());
     spillRegs(Insts, {RISCV::X10, RISCV::X11});

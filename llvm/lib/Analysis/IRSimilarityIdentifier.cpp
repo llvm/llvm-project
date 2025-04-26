@@ -1472,10 +1472,7 @@ INITIALIZE_PASS(IRSimilarityIdentifierWrapperPass, "ir-similarity-identifier",
                 "ir-similarity-identifier", false, true)
 
 IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
-    : ModulePass(ID) {
-  initializeIRSimilarityIdentifierWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
   IRSI.reset(new IRSimilarityIdentifier(!DisableBranches, !DisableIndirectCalls,
