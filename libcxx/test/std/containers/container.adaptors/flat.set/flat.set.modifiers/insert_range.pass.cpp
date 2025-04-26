@@ -97,6 +97,7 @@ void test() {
     MoveOnly expected[] = {1, 3, 4, 5};
     assert(std::ranges::equal(m, expected));
   }
+#ifdef _LIBCPP_HAS_LOCALIZATION
   {
     // https://github.com/llvm/llvm-project/issues/136656
     MinSequenceContainer<int> v;
@@ -106,6 +107,7 @@ void test() {
              std::views::transform([](int i) { return i * i; });
     s.insert_range(r);
   }
+#endif
 }
 
 void test_exception() {
