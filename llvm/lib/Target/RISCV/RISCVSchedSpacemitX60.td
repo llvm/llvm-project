@@ -90,8 +90,10 @@ def : WriteRes<WriteCLZ32, [SMX60_IEU]>;
 def : WriteRes<WriteCTZ, [SMX60_IEU]>;
 def : WriteRes<WriteCTZ32, [SMX60_IEU]>;
 
-def : WriteRes<WriteCPOP, [SMX60_IEU]>;
-def : WriteRes<WriteCPOP32, [SMX60_IEU]>;
+let Latency = 2 in {
+  def : WriteRes<WriteCPOP, [SMX60_IEU]>;
+  def : WriteRes<WriteCPOP32, [SMX60_IEU]>;
+}
 
 def : WriteRes<WriteORCB, [SMX60_IEU]>;
 
