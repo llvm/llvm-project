@@ -135,6 +135,7 @@ set(LLVM_TEST_DEPENDS
           llvm-strip
           llvm-symbolizer
           llvm-tblgen
+          llvm-tgt-verify
           llvm-readtapi
           llvm-tli-checker
           llvm-undname
