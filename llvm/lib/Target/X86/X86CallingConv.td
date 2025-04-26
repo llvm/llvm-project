@@ -364,6 +364,7 @@ def RetCC_X86_32_VectorCall : CallingConv<[
 def RetCC_X86_64_C : CallingConv<[
   // The X86-64 calling convention always returns FP values in XMM0.
   CCIfType<[f16], CCAssignToReg<[XMM0, XMM1]>>,
+  CCIfType<[bf16], CCAssignToReg<[XMM0, XMM1]>>,
   CCIfType<[f32], CCAssignToReg<[XMM0, XMM1]>>,
   CCIfType<[f64], CCAssignToReg<[XMM0, XMM1]>>,
   CCIfType<[f128], CCAssignToReg<[XMM0, XMM1]>>,
@@ -569,6 +570,10 @@ def CC_X86_64_C : CallingConv<[
             CCIfSubtarget<"hasSSE1()",
             CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>>,
 
+  // The first 8 128-bits bf16 arguments are passed in XMM registers (part of AVX-512_BF16).
+  CCIfType<[bf16], CCIfSubtarget<"hasAVX512()",
+            CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>>,
+
   // The first 8 256-bit vector arguments are passed in YMM registers, unless
   // this is a vararg function.
   // FIXME: This isn't precisely correct; the x86-64 ABI document says that
@@ -586,7 +591,7 @@ def CC_X86_64_C : CallingConv<[
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
-  CCIfType<[i32, i64, f16, f32, f64], CCAssignToStack<8, 8>>,
+  CCIfType<[i32, i64, bf16, f16, f32, f64], CCAssignToStack<8, 8>>,
 
   // Long doubles get stack slots whose size and alignment depends on the
   // subtarget.
@@ -649,7 +654,7 @@ def CC_X86_Win64_C : CallingConv<[
   CCIfType<[f64], CCIfNotSubtarget<"hasSSE1()", CCBitConvertToType<i64>>>,
 
   // The first 4 FP/Vector arguments are passed in XMM registers.
-  CCIfType<[f16, f32, f64],
+  CCIfType<[bf16, f16, f32, f64],
            CCAssignToRegWithShadow<[XMM0, XMM1, XMM2, XMM3],
                                    [RCX , RDX , R8  , R9  ]>>,
 
@@ -672,7 +677,7 @@ def CC_X86_Win64_C : CallingConv<[
 
   // Integer/FP values get stored in stack slots that are 8 bytes in size and
   // 8-byte aligned if there are no more registers to hold them.
-  CCIfType<[i8, i16, i32, i64, f16, f32, f64], CCAssignToStack<8, 8>>
+  CCIfType<[i8, i16, i32, i64, bf16, f16, f32, f64], CCAssignToStack<8, 8>>
 ]>;
 
 def CC_X86_Win64_VectorCall : CallingConv<[
