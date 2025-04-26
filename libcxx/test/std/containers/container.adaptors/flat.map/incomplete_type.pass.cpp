@@ -29,7 +29,6 @@ struct A {
 // Implement the operator< required in order to instantiate flat_map<A, X>
 constexpr bool operator<(A const& L, A const& R) { return L.data < R.data; }
 
-
 constexpr bool test() {
   A a;
 
