@@ -266,3 +266,7 @@ enum A a;
 // CHECK:   }
 // CHECK:   cir.global external @a = #cir.int<0> : !u32i
 // CHECK:   }
+
+enum E : int;
+
+// CHECK-NOT: cir.global {{.*}} @E
