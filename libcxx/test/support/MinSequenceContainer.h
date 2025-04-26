@@ -66,7 +66,9 @@ private:
     return cit - cbegin() + data_.begin();
   }
 
-  TEST_CONSTEXPR_CXX23 iterator from_vector_iterator(std::vector<T>::iterator it) { return it - data_.begin() + begin(); }
+  TEST_CONSTEXPR_CXX23 iterator from_vector_iterator(std::vector<T>::iterator it) {
+    return it - data_.begin() + begin();
+  }
 
   std::vector<T> data_;
 };
