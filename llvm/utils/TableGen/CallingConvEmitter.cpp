@@ -132,7 +132,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << Indent << "  ";
     ListSeparator LS;
     for (const Init *V : RL->getValues())
-      O << LS << getQualifiedName(dyn_cast<DefInit>(V)->getDef());
+      O << LS << getQualifiedName(cast<DefInit>(V)->getDef());
     O << "\n" << Indent << "};\n";
   };
 
@@ -163,16 +163,16 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
       O << Indent << "  (void)";
     O << "State.AllocateStack(";
 
-    std::string Fmt = "  State.getMachineFunction().getDataLayout()."
+    const char *Fmt = "  State.getMachineFunction().getDataLayout()."
                       "{0}(EVT(LocVT).getTypeForEVT(State.getContext()))";
     if (Size)
       O << Size << ", ";
     else
-      O << "\n" << Indent << formatv(Fmt.c_str(), "getTypeAllocSize") << ", ";
+      O << "\n" << Indent << formatv(Fmt, "getTypeAllocSize") << ", ";
     if (Align)
       O << "Align(" << Align << ")";
     else
-      O << "\n" << Indent << formatv(Fmt.c_str(), "getABITypeAlign");
+      O << "\n" << Indent << formatv(Fmt, "getABITypeAlign");
     O << ");\n";
   };
 
