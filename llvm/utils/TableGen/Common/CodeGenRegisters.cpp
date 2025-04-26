@@ -704,8 +704,8 @@ struct TupleExpander : SetTheory::Expander {
                         "Register tuple redefines register '" + Name + "'.");
 
       // Copy Proto super-classes.
-      for (const auto &[Super, Loc] : Proto->getSuperClasses())
-        NewReg->addSuperClass(Super, Loc);
+      for (const auto &[Super, Loc] : Proto->getDirectSuperClasses())
+        NewReg->addDirectSuperClass(Super, Loc);
 
       // Copy Proto fields.
       for (unsigned i = 0, e = Proto->getValues().size(); i != e; ++i) {
@@ -922,8 +922,7 @@ bool CodeGenRegisterClass::hasType(const ValueTypeByHwMode &VT) const {
 }
 
 bool CodeGenRegisterClass::contains(const CodeGenRegister *Reg) const {
-  return std::binary_search(Members.begin(), Members.end(), Reg,
-                            deref<std::less<>>());
+  return llvm::binary_search(Members, Reg, deref<std::less<>>());
 }
 
 unsigned CodeGenRegisterClass::getWeight(const CodeGenRegBank &RegBank) const {

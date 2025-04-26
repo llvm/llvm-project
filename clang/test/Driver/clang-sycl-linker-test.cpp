@@ -8,7 +8,7 @@
 // RUN: clang-sycl-linker --dry-run -v -triple=spirv64 %t_1.bc %t_2.bc -o a.spv 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
 // SIMPLE-FO: sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
-// SIMPLE-FO-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: a.spv
+// SIMPLE-FO-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 //
 // Test the dry run of a simple case with device library files specified.
 // RUN: touch %T/lib1.bc
@@ -16,7 +16,7 @@
 // RUN: clang-sycl-linker --dry-run -v -triple=spirv64 %t_1.bc %t_2.bc --library-path=%T --device-libs=lib1.bc,lib2.bc -o a.spv 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DEVLIBS
 // DEVLIBS: sycl-device-link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
-// DEVLIBS-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: a.spv
+// DEVLIBS-NEXT: SPIR-V Backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 //
 // Test a simple case with a random file (not bitcode) as input.
 // RUN: touch %t.o

@@ -469,9 +469,6 @@ enabled sub-projects. Nearly all of these variable names begin with
   combination with ``-DLLVM_ENABLE_DOXYGEN_QT_HELP=ON``; otherwise
   it has no effect.
 
-**LLVM_DOXYGEN_SVG**:BOOL
-  Uses .svg files instead of .png files for graphs in the Doxygen output.
-  Defaults to OFF.
 
 .. _llvm_enable_assertions:
 
