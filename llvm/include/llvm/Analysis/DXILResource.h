@@ -677,6 +677,7 @@ public:
   }
 
   friend class DXILResourceBindingAnalysis;
+  friend class DXILResourceBindingWrapperPass;
 };
 
 class DXILResourceBindingAnalysis
@@ -690,6 +691,25 @@ public:
 
   DXILResourceBindingInfo run(Module &M, ModuleAnalysisManager &AM);
 };
+
+class DXILResourceBindingWrapperPass : public ModulePass {
+  std::unique_ptr<DXILResourceBindingInfo> BindingInfo;
+
+public:
+  static char ID;
+
+  DXILResourceBindingWrapperPass();
+  ~DXILResourceBindingWrapperPass() override;
+
+  DXILResourceBindingInfo &getBindingInfo() { return *BindingInfo; }
+  const DXILResourceBindingInfo &getBindingInfo() const { return *BindingInfo; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnModule(Module &M) override;
+  void releaseMemory() override;
+};
+
+ModulePass *createDXILResourceBindingWrapperPassPass();
 
 } // namespace llvm
 

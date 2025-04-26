@@ -1077,3 +1077,33 @@ char DXILResourceWrapperPass::ID = 0;
 ModulePass *llvm::createDXILResourceWrapperPassPass() {
   return new DXILResourceWrapperPass();
 }
+
+DXILResourceBindingWrapperPass::DXILResourceBindingWrapperPass()
+    : ModulePass(ID) {}
+
+DXILResourceBindingWrapperPass::~DXILResourceBindingWrapperPass() = default;
+
+void DXILResourceBindingWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
+  AU.setPreservesAll();
+}
+
+bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
+  BindingInfo.reset(new DXILResourceBindingInfo());
+
+  DXILResourceTypeMap &DRTM =
+      getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
+  BindingInfo->populate(M, DRTM);
+
+  return false;
+}
+
+void DXILResourceBindingWrapperPass::releaseMemory() { BindingInfo.reset(); }
+
+INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource-binding",
+                "DXIL Resource Binding Analysis", false, true)
+char DXILResourceBindingWrapperPass::ID = 0;
+
+ModulePass *llvm::createDXILResourceBindingWrapperPassPass() {
+  return new DXILResourceWrapperPass();
+}
