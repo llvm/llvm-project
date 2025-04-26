@@ -920,6 +920,10 @@ public:
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
 
+  StatisticsMap &GetSymbolLocatorStatistics() {
+    return m_symbol_locator_duration_map;
+  }
+
   void ResetStatistics();
 
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
@@ -1099,10 +1103,11 @@ protected:
   /// time for the symbol tables can be aggregated here.
   StatsDuration m_symtab_index_time;
 
+  StatisticsMap m_symbol_locator_duration_map;
+
 #ifdef LLDB_ENABLE_SWIFT
   std::once_flag m_toolchain_mismatch_warning;
 #endif
-  StatisticsMap m_symbol_locator_duration_map;
 
   /// A set of hashes of all warnings and errors, to avoid reporting them
   /// multiple times to the same Debugger.
