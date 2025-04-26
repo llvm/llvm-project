@@ -8808,11 +8808,11 @@ static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
   // Candidate BUILD_VECTOR must have 2 unique operands.
   if (UniqueOps.size() != 2u)
     return SDValue();
-  
+
   SDValue Op0 = *(UniqueOps.begin());
   SDValue Op1 = *(++UniqueOps.begin());
 
-  if (isShuffleFoldableLoad(Op0) || isShuffleFoldableLoad(Op1) || 
+  if (isShuffleFoldableLoad(Op0) || isShuffleFoldableLoad(Op1) ||
       Subtarget.hasAVX2()) {
     // Create shuffle mask.
     auto const NumElems = VT.getVectorNumElements();
