@@ -27,8 +27,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
-/// Parses the memory buffer.  If successfully, run a series of passes against
-/// it and print the result.
+
 static LogicalResult
 processBuffer(llvm::raw_ostream &os,
               std::unique_ptr<llvm::MemoryBuffer> ownedBuffer,
@@ -43,40 +42,32 @@ processBuffer(llvm::raw_ostream &os,
 
   ctx.printOpOnDiagnostic(!verifyDiagnostics);
 
-  using SourceDiagnosticHandlerVariant =
-      std::variant<SourceMgrDiagnosticHandler,
-                   SourceMgrDiagnosticVerifierHandler>;
+  auto runTranslation = [&]() {
+    ParserConfig parseConfig(&ctx);
+    OwningOpRef<Operation *> op =
+        parseSourceFileForTool(sourceMgr, parseConfig, true);
+    if (!op)
+      return failure();
 
-  auto sourceMgrHandler =
-      verifyDiagnostics
-          ? SourceDiagnosticHandlerVariant(
-                std::in_place_type_t<SourceMgrDiagnosticVerifierHandler>{},
-                *sourceMgr, &ctx)
-          : SourceDiagnosticHandlerVariant(
-                std::in_place_type_t<SourceMgrDiagnosticHandler>{}, *sourceMgr,
-                &ctx);
+    auto moduleOp = llvm::cast<ModuleOp>(*op);
+    llvm::SmallVector<irdl::DialectOp> dialects{
+        moduleOp.getOps<irdl::DialectOp>(),
+    };
 
-  const auto verifyOr =
-      [verifier = std::get_if<SourceMgrDiagnosticVerifierHandler>(
-           &sourceMgrHandler)](LogicalResult res) -> LogicalResult {
-    return verifier ? verifier->verify() : res;
+    return irdl::translateIRDLDialectToCpp(dialects, os);
   };
 
-  ParserConfig parseConfig(&ctx);
-  OwningOpRef<Operation *> op =
-      parseSourceFileForTool(sourceMgr, parseConfig, true);
-  if (!op)
-    return verifyOr(failure());
+  if (!verifyDiagnostics) {
+    // If no errors are expected, return translation result.
+    SourceMgrDiagnosticHandler srcManagerHandler(*sourceMgr, &ctx);
+    return runTranslation();
+  }
 
-  auto moduleOp = llvm::cast<ModuleOp>(*op);
-  llvm::SmallVector<irdl::DialectOp> dialects{
-      moduleOp.getOps<irdl::DialectOp>(),
-  };
-
-  if (failed(irdl::translateIRDLDialectToCpp(dialects, os)))
-    return verifyOr(failure());
-
-  return verifyOr(success());
+  // If errors are expected, ignore translation result and check for
+  // diagnostics.
+  SourceMgrDiagnosticVerifierHandler srcManagerHandler(*sourceMgr, &ctx);
+  (void)runTranslation();
+  return srcManagerHandler.verify();
 }
 
 static LogicalResult translateIRDLToCpp(int argc, char **argv) {
