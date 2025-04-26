@@ -787,7 +787,6 @@ TEST(CodeExtractor, ArgsDebugInfo) {
     CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
     CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
     Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
-    Outlined->dump();
     EXPECT_TRUE(Outlined);
     BasicBlock &EB = Outlined->getEntryBlock();
     Instruction *Term = EB.getTerminator();
