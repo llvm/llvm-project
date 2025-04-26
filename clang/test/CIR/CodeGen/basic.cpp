@@ -127,3 +127,8 @@ enum C : int {
 C c;
 
 // CHECK:   cir.global external @c = #cir.int<0> : !s32i
+
+enum class D : int;
+D d;
+
+// CHECK:   cir.global external @d = #cir.int<0> : !s32i
