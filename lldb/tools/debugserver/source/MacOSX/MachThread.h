@@ -24,8 +24,6 @@
 #include "DNBArch.h"
 #include "DNBRegisterInfo.h"
 #include "MachException.h"
-#include "PThreadCondition.h"
-#include "PThreadMutex.h"
 
 #include "ThreadInfo.h"
 
@@ -139,7 +137,7 @@ protected:
                                // namesp.
   uint32_t m_seq_id;   // A Sequential ID that increments with each new thread
   nub_state_t m_state; // The state of our process
-  PThreadMutex m_state_mutex;            // Multithreaded protection for m_state
+  std::recursive_mutex m_state_mutex;    // Multithreaded protection for m_state
   struct thread_basic_info m_basic_info; // Basic information for a thread used
                                          // to see if a thread is valid
   int32_t m_suspend_count; // The current suspend count > 0 means we have
