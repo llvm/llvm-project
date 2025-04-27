@@ -23,7 +23,7 @@ void test() {
 // Note: The alignment of i64 stores below is wrong. That should be fixed
 //       when we add alignment attributes to the load/store ops.
 
-// CHECK: define{{.*}} void @test()
+// CHECK: define{{.*}} void @_Z4testv()
 // CHECK:    %[[I_PTR:.*]] = alloca i32, i64 1, align 4
 // CHECK:    %[[L_PTR:.*]] = alloca i64, i64 1, align 8
 // CHECK:    %[[F_PTR:.*]] = alloca float, i64 1, align 4

@@ -9443,6 +9443,9 @@ struct SearchNonTrivialToCopyField
   void visitARCWeak(QualType FT, SourceLocation SL) {
     S.DiagRuntimeBehavior(SL, E, S.PDiag(diag::note_nontrivial_field) << 0);
   }
+  void visitPtrAuth(QualType FT, SourceLocation SL) {
+    S.DiagRuntimeBehavior(SL, E, S.PDiag(diag::note_nontrivial_field) << 0);
+  }
   void visitStruct(QualType FT, SourceLocation SL) {
     for (const FieldDecl *FD : FT->castAs<RecordType>()->getDecl()->fields())
       visit(FD->getType(), FD->getLocation());

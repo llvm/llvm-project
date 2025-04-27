@@ -5980,7 +5980,7 @@ bool ASTReader::readASTFileControlBlock(
        }
       }
     }
-    Stream = SavedStream;
+    Stream = std::move(SavedStream);
   }
 
   // Scan for the UNHASHED_CONTROL_BLOCK_ID block.

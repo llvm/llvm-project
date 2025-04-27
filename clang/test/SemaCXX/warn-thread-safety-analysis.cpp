@@ -6708,7 +6708,7 @@ int testAdoptShared() {
 
 } // namespace ReturnScopedLockable
 
-#endif
+#endif // __cpp_guaranteed_copy_elision
 
 namespace PR38640 {
 void f() {
@@ -6716,7 +6716,7 @@ void f() {
   // safety analysis was enabled.
   int &i = i; // expected-warning {{reference 'i' is not yet bound to a value when used within its own initialization}}
 }
-}
+} // namespace PR38640
 
 namespace Derived_Smart_Pointer {
 template <class T>
@@ -6811,4 +6811,4 @@ class PointerGuard {
     mu1.Unlock();
   }
 };
-}
+} // namespace Derived_Smart_Pointer

@@ -156,6 +156,11 @@ static bool SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
       }
 
       const char *FilteringStr = ::getenv("CC_PRINT_HEADERS_FILTERING");
+      if (!FilteringStr) {
+        TheDriver.Diag(clang::diag::err_drv_print_header_env_var_invalid_format)
+            << EnvVar;
+        return false;
+      }
       HeaderIncludeFilteringKind Filtering;
       if (!stringToHeaderIncludeFiltering(FilteringStr, Filtering)) {
         TheDriver.Diag(clang::diag::err_drv_print_header_env_var)

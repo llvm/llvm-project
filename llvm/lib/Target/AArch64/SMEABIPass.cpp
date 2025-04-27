@@ -54,14 +54,22 @@ FunctionPass *llvm::createSMEABIPass() { return new SMEABI(); }
 //===----------------------------------------------------------------------===//
 
 // Utility function to emit a call to __arm_tpidr2_save and clear TPIDR2_EL0.
-void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
+void emitTPIDR2Save(Module *M, IRBuilder<> &Builder, bool ZT0IsUndef = false) {
+  auto &Ctx = M->getContext();
   auto *TPIDR2SaveTy =
       FunctionType::get(Builder.getVoidTy(), {}, /*IsVarArgs=*/false);
-  auto Attrs = AttributeList().addFnAttribute(M->getContext(),
-                                              "aarch64_pstate_sm_compatible");
+  auto Attrs =
+      AttributeList().addFnAttribute(Ctx, "aarch64_pstate_sm_compatible");
   FunctionCallee Callee =
       M->getOrInsertFunction("__arm_tpidr2_save", TPIDR2SaveTy, Attrs);
   CallInst *Call = Builder.CreateCall(Callee);
+
+  // If ZT0 is undefined (i.e. we're at the entry of a "new_zt0" function), mark
+  // that on the __arm_tpidr2_save call. This prevents an unnecessary spill of
+  // ZT0 that can occur before ZA is enabled.
+  if (ZT0IsUndef)
+    Call->addFnAttr(Attribute::get(Ctx, "aarch64_zt0_undef"));
+
   Call->setCallingConv(
       CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
 
@@ -119,7 +127,7 @@ bool SMEABI::updateNewStateFunctions(Module *M, Function *F,
 
     // Create a call __arm_tpidr2_save, which commits the lazy save.
     Builder.SetInsertPoint(&SaveBB->back());
-    emitTPIDR2Save(M, Builder);
+    emitTPIDR2Save(M, Builder, /*ZT0IsUndef=*/FnAttrs.isNewZT0());
 
     // Enable pstate.za at the start of the function.
     Builder.SetInsertPoint(&OrigBB->front());

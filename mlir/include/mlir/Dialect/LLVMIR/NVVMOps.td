@@ -25,6 +25,7 @@ def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
+def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions
@@ -2252,7 +2253,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   }];
 
   let arguments = (ins
-    LLVM_PointerShared:$dstMem,
+    LLVM_PointerSharedCluster:$dstMem,
     LLVM_PointerGlobal:$srcMem,
     LLVM_PointerShared:$mbar,
     I32:$size,
@@ -2309,7 +2310,7 @@ def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
   }];
 
   let arguments = (ins
-    LLVM_PointerShared:$dstMem,
+    LLVM_PointerSharedCluster:$dstMem,
     LLVM_PointerShared:$srcMem,
     LLVM_PointerShared:$mbar,
     I32:$size);

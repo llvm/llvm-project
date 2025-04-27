@@ -1247,6 +1247,10 @@ class PatGprNoX0Simm32NoSimm26<SDPatternOperator OpNode, RVInst48 Inst>
     : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm32_nosimm26:$imm)),
           (Inst GPRNoX0:$rs1, simm32_nosimm26:$imm)>;
 
+class PatGprNoX0GprNoX0<SDPatternOperator OpNode, RVInstR Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), (i32 GPRNoX0:$rs2))),
+          (Inst GPRNoX0:$rs1, GPRNoX0:$rs2)>;
+
 class QC48LdPat<PatFrag LoadOp, RVInst48 Inst>
     : Pat<(i32 (LoadOp (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26))),
           (Inst GPR:$rs1, simm26_nosimm12:$imm26)>;
@@ -1307,6 +1311,15 @@ let Predicates = [HasVendorXqcisls, IsRV32], AddedComplexity = 1 in {
   def : QCScaledStPat<truncstorei16, QC_SRH>;
   def : QCScaledStPat<store, QC_SRW>;
 } // Predicates = [HasVendorXqcisls, IsRV32], AddedComplexity = 1
+
+let Predicates = [HasVendorXqcia, IsRV32] in {
+def : PatGprNoX0GprNoX0<saddsat, QC_ADDSAT>;
+def : PatGprNoX0GprNoX0<uaddsat, QC_ADDUSAT>;
+def : PatGprNoX0GprNoX0<ssubsat, QC_SUBSAT>;
+def : PatGprNoX0GprNoX0<usubsat, QC_SUBUSAT>;
+def : PatGprNoX0GprNoX0<ushlsat, QC_SHLUSAT>;
+def : PatGprNoX0GprNoX0<sshlsat, QC_SHLSAT>;
+} // Predicates = [HasVendorXqcia, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;

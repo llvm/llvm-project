@@ -372,15 +372,15 @@ void SystemZTTIImpl::getUnrollingPreferences(
       }
       if (isa<StoreInst>(&I)) {
         Type *MemAccessTy = I.getOperand(0)->getType();
-        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy,
-                                     std::nullopt, 0, TTI::TCK_RecipThroughput);
+        NumStores += getMemoryOpCost(Instruction::Store, MemAccessTy, Align(),
+                                     0, TTI::TCK_RecipThroughput);
       }
     }
 
   // The z13 processor will run out of store tags if too many stores
   // are fed into it too quickly. Therefore make sure there are not
   // too many stores in the resulting unrolled loop.
-  unsigned const NumStoresVal = *NumStores.getValue();
+  unsigned const NumStoresVal = NumStores.getValue();
   unsigned const Max = (NumStoresVal ? (12 / NumStoresVal) : UINT_MAX);
 
   if (HasCall) {
@@ -1298,7 +1298,7 @@ static bool isBswapIntrinsicCall(const Value *V) {
 }
 
 InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
-                                                MaybeAlign Alignment,
+                                                Align Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
                                                 TTI::OperandValueInfo OpInfo,

@@ -9,7 +9,9 @@
 #include "Environment.hpp"
 #include "Fixtures.hpp"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
+#include <fstream>
 
 using namespace llvm;
 
@@ -25,8 +27,8 @@ static cl::opt<std::string>
     SelectedPlatform("platform", cl::desc("Only test the specified platform"),
                      cl::value_desc("platform"));
 
-std::ostream &operator<<(std::ostream &Out,
-                         const ol_platform_handle_t &Platform) {
+raw_ostream &operator<<(raw_ostream &Out,
+                        const ol_platform_handle_t &Platform) {
   size_t Size;
   olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_NAME, &Size);
   std::vector<char> Name(Size);
@@ -35,62 +37,132 @@ std::ostream &operator<<(std::ostream &Out,
   return Out;
 }
 
-std::ostream &operator<<(std::ostream &Out,
-                         const std::vector<ol_platform_handle_t> &Platforms) {
-  for (auto Platform : Platforms) {
-    Out << "\n  * \"" << Platform << "\"";
+void printPlatforms() {
+  SmallDenseSet<ol_platform_handle_t> Platforms;
+  using DeviceVecT = SmallVector<ol_device_handle_t, 8>;
+  DeviceVecT Devices{};
+
+  olIterateDevices(
+      [](ol_device_handle_t D, void *Data) {
+        static_cast<DeviceVecT *>(Data)->push_back(D);
+        return true;
+      },
+      &Devices);
+
+  for (auto &Device : Devices) {
+    ol_platform_handle_t Platform;
+    olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                    &Platform);
+    Platforms.insert(Platform);
   }
-  return Out;
+
+  for (const auto &Platform : Platforms) {
+    errs() << "  * " << Platform << "\n";
+  }
 }
 
-const std::vector<ol_platform_handle_t> &TestEnvironment::getPlatforms() {
-  static std::vector<ol_platform_handle_t> Platforms{};
+ol_device_handle_t TestEnvironment::getDevice() {
+  static ol_device_handle_t Device = nullptr;
 
-  if (Platforms.empty()) {
-    uint32_t PlatformCount = 0;
-    olGetPlatformCount(&PlatformCount);
-    if (PlatformCount > 0) {
-      Platforms.resize(PlatformCount);
-      olGetPlatform(PlatformCount, Platforms.data());
-    }
-  }
-
-  return Platforms;
-}
-
-// Get a single platform, which may be selected by the user.
-ol_platform_handle_t TestEnvironment::getPlatform() {
-  static ol_platform_handle_t Platform = nullptr;
-  const auto &Platforms = getPlatforms();
-
-  if (!Platform) {
+  if (!Device) {
     if (SelectedPlatform != "") {
-      for (const auto CandidatePlatform : Platforms) {
-        std::stringstream PlatformName;
-        PlatformName << CandidatePlatform;
-        if (SelectedPlatform == PlatformName.str()) {
-          Platform = CandidatePlatform;
-          return Platform;
-        }
+      olIterateDevices(
+          [](ol_device_handle_t D, void *Data) {
+            ol_platform_handle_t Platform;
+            olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                            &Platform);
+
+            std::string PlatformName;
+            raw_string_ostream S(PlatformName);
+            S << Platform;
+
+            if (PlatformName == SelectedPlatform) {
+              *(static_cast<ol_device_handle_t *>(Data)) = D;
+              return false;
+            }
+
+            return true;
+          },
+          &Device);
+
+      if (Device == nullptr) {
+        errs() << "No device found with the platform \"" << SelectedPlatform
+               << "\". Choose from:"
+               << "\n";
+        printPlatforms();
+        std::exit(1);
       }
-      std::cout << "No platform found with the name \"" << SelectedPlatform
-                << "\". Choose from:" << Platforms << "\n";
-      std::exit(1);
     } else {
-      // Pick a single platform. We prefer one that has available devices, but
-      // just pick the first initially in case none have any devices.
-      Platform = Platforms[0];
-      for (auto CandidatePlatform : Platforms) {
-        uint32_t NumDevices = 0;
-        if (olGetDeviceCount(CandidatePlatform, &NumDevices) == OL_SUCCESS) {
-          if (NumDevices > 0) {
-            Platform = CandidatePlatform;
-            break;
-          }
-        }
-      }
+      olIterateDevices(
+          [](ol_device_handle_t D, void *Data) {
+            *(static_cast<ol_device_handle_t *>(Data)) = D;
+            return false;
+          },
+          &Device);
     }
   }
 
-  return Platform;
+  return Device;
+}
+
+ol_device_handle_t TestEnvironment::getHostDevice() {
+  static ol_device_handle_t HostDevice = nullptr;
+
+  if (!HostDevice) {
+    olIterateDevices(
+        [](ol_device_handle_t D, void *Data) {
+          ol_platform_handle_t Platform;
+          olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                          &Platform);
+          ol_platform_backend_t Backend;
+          olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                            &Backend);
+
+          if (Backend == OL_PLATFORM_BACKEND_HOST) {
+            *(static_cast<ol_device_handle_t *>(Data)) = D;
+            return false;
+          }
+
+          return true;
+        },
+        &HostDevice);
+  }
+
+  return HostDevice;
+}
+
+// TODO: Allow overriding via cmd line arg
+const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
+
+bool TestEnvironment::loadDeviceBinary(
+    const std::string &BinaryName, ol_device_handle_t Device,
+    std::unique_ptr<MemoryBuffer> &BinaryOut) {
+
+  // Get the platform type
+  ol_platform_handle_t Platform;
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform), &Platform);
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
+  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                    &Backend);
+  std::string FileExtension;
+  if (Backend == OL_PLATFORM_BACKEND_AMDGPU) {
+    FileExtension = ".amdgpu.bin";
+  } else if (Backend == OL_PLATFORM_BACKEND_CUDA) {
+    FileExtension = ".nvptx64.bin";
+  } else {
+    errs() << "Unsupported platform type for a device binary test.\n";
+    return false;
+  }
+
+  std::string SourcePath =
+      DeviceBinsDirectory + "/" + BinaryName + FileExtension;
+
+  auto SourceFile = MemoryBuffer::getFile(SourcePath, false, false);
+  if (!SourceFile) {
+    errs() << "failed to read device binary file: " + SourcePath;
+    return false;
+  }
+
+  BinaryOut = std::move(SourceFile.get());
+  return true;
 }

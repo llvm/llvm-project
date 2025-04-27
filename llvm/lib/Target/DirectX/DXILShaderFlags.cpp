@@ -132,9 +132,10 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
 
-      // Set ResMayNotAlias if DXIL version >= 1.8 and function uses UAVs
+      // Set ResMayNotAlias if DXIL validator version >= 1.8 and the function
+      // uses UAVs
       if (!CSF.ResMayNotAlias && CanSetResMayNotAlias &&
-          MMDI.DXILVersion >= VersionTuple(1, 8) && RTI.isUAV())
+          MMDI.ValidatorVersion >= VersionTuple(1, 8) && RTI.isUAV())
         CSF.ResMayNotAlias = true;
 
       switch (RTI.getResourceKind()) {
@@ -208,15 +209,15 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         continue;
       }
 
-      // Set ResMayNotAlias to true if DXIL version < 1.8 and there are UAVs
-      // present globally.
-      if (CanSetResMayNotAlias && MMDI.DXILVersion < VersionTuple(1, 8))
+      // Set ResMayNotAlias to true if DXIL validator version < 1.8 and there
+      // are UAVs present globally.
+      if (CanSetResMayNotAlias && MMDI.ValidatorVersion < VersionTuple(1, 8))
         SCCSF.ResMayNotAlias = !DRM.uavs().empty();
 
       // Set UseNativeLowPrecision using dx.nativelowprec module metadata
       if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
               M.getModuleFlag("dx.nativelowprec")))
-        if (MMDI.DXILVersion >= VersionTuple(1, 2) &&
+        if (MMDI.ShaderModelVersion >= VersionTuple(6, 2) &&
             NativeLowPrec->getValue() != 0)
           SCCSF.UseNativeLowPrecision = true;
 
@@ -255,6 +256,16 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
             *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
   }
+
+  // Set the Max64UAVs flag if the number of UAVs is > 8
+  uint32_t NumUAVs = 0;
+  for (auto &UAV : DRM.uavs())
+    if (MMDI.ValidatorVersion < VersionTuple(1, 6))
+      NumUAVs++;
+    else // MMDI.ValidatorVersion >= VersionTuple(1, 6)
+      NumUAVs += UAV.getBinding().Size;
+  if (NumUAVs > 8)
+    CombinedSFMask.Max64UAVs = true;
 }
 
 void ComputedShaderFlags::print(raw_ostream &OS) const {
@@ -327,7 +338,8 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  DXILResourceMap &DRM = getAnalysis<DXILResourceWrapperPass>().getBindingMap();
+  DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getResourceMap();
   const ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 

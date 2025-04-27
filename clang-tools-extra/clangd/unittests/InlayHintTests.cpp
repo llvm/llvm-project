@@ -36,9 +36,12 @@ namespace {
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 
-std::vector<InlayHint> hintsOfKind(ParsedAST &AST, InlayHintKind Kind) {
+constexpr InlayHintOptions DefaultOptsForTests{2};
+
+std::vector<InlayHint> hintsOfKind(ParsedAST &AST, InlayHintKind Kind,
+                                   InlayHintOptions Opts) {
   std::vector<InlayHint> Result;
-  for (auto &Hint : inlayHints(AST, /*RestrictRange=*/std::nullopt)) {
+  for (auto &Hint : inlayHints(AST, /*RestrictRange=*/std::nullopt, Opts)) {
     if (Hint.kind == Kind)
       Result.push_back(Hint);
   }
@@ -90,7 +93,7 @@ Config noHintsConfig() {
 
 template <typename... ExpectedHints>
 void assertHintsWithHeader(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
-                           llvm::StringRef HeaderContent,
+                           llvm::StringRef HeaderContent, InlayHintOptions Opts,
                            ExpectedHints... Expected) {
   Annotations Source(AnnotatedSource);
   TestTU TU = TestTU::withCode(Source.code());
@@ -98,18 +101,18 @@ void assertHintsWithHeader(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
   TU.HeaderCode = HeaderContent;
   auto AST = TU.build();
 
-  EXPECT_THAT(hintsOfKind(AST, Kind),
+  EXPECT_THAT(hintsOfKind(AST, Kind, Opts),
               ElementsAre(HintMatcher(Expected, Source)...));
   // Sneak in a cross-cutting check that hints are disabled by config.
   // We'll hit an assertion failure if addInlayHint still gets called.
   WithContextValue WithCfg(Config::Key, noHintsConfig());
-  EXPECT_THAT(inlayHints(AST, std::nullopt), IsEmpty());
+  EXPECT_THAT(inlayHints(AST, std::nullopt, Opts), IsEmpty());
 }
 
 template <typename... ExpectedHints>
 void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
-                 ExpectedHints... Expected) {
-  return assertHintsWithHeader(Kind, AnnotatedSource, "",
+                 InlayHintOptions Opts, ExpectedHints... Expected) {
+  return assertHintsWithHeader(Kind, AnnotatedSource, "", Opts,
                                std::move(Expected)...);
 }
 
@@ -120,14 +123,16 @@ template <typename... ExpectedHints>
 void assertParameterHints(llvm::StringRef AnnotatedSource,
                           ExpectedHints... Expected) {
   ignore(Expected.Side = Left...);
-  assertHints(InlayHintKind::Parameter, AnnotatedSource, Expected...);
+  assertHints(InlayHintKind::Parameter, AnnotatedSource, DefaultOptsForTests,
+              Expected...);
 }
 
 template <typename... ExpectedHints>
 void assertTypeHints(llvm::StringRef AnnotatedSource,
                      ExpectedHints... Expected) {
   ignore(Expected.Side = Right...);
-  assertHints(InlayHintKind::Type, AnnotatedSource, Expected...);
+  assertHints(InlayHintKind::Type, AnnotatedSource, DefaultOptsForTests,
+              Expected...);
 }
 
 template <typename... ExpectedHints>
@@ -136,16 +141,25 @@ void assertDesignatorHints(llvm::StringRef AnnotatedSource,
   Config Cfg;
   Cfg.InlayHints.Designators = true;
   WithContextValue WithCfg(Config::Key, std::move(Cfg));
-  assertHints(InlayHintKind::Designator, AnnotatedSource, Expected...);
+  assertHints(InlayHintKind::Designator, AnnotatedSource, DefaultOptsForTests,
+              Expected...);
+}
+
+template <typename... ExpectedHints>
+void assertBlockEndHintsWithOpts(llvm::StringRef AnnotatedSource,
+                                 InlayHintOptions Opts,
+                                 ExpectedHints... Expected) {
+  Config Cfg;
+  Cfg.InlayHints.BlockEnd = true;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  assertHints(InlayHintKind::BlockEnd, AnnotatedSource, Opts, Expected...);
 }
 
 template <typename... ExpectedHints>
 void assertBlockEndHints(llvm::StringRef AnnotatedSource,
                          ExpectedHints... Expected) {
-  Config Cfg;
-  Cfg.InlayHints.BlockEnd = true;
-  WithContextValue WithCfg(Config::Key, std::move(Cfg));
-  assertHints(InlayHintKind::BlockEnd, AnnotatedSource, Expected...);
+  assertBlockEndHintsWithOpts(AnnotatedSource, DefaultOptsForTests,
+                              Expected...);
 }
 
 TEST(ParameterHints, Smoke) {
@@ -1226,7 +1240,9 @@ TEST(ParameterHints, IncludeAtNonGlobalScope) {
   ASSERT_TRUE(bool(AST));
 
   // Ensure the hint for the call in foo.inc is NOT materialized in foo.cc.
-  EXPECT_EQ(hintsOfKind(*AST, InlayHintKind::Parameter).size(), 0u);
+  EXPECT_EQ(
+      hintsOfKind(*AST, InlayHintKind::Parameter, DefaultOptsForTests).size(),
+      0u);
 }
 
 TEST(TypeHints, Smoke) {
@@ -1488,12 +1504,12 @@ TEST(DefaultArguments, Smoke) {
     void baz(int = 5) { if (false) baz($unnamed[[)]]; };
   )cpp";
 
-  assertHints(InlayHintKind::DefaultArgument, Code,
+  assertHints(InlayHintKind::DefaultArgument, Code, DefaultOptsForTests,
               ExpectedHint{"A: 4", "default1", Left},
               ExpectedHint{", B: 1, C: foo()", "default2", Left},
               ExpectedHint{"5", "unnamed", Left});
 
-  assertHints(InlayHintKind::Parameter, Code,
+  assertHints(InlayHintKind::Parameter, Code, DefaultOptsForTests,
               ExpectedHint{"A: ", "explicit", Left});
 }
 
@@ -1528,14 +1544,14 @@ TEST(DefaultArguments, WithoutParameterNames) {
     }
   )cpp";
 
-  assertHints(InlayHintKind::DefaultArgument, Code,
+  assertHints(InlayHintKind::DefaultArgument, Code, DefaultOptsForTests,
               ExpectedHint{"...", "abbreviated", Left},
               ExpectedHint{", Baz{}", "paren", Left},
               ExpectedHint{", Baz{}", "brace1", Left},
               ExpectedHint{", Baz{}", "brace2", Left},
               ExpectedHint{", Baz{}", "brace3", Left});
 
-  assertHints(InlayHintKind::Parameter, Code);
+  assertHints(InlayHintKind::Parameter, Code, DefaultOptsForTests);
 }
 
 TEST(TypeHints, Deduplication) {
@@ -1573,7 +1589,8 @@ TEST(TypeHints, Aliased) {
   TU.ExtraArgs.push_back("-xc");
   auto AST = TU.build();
 
-  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type), IsEmpty());
+  EXPECT_THAT(hintsOfKind(AST, InlayHintKind::Type, DefaultOptsForTests),
+              IsEmpty());
 }
 
 TEST(TypeHints, CallingConvention) {
@@ -1590,7 +1607,7 @@ TEST(TypeHints, CallingConvention) {
   auto AST = TU.build();
 
   EXPECT_THAT(
-      hintsOfKind(AST, InlayHintKind::Type),
+      hintsOfKind(AST, InlayHintKind::Type, DefaultOptsForTests),
       ElementsAre(HintMatcher(ExpectedHint{"-> void", "lambda"}, Source)));
 }
 
@@ -1673,7 +1690,7 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   )cpp";
 
   assertHintsWithHeader(
-      InlayHintKind::Type, VectorIntPtr, Header,
+      InlayHintKind::Type, VectorIntPtr, Header, DefaultOptsForTests,
       ExpectedHint{": int *", "no_modifier"},
       ExpectedHint{": int **", "ptr_modifier"},
       ExpectedHint{": int *&", "ref_modifier"},
@@ -1697,7 +1714,7 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   )cpp";
 
   assertHintsWithHeader(
-      InlayHintKind::Type, VectorInt, Header,
+      InlayHintKind::Type, VectorInt, Header, DefaultOptsForTests,
       ExpectedHint{": int", "no_modifier"},
       ExpectedHint{": int *", "ptr_modifier"},
       ExpectedHint{": int &", "ref_modifier"},
@@ -1724,6 +1741,7 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   )cpp";
 
   assertHintsWithHeader(InlayHintKind::Type, TypeAlias, Header,
+                        DefaultOptsForTests,
                         ExpectedHint{": Short", "short_name"},
                         ExpectedHint{": static_vector<int>", "vector_name"});
 }
@@ -2016,6 +2034,7 @@ TEST(BlockEndHints, If) {
   assertBlockEndHints(
       R"cpp(
     void foo(bool cond) {
+       void* ptr;
        if (cond)
           ;
 
@@ -2041,13 +2060,17 @@ TEST(BlockEndHints, If) {
 
        if (int i = 0; i > 10) {
        $init_cond[[}]]
+
+       if (ptr != nullptr) {
+       $null_check[[}]]
     } // suppress
   )cpp",
       ExpectedHint{" // if cond", "simple"},
       ExpectedHint{" // if cond", "ifelse"}, ExpectedHint{" // if", "elseif"},
       ExpectedHint{" // if !cond", "inner"},
       ExpectedHint{" // if cond", "outer"}, ExpectedHint{" // if X", "init"},
-      ExpectedHint{" // if i > 10", "init_cond"});
+      ExpectedHint{" // if i > 10", "init_cond"},
+      ExpectedHint{" // if ptr != nullptr", "null_check"});
 }
 
 TEST(BlockEndHints, Loops) {
@@ -2124,30 +2147,41 @@ TEST(BlockEndHints, PrintRefs) {
       R"cpp(
     namespace ns {
       int Var;
-      int func();
+      int func1();
+      int func2(int, int);
       struct S {
         int Field;
-        int method() const;
+        int method1() const;
+        int method2(int, int) const;
       }; // suppress
     } // suppress
     void foo() {
+      int int_a {};
       while (ns::Var) {
       $var[[}]]
 
-      while (ns::func()) {
-      $func[[}]]
+      while (ns::func1()) {
+      $func1[[}]]
+
+      while (ns::func2(int_a, int_a)) {
+      $func2[[}]]
 
       while (ns::S{}.Field) {
       $field[[}]]
 
-      while (ns::S{}.method()) {
-      $method[[}]]
+      while (ns::S{}.method1()) {
+      $method1[[}]]
+      
+      while (ns::S{}.method2(int_a, int_a)) {
+      $method2[[}]]
     } // suppress
   )cpp",
       ExpectedHint{" // while Var", "var"},
-      ExpectedHint{" // while func", "func"},
+      ExpectedHint{" // while func1()", "func1"},
+      ExpectedHint{" // while func2(...)", "func2"},
       ExpectedHint{" // while Field", "field"},
-      ExpectedHint{" // while method", "method"});
+      ExpectedHint{" // while method1()", "method1"},
+      ExpectedHint{" // while method2(...)", "method2"});
 }
 
 TEST(BlockEndHints, PrintConversions) {
@@ -2307,7 +2341,49 @@ TEST(BlockEndHints, PointerToMemberFunction) {
       $ptrmem[[}]]
     } // suppress
   )cpp",
-                      ExpectedHint{" // if", "ptrmem"});
+                      ExpectedHint{" // if ()", "ptrmem"});
+}
+
+TEST(BlockEndHints, MinLineLimit) {
+  InlayHintOptions Opts;
+  Opts.HintMinLineLimit = 10;
+
+  // namespace ns below is exactly 10 lines
+  assertBlockEndHintsWithOpts(
+      R"cpp(
+    namespace ns {
+      int Var;
+      int func1();
+      int func2(int, int);
+      struct S {
+        int Field;
+        int method1() const;
+        int method2(int, int) const;
+      };
+    $namespace[[}]]
+    void foo() {
+      int int_a {};
+      while (ns::Var) {
+      }
+
+      while (ns::func1()) {
+      }
+
+      while (ns::func2(int_a, int_a)) {
+      }
+
+      while (ns::S{}.Field) {
+      }
+
+      while (ns::S{}.method1()) {
+      }
+      
+      while (ns::S{}.method2(int_a, int_a)) {
+      }
+    $foo[[}]]
+  )cpp",
+      Opts, ExpectedHint{" // namespace ns", "namespace"},
+      ExpectedHint{" // foo", "foo"});
 }
 
 // FIXME: Low-hanging fruit where we could omit a type hint:

@@ -982,6 +982,7 @@ R"(All available -march extensions for RISC-V
     zicbop               1.0
     zicboz               1.0
     ziccamoa             1.0
+    ziccamoc             1.0
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
@@ -1181,6 +1182,8 @@ Experimental extensions
     xqcisync             0.2
     xrivosvisni          0.1
     xrivosvizip          0.1
+    xsfmclic             0.1
+    xsfsclic             0.1
 
 Supported Profiles
     rva20s64

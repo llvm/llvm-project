@@ -105,12 +105,10 @@ struct TagNode : public HTMLNode {
   void render(llvm::raw_ostream &OS, int IndentationLevel) override;
 };
 
-constexpr const char *kDoctypeDecl = "<!DOCTYPE html>";
-
 struct HTMLFile {
   std::vector<std::unique_ptr<HTMLNode>> Children; // List of child nodes
   void render(llvm::raw_ostream &OS) {
-    OS << kDoctypeDecl << "\n";
+    OS << "<!DOCTYPE html>\n";
     for (const auto &C : Children) {
       C->render(OS, 0);
       OS << "\n";
