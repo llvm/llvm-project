@@ -1387,9 +1387,14 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   return false;
 }
 
-static bool checkDestructor(InterpState &S, CodePtr OpPC, const Function *Func,
-                            const Pointer &ThisPtr) {
-  return CheckActive(S, OpPC, ThisPtr, AK_Destroy);
+bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  // Can't call a dtor on a global variable.
+  if (Ptr.block()->isStatic()) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_modify_global);
+    return false;
+  }
+  return CheckActive(S, OpPC, Ptr, AK_Destroy);
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
@@ -1486,7 +1491,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
     if (Func->isConstructor() && !checkConstructor(S, OpPC, Func, ThisPtr))
       return false;
-    if (Func->isDestructor() && !checkDestructor(S, OpPC, Func, ThisPtr))
+    if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
       return false;
   }
 

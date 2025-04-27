@@ -1810,3 +1810,12 @@ namespace AccessMismatch {
   static_assert(B().cmp(), ""); // both-error {{constant expression}} \
                                 // both-note {{in call}}
 }
+
+namespace GlobalDtor {
+  struct A {
+  };
+  constexpr A a = {};
+  constexpr void destroy1() { // both-error {{constexpr}}
+    a.~A(); // both-note {{cannot modify an object that is visible outside}}
+  }
+}
