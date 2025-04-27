@@ -67,45 +67,55 @@ class TestDAP_stackTraceMissingSourcePath(lldbdap_testcase.DAPTestCaseBase):
     def verify_frames_source(
         self, frames, main_frame_assembly: bool, other_frame_assembly: bool
     ):
+        self.assertLessEqual(2, len(frames), "expect at least 2 frames")
+        source_0 = frames[0].get("source")
+        source_1 = frames[1].get("source")
+        self.assertIsNotNone(source_0, "Expects a source object in frame 0")
+        self.assertIsNotNone(source_1, "Expects a source object in frame 1")
+
+        # it does not always have a path.
+        source_0_path: str = source_0.get("path", "")
+        source_1_path: str = source_1.get("path", "")
+
         if other_frame_assembly:
             self.assertFalse(
-                frames[0]["source"]["path"].endswith("other.c"),
+                source_0_path.endswith("other.c"),
                 "Expect original source path to not be in unavailable source frame (other.c)",
             )
             self.assertIn(
                 "sourceReference",
-                frames[0]["source"],
+                source_0,
                 "Expect sourceReference to be in unavailable source frame (other.c)",
             )
         else:
             self.assertTrue(
-                frames[0]["source"]["path"].endswith("other.c"),
+                source_0_path.endswith("other.c"),
                 "Expect original source path to be in normal source frame (other.c)",
             )
             self.assertNotIn(
                 "sourceReference",
-                frames[0]["source"],
+                source_0,
                 "Expect sourceReference to not be in normal source frame (other.c)",
             )
 
         if main_frame_assembly:
             self.assertFalse(
-                frames[1]["source"]["path"].endswith("main.c"),
+                source_1_path.endswith("main.c"),
                 "Expect original source path to not be in unavailable source frame (main.c)",
             )
             self.assertIn(
                 "sourceReference",
-                frames[1]["source"],
+                source_1,
                 "Expect sourceReference to be in unavailable source frame (main.c)",
             )
         else:
             self.assertTrue(
-                frames[1]["source"]["path"].endswith("main.c"),
+                source_1_path.endswith("main.c"),
                 "Expect original source path to be in normal source frame (main.c)",
             )
             self.assertNotIn(
                 "sourceReference",
-                frames[1]["source"],
+                source_1,
                 "Expect sourceReference to not be in normal source code frame (main.c)",
             )
 
