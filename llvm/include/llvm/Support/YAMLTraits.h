@@ -901,11 +901,12 @@ public:
   }
 
   template <typename T, typename Context>
-  std::enable_if_t<has_SequenceTraits<T>::value, void>
-  mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
-    // omit key/value instead of outputting empty sequence
-    if (this->canElideEmptySequence() && !(Val.begin() != Val.end()))
-      return;
+  void mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
+    if constexpr (has_SequenceTraits<T>::value) {
+      // omit key/value instead of outputting empty sequence
+      if (this->canElideEmptySequence() && Val.begin() == Val.end())
+        return;
+    }
     this->processKey(Key, Val, false, Ctx);
   }
 
@@ -914,12 +915,6 @@ public:
                               Context &Ctx) {
     this->processKeyWithDefault(Key, Val, std::optional<T>(),
                                 /*Required=*/false, Ctx);
-  }
-
-  template <typename T, typename Context>
-  std::enable_if_t<!has_SequenceTraits<T>::value, void>
-  mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
-    this->processKey(Key, Val, false, Ctx);
   }
 
   template <typename T, typename Context, typename DefaultT>
