@@ -142,7 +142,7 @@ void InitializePlatformInterceptors();
 #else
 # define ASAN_INTERCEPT_VFORK 0
 #endif
-`
+
 #if SANITIZER_NETBSD
 # define ASAN_INTERCEPT_PTHREAD_ATFORK 1
 #else
