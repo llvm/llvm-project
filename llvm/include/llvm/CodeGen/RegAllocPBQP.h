@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_REGALLOCPBQP_H
 #define LLVM_CODEGEN_REGALLOCPBQP_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/CodeGen/PBQP/CostAllocator.h"
@@ -183,18 +184,14 @@ public:
   NodeMetadata() = default;
 
   NodeMetadata(const NodeMetadata &Other)
-      : RS(Other.RS), NumOpts(Other.NumOpts), DeniedOpts(Other.DeniedOpts),
-        OptUnsafeEdges(new unsigned[NumOpts]), VReg(Other.VReg),
-        AllowedRegs(Other.AllowedRegs)
+      : RS(Other.RS), DeniedOpts(Other.DeniedOpts),
+        OptUnsafeEdges(ArrayRef<unsigned>(Other.OptUnsafeEdges)),
+        VReg(Other.VReg), AllowedRegs(Other.AllowedRegs)
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
         ,
         everConservativelyAllocatable(Other.everConservativelyAllocatable)
 #endif
   {
-    if (NumOpts > 0) {
-      std::copy(&Other.OptUnsafeEdges[0], &Other.OptUnsafeEdges[NumOpts],
-                &OptUnsafeEdges[0]);
-    }
   }
 
   NodeMetadata(NodeMetadata &&) = default;
@@ -209,8 +206,7 @@ public:
   const AllowedRegVector& getAllowedRegs() const { return *AllowedRegs; }
 
   void setup(const Vector& Costs) {
-    NumOpts = Costs.getLength() - 1;
-    OptUnsafeEdges = std::unique_ptr<unsigned[]>(new unsigned[NumOpts]());
+    OptUnsafeEdges = OwningArrayRef<unsigned>(Costs.getLength() - 1);
   }
 
   ReductionState getReductionState() const { return RS; }
@@ -230,7 +226,7 @@ public:
     DeniedOpts += Transpose ? MD.getWorstRow() : MD.getWorstCol();
     const bool* UnsafeOpts =
       Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
-    for (unsigned i = 0; i < NumOpts; ++i)
+    for (unsigned i = 0; i < OptUnsafeEdges.size(); ++i)
       OptUnsafeEdges[i] += UnsafeOpts[i];
   }
 
@@ -238,14 +234,13 @@ public:
     DeniedOpts -= Transpose ? MD.getWorstRow() : MD.getWorstCol();
     const bool* UnsafeOpts =
       Transpose ? MD.getUnsafeCols() : MD.getUnsafeRows();
-    for (unsigned i = 0; i < NumOpts; ++i)
+    for (unsigned i = 0; i < OptUnsafeEdges.size(); ++i)
       OptUnsafeEdges[i] -= UnsafeOpts[i];
   }
 
   bool isConservativelyAllocatable() const {
-    return (DeniedOpts < NumOpts) ||
-      (std::find(&OptUnsafeEdges[0], &OptUnsafeEdges[NumOpts], 0) !=
-       &OptUnsafeEdges[NumOpts]);
+    return (DeniedOpts < OptUnsafeEdges.size()) ||
+           llvm::is_contained(OptUnsafeEdges, 0);
   }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -256,9 +251,8 @@ public:
 
 private:
   ReductionState RS = Unprocessed;
-  unsigned NumOpts = 0;
   unsigned DeniedOpts = 0;
-  std::unique_ptr<unsigned[]> OptUnsafeEdges;
+  OwningArrayRef<unsigned> OptUnsafeEdges;
   Register VReg;
   GraphMetadata::AllowedRegVecRef AllowedRegs;
 
