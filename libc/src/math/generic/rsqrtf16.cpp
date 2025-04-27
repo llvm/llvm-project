@@ -60,9 +60,12 @@ LLVM_LIBC_FUNCTION(float16, rsqrtf16, (float16 x)) {
     return fputil::cast<float16>(1.0f);
   }
 
-  // x is valid, estimate the result - below is temporary solution for just
-  // testing
+  // x is valid, estimate the result
+  // 3-degree polynomial generated using Sollya
+  // P = fpminimax(1/sqrt(x), [|1, 2, 3|], [|SG...|], [0.5, 1]);
   float xf = x;
-  return fputil::cast<float16>(1.0f / xf);
+  float result =
+      fputil::polyeval(xf, 0x1.d42408p2f, -0x1.7cc4fep3f, 0x1.66cb6ap2f);
+  return fputil::cast<float16>(result);
 }
 } // namespace LIBC_NAMESPACE_DECL
