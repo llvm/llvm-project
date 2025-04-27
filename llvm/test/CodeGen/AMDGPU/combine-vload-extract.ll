@@ -5,14 +5,11 @@ define amdgpu_kernel void @vectorLoadCombine(ptr %in, ptr %out) {
 ; GCN-LABEL: vectorLoadCombine:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    flat_load_dword v2, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_store_dword v[0:1], v2
+; GCN-NEXT:    global_load_dword v1, v0, s[0:1]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
   %0 = load <4 x i8>, ptr %in, align 4
@@ -38,16 +35,21 @@ define amdgpu_kernel void @vectorLoadShuffle(ptr %in, ptr %out) {
 ; GCN-LABEL: vectorLoadShuffle:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    flat_load_dword v2, v[0:1]
-; GCN-NEXT:    s_mov_b32 s0, 0x7050604
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_perm_b32 v2, v2, v2, s0
-; GCN-NEXT:    flat_store_dword v[0:1], v2
+; GCN-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_bfe_u32 s4, s0, 0x80010
+; GCN-NEXT:    s_and_b32 s1, s0, 0xff
+; GCN-NEXT:    s_lshl_b32 s5, s0, 8
+; GCN-NEXT:    s_lshl_b32 s4, s4, 8
+; GCN-NEXT:    s_and_b32 s5, s5, 0xff0000
+; GCN-NEXT:    s_or_b32 s1, s4, s1
+; GCN-NEXT:    s_or_b32 s1, s1, s5
+; GCN-NEXT:    s_and_b32 s0, s0, 0xff000000
+; GCN-NEXT:    s_or_b32 s0, s1, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
   %0 = load <4 x i8>, ptr %in, align 4

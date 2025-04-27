@@ -112,48 +112,28 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) #0 {
 ; GFX8V4-LABEL: llvm_amdgcn_is_shared:
 ; GFX8V4:       ; %bb.0:
-; GFX8V4-NEXT:    s_load_dword s0, s[6:7], 0x40
-; GFX8V4-NEXT:    s_load_dword s1, s[8:9], 0x4
-; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V4-NEXT:    s_cmp_eq_u32 s1, s0
-; GFX8V4-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX8V4-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX8V4-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8V4-NEXT:    flat_store_dword v[0:1], v0
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V4-NEXT:    s_endpgm
 ;
 ; GFX8V5-LABEL: llvm_amdgcn_is_shared:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_load_dword s0, s[8:9], 0xcc
-; GFX8V5-NEXT:    s_load_dword s1, s[8:9], 0x4
-; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V5-NEXT:    s_cmp_eq_u32 s1, s0
-; GFX8V5-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX8V5-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX8V5-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8V5-NEXT:    flat_store_dword v[0:1], v0
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V5-NEXT:    s_endpgm
 ;
 ; GFX9V4-LABEL: llvm_amdgcn_is_shared:
 ; GFX9V4:       ; %bb.0:
-; GFX9V4-NEXT:    s_load_dword s2, s[8:9], 0x4
-; GFX9V4-NEXT:    s_mov_b64 s[0:1], src_shared_base
-; GFX9V4-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9V4-NEXT:    s_cmp_eq_u32 s2, s1
-; GFX9V4-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX9V4-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9V4-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9V4-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V4-NEXT:    s_endpgm
 ;
 ; GFX9V5-LABEL: llvm_amdgcn_is_shared:
 ; GFX9V5:       ; %bb.0:
-; GFX9V5-NEXT:    s_load_dword s2, s[8:9], 0x4
-; GFX9V5-NEXT:    s_mov_b64 s[0:1], src_shared_base
-; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9V5-NEXT:    s_cmp_eq_u32 s2, s1
-; GFX9V5-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX9V5-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9V5-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9V5-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
@@ -166,48 +146,28 @@ define amdgpu_kernel void @llvm_amdgcn_is_shared(ptr %ptr) #0 {
 define amdgpu_kernel void @llvm_amdgcn_is_private(ptr %ptr) #0 {
 ; GFX8V4-LABEL: llvm_amdgcn_is_private:
 ; GFX8V4:       ; %bb.0:
-; GFX8V4-NEXT:    s_load_dword s0, s[6:7], 0x44
-; GFX8V4-NEXT:    s_load_dword s1, s[8:9], 0x4
-; GFX8V4-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V4-NEXT:    s_cmp_eq_u32 s1, s0
-; GFX8V4-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX8V4-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX8V4-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8V4-NEXT:    flat_store_dword v[0:1], v0
 ; GFX8V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V4-NEXT:    s_endpgm
 ;
 ; GFX8V5-LABEL: llvm_amdgcn_is_private:
 ; GFX8V5:       ; %bb.0:
-; GFX8V5-NEXT:    s_load_dword s0, s[8:9], 0xc8
-; GFX8V5-NEXT:    s_load_dword s1, s[8:9], 0x4
-; GFX8V5-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8V5-NEXT:    s_cmp_eq_u32 s1, s0
-; GFX8V5-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX8V5-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX8V5-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8V5-NEXT:    flat_store_dword v[0:1], v0
 ; GFX8V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8V5-NEXT:    s_endpgm
 ;
 ; GFX9V4-LABEL: llvm_amdgcn_is_private:
 ; GFX9V4:       ; %bb.0:
-; GFX9V4-NEXT:    s_load_dword s2, s[8:9], 0x4
-; GFX9V4-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX9V4-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9V4-NEXT:    s_cmp_eq_u32 s2, s1
-; GFX9V4-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX9V4-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9V4-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9V4-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9V4-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V4-NEXT:    s_endpgm
 ;
 ; GFX9V5-LABEL: llvm_amdgcn_is_private:
 ; GFX9V5:       ; %bb.0:
-; GFX9V5-NEXT:    s_load_dword s2, s[8:9], 0x4
-; GFX9V5-NEXT:    s_mov_b64 s[0:1], src_private_base
-; GFX9V5-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9V5-NEXT:    s_cmp_eq_u32 s2, s1
-; GFX9V5-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX9V5-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX9V5-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9V5-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm

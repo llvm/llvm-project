@@ -7,28 +7,24 @@
 define amdgpu_kernel void @select_ptr_crash_i64_flat(i32 %tmp, [8 x i32], ptr %ptr0, [8 x i32], ptr %ptr1, [8 x i32], ptr addrspace(1) %ptr2) {
 ; GCN-LABEL: select_ptr_crash_i64_flat:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x28
 ; GCN-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x50
+; GCN-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x78
 ; GCN-NEXT:    s_add_i32 s12, s12, s17
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s6, 0
-; GCN-NEXT:    s_cselect_b32 s0, s0, s2
+; GCN-NEXT:    v_mov_b32_e32 v2, s4
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GCN-NEXT:    v_mov_b32_e32 v3, s5
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cselect_b32 s1, s1, s3
+; GCN-NEXT:    s_cselect_b32 s0, s0, s2
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
-; GCN-NEXT:    s_add_u32 s0, s0, 4
-; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GCN-NEXT:    s_addc_u32 s1, s1, 0
-; GCN-NEXT:    flat_load_dword v0, v[0:1]
-; GCN-NEXT:    v_mov_b32_e32 v2, s1
-; GCN-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NEXT:    flat_load_dword v1, v[1:2]
-; GCN-NEXT:    v_mov_b32_e32 v2, s4
-; GCN-NEXT:    v_mov_b32_e32 v3, s5
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GCN-NEXT:    s_endpgm
   %tmp2 = icmp eq i32 %tmp, 0

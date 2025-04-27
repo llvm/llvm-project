@@ -12,18 +12,18 @@ define amdgpu_kernel void @no_reorder_flat_load_local_store_local_load(ptr addrs
 ; CI-LABEL: no_reorder_flat_load_local_store_local_load:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
+; CI-NEXT:    s_mov_b32 s3, 0xf000
+; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v4, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_mov_b32_e32 v1, s1
-; CI-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; CI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x9
-; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    ds_write_b128 v4, v[0:3] offset:512
 ; CI-NEXT:    ds_read2_b32 v[0:1], v4 offset0:129 offset1:130
-; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_mov_b32_e32 v2, s0
 ; CI-NEXT:    ds_write2_b32 v2, v0, v1 offset1:1
 ; CI-NEXT:    s_endpgm
 ;
@@ -32,15 +32,13 @@ define amdgpu_kernel void @no_reorder_flat_load_local_store_local_load(ptr addrs
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; GFX9-NEXT:    global_load_dwordx4 v[0:3], v4, s[0:1]
 ; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ds_write_b128 v4, v[0:3] offset:512
 ; GFX9-NEXT:    ds_read2_b32 v[0:1], v4 offset0:129 offset1:130
-; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX9-NEXT:    ds_write2_b32 v2, v0, v1 offset1:1
 ; GFX9-NEXT:    s_endpgm
   %ptr1 = getelementptr %struct.lds, ptr addrspace(3) @stored_lds_struct, i32 0, i32 1

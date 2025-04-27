@@ -275,7 +275,7 @@ define amdgpu_kernel void @byref_global_i32_arg(ptr addrspace(1) nocapture %out,
 }
 
 ; GCN-LABEL: {{^}}byref_flat_i32_arg:
-; GCN: flat_load_dword [[IN:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}} offset:8{{$}}
+; GCN: s_load_dword s{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0x8
 define amdgpu_kernel void @byref_flat_i32_arg(ptr addrspace(1) nocapture %out, ptr byref(i32) %in.byref) #0 {
   %in = load i32, ptr %in.byref
   store i32 %in, ptr addrspace(1) %out, align 4
