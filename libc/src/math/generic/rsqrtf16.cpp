@@ -35,7 +35,7 @@ LLVM_LIBC_FUNCTION(float16, rsqrtf16, (float16 x)) {
     }
     return x;
   }
-  
+
   // |x| = 0
   if (LIBC_UNLIKELY(x_abs == 0x0)) {
     fputil::raise_except_if_required(FE_DIVBYZERO);
@@ -44,7 +44,7 @@ LLVM_LIBC_FUNCTION(float16, rsqrtf16, (float16 x)) {
   }
 
   // -inf <= x < 0
-  if (LIBC_UNLIKELY(x_sign == 1)) {  
+  if (LIBC_UNLIKELY(x_sign == 1)) {
     fputil::raise_except_if_required(FE_INVALID);
     fputil::set_errno_if_required(EDOM);
     return FPBits::quiet_nan().get_val();
@@ -54,13 +54,14 @@ LLVM_LIBC_FUNCTION(float16, rsqrtf16, (float16 x)) {
   if (LIBC_UNLIKELY(xbits.is_inf())) {
     return fputil::cast<float16>(0.0f);
   }
-  
+
   // x = 1 => rsqrt(x) = 1
   if (LIBC_UNLIKELY(x_u == 0x1)) {
     return fputil::cast<float16>(1.0f);
   }
 
-  // x is valid, estimate the result - below is temporary solution for just testing
+  // x is valid, estimate the result - below is temporary solution for just
+  // testing
   float xf = x;
   return fputil::cast<float16>(1.0f / xf);
 }
