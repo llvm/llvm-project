@@ -29,7 +29,7 @@ int main() { return bar(); }
 
 #--- commands.input
 settings set -f frame-format "custom-frame '${function.template-arguments}'\n"
-break set -l 4
+break set -l 4 -f main.cpp
 
 run
 bt
