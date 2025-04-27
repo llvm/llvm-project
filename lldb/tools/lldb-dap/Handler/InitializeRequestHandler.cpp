@@ -15,6 +15,8 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBTarget.h"
+#include <cstdint>
 
 using namespace lldb;
 using namespace lldb_dap::protocol;
@@ -108,6 +110,16 @@ void ProgressEventThreadFunction(DAP &dap) {
   }
 }
 
+static llvm::StringRef GetModuleEventReason(uint32_t event_mask) {
+  if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded)
+    return "new";
+  if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded)
+    return "removed";
+  assert(event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
+         event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged);
+  return "changed";
+}
+
 // All events from the debugger, target, process, thread and frames are
 // received in this function that runs in its own thread. We are using a
 // "FILE *" to output packets back to VS Code and they have mutexes in them
@@ -192,6 +204,27 @@ static void EventThreadFunction(DAP &dap) {
         } else if ((event_mask & lldb::SBProcess::eBroadcastBitSTDOUT) ||
                    (event_mask & lldb::SBProcess::eBroadcastBitSTDERR)) {
           SendStdOutStdErr(dap, process);
+        }
+      } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
+        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
+          llvm::StringRef reason = GetModuleEventReason(event_mask);
+          const uint32_t num_modules = SBTarget::GetNumModulesFromEvent(event);
+          for (uint32_t i = 0; i < num_modules; ++i) {
+            lldb::SBModule module =
+                SBTarget::GetModuleAtIndexFromEvent(i, event);
+            if (!module.IsValid())
+              continue;
+
+            llvm::json::Object body;
+            body.try_emplace("reason", reason);
+            body.try_emplace("module", CreateModule(dap.target, module));
+            llvm::json::Object module_event = CreateEventObject("module");
+            module_event.try_emplace("body", std::move(body));
+            dap.SendJSON(llvm::json::Value(std::move(module_event)));
+          }
         }
       } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
