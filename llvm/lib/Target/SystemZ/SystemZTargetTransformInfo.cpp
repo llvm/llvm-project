@@ -80,7 +80,6 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   const Function *Callee = CB->getCalledFunction();
   if (!Callee)
     return 0;
-  const Module *M = Caller->getParent();
 
   // Increase the threshold if an incoming argument is used only as a memcpy
   // source.
@@ -92,29 +91,38 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
     }
   }
 
-  // Give bonus for globals used much in both caller and callee.
-  std::set<const GlobalVariable *> CalleeGlobals;
-  std::set<const GlobalVariable *> CallerGlobals;
-  for (const GlobalVariable &Global : M->globals())
-    for (const User *U : Global.users())
-      if (const Instruction *User = dyn_cast<Instruction>(U)) {
-        if (User->getParent()->getParent() == Callee)
-          CalleeGlobals.insert(&Global);
-        if (User->getParent()->getParent() == Caller)
-          CallerGlobals.insert(&Global);
+  // Give bonus for globals used much in both caller and a relatively small
+  // callee.
+  if (Callee->getInstructionCount() < 200) {
+    std::map<const Value *, unsigned> Ptr2NumUses;
+    for (auto &BB : *Callee)
+      for (auto &I : BB) {
+        if (const auto *SI = dyn_cast<StoreInst>(&I)) {
+          if (!SI->isVolatile())
+            Ptr2NumUses[SI->getPointerOperand()]++;
+        } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
+          if (!LI->isVolatile())
+            Ptr2NumUses[LI->getPointerOperand()]++;
+        } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+          unsigned NumStores = 0, NumLoads = 0;
+          countNumMemAccesses(GEP, NumStores, NumLoads, Callee);
+          Ptr2NumUses[GEP->getPointerOperand()] += NumLoads + NumStores;
+        }
       }
-  for (auto *GV : CalleeGlobals)
-    if (CallerGlobals.count(GV)) {
-      unsigned CalleeStores = 0, CalleeLoads = 0;
-      unsigned CallerStores = 0, CallerLoads = 0;
-      countNumMemAccesses(GV, CalleeStores, CalleeLoads, Callee);
-      countNumMemAccesses(GV, CallerStores, CallerLoads, Caller);
-      if ((CalleeStores + CalleeLoads) > 10 &&
-          (CallerStores + CallerLoads) > 10) {
-        Bonus = 1000;
-        break;
+
+    for (auto I : Ptr2NumUses) {
+      const Value *Ptr = I.first;
+      unsigned NumCalleeUses = I.second;
+      if (NumCalleeUses > 10 && isa<GlobalVariable>(Ptr)) {
+        unsigned CallerStores = 0, CallerLoads = 0;
+        countNumMemAccesses(Ptr, CallerStores, CallerLoads, Caller);
+        if (CallerStores + CallerLoads > 10) {
+          Bonus = 1000;
+          break;
+        }
       }
     }
+  }
 
   // Give bonus when Callee accesses an Alloca of Caller heavily.
   unsigned NumStores = 0;
