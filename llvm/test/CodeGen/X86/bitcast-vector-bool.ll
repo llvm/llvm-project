@@ -60,18 +60,11 @@ define i1 @trunc_v2i64_cmp(<2 x i64> %a0) nounwind {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX12-LABEL: trunc_v2i64_cmp:
-; AVX12:       # %bb.0:
-; AVX12-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX12-NEXT:    sete %al
-; AVX12-NEXT:    retq
-;
-; AVX512-LABEL: trunc_v2i64_cmp:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,1]
-; AVX512-NEXT:    vptest %xmm1, %xmm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    retq
+; AVX-LABEL: trunc_v2i64_cmp:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %1 = trunc <2 x i64> %a0 to <2 x i1>
   %2 = bitcast <2 x i1> %1 to i2
   %3 = icmp eq i2 %2, 0
@@ -121,18 +114,11 @@ define i1 @trunc_v4i32_cmp(<4 x i32> %a0) nounwind {
 ; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
-; AVX12-LABEL: trunc_v4i32_cmp:
-; AVX12:       # %bb.0:
-; AVX12-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX12-NEXT:    setb %al
-; AVX12-NEXT:    retq
-;
-; AVX512-LABEL: trunc_v4i32_cmp:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4294967297,4294967297]
-; AVX512-NEXT:    vptest %xmm1, %xmm0
-; AVX512-NEXT:    setb %al
-; AVX512-NEXT:    retq
+; AVX-LABEL: trunc_v4i32_cmp:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    setb %al
+; AVX-NEXT:    retq
   %1 = trunc <4 x i32> %a0 to <4 x i1>
   %2 = bitcast <4 x i1> %1 to i4
   %3 = icmp eq i4 %2, -1
@@ -195,18 +181,11 @@ define i1 @trunc_v8i16_cmp(<8 x i16> %a0) nounwind {
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
-; AVX12-LABEL: trunc_v8i16_cmp:
-; AVX12:       # %bb.0:
-; AVX12-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX12-NEXT:    setne %al
-; AVX12-NEXT:    retq
-;
-; AVX512-LABEL: trunc_v8i16_cmp:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [281479271743489,281479271743489]
-; AVX512-NEXT:    vptest %xmm1, %xmm0
-; AVX512-NEXT:    setne %al
-; AVX512-NEXT:    retq
+; AVX-LABEL: trunc_v8i16_cmp:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    setne %al
+; AVX-NEXT:    retq
   %1 = trunc <8 x i16> %a0 to <8 x i1>
   %2 = bitcast <8 x i1> %1 to i8
   %3 = icmp ne i8 %2, 0
@@ -264,18 +243,11 @@ define i1 @trunc_v16i8_cmp(<16 x i8> %a0) nounwind {
 ; SSE41-NEXT:    setae %al
 ; SSE41-NEXT:    retq
 ;
-; AVX12-LABEL: trunc_v16i8_cmp:
-; AVX12:       # %bb.0:
-; AVX12-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX12-NEXT:    setae %al
-; AVX12-NEXT:    retq
-;
-; AVX512-LABEL: trunc_v16i8_cmp:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72340172838076673,72340172838076673]
-; AVX512-NEXT:    vptest %xmm1, %xmm0
-; AVX512-NEXT:    setae %al
-; AVX512-NEXT:    retq
+; AVX-LABEL: trunc_v16i8_cmp:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    setae %al
+; AVX-NEXT:    retq
   %1 = trunc <16 x i8> %a0 to <16 x i1>
   %2 = bitcast <16 x i1> %1 to i16
   %3 = icmp ne i16 %2, -1
@@ -350,8 +322,7 @@ define i1 @trunc_v4i64_cmp(<4 x i64> %a0) nounwind {
 ;
 ; AVX512-LABEL: trunc_v4i64_cmp:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX512-NEXT:    setne %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -426,8 +397,7 @@ define i1 @trunc_v8i132_cmp(<8 x i32> %a0) nounwind {
 ;
 ; AVX512-LABEL: trunc_v8i132_cmp:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967297,4294967297,4294967297,4294967297]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX512-NEXT:    setae %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -524,8 +494,7 @@ define i1 @trunc_v16i16_cmp(<16 x i16> %a0) nounwind {
 ;
 ; AVX512-LABEL: trunc_v16i16_cmp:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [281479271743489,281479271743489,281479271743489,281479271743489]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -616,8 +585,7 @@ define i1 @trunc_v32i8_cmp(<32 x i8> %a0) nounwind {
 ;
 ; AVX512-LABEL: trunc_v32i8_cmp:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
+; AVX512-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX512-NEXT:    setb %al
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

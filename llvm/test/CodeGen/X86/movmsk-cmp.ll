@@ -1120,24 +1120,11 @@ define i1 @allzeros_v16i8_and1(<16 x i8> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v16i8_and1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v16i8_and1:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v16i8_and1:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [72340172838076673,72340172838076673]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v16i8_and1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <16 x i8> %arg, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %tmp1 = icmp ne <16 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -1230,13 +1217,20 @@ define i1 @allzeros_v32i8_and1(<32 x i8> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v32i8_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v32i8_and1:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v32i8_and1:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <32 x i8> %arg, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %tmp1 = icmp ne <32 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -1416,24 +1410,11 @@ define i1 @allzeros_v8i16_and1(<8 x i16> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v8i16_and1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v8i16_and1:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v8i16_and1:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [281479271743489,281479271743489]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v8i16_and1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <8 x i16> %arg, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %tmp1 = icmp ne <8 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -1656,13 +1637,20 @@ define i1 @allzeros_v16i16_and1(<16 x i16> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v16i16_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [281479271743489,281479271743489,281479271743489,281479271743489]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v16i16_and1:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [281479271743489,281479271743489,281479271743489,281479271743489]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v16i16_and1:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <16 x i16> %arg, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %tmp1 = icmp ne <16 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -1726,24 +1714,11 @@ define i1 @allzeros_v4i32_and1(<4 x i32> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v4i32_and1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v4i32_and1:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v4i32_and1:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4294967297,4294967297]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v4i32_and1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <4 x i32> %arg, <i32 1, i32 1, i32 1, i32 1>
   %tmp1 = icmp ne <4 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -1839,13 +1814,20 @@ define i1 @allzeros_v8i32_and1(<8 x i32> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v8i32_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967297,4294967297,4294967297,4294967297]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v8i32_and1:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4294967297,4294967297,4294967297,4294967297]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v8i32_and1:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <8 x i32> %arg, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %tmp1 = icmp ne <8 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -2021,24 +2003,11 @@ define i1 @allzeros_v2i64_and1(<2 x i64> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v2i64_and1:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v2i64_and1:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v2i64_and1:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,1]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v2i64_and1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <2 x i64> %arg, <i64 1, i64 1>
   %tmp1 = icmp ne <2 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <2 x i1> %tmp1 to i2
@@ -2134,13 +2103,20 @@ define i1 @allzeros_v4i64_and1(<4 x i64> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v4i64_and1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v4i64_and1:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v4i64_and1:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <4 x i64> %arg, <i64 1, i64 1, i64 1, i64 1>
   %tmp1 = icmp ne <4 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -2255,8 +2231,7 @@ define i1 @allzeros_v8i64_and1(<8 x i64> %arg) {
 ;
 ; AVX512-LABEL: allzeros_v8i64_and1:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper
@@ -2321,24 +2296,11 @@ define i1 @allzeros_v16i8_and4(<16 x i8> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v16i8_and4:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v16i8_and4:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v16i8_and4:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [289360691352306692,289360691352306692]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v16i8_and4:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <16 x i8> %arg, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %tmp1 = icmp ne <16 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -2431,13 +2393,20 @@ define i1 @allzeros_v32i8_and4(<32 x i8> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v32i8_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [289360691352306692,289360691352306692,289360691352306692,289360691352306692]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v32i8_and4:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [289360691352306692,289360691352306692,289360691352306692,289360691352306692]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v32i8_and4:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <32 x i8> %arg, <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>
   %tmp1 = icmp ne <32 x i8> %tmp, zeroinitializer
   %tmp2 = bitcast <32 x i1> %tmp1 to i32
@@ -2617,24 +2586,11 @@ define i1 @allzeros_v8i16_and4(<8 x i16> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v8i16_and4:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v8i16_and4:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v8i16_and4:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1125917086973956,1125917086973956]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v8i16_and4:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <8 x i16> %arg, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %tmp1 = icmp ne <8 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -2857,13 +2813,20 @@ define i1 @allzeros_v16i16_and4(<16 x i16> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v16i16_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1125917086973956,1125917086973956,1125917086973956,1125917086973956]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v16i16_and4:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1125917086973956,1125917086973956,1125917086973956,1125917086973956]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v16i16_and4:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <16 x i16> %arg, <i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4, i16 4>
   %tmp1 = icmp ne <16 x i16> %tmp, zeroinitializer
   %tmp2 = bitcast <16 x i1> %tmp1 to i16
@@ -2927,24 +2890,11 @@ define i1 @allzeros_v4i32_and4(<4 x i32> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v4i32_and4:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v4i32_and4:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v4i32_and4:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [17179869188,17179869188]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v4i32_and4:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <4 x i32> %arg, <i32 4, i32 4, i32 4, i32 4>
   %tmp1 = icmp ne <4 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -3040,13 +2990,20 @@ define i1 @allzeros_v8i32_and4(<8 x i32> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v8i32_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [17179869188,17179869188,17179869188,17179869188]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v8i32_and4:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [17179869188,17179869188,17179869188,17179869188]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v8i32_and4:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <8 x i32> %arg, <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
   %tmp1 = icmp ne <8 x i32> %tmp, zeroinitializer
   %tmp2 = bitcast <8 x i1> %tmp1 to i8
@@ -3222,24 +3179,11 @@ define i1 @allzeros_v2i64_and4(<2 x i64> %arg) {
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
-; AVX1OR2-LABEL: allzeros_v2i64_and4:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; AVX1OR2-NEXT:    sete %al
-; AVX1OR2-NEXT:    retq
-;
-; KNL-LABEL: allzeros_v2i64_and4:
-; KNL:       # %bb.0:
-; KNL-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; KNL-NEXT:    sete %al
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: allzeros_v2i64_and4:
-; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [4,4]
-; SKX-NEXT:    vptest %xmm1, %xmm0
-; SKX-NEXT:    sete %al
-; SKX-NEXT:    retq
+; AVX-LABEL: allzeros_v2i64_and4:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %tmp = and <2 x i64> %arg, <i64 4, i64 4>
   %tmp1 = icmp ne <2 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <2 x i1> %tmp1 to i2
@@ -3335,13 +3279,20 @@ define i1 @allzeros_v4i64_and4(<4 x i64> %arg) {
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: allzeros_v4i64_and4:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
-; AVX512-NEXT:    vptest %ymm1, %ymm0
-; AVX512-NEXT:    sete %al
-; AVX512-NEXT:    vzeroupper
-; AVX512-NEXT:    retq
+; KNL-LABEL: allzeros_v4i64_and4:
+; KNL:       # %bb.0:
+; KNL-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [4,4,4,4]
+; KNL-NEXT:    vptest %ymm1, %ymm0
+; KNL-NEXT:    sete %al
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: allzeros_v4i64_and4:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
+; SKX-NEXT:    sete %al
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
   %tmp = and <4 x i64> %arg, <i64 4, i64 4, i64 4, i64 4>
   %tmp1 = icmp ne <4 x i64> %tmp, zeroinitializer
   %tmp2 = bitcast <4 x i1> %tmp1 to i4
@@ -3456,8 +3407,7 @@ define i1 @allzeros_v8i64_and4(<8 x i64> %arg) {
 ;
 ; AVX512-LABEL: allzeros_v8i64_and4:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4]
-; AVX512-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; AVX512-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
 ; AVX512-NEXT:    kortestw %k0, %k0
 ; AVX512-NEXT:    sete %al
 ; AVX512-NEXT:    vzeroupper

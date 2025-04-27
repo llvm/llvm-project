@@ -407,9 +407,9 @@ define <8 x i32> @test9(ptr %base, <8 x i64> %ind1, <8 x i32>%ind5) {
 ; X64-SKX-LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
+; X64-SKX-LARGE-NEXT:    vpmuldq (%rax), %zmm1, %zmm1
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
+; X64-SKX-LARGE-NEXT:    vpmullq (%rax), %zmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; X64-SKX-LARGE-NEXT:    kxnorw %k0, %k0, %k1
@@ -491,9 +491,9 @@ define <8 x i32> @test10(ptr %base, <8 x i64> %i1, <8 x i32>%ind5) {
 ; X64-SKX-LARGE-NEXT:    vpbroadcastq %rdi, %zmm2
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpmuldq (%rax){1to8}, %zmm1, %zmm1
+; X64-SKX-LARGE-NEXT:    vpmuldq (%rax), %zmm1, %zmm1
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpmullq (%rax){1to8}, %zmm0, %zmm0
+; X64-SKX-LARGE-NEXT:    vpmullq (%rax), %zmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; X64-SKX-LARGE-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; X64-SKX-LARGE-NEXT:    kxnorw %k0, %k0, %k1
@@ -3793,7 +3793,7 @@ define <16 x float> @zext_index(ptr %base, <16 x i32> %ind) {
 ; X64-SKX-LARGE-LABEL: zext_index:
 ; X64-SKX-LARGE:       # %bb.0:
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vandps (%rax){1to16}, %zmm0, %zmm1
+; X64-SKX-LARGE-NEXT:    vandps (%rax), %zmm0, %zmm1
 ; X64-SKX-LARGE-NEXT:    kxnorw %k0, %k0, %k1
 ; X64-SKX-LARGE-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-SKX-LARGE-NEXT:    vgatherdps (%rdi,%zmm1,4), %zmm0 {%k1}
@@ -4871,7 +4871,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index(ptr %x, ptr %arr, <16
 ; X64-SKX-LARGE-NEXT:    vpmovd2m %zmm0, %k1
 ; X64-SKX-LARGE-NEXT:    vmovdqu64 (%rsi), %zmm0
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpandd (%rax){1to16}, %zmm0, %zmm0
+; X64-SKX-LARGE-NEXT:    vpandd (%rax), %zmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
@@ -4961,7 +4961,7 @@ define <16 x float> @test_gather_structpt_16f32_mask_index_offset(ptr %x, ptr %a
 ; X64-SKX-LARGE-NEXT:    vpmovd2m %zmm0, %k1
 ; X64-SKX-LARGE-NEXT:    vmovdqu64 (%rsi), %zmm0
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpandd (%rax){1to16}, %zmm0, %zmm0
+; X64-SKX-LARGE-NEXT:    vpandd (%rax), %zmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
@@ -5067,7 +5067,7 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_mask_index_pair(ptr %x, p
 ; X64-SKX-LARGE-NEXT:    vpmovd2m %zmm0, %k1
 ; X64-SKX-LARGE-NEXT:    vmovdqu64 (%rsi), %zmm0
 ; X64-SKX-LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
-; X64-SKX-LARGE-NEXT:    vpandd (%rax){1to16}, %zmm0, %zmm0
+; X64-SKX-LARGE-NEXT:    vpandd (%rax), %zmm0, %zmm0
 ; X64-SKX-LARGE-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm2[0],zero,ymm2[1],zero,ymm2[2],zero,ymm2[3],zero,ymm2[4],zero,ymm2[5],zero,ymm2[6],zero,ymm2[7],zero
 ; X64-SKX-LARGE-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
