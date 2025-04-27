@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_REGALLOCPBQP_H
 #define LLVM_CODEGEN_REGALLOCPBQP_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/CodeGen/PBQP/CostAllocator.h"
@@ -191,10 +192,8 @@ public:
         everConservativelyAllocatable(Other.everConservativelyAllocatable)
 #endif
   {
-    if (NumOpts > 0) {
-      std::copy(&Other.OptUnsafeEdges[0], &Other.OptUnsafeEdges[NumOpts],
-                &OptUnsafeEdges[0]);
-    }
+    if (NumOpts > 0)
+      llvm::copy(Other.optUnsafeEdges(), &OptUnsafeEdges[0]);
   }
 
   NodeMetadata(NodeMetadata &&) = default;
@@ -243,9 +242,7 @@ public:
   }
 
   bool isConservativelyAllocatable() const {
-    return (DeniedOpts < NumOpts) ||
-      (std::find(&OptUnsafeEdges[0], &OptUnsafeEdges[NumOpts], 0) !=
-       &OptUnsafeEdges[NumOpts]);
+    return (DeniedOpts < NumOpts) || llvm::is_contained(optUnsafeEdges(), 0);
   }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -261,6 +258,10 @@ private:
   std::unique_ptr<unsigned[]> OptUnsafeEdges;
   Register VReg;
   GraphMetadata::AllowedRegVecRef AllowedRegs;
+
+  ArrayRef<unsigned> optUnsafeEdges() const {
+    return ArrayRef<unsigned>(OptUnsafeEdges.get(), NumOpts);
+  }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   bool everConservativelyAllocatable = false;
