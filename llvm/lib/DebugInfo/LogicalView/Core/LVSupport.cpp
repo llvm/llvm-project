@@ -49,7 +49,7 @@ std::string llvm::logicalview::flattenedFilePath(StringRef Path) {
   std::string Name(Path);
   std::transform(Name.begin(), Name.end(), Name.begin(), tolower);
 
-  const char *CharSet = "/\\<>.:%*?|\" ";
+  constexpr const char *CharSet = "/\\<>.:%*?|\" ";
   char *Input = Name.data();
   while (Input && *Input) {
     Input = strpbrk(Input, CharSet);
