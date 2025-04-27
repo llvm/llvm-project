@@ -610,7 +610,8 @@ namespace std {
     }
     constexpr void deallocate(void *p) {
       __builtin_operator_delete(p); // both-note 2{{std::allocator<...>::deallocate' used to delete pointer to object allocated with 'new'}} \
-                                    // both-note {{used to delete a null pointer}}
+                                    // both-note {{used to delete a null pointer}} \
+                                    // both-note {{delete of pointer '&no_deallocate_nonalloc' that does not point to a heap-allocated object}}
     }
   };
   template<typename T, typename ...Args>
@@ -1003,6 +1004,10 @@ namespace WrongFrame {
                         // both-note {{in call to}}
 
 }
+
+constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // both-error {{constant expression}} \
+                                                                                                             // both-note {{in call}} \
+                                                                                                             // both-note {{declared here}}
 
 #else
 /// Make sure we reject this prior to C++20
