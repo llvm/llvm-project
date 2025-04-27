@@ -90,6 +90,8 @@ public:
       return cir::FPAttr::getZero(ty);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
       return cir::ZeroAttr::get(arrTy);
+    if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
+      return cir::ZeroAttr::get(vecTy);
     if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty))
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
@@ -166,8 +168,7 @@ public:
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     auto valueAttr = mlir::IntegerAttr::get(
         mlir::IntegerType::get(type.getContext(), 64), value);
-    return cir::ConstPtrAttr::get(
-        getContext(), mlir::cast<cir::PointerType>(type), valueAttr);
+    return cir::ConstPtrAttr::get(type, valueAttr);
   }
 
   mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
@@ -189,6 +190,12 @@ public:
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
                            mlir::Value dst) {
     return create<cir::StoreOp>(loc, val, dst);
+  }
+
+  cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
+                                   mlir::Value base, llvm::StringRef name,
+                                   unsigned index) {
+    return create<cir::GetMemberOp>(loc, resultTy, base, name, index);
   }
 
   mlir::Value createDummyValue(mlir::Location loc, mlir::Type type,
@@ -355,6 +362,44 @@ public:
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
     return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
+  }
+
+  mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+                          bool isShiftLeft) {
+    return create<cir::ShiftOp>(loc, lhs.getType(), lhs, rhs, isShiftLeft);
+  }
+
+  mlir::Value createShift(mlir::Location loc, mlir::Value lhs,
+                          const llvm::APInt &rhs, bool isShiftLeft) {
+    return createShift(loc, lhs, getConstAPInt(loc, lhs.getType(), rhs),
+                       isShiftLeft);
+  }
+
+  mlir::Value createShift(mlir::Location loc, mlir::Value lhs, unsigned bits,
+                          bool isShiftLeft) {
+    auto width = mlir::dyn_cast<cir::IntType>(lhs.getType()).getWidth();
+    auto shift = llvm::APInt(width, bits);
+    return createShift(loc, lhs, shift, isShiftLeft);
+  }
+
+  mlir::Value createShiftLeft(mlir::Location loc, mlir::Value lhs,
+                              unsigned bits) {
+    return createShift(loc, lhs, bits, true);
+  }
+
+  mlir::Value createShiftRight(mlir::Location loc, mlir::Value lhs,
+                               unsigned bits) {
+    return createShift(loc, lhs, bits, false);
+  }
+
+  mlir::Value createShiftLeft(mlir::Location loc, mlir::Value lhs,
+                              mlir::Value rhs) {
+    return createShift(loc, lhs, rhs, true);
+  }
+
+  mlir::Value createShiftRight(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createShift(loc, lhs, rhs, false);
   }
 
   //
