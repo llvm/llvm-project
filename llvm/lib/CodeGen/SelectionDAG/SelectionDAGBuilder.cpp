@@ -6802,9 +6802,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
-  case Intrinsic::trunc:
   case Intrinsic::rint:
-  case Intrinsic::nearbyint:
   case Intrinsic::round:
   case Intrinsic::roundeven:
   case Intrinsic::canonicalize: {
@@ -6826,9 +6824,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
     case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
     case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
-    case Intrinsic::trunc:        Opcode = ISD::FTRUNC;        break;
     case Intrinsic::rint:         Opcode = ISD::FRINT;         break;
-    case Intrinsic::nearbyint:    Opcode = ISD::FNEARBYINT;    break;
     case Intrinsic::round:        Opcode = ISD::FROUND;        break;
     case Intrinsic::roundeven:    Opcode = ISD::FROUNDEVEN;    break;
     case Intrinsic::canonicalize: Opcode = ISD::FCANONICALIZE; break;
@@ -6958,6 +6954,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(I));
+    return;
+#define CONSTRAINED(INTRINSIC, DAGN)
+#define FUNCTION(INTRINSIC, DAGN) case Intrinsic::INTRINSIC:
+#include "llvm/IR/FloatingPointOps.def"
+    visitFPOperationIntrinsic(I, Intrinsic);
     return;
 #define BEGIN_REGISTER_VP_INTRINSIC(VPID, ...) case Intrinsic::VPID:
 #include "llvm/IR/VPIntrinsics.def"
@@ -8348,6 +8349,59 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
 
   SDValue FPResult = Result.getValue(0);
   setValue(&FPI, FPResult);
+}
+
+void SelectionDAGBuilder::visitFPOperationIntrinsic(const CallInst &CI,
+                                                    unsigned Intrinsic) {
+  SDLoc sdl = getCurSDLoc();
+  bool StrictFP =
+      FuncInfo.Fn->getAttributes().hasFnAttr(llvm::Attribute::StrictFP);
+
+  int Opcode = -1;
+  switch (Intrinsic) {
+#define CONSTRAINED(NAME, DAGN)
+#define FUNCTION(NAME, DAGN)                                                   \
+  case Intrinsic::NAME:                                                        \
+    Opcode = StrictFP ? ISD::STRICT_##DAGN : ISD::DAGN;                        \
+    break;
+#include "llvm/IR/FloatingPointOps.def"
+  }
+
+  SDNodeFlags Flags;
+  if (CI.getExceptionBehavior() == fp::ExceptionBehavior::ebIgnore)
+    Flags.setNoFPExcept(true);
+  if (auto *FPOp = dyn_cast<FPMathOperator>(&CI))
+    Flags.copyFMF(*FPOp);
+
+  SmallVector<SDValue, 4> Operands;
+  if (StrictFP)
+    Operands.push_back(DAG.getRoot());
+  for (unsigned I = 0, E = CI.arg_size(); I != E; ++I)
+    Operands.push_back(getValue(CI.getArgOperand(I)));
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = TLI.getValueType(DAG.getDataLayout(), CI.getType());
+  SDVTList VTs = StrictFP ? DAG.getVTList(VT, MVT::Other) : DAG.getVTList(VT);
+
+  SDValue Result = DAG.getNode(Opcode, sdl, VTs, Operands, Flags);
+
+  SDValue OutChain;
+  if (StrictFP) {
+    OutChain = Result.getValue(1);
+    switch (CI.getExceptionBehavior()) {
+    case fp::ExceptionBehavior::ebIgnore:
+    case fp::ExceptionBehavior::ebMayTrap:
+      PendingConstrainedFP.push_back(OutChain);
+      break;
+    case fp::ExceptionBehavior::ebStrict:
+      PendingConstrainedFPStrict.push_back(OutChain);
+      break;
+    }
+    SDValue FPResult = Result.getValue(0);
+    setValue(&CI, FPResult);
+  } else {
+    setValue(&CI, Result);
+  }
 }
 
 static unsigned getISDForVPIntrinsic(const VPIntrinsic &VPIntrin) {
