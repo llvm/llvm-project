@@ -36,11 +36,11 @@ using namespace __asan;
       ASAN_WRITE_RANGE(ctx, to, size);                        \
     } else if (UNLIKELY(!AsanInited())) {                     \
       return internal_memcpy(to, from, size);                 \
-    }                                                         \
+    }
 #if !SANITIZER_AIX
-    return REAL(memcpy)(to, from, size);                      \
+    return REAL(memcpy)(to, from, size);
 #else
-    return internal_memcpy(to, from, size);                   \
+    return internal_memcpy(to, from, size);
 #endif
   } while (0)
 
