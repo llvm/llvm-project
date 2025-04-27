@@ -482,15 +482,14 @@ public:
                       const TargetTransformInfo *TTI, AssumptionCache *AC,
                       OptimizationRemarkEmitter *ORE, ElementCount VecWidth,
                       ElementCount MinProfitableTripCount,
-                      unsigned UnrollFactor, LoopVectorizationLegality *LVL,
-                      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
-                      ProfileSummaryInfo *PSI, GeneratedRTChecks &RTChecks,
-                      VPlan &Plan)
+                      unsigned UnrollFactor, LoopVectorizationCostModel *CM,
+                      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
+                      GeneratedRTChecks &RTChecks, VPlan &Plan)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
         AC(AC), ORE(ORE), VF(VecWidth),
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
-        Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
-        PSI(PSI), RTChecks(RTChecks), Plan(Plan),
+        Builder(PSE.getSE()->getContext()), Cost(CM), BFI(BFI), PSI(PSI),
+        RTChecks(RTChecks), Plan(Plan),
         VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {}
 
   virtual ~InnerLoopVectorizer() = default;
@@ -630,9 +629,6 @@ protected:
   /// Trip count of the widened loop (TripCount - TripCount % (VF*UF))
   Value *VectorTripCount = nullptr;
 
-  /// The legality analysis.
-  LoopVectorizationLegality *Legal;
-
   /// The profitablity analysis.
   LoopVectorizationCostModel *Cost;
 
@@ -699,12 +695,11 @@ public:
       DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
-      LoopVectorizationLegality *LVL, llvm::LoopVectorizationCostModel *CM,
-      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-      GeneratedRTChecks &Checks, VPlan &Plan)
+      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
       : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                            EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF, LVL,
-                            CM, BFI, PSI, Checks, Plan),
+                            EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF, CM,
+                            BFI, PSI, Checks, Plan),
         EPI(EPI) {}
 
   // Override this function to handle the more complex control flow around the
@@ -737,11 +732,10 @@ public:
       DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
-      LoopVectorizationLegality *LVL, llvm::LoopVectorizationCostModel *CM,
-      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-      GeneratedRTChecks &Check, VPlan &Plan)
+      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Check, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, LVL, CM, BFI, PSI, Check, Plan) {}
+                                       EPI, CM, BFI, PSI, Check, Plan) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
   BasicBlock *createEpilogueVectorizedLoopSkeleton() final;
@@ -765,11 +759,10 @@ public:
       DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
-      LoopVectorizationLegality *LVL, llvm::LoopVectorizationCostModel *CM,
-      BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-      GeneratedRTChecks &Checks, VPlan &Plan)
+      LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, LVL, CM, BFI, PSI, Checks, Plan) {
+                                       EPI, CM, BFI, PSI, Checks, Plan) {
     TripCount = EPI.TripCount;
   }
   /// Implements the interface for creating a vectorized skeleton using the
@@ -7902,7 +7895,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Only use noalias metadata when using memory checks guaranteeing no overlap
   // across all iterations.
-  const LoopAccessInfo *LAI = ILV.Legal->getLAI();
+  const LoopAccessInfo *LAI = Legal->getLAI();
   std::unique_ptr<LoopVersioning> LVer = nullptr;
   if (LAI && !LAI->getRuntimePointerChecking()->getChecks().empty() &&
       !LAI->getRuntimePointerChecking()->getDiffChecks()) {
@@ -10254,7 +10247,7 @@ static bool processLoopInVPlanNativePath(
     GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(),
                              AddBranchWeights, CM.CostKind);
     InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
-                           VF.Width, 1, LVL, &CM, BFI, PSI, Checks, BestPlan);
+                           VF.Width, 1, &CM, BFI, PSI, Checks, BestPlan);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
                       << L->getHeader()->getParent()->getName() << "\"\n");
     LVP.executePlan(VF.Width, 1, BestPlan, LB, DT, false);
@@ -11022,7 +11015,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       VPlan &BestPlan = LVP.getPlanFor(VF.Width);
       InnerLoopVectorizer Unroller(
           L, PSE, LI, DT, TLI, TTI, AC, ORE, ElementCount::getFixed(1),
-          ElementCount::getFixed(1), IC, &LVL, &CM, BFI, PSI, Checks, BestPlan);
+          ElementCount::getFixed(1), IC, &CM, BFI, PSI, Checks, BestPlan);
 
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
@@ -11051,7 +11044,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1,
                                           BestEpiPlan);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                           EPI, &LVL, &CM, BFI, PSI, Checks,
+                                           EPI, &CM, BFI, PSI, Checks,
                                            *BestMainPlan);
         auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
                                              *BestMainPlan, MainILV, DT, false);
@@ -11062,7 +11055,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EPI.MainLoopVF = EPI.EpilogueVF;
         EPI.MainLoopUF = EPI.EpilogueUF;
         EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TLI, TTI, AC,
-                                                 ORE, EPI, &LVL, &CM, BFI, PSI,
+                                                 ORE, EPI, &CM, BFI, PSI,
                                                  Checks, BestEpiPlan);
         EpilogILV.setTripCount(MainILV.getTripCount());
         preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs, EPI);
@@ -11089,8 +11082,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           DisableRuntimeUnroll = true;
       } else {
         InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width,
-                               VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
-                               PSI, Checks, BestPlan);
+                               VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
+                               Checks, BestPlan);
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
