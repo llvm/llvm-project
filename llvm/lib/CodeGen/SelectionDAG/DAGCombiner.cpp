@@ -11529,11 +11529,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
       return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
 
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
-    if (TLI.isOperationLegal(IEEEOpcode, VT))
+    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
       return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
 
     unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
-    if (TLI.isOperationLegal(Opcode, TransformVT))
+    if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
     return SDValue();
   }
@@ -11553,11 +11553,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
       return DAG.getNode(IEEE2019Opcode, DL, VT, LHS, RHS);
 
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-    if (TLI.isOperationLegal(IEEEOpcode, VT))
+    if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
       return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
 
     unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
-    if (TLI.isOperationLegal(Opcode, TransformVT))
+    if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
       return DAG.getNode(Opcode, DL, VT, LHS, RHS);
     return SDValue();
   }
