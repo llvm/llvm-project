@@ -331,43 +331,50 @@ TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
 // TestConstMemorySpaceAttr
 //===----------------------------------------------------------------------===//
 
-LogicalResult TestConstMemorySpaceAttr::isValidLoad(
+bool TestConstMemorySpaceAttr::isValidLoad(
     Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return success();
+  return true;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidStore(
+bool TestConstMemorySpaceAttr::isValidStore(
     Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space is read-only") : failure();
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidAtomicOp(
+bool TestConstMemorySpaceAttr::isValidAtomicOp(
     mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
     IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space is read-only") : failure();
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidAtomicXchg(
+bool TestConstMemorySpaceAttr::isValidAtomicXchg(
     Type type, mlir::ptr::AtomicOrdering successOrdering,
     mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space is read-only") : failure();
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidAddrSpaceCast(
+bool TestConstMemorySpaceAttr::isValidAddrSpaceCast(
     Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError
-             ? (emitError() << "memory space doesn't allow addrspace casts")
-             : failure();
+  if (emitError)
+    emitError() << "memory space doesn't allow addrspace casts";
+  return false;
 }
 
-LogicalResult TestConstMemorySpaceAttr::isValidPtrIntCast(
+bool TestConstMemorySpaceAttr::isValidPtrIntCast(
     Type intLikeTy, Type ptrLikeTy,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? (emitError() << "memory space doesn't allow int-ptr casts")
-                   : failure();
+  if (emitError)
+    emitError() << "memory space doesn't allow int-ptr casts";
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
