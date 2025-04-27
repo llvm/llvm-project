@@ -8,16 +8,13 @@ define void @powi(ptr noalias %p, i32 %pow) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[POW]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[BROADCAST_SPLAT]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[WIDE_LOAD]], i32 [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[WIDE_LOAD]], i32 [[POW]])
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024

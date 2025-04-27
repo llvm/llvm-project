@@ -149,6 +149,11 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
 
+  // Vector predication intrinsics only demand the the first lane the last
+  // operand (the EVL operand).
+  if (VPIntrinsic::getVectorLengthParamPos(ID) == ScalarOpdIdx)
+    return true;
+
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::vp_abs:
@@ -166,7 +171,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::umul_fix_sat:
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
-    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4 || ScalarOpdIdx == 5;
+    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
   default:
     return false;
   }
