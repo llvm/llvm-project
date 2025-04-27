@@ -17,8 +17,7 @@ TEST_F(LlvmLibcRsqrtf16Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::rsqrtf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::rsqrtf16(sNaN),
-                              FE_INVALID);
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::rsqrtf16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::rsqrtf16(0.0f));
