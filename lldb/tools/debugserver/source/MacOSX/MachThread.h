@@ -13,6 +13,7 @@
 #ifndef LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREAD_H
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHTHREAD_H
 
+#include <mutex>
 #include <string>
 #include <vector>
 
