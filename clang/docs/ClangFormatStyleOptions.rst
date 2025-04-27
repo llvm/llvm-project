@@ -2132,6 +2132,47 @@ the configuration (without a prefix: ``Auto``).
 **AlwaysBreakTemplateDeclarations** (``deprecated``) :versionbadge:`clang-format 3.4` :ref:`¶ <AlwaysBreakTemplateDeclarations>`
   This option is renamed to ``BreakTemplateDeclarations``.
 
+.. _ApplyAlwaysOnePerLineToTemplateArguments:
+
+**ApplyAlwaysOnePerLineToTemplateArguments** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <ApplyAlwaysOnePerLineToTemplateArguments>`
+  If ``BinPackParameters`` is set to ``AlwaysOnePerLine``, specifies whether
+  template argument lists should also be split across multiple lines.
+
+  When set to ``true``, each template argument will be placed on its own
+  line. When set to ``false``, template argument lists remain compact even
+  when function parameters are broken one per line.
+
+
+  .. code-block:: c++
+
+    true:
+    template <typename T, int N>
+    struct Foo {
+        T mData[N];
+
+        Foo<T,
+            N>
+        operator+(const Foo<T,
+                            N> &other) const {}
+
+        Foo<T,
+            N>
+        bar(const Foo<T,
+                      N> &other,
+            float t) const {}
+        };
+
+    false:
+    template <typename T, int N>
+    struct Foo {
+        T mData[N];
+
+        Foo<T, N> operator+(const Foo<T, N> &other) const {}
+
+        Foo<T, N> bar(const Foo<T, N> &other,
+                  float t) const {}
+    };
+
 .. _AttributeMacros:
 
 **AttributeMacros** (``List of Strings``) :versionbadge:`clang-format 12` :ref:`¶ <AttributeMacros>`

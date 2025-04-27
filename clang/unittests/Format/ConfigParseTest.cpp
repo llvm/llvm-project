@@ -497,6 +497,12 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BinPackParameters: false", BinPackParameters,
               FormatStyle::BPPS_OnePerLine);
 
+  Style.ApplyAlwaysOnePerLineToTemplateArguments = false;
+  CHECK_PARSE("ApplyAlwaysOnePerLineToTemplateArguments: true",
+              ApplyAlwaysOnePerLineToTemplateArguments, true);
+  CHECK_PARSE("ApplyAlwaysOnePerLineToTemplateArguments: false",
+              ApplyAlwaysOnePerLineToTemplateArguments, false);
+
   Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
   CHECK_PARSE("PackConstructorInitializers: Never", PackConstructorInitializers,
               FormatStyle::PCIS_Never);

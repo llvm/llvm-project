@@ -1254,6 +1254,45 @@ struct FormatStyle {
   /// \version 3.7
   BinPackParametersStyle BinPackParameters;
 
+  /// If ``BinPackParameters`` is set to ``AlwaysOnePerLine``, specifies whether
+  /// template argument lists should also be split across multiple lines.
+  ///
+  /// When set to ``true``, each template argument will be placed on its own
+  /// line. When set to ``false``, template argument lists remain compact even
+  /// when function parameters are broken one per line.
+  ///
+  /// \code
+  ///   true:
+  ///   template <typename T, int N>
+  ///   struct Foo {
+  ///       T mData[N];
+  ///
+  ///       Foo<T,
+  ///           N>
+  ///       operator+(const Foo<T,
+  ///                           N> &other) const {}
+  ///
+  ///       Foo<T,
+  ///           N>
+  ///       bar(const Foo<T,
+  ///                     N> &other,
+  ///           float t) const {}
+  ///       };
+  ///
+  ///   false:
+  ///   template <typename T, int N>
+  ///   struct Foo {
+  ///       T mData[N];
+  ///
+  ///       Foo<T, N> operator+(const Foo<T, N> &other) const {}
+  ///
+  ///       Foo<T, N> bar(const Foo<T, N> &other,
+  ///                 float t) const {}
+  ///   };
+  /// \endcode
+  /// \version 21
+  bool ApplyAlwaysOnePerLineToTemplateArguments;
+
   /// Styles for adding spacing around ``:`` in bitfield definitions.
   enum BitFieldColonSpacingStyle : int8_t {
     /// Add one space on each side of the ``:``
@@ -5684,6 +5723,8 @@ struct FormatStyle {
            BinPackArguments == R.BinPackArguments &&
            BinPackLongBracedList == R.BinPackLongBracedList &&
            BinPackParameters == R.BinPackParameters &&
+           ApplyAlwaysOnePerLineToTemplateArguments ==
+               R.ApplyAlwaysOnePerLineToTemplateArguments &&
            BitFieldColonSpacing == R.BitFieldColonSpacing &&
            BracedInitializerIndentWidth == R.BracedInitializerIndentWidth &&
            BreakAdjacentStringLiterals == R.BreakAdjacentStringLiterals &&

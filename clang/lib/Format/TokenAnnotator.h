@@ -186,6 +186,9 @@ public:
   bool MightBeFunctionDecl;
   bool IsMultiVariableDeclStmt;
 
+  /// \c True if this token is part o a template declaration.
+  bool InTemplateDecl = false;
+
   /// \c True if this line contains a macro call for which an expansion exists.
   bool ContainsMacroCall = false;
 

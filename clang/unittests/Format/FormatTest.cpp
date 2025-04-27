@@ -9049,6 +9049,146 @@ TEST_F(FormatTest, FormatsOneParameterPerLineIfNecessary) {
       NoBinPacking);
 }
 
+TEST_F(FormatTest, FormatsDeclarationBreakAlways) {
+  FormatStyle BreakAlways = getGoogleStyle();
+  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("void f(int a,\n"
+               "       int b);",
+               BreakAlways);
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "       int cccccccccccccccccccccccc);",
+               BreakAlways);
+
+  // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
+  // to BPPS_AlwaysOnePerLine.
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b);",
+      BreakAlways);
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b\n"
+      ");",
+      BreakAlways);
+}
+
+TEST_F(FormatTest, ApplyAlwaysOnePerLineToTemplateArguments) {
+  FormatStyle Style = getGoogleStyle();
+  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+
+  // Case 1: Template arguments split by AlwaysOnePerLine
+  Style.ApplyAlwaysOnePerLineToTemplateArguments = true;
+  verifyFormat("template <typename T, int N>\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T,\n"
+               "      N>\n"
+               "  operator+(const Foo<T,\n"
+               "                      N> &other) const {}\n"
+               "  Foo<T,\n"
+               "      N>\n"
+               "  bar(const Foo<T,\n"
+               "                N> &other,\n"
+               "      float t) const {}\n"
+               "};\n",
+               Style);
+
+  // Case 2: Template arguments not split by The
+  // ApplyAlwaysOnePerLineToTemplateArguments
+  Style.ApplyAlwaysOnePerLineToTemplateArguments = false;
+  verifyFormat("template <typename T, int N>\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T, N> operator+(const Foo<T, N> &other) const {}\n"
+               "  Foo<T, N> bar(const Foo<T, N> &other,\n"
+               "                float t) const {}\n"
+               "};\n",
+               Style);
+
+  // Case 3: Template arguments not split by the
+  // ApplyAlwaysOnePerLineToTemplateArguments but using the
+  // BreakFunctionDefinitionParameters flag
+  Style.BreakFunctionDefinitionParameters = true;
+  verifyFormat("template <typename T, int N>\n"
+               "struct Foo {\n"
+               "  T mData[N];\n"
+               "  Foo<T, N> operator+(\n"
+               "      const Foo<T, N> &other) const {}\n"
+               "  Foo<T, N> bar(\n"
+               "      const Foo<T, N> &other,\n"
+               "      float t) const {}\n"
+               "};\n",
+               Style);
+}
+
+TEST_F(FormatTest, FormatsDefinitionBreakAlways) {
+  FormatStyle BreakAlways = getGoogleStyle();
+  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  verifyFormat("void f(int a,\n"
+               "       int b) {\n"
+               "  f(a, b);\n"
+               "}",
+               BreakAlways);
+
+  // Ensure BinPackArguments interact correctly when BinPackParameters is set to
+  // BPPS_AlwaysOnePerLine.
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "       int cccccccccccccccccccccccc) {\n"
+               "  f(aaaaaaaaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "    cccccccccccccccccccccccc);\n"
+               "}",
+               BreakAlways);
+  BreakAlways.BinPackArguments = false;
+  verifyFormat("void f(int aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "       int bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "       int cccccccccccccccccccccccc) {\n"
+               "  f(aaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    bbbbbbbbbbbbbbbbbbbbbbbbb,\n"
+               "    cccccccccccccccccccccccc);\n"
+               "}",
+               BreakAlways);
+
+  // Ensure BreakFunctionDefinitionParameters interacts correctly when
+  // BinPackParameters is set to BPPS_AlwaysOnePerLine.
+  BreakAlways.BreakFunctionDefinitionParameters = true;
+  verifyFormat("void f(\n"
+               "    int a,\n"
+               "    int b) {\n"
+               "  f(a, b);\n"
+               "}",
+               BreakAlways);
+  BreakAlways.BreakFunctionDefinitionParameters = false;
+
+  // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
+  // to BPPS_AlwaysOnePerLine.
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b) {\n"
+      "  someLongFunctionName(\n"
+      "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, b);\n"
+      "}",
+      BreakAlways);
+  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  verifyFormat(
+      "void someLongFunctionName(\n"
+      "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    int b\n"
+      ") {\n"
+      "  someLongFunctionName(\n"
+      "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, b\n"
+      "  );\n"
+      "}",
+      BreakAlways);
+}
+
 TEST_F(FormatTest, AdaptiveOnePerLineFormatting) {
   FormatStyle Style = getLLVMStyleWithColumns(15);
   Style.ExperimentalAutoDetectBinPacking = true;
