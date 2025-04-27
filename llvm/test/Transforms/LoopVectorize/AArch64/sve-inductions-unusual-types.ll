@@ -32,10 +32,9 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i7> [ [[INDUCTION]], %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i7> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <vscale x 2 x i7> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 2 x i7> [[STEP_ADD]], zeroinitializer
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext <vscale x 2 x i7> [[TMP19]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext <vscale x 2 x i7> [[TMP20]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
@@ -98,10 +97,9 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i3> [ [[INDUCTION]], %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <vscale x 2 x i3> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext <vscale x 2 x i3> [[VEC_IND]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext <vscale x 2 x i3> [[STEP_ADD]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP13]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP25:%.*]] = mul i64 [[TMP24]], 2

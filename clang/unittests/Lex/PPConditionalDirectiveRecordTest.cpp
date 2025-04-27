@@ -73,11 +73,11 @@ TEST_F(PPConditionalDirectiveRecordTest, PPRecAPI) {
       llvm::MemoryBuffer::getMemBuffer(source);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
+  HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, Target.get());
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+  PreprocessorOptions PPOpts;
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);

@@ -23,9 +23,9 @@
 template <template <class> class Allocator, class T>
 TEST_CONSTEXPR_CXX20 void tests() {
   {
-    T arr[]             = {T(1), T(2), T(3), T(4), T(5)};
-    using Vector        = std::vector<T, Allocator<T> >;
-    using Iterator      = typename Vector::iterator;
+    T arr[]        = {T(1), T(2), T(3), T(4), T(5)};
+    using Vector   = std::vector<T, Allocator<T> >;
+    using Iterator = typename Vector::iterator;
 
     {
       Vector v(arr, arr + 5);

@@ -51,6 +51,7 @@ module m
     .and. ieee_support_sqrt(1.0_8) &
     .and. ieee_support_sqrt(1.0_10) &
     .and. ieee_support_sqrt(1.0_16)
+#if __x86_64__
   logical, parameter :: test_ieee_support_standard = ieee_support_standard() &
     .and. ieee_support_standard(1.0_2) &
     .and. ieee_support_standard(1.0_3) &
@@ -58,6 +59,7 @@ module m
     .and. ieee_support_standard(1.0_8) &
     .and. ieee_support_standard(1.0_10) &
     .and. ieee_support_standard(1.0_16)
+#endif
   logical, parameter :: test_ieee_support_subnormal = ieee_support_subnormal() &
     .and. ieee_support_subnormal(1.0_2) &
     .and. ieee_support_subnormal(1.0_3) &

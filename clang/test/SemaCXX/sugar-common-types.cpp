@@ -44,7 +44,7 @@ template <class T> struct S1 {
 };
 
 N t10 = 0 ? S1<X1>() : S1<Y1>(); // expected-error {{from 'S1<B1>' (aka 'S1<int>')}}
-N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<int>::S2<B2>' (aka 'S2<void>')}}
+N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<B1>::S2<B2>' (aka 'S2<void>')}}
 
 template <class T> using Al = S1<T>;
 
@@ -88,7 +88,7 @@ N t19 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::Y)){};
 // expected-error@-1 {{rvalue of type 'B1' (aka 'int')}}
 
 N t20 = 0 ? (__underlying_type(EnumsX::X)){} : (__underlying_type(EnumsY::X)){};
-// expected-error@-1 {{rvalue of type '__underlying_type(Enums::X)' (aka 'int')}}
+// expected-error@-1 {{rvalue of type '__underlying_type(EnumsB::X)' (aka 'int')}}
 
 using QX = const SB1 *;
 using QY = const ::SB1 *;
@@ -146,3 +146,59 @@ namespace GH67603 {
   }
   template void h<int>();
 } // namespace GH67603
+
+namespace arrays {
+  namespace same_canonical {
+    using ConstB1I = const B1[];
+    using ConstB1C = const B1[1];
+    const ConstB1I a = {0};
+    const ConstB1C b = {0};
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'const B1[1]' (aka 'const int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const ConstB1C' (aka 'const const int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'const B1[1]' (aka 'const int[1]')}}
+  } // namespace same_canonical
+  namespace same_element {
+    using ConstB1 = const B1;
+    using ConstB1I = ConstB1[];
+    using ConstB1C = ConstB1[1];
+    const ConstB1I a = {0};
+    const ConstB1C b = {0};
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'const ConstB1[1]' (aka 'const int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const ConstB1C' (aka 'const const int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'ConstB1[1]' (aka 'const int[1]')}}
+  } // namespace same_element
+  namespace balanced_qualifiers {
+    using ConstX1C = const volatile X1[1];
+    using Y1C = volatile Y1[1];
+    extern volatile ConstX1C a;
+    extern const volatile Y1C b;
+    N ta = a;
+    // expected-error@-1 {{lvalue of type 'volatile ConstX1C' (aka 'volatile const volatile int[1]')}}
+    N tb = b;
+    // expected-error@-1 {{lvalue of type 'const volatile Y1C' (aka 'const volatile volatile int[1]')}}
+    N tc = 0 ? a : b;
+    // expected-error@-1 {{lvalue of type 'const volatile volatile B1[1]' (aka 'const volatile volatile int[1]')}}
+  } // namespace balanced_qualifiers
+} // namespace arrays
+
+namespace member_pointers {
+  template <class T> struct W {
+    X1 a;
+    Y1 b;
+  };
+  struct W1 : W<X2> {};
+  struct W2 : W<Y2> {};
+
+  N t1 = 0 ? &W<X2>::a : &W<Y2>::b;
+  // expected-error@-1 {{rvalue of type 'B1 W<B2>::*'}}
+
+  // FIXME: adjusted MemberPointer does not preserve qualifier
+  N t3 = 0 ? &W1::a : &W2::b;
+  // expected-error@-1 {{rvalue of type 'B1 W<void>::*'}}
+} // namespace member_pointers

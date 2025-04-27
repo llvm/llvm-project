@@ -389,13 +389,13 @@ AMDGPUDwarfFlavour AMDGPUSubtarget::getAMDGPUDwarfFlavour() const {
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {
-  if (MF.getTarget().getTargetTriple().getArch() == Triple::amdgcn)
+  if (MF.getTarget().getTargetTriple().isAMDGCN())
     return static_cast<const AMDGPUSubtarget&>(MF.getSubtarget<GCNSubtarget>());
   return static_cast<const AMDGPUSubtarget &>(MF.getSubtarget<R600Subtarget>());
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Function &F) {
-  if (TM.getTargetTriple().getArch() == Triple::amdgcn)
+  if (TM.getTargetTriple().isAMDGCN())
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
   return static_cast<const AMDGPUSubtarget &>(
       TM.getSubtarget<R600Subtarget>(F));

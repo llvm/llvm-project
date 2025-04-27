@@ -348,10 +348,14 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       // calling convention definitions, so we need to watch for it, too. An LR
       // mentioned implicitly by a return (or "branch to link register")
       // instruction we can ignore, otherwise we may pessimize shrinkwrapping.
-      UseOrDefCSR =
-          (!MI.isCall() && PhysReg == SP) ||
-          RCI.getLastCalleeSavedAlias(PhysReg) ||
-          (!MI.isReturn() && TRI->isNonallocatableRegisterCalleeSave(PhysReg));
+      // PPC's Frame pointer (FP) is also not described as a callee-saved
+      // register. Until the FP is assigned a Physical Register PPC's FP needs
+      // to be checked separately.
+      UseOrDefCSR = (!MI.isCall() && PhysReg == SP) ||
+                    RCI.getLastCalleeSavedAlias(PhysReg) ||
+                    (!MI.isReturn() &&
+                     TRI->isNonallocatableRegisterCalleeSave(PhysReg)) ||
+                    TRI->isVirtualFrameRegister(PhysReg);
     } else if (MO.isRegMask()) {
       // Check if this regmask clobbers any of the CSRs.
       for (unsigned Reg : getCurrentCSRs(RS)) {

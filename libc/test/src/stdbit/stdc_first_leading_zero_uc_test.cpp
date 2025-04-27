@@ -16,6 +16,7 @@ TEST(LlvmLibcStdcFirstLeadingZeroUcTest, ALL) {
 
 TEST(LlvmLibcStdcFirstLeadingZeroUcTest, ZeroHot) {
   for (unsigned i = 0U; i != UCHAR_WIDTH; ++i)
-    EXPECT_EQ(LIBC_NAMESPACE::stdc_first_leading_zero_uc(~(1U << i)),
+    EXPECT_EQ(LIBC_NAMESPACE::stdc_first_leading_zero_uc(
+                  static_cast<unsigned char>(~(1U << i))),
               UCHAR_WIDTH - i);
 }

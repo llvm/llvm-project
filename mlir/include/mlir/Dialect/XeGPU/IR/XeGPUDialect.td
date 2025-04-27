@@ -16,11 +16,20 @@ def XeGPU_Dialect : Dialect {
     let cppNamespace = "::mlir::xegpu";
     let summary = "The XeGPU dialect that models Intel GPU's ISA";
     let description = [{
-      The XeGPU dialect models Intel Xe ISA semantics but works at vector and
-      TensorDesc data type. It provides 1:1 mappings to match Xe instructions
-      like DPAS and 2D block load. The matrix size being processed at this level
-      exactly matches the hardware instructions or the intrinsic supported by
-      the lower-level GPU compiler.
+      The XeGPU dialect closely models a subset of the Xe GPU's ISA, providing an
+      abstraction to support high-performance GEMM code generation. It serves as a
+      bridge dialect in the MLIR gradual lowering process, working with MLIR memref
+      and vector types, and complements the Arith, Math, Vector, and Memref dialects.
+      XeGPU operations are introduced for special Xe instructions not modeled by the
+      LLVM/SPIR-V dialect, such as DPAS and 2D block load and store.
+
+      It supports a tile-based programming model, decomposing the GEMM kernel into
+      large predefined tile sizes at the subgroup and workgroup levels. XeGPU allows
+      the high-level GEMM algorithm to be easily expressed. Underneath, it uses
+      target-specific recipes and hardware features to achieve optimal performance
+      on specific hardware. By decomposing GEMM at submatrix granularity and mapping it
+      to registers, it naturally supports optimizations like fusing with neighboring
+      operations.
     }];
 
     let dependentDialects = ["arith::ArithDialect"];

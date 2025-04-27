@@ -882,7 +882,8 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
 
     void tooManyUses() override { Captured = true; }
 
-    bool captured(const Use *U) override {
+    Action captured(const Use *U, UseCaptureInfo CI) override {
+      // TODO(captures): Use UseCaptureInfo.
       auto *ICmp = dyn_cast<ICmpInst>(U->getUser());
       // We need to check that U is based *only* on the alloca, and doesn't
       // have other contributions from a select/phi operand.
@@ -892,11 +893,11 @@ bool InstCombinerImpl::foldAllocaCmp(AllocaInst *Alloca) {
         // Collect equality icmps of the alloca, and don't treat them as
         // captures.
         ICmps[ICmp] |= 1u << U->getOperandNo();
-        return false;
+        return Continue;
       }
 
       Captured = true;
-      return true;
+      return Stop;
     }
   };
 
@@ -5033,8 +5034,8 @@ static Instruction *foldICmpOrXX(ICmpInst &I, const SimplifyQuery &Q,
 
   if (ICmpInst::isEquality(Pred) && Op0->hasOneUse()) {
     // icmp (X | Y) eq/ne Y --> (X & ~Y) eq/ne 0 if Y is freely invertible
-    if (Value *NotOp1 =
-            IC.getFreelyInverted(Op1, !Op1->hasNUsesOrMore(3), &IC.Builder))
+    if (Value *NotOp1 = IC.getFreelyInverted(
+            Op1, !isa<Constant>(Op1) && !Op1->hasNUsesOrMore(3), &IC.Builder))
       return new ICmpInst(Pred, IC.Builder.CreateAnd(A, NotOp1),
                           Constant::getNullValue(Op1->getType()));
     // icmp (X | Y) eq/ne Y --> (~X | Y) eq/ne -1 if X  is freely invertible.
@@ -5064,6 +5065,27 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
   CmpInst::Predicate PredOut = CmpInst::getStrictPredicate(Pred);
   if (PredOut != Pred && isKnownNonZero(A, Q))
     return new ICmpInst(PredOut, Op0, Op1);
+
+  // These transform work when A is negative.
+  // X s< X^A, X s<= X^A, X u> X^A, X u>= X^A  --> X s< 0
+  // X s> X^A, X s>= X^A, X u< X^A, X u<= X^A  --> X s>= 0
+  if (match(A, m_Negative())) {
+    CmpInst::Predicate NewPred;
+    switch (ICmpInst::getStrictPredicate(Pred)) {
+    default:
+      return nullptr;
+    case ICmpInst::ICMP_SLT:
+    case ICmpInst::ICMP_UGT:
+      NewPred = ICmpInst::ICMP_SLT;
+      break;
+    case ICmpInst::ICMP_SGT:
+    case ICmpInst::ICMP_ULT:
+      NewPred = ICmpInst::ICMP_SGE;
+      break;
+    }
+    Constant *Const = Constant::getNullValue(Op0->getType());
+    return new ICmpInst(NewPred, Op0, Const);
+  }
 
   return nullptr;
 }
@@ -5615,6 +5637,11 @@ Instruction *InstCombinerImpl::foldICmpWithMinMax(Instruction &I,
       return false;
     return std::nullopt;
   };
+  // Remove samesign here since it is illegal to keep it when we speculatively
+  // execute comparisons. For example, `icmp samesign ult umax(X, -46), -32`
+  // cannot be decomposed into `(icmp samesign ult X, -46) or (icmp samesign ult
+  // -46, -32)`. `X` is allowed to be non-negative here.
+  Pred = Pred.dropSameSign();
   auto CmpXZ = IsCondKnownTrue(simplifyICmpInst(Pred, X, Z, Q));
   auto CmpYZ = IsCondKnownTrue(simplifyICmpInst(Pred, Y, Z, Q));
   if (!CmpXZ.has_value() && !CmpYZ.has_value())
@@ -7424,6 +7451,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
+    return Res;
+
   if (Op0->getType()->isIntOrIntVectorTy(1))
     if (Instruction *Res = canonicalizeICmpBool(I, Builder))
       return Res;
@@ -7444,9 +7474,6 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
-    return Res;
-
-  if (Instruction *Res = foldICmpTruncWithTruncOrExt(I, Q))
     return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as

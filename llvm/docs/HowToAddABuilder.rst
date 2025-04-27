@@ -200,10 +200,9 @@ will:
 
 In order to use this "local testing" mode:
 
-* Within a checkout of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_,
-  create and activate a Python `venv
+* Create and activate a Python `venv
   <https://docs.python.org/3/library/venv.html>`_ and install the necessary
-  dependencies.
+  dependencies. This step can be run from any directory.
 
     .. code-block:: bash
 
@@ -211,9 +210,22 @@ In order to use this "local testing" mode:
        source bbenv/bin/activate
        pip install buildbot{,-console-view,-grid-view,-waterfall-view,-worker,-www}==3.11.7 urllib3
 
-* Initialise the necessary buildmaster files, link to the configuration in
-  ``llvm-zorg`` and ask ``buildbot`` to check the configuration. This step can
-  be run from any directory.
+* If your system has Python 3.13 or newer you will need to additionally
+  install ``legacy-cgi`` and make a minor patch to the installed buildbot
+  package. This step does not need to be followed for earlier Python versions.
+
+    .. code-block:: bash
+
+       pip install legacy-cgi
+       sed -i \
+         -e 's/import pipes/import shlex/' \
+         -e 's/pipes\.quote/shlex.quote/' \
+         bbenv/lib/python3.13/site-packages/buildbot_worker/runprocess.py
+
+* Initialise the necessary buildmaster files, link to the configuration in a
+  local checkout out of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_, and
+  ask ``buildbot`` to check the configuration. This step can be run from any
+  directory.
 
     .. code-block:: bash
 
@@ -266,6 +278,15 @@ to the remote buildmaster by connecting to ``localhost:9900``:
 
        ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@buildmaster_server_address
 
+Be aware that some build configurations may checkout the current upstream
+``llvm-zorg`` repository in order to retrieve additional scripts used during
+the build process, meaning any local changes will not be reflected in this
+part of the build. If you wish to test changes to any of these scripts without
+committing them upstream, you will need to temporarily patch the builder logic
+in order to instead check out your own branch.
+Typically, ``addGetSourcecodeForProject`` from
+``zorg/buildbot/process/factory.py`` is used for this and you can edit the
+caller to specify your own ``repourl`` and/or ``branch`` keyword argument.
 
 Best Practices for Configuring a Fast Builder
 =============================================

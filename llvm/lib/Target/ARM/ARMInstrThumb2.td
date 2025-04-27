@@ -4899,17 +4899,17 @@ def : T2Pat<(add rGPR:$Rn, (sext_inreg rGPR:$Rm, i16)),
            Requires<[HasDSP, IsThumb2]>;
 
 // Atomic load/store patterns
-def : T2Pat<(atomic_load_8   t2addrmode_imm12:$addr),
+def : T2Pat<(atomic_load_azext_8   t2addrmode_imm12:$addr),
             (t2LDRBi12  t2addrmode_imm12:$addr)>;
-def : T2Pat<(atomic_load_8   t2addrmode_negimm8:$addr),
+def : T2Pat<(atomic_load_azext_8   t2addrmode_negimm8:$addr),
             (t2LDRBi8   t2addrmode_negimm8:$addr)>;
-def : T2Pat<(atomic_load_8   t2addrmode_so_reg:$addr),
+def : T2Pat<(atomic_load_azext_8   t2addrmode_so_reg:$addr),
             (t2LDRBs    t2addrmode_so_reg:$addr)>;
-def : T2Pat<(atomic_load_16  t2addrmode_imm12:$addr),
+def : T2Pat<(atomic_load_azext_16  t2addrmode_imm12:$addr),
             (t2LDRHi12  t2addrmode_imm12:$addr)>;
-def : T2Pat<(atomic_load_16  t2addrmode_negimm8:$addr),
+def : T2Pat<(atomic_load_azext_16  t2addrmode_negimm8:$addr),
             (t2LDRHi8   t2addrmode_negimm8:$addr)>;
-def : T2Pat<(atomic_load_16  t2addrmode_so_reg:$addr),
+def : T2Pat<(atomic_load_azext_16  t2addrmode_so_reg:$addr),
             (t2LDRHs    t2addrmode_so_reg:$addr)>;
 def : T2Pat<(atomic_load_32  t2addrmode_imm12:$addr),
             (t2LDRi12   t2addrmode_imm12:$addr)>;
@@ -4937,8 +4937,8 @@ def : T2Pat<(atomic_store_32 GPR:$val, t2addrmode_so_reg:$addr),
             (t2STRs     GPR:$val, t2addrmode_so_reg:$addr)>;
 
 let AddedComplexity = 8, Predicates = [IsThumb, HasAcquireRelease, HasV7Clrex] in {
-  def : Pat<(atomic_load_acquire_8 addr_offset_none:$addr),  (t2LDAB addr_offset_none:$addr)>;
-  def : Pat<(atomic_load_acquire_16 addr_offset_none:$addr), (t2LDAH addr_offset_none:$addr)>;
+  def : Pat<(atomic_load_azext_acquire_8 addr_offset_none:$addr),  (t2LDAB addr_offset_none:$addr)>;
+  def : Pat<(atomic_load_azext_acquire_16 addr_offset_none:$addr), (t2LDAH addr_offset_none:$addr)>;
   def : Pat<(atomic_load_acquire_32 addr_offset_none:$addr), (t2LDA  addr_offset_none:$addr)>;
   def : Pat<(atomic_store_release_8 addr_offset_none:$addr, GPR:$val),  (t2STLB GPR:$val, addr_offset_none:$addr)>;
   def : Pat<(atomic_store_release_16 addr_offset_none:$addr, GPR:$val), (t2STLH GPR:$val, addr_offset_none:$addr)>;
@@ -5735,11 +5735,10 @@ def t2CSINC : CS<"csinc", 0b1001>;
 def t2CSINV : CS<"csinv", 0b1010>;
 def t2CSNEG : CS<"csneg", 0b1011>;
 
+let HasOneUse = 1 in
 def ARMcsinc_su
     : PatFrag<(ops node:$lhs, node:$rhs, node:$cc, node:$flags),
-              (ARMcsinc node:$lhs, node:$rhs, node:$cc, node:$flags), [{
-  return N->hasOneUse();
-}]>;
+              (ARMcsinc node:$lhs, node:$rhs, node:$cc, node:$flags)>;
 
 let Predicates = [HasV8_1MMainline] in {
   multiclass CSPats<SDNode Node, Instruction Insn> {

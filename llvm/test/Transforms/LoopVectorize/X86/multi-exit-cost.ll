@@ -26,9 +26,8 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i8> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = and i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i32 0
@@ -36,15 +35,15 @@ define i64 @test_value_in_exit_compare_chain_used_outside(ptr %src, i64 %x, i64 
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP28]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i8> [[WIDE_LOAD]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP29]] = xor <8 x i8> [[REVERSE]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP10]], 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP31:%.*]] = call i8 @llvm.vector.reduce.xor.v8i8(<8 x i8> [[TMP29]])
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i8 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i8 [ [[TMP31]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]

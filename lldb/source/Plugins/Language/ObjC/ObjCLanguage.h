@@ -23,9 +23,9 @@ class ObjCLanguage : public Language {
   ClangHighlighter m_highlighter;
 
 public:
-  class MethodName {
+  class ObjCMethodName {
   public:
-    /// The static factory method for creating a MethodName.
+    /// The static factory method for creating a ObjCMethodName.
     ///
     /// \param[in] name
     ///   The name of the method.
@@ -35,9 +35,9 @@ public:
     ///   front of the name.
     ///
     /// \return If the name failed to parse as a valid Objective-C method name,
-    /// returns std::nullopt. Otherwise returns a const MethodName.
-    static std::optional<const MethodName> Create(llvm::StringRef name,
-                                                  bool strict);
+    /// returns std::nullopt. Otherwise returns a const ObjCMethodName.
+    static std::optional<const ObjCMethodName> Create(llvm::StringRef name,
+                                                      bool strict);
 
     /// Determines if this method is a class method
     ///
@@ -112,7 +112,7 @@ public:
   protected:
     enum Type { eTypeUnspecified, eTypeClassMethod, eTypeInstanceMethod };
 
-    MethodName(llvm::StringRef name, Type type)
+    ObjCMethodName(llvm::StringRef name, Type type)
         : m_full(name.str()), m_type(type) {}
 
     const std::string m_full;
@@ -141,6 +141,9 @@ public:
   // Also returns the FunctionNameType of each possible name.
   std::vector<Language::MethodNameVariant>
   GetMethodNameVariants(ConstString method_name) const override;
+
+  std::pair<lldb::FunctionNameType, std::optional<ConstString>>
+  GetFunctionNameInfo(ConstString name) const override;
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
 

@@ -17,7 +17,9 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUMachineFunction.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
@@ -29,6 +31,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include <algorithm>
@@ -42,24 +45,24 @@ AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx,
                                      const AsmPrinter &ap):
   Ctx(ctx), ST(st), AP(ap) { }
 
-static MCSymbolRefExpr::VariantKind getVariantKind(unsigned MOFlags) {
+static AMDGPUMCExpr::Specifier getSpecifier(unsigned MOFlags) {
   switch (MOFlags) {
   default:
-    return MCSymbolRefExpr::VK_None;
+    return AMDGPUMCExpr::S_None;
   case SIInstrInfo::MO_GOTPCREL:
-    return MCSymbolRefExpr::VK_GOTPCREL;
+    return AMDGPUMCExpr::S_GOTPCREL;
   case SIInstrInfo::MO_GOTPCREL32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_LO;
+    return AMDGPUMCExpr::S_GOTPCREL32_LO;
   case SIInstrInfo::MO_GOTPCREL32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_GOTPCREL32_HI;
+    return AMDGPUMCExpr::S_GOTPCREL32_HI;
   case SIInstrInfo::MO_REL32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_REL32_LO;
+    return AMDGPUMCExpr::S_REL32_LO;
   case SIInstrInfo::MO_REL32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_REL32_HI;
+    return AMDGPUMCExpr::S_REL32_HI;
   case SIInstrInfo::MO_ABS32_LO:
-    return MCSymbolRefExpr::VK_AMDGPU_ABS32_LO;
+    return AMDGPUMCExpr::S_ABS32_LO;
   case SIInstrInfo::MO_ABS32_HI:
-    return MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
+    return AMDGPUMCExpr::S_ABS32_HI;
   }
 }
 
@@ -84,7 +87,7 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     AP.getNameWithPrefix(SymbolName, GV);
     MCSymbol *Sym = Ctx.getOrCreateSymbol(SymbolName);
     const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, getVariantKind(MO.getTargetFlags()),Ctx);
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
     int64_t Offset = MO.getOffset();
     if (Offset != 0) {
       Expr = MCBinaryExpr::createAdd(Expr,
@@ -113,9 +116,63 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
   llvm_unreachable("unknown operand type");
 }
 
-void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
+// Lower true16 D16 Pseudo instruction to d16_lo/d16_hi MCInst based on
+// Dst/Data's .l/.h selection
+void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
+                                          MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo*>(ST.getInstrInfo());
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  const auto *Info = AMDGPU::getT16D16Helper(Opcode);
+
+  llvm::AMDGPU::OpName OpName;
+  if (TII->isDS(Opcode)) {
+    if (MI->mayLoad())
+      OpName = llvm::AMDGPU::OpName::vdst;
+    else if (MI->mayStore())
+      OpName = llvm::AMDGPU::OpName::data0;
+    else
+      llvm_unreachable("LDS load or store expected");
+  } else {
+    OpName = AMDGPU::hasNamedOperand(Opcode, llvm::AMDGPU::OpName::vdata)
+                 ? llvm::AMDGPU::OpName::vdata
+                 : llvm::AMDGPU::OpName::vdst;
+  }
+
+  // select Dst/Data
+  int VDstOrVDataIdx = AMDGPU::getNamedOperandIdx(Opcode, OpName);
+  const MachineOperand &MIVDstOrVData = MI->getOperand(VDstOrVDataIdx);
+
+  // select hi/lo MCInst
+  bool IsHi = AMDGPU::isHi16Reg(MIVDstOrVData.getReg(), TRI);
+  Opcode = IsHi ? Info->HiOp : Info->LoOp;
+
+  int MCOpcode = TII->pseudoToMCOpcode(Opcode);
+  assert(MCOpcode != -1 &&
+         "Pseudo instruction doesn't have a target-specific version");
+  OutMI.setOpcode(MCOpcode);
+
+  // lower operands
+  for (int I = 0, E = MI->getNumExplicitOperands(); I < E; I++) {
+    const MachineOperand &MO = MI->getOperand(I);
+    MCOperand MCOp;
+    if (I == VDstOrVDataIdx)
+      MCOp = MCOperand::createReg(TRI.get32BitRegister(MIVDstOrVData.getReg()));
+    else
+      lowerOperand(MO, MCOp);
+    OutMI.addOperand(MCOp);
+  }
+
+  if (AMDGPU::hasNamedOperand(MCOpcode, AMDGPU::OpName::vdst_in)) {
+    MCOperand MCOp;
+    lowerOperand(MIVDstOrVData, MCOp);
+    OutMI.addOperand(MCOp);
+  }
+}
+
+void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
+  unsigned Opcode = MI->getOpcode();
+  const auto *TII = static_cast<const SIInstrInfo *>(ST.getInstrInfo());
 
   // FIXME: Should be able to handle this with lowerPseudoInstExpansion. We
   // need to select it to the subtarget specific version, and there's no way to
@@ -136,6 +193,9 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
              Opcode == AMDGPU::SI_TCRETURN_GFX) {
     // TODO: How to use branch immediate and avoid register+add?
     Opcode = AMDGPU::S_SETPC_B64;
+  } else if (AMDGPU::getT16D16Helper(Opcode)) {
+    lowerT16D16Helper(MI, OutMI);
+    return;
   }
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);
@@ -165,20 +225,53 @@ bool AMDGPUAsmPrinter::lowerOperand(const MachineOperand &MO,
   return MCInstLowering.lowerOperand(MO, MCOp);
 }
 
-const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AMDGPUAsmPrinter::lowerConstant(const Constant *CV,
+                                              const Constant *BaseCV,
+                                              uint64_t Offset) {
 
   // Intercept LDS variables with known addresses
   if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(CV)) {
     if (std::optional<uint32_t> Address =
             AMDGPUMachineFunction::getLDSAbsoluteAddress(*GV)) {
       auto *IntTy = Type::getInt32Ty(CV->getContext());
-      return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address));
+      return AsmPrinter::lowerConstant(ConstantInt::get(IntTy, *Address),
+                                       BaseCV, Offset);
     }
   }
 
   if (const MCExpr *E = lowerAddrSpaceCast(TM, CV, OutContext))
     return E;
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
+}
+
+static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI,
+                                 const SIMachineFunctionInfo *MFI,
+                                 MCStreamer &OS) {
+  // The instruction will only transfer a subset of the registers in the block,
+  // based on the mask that is stored in m0. We could search for the instruction
+  // that sets m0, but most of the time we'll already have the mask stored in
+  // the machine function info. Try to use that. This assumes that we only use
+  // block loads/stores for CSR spills.
+  Register RegBlock =
+      TII->getNamedOperand(*MI, MI->mayLoad() ? AMDGPU::OpName::vdst
+                                              : AMDGPU::OpName::vdata)
+          ->getReg();
+  Register FirstRegInBlock = TRI->getSubReg(RegBlock, AMDGPU::sub0);
+  uint32_t Mask = MFI->getMaskForVGPRBlockOps(RegBlock);
+
+  if (!Mask)
+    return; // Nothing to report
+
+  SmallString<512> TransferredRegs;
+  for (unsigned I = 0; I < sizeof(Mask) * 8; ++I) {
+    if (Mask & (1 << I)) {
+      (llvm::Twine(" ") + TRI->getRegAsmName(FirstRegInBlock + I))
+          .toVector(TransferredRegs);
+    }
+  }
+
+  OS.emitRawComment(" transferring at most " + TransferredRegs);
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -269,6 +362,12 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    if (isVerbose())
+      if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
+        emitVGPRBlockComment(MI, STI.getInstrInfo(), STI.getRegisterInfo(),
+                             MF->getInfo<SIMachineFunctionInfo>(),
+                             *OutStreamer);
+
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
@@ -316,7 +415,8 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       raw_string_ostream HexStream(HexLine);
 
       for (size_t i = 0; i < CodeBytes.size(); i += 4) {
-        unsigned int CodeDWord = *(unsigned int *)&CodeBytes[i];
+        unsigned int CodeDWord =
+            support::endian::read32le(CodeBytes.data() + i);
         HexStream << format("%s%08X", (i > 0 ? " " : ""), CodeDWord);
       }
 

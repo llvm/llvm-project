@@ -55,6 +55,8 @@ the stored debug information into source-language specific information.  As
 such, a debugger must be aware of the source-language, and is thus tied to a
 specific language or family of languages.
 
+.. _intro_consumers:
+
 Debug information consumers
 ---------------------------
 
@@ -70,6 +72,17 @@ the Microsoft debug info format, which is usable with Microsoft debuggers such
 as Visual Studio and WinDBG. LLVM's debug information format is mostly derived
 from and inspired by DWARF, but it is feasible to translate into other target
 debug info formats such as STABS.
+
+SamplePGO (also known as `AutoFDO <https://gcc.gnu.org/wiki/AutoFDO>`_)
+is a variant of profile guided optimizations which uses hardware sampling based
+profilers to collect branch frequency data with low overhead in production
+environments. It relies on debug information to associate profile information
+to LLVM IR which is then used to guide optimization heuristics. Maintaining
+deterministic and distinct source locations is necessary to maximize the
+accuracy of mapping hardware sample counts to LLVM IR. For example, DWARF
+`discriminators <https://wiki.dwarfstd.org/Path_Discriminators.md>`_ allow
+SamplePGO to distinguish between multiple paths of execution which map to the
+same source line.
 
 It would also be reasonable to use debug information to feed profiling tools
 for analysis of generated code, or, tools for reconstructing the original
@@ -208,10 +221,10 @@ comma-separated arguments in parentheses, as with a `call`.
     #dbg_declare([Value|MDNode], DILocalVariable, DIExpression, DILocation)
 
 This record provides information about a local element (e.g., variable).
-The first argument is an SSA value corresponding to a variable address, and is
-typically a static alloca in the function entry block.  The second argument is a
-`local variable <LangRef.html#dilocalvariable>`_ containing a description of
-the variable.  The third argument is a `complex expression
+The first argument is an SSA ``ptr`` value corresponding to a variable address,
+and is typically a static alloca in the function entry block.  The second
+argument is a `local variable <LangRef.html#dilocalvariable>`_ containing a
+description of the variable.  The third argument is a `complex expression
 <LangRef.html#diexpression>`_. The fourth argument is a `source location
 <LangRef.html#dilocation>`_. A ``#dbg_declare`` record describes the
 *address* of a source variable.

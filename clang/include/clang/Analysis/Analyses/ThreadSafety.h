@@ -54,6 +54,18 @@ enum ProtectedOperationKind {
 
   /// Returning a pt-guarded variable by reference.
   POK_PtReturnByRef,
+
+  /// Passing pointer to a guarded variable.
+  POK_PassPointer,
+
+  /// Passing a pt-guarded pointer.
+  POK_PtPassPointer,
+
+  /// Returning pointer to a guarded variable.
+  POK_ReturnPointer,
+
+  /// Returning a pt-guarded pointer.
+  POK_PtReturnPointer,
 };
 
 /// This enum distinguishes between different kinds of lock actions. For

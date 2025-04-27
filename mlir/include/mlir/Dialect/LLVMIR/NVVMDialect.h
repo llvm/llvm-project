@@ -39,7 +39,14 @@ enum NVVMMemorySpace {
   /// Shared memory space identifier.
   kSharedMemorySpace = 3,
   /// Constant memory space identifier.
-  kConstantMemorySpace = 4
+  kConstantMemorySpace = 4,
+  /// Tensor memory space identifier.
+  /// Tensor memory is available only in arch-accelerated
+  /// variants from sm100 onwards.
+  kTensorMemorySpace = 6,
+  /// Distributed shared memory space identifier.
+  /// Distributed shared memory is available only in sm90+.
+  kSharedClusterMemorySpace = 7,
 };
 
 /// Return the element type and number of elements associated with a wmma matrix

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86MCExpr.h"
 #include "X86MCTargetDesc.h"
 #include "X86TargetStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"

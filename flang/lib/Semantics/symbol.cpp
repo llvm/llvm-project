@@ -155,6 +155,7 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
 void AssocEntityDetails::set_IsAssumedSize() { rank_ = isAssumedSize; }
 void AssocEntityDetails::set_IsAssumedRank() { rank_ = isAssumedRank; }
+void AssocEntityDetails::set_isTypeGuard(bool yes) { isTypeGuard_ = yes; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
 ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
