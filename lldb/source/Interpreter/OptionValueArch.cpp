@@ -35,9 +35,8 @@ void OptionValueArch::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
 
 llvm::json::Value
 OptionValueArch::ToJSON(const ExecutionContext *exe_ctx) const {
-  if (m_current_value.IsValid()) {
+  if (m_current_value.IsValid())
     return llvm::json::Value(m_current_value.GetArchitectureName());
-  }
 
   return {};
 }
