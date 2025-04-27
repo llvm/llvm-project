@@ -955,8 +955,7 @@ public:
       } else
       // END SWIFT
         // Update all instances of Src in the variable's tracked values to Dst.
-        std::replace(ActiveVLocIt->second.Ops.begin(),
-                     ActiveVLocIt->second.Ops.end(), SrcOp, DstOp);
+        llvm::replace(ActiveVLocIt->second.Ops, SrcOp, DstOp);
 
       auto &[Var, DILoc] = DVMap.lookupDVID(VarID);
       MachineInstr *MI = MTracker->emitLoc(ActiveVLocIt->second.Ops, Var, DILoc,
