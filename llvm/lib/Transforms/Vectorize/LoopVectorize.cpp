@@ -9237,8 +9237,6 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
       cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPBuilder ScalarPHBuilder(ScalarPH);
-  VPValue *OneVPV = Plan.getOrAddLiveIn(
-      ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
   for (VPRecipeBase &ScalarPhiR : Plan.getScalarHeader()->phis()) {
     auto *ScalarPhiIRI = cast<VPIRPhi>(&ScalarPhiR);
 
@@ -9273,7 +9271,7 @@ static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
            "Cannot handle loops with uncountable early exits");
     if (IsFOR)
       ResumeFromVectorLoop = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractFromEnd, {ResumeFromVectorLoop, OneVPV}, {},
+          VPInstruction::ExtractLastElement, {ResumeFromVectorLoop}, {},
           "vector.recur.extract");
     StringRef Name = IsFOR ? "scalar.recur.init" : "bc.merge.rdx";
     auto *ResumePhiR = ScalarPHBuilder.createNaryOp(
@@ -9341,8 +9339,6 @@ static void addExitUsersForFirstOrderRecurrences(
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder ScalarPHBuilder(ScalarPHVPBB);
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-  VPValue *TwoVPV = Plan.getOrAddLiveIn(
-      ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 2));
 
   for (auto &HeaderPhi : VectorRegion->getEntryBasicBlock()->phis()) {
     auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&HeaderPhi);
@@ -9426,8 +9422,8 @@ static void addExitUsersForFirstOrderRecurrences(
       if (ExitIRI->getOperand(0) != FOR)
         continue;
       VPValue *PenultimateElement = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractFromEnd, {FOR->getBackedgeValue(), TwoVPV}, {},
-          "vector.recur.extract.for.phi");
+          VPInstruction::ExtractPenultimateElement, {FOR->getBackedgeValue()},
+          {}, "vector.recur.extract.for.phi");
       ExitIRI->setOperand(0, PenultimateElement);
       ExitUsersToFix.remove(ExitIRI);
     }
@@ -9535,14 +9531,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
   VPBlockBase *PrevVPBB = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    // Handle VPBBs down to the latch.
-    if (VPBB == LoopRegion->getExiting()) {
-      assert(!VPB2IRBB.contains(VPBB) &&
-             "the latch block shouldn't have a corresponding IRBB");
-      VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
-      break;
-    }
-
     // Create mask based on the IR BB corresponding to VPBB.
     // TODO: Predicate directly based on VPlan.
     Builder.setInsertPoint(VPBB, VPBB->begin());
@@ -9765,6 +9753,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   for (ElementCount VF : Range)
     Plan->addVF(VF);
 
+  // Tail folding is not supported for outer loops, so the induction increment
+  // is guaranteed to not wrap.
+  bool HasNUW = true;
+  addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW,
+                        DebugLoc());
+
   if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           Plan,
           [this](PHINode *P) {
@@ -9772,12 +9766,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
           },
           *PSE.getSE(), *TLI))
     return nullptr;
-
-  // Tail folding is not supported for outer loops, so the induction increment
-  // is guaranteed to not wrap.
-  bool HasNUW = true;
-  addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW,
-                        DebugLoc());
 
   // Collect mapping of IR header phis to header phi recipes, to be used in
   // addScalarResumePhis.
@@ -9943,14 +9931,18 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       // ensure that it comes after all of it's inputs, including CondOp.
       // Delete CurrentLink as it will be invalid if its operand is replaced
       // with a reduction defined at the bottom of the block in the next link.
-      LinkVPBB->appendRecipe(RedRecipe);
+      if (LinkVPBB->getNumSuccessors() == 0)
+        RedRecipe->insertBefore(&*std::prev(std::prev(LinkVPBB->end())));
+      else
+        LinkVPBB->appendRecipe(RedRecipe);
+
       CurrentLink->replaceAllUsesWith(RedRecipe);
       ToDelete.push_back(CurrentLink);
       PreviousLink = RedRecipe;
     }
   }
   VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
-  Builder.setInsertPoint(&*LatchVPBB->begin());
+  Builder.setInsertPoint(&*std::prev(std::prev(LatchVPBB->end())));
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
@@ -9970,8 +9962,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(OrigLoop->getHeader());
-      assert(OrigExitingVPV->getDefiningRecipe()->getParent() != LatchVPBB &&
-             "reduction recipe must be defined before latch");
       Type *PhiTy = PhiR->getOperand(0)->getLiveInIRValue()->getType();
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()

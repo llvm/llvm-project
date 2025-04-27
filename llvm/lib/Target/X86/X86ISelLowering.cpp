@@ -6443,25 +6443,36 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   }
   case ISD::SHL:
   case ISD::SRL: {
-    // We can only decode 'whole byte' bit shifts as shuffles.
-    std::optional<uint64_t> Amt = DAG.getValidShiftAmount(N, DemandedElts);
-    if (!Amt || (*Amt % 8) != 0)
+    APInt UndefElts;
+    SmallVector<APInt, 32> EltBits;
+    if (!getTargetConstantBitsFromNode(N.getOperand(1), NumBitsPerElt,
+                                       UndefElts, EltBits,
+                                       /*AllowWholeUndefs*/ true,
+                                       /*AllowPartialUndefs*/ false))
       return false;
 
-    uint64_t ByteShift = *Amt / 8;
+    // We can only decode 'whole byte' bit shifts as shuffles.
+    for (unsigned I = 0; I != NumElts; ++I)
+      if (DemandedElts[I] && !UndefElts[I] &&
+          (EltBits[I].urem(8) != 0 || EltBits[I].uge(NumBitsPerElt)))
+        return false;
+
+    Mask.append(NumSizeInBytes, SM_SentinelUndef);
     Ops.push_back(N.getOperand(0));
 
-    // Clear mask to all zeros and insert the shifted byte indices.
-    Mask.append(NumSizeInBytes, SM_SentinelZero);
-
-    if (ISD::SHL == Opcode) {
-      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
-        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
-          Mask[i + j] = i + j - ByteShift;
-    } else {
-      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
-        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
-          Mask[i + j - ByteShift] = i + j;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (!DemandedElts[I] || UndefElts[I])
+        continue;
+      unsigned ByteShift = EltBits[I].getZExtValue() / 8;
+      unsigned Lo = I * NumBytesPerElt;
+      unsigned Hi = Lo + NumBytesPerElt;
+      // Clear mask to all zeros and insert the shifted byte indices.
+      std::fill(Mask.begin() + Lo, Mask.begin() + Hi, SM_SentinelZero);
+      if (ISD::SHL == Opcode)
+        std::iota(Mask.begin() + Lo + ByteShift, Mask.begin() + Hi, Lo);
+      else
+        std::iota(Mask.begin() + Lo, Mask.begin() + Hi - ByteShift,
+                  Lo + ByteShift);
     }
     return true;
   }
