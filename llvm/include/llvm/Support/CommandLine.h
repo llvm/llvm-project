@@ -1459,17 +1459,15 @@ class opt
     }
   }
 
-  template <class T> void setDefaultImpl() {
-    if constexpr (std::is_assignable_v<T &, T>) {
+  void setDefault() override {
+    if constexpr (std::is_assignable_v<DataType &, DataType>) {
       const OptionValue<DataType> &V = this->getDefault();
       if (V.hasValue())
         this->setValue(V.getValue());
       else
-        this->setValue(T());
+        this->setValue(DataType());
     }
   }
-
-  void setDefault() override { setDefaultImpl<DataType>(); }
 
   void done() {
     addArgument();
