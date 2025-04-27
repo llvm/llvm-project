@@ -72,17 +72,11 @@ using namespace llvm::AMDGPU;
   class GetMember##member {                                                    \
   public:                                                                      \
     static const MCExpr *Phony;                                                \
-    template <typename U, typename std::enable_if_t<IsMCExpr##member::RESULT,  \
-                                                    U> * = nullptr>            \
-    static const MCExpr *&Get(U &C) {                                          \
-      assert(IsMCExpr##member::RESULT &&                                       \
-             "Trying to retrieve member that does not exist.");                \
-      return C.member;                                                         \
-    }                                                                          \
-    template <typename U, typename std::enable_if_t<!IsMCExpr##member::RESULT, \
-                                                    U> * = nullptr>            \
-    static const MCExpr *&Get(U &C) {                                          \
-      return Phony;                                                            \
+    template <typename U> static const MCExpr *&Get(U &C) {                    \
+      if constexpr (IsMCExpr##member::RESULT)                                  \
+        return C.member;                                                       \
+      else                                                                     \
+        return Phony;                                                          \
     }                                                                          \
   };                                                                           \
   const MCExpr *GetMember##member::Phony = nullptr;
