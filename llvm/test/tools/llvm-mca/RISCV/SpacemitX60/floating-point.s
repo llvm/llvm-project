@@ -154,85 +154,85 @@ fclass.d a3, ft10
 # CHECK-NEXT:  1      3     0.50           *             3     SMX60_LS                                   FSW                        fsw	ft0, 0(a0)
 # CHECK-NEXT:  1      5     0.50    *                    5     SMX60_LS                                   FLD                        fld	ft0, 0(a0)
 # CHECK-NEXT:  1      3     0.50           *             3     SMX60_LS                                   FSD                        fsd	ft0, 0(a0)
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FADD_H                     fadd.h	fs10, fs11, ft8
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FSUB_H                     fsub.h	ft9, ft10, ft11
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FMUL_H                     fmul.h	ft0, ft1, ft2
-# CHECK-NEXT:  1      7     7.00                         7     SMX60_FP[7]                                FDIV_H                     fdiv.h	ft3, ft4, ft5
-# CHECK-NEXT:  1      7     7.00                         7     SMX60_FP[7]                                FSQRT_H                    fsqrt.h	ft6, ft7
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FMIN_H                     fmin.h	fa5, fa6, fa7
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FMAX_H                     fmax.h	fs2, fs3, fs4
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMADD_H                    fmadd.h	fa0, fa1, fa2, ft11
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMSUB_H                    fmsub.h	fa4, fa5, fa6, fa7
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FNMSUB_H                   fnmsub.h	fs2, fs3, fs4, fs5
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FNMADD_H                   fnmadd.h	fs6, fs7, fs8, fs9
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FADD_S                     fadd.s	fs10, fs11, ft8
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FSUB_S                     fsub.s	ft9, ft10, ft11
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FADD_H                     fadd.h	fs10, fs11, ft8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FSUB_H                     fsub.h	ft9, ft10, ft11
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMUL_H                     fmul.h	ft0, ft1, ft2
+# CHECK-NEXT:  1      12    12.00                        12    SMX60_FP[12]                               FDIV_H                     fdiv.h	ft3, ft4, ft5
+# CHECK-NEXT:  1      12    12.00                        12    SMX60_FP[12]                               FSQRT_H                    fsqrt.h	ft6, ft7
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMIN_H                     fmin.h	fa5, fa6, fa7
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMAX_H                     fmax.h	fs2, fs3, fs4
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FMADD_H                    fmadd.h	fa0, fa1, fa2, ft11
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FMSUB_H                    fmsub.h	fa4, fa5, fa6, fa7
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FNMSUB_H                   fnmsub.h	fs2, fs3, fs4, fs5
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FNMADD_H                   fnmadd.h	fs6, fs7, fs8, fs9
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FADD_S                     fadd.s	fs10, fs11, ft8
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FSUB_S                     fsub.s	ft9, ft10, ft11
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMUL_S                     fmul.s	ft0, ft1, ft2
-# CHECK-NEXT:  1      10    10.00                        10    SMX60_FP[10]                               FDIV_S                     fdiv.s	ft3, ft4, ft5
-# CHECK-NEXT:  1      10    10.00                        10    SMX60_FP[10]                               FSQRT_S                    fsqrt.s	ft6, ft7
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FMIN_S                     fmin.s	fa5, fa6, fa7
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FMAX_S                     fmax.s	fs2, fs3, fs4
+# CHECK-NEXT:  1      15    15.00                        15    SMX60_FP[15]                               FDIV_S                     fdiv.s	ft3, ft4, ft5
+# CHECK-NEXT:  1      15    15.00                        15    SMX60_FP[15]                               FSQRT_S                    fsqrt.s	ft6, ft7
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMIN_S                     fmin.s	fa5, fa6, fa7
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMAX_S                     fmax.s	fs2, fs3, fs4
 # CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FMADD_S                    fmadd.s	fa0, fa1, fa2, ft11
 # CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FMSUB_S                    fmsub.s	fa4, fa5, fa6, fa7
 # CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FNMSUB_S                   fnmsub.s	fs2, fs3, fs4, fs5
 # CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FNMADD_S                   fnmadd.s	fs6, fs7, fs8, fs9
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FADD_D                     fadd.d	fs10, fs11, ft8
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FSUB_D                     fsub.d	ft9, ft10, ft11
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMUL_D                     fmul.d	ft0, ft1, ft2
-# CHECK-NEXT:  1      10    10.00                        10    SMX60_FP[10]                               FDIV_D                     fdiv.d	ft3, ft4, ft5
-# CHECK-NEXT:  1      10    10.00                        10    SMX60_FP[10]                               FSQRT_D                    fsqrt.d	ft6, ft7
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FMIN_D                     fmin.d	fa5, fa6, fa7
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FMAX_D                     fmax.d	fs2, fs3, fs4
-# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FMADD_D                    fmadd.d	fa0, fa1, fa2, ft11
-# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FMSUB_D                    fmsub.d	fa4, fa5, fa6, fa7
-# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FNMSUB_D                   fnmsub.d	fs2, fs3, fs4, fs5
-# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FNMADD_D                   fnmadd.d	fs6, fs7, fs8, fs9
-# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  FMV_X_H                    fmv.x.h	a2, fs7
-# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  FMV_H_X                    fmv.h.x	ft1, a6
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_S_H                   fcvt.s.h	fa0, ft0
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_S_H                   fcvt.s.h	fa0, ft0, rup
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_H_S                   fcvt.h.s	ft2, fa2
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_D_H                   fcvt.d.h	fa0, ft0
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_D_H                   fcvt.d.h	fa0, ft0, rup
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_H_D                   fcvt.h.d	ft2, fa2
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_W_S                   fcvt.w.s	a0, fs5
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_WU_S                  fcvt.wu.s	a1, fs6
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_S_W                   fcvt.s.w	ft11, a4
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_S_WU                  fcvt.s.wu	ft0, a5
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_L_S                   fcvt.l.s	a0, ft0
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_LU_S                  fcvt.lu.s	a1, ft1
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_S_L                   fcvt.s.l	ft2, a2
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_S_LU                  fcvt.s.lu	ft3, a3
-# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  FMV_X_W                    fmv.x.w	a2, fs7
-# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  FMV_W_X                    fmv.w.x	ft1, a6
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FSGNJ_S                    fsgnj.s	fs1, fa0, fa1
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FSGNJN_S                   fsgnjn.s	fa1, fa3, fa4
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_WU_D                  fcvt.wu.d	a4, ft11
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_W_D                   fcvt.w.d	a4, ft11
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_D_W                   fcvt.d.w	ft0, a5
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_D_WU                  fcvt.d.wu	ft1, a6
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_S_D                   fcvt.s.d	fs5, fs6
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FCVT_D_S                   fcvt.d.s	fs7, fs8
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_L_D                   fcvt.l.d	a0, ft0
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_LU_D                  fcvt.lu.d	a1, ft1
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_D_L                   fcvt.d.l	ft3, a3
-# CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  FCVT_D_LU                  fcvt.d.lu	ft4, a4
-# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  FMV_X_D                    fmv.x.d	a2, ft2
-# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  FMV_D_X                    fmv.d.x	ft5, a5
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FSGNJ_D                    fsgnj.d	fs1, fa0, fa1
-# CHECK-NEXT:  1      3     1.00                         3     SMX60_FP                                   FSGNJN_D                   fsgnjn.d	fa1, fa3, fa4
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FEQ_H                      feq.h	a1, fs8, fs9
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FLT_H                      flt.h	a2, fs10, fs11
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FLE_H                      fle.h	a3, ft8, ft9
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FEQ_S                      feq.s	a1, fs8, fs9
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FLT_S                      flt.s	a2, fs10, fs11
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FLE_S                      fle.s	a3, ft8, ft9
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FEQ_D                      feq.d	a1, fs8, fs9
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FLT_D                      flt.d	a2, fs10, fs11
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FLE_D                      fle.d	a3, ft8, ft9
-# CHECK-NEXT:  1      2     1.00                         2     SMX60_FP                                   FCLASS_S                   fclass.s	a3, ft10
-# CHECK-NEXT:  1      2     1.00                         2     SMX60_FP                                   FCLASS_S                   fclass.s	a3, ft10
-# CHECK-NEXT:  1      2     1.00                         2     SMX60_FP                                   FCLASS_D                   fclass.d	a3, ft10
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FADD_D                     fadd.d	fs10, fs11, ft8
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FSUB_D                     fsub.d	ft9, ft10, ft11
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FMUL_D                     fmul.d	ft0, ft1, ft2
+# CHECK-NEXT:  1      22    22.00                        22    SMX60_FP[22]                               FDIV_D                     fdiv.d	ft3, ft4, ft5
+# CHECK-NEXT:  1      22    22.00                        22    SMX60_FP[22]                               FSQRT_D                    fsqrt.d	ft6, ft7
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMIN_D                     fmin.d	fa5, fa6, fa7
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FMAX_D                     fmax.d	fs2, fs3, fs4
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FMADD_D                    fmadd.d	fa0, fa1, fa2, ft11
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FMSUB_D                    fmsub.d	fa4, fa5, fa6, fa7
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FNMSUB_D                   fnmsub.d	fs2, fs3, fs4, fs5
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FNMADD_D                   fnmadd.d	fs6, fs7, fs8, fs9
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FMV_X_H                    fmv.x.h	a2, fs7
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FMV_H_X                    fmv.h.x	ft1, a6
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_S_H                   fcvt.s.h	fa0, ft0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_S_H                   fcvt.s.h	fa0, ft0, rup
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_H_S                   fcvt.h.s	ft2, fa2
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_D_H                   fcvt.d.h	fa0, ft0
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_D_H                   fcvt.d.h	fa0, ft0, rup
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_H_D                   fcvt.h.d	ft2, fa2
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_W_S                   fcvt.w.s	a0, fs5
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_WU_S                  fcvt.wu.s	a1, fs6
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_S_W                   fcvt.s.w	ft11, a4
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_S_WU                  fcvt.s.wu	ft0, a5
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_L_S                   fcvt.l.s	a0, ft0
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_LU_S                  fcvt.lu.s	a1, ft1
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_S_L                   fcvt.s.l	ft2, a2
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_S_LU                  fcvt.s.lu	ft3, a3
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FMV_X_W                    fmv.x.w	a2, fs7
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FMV_W_X                    fmv.w.x	ft1, a6
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FSGNJ_S                    fsgnj.s	fs1, fa0, fa1
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FSGNJN_S                   fsgnjn.s	fa1, fa3, fa4
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_WU_D                  fcvt.wu.d	a4, ft11
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_W_D                   fcvt.w.d	a4, ft11
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_D_W                   fcvt.d.w	ft0, a5
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_D_WU                  fcvt.d.wu	ft1, a6
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_S_D                   fcvt.s.d	fs5, fs6
+# CHECK-NEXT:  1      4     1.00                         4     SMX60_FP                                   FCVT_D_S                   fcvt.d.s	fs7, fs8
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_L_D                   fcvt.l.d	a0, ft0
+# CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  FCVT_LU_D                  fcvt.lu.d	a1, ft1
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_D_L                   fcvt.d.l	ft3, a3
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FCVT_D_LU                  fcvt.d.lu	ft4, a4
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FMV_X_D                    fmv.x.d	a2, ft2
+# CHECK-NEXT:  1      4     0.50                         4     SMX60_IEU                                  FMV_D_X                    fmv.d.x	ft5, a5
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FSGNJ_D                    fsgnj.d	fs1, fa0, fa1
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_FP                                   FSGNJN_D                   fsgnjn.d	fa1, fa3, fa4
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FEQ_H                      feq.h	a1, fs8, fs9
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FLT_H                      flt.h	a2, fs10, fs11
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FLE_H                      fle.h	a3, ft8, ft9
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FEQ_S                      feq.s	a1, fs8, fs9
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FLT_S                      flt.s	a2, fs10, fs11
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FLE_S                      fle.s	a3, ft8, ft9
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FEQ_D                      feq.d	a1, fs8, fs9
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FLT_D                      flt.d	a2, fs10, fs11
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FLE_D                      fle.d	a3, ft8, ft9
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FCLASS_S                   fclass.s	a3, ft10
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FCLASS_S                   fclass.s	a3, ft10
+# CHECK-NEXT:  1      6     1.00                         6     SMX60_FP                                   FCLASS_D                   fclass.d	a3, ft10
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SMX60_FP
@@ -243,7 +243,7 @@ fclass.d a3, ft10
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]
-# CHECK-NEXT: 105.00 11.00  11.00  3.00   3.00
+# CHECK-NEXT: 149.00 11.00  11.00  3.00   3.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  Instructions:
@@ -256,8 +256,8 @@ fclass.d a3, ft10
 # CHECK-NEXT: 1.00    -      -      -      -     fadd.h	fs10, fs11, ft8
 # CHECK-NEXT: 1.00    -      -      -      -     fsub.h	ft9, ft10, ft11
 # CHECK-NEXT: 1.00    -      -      -      -     fmul.h	ft0, ft1, ft2
-# CHECK-NEXT: 7.00    -      -      -      -     fdiv.h	ft3, ft4, ft5
-# CHECK-NEXT: 7.00    -      -      -      -     fsqrt.h	ft6, ft7
+# CHECK-NEXT: 12.00   -      -      -      -     fdiv.h	ft3, ft4, ft5
+# CHECK-NEXT: 12.00   -      -      -      -     fsqrt.h	ft6, ft7
 # CHECK-NEXT: 1.00    -      -      -      -     fmin.h	fa5, fa6, fa7
 # CHECK-NEXT: 1.00    -      -      -      -     fmax.h	fs2, fs3, fs4
 # CHECK-NEXT: 1.00    -      -      -      -     fmadd.h	fa0, fa1, fa2, ft11
@@ -267,8 +267,8 @@ fclass.d a3, ft10
 # CHECK-NEXT: 1.00    -      -      -      -     fadd.s	fs10, fs11, ft8
 # CHECK-NEXT: 1.00    -      -      -      -     fsub.s	ft9, ft10, ft11
 # CHECK-NEXT: 1.00    -      -      -      -     fmul.s	ft0, ft1, ft2
-# CHECK-NEXT: 10.00   -      -      -      -     fdiv.s	ft3, ft4, ft5
-# CHECK-NEXT: 10.00   -      -      -      -     fsqrt.s	ft6, ft7
+# CHECK-NEXT: 15.00   -      -      -      -     fdiv.s	ft3, ft4, ft5
+# CHECK-NEXT: 15.00   -      -      -      -     fsqrt.s	ft6, ft7
 # CHECK-NEXT: 1.00    -      -      -      -     fmin.s	fa5, fa6, fa7
 # CHECK-NEXT: 1.00    -      -      -      -     fmax.s	fs2, fs3, fs4
 # CHECK-NEXT: 1.00    -      -      -      -     fmadd.s	fa0, fa1, fa2, ft11
@@ -278,8 +278,8 @@ fclass.d a3, ft10
 # CHECK-NEXT: 1.00    -      -      -      -     fadd.d	fs10, fs11, ft8
 # CHECK-NEXT: 1.00    -      -      -      -     fsub.d	ft9, ft10, ft11
 # CHECK-NEXT: 1.00    -      -      -      -     fmul.d	ft0, ft1, ft2
-# CHECK-NEXT: 10.00   -      -      -      -     fdiv.d	ft3, ft4, ft5
-# CHECK-NEXT: 10.00   -      -      -      -     fsqrt.d	ft6, ft7
+# CHECK-NEXT: 22.00   -      -      -      -     fdiv.d	ft3, ft4, ft5
+# CHECK-NEXT: 22.00   -      -      -      -     fsqrt.d	ft6, ft7
 # CHECK-NEXT: 1.00    -      -      -      -     fmin.d	fa5, fa6, fa7
 # CHECK-NEXT: 1.00    -      -      -      -     fmax.d	fs2, fs3, fs4
 # CHECK-NEXT: 1.00    -      -      -      -     fmadd.d	fa0, fa1, fa2, ft11
