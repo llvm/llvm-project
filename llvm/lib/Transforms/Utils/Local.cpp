@@ -1445,9 +1445,9 @@ EliminateDuplicatePHINodesSetBasedImpl(BasicBlock *BB,
       // Compute a hash value on the operands. Instcombine will likely have
       // sorted them, which helps expose duplicates, but we have to check all
       // the operands to be safe in case instcombine hasn't run.
-      return static_cast<unsigned>(hash_combine(
-          hash_combine_range(PN->value_op_begin(), PN->value_op_end()),
-          hash_combine_range(PN->block_begin(), PN->block_end())));
+      return static_cast<unsigned>(
+          hash_combine(hash_combine_range(PN->operand_values()),
+                       hash_combine_range(PN->blocks())));
     }
 
     static unsigned getHashValue(PHINode *PN) {

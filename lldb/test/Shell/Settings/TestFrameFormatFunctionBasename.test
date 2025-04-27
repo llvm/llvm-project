@@ -38,7 +38,7 @@ int main() {
 
 #--- commands.input
 settings set -f frame-format "custom-frame '${function.basename}'\n"
-break set -l 5 -f main.cpp
+break set -n bar
 
 run
 bt
