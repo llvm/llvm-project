@@ -1024,8 +1024,8 @@ bool MachineBlockPlacement::isTrellis(
   if (BB->succ_size() != 2 || ViableSuccs.size() != 2)
     return false;
 
-  SmallPtrSet<const MachineBasicBlock *, 2> Successors(BB->succ_begin(),
-                                                       BB->succ_end());
+  SmallPtrSet<const MachineBasicBlock *, 2> Successors(llvm::from_range,
+                                                       BB->successors());
   // To avoid reviewing the same predecessors twice.
   SmallPtrSet<const MachineBasicBlock *, 8> SeenPreds;
 
@@ -1117,8 +1117,8 @@ MachineBlockPlacement::getBestTrellisSuccessor(
     const BlockFilterSet *BlockFilter) {
 
   BlockAndTailDupResult Result = {nullptr, false};
-  SmallPtrSet<const MachineBasicBlock *, 4> Successors(BB->succ_begin(),
-                                                       BB->succ_end());
+  SmallPtrSet<const MachineBasicBlock *, 4> Successors(llvm::from_range,
+                                                       BB->successors());
 
   // We assume size 2 because it's common. For general n, we would have to do
   // the Hungarian algorithm, but it's not worth the complexity because more
@@ -1209,8 +1209,8 @@ bool MachineBlockPlacement::canTailDuplicateUnplacedPreds(
   unsigned int NumDup = 0;
 
   // For CFG checking.
-  SmallPtrSet<const MachineBasicBlock *, 4> Successors(BB->succ_begin(),
-                                                       BB->succ_end());
+  SmallPtrSet<const MachineBasicBlock *, 4> Successors(llvm::from_range,
+                                                       BB->successors());
   for (MachineBasicBlock *Pred : Succ->predecessors()) {
     // Make sure all unplaced and unfiltered predecessors can be
     // tail-duplicated into.

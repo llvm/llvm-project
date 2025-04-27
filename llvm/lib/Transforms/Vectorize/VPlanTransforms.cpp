@@ -597,7 +597,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
 }
 
 static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
-  SetVector<VPUser *> Users(V->user_begin(), V->user_end());
+  SetVector<VPUser *> Users(llvm::from_range, V->users());
   for (unsigned I = 0; I != Users.size(); ++I) {
     VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
     if (isa<VPHeaderPHIRecipe>(Cur))

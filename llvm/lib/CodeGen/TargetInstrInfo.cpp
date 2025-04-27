@@ -1043,7 +1043,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
 
   // Check if the MBB this instruction is a part of contains any other chains.
   // If so, don't apply it.
-  SmallSet<Register, 32> ReductionChain(Chain.begin(), Chain.end());
+  SmallSet<Register, 32> ReductionChain(llvm::from_range, Chain);
   for (const auto &I : MBB) {
     if (I.getOpcode() == Opc &&
         !ReductionChain.contains(I.getOperand(0).getReg()))
