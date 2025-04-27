@@ -116,7 +116,7 @@ public:
   std::string getFormattedName() const {
     StringRef Name = Def->getValueAsString("name");
     std::string N = Name.str();
-    std::replace(N.begin(), N.end(), ' ', '_');
+    llvm::replace(N, ' ', '_');
     return N;
   }
 
@@ -255,6 +255,10 @@ public:
 
   std::vector<const Record *> getClauseVals() const {
     return Def->getValueAsListOfDefs("allowedClauseValues");
+  }
+
+  bool skipFlangUnparser() const {
+    return Def->getValueAsBit("skipFlangUnparser");
   }
 
   bool isValueOptional() const { return Def->getValueAsBit("isValueOptional"); }
