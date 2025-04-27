@@ -31,7 +31,7 @@ def Ptr_FromPtrOp : Pointer_Op<"from_ptr", [
     important to note that:
     - The ptr-like object cannot be a `!ptr.ptr`.
     - The memory-space of both the `ptr` and ptr-like object must match.
-    - The cast is side-effect free.
+    - The cast is Pure (no UB and side-effect free).
 
     If the ptr-like object type has metadata, then the operation expects the
     metadata as an argument or expects that the flag `trivial_metadata` is set.
