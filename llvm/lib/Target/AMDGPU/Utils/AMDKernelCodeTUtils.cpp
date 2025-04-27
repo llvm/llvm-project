@@ -73,13 +73,10 @@ using namespace llvm::AMDGPU;
   public:                                                                      \
     static const MCExpr *Phony;                                                \
     template <typename U> static const MCExpr *&Get(U &C) {                    \
-      if constexpr (IsMCExpr##member::RESULT) {                                \
-        assert(IsMCExpr##member::RESULT &&                                     \
-               "Trying to retrieve member that does not exist.");              \
+      if constexpr (IsMCExpr##member::RESULT)                                  \
         return C.member;                                                       \
-      } else {                                                                 \
+      else                                                                     \
         return Phony;                                                          \
-      }                                                                        \
     }                                                                          \
   };                                                                           \
   const MCExpr *GetMember##member::Phony = nullptr;
