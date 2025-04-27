@@ -74,7 +74,8 @@
         "lldb-dap.executable-path": {
           "scope": "resource",
           "type": "string",
-          "description": "The path to the lldb-dap binary."
+          "scope": "machine-overridable",
+          "description": "The path to the lldb-dap binary, e.g. /usr/local/bin/lldb-dap"
         },
         "lldb-dap.arguments": {
           "scope": "resource",
