@@ -307,28 +307,28 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    mul t2, a1, s1
 ; RV64X60-NEXT:    mul t3, a3, s1
 ; RV64X60-NEXT:    mul t4, a5, s1
-; RV64X60-NEXT:    add s1, a0, a6
-; RV64X60-NEXT:    add s0, a2, a6
+; RV64X60-NEXT:    add s0, a0, a6
+; RV64X60-NEXT:    add s1, a2, a6
 ; RV64X60-NEXT:    add t5, a4, a6
-; RV64X60-NEXT:    add s2, s1, t2
+; RV64X60-NEXT:    add s0, s0, t2
 ; RV64X60-NEXT:    csrr t2, vlenb
-; RV64X60-NEXT:    add t3, t3, s0
-; RV64X60-NEXT:    or t6, a1, a3
+; RV64X60-NEXT:    add t3, t3, s1
+; RV64X60-NEXT:    li t6, 32
 ; RV64X60-NEXT:    add t4, t4, t5
-; RV64X60-NEXT:    sltu s0, a0, t3
-; RV64X60-NEXT:    sltu s1, a2, s2
-; RV64X60-NEXT:    and t5, s0, s1
-; RV64X60-NEXT:    slli t3, t2, 1
-; RV64X60-NEXT:    slti s1, t6, 0
-; RV64X60-NEXT:    sltu s0, a0, t4
-; RV64X60-NEXT:    or t4, t5, s1
-; RV64X60-NEXT:    sltu s1, a4, s2
+; RV64X60-NEXT:    sltu t3, a0, t3
+; RV64X60-NEXT:    sltu s1, a2, s0
+; RV64X60-NEXT:    and t3, t3, s1
+; RV64X60-NEXT:    or t5, a1, a3
+; RV64X60-NEXT:    sltu s1, a0, t4
+; RV64X60-NEXT:    sltu s0, a4, s0
+; RV64X60-NEXT:    slti t4, t5, 0
 ; RV64X60-NEXT:    and s0, s0, s1
 ; RV64X60-NEXT:    or s1, a1, a5
-; RV64X60-NEXT:    li t5, 32
+; RV64X60-NEXT:    or t4, t3, t4
+; RV64X60-NEXT:    slli t3, t2, 1
 ; RV64X60-NEXT:    slti s1, s1, 0
 ; RV64X60-NEXT:    or s0, s0, s1
-; RV64X60-NEXT:    maxu s1, t3, t5
+; RV64X60-NEXT:    maxu s1, t3, t6
 ; RV64X60-NEXT:    or s0, t4, s0
 ; RV64X60-NEXT:    sltu s1, a6, s1
 ; RV64X60-NEXT:    or s0, s0, s1
