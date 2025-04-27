@@ -187,25 +187,25 @@ AMDGPUFunctionArgInfo::getPreloadDescriptorsForArgIdx(unsigned ArgIdx) const {
       Results.push_back(&KV.second);
   }
 
-  llvm::stable_sort(Results, [](const KernArgPreloadDescriptor *A,
-                                const KernArgPreloadDescriptor *B) {
+  stable_sort(Results, [](const KernArgPreloadDescriptor *A,
+                          const KernArgPreloadDescriptor *B) {
     return A->PartIdx < B->PartIdx;
   });
 
   return Results;
 }
 
-std::optional<const KernArgPreloadDescriptor *>
+const KernArgPreloadDescriptor *
 AMDGPUFunctionArgInfo::getHiddenArgPreloadDescriptor(HiddenArg HA) const {
   assert(HA < END_HIDDEN_ARGS);
 
   auto HiddenArgIt = PreloadHiddenArgsIndexMap.find(HA);
   if (HiddenArgIt == PreloadHiddenArgsIndexMap.end())
-    return std::nullopt;
+    return nullptr;
 
   auto KernArgIt = PreloadKernArgs.find(HiddenArgIt->second);
   if (KernArgIt == PreloadKernArgs.end())
-    return std::nullopt;
+    return nullptr;
 
   return &KernArgIt->second;
 }
