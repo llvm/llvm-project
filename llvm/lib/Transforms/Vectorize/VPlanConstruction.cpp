@@ -403,15 +403,14 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
     std::swap(PreheaderVPBB, LatchVPBB);
 
     if (!VPDT.dominates(PreheaderVPBB, HeaderVPB) ||
-        !VPDT.dominates(HeaderVPB, LatchVPBB)) {
+        !VPDT.dominates(HeaderVPB, LatchVPBB))
       return false;
-    } else {
-      // Canonicalize predecessors of header so that preheader is first and
-      // latch second.
-      HeaderVPB->swapPredecessors();
-      for (VPRecipeBase &R : cast<VPBasicBlock>(HeaderVPB)->phis())
-        R.swapOperands();
-    }
+
+    // Canonicalize predecessors of header so that preheader is first and
+    // latch second.
+    HeaderVPB->swapPredecessors();
+    for (VPRecipeBase &R : cast<VPBasicBlock>(HeaderVPB)->phis())
+      R.swapOperands();
   }
 
   // The two successors of conditional branch match the condition, with the
@@ -419,18 +418,20 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
   // canonicalize the successors of the latch when introducing the region, such
   // that the latch exits the region when its condition is true; invert the
   // original condition if the original CFG branches to the header on true.
-  if (!LatchVPBB->getSingleSuccessor() &&
-      LatchVPBB->getSuccessors()[0] == HeaderVPB) {
-    assert(LatchVPBB->getNumSuccessors() == 2 && "Must have 2 successors");
-    auto *Term = cast<VPBasicBlock>(LatchVPBB)->getTerminator();
-    assert(cast<VPInstruction>(Term)->getOpcode() ==
-               VPInstruction::BranchOnCond &&
-           "terminator must be a BranchOnCond");
-    auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
-    Not->insertBefore(Term);
-    Term->setOperand(0, Not);
-    LatchVPBB->swapSuccessors();
-  }
+  // Note that the exit edge is not yet connected for top-level loops.
+  if (LatchVPBB->getSingleSuccessor() ||
+      LatchVPBB->getSuccessors()[0] != HeaderVPB)
+    return true;
+
+  assert(LatchVPBB->getNumSuccessors() == 2 && "Must have 2 successors");
+  auto *Term = cast<VPBasicBlock>(LatchVPBB)->getTerminator();
+  assert(cast<VPInstruction>(Term)->getOpcode() ==
+             VPInstruction::BranchOnCond &&
+         "terminator must be a BranchOnCond");
+  auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
+  Not->insertBefore(Term);
+  Term->setOperand(0, Not);
+  LatchVPBB->swapSuccessors();
 
   return true;
 }
