@@ -3,22 +3,22 @@
 
 @gptr = protected addrspace(1) externally_initialized global i32 0, align 4
 
-define amdgpu_kernel void @no_alias_addr_space_select(ptr addrspace(5) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @no_alias_addr_space_select(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_select(
-; CHECK-SAME: ptr addrspace(5) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(3)
-; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[LPTR]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(5) [[SPTR]] to ptr
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(3) [[SPTR]] to ptr
 ; CHECK-NEXT:    [[ADD_A:%.*]] = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(1) @gptr to ptr), i32 [[OFFSET]]
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND1]], ptr [[ADD_A]], ptr [[B]]
 ; CHECK-NEXT:    [[PTR2:%.*]] = select i1 [[COND2]], ptr [[PTR]], ptr [[C]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[PTR2]], align 4, !noalias.addrspace [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
-  %lptr = alloca i32, align 4, addrspace(3)
+  %lptr = alloca i32, align 4, addrspace(5)
   %a = addrspacecast ptr addrspace(1) @gptr to ptr
-  %b = addrspacecast ptr addrspace(3) %lptr to ptr
-  %c = addrspacecast ptr addrspace(5) %sptr to ptr
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  %c = addrspacecast ptr addrspace(3) %sptr to ptr
   %add_a = getelementptr inbounds i8, ptr %a, i32 %offset
   %ptr = select i1 %cond1, ptr %add_a, ptr %b
   %ptr2 = select i1 %cond2, ptr %ptr, ptr %c
@@ -41,22 +41,22 @@ define amdgpu_kernel void @no_alias_addr_space_arg(ptr %ptr, i32 %val, i1 %cond)
   ret void
 }
 
-define amdgpu_kernel void @no_alias_addr_space_branch(ptr addrspace(5) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @no_alias_addr_space_branch(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_branch(
-; CHECK-SAME: ptr addrspace(5) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
 ; CHECK:       [[BB_1_TRUE]]:
 ; CHECK-NEXT:    [[A:%.*]] = addrspacecast ptr addrspace(1) @gptr to ptr
 ; CHECK-NEXT:    br label %[[BB_1_END:.*]]
 ; CHECK:       [[BB_1_FALSE]]:
-; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(3)
-; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[LPTR]] to ptr
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
 ; CHECK-NEXT:    br label %[[BB_1_END]]
 ; CHECK:       [[BB_1_END]]:
 ; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ [[A]], %[[BB_1_TRUE]] ], [ [[B]], %[[BB_1_FALSE]] ]
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[BB_2_TRUE:.*]], label %[[BB_2_END:.*]]
 ; CHECK:       [[BB_2_TRUE]]:
-; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(5) [[SPTR]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(3) [[SPTR]] to ptr
 ; CHECK-NEXT:    br label %[[BB_2_END]]
 ; CHECK:       [[BB_2_END]]:
 ; CHECK-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR1]], %[[BB_1_END]] ], [ [[C]], %[[BB_2_TRUE]] ]
@@ -69,8 +69,8 @@ bb.1.true:
   br label %bb.1.end
 
 bb.1.false:
-  %lptr = alloca i32, align 4, addrspace(3)
-  %b = addrspacecast ptr addrspace(3) %lptr to ptr
+  %lptr = alloca i32, align 4, addrspace(5)
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
   br label %bb.1.end
 
 bb.1.end:
@@ -78,7 +78,7 @@ bb.1.end:
   br i1 %cond2, label %bb.2.true, label %bb.2.end
 
 bb.2.true:
-  %c = addrspacecast ptr addrspace(5) %sptr to ptr
+  %c = addrspacecast ptr addrspace(3) %sptr to ptr
   br label %bb.2.end
 
 bb.2.end:
@@ -87,12 +87,12 @@ bb.2.end:
   ret void
 }
 
-define amdgpu_kernel void @no_alias_addr_space_select_cmpxchg(ptr addrspace(5) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @no_alias_addr_space_select_cmpxchg(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_select_cmpxchg(
-; CHECK-SAME: ptr addrspace(5) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(3)
-; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[LPTR]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(5) [[SPTR]] to ptr
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(3) [[SPTR]] to ptr
 ; CHECK-NEXT:    [[ADD_A:%.*]] = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(1) @gptr to ptr), i32 [[OFFSET]]
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND1]], ptr [[ADD_A]], ptr [[B]]
 ; CHECK-NEXT:    [[PTR2:%.*]] = select i1 [[COND2]], ptr [[PTR]], ptr [[C]]
@@ -106,10 +106,10 @@ define amdgpu_kernel void @no_alias_addr_space_select_cmpxchg(ptr addrspace(5) %
 ; CHECK-NEXT:    [[CMPXCHG_7:%.*]] = cmpxchg weak volatile ptr [[PTR2]], i32 0, i32 11 syncscope("singlethread") seq_cst monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    ret void
 ;
-  %lptr = alloca i32, align 4, addrspace(3)
+  %lptr = alloca i32, align 4, addrspace(5)
   %a = addrspacecast ptr addrspace(1) @gptr to ptr
-  %b = addrspacecast ptr addrspace(3) %lptr to ptr
-  %c = addrspacecast ptr addrspace(5) %sptr to ptr
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  %c = addrspacecast ptr addrspace(3) %sptr to ptr
   %add_a = getelementptr inbounds i8, ptr %a, i32 %offset
   %ptr = select i1 %cond1, ptr %add_a, ptr %b
   %ptr2 = select i1 %cond2, ptr %ptr, ptr %c
@@ -124,22 +124,22 @@ define amdgpu_kernel void @no_alias_addr_space_select_cmpxchg(ptr addrspace(5) %
   ret void
 }
 
-define amdgpu_kernel void @no_alias_addr_space_branch_cmpxchg(ptr addrspace(5) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @no_alias_addr_space_branch_cmpxchg(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_branch_cmpxchg(
-; CHECK-SAME: ptr addrspace(5) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
 ; CHECK:       [[BB_1_TRUE]]:
 ; CHECK-NEXT:    [[A:%.*]] = addrspacecast ptr addrspace(1) @gptr to ptr
 ; CHECK-NEXT:    br label %[[BB_1_END:.*]]
 ; CHECK:       [[BB_1_FALSE]]:
-; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(3)
-; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[LPTR]] to ptr
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
 ; CHECK-NEXT:    br label %[[BB_1_END]]
 ; CHECK:       [[BB_1_END]]:
 ; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ [[A]], %[[BB_1_TRUE]] ], [ [[B]], %[[BB_1_FALSE]] ]
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[BB_2_TRUE:.*]], label %[[BB_2_END:.*]]
 ; CHECK:       [[BB_2_TRUE]]:
-; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(5) [[SPTR]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(3) [[SPTR]] to ptr
 ; CHECK-NEXT:    br label %[[BB_2_END]]
 ; CHECK:       [[BB_2_END]]:
 ; CHECK-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR1]], %[[BB_1_END]] ], [ [[C]], %[[BB_2_TRUE]] ]
@@ -159,8 +159,8 @@ bb.1.true:
   br label %bb.1.end
 
 bb.1.false:
-  %lptr = alloca i32, align 4, addrspace(3)
-  %b = addrspacecast ptr addrspace(3) %lptr to ptr
+  %lptr = alloca i32, align 4, addrspace(5)
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
   br label %bb.1.end
 
 bb.1.end:
@@ -168,7 +168,7 @@ bb.1.end:
   br i1 %cond2, label %bb.2.true, label %bb.2.end
 
 bb.2.true:
-  %c = addrspacecast ptr addrspace(5) %sptr to ptr
+  %c = addrspacecast ptr addrspace(3) %sptr to ptr
   br label %bb.2.end
 
 bb.2.end:
@@ -184,12 +184,12 @@ bb.2.end:
   ret void
 }
 
-define amdgpu_kernel void @no_alias_addr_space_select_atomicrmw(ptr addrspace(5) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @no_alias_addr_space_select_atomicrmw(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_select_atomicrmw(
-; CHECK-SAME: ptr addrspace(5) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(3)
-; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[LPTR]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(5) [[SPTR]] to ptr
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(3) [[SPTR]] to ptr
 ; CHECK-NEXT:    [[ADD_A:%.*]] = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(1) @gptr to ptr), i32 [[OFFSET]]
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND1]], ptr [[ADD_A]], ptr [[B]]
 ; CHECK-NEXT:    [[PTR2:%.*]] = select i1 [[COND2]], ptr [[PTR]], ptr [[C]]
@@ -206,10 +206,10 @@ define amdgpu_kernel void @no_alias_addr_space_select_atomicrmw(ptr addrspace(5)
 ; CHECK-NEXT:    [[ATOMICRMW_UMIN:%.*]] = atomicrmw volatile umin ptr [[PTR2]], i32 22 syncscope("singlethread") monotonic, align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    ret void
 ;
-  %lptr = alloca i32, align 4, addrspace(3)
+  %lptr = alloca i32, align 4, addrspace(5)
   %a = addrspacecast ptr addrspace(1) @gptr to ptr
-  %b = addrspacecast ptr addrspace(3) %lptr to ptr
-  %c = addrspacecast ptr addrspace(5) %sptr to ptr
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
+  %c = addrspacecast ptr addrspace(3) %sptr to ptr
   %add_a = getelementptr inbounds i8, ptr %a, i32 %offset
   %ptr = select i1 %cond1, ptr %add_a, ptr %b
   %ptr2 = select i1 %cond2, ptr %ptr, ptr %c
@@ -227,22 +227,22 @@ define amdgpu_kernel void @no_alias_addr_space_select_atomicrmw(ptr addrspace(5)
   ret void
 }
 
-define amdgpu_kernel void @no_alias_addr_space_branch_atomicrmw(ptr addrspace(5) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
+define amdgpu_kernel void @no_alias_addr_space_branch_atomicrmw(ptr addrspace(3) %sptr, i1 %cond1, i1 %cond2, i32 %val, i32 %offset) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @no_alias_addr_space_branch_atomicrmw(
-; CHECK-SAME: ptr addrspace(5) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr addrspace(3) [[SPTR:%.*]], i1 [[COND1:%.*]], i1 [[COND2:%.*]], i32 [[VAL:%.*]], i32 [[OFFSET:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    br i1 [[COND1]], label %[[BB_1_TRUE:.*]], label %[[BB_1_FALSE:.*]]
 ; CHECK:       [[BB_1_TRUE]]:
 ; CHECK-NEXT:    [[A:%.*]] = addrspacecast ptr addrspace(1) @gptr to ptr
 ; CHECK-NEXT:    br label %[[BB_1_END:.*]]
 ; CHECK:       [[BB_1_FALSE]]:
-; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(3)
-; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(3) [[LPTR]] to ptr
+; CHECK-NEXT:    [[LPTR:%.*]] = alloca i32, align 4, addrspace(5)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(5) [[LPTR]] to ptr
 ; CHECK-NEXT:    br label %[[BB_1_END]]
 ; CHECK:       [[BB_1_END]]:
 ; CHECK-NEXT:    [[PTR1:%.*]] = phi ptr [ [[A]], %[[BB_1_TRUE]] ], [ [[B]], %[[BB_1_FALSE]] ]
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[BB_2_TRUE:.*]], label %[[BB_2_END:.*]]
 ; CHECK:       [[BB_2_TRUE]]:
-; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(5) [[SPTR]] to ptr
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr addrspace(3) [[SPTR]] to ptr
 ; CHECK-NEXT:    br label %[[BB_2_END]]
 ; CHECK:       [[BB_2_END]]:
 ; CHECK-NEXT:    [[PTR2:%.*]] = phi ptr [ [[PTR1]], %[[BB_1_END]] ], [ [[C]], %[[BB_2_TRUE]] ]
@@ -265,8 +265,8 @@ bb.1.true:
   br label %bb.1.end
 
 bb.1.false:
-  %lptr = alloca i32, align 4, addrspace(3)
-  %b = addrspacecast ptr addrspace(3) %lptr to ptr
+  %lptr = alloca i32, align 4, addrspace(5)
+  %b = addrspacecast ptr addrspace(5) %lptr to ptr
   br label %bb.1.end
 
 bb.1.end:
@@ -274,7 +274,7 @@ bb.1.end:
   br i1 %cond2, label %bb.2.true, label %bb.2.end
 
 bb.2.true:
-  %c = addrspacecast ptr addrspace(5) %sptr to ptr
+  %c = addrspacecast ptr addrspace(3) %sptr to ptr
   br label %bb.2.end
 
 bb.2.end:
