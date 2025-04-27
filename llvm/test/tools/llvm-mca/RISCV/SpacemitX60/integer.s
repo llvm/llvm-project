@@ -233,10 +233,10 @@ bseti a0, a1, 1
 # CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  MULHU                      mulhu	a0, a0, a0
 # CHECK-NEXT:  1      6     0.50                         6     SMX60_IEU                                  MULHSU                     mulhsu	a0, a0, a0
 # CHECK-NEXT:  1      3     0.50                         3     SMX60_IEU                                  MULW                       mulw	a0, a0, a0
-# CHECK-NEXT:  1      23    23.00                        23    SMX60_IEU[23],SMX60_IEUA[23]               DIV                        div	a0, a1, a2
-# CHECK-NEXT:  1      23    23.00                        23    SMX60_IEU[23],SMX60_IEUA[23]               DIVU                       divu	a0, a1, a2
-# CHECK-NEXT:  1      23    23.00                        23    SMX60_IEU[23],SMX60_IEUA[23]               REM                        rem	a0, a1, a2
-# CHECK-NEXT:  1      23    23.00                        23    SMX60_IEU[23],SMX60_IEUA[23]               REMU                       remu	a0, a1, a2
+# CHECK-NEXT:  1      3     3.00                         3     SMX60_IEU[3],SMX60_IEUA[3]                 DIV                        div	a0, a1, a2
+# CHECK-NEXT:  1      3     3.00                         3     SMX60_IEU[3],SMX60_IEUA[3]                 DIVU                       divu	a0, a1, a2
+# CHECK-NEXT:  1      3     3.00                         3     SMX60_IEU[3],SMX60_IEUA[3]                 REM                        rem	a0, a1, a2
+# CHECK-NEXT:  1      3     3.00                         3     SMX60_IEU[3],SMX60_IEUA[3]                 REMU                       remu	a0, a1, a2
 # CHECK-NEXT:  1      3     3.00                         3     SMX60_IEU[3],SMX60_IEUA[3]                 DIVW                       divw	a0, a1, a2
 # CHECK-NEXT:  1      3     3.00                         3     SMX60_IEU[3],SMX60_IEUA[3]                 DIVUW                      divuw	a0, a1, a2
 # CHECK-NEXT:  1      3     3.00                         3     SMX60_IEU[3],SMX60_IEUA[3]                 REMW                       remw	a0, a1, a2
@@ -301,7 +301,7 @@ bseti a0, a1, 1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]
-# CHECK-NEXT:  -     155.00 43.00  5.50   5.50
+# CHECK-NEXT:  -     75.00  43.00  5.50   5.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  Instructions:
@@ -360,10 +360,10 @@ bseti a0, a1, 1
 # CHECK-NEXT:  -     0.50   0.50    -      -     mulhu	a0, a0, a0
 # CHECK-NEXT:  -     0.50   0.50    -      -     mulhsu	a0, a0, a0
 # CHECK-NEXT:  -     0.50   0.50    -      -     mulw	a0, a0, a0
-# CHECK-NEXT:  -     23.00   -      -      -     div	a0, a1, a2
-# CHECK-NEXT:  -     23.00   -      -      -     divu	a0, a1, a2
-# CHECK-NEXT:  -     23.00   -      -      -     rem	a0, a1, a2
-# CHECK-NEXT:  -     23.00   -      -      -     remu	a0, a1, a2
+# CHECK-NEXT:  -     3.00    -      -      -     div	a0, a1, a2
+# CHECK-NEXT:  -     3.00    -      -      -     divu	a0, a1, a2
+# CHECK-NEXT:  -     3.00    -      -      -     rem	a0, a1, a2
+# CHECK-NEXT:  -     3.00    -      -      -     remu	a0, a1, a2
 # CHECK-NEXT:  -     3.00    -      -      -     divw	a0, a1, a2
 # CHECK-NEXT:  -     3.00    -      -      -     divuw	a0, a1, a2
 # CHECK-NEXT:  -     3.00    -      -      -     remw	a0, a1, a2
