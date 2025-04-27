@@ -1,0 +1,26 @@
+# RUN: %clang_host -g -O0 %S/Inputs/sigchld.c -o %t.out
+# RUN: %lldb %t.out -b -s %s 2>&1 | FileCheck %s
+
+list
+# CHECK: note: No source available 
+
+b main
+# CHECK: Breakpoint 1:
+
+r
+# CHECK: int main()
+
+list
+# CHECK: if (child_pid == 0)
+
+list
+# CHECK: printf("signo = %d\n", SIGCHLD);
+
+list
+# CHECK: return 0;
+
+list 
+# CHECK: note: Reached end of the file, no more to page
+
+list 
+# CHECK: note: Reached end of the file, no more to page
