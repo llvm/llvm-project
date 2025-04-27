@@ -192,8 +192,7 @@ public:
         everConservativelyAllocatable(Other.everConservativelyAllocatable)
 #endif
   {
-    if (NumOpts > 0)
-      llvm::copy(Other.optUnsafeEdges(), &OptUnsafeEdges[0]);
+    llvm::copy(Other.optUnsafeEdges(), &OptUnsafeEdges[0]);
   }
 
   NodeMetadata(NodeMetadata &&) = default;
