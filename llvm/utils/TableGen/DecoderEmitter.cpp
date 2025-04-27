@@ -2145,16 +2145,14 @@ static void emitInsertBits(formatted_raw_ostream &OS) {
 // Helper function for inserting bits extracted from an encoded instruction into
 // a field.
 template <typename InsnType>
-static std::enable_if_t<std::is_integral<InsnType>::value>
-insertBits(InsnType &field, InsnType bits, unsigned startBit, unsigned numBits) {
-  assert(startBit + numBits <= sizeof field * 8);
-  field |= (InsnType)bits << startBit;
-}
-
-template <typename InsnType>
-static std::enable_if_t<!std::is_integral<InsnType>::value>
-insertBits(InsnType &field, uint64_t bits, unsigned startBit, unsigned numBits) {
-  field.insertBits(bits, startBit, numBits);
+static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
+                       unsigned numBits) {
+  if constexpr (std::is_integral<InsnType>::value) {
+    assert(startBit + numBits <= sizeof field * 8);
+    field |= (InsnType)bits << startBit;
+  } else {
+    field.insertBits(bits, startBit, numBits);
+  }
 }
 )";
 }
