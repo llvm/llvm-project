@@ -28,6 +28,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/StringSaver.h"
@@ -342,22 +343,8 @@ struct CallsiteInfo {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
   OS << "Callee: " << SNI.Callee;
-  bool First = true;
-  OS << " Clones: ";
-  for (auto V : SNI.Clones) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << V;
-  }
-  First = true;
-  OS << " StackIds: ";
-  for (auto Id : SNI.StackIdIndices) {
-    if (!First)
-      OS << ", ";
-    First = false;
-    OS << Id;
-  }
+  OS << " Clones: " << llvm::interleaved(SNI.Clones);
+  OS << " StackIds: " << llvm::interleaved(SNI.StackIdIndices);
   return OS;
 }
 
