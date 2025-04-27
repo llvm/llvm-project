@@ -97,7 +97,7 @@ public:
 
 private:
   unsigned Length;
-  std::unique_ptr<PBQPNum []> Data;
+  std::unique_ptr<PBQPNum []> Data;// Use OwningArrayRef
 };
 
 /// Return a hash_value for the given vector.
