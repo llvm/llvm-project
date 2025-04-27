@@ -1717,20 +1717,20 @@ bool SwiftLanguage::IsUninitializedReference(ValueObject &valobj) {
 }
 
 bool SwiftLanguage::GetFunctionDisplayName(
-    const SymbolContext *sc, const ExecutionContext *exe_ctx,
+    const SymbolContext &sc, const ExecutionContext *exe_ctx,
     FunctionNameRepresentation representation, Stream &s) {
   switch (representation) {
   case Language::FunctionNameRepresentation::eName:
     // No need to customize this.
     return false;
   case Language::FunctionNameRepresentation::eNameWithNoArgs: {
-    if (!sc->function)
+    if (!sc.function)
       return false;
-    if (sc->function->GetLanguage() != eLanguageTypeSwift)
+    if (sc.function->GetLanguage() != eLanguageTypeSwift)
       return false;
     std::string display_name = SwiftLanguageRuntime::DemangleSymbolAsString(
-        sc->function->GetMangled().GetMangledName().GetStringRef(),
-        SwiftLanguageRuntime::eSimplified, sc, exe_ctx);
+        sc.function->GetMangled().GetMangledName().GetStringRef(),
+        SwiftLanguageRuntime::eSimplified, &sc, exe_ctx);
     if (display_name.empty())
       return false;
     s << display_name;
@@ -1744,12 +1744,12 @@ bool SwiftLanguage::GetFunctionDisplayName(
     const InlineFunctionInfo *inline_info = NULL;
     VariableListSP variable_list_sp;
     bool get_function_vars = true;
-    if (sc->block) {
-      Block *inline_block = sc->block->GetContainingInlinedBlock();
+    if (sc.block) {
+      Block *inline_block = sc.block->GetContainingInlinedBlock();
 
       if (inline_block) {
         get_function_vars = false;
-        inline_info = sc->block->GetInlinedFunctionInfo();
+        inline_info = sc.block->GetInlinedFunctionInfo();
         if (inline_info)
           variable_list_sp = inline_block->GetBlockVariableList(true);
       }
@@ -1757,7 +1757,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
 
     if (get_function_vars) {
       variable_list_sp =
-          sc->function->GetBlock(true).GetBlockVariableList(true);
+          sc.function->GetBlock(true).GetBlockVariableList(true);
     }
 
     VariableList args;
