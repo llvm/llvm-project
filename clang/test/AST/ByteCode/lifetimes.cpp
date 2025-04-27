@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -verify=expected,both -std=c++20 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -verify=ref,both      -std=c++20 %s
 
 /// FIXME: Slight difference in diagnostic output here.
 
@@ -67,4 +67,24 @@ namespace PrimitiveMoveFn {
     const float y = 100;
     const float &x = y;
   }
+}
+
+/// FIXME:
+///  1) This doesn't work for parameters
+///  2) We need to do this for all fields in composite scenarios
+namespace PseudoDtor {
+  typedef int I;
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    {
+      int a; // both-note {{destroying object 'a' whose lifetime has already ended}}
+      a.~I();
+    }
+    return true;
+  }
+
+  int k;
+  struct T {
+    int n : (k.~I(), 1); // both-error {{constant expression}} \
+                         // both-note {{visible outside that expression}}
+  };
 }

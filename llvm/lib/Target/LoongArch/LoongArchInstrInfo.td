@@ -1779,7 +1779,7 @@ def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_8B GPR:$rj)>;
 
 /// Loads
 
-multiclass LdPat<PatFrag LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
+multiclass LdPat<PatFrags LoadOp, LAInst Inst, ValueType vt = GRLenVT> {
   def : Pat<(vt (LoadOp BaseAddr:$rj)), (Inst BaseAddr:$rj, 0)>;
   def : Pat<(vt (LoadOp (AddrConstant GPR:$rj, simm12:$imm12))),
             (Inst GPR:$rj, simm12:$imm12)>;
@@ -1890,9 +1890,10 @@ def : Pat<(atomic_fence 5, timm), (DBAR 0b10010)>; // release
 def : Pat<(atomic_fence 6, timm), (DBAR 0b10000)>; // acqrel
 def : Pat<(atomic_fence 7, timm), (DBAR 0b10000)>; // seqcst
 
-defm : LdPat<atomic_load_8, LD_B>;
-defm : LdPat<atomic_load_16, LD_H>;
-defm : LdPat<atomic_load_32, LD_W>;
+defm : LdPat<atomic_load_asext_8, LD_B>;
+defm : LdPat<atomic_load_asext_16, LD_H>;
+defm : LdPat<atomic_load_32, LD_W>, Requires<[IsLA32]>;
+defm : LdPat<atomic_load_asext_32, LD_W>, Requires<[IsLA64]>;
 
 class release_seqcst_store<PatFrag base>
     : PatFrag<(ops node:$val, node:$ptr), (base node:$val, node:$ptr), [{
