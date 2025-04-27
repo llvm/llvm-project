@@ -476,40 +476,40 @@ struct __sanitizer_cmsghdr {
   int cmsg_level;
   int cmsg_type;
 };
-#elif SANITIZER_MUSL
+#  elif SANITIZER_MUSL
 struct __sanitizer_msghdr {
   void *msg_name;
   unsigned msg_namelen;
   struct __sanitizer_iovec *msg_iov;
-#  if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
+#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
   int __pad1;
-#  endif
+#    endif
   int msg_iovlen;
-#  if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
   int __pad1;
-#  endif
+#    endif
   void *msg_control;
-#  if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
+#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
   int __pad2;
-#  endif
+#    endif
   unsigned msg_controllen;
-#  if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
   int __pad2;
-#  endif
+#    endif
   int msg_flags;
 };
 struct __sanitizer_cmsghdr {
-#  if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
+#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __BIG_ENDIAN
   int __pad1;
-#  endif
+#    endif
   unsigned cmsg_len;
-#  if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
+#    if __LONG_MAX > 0x7fffffff && __BYTE_ORDER == __LITTLE_ENDIAN
   int __pad1;
-#  endif
+#    endif
   int cmsg_level;
   int cmsg_type;
 };
-#else
+#  else
 // In POSIX, int msg_iovlen; socklen_t msg_controllen; socklen_t cmsg_len; but
 // many implementations don't conform to the standard.
 struct __sanitizer_msghdr {
@@ -526,9 +526,9 @@ struct __sanitizer_cmsghdr {
   int cmsg_level;
   int cmsg_type;
 };
-#endif
+#  endif
 
-#if SANITIZER_LINUX
+#  if SANITIZER_LINUX
 struct __sanitizer_mmsghdr {
   __sanitizer_msghdr msg_hdr;
   unsigned int msg_len;
