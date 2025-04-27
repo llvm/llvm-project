@@ -5808,6 +5808,62 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
   return nullptr;
 }
 
+static void decomposeAddSub(Value *V, DenseMap<Value *, int32_t> &Row,
+                            Constant *&C, uint32_t Depth, bool Add) {
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (Depth && !Row.contains(V)) {
+      if (I->getOpcode() == Instruction::Add ||
+          I->getOpcode() == Instruction::Sub) {
+        decomposeAddSub(I->getOperand(0), Row, C, Depth - 1, Add);
+        decomposeAddSub(I->getOperand(1), Row, C, Depth - 1,
+                        (I->getOpcode() == Instruction::Sub) ^ Add);
+        return;
+      }
+      Value *Op0;
+      // ~X -> -X - 1
+      if (match(V, m_Not(m_Value(Op0)))) {
+        decomposeAddSub(Op0, Row, C, Depth - 1, !Add);
+        decomposeAddSub(Constant::getAllOnesValue(Op0->getType()), Row, C,
+                        Depth - 1, Add);
+        return;
+      }
+    }
+  }
+
+  Constant *CI;
+  if (match(V, m_ImmConstant(CI))) {
+    if (auto *Res =
+            (Add ? ConstantExpr::getAdd(C, CI) : ConstantExpr::getSub(C, CI))) {
+      C = Res;
+      return;
+    }
+  }
+
+  Row[V] += Add ? 1 : -1;
+}
+
+static Value *foldICmpEqualityWithAddSubTree(ICmpInst::Predicate Pred,
+                                             Value *Op0, Value *Op1,
+                                             const SimplifyQuery &SQ) {
+  if (Op0->getType()->isPtrOrPtrVectorTy())
+    return nullptr;
+
+  if (match(Op1, m_Constant()))
+    return nullptr;
+
+  DenseMap<Value *, int32_t> Row;
+  Constant *C = Constant::getNullValue(Op0->getType());
+  constexpr uint32_t Depth = 4;
+  decomposeAddSub(Op0, Row, C, Depth, /*Add=*/true);
+  decomposeAddSub(Op1, Row, C, Depth, /*Add=*/false);
+
+  for (auto &[V, K] : Row)
+    if (K != 0)
+      return nullptr;
+
+  return ConstantExpr::getICmp(Pred, C, Constant::getNullValue(Op0->getType()));
+}
+
 Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
   if (!I.isEquality())
     return nullptr;
@@ -6053,6 +6109,10 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
                           *IsZero ? A
                                   : ConstantInt::getNullValue(A->getType()));
   }
+
+  if (auto *V = foldICmpEqualityWithAddSubTree(Pred, Op0, Op1,
+                                               SQ.getWithInstruction(&I)))
+    return replaceInstUsesWith(I, V);
 
   return nullptr;
 }
