@@ -39,6 +39,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -2955,11 +2956,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   for (auto &Edge : CallerEdges)
     OS << "\t\t" << *Edge << "\n";
   if (!Clones.empty()) {
-    OS << "\tClones: ";
-    ListSeparator LS;
-    for (auto *Clone : Clones)
-      OS << LS << Clone;
-    OS << "\n";
+    OS << "\tClones: " << llvm::interleaved(Clones) << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << "\n";
   }
