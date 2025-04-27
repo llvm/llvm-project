@@ -37,8 +37,11 @@ using namespace __asan;
     } else if (UNLIKELY(!AsanInited())) {                     \
       return internal_memcpy(to, from, size);                 \
     }                                                         \
-    return SANITIZER_AIX ? internal_memcpy(to, from, size) :  \
-      REAL(memcpy)(to, from, size);                           \
+#if !SANITIZER_AIX
+    return REAL(memcpy)(to, from, size);                      \
+#else
+    return internal_memcpy(to, from, size);                   \
+#endif
   } while (0)
 
 // memset is called inside Printf.
