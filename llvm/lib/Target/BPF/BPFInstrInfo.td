@@ -1023,12 +1023,12 @@ foreach P = [[atomic_load_sub_i64_monotonic,  XADDD],
 class binop_no_use<SDPatternOperator operator>
       : PatFrag<(ops node:$A, node:$B),
                 (operator node:$A, node:$B),
-                [{ return SDValue(N, 0).use_empty(); }]>;
+                [{ return Op.use_empty(); }]>;
 
 class binop_has_use<SDPatternOperator operator>
       : PatFrag<(ops node:$A, node:$B),
                 (operator node:$A, node:$B),
-                [{ return !SDValue(N, 0).use_empty(); }]>;
+                [{ return !Op.use_empty(); }]>;
 
 foreach op = [add, and, or, xor] in {
 def atomic_load_ # op # _i64_monotonic_nu:

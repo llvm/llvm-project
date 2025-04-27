@@ -858,7 +858,7 @@ def fmaxnum_like : PatFrags<(ops node:$src0, node:$src1),
 
 class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
   let PredicateCode = [{
-    return CurDAG->isKnownNeverNaN(SDValue(N,0));
+    return CurDAG->isKnownNeverNaN(Op);
   }];
   let GISelPredicateCode = [{
     return isKnownNeverNaN(MI.getOperand(0).getReg(), MRI);
