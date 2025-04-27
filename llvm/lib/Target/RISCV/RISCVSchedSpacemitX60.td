@@ -54,6 +54,7 @@ def : WriteRes<WriteJal, [SMX60_IEUA]>;
 def : WriteRes<WriteJalr, [SMX60_IEUA]>;
 
 // Integer arithmetic and logic
+// Latency of ALU instructions is 1, but add.uw is 2
 def : WriteRes<WriteIALU32, [SMX60_IEU]>;
 def : WriteRes<WriteIALU, [SMX60_IEU]>;
 def : WriteRes<WriteShiftImm32, [SMX60_IEU]>;
@@ -62,14 +63,13 @@ def : WriteRes<WriteShiftReg32, [SMX60_IEU]>;
 def : WriteRes<WriteShiftReg, [SMX60_IEU]>;
 
 // Integer multiplication
-let Latency = 4 in {
-  def : WriteRes<WriteIMul, [SMX60_IEU]>;
-  def : WriteRes<WriteIMul32, [SMX60_IEU]>;
-}
+// The latency of mul is 5, while mulh, mulhsu, mulhu is 6.
+// Worst case latency is used
+def : WriteRes<WriteIMul, [SMX60_IEU]>  { let Latency = 6; }
+def : WriteRes<WriteIMul32, [SMX60_IEU]>  { let Latency = 3; }
 
 // Integer division/remainder
-// Worst case latency is used.
-let Latency = 15, ReleaseAtCycles = [15] in {
+let Latency = 3, ReleaseAtCycles = [3] in {
   def : WriteRes<WriteIDiv32, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem32, [SMX60_IEUA]>;
 }
@@ -96,13 +96,14 @@ let Latency = 2 in {
 }
 
 def : WriteRes<WriteORCB, [SMX60_IEU]>;
-
 def : WriteRes<WriteIMinMax, [SMX60_IEU]>;
-
 def : WriteRes<WriteREV8, [SMX60_IEU]>;
 
-def : WriteRes<WriteSHXADD, [SMX60_IEU]>;
-def : WriteRes<WriteSHXADD32, [SMX60_IEU]>;
+let Latency = 2 in {
+  def : WriteRes<WriteSHXADD, [SMX60_IEU]>;
+  def : WriteRes<WriteSHXADD32, [SMX60_IEU]>;
+  def : WriteRes<WriteCLMUL, [SMX60_IEU]>;
+}
 
 // Single-bit instructions
 def : WriteRes<WriteSingleBit, [SMX60_IEU]>;
@@ -142,92 +143,90 @@ let Latency = 5 in {
 }
 
 // Floating point units Half precision
-let Latency = 3 in {
+let Latency = 4 in {
   def : WriteRes<WriteFAdd16, [SMX60_FP]>;
   def : WriteRes<WriteFMul16, [SMX60_FP]>;
   def : WriteRes<WriteFSGNJ16, [SMX60_FP]>;
   def : WriteRes<WriteFMinMax16, [SMX60_FP]>;
 }
-def : WriteRes<WriteFMA16, [SMX60_FP]> { let Latency = 4; }
+def : WriteRes<WriteFMA16, [SMX60_FP]> { let Latency = 5; }
 
-// Worst case latency is used
-let Latency = 7, ReleaseAtCycles = [7] in {
+let Latency = 12, ReleaseAtCycles = [12] in {
   def :  WriteRes<WriteFDiv16, [SMX60_FP]>;
   def :  WriteRes<WriteFSqrt16, [SMX60_FP]>;
 }
 
 // Single precision
-let Latency = 3 in {
+let Latency = 4 in {
   def : WriteRes<WriteFAdd32, [SMX60_FP]>;
+  def : WriteRes<WriteFMul32, [SMX60_FP]>;
   def : WriteRes<WriteFSGNJ32, [SMX60_FP]>;
   def : WriteRes<WriteFMinMax32, [SMX60_FP]>;
 }
-def : WriteRes<WriteFMul32, [SMX60_FP]> { let Latency = 4; }
 def : WriteRes<WriteFMA32, [SMX60_FP]> { let Latency = 5; }
 
-// Worst case latency is used
-let Latency = 10, ReleaseAtCycles = [10] in {
+let Latency = 15, ReleaseAtCycles = [15] in {
   def :  WriteRes<WriteFDiv32, [SMX60_FP]>;
   def :  WriteRes<WriteFSqrt32, [SMX60_FP]>;
 }
 
 // Double precision
-let Latency = 4 in {
+let Latency = 5 in {
   def : WriteRes<WriteFAdd64, [SMX60_FP]>;
   def : WriteRes<WriteFMul64, [SMX60_FP]>;
-}
-let Latency = 3 in {
   def : WriteRes<WriteFSGNJ64, [SMX60_FP]>;
-  def : WriteRes<WriteFMinMax64, [SMX60_FP]>;
 }
-def : WriteRes<WriteFMA64, [SMX60_FP]> { let Latency = 5; }
+def : WriteRes<WriteFMinMax64, [SMX60_FP]> { let Latency = 4; }
+def : WriteRes<WriteFMA64, [SMX60_FP]> { let Latency = 6; }
 
-let Latency = 10, ReleaseAtCycles = [10] in {
+let Latency = 22, ReleaseAtCycles = [22] in {
   def :  WriteRes<WriteFDiv64, [SMX60_FP]>;
   def :  WriteRes<WriteFSqrt64, [SMX60_FP]>;
 }
 
 // Conversions
-let Latency = 3 in {
+let Latency = 6 in {
+  def : WriteRes<WriteFCvtF16ToI32, [SMX60_IEU]>;
+  def : WriteRes<WriteFCvtF32ToI32, [SMX60_IEU]>;
+  def : WriteRes<WriteFCvtF32ToI64, [SMX60_IEU]>;
+  def : WriteRes<WriteFCvtF64ToI64, [SMX60_IEU]>;
+  def : WriteRes<WriteFCvtF64ToI32, [SMX60_IEU]>;
+  def : WriteRes<WriteFCvtF16ToI64, [SMX60_IEU]>;
+}
+
+let Latency = 4 in {
   def : WriteRes<WriteFCvtI32ToF16, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtI32ToF32, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtI32ToF64, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtI64ToF16, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtI64ToF32, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtI64ToF64, [SMX60_IEU]>;
-  def : WriteRes<WriteFCvtF16ToI32, [SMX60_IEU]>;
-  def : WriteRes<WriteFCvtF16ToI64, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtF16ToF32, [SMX60_FP]>;
   def : WriteRes<WriteFCvtF16ToF64, [SMX60_FP]>;
-  def : WriteRes<WriteFCvtF32ToI32, [SMX60_IEU]>;
-  def : WriteRes<WriteFCvtF32ToI64, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtF32ToF16, [SMX60_FP]>;
   def : WriteRes<WriteFCvtF32ToF64, [SMX60_FP]>;
-  def : WriteRes<WriteFCvtF64ToI32, [SMX60_IEU]>;
-  def : WriteRes<WriteFCvtF64ToI64, [SMX60_IEU]>;
   def : WriteRes<WriteFCvtF64ToF16, [SMX60_FP]>;
   def : WriteRes<WriteFCvtF64ToF32, [SMX60_FP]>;
 }
 
-let Latency = 2 in {
+let Latency = 6 in {
   def : WriteRes<WriteFClass16, [SMX60_FP]>;
   def : WriteRes<WriteFClass32, [SMX60_FP]>;
   def : WriteRes<WriteFClass64, [SMX60_FP]>;
-}
 
-let Latency = 4 in {
   def : WriteRes<WriteFCmp16, [SMX60_FP]>;
   def : WriteRes<WriteFCmp32, [SMX60_FP]>;
   def : WriteRes<WriteFCmp64, [SMX60_FP]>;
+
+  def : WriteRes<WriteFMovF32ToI32, [SMX60_IEU]>;
+  def : WriteRes<WriteFMovF16ToI16, [SMX60_IEU]>;
 }
 
-let Latency = 2 in {
+let Latency = 4 in {
   def : WriteRes<WriteFMovI16ToF16, [SMX60_IEU]>;
-  def : WriteRes<WriteFMovF16ToI16, [SMX60_IEU]>;
-  def : WriteRes<WriteFMovI32ToF32, [SMX60_IEU]>;
-  def : WriteRes<WriteFMovF32ToI32, [SMX60_IEU]>;
-  def : WriteRes<WriteFMovI64ToF64, [SMX60_IEU]>;
   def : WriteRes<WriteFMovF64ToI64, [SMX60_IEU]>;
+  def : WriteRes<WriteFMovI64ToF64, [SMX60_IEU]>;
+  def : WriteRes<WriteFMovI32ToF32, [SMX60_IEU]>;
 }
 
 // Others
@@ -334,6 +333,7 @@ def : ReadAdvance<ReadIMinMax, 0>;
 def : ReadAdvance<ReadREV8, 0>;
 def : ReadAdvance<ReadSHXADD, 0>;
 def : ReadAdvance<ReadSHXADD32, 0>;
+def : ReadAdvance<ReadCLMUL, 0>;
 // Single-bit instructions
 def : ReadAdvance<ReadSingleBit, 0>;
 def : ReadAdvance<ReadSingleBitImm, 0>;
@@ -343,7 +343,6 @@ def : ReadAdvance<ReadSingleBitImm, 0>;
 defm : UnsupportedSchedV;
 defm : UnsupportedSchedXsfvcp;
 defm : UnsupportedSchedZabha;
-defm : UnsupportedSchedZbc;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
