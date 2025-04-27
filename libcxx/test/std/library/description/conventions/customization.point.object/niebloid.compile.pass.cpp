@@ -32,7 +32,7 @@
 //
 // As of P3136R1, niebloids (formally known as algorithm function objects) are required to be CPOs.
 //
-// libc++ always implements niebloids in the same way as CPOs;
+// libc++ implements niebloids in the same way as CPOs since LLVM 14;
 // therefore this file should stay in sync with ./cpo.compile.pass.cpp.
 
 template <class CPO, class... Args>
