@@ -444,9 +444,10 @@ public:
       return false;
     if (!ObjCMsgExpr->isInstanceMessage())
       return false;
-    auto *Receiver = ObjCMsgExpr->getInstanceReceiver()->IgnoreParenCasts();
+    auto *Receiver = ObjCMsgExpr->getInstanceReceiver();
     if (!Receiver)
       return false;
+    Receiver = Receiver->IgnoreParenCasts();
     if (auto *Inner = dyn_cast<ObjCMessageExpr>(Receiver)) {
       if (InnerExpr)
         *InnerExpr = Inner;
