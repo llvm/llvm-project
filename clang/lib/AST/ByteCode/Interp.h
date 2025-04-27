@@ -162,6 +162,7 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
+bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -3242,7 +3243,7 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
-  return CheckActive(S, OpPC, Ptr, AK_Destroy);
+  return CheckDestructor(S, OpPC, Ptr);
 }
 
 //===----------------------------------------------------------------------===//
