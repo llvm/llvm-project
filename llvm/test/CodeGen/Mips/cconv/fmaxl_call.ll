@@ -8,7 +8,7 @@ define fp128 @call_fmaxl(fp128 %a, fp128 %b) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 31, -8
-; CHECK-NEXT:    jal fmaxl
+; CHECK-NEXT:    jal fmaxf128
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    mov.d $f12, $f0
 ; CHECK-NEXT:    jal f

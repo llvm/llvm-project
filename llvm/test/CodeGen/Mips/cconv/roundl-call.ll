@@ -25,8 +25,8 @@
 define void @roundl_call(fp128 %value) {
 entry:
 ; ALL-LABEL: roundl_call:
-; N32:          lw      $25, %call16(roundl)($gp)
-; N64:          ld      $25, %call16(roundl)($gp)
+; N32:          lw      $25, %call16(roundf128)($gp)
+; N64:          ld      $25, %call16(roundf128)($gp)
 
 ; SOFT-FLOAT:   sd      $4, 8(${{[0-9]+}})
 ; SOFT-FLOAT:   sd      $2, 0(${{[0-9]+}})

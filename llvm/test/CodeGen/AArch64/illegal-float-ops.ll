@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-android -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-GNU
+; RUN: llc -mtriple=aarch64-linux-android -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-ANDROID
 
 @varfloat = global float 0.0
 @vardouble = global double 0.0
@@ -22,7 +22,8 @@ define void @test_cos(float %float, double %double, fp128 %fp128) {
 
    %cosfp128 = call fp128 @llvm.cos.f128(fp128 %fp128)
    store fp128 %cosfp128, ptr @varfp128
-; CHECK: bl cosl
+; CHECK-GNU: bl cosf128
+; CHECK-ANDROID: bl cosl
 
   ret void
 }
@@ -44,7 +45,8 @@ define void @test_exp(float %float, double %double, fp128 %fp128) {
 
    %expfp128 = call fp128 @llvm.exp.f128(fp128 %fp128)
    store fp128 %expfp128, ptr @varfp128
-; CHECK: bl expl
+; CHECK-GNU: bl expf128
+; CHECK-ANDROID: bl expl
 
   ret void
 }
@@ -66,7 +68,8 @@ define void @test_exp2(float %float, double %double, fp128 %fp128) {
 
    %exp2fp128 = call fp128 @llvm.exp2.f128(fp128 %fp128)
    store fp128 %exp2fp128, ptr @varfp128
-; CHECK: bl exp2l
+; CHECK-GNU: bl exp2f128
+; CHECK-ANDROID: bl exp2l
   ret void
 
 }
@@ -88,7 +91,8 @@ define void @test_log(float %float, double %double, fp128 %fp128) {
 
    %logfp128 = call fp128 @llvm.log.f128(fp128 %fp128)
    store fp128 %logfp128, ptr @varfp128
-; CHECK: bl logl
+; CHECK-GNU: bl logf128
+; CHECK-ANDROID: bl logl
 
   ret void
 }
@@ -110,7 +114,8 @@ define void @test_log2(float %float, double %double, fp128 %fp128) {
 
    %log2fp128 = call fp128 @llvm.log2.f128(fp128 %fp128)
    store fp128 %log2fp128, ptr @varfp128
-; CHECK: bl log2l
+; CHECK-GNU: bl log2f128
+; CHECK-ANDROID: bl log2l
   ret void
 
 }
@@ -132,7 +137,8 @@ define void @test_log10(float %float, double %double, fp128 %fp128) {
 
    %log10fp128 = call fp128 @llvm.log10.f128(fp128 %fp128)
    store fp128 %log10fp128, ptr @varfp128
-; CHECK: bl log10l
+; CHECK-GNU: bl log10f128
+; CHECK-ANDROID: bl log10l
 
   ret void
 }
@@ -154,7 +160,8 @@ define void @test_sin(float %float, double %double, fp128 %fp128) {
 
    %sinfp128 = call fp128 @llvm.sin.f128(fp128 %fp128)
    store fp128 %sinfp128, ptr @varfp128
-; CHECK: bl sinl
+; CHECK-GNU: bl sinf128
+; CHECK-ANDROID: bl sinl
   ret void
 
 }
@@ -176,7 +183,8 @@ define void @test_tan(float %float, double %double, fp128 %fp128) {
 
    %tanfp128 = call fp128 @llvm.tan.f128(fp128 %fp128)
    store fp128 %tanfp128, ptr @varfp128
-; CHECK: bl tanl
+; CHECK-GNU: bl tanf128
+; CHECK-ANDROID: bl tanl
   ret void
 }
 
@@ -197,7 +205,8 @@ define void @test_acos(float %float, double %double, fp128 %fp128) {
 
    %acosfp128 = call fp128 @llvm.acos.f128(fp128 %fp128)
    store fp128 %acosfp128, ptr @varfp128
-; CHECK: bl acosl
+; CHECK-GNU: bl acosf128
+; CHECK-ANDROID: bl acosl
   ret void
 }
 
@@ -218,7 +227,8 @@ define void @test_asin(float %float, double %double, fp128 %fp128) {
 
    %asinfp128 = call fp128 @llvm.asin.f128(fp128 %fp128)
    store fp128 %asinfp128, ptr @varfp128
-; CHECK: bl asinl
+; CHECK-GNU: bl asinf128
+; CHECK-ANDROID: bl asinl
   ret void
 }
 
@@ -239,7 +249,8 @@ define void @test_atan(float %float, double %double, fp128 %fp128) {
 
    %atanfp128 = call fp128 @llvm.atan.f128(fp128 %fp128)
    store fp128 %atanfp128, ptr @varfp128
-; CHECK: bl atanl
+; CHECK-GNU: bl atanf128
+; CHECK-ANDROID: bl atanl
   ret void
 }
 
@@ -260,7 +271,8 @@ define void @test_atan2(float %float1, double %double1, fp128 %fp1281, float %fl
 
    %atan2fp128 = call fp128 @llvm.atan2.f128(fp128 %fp1281, fp128 %fp1282)
    store fp128 %atan2fp128, ptr @varfp128
-; CHECK: bl atan2l
+; CHECK-GNU: bl atan2f128
+; CHECK-ANDROID: bl atan2l
   ret void
 }
 
@@ -281,7 +293,8 @@ define void @test_cosh(float %float, double %double, fp128 %fp128) {
 
    %coshfp128 = call fp128 @llvm.cosh.f128(fp128 %fp128)
    store fp128 %coshfp128, ptr @varfp128
-; CHECK: bl coshl
+; CHECK-GNU: bl coshf128
+; CHECK-ANDROID: bl coshl
   ret void
 }
 
@@ -302,7 +315,8 @@ define void @test_sinh(float %float, double %double, fp128 %fp128) {
 
    %sinhfp128 = call fp128 @llvm.sinh.f128(fp128 %fp128)
    store fp128 %sinhfp128, ptr @varfp128
-; CHECK: bl sinhl
+; CHECK-GNU: bl sinhf128
+; CHECK-ANDROID: bl sinhl
   ret void
 }
 
@@ -323,7 +337,8 @@ define void @test_tanh(float %float, double %double, fp128 %fp128) {
 
    %tanhfp128 = call fp128 @llvm.tanh.f128(fp128 %fp128)
    store fp128 %tanhfp128, ptr @varfp128
-; CHECK: bl tanhl
+; CHECK-GNU: bl tanhf128
+; CHECK-ANDROID: bl tanhl
   ret void
 }
 
@@ -344,7 +359,8 @@ define void @test_pow(float %float, double %double, fp128 %fp128) {
 
    %powfp128 = call fp128 @llvm.pow.f128(fp128 %fp128, fp128 %fp128)
    store fp128 %powfp128, ptr @varfp128
-; CHECK: bl powl
+; CHECK-GNU: bl powf128
+; CHECK-ANDROID: bl powl
 
   ret void
 }
@@ -384,7 +400,8 @@ define void @test_frem(float %float, double %double, fp128 %fp128) {
 
   %fremfp128 = frem fp128 %fp128, %fp128
   store fp128 %fremfp128, ptr @varfp128
-; CHECK: bl fmodl
+; CHECK-GNU: bl fmodf128
+; CHECK-ANDROID: bl fmodl
 
   ret void
 }
@@ -396,7 +413,8 @@ define void @test_fma(fp128 %fp128) {
 
   %fmafp128 = call fp128 @llvm.fma.f128(fp128 %fp128, fp128 %fp128, fp128 %fp128)
   store fp128 %fmafp128, ptr @varfp128
-; CHECK: bl fmal
+; CHECK-GNU: bl fmaf128
+; CHECK-ANDROID: bl fmal
 
   ret void
 }

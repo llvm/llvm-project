@@ -535,6 +535,7 @@ struct StaticLibcallNameMap {
 #undef HANDLE_LIBCALL
     };
     for (const auto &NameLibcall : NameLibcalls) {
+      fprintf(stderr, "libcall: %s", NameLibcall.first);
       if (NameLibcall.first != nullptr &&
           getRuntimeLibcallSignatures().Table[NameLibcall.second] !=
               unsupported) {

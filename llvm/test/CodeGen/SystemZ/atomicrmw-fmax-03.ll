@@ -19,7 +19,7 @@ define void @f1(ptr %ret, ptr %src, ptr %b) {
 ; CHECK: la %r4, 160(%r15)
 ; CHECK: std [[FSL]], 176(%r15)
 ; CHECK: std [[FSH]], 184(%r15)
-; CHECK: brasl %r14, fmaxl@PLT
+; CHECK: brasl %r14, fmaxf128@PLT
 ; CHECK: lg [[RH:%r[0-9]+]], 200(%r15)
 ; CHECK: lg [[RL:%r[0-9]+]], 192(%r15)
 ; CHECK: lgdr [[RSH:%r[0-9]+]], [[FSH]]
