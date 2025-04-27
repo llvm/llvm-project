@@ -22,5 +22,3 @@ entry:
   store i32 %1, ptr null, align 4
   ret void
 }
-
-declare <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr>, i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i32>)
