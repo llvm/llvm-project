@@ -314,6 +314,74 @@
 ; CHECK-NEXT:   .vgpr_count:     2
 ; CHECK-NEXT:   .vgpr_spill_count: 0
 ; CHECK-NEXT:   .wavefront_size: 64
+; CHECK-NEXT: - .agpr_count:     0
+; CHECK-NEXT:   .args:
+; CHECK-NEXT:    - .address_space:  global
+; CHECK-NEXT:      .name:           out
+; CHECK-NEXT:      .offset:         0
+; CHECK-NEXT:      .preload_registers: 's[2:3]'
+; CHECK-NEXT:      .size:           8
+; CHECK-NEXT:      .value_kind:     global_buffer
+; CHECK-NEXT:    - .name:           arg0
+; CHECK-NEXT:      .offset:         16
+; CHECK-NEXT:      .preload_registers: s6 s7 s8 s9
+; CHECK-NEXT:      .size:           16
+; CHECK-NEXT:      .value_kind:     by_value
+; CHECK-NEXT:    - .offset:         32
+; CHECK-NEXT:      .size:           4
+; CHECK-NEXT:      .value_kind:     hidden_block_count_x
+; CHECK-NEXT:    - .offset:         36
+; CHECK-NEXT:      .size:           4
+; CHECK-NEXT:      .value_kind:     hidden_block_count_y
+; CHECK-NEXT:    - .offset:         40
+; CHECK-NEXT:      .size:           4
+; CHECK-NEXT:      .value_kind:     hidden_block_count_z
+; CHECK-NEXT:    - .offset:         44
+; CHECK-NEXT:      .size:           2
+; CHECK-NEXT:      .value_kind:     hidden_group_size_x
+; CHECK-NEXT:    - .offset:         46
+; CHECK-NEXT:      .size:           2
+; CHECK-NEXT:      .value_kind:     hidden_group_size_y
+; CHECK-NEXT:    - .offset:         48
+; CHECK-NEXT:      .size:           2
+; CHECK-NEXT:      .value_kind:     hidden_group_size_z
+; CHECK-NEXT:    - .offset:         50
+; CHECK-NEXT:      .size:           2
+; CHECK-NEXT:      .value_kind:     hidden_remainder_x
+; CHECK-NEXT:    - .offset:         52
+; CHECK-NEXT:      .size:           2
+; CHECK-NEXT:      .value_kind:     hidden_remainder_y
+; CHECK-NEXT:    - .offset:         54
+; CHECK-NEXT:      .size:           2
+; CHECK-NEXT:      .value_kind:     hidden_remainder_z
+; CHECK-NEXT:    - .offset:         72
+; CHECK-NEXT:      .size:           8
+; CHECK-NEXT:      .value_kind:     hidden_global_offset_x
+; CHECK-NEXT:    - .offset:         80
+; CHECK-NEXT:      .size:           8
+; CHECK-NEXT:      .value_kind:     hidden_global_offset_y
+; CHECK-NEXT:    - .offset:         88
+; CHECK-NEXT:      .size:           8
+; CHECK-NEXT:      .value_kind:     hidden_global_offset_z
+; CHECK-NEXT:    - .offset:         96
+; CHECK-NEXT:      .size:           2
+; CHECK-NEXT:      .value_kind:     hidden_grid_dims
+; CHECK-NEXT:    - .offset:         104
+; CHECK-NEXT:      .size:           8
+; CHECK-NEXT:      .value_kind:     hidden_printf_buffer
+; CHECK-NEXT:  .group_segment_fixed_size: 0
+; CHECK-NEXT:  .kernarg_segment_align: 16
+; CHECK-NEXT:  .kernarg_segment_size: 288
+; CHECK-NEXT:  .max_flat_workgroup_size: 1024
+; CHECK-NEXT:  .name:           test_prelaod_v6_ptr1_v8i16
+; CHECK-NEXT:  .private_segment_fixed_size: 0
+; CHECK-NEXT:  .sgpr_count:     16
+; CHECK-NEXT:  .sgpr_spill_count: 0
+; CHECK-NEXT:  .symbol:         test_prelaod_v6_ptr1_v8i16.kd
+; CHECK-NEXT:  .uses_dynamic_stack: false
+; CHECK-NEXT:  .vgpr_count:     5
+; CHECK-NEXT:  .vgpr_spill_count: 0
+; CHECK-NEXT:  .wavefront_size: 64
 ; CHECK-NEXT: amdhsa.printf:
 ; CHECK-NEXT:   - '1:1:4:%d\n'
 ; CHECK-NEXT:   - '2:1:8:%g\n'
@@ -377,6 +445,10 @@ define amdgpu_kernel void @test_prelaod_v6_ptr1_i16_i16(ptr addrspace(1) inreg %
   ret void
 }
 
+define amdgpu_kernel void @test_prelaod_v6_ptr1_v8i16(ptr addrspace(1) inreg %out, <8 x i16> inreg %arg0) #1 {
+  store <8 x i16> %arg0, ptr addrspace(1) %out, align 4
+  ret void
+}
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 600}

@@ -303,6 +303,12 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
                                               unsigned &Offset,
                                               msgpack::ArrayDocNode Args,
                                               const MachineFunction &MF) {
+  emitKernelArgCommon(Arg, Offset, Args, MF);
+}
+
+void MetadataStreamerMsgPackV4::emitKernelArgCommon(
+    const Argument &Arg, unsigned &Offset, msgpack::ArrayDocNode Args,
+    const MachineFunction &MF, StringRef PreloadRegisters) {
   const auto *Func = Arg.getParent();
   auto ArgNo = Arg.getArgNo();
   const MDNode *Node;
@@ -361,7 +367,7 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
 
   emitKernelArgImpl(DL, ArgTy, ArgAlign,
                     getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
-                    "" /* PreloadRegisters */, PointeeAlign, Name, TypeName,
+                    PreloadRegisters, PointeeAlign, Name, TypeName,
                     BaseTypeName, ActAccQual, AccQual, TypeQual);
 }
 
@@ -768,9 +774,9 @@ void MetadataStreamerMsgPackV6::emitHiddenKernelArgWithPreload(
     msgpack::ArrayDocNode Args, const AMDGPUFunctionArgInfo &ArgInfo) {
 
   SmallString<16> PreloadStr;
-  auto PreloadDesc = ArgInfo.getHiddenArgPreloadDescriptor(HiddenArg);
+  const auto *PreloadDesc = ArgInfo.getHiddenArgPreloadDescriptor(HiddenArg);
   if (PreloadDesc) {
-    const auto &Regs = (*PreloadDesc)->Regs;
+    const auto &Regs = PreloadDesc->Regs;
     for (unsigned I = 0; I < Regs.size(); ++I) {
       if (I > 0)
         PreloadStr += " ";
@@ -918,63 +924,12 @@ void MetadataStreamerMsgPackV6::emitKernelArg(const Argument &Arg,
                                               unsigned &Offset,
                                               msgpack::ArrayDocNode Args,
                                               const MachineFunction &MF) {
-  const auto *Func = Arg.getParent();
-  auto ArgNo = Arg.getArgNo();
-  const MDNode *Node;
-
-  StringRef Name;
-  Node = Func->getMetadata("kernel_arg_name");
-  if (Node && ArgNo < Node->getNumOperands())
-    Name = cast<MDString>(Node->getOperand(ArgNo))->getString();
-  else if (Arg.hasName())
-    Name = Arg.getName();
-
-  StringRef TypeName;
-  Node = Func->getMetadata("kernel_arg_type");
-  if (Node && ArgNo < Node->getNumOperands())
-    TypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
-
-  StringRef BaseTypeName;
-  Node = Func->getMetadata("kernel_arg_base_type");
-  if (Node && ArgNo < Node->getNumOperands())
-    BaseTypeName = cast<MDString>(Node->getOperand(ArgNo))->getString();
-
-  StringRef ActAccQual;
-  // Do we really need NoAlias check here?
-  if (Arg.getType()->isPointerTy() && Arg.hasNoAliasAttr()) {
-    if (Arg.onlyReadsMemory())
-      ActAccQual = "read_only";
-    else if (Arg.hasAttribute(Attribute::WriteOnly))
-      ActAccQual = "write_only";
-  }
-
-  StringRef AccQual;
-  Node = Func->getMetadata("kernel_arg_access_qual");
-  if (Node && ArgNo < Node->getNumOperands())
-    AccQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
-
-  StringRef TypeQual;
-  Node = Func->getMetadata("kernel_arg_type_qual");
-  if (Node && ArgNo < Node->getNumOperands())
-    TypeQual = cast<MDString>(Node->getOperand(ArgNo))->getString();
-
-  const DataLayout &DL = Func->getDataLayout();
-
-  MaybeAlign PointeeAlign;
-  Type *Ty = Arg.hasByRefAttr() ? Arg.getParamByRefType() : Arg.getType();
-
-  // FIXME: Need to distinguish in memory alignment from pointer alignment.
-  if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
-    if (PtrTy->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
-      PointeeAlign = Arg.getParamAlign().valueOrOne();
-  }
-
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   SmallString<8> PreloadRegisters;
   if (MFI->getNumKernargPreloadedSGPRs()) {
     assert(MF.getSubtarget<GCNSubtarget>().hasKernargPreload());
     const auto &PreloadDescs =
-        MFI->getArgInfo().getPreloadDescriptorsForArgIdx(ArgNo);
+        MFI->getArgInfo().getPreloadDescriptorsForArgIdx(Arg.getArgNo());
     for (auto &Desc : PreloadDescs) {
       if (!PreloadRegisters.empty())
         PreloadRegisters += " ";
@@ -987,15 +942,7 @@ void MetadataStreamerMsgPackV6::emitKernelArg(const Argument &Arg,
     }
   }
 
-  // There's no distinction between byval aggregates and raw aggregates.
-  Type *ArgTy;
-  Align ArgAlign;
-  std::tie(ArgTy, ArgAlign) = getArgumentTypeAlign(Arg, DL);
-
-  emitKernelArgImpl(DL, ArgTy, ArgAlign,
-                    getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
-                    PreloadRegisters, PointeeAlign, Name, TypeName,
-                    BaseTypeName, ActAccQual, AccQual, TypeQual);
+  emitKernelArgCommon(Arg, Offset, Args, MF, PreloadRegisters);
 }
 
 } // end namespace AMDGPU::HSAMD

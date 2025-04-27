@@ -115,6 +115,11 @@ protected:
                      msgpack::ArrayDocNode Args,
                      const MachineFunction &MF) override;
 
+  void emitKernelArgCommon(const Argument &Arg, unsigned &Offset,
+                           msgpack::ArrayDocNode Args,
+                           const MachineFunction &MF,
+                           StringRef PreloadRegisters = {});
+
   void emitKernelArgImpl(const DataLayout &DL, Type *Ty, Align Alignment,
                          StringRef ValueKind, unsigned &Offset,
                          msgpack::ArrayDocNode Args,

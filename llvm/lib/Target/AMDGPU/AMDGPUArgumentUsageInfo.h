@@ -133,25 +133,26 @@ struct HiddenArgUtils {
       {22, 2, "_hidden_remainder_z"}};
 
   static HiddenArg getHiddenArgFromOffset(unsigned Offset) {
-    for (unsigned I = 0; I < END_HIDDEN_ARGS; ++I)
+    for (unsigned I = 0; I < END_HIDDEN_ARGS; ++I) {
       if (HiddenArgs[I].Offset == Offset)
         return static_cast<HiddenArg>(I);
+    }
 
     return END_HIDDEN_ARGS;
   }
 
   static Type *getHiddenArgType(LLVMContext &Ctx, HiddenArg HA) {
     if (HA < END_HIDDEN_ARGS)
-      return static_cast<Type *>(Type::getIntNTy(Ctx, HiddenArgs[HA].Size * 8));
+      return Type::getIntNTy(Ctx, HiddenArgs[HA].Size * 8);
 
-    llvm_unreachable("Unexpected hidden argument.");
+    llvm_unreachable("unexpected hidden argument");
   }
 
   static const char *getHiddenArgName(HiddenArg HA) {
-    if (HA < END_HIDDEN_ARGS) {
+    if (HA < END_HIDDEN_ARGS)
       return HiddenArgs[HA].Name;
-    }
-    llvm_unreachable("Unexpected hidden argument.");
+
+    llvm_unreachable("unexpected hidden argument");
   }
 };
 
@@ -250,7 +251,7 @@ struct AMDGPUFunctionArgInfo {
   getPreloadDescriptorsForArgIdx(unsigned ArgIdx) const;
 
   // Returns the hidden arguments `KernArgPreloadDescriptor` if it is preloaded.
-  std::optional<const KernArgPreload::KernArgPreloadDescriptor *>
+  const KernArgPreload::KernArgPreloadDescriptor *
   getHiddenArgPreloadDescriptor(KernArgPreload::HiddenArg HA) const;
 };
 
