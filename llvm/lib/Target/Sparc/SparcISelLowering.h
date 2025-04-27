@@ -216,6 +216,8 @@ namespace llvm {
       return isCtlzFast();
     }
 
+    bool isCheapToSpeculateCttz(Type *Ty) const override;
+
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       // FIXME: We insert fences for each atomics and generate
       // sub-optimal code for PSO/TSO. (Approximately nobody uses any
