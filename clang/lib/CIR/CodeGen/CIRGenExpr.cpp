@@ -317,20 +317,25 @@ LValue CIRGenFunction::emitLValueForField(LValue base, const FieldDecl *field) {
   }
 
   unsigned recordCVR = base.getVRQualifiers();
-  if (rec->isUnion()) {
-    cgm.errorNYI(field->getSourceRange(), "emitLValueForField: union");
-    return LValue();
-  }
 
-  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
   llvm::StringRef fieldName = field->getName();
-  const CIRGenRecordLayout &layout =
-      cgm.getTypes().getCIRGenRecordLayout(field->getParent());
-  unsigned fieldIndex = layout.getCIRFieldNo(field);
 
-  assert(!cir::MissingFeatures::lambdaFieldToName());
+  if (rec->isUnion()) {
+    unsigned fieldIndex = field->getFieldIndex();
+    assert(!cir::MissingFeatures::lambdaFieldToName());
+    addr = emitAddrOfFieldStorage(addr, field, fieldName, fieldIndex);
 
-  addr = emitAddrOfFieldStorage(addr, field, fieldName, fieldIndex);
+  } else {
+    assert(!cir::MissingFeatures::preservedAccessIndexRegion());
+
+    const CIRGenRecordLayout &layout =
+        cgm.getTypes().getCIRGenRecordLayout(field->getParent());
+    unsigned fieldIndex = layout.getCIRFieldNo(field);
+
+    assert(!cir::MissingFeatures::lambdaFieldToName());
+
+    addr = emitAddrOfFieldStorage(addr, field, fieldName, fieldIndex);
+  }
 
   // If this is a reference field, load the reference right now.
   if (fieldType->isReferenceType()) {

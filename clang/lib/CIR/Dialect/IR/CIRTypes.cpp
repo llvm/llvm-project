@@ -230,6 +230,32 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
     llvm_unreachable("failed to complete record");
 }
 
+/// Return the largest member of in the type.
+///
+/// Recurses into union members never returning a union as the largest member.
+Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
+  assert(isUnion() && "Only call getLargestMember on unions");
+  Type largestMember;
+  unsigned largestMemberSize = 0;
+  unsigned numElements = getNumElements();
+  auto members = getMembers();
+  if (getPadded())
+    numElements -= 1; // The last element is padding.
+  for (unsigned i = 0; i < numElements; ++i) {
+    Type ty = members[i];
+    if (!largestMember ||
+        dataLayout.getTypeABIAlignment(ty) >
+            dataLayout.getTypeABIAlignment(largestMember) ||
+        (dataLayout.getTypeABIAlignment(ty) ==
+             dataLayout.getTypeABIAlignment(largestMember) &&
+         dataLayout.getTypeSize(ty) > largestMemberSize)) {
+      largestMember = ty;
+      largestMemberSize = dataLayout.getTypeSize(largestMember);
+    }
+  }
+  return largestMember;
+}
+
 //===----------------------------------------------------------------------===//
 // Data Layout information for types
 //===----------------------------------------------------------------------===//
@@ -237,10 +263,8 @@ void RecordType::complete(ArrayRef<Type> members, bool packed, bool padded) {
 llvm::TypeSize
 RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                               mlir::DataLayoutEntryListRef params) const {
-  if (isUnion()) {
-    // TODO(CIR): Implement union layout.
-    return llvm::TypeSize::getFixed(8);
-  }
+  if (isUnion())
+    return dataLayout.getTypeSize(getLargestMember(dataLayout));
 
   unsigned recordSize = computeStructSize(dataLayout);
   return llvm::TypeSize::getFixed(recordSize * 8);
@@ -249,10 +273,8 @@ RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
 uint64_t
 RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                             ::mlir::DataLayoutEntryListRef params) const {
-  if (isUnion()) {
-    // TODO(CIR): Implement union layout.
-    return 8;
-  }
+  if (isUnion())
+    return dataLayout.getTypeABIAlignment(getLargestMember(dataLayout));
 
   // Packed structures always have an ABI alignment of 1.
   if (getPacked())
@@ -268,8 +290,6 @@ RecordType::computeStructSize(const mlir::DataLayout &dataLayout) const {
   unsigned recordSize = 0;
   uint64_t recordAlignment = 1;
 
-  // We can't use a range-based for loop here because we might be ignoring the
-  // last element.
   for (mlir::Type ty : getMembers()) {
     // This assumes that we're calculating size based on the ABI alignment, not
     // the preferred alignment for each type.
