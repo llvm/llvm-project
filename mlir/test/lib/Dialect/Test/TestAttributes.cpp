@@ -340,35 +340,41 @@ bool TestConstMemorySpaceAttr::isValidLoad(
 bool TestConstMemorySpaceAttr::isValidStore(
     Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? failed(emitError() << "memory space is read-only") : false;
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
 bool TestConstMemorySpaceAttr::isValidAtomicOp(
     mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
     IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? failed(emitError() << "memory space is read-only") : false;
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
 bool TestConstMemorySpaceAttr::isValidAtomicXchg(
     Type type, mlir::ptr::AtomicOrdering successOrdering,
     mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? failed(emitError() << "memory space is read-only") : false;
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
 }
 
 bool TestConstMemorySpaceAttr::isValidAddrSpaceCast(
     Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError ? failed(emitError()
-                            << "memory space doesn't allow addrspace casts")
-                   : false;
+  if (emitError)
+    emitError() << "memory space doesn't allow addrspace casts";
+  return false;
 }
 
 bool TestConstMemorySpaceAttr::isValidPtrIntCast(
     Type intLikeTy, Type ptrLikeTy,
     function_ref<InFlightDiagnostic()> emitError) const {
-  return emitError
-             ? failed(emitError() << "memory space doesn't allow int-ptr casts")
-             : false;
+  if (emitError)
+    emitError() << "memory space doesn't allow int-ptr casts";
+  return false;
 }
 
 //===----------------------------------------------------------------------===//
