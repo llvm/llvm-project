@@ -72,9 +72,6 @@ def : WriteRes<WriteIMul32, [SMX60_IEU]>  { let Latency = 3; }
 let Latency = 3, ReleaseAtCycles = [3] in {
   def : WriteRes<WriteIDiv32, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem32, [SMX60_IEUA]>;
-}
-
-let Latency = 23, ReleaseAtCycles = [23] in {
   def : WriteRes<WriteIDiv, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem, [SMX60_IEUA]>;
 }
