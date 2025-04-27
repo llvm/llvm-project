@@ -17581,7 +17581,7 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
 bool SITargetLowering::hasAndNot(SDValue Op) const {
   // Return false if the operation is divergent, as AND-NOT is a scalar-only
   // instruction.
-  if (Op->isDivergent() || !Op->isMachineOpcode())
+  if (Op->isDivergent())
     return false;
 
   EVT VT = Op.getValueType();
