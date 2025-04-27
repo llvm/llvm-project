@@ -390,9 +390,13 @@ static void addReplicateRegions(VPlan &Plan) {
     SplitBlock->setName(
         OrigBB->hasName() ? OrigBB->getName() + "." + Twine(BBNum++) : "");
     // Record predicated instructions for above packing optimizations.
-    VPBlockBase *Region = createReplicateRegion(RepR, Plan);
+    VPRegionBlock *Region = createReplicateRegion(RepR, Plan);
     Region->setParent(CurrentBlock->getParent());
     VPBlockUtils::insertOnEdge(CurrentBlock, SplitBlock, Region);
+
+    VPRegionBlock *ParentRegion = Region->getParent();
+    if (ParentRegion && ParentRegion->getExiting() == CurrentBlock)
+      ParentRegion->setExiting(SplitBlock);
   }
 }
 
