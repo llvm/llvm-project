@@ -1074,10 +1074,9 @@ PHIExpression *NewGVN::createPHIExpression(ArrayRef<ValPair> PHIOperands,
     HasBackedge = HasBackedge || isBackedge(BB, PHIBlock);
     return lookupOperandLeader(P.first) != I;
   });
-  std::transform(Filtered.begin(), Filtered.end(), op_inserter(E),
-                 [&](const ValPair &P) -> Value * {
-                   return lookupOperandLeader(P.first);
-                 });
+  llvm::transform(Filtered, op_inserter(E), [&](const ValPair &P) -> Value * {
+    return lookupOperandLeader(P.first);
+  });
   return E;
 }
 
