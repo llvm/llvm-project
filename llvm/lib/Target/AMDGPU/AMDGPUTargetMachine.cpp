@@ -435,11 +435,6 @@ static cl::opt<bool> EnablePreRAOptimizations(
     cl::desc("Enable Pre-RA optimizations pass"), cl::init(true),
     cl::Hidden);
 
-static cl::opt<bool> EnablePromoteKernelArguments(
-    "amdgpu-enable-promote-kernel-arguments",
-    cl::desc("Enable promotion of flat kernel pointer arguments to global"),
-    cl::Hidden, cl::init(true));
-
 static cl::opt<bool> EnableImageIntrinsicOptimizer(
     "amdgpu-enable-image-intrinsic-optimizer",
     cl::desc("Enable image intrinsic optimizer pass"), cl::init(true),
@@ -520,7 +515,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUArgumentUsageInfoPass(*PR);
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
-  initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
@@ -853,13 +847,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           return;
 
         FunctionPassManager FPM;
-
-        // Add promote kernel arguments pass to the opt pipeline right before
-        // infer address spaces which is needed to do actual address space
-        // rewriting.
-        if (Level.getSpeedupLevel() > OptimizationLevel::O1.getSpeedupLevel() &&
-            EnablePromoteKernelArguments)
-          FPM.addPass(AMDGPUPromoteKernelArgumentsPass());
 
         // Add infer address spaces pass to the opt pipeline after inlining
         // but before SROA to increase SROA opportunities.
