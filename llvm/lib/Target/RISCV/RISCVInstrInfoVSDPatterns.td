@@ -467,6 +467,17 @@ multiclass VPatWidenBinarySDNode_VV_VX<SDNode op, PatFrags extop1, PatFrags exto
                 (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                    GPR:$rs1, vti.AVL, vti.Log2SEW, TA_MA)>;
+      if !eq(extop1, extop2) then
+        def : Pat<(wti.Vector (extop1 (op (vti.Vector vti.RegClass:$rs2),
+                                          (vti.Vector vti.RegClass:$rs1)))),
+                  (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
+                     (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                     vti.RegClass:$rs1, vti.AVL, vti.Log2SEW, TA_MA)>;
+        def : Pat<(wti.Vector (extop1 (op (vti.Vector vti.RegClass:$rs2),
+                                          (vti.Vector (SplatPat (XLenVT GPR:$rs1)))))),
+                  (!cast<Instruction>(instruction_name#"_VX_"#vti.LMul.MX)
+                     (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                     GPR:$rs1, vti.AVL, vti.Log2SEW, TA_MA)>;
     }
   }
 }
