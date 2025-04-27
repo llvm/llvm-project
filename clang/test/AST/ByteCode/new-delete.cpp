@@ -620,6 +620,10 @@ namespace std {
   }
 }
 
+constexpr int *escape = std::allocator<int>().allocate(3); // both-error {{constant expression}} \
+                                                           // both-note {{pointer to subobject of heap-allocated}} \
+                                                           // both-note {{heap allocation performed here}}
+
 /// Specialization for float, using operator new/delete.
 namespace std {
   using size_t = decltype(sizeof(0));

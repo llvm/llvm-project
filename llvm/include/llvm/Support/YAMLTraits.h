@@ -1105,22 +1105,18 @@ yamlize(IO &io, T &Val, bool, Context &Ctx) {
 }
 
 template <typename T, typename Context>
-std::enable_if_t<!has_MappingEnumInputTraits<T, Context>::value, bool>
-yamlizeMappingEnumInput(IO &io, T &Val) {
+bool yamlizeMappingEnumInput(IO &io, T &Val) {
+  if constexpr (has_MappingEnumInputTraits<T, Context>::value) {
+    if (io.outputting())
+      return false;
+
+    io.beginEnumScalar();
+    MappingTraits<T>::enumInput(io, Val);
+    bool Matched = !io.matchEnumFallback();
+    io.endEnumScalar();
+    return Matched;
+  }
   return false;
-}
-
-template <typename T, typename Context>
-std::enable_if_t<has_MappingEnumInputTraits<T, Context>::value, bool>
-yamlizeMappingEnumInput(IO &io, T &Val) {
-  if (io.outputting())
-    return false;
-
-  io.beginEnumScalar();
-  MappingTraits<T>::enumInput(io, Val);
-  bool Matched = !io.matchEnumFallback();
-  io.endEnumScalar();
-  return Matched;
 }
 
 template <typename T, typename Context>
