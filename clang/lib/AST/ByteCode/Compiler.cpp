@@ -1695,9 +1695,6 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   const Expr *Index = E->getIdx();
   const Expr *Base = E->getBase();
 
-  if (DiscardResult)
-    return this->discard(LHS) && this->discard(RHS);
-
   // C++17's rules require us to evaluate the LHS first, regardless of which
   // side is the base.
   bool Success = true;
@@ -1728,7 +1725,11 @@ bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
       return false;
   }
 
-  return this->emitArrayElemPtrPop(*IndexT, E);
+  if (!this->emitArrayElemPtrPop(*IndexT, E))
+    return false;
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+  return true;
 }
 
 template <class Emitter>
