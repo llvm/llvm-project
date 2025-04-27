@@ -31,7 +31,7 @@ LVStringPool &llvm::logicalview::getStringPool() { return StringPool; }
 std::string llvm::logicalview::transformPath(StringRef Path) {
   std::string Name(Path);
   std::transform(Name.begin(), Name.end(), Name.begin(), tolower);
-  std::replace(Name.begin(), Name.end(), '\\', '/');
+  llvm::replace(Name, '\\', '/');
 
   // Remove all duplicate slashes.
   size_t Pos = 0;
