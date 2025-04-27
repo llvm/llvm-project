@@ -904,7 +904,7 @@ public:
   void mapOptionalWithContext(const char *Key, T &Val, Context &Ctx) {
     if constexpr (has_SequenceTraits<T>::value) {
       // omit key/value instead of outputting empty sequence
-      if (this->canElideEmptySequence() && !(Val.begin() != Val.end()))
+      if (this->canElideEmptySequence() && Val.begin() == Val.end())
         return;
     }
     this->processKey(Key, Val, false, Ctx);
