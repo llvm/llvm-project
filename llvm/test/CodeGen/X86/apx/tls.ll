@@ -1,12 +1,8 @@
-; RUN: llc -mattr=+egpr %s -mtriple=x86_64 --relocation-model=pic -enable-tlsdesc -filetype=obj -x86-apx-relax-relocations=true -o %t.o
-; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=TLSDESC_APXRELAX
-; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
-
 ; RUN: llc -mattr=+egpr %s -mtriple=x86_64 --relocation-model=pic -enable-tlsdesc -filetype=obj -o %t.o
-; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=TLSDESC_NOAPXRELAX
+; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=TLSDESC
 ; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 
-; RUN: llc -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-apx-relax-relocations=true
+; RUN: llc -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-enable-apx-for-relocation=true
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=GOTTPOFF_APXRELAX
 ; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
 ; RUN: ld.lld  %t.o %t1.o -o %t.so
@@ -18,34 +14,18 @@
 ; RUN: ld.lld  %t.o %t1.o -o %t.so
 ; RUN: llvm-objdump --no-print-imm-hex -dr %t.so | FileCheck %s --check-prefix=GOTTPOFF_LD_NOAPXRELAX
 
-; RUN: llc -mattr=+egpr %s -mtriple=x86_64 -filetype=obj -o %t.o -x86-enable-apx-for-relocation=true
-; RUN: llvm-objdump --no-print-imm-hex -dr %t.o | FileCheck %s --check-prefix=GOTTPOFF_NOAPXRELAX_APXINSTR
-; RUN: echo '.tbss; .globl b,c,d,e,f,g,h,i,j; b: .zero 4;c: .zero 4;d: .zero 4;e: .zero 4;f: .zero 4;g: .zero 4;h: .zero 4;i: .zero 4;j: .zero 4' | llvm-mc -filetype=obj -triple=x86_64 - -o %t1.o
-; RUN: ld.lld  %t.o %t1.o -o %t.so
-; RUN: llvm-objdump --no-print-imm-hex -dr %t.so | FileCheck %s --check-prefix=GOTTPOFF_LD_NOAPXRELAX_APXINSTR
 
-; TLSDESC_APXRELAX: d5 18 89 c0       movq %rax, %r16
-; TLSDESC_APXRELAX-NEXT: 48 8d 05 00 00 00 00       leaq (%rip), %rax
-; TLSDESC_APXRELAX-NEXT: R_X86_64_GOTPC32_TLSDESC j-0x4
-; TLSDESC_NOAPXRELAX: d5 18 89 c0       movq %rax, %r16
-; TLSDESC_NOAPXRELAX-NEXT: 48 8d 05 00 00 00 00       leaq (%rip), %rax
-; TLSDESC_NOAPXRELAX-NEXT: R_X86_64_GOTPC32_TLSDESC j-0x4
+; TLSDESC: d5 18 89 c0       movq %rax, %r16
+; TLSDESC-NEXT: 48 8d 05 00 00 00 00       leaq (%rip), %rax
+; TLSDESC-NEXT: R_X86_64_GOTPC32_TLSDESC j-0x4
 
 ; GOTTPOFF_APXRELAX: d5 48 8b 05 00 00 00 00       movq (%rip), %r16
 ; GOTTPOFF_APXRELAX-NEXT: R_X86_64_CODE_4_GOTTPOFF j-0x4
+; GOTTPOFF_LD_APXRELAX: d5 18 c7 c0 fc ff ff ff       movq $-4, %r16
 
 ; GOTTPOFF_NOAPXRELAX: 48 8b 1d 00 00 00 00       movq (%rip), %rbx
 ; GOTTPOFF_NOAPXRELAX-NEXT: R_X86_64_GOTTPOFF j-0x4
-
-; GOTTPOFF_LD_APXRELAX: d5 18 c7 c0 fc ff ff ff       movq $-4, %r16
 ; GOTTPOFF_LD_NOAPXRELAX: 48 c7 c3 fc ff ff ff       movq $-4, %rbx
-
-; GOTTPOFF_NOAPXRELAX_APXINSTR: d5 48 8b 05 00 00 00 00       movq (%rip), %r16
-; GOTTPOFF_NOAPXRELAX_APXINSTR-NEXT: R_X86_64_GOTTPOFF j-0x4
-
-; The instruction is incorrectly updated by the LLD linker, if it's emitted with
-; EGPR and R_X86_64_GOTTPOFF relocation.
-; GOTTPOFF_LD_NOAPXRELAX_APXINSTR: d5 48 c7 c0 fc ff ff ff       movq $-4, %rax
 
 @a = thread_local global i32 0, align 4
 @b = external thread_local global i32, align 4

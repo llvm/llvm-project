@@ -560,6 +560,8 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86AvoidStoreForwardingBlocks());
   }
 
+  addPass(createX86SuppressAPXForRelocationPass());
+
   addPass(createX86SpeculativeLoadHardeningPass());
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86DynAllocaExpander());
@@ -568,8 +570,6 @@ void X86PassConfig::addPreRegAlloc() {
     addPass(createX86PreTileConfigPass());
   else
     addPass(createX86FastPreTileConfigPass());
-
-  addPass(createX86SuppressAPXForRelocationPass());
 }
 
 void X86PassConfig::addMachineSSAOptimization() {

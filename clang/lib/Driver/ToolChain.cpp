@@ -192,10 +192,6 @@ bool ToolChain::useRelaxRelocations() const {
   return ENABLE_X86_RELAX_RELOCATIONS;
 }
 
-bool ToolChain::useAPXRelaxRelocations() const {
-  return ENABLE_X86_APX_RELAX_RELOCATIONS;
-}
-
 bool ToolChain::defaultToIEEELongDouble() const {
   return PPC_LINUX_DEFAULT_IEEELONGDOUBLE && getTriple().isOSLinux();
 }

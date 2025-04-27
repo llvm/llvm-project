@@ -78,6 +78,7 @@ set(sources
   X86SpeculativeLoadHardening.cpp
   X86SpeculativeExecutionSideEffectSuppression.cpp
   X86Subtarget.cpp
+  X86SuppressAPXForReloc.cpp
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
@@ -89,7 +90,6 @@ set(sources
   GISel/X86InstructionSelector.cpp
   GISel/X86LegalizerInfo.cpp
   GISel/X86RegisterBankInfo.cpp
-  X86SuppressAPXForReloc.cpp
   )
 
 add_llvm_target(X86CodeGen ${sources}

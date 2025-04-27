@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This pass is added to suppress APX features for relocations. It's used
-/// together with disabling emitting APX relocation types for backward
-/// compatibility with old version of linker (like before LD 2.43). It can avoid
-/// the instructions updated incorrectly by old version of linker if the
-/// instructions are with APX EGPR/NDD/NF features + the relocations other than
-/// APX ones (like GOTTPOFF).
+/// This pass is added to suppress APX features for relocations. It's used to
+/// keep backward compatibility with old version of linker having no APX
+/// support. It can be removed after APX support is included in the default
+/// linker on OS.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -23,10 +21,12 @@
 #include "X86Subtarget.h"
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -79,14 +79,25 @@ static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
   MRI->setRegClass(Reg, NewRC);
 }
 
-bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
-    MachineFunction &MF) {
-  if (MF.getTarget().Options.MCOptions.X86APXRelaxRelocations ||
-      X86EnableAPXForRelocation)
+static bool handleInstructionWithEGPR(MachineFunction &MF,
+                                      const X86Subtarget &ST) {
+  if (!ST.hasEGPR())
     return false;
-  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasEGPR() && !ST.hasNDD() && !ST.hasNF())
-    return false;
+
+  auto suppressEGPRInRegs = [&](MachineInstr &MI,
+                                ArrayRef<unsigned> OpNoArray) {
+    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                  X86II::getOperandBias(MI.getDesc());
+    auto &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+    if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
+        MO.getTargetFlags() == X86II::MO_GOTPCREL) {
+      LLVM_DEBUG(dbgs() << "Transform instruction with relocation type: " << MI
+                        << "\n");
+      for (auto OpNo : OpNoArray)
+        suppressEGPRRegClass(MF, MI, OpNo);
+      LLVM_DEBUG(dbgs() << "to\n  " << MI << "\n");
+    }
+  };
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -96,78 +107,122 @@ bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
         // X86AsmPrinter::LowerTlsAddr, and there is no corresponding target
         // flag for it, so we don't need to handle LEA64r with TLSDESC and EGPR
         // in this pass (before emitting assembly).
-
+      case X86::TEST32mr:
+      case X86::TEST64mr: {
+        suppressEGPRInRegs(MI, {5});
+        break;
+      }
+      case X86::CMP32rm:
+      case X86::CMP64rm:
+      case X86::MOV32rm:
+      case X86::MOV64rm: {
+        suppressEGPRInRegs(MI, {0});
+        break;
+      }
       case X86::ADC32rm:
       case X86::ADD32rm:
       case X86::AND32rm:
-      case X86::CMP32rm:
-      case X86::MOV32rm:
       case X86::OR32rm:
       case X86::SBB32rm:
       case X86::SUB32rm:
-      case X86::TEST32mr:
       case X86::XOR32rm:
-      case X86::CALL64m:
-      case X86::JMP64m:
-      case X86::TAILJMPm64:
-      case X86::TEST64mr:
       case X86::ADC64rm:
       case X86::ADD64rm:
       case X86::AND64rm:
-      case X86::CMP64rm:
       case X86::OR64rm:
       case X86::SBB64rm:
       case X86::SUB64rm:
       case X86::XOR64rm: {
-        for (auto &MO : MI.operands()) {
-          if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
-              MO.getTargetFlags() == X86II::MO_GOTPCREL) {
-            suppressEGPRRegClass(MF, MI, 0);
-            break;
-          }
-        }
+        suppressEGPRInRegs(MI, {0, 1});
         break;
       }
-      case X86::MOV64rm: {
-        for (auto &MO : MI.operands()) {
-          if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
-            suppressEGPRRegClass(MF, MI, 0);
-            break;
-          }
-        }
-        break;
       }
+    }
+  }
+  return true;
+}
+
+static bool handleNDDOrNFInstructions(MachineFunction &MF,
+                                      const X86Subtarget &ST) {
+  if (!ST.hasNDD() && !ST.hasNF())
+    return false;
+
+  auto TII = ST.getInstrInfo();
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      unsigned Opcode = MI.getOpcode();
+      switch (Opcode) {
       case X86::ADD64rm_NF:
-      case X86::ADD64rm_ND:
-      case X86::ADD64rm_NF_ND: {
-        for (auto &MO : MI.operands()) {
-          if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
-            suppressEGPRRegClass(MF, MI, 0);
-            const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(X86::ADD64rm);
-            MI.setDesc(NewDesc);
-            if (Opcode == X86::ADD64rm_ND || Opcode == X86::ADD64rm_NF_ND) {
-              MI.tieOperands(0, 1);
-              MI.getOperand(1).setIsKill(false);
-              suppressEGPRRegClass(MF, MI, 1);
-            }
-            break;
-          }
+      case X86::ADD64mr_NF_ND:
+      case X86::ADD64rm_NF_ND:
+        llvm_unreachable("Unexpected NF instruction!");
+      case X86::ADD64rm_ND: {
+        int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
+                      X86II::getOperandBias(MI.getDesc());
+        auto &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
+        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
+          LLVM_DEBUG(dbgs() << "Transform instruction with relocation type: "
+                            << MI << "\n");
+          Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
+          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
+                                 TII->get(TargetOpcode::COPY), Reg)
+                             .addReg(MI.getOperand(1).getReg());
+          auto &NewMI =
+              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::ADD64rm),
+                      MI.getOperand(0).getReg())
+                  .addReg(Reg)
+                  .addReg(MI.getOperand(2).getReg())
+                  .addImm(MI.getOperand(3).getImm())
+                  .addReg(MI.getOperand(4).getReg())
+                  .add(MI.getOperand(5))
+                  .addReg(MI.getOperand(6).getReg());
+          suppressEGPRRegClass(MF, *NewMI, 0);
+          MI.eraseFromParent();
+          LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMI << "\n");
+          LLVM_DEBUG(dbgs() << "  " << *NewMI << "\n");
         }
         break;
       }
-      case X86::ADD64mr_ND:
-      case X86::ADD64mr_NF_ND: {
-        for ([[maybe_unused]] auto &MO : MI.operands()) {
-          assert((MO.getTargetFlags() != X86II::MO_GOTTPOFF) &&
-                 "Suppressing this instruction with relocation is "
-                 "unimplemented!");
-          break;
+      case X86::ADD64mr_ND: {
+        int MemRefBegin = X86II::getMemoryOperandNo(MI.getDesc().TSFlags);
+        auto &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
+        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
+          LLVM_DEBUG(dbgs() << "Transform instruction with relocation type: "
+                            << MI << "\n");
+          Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
+          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
+                                 TII->get(TargetOpcode::COPY), Reg)
+                             .addReg(MI.getOperand(6).getReg());
+          [[maybe_unused]] auto &NewMI =
+              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::ADD64rm),
+                      MI.getOperand(0).getReg())
+                  .addReg(Reg)
+                  .addReg(MI.getOperand(1).getReg())
+                  .addImm(MI.getOperand(2).getImm())
+                  .addReg(MI.getOperand(3).getReg())
+                  .add(MI.getOperand(4))
+                  .addReg(MI.getOperand(5).getReg());
+          suppressEGPRRegClass(MF, *NewMI, 0);
+          MI.eraseFromParent();
+          LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMI << "\n");
+          LLVM_DEBUG(dbgs() << "  " << *NewMI << "\n");
         }
         break;
       }
       }
     }
   }
-
   return true;
+}
+
+bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (X86EnableAPXForRelocation)
+    return false;
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  bool Changed = handleInstructionWithEGPR(MF, ST);
+  Changed |= handleNDDOrNFInstructions(MF, ST);
+
+  return Changed;
 }
