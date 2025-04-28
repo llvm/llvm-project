@@ -89,7 +89,7 @@ protected:
   std::shared_ptr<PreprocessorOptions> PPOpts;
 
   /// Options controlling the static analyzer.
-  AnalyzerOptionsRef AnalyzerOpts;
+  std::shared_ptr<AnalyzerOptions> AnalyzerOpts;
 
   std::shared_ptr<MigratorOptions> MigratorOpts;
 
