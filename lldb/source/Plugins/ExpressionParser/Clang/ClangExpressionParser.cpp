@@ -789,7 +789,7 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
-          m_compiler->getInvocation().TargetOpts)) {
+          m_compiler->getInvocation().getTargetOpts())) {
     if (log) {
       LLDB_LOGF(log, "Target datalayout string: '%s'",
                 target_info->getDataLayoutString());
