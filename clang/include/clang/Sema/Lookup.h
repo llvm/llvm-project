@@ -36,6 +36,79 @@ namespace clang {
 
 class CXXBasePaths;
 
+enum class LookupAmbiguityKind {
+  /// Name lookup results in an ambiguity because multiple
+  /// entities that meet the lookup criteria were found in
+  /// subobjects of different types. For example:
+  /// @code
+  /// struct A { void f(int); }
+  /// struct B { void f(double); }
+  /// struct C : A, B { };
+  /// void test(C c) {
+  ///   c.f(0); // error: A::f and B::f come from subobjects of different
+  ///           // types. overload resolution is not performed.
+  /// }
+  /// @endcode
+  AmbiguousBaseSubobjectTypes,
+
+  /// Name lookup results in an ambiguity because multiple
+  /// nonstatic entities that meet the lookup criteria were found
+  /// in different subobjects of the same type. For example:
+  /// @code
+  /// struct A { int x; };
+  /// struct B : A { };
+  /// struct C : A { };
+  /// struct D : B, C { };
+  /// int test(D d) {
+  ///   return d.x; // error: 'x' is found in two A subobjects (of B and C)
+  /// }
+  /// @endcode
+  AmbiguousBaseSubobjects,
+
+  /// Name lookup results in an ambiguity because multiple definitions
+  /// of entity that meet the lookup criteria were found in different
+  /// declaration contexts.
+  /// @code
+  /// namespace A {
+  ///   int i;
+  ///   namespace B { int i; }
+  ///   int test() {
+  ///     using namespace B;
+  ///     return i; // error 'i' is found in namespace A and A::B
+  ///    }
+  /// }
+  /// @endcode
+  AmbiguousReference,
+
+  /// Name lookup results in an ambiguity because multiple placeholder
+  /// variables were found in the same scope.
+  /// @code
+  /// void f() {
+  ///    int _ = 0;
+  ///    int _ = 0;
+  ///    return _; // ambiguous use of placeholder variable
+  /// }
+  /// @endcode
+  AmbiguousReferenceToPlaceholderVariable,
+
+  /// Name lookup results in an ambiguity because an entity with a
+  /// tag name was hidden by an entity with an ordinary name from
+  /// a different context.
+  /// @code
+  /// namespace A { struct Foo {}; }
+  /// namespace B { void Foo(); }
+  /// namespace C {
+  ///   using namespace A;
+  ///   using namespace B;
+  /// }
+  /// void test() {
+  ///   C::Foo(); // error: tag 'A::Foo' is hidden by an object in a
+  ///             // different namespace
+  /// }
+  /// @endcode
+  AmbiguousTagHiding
+};
+
 /// Represents the results of name lookup.
 ///
 /// An instance of the LookupResult class captures the results of a
@@ -71,79 +144,6 @@ public:
     /// getAmbiguityKind to figure out what kind of ambiguity
     /// we have.
     Ambiguous
-  };
-
-  enum AmbiguityKind {
-    /// Name lookup results in an ambiguity because multiple
-    /// entities that meet the lookup criteria were found in
-    /// subobjects of different types. For example:
-    /// @code
-    /// struct A { void f(int); }
-    /// struct B { void f(double); }
-    /// struct C : A, B { };
-    /// void test(C c) {
-    ///   c.f(0); // error: A::f and B::f come from subobjects of different
-    ///           // types. overload resolution is not performed.
-    /// }
-    /// @endcode
-    AmbiguousBaseSubobjectTypes,
-
-    /// Name lookup results in an ambiguity because multiple
-    /// nonstatic entities that meet the lookup criteria were found
-    /// in different subobjects of the same type. For example:
-    /// @code
-    /// struct A { int x; };
-    /// struct B : A { };
-    /// struct C : A { };
-    /// struct D : B, C { };
-    /// int test(D d) {
-    ///   return d.x; // error: 'x' is found in two A subobjects (of B and C)
-    /// }
-    /// @endcode
-    AmbiguousBaseSubobjects,
-
-    /// Name lookup results in an ambiguity because multiple definitions
-    /// of entity that meet the lookup criteria were found in different
-    /// declaration contexts.
-    /// @code
-    /// namespace A {
-    ///   int i;
-    ///   namespace B { int i; }
-    ///   int test() {
-    ///     using namespace B;
-    ///     return i; // error 'i' is found in namespace A and A::B
-    ///    }
-    /// }
-    /// @endcode
-    AmbiguousReference,
-
-    /// Name lookup results in an ambiguity because multiple placeholder
-    /// variables were found in the same scope.
-    /// @code
-    /// void f() {
-    ///    int _ = 0;
-    ///    int _ = 0;
-    ///    return _; // ambiguous use of placeholder variable
-    /// }
-    /// @endcode
-    AmbiguousReferenceToPlaceholderVariable,
-
-    /// Name lookup results in an ambiguity because an entity with a
-    /// tag name was hidden by an entity with an ordinary name from
-    /// a different context.
-    /// @code
-    /// namespace A { struct Foo {}; }
-    /// namespace B { void Foo(); }
-    /// namespace C {
-    ///   using namespace A;
-    ///   using namespace B;
-    /// }
-    /// void test() {
-    ///   C::Foo(); // error: tag 'A::Foo' is hidden by an object in a
-    ///             // different namespace
-    /// }
-    /// @endcode
-    AmbiguousTagHiding
   };
 
   /// A little identifier for flagging temporary lookup results.
@@ -346,7 +346,7 @@ public:
     return ResultKind;
   }
 
-  AmbiguityKind getAmbiguityKind() const {
+  LookupAmbiguityKind getAmbiguityKind() const {
     assert(isAmbiguous());
     return Ambiguity;
   }
@@ -532,7 +532,7 @@ public:
         Paths = nullptr;
       }
     } else {
-      std::optional<AmbiguityKind> SavedAK;
+      std::optional<LookupAmbiguityKind> SavedAK;
       bool WasAmbiguous = false;
       if (ResultKind == Ambiguous) {
         SavedAK = Ambiguity;
@@ -598,7 +598,7 @@ public:
   /// different contexts and a tag decl was hidden by an ordinary
   /// decl in a different context.
   void setAmbiguousQualifiedTagHiding() {
-    setAmbiguous(AmbiguousTagHiding);
+    setAmbiguous(LookupAmbiguityKind::AmbiguousTagHiding);
   }
 
   /// Clears out any current state.
@@ -769,7 +769,7 @@ private:
       getSema().DiagnoseAmbiguousLookup(*this);
   }
 
-  void setAmbiguous(AmbiguityKind AK) {
+  void setAmbiguous(LookupAmbiguityKind AK) {
     ResultKind = Ambiguous;
     Ambiguity = AK;
   }
@@ -792,7 +792,7 @@ private:
   LookupResultKind ResultKind = NotFound;
   // ill-defined unless ambiguous. Still need to be initialized it will be
   // copied/moved.
-  AmbiguityKind Ambiguity = {};
+  LookupAmbiguityKind Ambiguity = {};
   UnresolvedSet<8> Decls;
   CXXBasePaths *Paths = nullptr;
   CXXRecordDecl *NamingClass = nullptr;
