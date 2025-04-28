@@ -365,7 +365,7 @@ def SIFIVE_P670 : RISCVProcessorModel<"sifive-p670", SiFiveP600Model,
                                        TuneVXRMPipelineFlush,
                                        TunePostRAScheduler]>;
 
-def SIFIVE_P870 : RISCVProcessorModel<"sifive-p870", NoSchedModel,
+def SIFIVE_P870 : RISCVProcessorModel<"sifive-p870", SiFiveP800Model,
                                       !listconcat(RVA23U64Features,
                                       [FeatureStdExtZama16b,
                                        FeatureStdExtZfh,
