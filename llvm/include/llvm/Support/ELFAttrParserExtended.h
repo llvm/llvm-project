@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_ELFEXTENDEDATTRPARSER_H
 #define LLVM_SUPPORT_ELFEXTENDEDATTRPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/ELFAttributeParser.h"
@@ -21,7 +22,7 @@ namespace llvm {
 class StringRef;
 class ScopedPrinter;
 
-class ELFExtendedAttrParser : public ELFAttributeParser {
+class LLVM_ABI ELFExtendedAttrParser : public ELFAttributeParser {
 protected:
   ScopedPrinter *Sw;
   DataExtractor De{ArrayRef<uint8_t>{}, true, 0};

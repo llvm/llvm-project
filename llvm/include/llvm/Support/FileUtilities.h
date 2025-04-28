@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_FILEUTILITIES_H
 #define LLVM_SUPPORT_FILEUTILITIES_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -29,7 +30,7 @@ namespace llvm {
 /// option, it will set the string to an error message if an error occurs, or
 /// if the files are different.
 ///
-int DiffFilesWithTolerance(StringRef FileA, StringRef FileB, double AbsTol,
+LLVM_ABI int DiffFilesWithTolerance(StringRef FileA, StringRef FileB, double AbsTol,
                            double RelTol, std::string *Error = nullptr);
 
 /// FileRemover - This class is a simple object meant to be stack allocated.
@@ -79,12 +80,12 @@ public:
 /// permissions and dates to the output file.
 class FilePermissionsApplier {
 public:
-  static Expected<FilePermissionsApplier> create(StringRef InputFilename);
+  LLVM_ABI static Expected<FilePermissionsApplier> create(StringRef InputFilename);
 
   /// Apply stored permissions to the \p OutputFilename.
   /// Copy LastAccess and ModificationTime if \p CopyDates is true.
   /// Overwrite stored permissions if \p OverwritePermissions is specified.
-  Error
+  LLVM_ABI Error
   apply(StringRef OutputFilename, bool CopyDates = false,
         std::optional<sys::fs::perms> OverwritePermissions = std::nullopt);
 

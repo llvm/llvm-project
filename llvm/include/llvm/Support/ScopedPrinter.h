@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_SCOPEDPRINTER_H
 #define LLVM_SUPPORT_SCOPEDPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -80,7 +81,7 @@ struct FlagEntry {
   uint64_t Value;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const HexNumber &Value);
 
 template <class T> std::string to_string(const T &Value) {
   std::string number;
@@ -97,7 +98,7 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   return utohexstr(Value, true);
 }
 
-class ScopedPrinter {
+class LLVM_ABI ScopedPrinter {
 public:
   enum class ScopedPrinterKind {
     Base,
@@ -572,7 +573,7 @@ private:
   std::unique_ptr<DelimitedScope> OuterScope;
 
 public:
-  JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
+  LLVM_ABI JSONScopedPrinter(raw_ostream &OS, bool PrettyPrint = false,
                     std::unique_ptr<DelimitedScope> &&OuterScope =
                         std::unique_ptr<DelimitedScope>{});
 

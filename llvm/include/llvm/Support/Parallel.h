@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_PARALLEL_H
 #define LLVM_SUPPORT_PARALLEL_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Error.h"
@@ -27,7 +28,7 @@ namespace parallel {
 // Strategy for the default executor used by the parallel routines provided by
 // this file. It defaults to using all hardware threads and should be
 // initialized before the first use of parallel routines.
-extern ThreadPoolStrategy strategy;
+LLVM_ABI extern ThreadPoolStrategy strategy;
 
 #if LLVM_ENABLE_THREADS
 #define GET_THREAD_INDEX_IMPL                                                  \
@@ -44,12 +45,12 @@ extern ThreadPoolStrategy strategy;
 unsigned getThreadIndex();
 #else
 // Don't access this directly, use the getThreadIndex wrapper.
-extern thread_local unsigned threadIndex;
+LLVM_ABI extern thread_local unsigned threadIndex;
 
 inline unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #endif
 
-size_t getThreadCount();
+LLVM_ABI size_t getThreadCount();
 #else
 inline unsigned getThreadIndex() { return 0; }
 inline size_t getThreadCount() { return 1; }
@@ -91,13 +92,13 @@ class TaskGroup {
   bool Parallel;
 
 public:
-  TaskGroup();
-  ~TaskGroup();
+  LLVM_ABI TaskGroup();
+  LLVM_ABI ~TaskGroup();
 
   // Spawn a task, but does not wait for it to finish.
   // Tasks marked with \p Sequential will be executed
   // exactly in the order which they were spawned.
-  void spawn(std::function<void()> f);
+  LLVM_ABI void spawn(std::function<void()> f);
 
   void sync() const { L.sync(); }
 
@@ -225,7 +226,7 @@ void parallelSort(RandomAccessIterator Start, RandomAccessIterator End,
   llvm::sort(Start, End, Comp);
 }
 
-void parallelFor(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
+LLVM_ABI void parallelFor(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
 
 template <class IterTy, class FuncTy>
 void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {

@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_STRINGSAVER_H
 #define LLVM_SUPPORT_STRINGSAVER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -28,8 +29,8 @@ public:
 
   // All returned strings are null-terminated: *save(S).end() == 0.
   StringRef save(const char *S) { return save(StringRef(S)); }
-  StringRef save(StringRef S);
-  StringRef save(const Twine &S);
+  LLVM_ABI StringRef save(StringRef S);
+  LLVM_ABI StringRef save(const Twine &S);
   StringRef save(const std::string &S) { return save(StringRef(S)); }
 };
 
@@ -50,8 +51,8 @@ public:
 
   // All returned strings are null-terminated: *save(S).end() == 0.
   StringRef save(const char *S) { return save(StringRef(S)); }
-  StringRef save(StringRef S);
-  StringRef save(const Twine &S);
+  LLVM_ABI StringRef save(StringRef S);
+  LLVM_ABI StringRef save(const Twine &S);
   StringRef save(const std::string &S) { return save(StringRef(S)); }
 };
 

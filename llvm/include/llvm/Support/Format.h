@@ -22,6 +22,7 @@
 #ifndef LLVM_SUPPORT_FORMAT_H
 #define LLVM_SUPPORT_FORMAT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -36,7 +37,7 @@ namespace llvm {
 
 /// This is a helper class used for handling formatted output.  It is the
 /// abstract base class of a templated derived class.
-class format_object_base {
+class LLVM_ABI format_object_base {
 protected:
   const char *Fmt;
   ~format_object_base() = default; // Disallow polymorphic deletion.

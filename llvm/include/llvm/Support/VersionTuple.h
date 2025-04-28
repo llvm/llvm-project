@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_VERSIONTUPLE_H
 #define LLVM_SUPPORT_VERSIONTUPLE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include <optional>
@@ -179,16 +180,16 @@ public:
   }
 
   /// Retrieve a string representation of the version number.
-  std::string getAsString() const;
+  LLVM_ABI std::string getAsString() const;
 
   /// Try to parse the given string as a version number.
   /// \returns \c true if the string does not match the regular expression
   ///   [0-9]+(\.[0-9]+){0,3}
-  bool tryParse(StringRef string);
+  LLVM_ABI bool tryParse(StringRef string);
 };
 
 /// Print a version number.
-raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &Out, const VersionTuple &V);
 
 // Provide DenseMapInfo for version tuples.
 template <> struct DenseMapInfo<VersionTuple> {
