@@ -468,6 +468,9 @@ public:
   /// Return true if the recipe is a scalar cast.
   bool isScalarCast() const;
 
+  /// Set the recipe's debug location to \p NewDL.
+  void setDebugLoc(DebugLoc NewDL) { DL = NewDL; }
+
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
@@ -802,6 +805,12 @@ public:
     assert(OpType == OperationType::Cmp &&
            "recipe doesn't have a compare predicate");
     return CmpPredicate;
+  }
+
+  void setPredicate(CmpInst::Predicate Pred) {
+    assert(OpType == OperationType::Cmp &&
+           "recipe doesn't have a compare predicate");
+    CmpPredicate = Pred;
   }
 
   GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
