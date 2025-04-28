@@ -2502,21 +2502,12 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   taskArgs.inReduction.syms = inReductionSyms;
   taskArgs.inReduction.vars = clauseOps.inReductionVars;
 
-  auto genRegionEntryCB = [&](mlir::Operation *op) {
-    genEntryBlock(converter.getFirOpBuilder(), taskArgs, op->getRegion(0));
-    bindEntryBlockArgs(converter,
-                       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op),
-                       taskArgs);
-    return llvm::to_vector(taskArgs.getSyms());
-  };
-
   return genOpWithBody<mlir::omp::TaskOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_task)
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
-          .setEntryBlockArgs(&taskArgs)
-          .setGenRegionEntryCb(genRegionEntryCB),
+          .setEntryBlockArgs(&taskArgs),
       queue, item, clauseOps);
 }
 
@@ -2535,19 +2526,11 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   taskgroupArgs.taskReduction.syms = taskReductionSyms;
   taskgroupArgs.taskReduction.vars = clauseOps.taskReductionVars;
 
-  auto genRegionEntryCB = [&](mlir::Operation *op) {
-    genEntryBlock(converter.getFirOpBuilder(), taskgroupArgs, op->getRegion(0));
-    bindEntryBlockArgs(converter,
-                       llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op),
-                       taskgroupArgs);
-    return llvm::to_vector(taskgroupArgs.getSyms());
-  };
-
   return genOpWithBody<mlir::omp::TaskgroupOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
           .setClauses(&item->clauses)
-          .setGenRegionEntryCb(genRegionEntryCB),
+          .setEntryBlockArgs(&taskgroupArgs),
       queue, item, clauseOps);
 }
 
