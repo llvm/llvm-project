@@ -2174,24 +2174,34 @@ public:
   InstructionListType createLoadImmediate(const MCPhysReg Dest,
                                           uint64_t Imm) const override {
     InstructionListType Insts;
-    for (int I = 0, Shift = 0; I < 4; I++, Shift += 16) {
-      uint16_t HalfWord = (Imm >> Shift) & 0xFFFF;
-      if (!HalfWord)
-        continue;
+    if (Imm == 0) {
       MCInst Inst;
-      if (Insts.size() == 0) {
-        Inst.setOpcode(AArch64::MOVZXi);
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createImm(HalfWord));
-        Inst.addOperand(MCOperand::createImm(Shift));
-        Insts.push_back(Inst);
-      } else {
-        Inst.setOpcode(AArch64::MOVKXi);
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createReg(Dest));
-        Inst.addOperand(MCOperand::createImm(HalfWord));
-        Inst.addOperand(MCOperand::createImm(Shift));
-        Insts.push_back(Inst);
+      Inst.setOpcode(AArch64::ORRXrs);
+      Inst.addOperand(MCOperand::createReg(Dest));
+      Inst.addOperand(MCOperand::createReg(AArch64::XZR));
+      Inst.addOperand(MCOperand::createReg(AArch64::XZR));
+      Inst.addOperand(MCOperand::createImm(0));
+      Insts.push_back(Inst);
+    } else {
+      for (int I = 0, Shift = 0; I < 4; I++, Shift += 16) {
+        uint16_t HalfWord = (Imm >> Shift) & 0xFFFF;
+        if (!HalfWord)
+          continue;
+        MCInst Inst;
+        if (Insts.size() == 0) {
+          Inst.setOpcode(AArch64::MOVZXi);
+          Inst.addOperand(MCOperand::createReg(Dest));
+          Inst.addOperand(MCOperand::createImm(HalfWord));
+          Inst.addOperand(MCOperand::createImm(Shift));
+          Insts.push_back(Inst);
+        } else {
+          Inst.setOpcode(AArch64::MOVKXi);
+          Inst.addOperand(MCOperand::createReg(Dest));
+          Inst.addOperand(MCOperand::createReg(Dest));
+          Inst.addOperand(MCOperand::createImm(HalfWord));
+          Inst.addOperand(MCOperand::createImm(Shift));
+          Insts.push_back(Inst);
+        }
       }
     }
     return Insts;

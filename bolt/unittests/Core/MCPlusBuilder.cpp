@@ -167,7 +167,26 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
   ASSERT_EQ(Label, BB->getLabel());
 }
 
-TEST_P(MCPlusBuilderTester, AArch64_LoadImm32) {
+TEST_P(MCPlusBuilderTester, AArch64_LoadZero) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs = BC->MIB->createLoadImmediate(AArch64::X0, 0);
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+
+  ASSERT_EQ(BB->size(), 1);
+  auto II = BB->begin();
+  // mov x0, xzr <=> orr x0, xzr, xzr, lsl #0
+  ASSERT_EQ(II->getOpcode(), AArch64::ORRXrs);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(2).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(3).getImm(), 0);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_LoadImm16) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
