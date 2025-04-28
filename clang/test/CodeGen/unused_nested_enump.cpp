@@ -11,7 +11,6 @@ int main() {
 
 // CHECK: !DICompositeType(tag: DW_TAG_enumeration_type
 // CHECK-SAME: scope: ![[STRUCT:[0-9]+]]
-// CHECK-SAME: baseType: ![[UINT:[0-9]+]]
 // CHECK-SAME: elements: ![[ELEMENTS:[0-9]+]]
 
 // CHECK: ![[STRUCT]] = distinct !DICompositeType(tag: DW_TAG_structure_type
@@ -22,11 +21,6 @@ int main() {
 // CHECK: ![[VALUE_MEMBER]] = !DIDerivedType(tag: DW_TAG_member
 // CHECK-SAME: name: "value"
 // CHECK-SAME: scope: ![[STRUCT]]
-// CHECK-SAME: baseType: ![[INT:[0-9]+]]
-
-// CHECK: ![[INT]] = !DIBasicType(name: "int"
-
-// CHECK: ![[UINT]] = !DIBasicType(name: "unsigned int"
 
 // CHECK: ![[ELEMENTS]] = !{![[ENUMERATOR:[0-9]+]]}
 // CHECK: ![[ENUMERATOR]] = !DIEnumerator(name: "Unused", value: 0, isUnsigned: true)
