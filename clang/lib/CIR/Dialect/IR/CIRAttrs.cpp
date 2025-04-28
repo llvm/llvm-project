@@ -203,7 +203,7 @@ ConstArrayAttr::verify(function_ref<::mlir::InFlightDiagnostic()> emitError,
 
   if (auto strAttr = mlir::dyn_cast<StringAttr>(elts)) {
     const auto arrayTy = mlir::cast<ArrayType>(type);
-    const auto intTy = mlir::dyn_cast<IntType>(arrayTy.getEltType());
+    const auto intTy = mlir::dyn_cast<IntType>(arrayTy.getElementType());
 
     // TODO: add CIR type for char.
     if (!intTy || intTy.getWidth() != 8) {
