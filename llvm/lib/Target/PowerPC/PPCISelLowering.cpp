@@ -16562,13 +16562,16 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                     MemVT.getSizeInBits());
       SDValue Const64 = DAG.getConstant(Val64, dl, MVT::i64);
 
-      // DAG.getTruncStore() can't be used here because it doesn't accept
-      // the general (base + offset) addressing mode.
-      // So we use UpdateNodeOperands and setTruncatingStore instead.
-      DAG.UpdateNodeOperands(N, N->getOperand(0), Const64, N->getOperand(2),
-                             N->getOperand(3));
-      cast<StoreSDNode>(N)->setTruncatingStore(true);
-      return SDValue(N, 0);
+      auto *ST = cast<StoreSDNode>(N);
+      SDValue NewST = DAG.getStore(ST->getChain(), dl, Const64,
+                                   ST->getBasePtr(), ST->getOffset(), MemVT,
+                                   ST->getMemOperand(), ST->getAddressingMode(),
+                                   /*IsTruncating=*/true);
+      // Note we use CombineTo here to prevent DAGCombiner from visiting the
+      // new store which will change the constant by removing non-demanded bits.
+      return ST->isUnindexed()
+                 ? DCI.CombineTo(N, NewST, /*AddTo=*/false)
+                 : DCI.CombineTo(N, NewST, NewST.getValue(1), /*AddTo=*/false);
     }
 
     // For little endian, VSX stores require generating xxswapd/lxvd2x.
