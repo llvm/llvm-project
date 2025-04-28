@@ -1404,8 +1404,11 @@ public:
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
-    return new VPWidenIntrinsicRecipe(*cast<CallInst>(getUnderlyingValue()),
-                                      VectorIntrinsicID, {op_begin(), op_end()},
+    if (Value *CI = getUnderlyingValue())
+      return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
+                                        {op_begin(), op_end()}, ResultTy,
+                                        getDebugLoc());
+    return new VPWidenIntrinsicRecipe(VectorIntrinsicID, {op_begin(), op_end()},
                                       ResultTy, getDebugLoc());
   }
 
