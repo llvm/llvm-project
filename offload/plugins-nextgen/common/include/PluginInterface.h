@@ -17,6 +17,8 @@
 #include <list>
 #include <map>
 #include <shared_mutex>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "ExclusiveAccess.h"
@@ -58,6 +60,7 @@ struct GenericPluginTy;
 struct GenericKernelTy;
 struct GenericDeviceTy;
 struct RecordReplayTy;
+struct KernelRunRecordTy;
 
 /// Class that wraps the __tgt_async_info to simply its usage. In case the
 /// object is constructed without a valid __tgt_async_info, the object will use
@@ -298,6 +301,7 @@ struct GenericKernelTy {
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
+    case OMP_TGT_EXEC_MODE_BARE:
     case OMP_TGT_EXEC_MODE_SPMD:
     case OMP_TGT_EXEC_MODE_GENERIC:
     case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
@@ -344,10 +348,35 @@ struct GenericKernelTy {
     return AchievedOccupancy;
   }
 
+  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  bool isGenericSPMDMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+  }
+  bool isGenericMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
+  }
+  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+
+  /// AMD-only execution modes
+  bool isBigJumpLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
+  }
+  bool isNoLoopMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  }
+  bool isXTeamReductionsMode() const {
+    return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
+  }
+
+  /// Indicate if the input block size is within the limit.
+  virtual bool isValidBlockSize(uint32_t BlockSize) const { return true; }
+
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
-    switch (ExecutionMode) {
+    switch (KernelEnvironment.Configuration.ExecMode) {
+    case OMP_TGT_EXEC_MODE_BARE:
+      return "BARE";
     case OMP_TGT_EXEC_MODE_SPMD:
       return "SPMD";
     case OMP_TGT_EXEC_MODE_GENERIC:
@@ -411,6 +440,10 @@ private:
                                 uint32_t BlockLimitClause[3],
                                 uint64_t LoopTripCount, uint32_t &NumThreads,
                                 bool IsNumThreadsFromUser) const;
+  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
+  bool isBareMode() const {
+    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_BARE;
+  }
 
   /// The kernel name.
   const char *Name;
@@ -430,26 +463,6 @@ protected:
 
   /// The maximum number of threads which the kernel could leverage.
   uint32_t MaxNumThreads;
-
-  /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
-  bool isGenericSPMDMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
-  }
-  bool isGenericMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
-  }
-  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
-
-  /// AMD-only execution modes
-  bool isBigJumpLoopMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP;
-  }
-  bool isNoLoopMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
-  }
-  bool isXTeamReductionsMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
-  }
 
   /// The kernel environment, including execution flags.
   KernelEnvironmentTy KernelEnvironment;
@@ -1011,6 +1024,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual uint32_t getOMPXBigJumpLoopTeamsPerCU() const {
     llvm_unreachable("Unimplemented");
   }
+  virtual uint32_t getXTeamRedTeamsPerCU() const {
+    llvm_unreachable("Unimplemented");
+  }
   virtual uint32_t getOMPXBigJumpLoopMaxTotalTeams() const {
     llvm_unreachable("Unimplemented");
   }
@@ -1105,6 +1121,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   bool getMultiDeviceKernelValue(void *EntryPtr);
 
+  KernelRunRecordTy *getKernelRunRecords() const { return KernelRunRecords; }
+
   /// Return true if a descriptor of size 'Size' should be allocated using
   /// shared memory. Default implementation returns 'false',
   virtual bool useSharedMemForDescriptor(int64_t Size);
@@ -1165,6 +1183,28 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   BoolEnvar OMPX_TrackAllocationTraces =
       BoolEnvar("OFFLOAD_TRACK_ALLOCATION_TRACES", false);
 
+  /// An entry to cache a shared memory buffer for Args to emissary APIs
+  struct ArgBufEntryTy {
+    size_t Size; // Size of Buffer
+    void *Addr;  // Pointer to SHARED mem
+    bool is_free;
+  };
+  /// The cache of allocated shared memory buffers for emissary APIs args
+  std::list<ArgBufEntryTy *> ArgBufEntries;
+  /// Get a free shared memory buffer and mark it not free. If none
+  /// free, allocate a new buffer and mark it not free.
+  void *getFree_ArgBuf(size_t sz);
+  /// Change a cached buffer from not free (busy) to free.
+  void moveBusyToFree_ArgBuf(void *ptr);
+  /// Destroy Argbufs and clear the cache. Used as part of device destructor
+  void clear_ArgBufs();
+
+  bool enableKernelDurationTracing() const {
+    return OMPX_KernelDurationTracing;
+  }
+
+  uint32_t getAndIncrementLaunchId() { return LaunchId.fetch_add(1); }
+
 private:
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -1212,6 +1252,9 @@ private:
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
+  /// Variable to track kernel launch for a device.
+  std::atomic<uint32_t> LaunchId = 0;
+
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
@@ -1256,6 +1299,12 @@ protected:
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
 
+  /// Structs for functions and data used in runtime autotuning.
+  KernelRunRecordTy *KernelRunRecords;
+
+  /// Variable to enable kernel duration tracing.
+  BoolEnvar OMPX_KernelDurationTracing;
+
 private:
 #ifdef OMPT_SUPPORT
   /// OMPT callback functions
@@ -1280,6 +1329,116 @@ private:
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
 
   bool IsFastReductionEnabled = false;
+};
+
+/// Struct represents the metadata for each kernel run on the device.
+struct KernelRunRecordTy {
+
+  struct KernelRunEntryTy {
+    std::string KernelName;
+    uint32_t NumTeams = 0;
+    uint32_t NumThreads = 0;
+    uint64_t RunDuration = 0;
+  };
+
+  // Metadata used in tuning process.
+  struct TuningMetadataTy {
+    uint32_t IdxThread = 0;
+    uint32_t IdxCUMultiplier = 0;
+    // Run counters.
+    uint32_t RunCounters = 0;
+    // Entry with minimum running time.
+    KernelRunEntryTy MinEntry;
+  };
+
+  // Add a new entry
+  void addEntry(std::string KernelName, uint32_t NumTeams, uint32_t NumThreads,
+                uint64_t RunDuration) {
+    TuningData[KernelName].RunCounters++;
+
+    // Update min entries.
+    uint64_t MinDuration = 0;
+    auto It = TuningData.find(KernelName);
+    if (It != TuningData.end()) {
+      MinDuration = It->second.MinEntry.RunDuration;
+    }
+    if (MinDuration > RunDuration || MinDuration == 0) {
+      TuningData[KernelName].MinEntry = {KernelName, NumTeams, NumThreads,
+                                         RunDuration};
+    }
+  }
+
+  // Get parameters for next kernel launch.
+  std::pair<uint32_t, uint32_t>
+  getLaunchParamsForKernel(const GenericKernelTy &Kernel,
+                           GenericDeviceTy &GenericDevice) {
+    std::string KernelName = Kernel.getName();
+
+    // If the kernel reaches the run limit,
+    // return the current optimal launch parameters.
+    if (reachedRunLimitForKernel(KernelName)) {
+      auto MinEntry = TuningData[KernelName].MinEntry;
+      return {MinEntry.NumTeams, MinEntry.NumThreads};
+    }
+
+    // Pick new launch parameters.
+    uint32_t IdxCUMulti = TuningData[KernelName].IdxCUMultiplier;
+    uint32_t IdxThread = TuningData[KernelName].IdxThread;
+
+    if (IdxCUMulti >= CUMultiplierCandidate.size()) {
+      // No more element to search.
+      // Max run counter to stop further runs.
+      // Return current optimal launch parameters.
+      TuningData[KernelName].RunCounters = RunLimiter + 1;
+
+      return {TuningData[KernelName].MinEntry.NumTeams,
+              TuningData[KernelName].MinEntry.NumThreads};
+    }
+
+    // New team/thread pair for launch parameters.
+    uint32_t NumCU = GenericDevice.getNumComputeUnits();
+    std::pair<uint32_t, uint32_t> NewLaunchParams = {
+        CUMultiplierCandidate[IdxCUMulti] * NumCU, ThreadCandidate[IdxThread]};
+
+    // Update indices.
+    IdxThread++;
+    TuningData[KernelName].IdxThread = IdxThread;
+
+    // Threads should be within the limit.
+    if (IdxThread >= ThreadCandidate.size() ||
+        !Kernel.isValidBlockSize(ThreadCandidate[IdxThread])) {
+      TuningData[KernelName].IdxThread = 0;
+      TuningData[KernelName].IdxCUMultiplier++;
+    }
+
+    return NewLaunchParams;
+  }
+
+  bool reachedRunLimitForKernel(std::string KernelName) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
+      // If no record for this kernel.
+      return false;
+    }
+
+    return TuningData[KernelName].RunCounters > RunLimiter;
+  }
+
+  uint32_t getRunCounterForKernel(std::string KernelName) {
+    if (TuningData.find(KernelName) == TuningData.end()) {
+      return 0;
+    }
+
+    return TuningData[KernelName].RunCounters;
+  }
+
+private:
+  // Candidates for thread and team.
+  std::vector<uint32_t> ThreadCandidate = {32, 64, 128, 256, 512, 1024};
+  std::vector<uint32_t> CUMultiplierCandidate = {4, 8, 16, 32, 64, 128};
+  // The max number of tuning runs for each kernel.
+  uint32_t RunLimiter = ThreadCandidate.size() * CUMultiplierCandidate.size();
+  // Used for keeping track of the metatdata used in tuning for each kernel.
+  std::unordered_map<std::string, TuningMetadataTy> TuningData;
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin

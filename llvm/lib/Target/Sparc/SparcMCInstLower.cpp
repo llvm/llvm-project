@@ -30,8 +30,7 @@ static MCOperand LowerSymbolOperand(const MachineInstr *MI,
                                     const MachineOperand &MO,
                                     AsmPrinter &AP) {
 
-  SparcMCExpr::VariantKind Kind =
-    (SparcMCExpr::VariantKind)MO.getTargetFlags();
+  SparcMCExpr::Specifier Kind = (SparcMCExpr::Specifier)MO.getTargetFlags();
   const MCSymbol *Symbol = nullptr;
 
   switch(MO.getType()) {

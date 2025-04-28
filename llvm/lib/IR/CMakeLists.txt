@@ -26,13 +26,14 @@ add_llvm_component_library(LLVMCore
   DiagnosticInfo.cpp
   DiagnosticPrinter.cpp
   Dominators.cpp
+  DroppedVariableStats.cpp
+  DroppedVariableStatsIR.cpp
   EHPersonalities.cpp
   FPEnv.cpp
   Function.cpp
   GCStrategy.cpp
   GVMaterializer.cpp
   Globals.cpp
-  HeterogeneousDebugVerify.cpp
   Intrinsics.cpp
   IRBuilder.cpp
   IRPrintingPasses.cpp

@@ -29,11 +29,10 @@
 ; LAXX-NEXT: Default Regalloc Eviction Advisor
 ; LAXX-NEXT: Default Regalloc Priority Advisor
 ; LAXX-NEXT:   ModulePass Manager
-; LAXX-NEXT:     Verify Heterogeneous Debug Preconditions
 ; LAXX-NEXT:     Pre-ISel Intrinsic Lowering
 ; LAXX-NEXT:     FunctionPass Manager
 ; LAXX-NEXT:       Expand large div/rem
-; LAXX-NEXT:       Expand large fp convert
+; LAXX-NEXT:       Expand fp
 ; LAXX-NEXT:       Expand Atomic instructions
 ; LAXX-NEXT:       Module Verifier
 ; LAXX-NEXT:       Dominator Tree Construction

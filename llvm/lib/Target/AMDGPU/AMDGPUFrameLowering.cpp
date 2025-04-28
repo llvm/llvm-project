@@ -69,26 +69,6 @@ unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
   return 1;
 }
 
-DIExprBuilder::Iterator AMDGPUFrameLowering::insertFrameLocation(
-    const MachineFunction &MF, DIExprBuilder &Builder,
-    DIExprBuilder::Iterator BI, Type *ResultType) const {
-  LLVMContext &Context = MF.getFunction().getParent()->getContext();
-  const auto &ST = MF.getSubtarget<GCNSubtarget>();
-  unsigned AllocaAddrSpace = MF.getDataLayout().getAllocaAddrSpace();
-  Type *IntPtrTy = IntegerType::getIntNTy(
-      Context, MF.getTarget().getPointerSizeInBits(AllocaAddrSpace));
-  ConstantData *WavefrontSizeLog2 = static_cast<ConstantData *>(
-      ConstantInt::get(IntPtrTy, ST.getWavefrontSizeLog2(), false));
-
-  SmallVector<DIOp::Variant> FL = { DIOp::Referrer(IntPtrTy) };
-  if (!ST.enableFlatScratch())
-    FL.append({DIOp::Constant(WavefrontSizeLog2), DIOp::LShr()});
-  FL.append(
-      { DIOp::Reinterpret(PointerType::get(ResultType, AllocaAddrSpace)),
-        DIOp::Deref(ResultType) });
-  return Builder.insert(BI, FL) + FL.size();
-}
-
 DIExpression *AMDGPUFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
                                                      const DIExpression *Expr,
                                                      uint64_t ArgIndex,

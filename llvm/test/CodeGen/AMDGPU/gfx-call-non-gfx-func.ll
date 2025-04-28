@@ -40,14 +40,46 @@ define amdgpu_gfx void @gfx_func() {
 ; SDAG-NEXT:    v_writelane_b32 v40, s27, 23
 ; SDAG-NEXT:    v_writelane_b32 v40, s28, 24
 ; SDAG-NEXT:    v_writelane_b32 v40, s29, 25
-; SDAG-NEXT:    v_writelane_b32 v40, s30, 26
-; SDAG-NEXT:    v_writelane_b32 v40, s31, 27
+; SDAG-NEXT:    v_writelane_b32 v40, s72, 26
+; SDAG-NEXT:    v_writelane_b32 v40, s73, 27
+; SDAG-NEXT:    v_writelane_b32 v40, s74, 28
+; SDAG-NEXT:    v_writelane_b32 v40, s75, 29
+; SDAG-NEXT:    v_writelane_b32 v40, s76, 30
+; SDAG-NEXT:    v_writelane_b32 v40, s77, 31
+; SDAG-NEXT:    v_writelane_b32 v40, s78, 32
+; SDAG-NEXT:    v_writelane_b32 v40, s79, 33
+; SDAG-NEXT:    v_writelane_b32 v40, s88, 34
+; SDAG-NEXT:    v_writelane_b32 v40, s89, 35
+; SDAG-NEXT:    v_writelane_b32 v40, s90, 36
+; SDAG-NEXT:    v_writelane_b32 v40, s91, 37
+; SDAG-NEXT:    v_writelane_b32 v40, s92, 38
+; SDAG-NEXT:    v_writelane_b32 v40, s93, 39
+; SDAG-NEXT:    v_writelane_b32 v40, s94, 40
+; SDAG-NEXT:    v_writelane_b32 v40, s95, 41
+; SDAG-NEXT:    v_writelane_b32 v40, s30, 42
+; SDAG-NEXT:    v_writelane_b32 v40, s31, 43
 ; SDAG-NEXT:    s_mov_b32 s35, extern_c_func@abs32@hi
 ; SDAG-NEXT:    s_mov_b32 s34, extern_c_func@abs32@lo
 ; SDAG-NEXT:    s_mov_b64 s[8:9], 0
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[34:35]
-; SDAG-NEXT:    v_readlane_b32 s30, v40, 26
-; SDAG-NEXT:    v_readlane_b32 s31, v40, 27
+; SDAG-NEXT:    v_readlane_b32 s30, v40, 42
+; SDAG-NEXT:    v_readlane_b32 s31, v40, 43
+; SDAG-NEXT:    v_readlane_b32 s95, v40, 41
+; SDAG-NEXT:    v_readlane_b32 s94, v40, 40
+; SDAG-NEXT:    v_readlane_b32 s93, v40, 39
+; SDAG-NEXT:    v_readlane_b32 s92, v40, 38
+; SDAG-NEXT:    v_readlane_b32 s91, v40, 37
+; SDAG-NEXT:    v_readlane_b32 s90, v40, 36
+; SDAG-NEXT:    v_readlane_b32 s89, v40, 35
+; SDAG-NEXT:    v_readlane_b32 s88, v40, 34
+; SDAG-NEXT:    v_readlane_b32 s79, v40, 33
+; SDAG-NEXT:    v_readlane_b32 s78, v40, 32
+; SDAG-NEXT:    v_readlane_b32 s77, v40, 31
+; SDAG-NEXT:    v_readlane_b32 s76, v40, 30
+; SDAG-NEXT:    v_readlane_b32 s75, v40, 29
+; SDAG-NEXT:    v_readlane_b32 s74, v40, 28
+; SDAG-NEXT:    v_readlane_b32 s73, v40, 27
+; SDAG-NEXT:    v_readlane_b32 s72, v40, 26
 ; SDAG-NEXT:    v_readlane_b32 s29, v40, 25
 ; SDAG-NEXT:    v_readlane_b32 s28, v40, 24
 ; SDAG-NEXT:    v_readlane_b32 s27, v40, 23
@@ -117,14 +149,46 @@ define amdgpu_gfx void @gfx_func() {
 ; GISEL-NEXT:    v_writelane_b32 v40, s27, 23
 ; GISEL-NEXT:    v_writelane_b32 v40, s28, 24
 ; GISEL-NEXT:    v_writelane_b32 v40, s29, 25
-; GISEL-NEXT:    v_writelane_b32 v40, s30, 26
-; GISEL-NEXT:    v_writelane_b32 v40, s31, 27
+; GISEL-NEXT:    v_writelane_b32 v40, s72, 26
+; GISEL-NEXT:    v_writelane_b32 v40, s73, 27
+; GISEL-NEXT:    v_writelane_b32 v40, s74, 28
+; GISEL-NEXT:    v_writelane_b32 v40, s75, 29
+; GISEL-NEXT:    v_writelane_b32 v40, s76, 30
+; GISEL-NEXT:    v_writelane_b32 v40, s77, 31
+; GISEL-NEXT:    v_writelane_b32 v40, s78, 32
+; GISEL-NEXT:    v_writelane_b32 v40, s79, 33
+; GISEL-NEXT:    v_writelane_b32 v40, s88, 34
+; GISEL-NEXT:    v_writelane_b32 v40, s89, 35
+; GISEL-NEXT:    v_writelane_b32 v40, s90, 36
+; GISEL-NEXT:    v_writelane_b32 v40, s91, 37
+; GISEL-NEXT:    v_writelane_b32 v40, s92, 38
+; GISEL-NEXT:    v_writelane_b32 v40, s93, 39
+; GISEL-NEXT:    v_writelane_b32 v40, s94, 40
+; GISEL-NEXT:    v_writelane_b32 v40, s95, 41
+; GISEL-NEXT:    v_writelane_b32 v40, s30, 42
+; GISEL-NEXT:    v_writelane_b32 v40, s31, 43
 ; GISEL-NEXT:    s_mov_b32 s34, extern_c_func@abs32@lo
 ; GISEL-NEXT:    s_mov_b32 s35, extern_c_func@abs32@hi
 ; GISEL-NEXT:    s_mov_b64 s[8:9], 0
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[34:35]
-; GISEL-NEXT:    v_readlane_b32 s30, v40, 26
-; GISEL-NEXT:    v_readlane_b32 s31, v40, 27
+; GISEL-NEXT:    v_readlane_b32 s30, v40, 42
+; GISEL-NEXT:    v_readlane_b32 s31, v40, 43
+; GISEL-NEXT:    v_readlane_b32 s95, v40, 41
+; GISEL-NEXT:    v_readlane_b32 s94, v40, 40
+; GISEL-NEXT:    v_readlane_b32 s93, v40, 39
+; GISEL-NEXT:    v_readlane_b32 s92, v40, 38
+; GISEL-NEXT:    v_readlane_b32 s91, v40, 37
+; GISEL-NEXT:    v_readlane_b32 s90, v40, 36
+; GISEL-NEXT:    v_readlane_b32 s89, v40, 35
+; GISEL-NEXT:    v_readlane_b32 s88, v40, 34
+; GISEL-NEXT:    v_readlane_b32 s79, v40, 33
+; GISEL-NEXT:    v_readlane_b32 s78, v40, 32
+; GISEL-NEXT:    v_readlane_b32 s77, v40, 31
+; GISEL-NEXT:    v_readlane_b32 s76, v40, 30
+; GISEL-NEXT:    v_readlane_b32 s75, v40, 29
+; GISEL-NEXT:    v_readlane_b32 s74, v40, 28
+; GISEL-NEXT:    v_readlane_b32 s73, v40, 27
+; GISEL-NEXT:    v_readlane_b32 s72, v40, 26
 ; GISEL-NEXT:    v_readlane_b32 s29, v40, 25
 ; GISEL-NEXT:    v_readlane_b32 s28, v40, 24
 ; GISEL-NEXT:    v_readlane_b32 s27, v40, 23

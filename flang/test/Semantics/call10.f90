@@ -36,6 +36,8 @@ module m
     end subroutine
   end interface
 
+  real :: moduleVar = 1.
+
  contains
 
   subroutine impure(x)
@@ -117,6 +119,8 @@ module m
     !ERROR: A pure subprogram may not initialize a variable
       real :: v6 = 0.
     end block
+    associate (x => moduleVar) ! ok
+    end associate
   end subroutine
   pure subroutine s06 ! C1589
     !ERROR: A pure subprogram may not have a variable with the VOLATILE attribute
@@ -200,8 +204,9 @@ module m
     !ERROR: An image control statement may not appear in a pure subprogram
     sync all ! C1599
   end subroutine
-  pure subroutine s14
-    integer :: img, nimgs, i[*], tmp
+  pure subroutine s14(i)
+    integer :: img, nimgs, tmp
+    integer, intent(in out) :: i[*]
                                    ! implicit sync all
     img = this_image()
     nimgs = num_images()

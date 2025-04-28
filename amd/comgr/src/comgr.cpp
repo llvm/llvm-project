@@ -1,37 +1,16 @@
-/*******************************************************************************
- *
- * University of Illinois/NCSA
- * Open Source License
- *
- * Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * with the Software without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- *     * Redistributions of source code must retain the above copyright notice,
- *       this list of conditions and the following disclaimers.
- *
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimers in the
- *       documentation and/or other materials provided with the distribution.
- *
- *     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
- *       contributors may be used to endorse or promote products derived from
- *       this Software without specific prior written permission.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
- * THE SOFTWARE.
- *
- ******************************************************************************/
+//===- comgr.cpp - User-facing APIs ---------------------------------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the core user-facing Comgr APIs, including compilation,
+/// metadata, and disassembly, symbol lookup, and symbolization APIs.
+///
+//===----------------------------------------------------------------------===//
 
 #include "comgr.h"
 #include "comgr-compiler.h"
@@ -187,24 +166,11 @@ amd_comgr_status_t dispatchCompilerAction(amd_comgr_action_kind_t ActionKind,
     return Compiler.compileToBitcode(true);
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
     return Compiler.compileToExecutable();
+  case AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE:
+    return Compiler.compileSpirvToRelocatable();
   case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
     return Compiler.translateSpirvToBitcode();
 
-  default:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
-}
-
-amd_comgr_status_t dispatchAddAction(amd_comgr_action_kind_t ActionKind,
-                                     DataAction *ActionInfo, DataSet *InputSet,
-                                     DataSet *ResultSet) {
-  for (DataObject *Data : InputSet->DataObjects) {
-    Data->RefCount++;
-    ResultSet->DataObjects.insert(Data);
-  }
-  switch (ActionKind) {
-  case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
-    return addPrecompiledHeaders(ActionInfo, ResultSet);
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
@@ -291,6 +257,8 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE";
   case AMD_COMGR_ACTION_UNBUNDLE:
     return "AMD_COMGR_ACTION_UNBUNDLE";
+  case AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE:
+    return "AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE";
   case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
     return "AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC";
   }
@@ -315,6 +283,10 @@ amd_comgr_status_t COMGR::setCStr(char *&Dest, StringRef Src, size_t *Size) {
     *Size = Src.size();
   }
   return AMD_COMGR_STATUS_SUCCESS;
+}
+
+StringRef COMGR::getComgrHashIdentifier() {
+  return xstringify(AMD_COMGR_VERSION_ID);
 }
 
 amd_comgr_status_t COMGR::parseTargetIdentifier(StringRef IdentStr,
@@ -1184,6 +1156,22 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_action_info_set_vfs
+    //
+    (amd_comgr_action_info_t ActionInfo, bool ShouldUseVFS) {
+  DataAction *ActionP = DataAction::convert(ActionInfo);
+
+  if (!ActionP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  ActionP->ShouldUseVFS = ShouldUseVFS;
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_device_lib_linking
     //
     (amd_comgr_action_info_t ActionInfo, bool ShouldLinkDeviceLibs) {
@@ -1372,13 +1360,19 @@ amd_comgr_status_t AMD_COMGR_API
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC:
     case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE:
+    case AMD_COMGR_ACTION_COMPILE_SPIRV_TO_RELOCATABLE:
     case AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC:
       ActionStatus = dispatchCompilerAction(ActionKind, ActionInfoP, InputSetP,
                                             ResultSetP, *LogP);
       break;
     case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
-      ActionStatus =
-          dispatchAddAction(ActionKind, ActionInfoP, InputSetP, ResultSetP);
+      // Redirect the input to the output.
+      // Deprecate and remove this action.
+      for (DataObject *Data : InputSetP->DataObjects) {
+        Data->RefCount++;
+        ResultSetP->DataObjects.insert(Data);
+      }
+      ActionStatus = AMD_COMGR_STATUS_SUCCESS;
       break;
     default:
       ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -2164,7 +2158,8 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data, size_t *Count) {
 amd_comgr_status_t AMD_COMGR_API
 // NOLINTNEXTLINE(readability-identifier-naming)
 amd_comgr_map_name_expression_to_symbol_name(amd_comgr_data_t Data,
-                                             size_t *Size, char *NameExpression,
+                                             size_t *Size,
+                                             const char *NameExpression,
                                              char *SymbolName) {
   DataObject *DataP = DataObject::convert(Data);
   if (!DataP || !DataP->Data ||

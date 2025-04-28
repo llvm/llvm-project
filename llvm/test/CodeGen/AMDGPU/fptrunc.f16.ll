@@ -654,7 +654,9 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-SDAG-NEXT:    v_cvt_f32_f64_e32 v2, v[2:3]
 ; GFX950-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
-; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v2
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; GFX950-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
@@ -666,11 +668,11 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX950-GISEL-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX950-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[4:5]
-; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
-; GFX950-GISEL-NEXT:    v_cvt_f32_f64_e32 v2, v[2:3]
-; GFX950-GISEL-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
-; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v2
+; GFX950-GISEL-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
+; GFX950-GISEL-NEXT:    v_cvt_f32_f64_e32 v1, s[6:7]
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX950-GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX950-GISEL-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;

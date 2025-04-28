@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "MCTargetDesc/HexagonShuffler.h"
+#include "MCTargetDesc/HexagonTargetStreamer.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1247,11 +1247,11 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
               Expr, MCConstantExpr::create(0xffff, Context), Context);
       } else {
         MCValue Value;
-        if (Expr->evaluateAsRelocatable(Value, nullptr, nullptr)) {
+        if (Expr->evaluateAsRelocatable(Value, nullptr)) {
           if (!Value.isAbsolute()) {
-            switch (Value.getAccessVariant()) {
-            case MCSymbolRefExpr::VariantKind::VK_TPREL:
-            case MCSymbolRefExpr::VariantKind::VK_DTPREL:
+            switch (HexagonMCExpr::VariantKind(Value.getSpecifier())) {
+            case HexagonMCExpr::VK_TPREL:
+            case HexagonMCExpr::VK_DTPREL:
               // Don't lazy extend these expression variants
               MustNotExtend = !MustExtend;
               break;

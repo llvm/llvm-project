@@ -867,9 +867,10 @@ protected:
       if (addr_type == eAddressTypeLoad) {
         // We're in business.
         // Find out the size of this variable.
-        size = m_option_watchpoint.watch_size.GetCurrentValue() == 0
-                   ? valobj_sp->GetByteSize().value_or(0)
-                   : m_option_watchpoint.watch_size.GetCurrentValue();
+        size =
+            m_option_watchpoint.watch_size.GetCurrentValue() == 0
+                ? llvm::expectedToOptional(valobj_sp->GetByteSize()).value_or(0)
+                : m_option_watchpoint.watch_size.GetCurrentValue();
       }
       compiler_type = valobj_sp->GetCompilerType();
     } else {
@@ -1080,7 +1081,8 @@ protected:
     /// of the expression, so convert to that if we found a valid type.
     CompilerType compiler_type(valobj_sp->GetCompilerType());
 
-    std::optional<uint64_t> valobj_size = valobj_sp->GetByteSize();
+    std::optional<uint64_t> valobj_size =
+        llvm::expectedToOptional(valobj_sp->GetByteSize());
     // Set the type as a uint8_t array if the size being watched is
     // larger than the ValueObject's size (which is probably the size
     // of a pointer).

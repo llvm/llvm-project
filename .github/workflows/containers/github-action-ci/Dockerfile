@@ -1,8 +1,8 @@
-FROM docker.io/library/ubuntu:22.04 as base
+FROM docker.io/library/ubuntu:24.04 as base
 ENV LLVM_SYSROOT=/opt/llvm
 
 FROM base as stage1-toolchain
-ENV LLVM_VERSION=19.1.5
+ENV LLVM_VERSION=20.1.1
 
 RUN apt-get update && \
     apt-get install -y \
@@ -14,17 +14,15 @@ RUN apt-get update && \
     python3 \
     git \
     curl \
-    zlib1g-dev
+    zlib1g-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && tar -xf llvmorg-$LLVM_VERSION.tar.gz
+RUN curl -O -L https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-$LLVM_VERSION.tar.gz && \
+  tar -xf llvmorg-$LLVM_VERSION.tar.gz && \
+  rm -f llvmorg-$LLVM_VERSION.tar.gz
 
 WORKDIR /llvm-project-llvmorg-$LLVM_VERSION
-
-# Patch to enable better PGO profile data.
-# TODO: Remove this for llvm 20
-ADD https://github.com/llvm/llvm-project/commit/738250989ce516f02f809bdfde474a039c77e81f.patch .
-
-RUN patch -p1 < 738250989ce516f02f809bdfde474a039c77e81f.patch
 
 RUN cmake -B ./build -G Ninja ./llvm \
   -C ./clang/cmake/caches/BOLT-PGO.cmake \
@@ -34,13 +32,13 @@ RUN cmake -B ./build -G Ninja ./llvm \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
   -DCMAKE_INSTALL_PREFIX="$LLVM_SYSROOT" \
   -DLLVM_ENABLE_PROJECTS="bolt;clang;lld;clang-tools-extra" \
-  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build" \
+  -DLLVM_DISTRIBUTION_COMPONENTS="lld;compiler-rt;clang-format;scan-build;llvm-symbolizer" \
   -DCLANG_DEFAULT_LINKER="lld"
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
 
 FROM base as ci-container
-    
+
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 
 # Need to install curl for hendrikmuhs/ccache-action
@@ -49,7 +47,7 @@ COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need git for SPIRV-Tools tests.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    binutils \ 
+    binutils \
     cmake \
     curl \
     git \
@@ -59,14 +57,15 @@ RUN apt-get update && \
     perl-modules \
     python3-psutil \
     sudo \
-
     # These are needed by the premerge pipeline. Pip is used to install
     # dependent python packages and ccache is used for build caching. File and
     # tzdata are used for tests.
     python3-pip \
     ccache \
     file \
-    tzdata
+    tzdata && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install sccache as it is needed by most of the project test workflows and
 # cannot be installed by the ccache action when executing as a non-root user.
@@ -96,7 +95,7 @@ WORKDIR /home/gha
 
 FROM ci-container as ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.322.0
+ENV GITHUB_RUNNER_VERSION=2.323.0
 
 RUN mkdir actions-runner && \
     cd actions-runner && \

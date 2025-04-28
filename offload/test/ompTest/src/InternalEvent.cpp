@@ -4,12 +4,10 @@
 #include <sstream>
 
 using namespace omptest;
+using namespace util;
 
-/// String manipulation helper function. Takes up to 8 bytes of data and returns
-/// their hexadecimal representation as string. The data can be truncated to a
-/// certain size in bytes and will by default be prefixed with '0x'.
-std::string makeHexString(uint64_t Data, bool IsPointer = true,
-                          size_t DataBytes = 0, bool ShowHexBase = true) {
+std::string util::makeHexString(uint64_t Data, bool IsPointer, size_t MinBytes,
+                                bool ShowHexBase) {
   if (Data == 0 && IsPointer)
     return "(nil)";
 
@@ -21,10 +19,10 @@ std::string makeHexString(uint64_t Data, bool IsPointer = true,
   if (ShowHexBase)
     os << "0x";
 
-  // Default to 32bit (8 hex digits) width if exceeding 64bit or zero value
-  size_t NumDigits = (DataBytes > 0 && DataBytes < 9) ? (DataBytes << 1) : 8;
+  // Default to 32bit (8 hex digits) width, if exceeding 64bit or zero value
+  size_t NumDigits = (MinBytes > 0 && MinBytes < 9) ? (MinBytes << 1) : 8;
 
-  if (DataBytes > 0)
+  if (MinBytes > 0)
     os << std::setfill('0') << std::setw(NumDigits);
 
   os << std::hex << Data;
@@ -55,6 +53,7 @@ std::string internal::ParallelBegin::toString() const {
 }
 
 std::string internal::ParallelEnd::toString() const {
+  // TODO: Should we expose more detailed info here?
   std::string S{"OMPT Callback ParallelEnd"};
   return S;
 }
@@ -77,7 +76,7 @@ std::string internal::Dispatch::toString() const {
   S.append(" kind=").append(std::to_string(Kind));
   // TODO Check what to print for instance in all different cases
   if (Kind == ompt_dispatch_iteration) {
-    S.append(" instance[it=")
+    S.append(" instance=[it=")
         .append(std::to_string(Instance.value))
         .append(1, ']');
   } else if (Kind == ompt_dispatch_section) {
@@ -133,6 +132,7 @@ std::string internal::SyncRegion::toString() const {
 }
 
 std::string internal::Target::toString() const {
+  // TODO Should we canonicalize the string prefix (use "OMPT ..." everywhere)?
   std::string S{"Callback Target: target_id="};
   S.append(std::to_string(TargetId));
   S.append(" kind=").append(std::to_string(Kind));
@@ -143,6 +143,7 @@ std::string internal::Target::toString() const {
 }
 
 std::string internal::TargetEmi::toString() const {
+  // TODO Should we canonicalize the string prefix (use "OMPT ..." everywhere)?
   std::string S{"Callback Target EMI: kind="};
   S.append(std::to_string(Kind));
   S.append(" endpoint=").append(std::to_string(Endpoint));
@@ -338,7 +339,7 @@ std::string internal::BufferRecord::toString() const {
     break;
   }
   default:
-    S.append("Unsupported record type: ").append(std::to_string(Record.type));
+    S.append(" (unsupported record type)");
     break;
   }
 

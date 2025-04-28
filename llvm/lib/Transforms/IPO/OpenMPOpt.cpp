@@ -675,7 +675,7 @@ struct BooleanStateWithSetVector : public BooleanState {
   /// "Clamp" this state with \p RHS.
   BooleanStateWithSetVector &operator^=(const BooleanStateWithSetVector &RHS) {
     BooleanState::operator^=(RHS);
-    Set.insert(RHS.Set.begin(), RHS.Set.end());
+    Set.insert_range(RHS.Set);
     return *this;
   }
 
@@ -1535,7 +1535,7 @@ private:
     // safely remove it.
     // TODO: This should be somewhere more common in the future.
     if (GlobalVariable *GV = M.getNamedGlobal("__llvm_rpc_client")) {
-      if (GV->getNumUses() >= 1)
+      if (GV->hasNUsesOrMore(1))
         return false;
 
       GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
@@ -5822,7 +5822,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
-                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
+                  LTOPhase == ThinOrFullLTOPhase::CustomLTOPostLink;
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, PostLink);
 
   unsigned MaxFixpointIterations =
@@ -5885,8 +5886,6 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   if (PrintModuleBeforeOptimizations)
     LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt CGSCC Pass:\n" << M);
 
-  KernelSet Kernels = getDeviceKernels(M);
-
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
@@ -5902,8 +5901,9 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
-                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
-  SetVector<Function *> Functions(SCC.begin(), SCC.end());
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
+                  LTOPhase == ThinOrFullLTOPhase::CustomLTOPostLink;
+  SetVector<Function *> Functions(llvm::from_range, SCC);
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ &Functions, PostLink);
 

@@ -1,4 +1,5 @@
 #include "OmptAssertEvent.h"
+#include "OmptAsserter.h"
 #include <omp-tools.h>
 
 #include "gtest/gtest.h"

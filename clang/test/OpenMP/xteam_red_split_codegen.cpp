@@ -193,12 +193,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP29:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP17:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -295,12 +295,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP31:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -397,12 +397,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP32:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP20:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -499,12 +499,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP33:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP21:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -601,12 +601,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP34:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -703,12 +703,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP35:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP23:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -805,12 +805,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP36:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP24:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -907,12 +907,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP37:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP25:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -1009,12 +1009,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP38:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP26:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -1111,12 +1111,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP39:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP27:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -1214,12 +1214,12 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP40:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP28:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //
 //
@@ -1317,11 +1317,11 @@ int main()
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP26]], [[TMP27]]
 // CHECK-NEXT:    store i32 [[TMP28]], ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP41:![0-9]+]]
+// CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP29:![0-9]+]]
 // CHECK:       for.end:
 // CHECK-NEXT:    [[TMP29:%.*]] = load ptr, ptr [[DOTADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP30:%.*]] = load ptr, ptr [[DOTADDR1_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr addrspace(5) [[TMP5]], align 8
-// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]])
+// CHECK-NEXT:    call void @__kmpc_xteamr_d_16x64(double [[TMP31]], ptr [[TMP2]], ptr [[TMP29]], ptr [[TMP30]], ptr @__kmpc_rfun_sum_d, ptr @__kmpc_rfun_sum_lds_d, double 0.000000e+00, i64 [[TMP17]], i32 [[TMP16]], i32 1)
 // CHECK-NEXT:    ret void
 //

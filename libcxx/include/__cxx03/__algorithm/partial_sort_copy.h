@@ -18,8 +18,8 @@
 #include <__cxx03/__algorithm/sort_heap.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/identity.h>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__type_traits/is_callable.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/__utility/pair.h>

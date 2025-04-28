@@ -10,7 +10,7 @@ set(TEST_INPUT_LINKED_OBJS)
 macro(add_test_input_binary name input output)
   add_custom_command(
     OUTPUT "${output}"
-    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -mcpu=gfx900 -nogpulib
+    COMMAND "$<TARGET_FILE:clang>" --target=amdgcn-amd-amdhsa -mcpu=gfx900 -nogpulib -nogpuinc
     ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -27,7 +27,7 @@ macro(add_test_input_bitcode name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c -emit-llvm -target amdgcn-amd-amdhsa
-    -mcpu=gfx900 -nogpulib
+    -mcpu=gfx900 -nogpulib -nogpuinc
     ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}"
     -o "${output}"
     VERBATIM
@@ -45,7 +45,7 @@ macro(add_test_input_bitcode_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 -emit-llvm -fgpu-rdc
-    --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib
+    --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib -nogpuinc
     -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -62,7 +62,7 @@ macro(add_test_input_object_file_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
     COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 --gpu-bundle-output
-    --offload-device-only ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib
+    --offload-device-only ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib -nogpuinc
     -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
@@ -193,9 +193,12 @@ endif()
   add_dependencies(check-comgr ${name})
   # Windows binaries have no equivalent to RPATH, so we must set their PATH to
   # include the .lib/.dll directory.
-  if (NOT(UNIX))
+  if (UNIX)
     set_tests_properties(${test_name}
-      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>")
+      PROPERTIES ENVIRONMENT "AMD_COMGR_CACHE=0;")
+  else()
+    set_tests_properties(${test_name}
+      PROPERTIES ENVIRONMENT "PATH=$<TARGET_LINKER_FILE_DIR:amd_comgr>;AMD_COMGR_CACHE=0;")
   endif()
 endmacro()
 
@@ -218,6 +221,7 @@ add_comgr_test(compile_minimal_test c)
 add_comgr_test(compile_log_test c)
 add_comgr_test(compile_log_remarks_test c)
 add_comgr_test(compile_source_with_device_libs_to_bc_test c)
+add_comgr_test(compile_source_with_device_libs_to_bc_with_vfs_test c)
 add_comgr_test(assemble_test c)
 add_comgr_test(link_test c)
 add_comgr_test(isa_name_parsing_test c)

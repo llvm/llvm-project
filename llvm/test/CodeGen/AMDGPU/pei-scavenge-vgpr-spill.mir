@@ -59,6 +59,38 @@ body:             |
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX8-NEXT: $sgpr4 = COPY $sgpr33
     ; GFX8-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX8-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
@@ -128,6 +160,38 @@ body:             |
     ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
     ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
     ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX9-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX9-NEXT: $sgpr4 = COPY $sgpr33
     ; GFX9-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; GFX9-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def dead $scc
@@ -195,6 +259,38 @@ body:             |
     ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
     ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
     ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX9-FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX9-FLATSCR-NEXT: $sgpr4 = COPY $sgpr33
     ; GFX9-FLATSCR-NEXT: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 8191, implicit-def $scc
     ; GFX9-FLATSCR-NEXT: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294959104, implicit-def dead $scc

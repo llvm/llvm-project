@@ -23,40 +23,40 @@
 #include "llvm/ADT/UniqueVector.h"
 
 namespace llvm {
-  class Constant;
-  class Function;
-  class Module;
-  class StructLayout;
-  class StructType;
-  class Type;
-  class Value;
-}
+class Constant;
+class Function;
+class Module;
+class StructLayout;
+class StructType;
+class Type;
+class Value;
+} // namespace llvm
 
 namespace clang {
 namespace CodeGen {
 class CGFunctionInfo;
 class CodeGenFunction;
-}
+} // namespace CodeGen
 
-  class FieldDecl;
-  class ObjCAtTryStmt;
-  class ObjCAtThrowStmt;
-  class ObjCAtSynchronizedStmt;
-  class ObjCContainerDecl;
-  class ObjCCategoryImplDecl;
-  class ObjCImplementationDecl;
-  class ObjCInterfaceDecl;
-  class ObjCMessageExpr;
-  class ObjCMethodDecl;
-  class ObjCProtocolDecl;
-  class Selector;
-  class ObjCIvarDecl;
-  class ObjCStringLiteral;
-  class BlockDeclRefExpr;
+class FieldDecl;
+class ObjCAtTryStmt;
+class ObjCAtThrowStmt;
+class ObjCAtSynchronizedStmt;
+class ObjCContainerDecl;
+class ObjCCategoryImplDecl;
+class ObjCImplementationDecl;
+class ObjCInterfaceDecl;
+class ObjCMessageExpr;
+class ObjCMethodDecl;
+class ObjCProtocolDecl;
+class Selector;
+class ObjCIvarDecl;
+class ObjCStringLiteral;
+class BlockDeclRefExpr;
 
 namespace CodeGen {
-  class CodeGenModule;
-  class CGBlockInfo;
+class CodeGenModule;
+class CGBlockInfo;
 
 // FIXME: Several methods should be pure virtual but aren't to avoid the
 // partially-implemented subclass breaking.
@@ -88,8 +88,7 @@ protected:
                                   const ObjCInterfaceDecl *OID,
                                   llvm::Value *BaseValue,
                                   const ObjCIvarDecl *Ivar,
-                                  unsigned CVRQualifiers,
-                                  llvm::Value *Offset);
+                                  unsigned CVRQualifiers, llvm::Value *Offset);
   /// Emits a try / catch statement.  This function is intended to be called by
   /// subclasses, and provides a generic mechanism for generating these, which
   /// should be usable by all runtimes.  The caller must provide the functions
@@ -145,7 +144,7 @@ public:
   /// error to Sema.
   virtual llvm::Constant *GetEHType(QualType T) = 0;
 
-  virtual CatchTypeInfo getCatchAllTypeInfo() { return { nullptr, 0 }; }
+  virtual CatchTypeInfo getCatchAllTypeInfo() { return {nullptr, 0}; }
 
   /// Generate a constant string object.
   virtual ConstantAddress GenerateConstantString(const StringLiteral *) = 0;
@@ -165,11 +164,8 @@ public:
   /// \param Method - The method being called, this may be null if synthesizing
   /// a property setter or getter.
   virtual CodeGen::RValue
-  GenerateMessageSend(CodeGen::CodeGenFunction &CGF,
-                      ReturnValueSlot ReturnSlot,
-                      QualType ResultType,
-                      Selector Sel,
-                      llvm::Value *Receiver,
+  GenerateMessageSend(CodeGen::CodeGenFunction &CGF, ReturnValueSlot ReturnSlot,
+                      QualType ResultType, Selector Sel, llvm::Value *Receiver,
                       const CallArgList &CallArgs,
                       const ObjCInterfaceDecl *Class = nullptr,
                       const ObjCMethodDecl *Method = nullptr) = 0;
@@ -178,16 +174,11 @@ public:
   ///
   /// This variant allows for the call to be substituted with an optimized
   /// variant.
-  CodeGen::RValue
-  GeneratePossiblySpecializedMessageSend(CodeGenFunction &CGF,
-                                         ReturnValueSlot Return,
-                                         QualType ResultType,
-                                         Selector Sel,
-                                         llvm::Value *Receiver,
-                                         const CallArgList& Args,
-                                         const ObjCInterfaceDecl *OID,
-                                         const ObjCMethodDecl *Method,
-                                         bool isClassMessage);
+  CodeGen::RValue GeneratePossiblySpecializedMessageSend(
+      CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
+      Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
+      const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
+      bool isClassMessage);
 
   /// Generate an Objective-C message send operation to the super
   /// class initiated in a method for Class and with the given Self
@@ -195,17 +186,11 @@ public:
   ///
   /// \param Method - The method being called, this may be null if synthesizing
   /// a property setter or getter.
-  virtual CodeGen::RValue
-  GenerateMessageSendSuper(CodeGen::CodeGenFunction &CGF,
-                           ReturnValueSlot ReturnSlot,
-                           QualType ResultType,
-                           Selector Sel,
-                           const ObjCInterfaceDecl *Class,
-                           bool isCategoryImpl,
-                           llvm::Value *Self,
-                           bool IsClassMessage,
-                           const CallArgList &CallArgs,
-                           const ObjCMethodDecl *Method = nullptr) = 0;
+  virtual CodeGen::RValue GenerateMessageSendSuper(
+      CodeGen::CodeGenFunction &CGF, ReturnValueSlot ReturnSlot,
+      QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
+      bool isCategoryImpl, llvm::Value *Self, bool IsClassMessage,
+      const CallArgList &CallArgs, const ObjCMethodDecl *Method = nullptr) = 0;
 
   /// Walk the list of protocol references from a class, category or
   /// protocol to traverse the DAG formed from it's inheritance hierarchy. Find
@@ -272,7 +257,6 @@ public:
   virtual llvm::Value *GetClass(CodeGenFunction &CGF,
                                 const ObjCInterfaceDecl *OID) = 0;
 
-
   virtual llvm::Value *EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) {
     llvm_unreachable("autoreleasepool unsupported in this ABI");
   }
@@ -287,14 +271,14 @@ public:
                            const ObjCAtTryStmt &S) = 0;
   virtual void EmitThrowStmt(CodeGen::CodeGenFunction &CGF,
                              const ObjCAtThrowStmt &S,
-                             bool ClearInsertionPoint=true) = 0;
+                             bool ClearInsertionPoint = true) = 0;
   virtual llvm::Value *EmitObjCWeakRead(CodeGen::CodeGenFunction &CGF,
                                         Address AddrWeakObj) = 0;
   virtual void EmitObjCWeakAssign(CodeGen::CodeGenFunction &CGF,
                                   llvm::Value *src, Address dest) = 0;
   virtual void EmitObjCGlobalAssign(CodeGen::CodeGenFunction &CGF,
                                     llvm::Value *src, Address dest,
-                                    bool threadlocal=false) = 0;
+                                    bool threadlocal = false) = 0;
   virtual void EmitObjCIvarAssign(CodeGen::CodeGenFunction &CGF,
                                   llvm::Value *src, Address dest,
                                   llvm::Value *ivarOffset) = 0;
@@ -302,21 +286,21 @@ public:
                                         llvm::Value *src, Address dest) = 0;
 
   virtual LValue EmitObjCValueForIvar(CodeGen::CodeGenFunction &CGF,
-                                      QualType ObjectTy,
-                                      llvm::Value *BaseValue,
+                                      QualType ObjectTy, llvm::Value *BaseValue,
                                       const ObjCIvarDecl *Ivar,
                                       unsigned CVRQualifiers) = 0;
   virtual llvm::Value *EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
                                       const ObjCInterfaceDecl *Interface,
                                       const ObjCIvarDecl *Ivar) = 0;
   virtual void EmitGCMemmoveCollectable(CodeGen::CodeGenFunction &CGF,
-                                        Address DestPtr,
-                                        Address SrcPtr,
+                                        Address DestPtr, Address SrcPtr,
                                         llvm::Value *Size) = 0;
-  virtual llvm::Constant *BuildGCBlockLayout(CodeGen::CodeGenModule &CGM,
-                                  const CodeGen::CGBlockInfo &blockInfo) = 0;
-  virtual llvm::Constant *BuildRCBlockLayout(CodeGen::CodeGenModule &CGM,
-                                  const CodeGen::CGBlockInfo &blockInfo) = 0;
+  virtual llvm::Constant *
+  BuildGCBlockLayout(CodeGen::CodeGenModule &CGM,
+                     const CodeGen::CGBlockInfo &blockInfo) = 0;
+  virtual llvm::Constant *
+  BuildRCBlockLayout(CodeGen::CodeGenModule &CGM,
+                     const CodeGen::CGBlockInfo &blockInfo) = 0;
   virtual std::string getRCBlockLayoutStr(CodeGen::CodeGenModule &CGM,
                                           const CGBlockInfo &blockInfo) {
     return {};
@@ -332,15 +316,14 @@ public:
 
     MessageSendInfo(const CGFunctionInfo &callInfo,
                     llvm::PointerType *messengerType)
-      : CallInfo(callInfo), MessengerType(messengerType) {}
+        : CallInfo(callInfo), MessengerType(messengerType) {}
   };
 
   MessageSendInfo getMessageSendInfo(const ObjCMethodDecl *method,
                                      QualType resultType,
                                      CallArgList &callArgs);
   bool canMessageReceiverBeNull(CodeGenFunction &CGF,
-                                const ObjCMethodDecl *method,
-                                bool isSuper,
+                                const ObjCMethodDecl *method, bool isSuper,
                                 const ObjCInterfaceDecl *classReceiver,
                                 llvm::Value *receiver);
   static bool isWeakLinkedClass(const ObjCInterfaceDecl *cls);
@@ -364,9 +347,9 @@ public:
 };
 
 /// Creates an instance of an Objective-C runtime class.
-//TODO: This should include some way of selecting which runtime to target.
+// TODO: This should include some way of selecting which runtime to target.
 CGObjCRuntime *CreateGNUObjCRuntime(CodeGenModule &CGM);
 CGObjCRuntime *CreateMacObjCRuntime(CodeGenModule &CGM);
-}
-}
+} // namespace CodeGen
+} // namespace clang
 #endif

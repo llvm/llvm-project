@@ -1,8 +1,14 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 -misched-dump-reserved-cycles=true \
 # RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
 
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 -misched-dump-reserved-cycles=true \
+# RUN: -passes=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s
+
 # RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 -misched-dump-reserved-cycles=false\
 # RUN: -run-pass=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s --check-prefix=NODUMP
+
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55 -misched-dump-reserved-cycles=false\
+# RUN: -passes=machine-scheduler -debug-only=machine-scheduler -o - %s 2>&1 | FileCheck %s --check-prefix=NODUMP
 
 # REQUIRES: asserts
 ---

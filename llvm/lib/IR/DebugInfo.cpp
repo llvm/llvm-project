@@ -19,7 +19,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
@@ -205,7 +204,6 @@ void DebugInfoFinder::reset() {
   CUs.clear();
   SPs.clear();
   GVs.clear();
-  HGVs.clear();
   TYs.clear();
   Scopes.clear();
   NodesSeen.clear();
@@ -259,8 +257,6 @@ void DebugInfoFinder::processInstruction(const Module &M,
                                          const Instruction &I) {
   if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
     processVariable(M, DVI->getVariable());
-  else if (auto *DDKI = dyn_cast<DbgDefKillIntrinsic>(&I))
-    processLifetime(DDKI->getLifetime());
 
   if (auto DbgLoc = I.getDebugLoc())
     processLocation(M, DbgLoc.get());
@@ -361,21 +357,6 @@ void DebugInfoFinder::processVariable(const Module &M,
     return;
   processScope(DV->getScope());
   processType(DV->getType());
-}
-
-void DebugInfoFinder::processLifetime(DILifetime *DL) {
-  if (!DL)
-    return;
-  processObject(DL->getObject());
-  for (auto *DO : DL->argObjects())
-    processObject(DO);
-}
-
-void DebugInfoFinder::processObject(DIObject *DO) {
-  if (!DO)
-    return;
-  if (auto *DGV = dyn_cast<DIGlobalVariable>(DO))
-    HGVs.push_back(DGV);
 }
 
 bool DebugInfoFinder::addType(DIType *DT) {
@@ -970,11 +951,6 @@ unsigned llvm::getDebugMetadataVersionFromModule(const Module &M) {
   return 0;
 }
 
-bool llvm::isHeterogeneousDebug(const Module &M) {
-  return getDebugMetadataVersionFromModule(M) ==
-         DEBUG_METADATA_VERSION_HETEROGENEOUS_DWARF;
-}
-
 void Instruction::applyMergedLocation(DILocation *LocA, DILocation *LocB) {
   setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
 }
@@ -1001,9 +977,9 @@ void Instruction::mergeDIAssignID(
     return; // No DIAssignID tags to process.
 
   DIAssignID *MergeID = IDs[0];
-  for (auto It = std::next(IDs.begin()), End = IDs.end(); It != End; ++It) {
-    if (*It != MergeID)
-      at::RAUW(*It, MergeID);
+  for (DIAssignID *AssignID : drop_begin(IDs)) {
+    if (AssignID != MergeID)
+      at::RAUW(AssignID, MergeID);
   }
   setMetadata(LLVMContext::MD_DIAssignID, MergeID);
 }
@@ -1733,7 +1709,8 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
   DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
-      unwrap<Instruction>(Instr));
+      Instr ? InsertPosition(unwrap<Instruction>(Instr)->getIterator())
+            : nullptr);
   // This assert will fail if the module is in the old debug info format.
   // This function should only be called if the module is in the new
   // debug info format.
@@ -1765,7 +1742,9 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
   DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
-      unwrap<DILocation>(DebugLoc), unwrap<Instruction>(Instr));
+      unwrap<DILocation>(DebugLoc),
+      Instr ? InsertPosition(unwrap<Instruction>(Instr)->getIterator())
+            : nullptr);
   // This assert will fail if the module is in the old debug info format.
   // This function should only be called if the module is in the new
   // debug info format.
@@ -1781,7 +1760,8 @@ LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
   DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
-      unwrap<DILocation>(DebugLoc), unwrap(Block));
+      unwrap<DILocation>(DebugLoc),
+      Block ? InsertPosition(unwrap(Block)->end()) : nullptr);
   // This assert will fail if the module is in the old debug info format.
   // This function should only be called if the module is in the new
   // debug info format.
@@ -1848,21 +1828,25 @@ void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc) {
     unwrap<Instruction>(Inst)->setDebugLoc(DebugLoc());
 }
 
-LLVMMetadataRef LLVMDIBuilderCreateLabel(
-    LLVMDIBuilderRef Builder,
-    LLVMMetadataRef Context, const char *Name, size_t NameLen,
-    LLVMMetadataRef File, unsigned LineNo, LLVMBool AlwaysPreserve) {
+LLVMMetadataRef LLVMDIBuilderCreateLabel(LLVMDIBuilderRef Builder,
+                                         LLVMMetadataRef Context,
+                                         const char *Name, size_t NameLen,
+                                         LLVMMetadataRef File, unsigned LineNo,
+                                         LLVMBool AlwaysPreserve) {
   return wrap(unwrap(Builder)->createLabel(
-    unwrapDI<DIScope>(Context), StringRef(Name, NameLen),
-    unwrapDI<DIFile>(File), LineNo, AlwaysPreserve));
+      unwrapDI<DIScope>(Context), StringRef(Name, NameLen),
+      unwrapDI<DIFile>(File), LineNo, AlwaysPreserve));
 }
 
-LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(
-    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
-    LLVMMetadataRef Location, LLVMValueRef InsertBefore) {
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(LLVMDIBuilderRef Builder,
+                                                LLVMMetadataRef LabelInfo,
+                                                LLVMMetadataRef Location,
+                                                LLVMValueRef InsertBefore) {
   DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
-    unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
-    unwrap<Instruction>(InsertBefore));
+      unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
+      InsertBefore
+          ? InsertPosition(unwrap<Instruction>(InsertBefore)->getIterator())
+          : nullptr);
   // This assert will fail if the module is in the old debug info format.
   // This function should only be called if the module is in the new
   // debug info format.
@@ -1873,12 +1857,13 @@ LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(
   return wrap(cast<DbgRecord *>(DbgInst));
 }
 
-LLVMDbgRecordRef LLVMDIBuilderInsertLabelAtEnd(
-    LLVMDIBuilderRef Builder, LLVMMetadataRef LabelInfo,
-    LLVMMetadataRef Location, LLVMBasicBlockRef InsertAtEnd) {
+LLVMDbgRecordRef LLVMDIBuilderInsertLabelAtEnd(LLVMDIBuilderRef Builder,
+                                               LLVMMetadataRef LabelInfo,
+                                               LLVMMetadataRef Location,
+                                               LLVMBasicBlockRef InsertAtEnd) {
   DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
-    unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
-    unwrap(InsertAtEnd));
+      unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
+      InsertAtEnd ? InsertPosition(unwrap(InsertAtEnd)->end()) : nullptr);
   // This assert will fail if the module is in the old debug info format.
   // This function should only be called if the module is in the new
   // debug info format.
@@ -2168,8 +2153,8 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
   auto &Ctx = Start->getContext();
   auto &Module = *Start->getModule();
 
-  // Undef type doesn't matter, so long as it isn't void. Let's just use i1.
-  auto *Undef = UndefValue::get(Type::getInt1Ty(Ctx));
+  // Poison type doesn't matter, so long as it isn't void. Let's just use i1.
+  auto *Poison = PoisonValue::get(Type::getInt1Ty(Ctx));
   DIBuilder DIB(Module, /*AllowUnresolved*/ false);
 
   // Scan the instructions looking for stores to local variables' storage.
@@ -2183,9 +2168,9 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
       if (auto *AI = dyn_cast<AllocaInst>(&I)) {
         // We want to track the variable's stack home from its alloca's
         // position onwards so we treat it as an assignment (where the stored
-        // value is Undef).
+        // value is poison).
         Info = getAssignmentInfo(DL, AI);
-        ValueComponent = Undef;
+        ValueComponent = Poison;
         DestComponent = AI;
       } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         Info = getAssignmentInfo(DL, SI);
@@ -2194,7 +2179,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
       } else if (auto *MI = dyn_cast<MemTransferInst>(&I)) {
         Info = getAssignmentInfo(DL, MI);
         // May not be able to represent this value easily.
-        ValueComponent = Undef;
+        ValueComponent = Poison;
         DestComponent = MI->getOperand(0);
       } else if (auto *MI = dyn_cast<MemSetInst>(&I)) {
         Info = getAssignmentInfo(DL, MI);
@@ -2204,7 +2189,7 @@ void at::trackAssignments(Function::iterator Start, Function::iterator End,
         if (ConstValue && ConstValue->isZero())
           ValueComponent = ConstValue;
         else
-          ValueComponent = Undef;
+          ValueComponent = Poison;
         DestComponent = MI->getOperand(0);
       } else {
         // Not a store-like instruction.

@@ -166,17 +166,10 @@ public:
 
   enum class HeterogeneousDwarfOpts {
     Disabled,     //< Do not emit any heterogeneous dwarf metadata.
-    DIExpr,       //< Enable DIExpr-based metadata.
     DIExpression, //< Enable DIExpression-based metadata.
   };
   bool isHeterogeneousDwarfEnabled() const {
     return getHeterogeneousDwarfMode() != HeterogeneousDwarfOpts::Disabled;
-  }
-  bool isHeterogeneousDwarfDIExpr() const {
-    return getHeterogeneousDwarfMode() == HeterogeneousDwarfOpts::DIExpr;
-  }
-  bool isHeterogeneousDwarfDIExpression() const {
-    return getHeterogeneousDwarfMode() == HeterogeneousDwarfOpts::DIExpression;
   }
 
   enum AssignmentTrackingOpts {
@@ -295,6 +288,10 @@ public:
   /// Name of the profile file to use as output for -fprofile-instr-generate,
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
+
+  /// Name of the patchable function entry section with
+  /// -fpatchable-function-entry.
+  std::string PatchableFunctionEntrySection;
 
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;

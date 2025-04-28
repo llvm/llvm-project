@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// needs flang-new to be default
+// needs flang to be default
 // XFAIL: *
 // Not intended to be a functional example, the aim of this test is to verify
 // omp.threadprivate does not crash on lowering during the OpenMP target device

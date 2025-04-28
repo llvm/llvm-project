@@ -13,24 +13,24 @@ define i32 @test_const(ptr %in1, ptr %in2, ptr %out, i32 %n, ptr %tbl) {
 ; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:    movk w9, #16309, lsl #16
 ; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    .p2align 5, , 16
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr s4, [x1], #4
-; CHECK-NEXT:    ldr w9, [x0], #4
-; CHECK-NEXT:    add w9, w9, #10
-; CHECK-NEXT:    scvtf d3, w9
+; CHECK-NEXT:    ldr w10, [x0], #4
+; CHECK-NEXT:    add w10, w10, #10
+; CHECK-NEXT:    scvtf d3, w10
 ; CHECK-NEXT:    fmadd s4, s4, s0, s1
 ; CHECK-NEXT:    fabs s4, s4
 ; CHECK-NEXT:    fcvt d4, s4
 ; CHECK-NEXT:    fdiv d3, d3, d4
 ; CHECK-NEXT:    fcmp d3, d2
-; CHECK-NEXT:    cset w9, lt
+; CHECK-NEXT:    csel x10, x9, xzr, lt
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    ubfiz x9, x9, #4, #32
-; CHECK-NEXT:    ldr s3, [x4, x9]
-; CHECK-NEXT:    fcvtzs w9, s3
-; CHECK-NEXT:    str w9, [x2], #4
+; CHECK-NEXT:    ldr s3, [x4, x10]
+; CHECK-NEXT:    fcvtzs w10, s3
+; CHECK-NEXT:    str w10, [x2], #4
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: // %for.cond.cleanup
 ; CHECK-NEXT:    mov w0, wzr

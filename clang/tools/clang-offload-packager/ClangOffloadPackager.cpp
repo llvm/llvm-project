@@ -75,10 +75,9 @@ static DenseMap<StringRef, StringRef> getImageArguments(StringRef Image,
   DenseMap<StringRef, StringRef> Args;
   for (StringRef Arg : llvm::split(Image, ",")) {
     auto [Key, Value] = Arg.split("=");
-    if (Args.count(Key))
-      Args[Key] = Saver.save(Args[Key] + "," + Value);
-    else
-      Args[Key] = Value;
+    auto [It, Inserted] = Args.try_emplace(Key, Value);
+    if (!Inserted)
+      It->second = Saver.save(It->second + "," + Value);
   }
 
   return Args;
@@ -220,12 +219,12 @@ static Error unbundleImages() {
               Args["file"], Members, SymtabWritingMode::NormalSymtab,
               Archive::getDefaultKind(), true, false, nullptr))
         return E;
-    } else if (Args.count("file")) {
+    } else if (auto It = Args.find("file"); It != Args.end()) {
       if (Extracted.size() > 1)
         WithColor::warning(errs(), PackagerExecutable)
-            << "Multiple inputs match to a single file, '" << Args["file"]
+            << "Multiple inputs match to a single file, '" << It->second
             << "'\n";
-      if (Error E = writeFile(Args["file"], Extracted.back()->getImage()))
+      if (Error E = writeFile(It->second, Extracted.back()->getImage()))
         return E;
     } else {
       uint64_t Idx = 0;

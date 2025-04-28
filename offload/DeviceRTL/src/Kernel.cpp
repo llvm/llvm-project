@@ -21,9 +21,17 @@
 #include "Synchronization.h"
 #include "Workshare.h"
 
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
-
 using namespace ompx;
+
+// These flags are copied from "llvm/Frontend/OpenMP/OMPDeviceConstants.h" and
+// must be kept in-sync.
+enum OMPTgtExecModeFlags : unsigned char {
+  OMP_TGT_EXEC_MODE_BARE = 0,
+  OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,
+  OMP_TGT_EXEC_MODE_SPMD = 1 << 1,
+  OMP_TGT_EXEC_MODE_GENERIC_SPMD =
+      OMP_TGT_EXEC_MODE_GENERIC | OMP_TGT_EXEC_MODE_SPMD
+};
 
 static void
 inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
@@ -74,8 +82,7 @@ extern "C" {
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
                            KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
-  bool IsSPMD = Configuration.ExecMode &
-                llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
+  bool IsSPMD = Configuration.ExecMode & OMP_TGT_EXEC_MODE_SPMD;
   bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
     inititializeRuntime(/*IsSPMD=*/true, KernelEnvironment,
@@ -152,61 +159,6 @@ void __kmpc_target_deinit() {
 }
 
 void __kmpc_specialized_kernel_init() { mapping::init(/*IsSPMD=*/true); }
-
-#ifndef FORTRAN_NO_LONGER_NEEDS
-int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
-                              int8_t UseGenericStateMachine,
-                              int8_t RequiresFullRuntime) {
-  KernelEnvironmentTy KE{{static_cast<uint8_t>(UseGenericStateMachine),
-                          /*MayUseNestedParallelism=*/1,
-                          static_cast<llvm::omp::OMPTgtExecModeFlags>(Mode)},
-                         /*Ident=*/nullptr,
-                         /*DebugIndentionLevel=*/0};
-  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
-  int32_t res = __kmpc_target_init(KE, KernelLaunchEnvironment);
-  if (Mode & llvm::omp::OMP_TGT_EXEC_MODE_SPMD) {
-
-    uint32_t TId = mapping::getThreadIdInBlock();
-
-    uint32_t NThreadsICV = icv::NThreads;
-    uint32_t NumThreads = mapping::getNumberOfThreadsInBlock();
-
-    if (NThreadsICV != 0 && NThreadsICV < NumThreads)
-      NumThreads = NThreadsICV;
-
-    synchronize::threadsAligned(atomic::seq_cst);
-    if (TId == 0) {
-      // Note that the order here is important. `icv::Level` has to be updated
-      // last or the other updates will cause a thread specific state to be
-      // created.
-      state::ParallelTeamSize = NumThreads;
-      icv::ActiveLevel = 1u;
-      icv::Level = 1u;
-    }
-    synchronize::threadsAligned(atomic::seq_cst);
-  }
-  return res;
-}
-
-void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
-                             int8_t RequiresFullRuntime) {
-  uint32_t TId = mapping::getThreadIdInBlock();
-  synchronize::threadsAligned(atomic::seq_cst);
-
-  if (TId == 0) {
-    // Reverse order of deinitialization
-    icv::Level = 0u;
-    icv::ActiveLevel = 0u;
-    state::ParallelTeamSize = 1u;
-  }
-  // Synchronize all threads to make sure every thread exits the scope above;
-  // otherwise the following assertions and the assumption in
-  // __kmpc_target_deinit may not hold.
-  synchronize::threadsAligned(atomic::seq_cst);
-  __kmpc_target_deinit();
-}
-
-#endif
 
 int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }

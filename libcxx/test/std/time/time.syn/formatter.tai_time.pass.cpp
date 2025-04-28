@@ -268,9 +268,6 @@ static void test_valid_values_day() {
         lfmt,
         cr::tai_seconds(1'613'259'090s)); // 23:31:30 TAI Friday, 13 February 2009
 
-  // Use the global locale (fr_FR)
-  check(SV("%d='01'\t%Od='01'\t%e=' 1'\t%Oe=' 1'\n"),
-        lfmt,
 #else // defined(_WIN32) || defined(__APPLE__) || defined(_AIX) || defined(__FreeBSD__)
   check(loc,
         SV("%d='01'\t%Od='一'\t%e=' 1'\t%Oe='一'\n"),
