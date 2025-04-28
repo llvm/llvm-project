@@ -393,21 +393,21 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
   PragmaClangSection *CSec;
   int SectionFlags = ASTContext::PSF_Read;
   switch (SecKind) {
-    case PragmaClangSectionKind::PCSK_BSS:
+    case PragmaClangSectionKind::BSS:
       CSec = &PragmaClangBSSSection;
       SectionFlags |= ASTContext::PSF_Write | ASTContext::PSF_ZeroInit;
       break;
-    case PragmaClangSectionKind::PCSK_Data:
+    case PragmaClangSectionKind::Data:
       CSec = &PragmaClangDataSection;
       SectionFlags |= ASTContext::PSF_Write;
       break;
-    case PragmaClangSectionKind::PCSK_Rodata:
+    case PragmaClangSectionKind::Rodata:
       CSec = &PragmaClangRodataSection;
       break;
-    case PragmaClangSectionKind::PCSK_Relro:
+    case PragmaClangSectionKind::Relro:
       CSec = &PragmaClangRelroSection;
       break;
-    case PragmaClangSectionKind::PCSK_Text:
+    case PragmaClangSectionKind::Text:
       CSec = &PragmaClangTextSection;
       SectionFlags |= ASTContext::PSF_Execute;
       break;
