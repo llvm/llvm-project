@@ -521,14 +521,14 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
 
 static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
                                                  llvm::MDTuple *mdTuple) {
-  auto getFunctionSymbol =
-      [&](const llvm::MDOperand &funcMDO) -> std::optional<FlatSymbolRefAttr> {
+  auto getLLVMFunction =
+      [&](const llvm::MDOperand &funcMDO) -> llvm::Function * {
     auto *f = cast_or_null<llvm::ValueAsMetadata>(funcMDO);
     // nullptr is a valid value for the function pointer.
     if (!f)
-      return std::nullopt;
+      return nullptr;
     auto *llvmFn = cast<llvm::Function>(f->getValue()->stripPointerCasts());
-    return FlatSymbolRefAttr::get(mlirModule->getContext(), llvmFn->getName());
+    return llvmFn;
   };
 
   // Each tuple element becomes one ModuleFlagCGProfileEntryAttr.
@@ -539,9 +539,17 @@ static Attribute convertCGProfileModuleFlagValue(ModuleOp mlirModule,
     llvm::Constant *llvmConstant =
         cast<llvm::ConstantAsMetadata>(cgEntry->getOperand(2))->getValue();
     uint64_t count = cast<llvm::ConstantInt>(llvmConstant)->getZExtValue();
+    auto *fromFn = getLLVMFunction(cgEntry->getOperand(0));
+    auto *toFn = getLLVMFunction(cgEntry->getOperand(1));
+    // FlatSymbolRefAttr::get(mlirModule->getContext(), llvmFn->getName());
     cgProfile.push_back(ModuleFlagCGProfileEntryAttr::get(
-        mlirModule->getContext(), getFunctionSymbol(cgEntry->getOperand(0)),
-        getFunctionSymbol(cgEntry->getOperand(1)), count));
+        mlirModule->getContext(),
+        fromFn ? FlatSymbolRefAttr::get(mlirModule->getContext(),
+                                        fromFn->getName())
+               : nullptr,
+        toFn ? FlatSymbolRefAttr::get(mlirModule->getContext(), toFn->getName())
+             : nullptr,
+        count));
   }
   return ArrayAttr::get(mlirModule->getContext(), cgProfile);
 }

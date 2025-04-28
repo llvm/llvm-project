@@ -284,12 +284,12 @@ convertModuleFlagValue(StringRef key, ArrayAttr arrayAttr,
       llvm::Metadata *fromMetadata =
           entry.getFrom()
               ? llvm::ValueAsMetadata::get(moduleTranslation.lookupFunction(
-                    entry.getFrom()->getValue()))
+                    entry.getFrom().getValue()))
               : nullptr;
       llvm::Metadata *toMetadata =
           entry.getTo()
               ? llvm::ValueAsMetadata::get(
-                    moduleTranslation.lookupFunction(entry.getTo()->getValue()))
+                    moduleTranslation.lookupFunction(entry.getTo().getValue()))
               : nullptr;
 
       llvm::Metadata *vals[] = {

@@ -41,6 +41,6 @@ declare void @to()
 
 ; CHECK: llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
 ; CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
-; CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = null, count = 222>,
+; CHECK-SAME: #llvm.cgprofile_entry<from = @from, count = 222>,
 ; CHECK-SAME: #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
 ; CHECK-SAME: ]>]
