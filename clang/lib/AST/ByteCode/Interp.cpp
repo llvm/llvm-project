@@ -321,8 +321,11 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
   if (Ptr.isTypeidPointer())
     return true;
 
+  if (Ptr.getType()->isAnyComplexType())
+    return true;
+
   if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
-    return isa<StringLiteral>(Base);
+    return isa<StringLiteral>(Base) && Ptr.getIndex() == 0;
   return false;
 }
 
