@@ -2493,13 +2493,6 @@ public:
 /// recipe is abstract and needs to be lowered to concrete recipes before
 /// codegen. The Operands are {ChainOp, VecOp1, VecOp2, [Condition]}.
 class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
-  /// Opcodes of the extend recipes.
-  Instruction::CastOps ExtOp0;
-  Instruction::CastOps ExtOp1;
-
-  /// Non-neg flags of the extend recipe.
-  bool IsNonNeg0 = false;
-  bool IsNonNeg1 = false;
 
   Type *ResultTy;
 
@@ -2514,10 +2507,11 @@ class VPMulAccumulateReductionRecipe : public VPReductionRecipe {
             MulAcc->getCondOp(), MulAcc->isOrdered(),
             WrapFlagsTy(MulAcc->hasNoUnsignedWrap(), MulAcc->hasNoSignedWrap()),
             MulAcc->getDebugLoc()),
-        ExtOp0(MulAcc->getExt0Opcode()), ExtOp1(MulAcc->getExt1Opcode()),
-        IsNonNeg0(MulAcc->isNonNeg0()), IsNonNeg1(MulAcc->isNonNeg1()),
         ResultTy(MulAcc->getResultType()),
-        IsPartialReduction(MulAcc->isPartialReduction()) {}
+        IsPartialReduction(MulAcc->isPartialReduction()) {
+    VecOpInfo[0] = MulAcc->getVecOp0Info();
+    VecOpInfo[1] = MulAcc->getVecOp1Info();
+  }
 
 public:
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul,
@@ -2529,14 +2523,14 @@ public:
             R->getCondOp(), R->isOrdered(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
             R->getDebugLoc()),
-        ExtOp0(Ext0->getOpcode()), ExtOp1(Ext1->getOpcode()),
-        IsNonNeg0(Ext0->isNonNeg()), IsNonNeg1(Ext1->isNonNeg()),
         ResultTy(ResultTy),
         IsPartialReduction(isa<VPPartialReductionRecipe>(R)) {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateteReductionRecipe must "
            "be Add");
+    VecOpInfo[0] = {Ext0->getOpcode(), Ext0->isNonNeg()};
+    VecOpInfo[1] = {Ext1->getOpcode(), Ext1->isNonNeg()};
   }
 
   VPMulAccumulateReductionRecipe(VPReductionRecipe *R, VPWidenRecipe *Mul)
@@ -2545,14 +2539,19 @@ public:
             {R->getChainOp(), Mul->getOperand(0), Mul->getOperand(1)},
             R->getCondOp(), R->isOrdered(),
             WrapFlagsTy(Mul->hasNoUnsignedWrap(), Mul->hasNoSignedWrap()),
-            R->getDebugLoc()),
-        ExtOp0(Instruction::CastOps::CastOpsEnd),
-        ExtOp1(Instruction::CastOps::CastOpsEnd) {
+            R->getDebugLoc()) {
     assert(RecurrenceDescriptor::getOpcode(getRecurrenceKind()) ==
                Instruction::Add &&
            "The reduction instruction in MulAccumulateReductionRecipe must be "
            "Add");
   }
+
+  struct VecOperandInfo {
+    /// The operand's extend opcode.
+    Instruction::CastOps ExtOp{Instruction::CastOps::CastOpsEnd};
+    /// Non-neg portion of the operand's flags.
+    bool IsNonNeg = false;
+  };
 
   ~VPMulAccumulateReductionRecipe() override = default;
 
@@ -2591,29 +2590,21 @@ public:
   VPValue *getVecOp1() const { return getOperand(2); }
 
   /// Return if this MulAcc recipe contains extend instructions.
-  bool isExtended() const { return ExtOp0 != Instruction::CastOps::CastOpsEnd; }
+  bool isExtended() const {
+    return getVecOp0Info().ExtOp != Instruction::CastOps::CastOpsEnd;
+  }
 
   /// Return if the operands of mul instruction come from same extend.
   bool isSameExtendVal() const { return getVecOp0() == getVecOp1(); }
 
-  /// Return the opcode of the underlying extends.
-  Instruction::CastOps getExt0Opcode() const { return ExtOp0; }
-  Instruction::CastOps getExt1Opcode() const { return ExtOp1; }
-
-  /// Return if the first extend's opcode is ZExt.
-  bool isZExt0() const { return ExtOp0 == Instruction::CastOps::ZExt; }
-
-  /// Return if the second extend's opcode is ZExt.
-  bool isZExt1() const { return ExtOp1 == Instruction::CastOps::ZExt; }
-
-  /// Return the non negative flag of the first ext recipe.
-  bool isNonNeg0() const { return IsNonNeg0; }
-
-  /// Return the non negative flag of the second ext recipe.
-  bool isNonNeg1() const { return IsNonNeg1; }
+  VecOperandInfo getVecOp0Info() const { return VecOpInfo[0]; }
+  VecOperandInfo getVecOp1Info() const { return VecOpInfo[1]; }
 
   /// Return if the underlying reduction recipe is a partial reduction.
   bool isPartialReduction() const { return IsPartialReduction; }
+
+protected:
+  VecOperandInfo VecOpInfo[2];
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
