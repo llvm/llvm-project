@@ -363,6 +363,8 @@ private:
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
