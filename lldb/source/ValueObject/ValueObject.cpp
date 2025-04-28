@@ -2223,7 +2223,7 @@ static ValueObjectSP GetAlternateValue(
   return nullptr;
 }
 
-// Dereference the provided object or the alternate value, ir permitted by the
+// Dereference the provided object or the alternate value, if permitted by the
 // expression path options.
 static ValueObjectSP DereferenceValueOrAlternate(
     ValueObject &valobj,
