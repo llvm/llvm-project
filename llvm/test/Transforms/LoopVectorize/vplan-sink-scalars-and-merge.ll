@@ -273,9 +273,8 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]>, vp<[[BTC]]>
 ; CHECK-NEXT:   CLONE ir<%lv> = load ir<%gep.A.uniform>
-; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%iv>, ir<%k>
-; CHECK-NEXT:   EMIT vp<[[NOT2:%.+]]> = not ir<%cmp>
-; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK]]>, vp<[[NOT2]]>
+; CHECK-NEXT:   WIDEN ir<%cmp> = icmp uge ir<%iv>, ir<%k>
+; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK]]>, ir<%cmp>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -982,13 +981,12 @@ define void @sinking_requires_duplication(ptr %addr) {
 ; CHECK-NEXT:   CLONE ir<%gep> = getelementptr ir<%addr>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:   WIDEN ir<%0> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:   WIDEN ir<%pred> = fcmp oeq ir<%0>, ir<0.000000e+00>
-; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = not ir<%pred>
+; CHECK-NEXT:   WIDEN ir<%pred> = fcmp une ir<%0>, ir<0.000000e+00>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK vp<[[MASK]]>
+; CHECK-NEXT:     BRANCH-ON-MASK ir<%pred>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
@@ -1153,13 +1151,12 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr inbounds vp<[[PTR_IV]]>, ir<-1>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-end-pointer inbounds ir<%ptr.iv.next>, vp<[[VF]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:     WIDEN ir<%c.1> = icmp eq ir<%l>, ir<0>
-; CHECK-NEXT:     EMIT vp<[[NEG:%.+]]> = not ir<%c.1>
+; CHECK-NEXT:     WIDEN ir<%c.1> = icmp ne ir<%l>, ir<0>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   <xVFxUF> pred.store: {
 ; CHECK-NEXT:     pred.store.entry:
-; CHECK-NEXT:       BRANCH-ON-MASK vp<[[NEG]]>
+; CHECK-NEXT:       BRANCH-ON-MASK ir<%c.1>
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
