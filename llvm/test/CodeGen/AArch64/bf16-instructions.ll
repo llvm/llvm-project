@@ -202,16 +202,13 @@ define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) #0 {
 ;
 ; CHECK-BF16-LABEL: test_fmadd:
 ; CHECK-BF16:       // %bb.0:
+; CHECK-BF16-NEXT:    // kill: def $h2 killed $h2 def $d2
 ; CHECK-BF16-NEXT:    // kill: def $h1 killed $h1 def $d1
 ; CHECK-BF16-NEXT:    // kill: def $h0 killed $h0 def $d0
-; CHECK-BF16-NEXT:    // kill: def $h2 killed $h2 def $d2
 ; CHECK-BF16-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-NEXT:    fmul s0, s0, s1
-; CHECK-BF16-NEXT:    shll v1.4s, v2.4h, #16
-; CHECK-BF16-NEXT:    bfcvt h0, s0
-; CHECK-BF16-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-NEXT:    fadd s0, s0, s1
+; CHECK-BF16-NEXT:    shll v2.4s, v2.4h, #16
+; CHECK-BF16-NEXT:    fmadd s0, s0, s1, s2
 ; CHECK-BF16-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-NEXT:    ret
   %mul = fmul fast bfloat %a, %b

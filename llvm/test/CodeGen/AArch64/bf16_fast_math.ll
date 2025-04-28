@@ -4,8 +4,6 @@
 
 ; Check that the output instructions have the same fast math flags as the input
 ; fadd, even when bf16 is legalized to f32.
-; FIXME: Conversion from float to bf16 is done via a vector type for some
-; reason, when we should just be using scalar instructions.
 
 define bfloat @normal_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-LABEL: name: normal_fadd
@@ -14,13 +12,11 @@ define bfloat @normal_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT: {{  $}}
   ; CHECK-NOBF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-NOBF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-NOBF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-NOBF16-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
@@ -40,13 +36,11 @@ define bfloat @normal_fadd(bfloat %x, bfloat %y) {
   ; CHECK-BF16-NEXT: {{  $}}
   ; CHECK-BF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-BF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-BF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-BF16-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-BF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
   ; CHECK-BF16-NEXT:   [[BFCVT:%[0-9]+]]:fpr16 = nofpexcept BFCVT killed [[FADDSrr]], implicit $fpcr
@@ -64,13 +58,11 @@ define bfloat @fast_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT: {{  $}}
   ; CHECK-NOBF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-NOBF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-NOBF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-NOBF16-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
@@ -90,13 +82,11 @@ define bfloat @fast_fadd(bfloat %x, bfloat %y) {
   ; CHECK-BF16-NEXT: {{  $}}
   ; CHECK-BF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-BF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-BF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-BF16-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-BF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf nsz arcp contract afn reassoc nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
   ; CHECK-BF16-NEXT:   [[BFCVT:%[0-9]+]]:fpr16 = nnan ninf nsz arcp contract afn reassoc nofpexcept BFCVT killed [[FADDSrr]], implicit $fpcr
@@ -114,13 +104,11 @@ define bfloat @ninf_fadd(bfloat %x, bfloat %y) {
   ; CHECK-NOBF16-NEXT: {{  $}}
   ; CHECK-NOBF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-NOBF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-NOBF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-NOBF16-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
@@ -140,13 +128,11 @@ define bfloat @ninf_fadd(bfloat %x, bfloat %y) {
   ; CHECK-BF16-NEXT: {{  $}}
   ; CHECK-BF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-BF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-BF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-BF16-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY1]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-BF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY3]], killed [[COPY2]], implicit $fpcr
   ; CHECK-BF16-NEXT:   [[BFCVT:%[0-9]+]]:fpr16 = ninf nofpexcept BFCVT killed [[FADDSrr]], implicit $fpcr
@@ -159,8 +145,6 @@ entry:
 
 ; Check that when we have the right fast math flags the converts in between the
 ; two fadds are removed.
-; FIXME: The convert from float to bf16 being done by a shift prevents this from
-; happening.
 
 define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-LABEL: name: normal_fadd_sequence
@@ -170,13 +154,11 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h2
   ; CHECK-NOBF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-NOBF16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-NOBF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY2]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
@@ -187,13 +169,11 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
   ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
-  ; CHECK-NOBF16-NEXT:   [[DEF2:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG2:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF2]], killed [[COPY7]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG2]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[COPY7]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
   ; CHECK-NOBF16-NEXT:   [[COPY8:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG3:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF3]], [[COPY]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG3]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY8]], killed [[COPY9]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
@@ -213,23 +193,19 @@ define bfloat @normal_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-BF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h2
   ; CHECK-BF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-BF16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-BF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-BF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY2]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-BF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
   ; CHECK-BF16-NEXT:   [[BFCVT:%[0-9]+]]:fpr16 = nofpexcept BFCVT killed [[FADDSrr]], implicit $fpcr
-  ; CHECK-BF16-NEXT:   [[DEF2:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG2:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF2]], killed [[BFCVT]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG2]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[BFCVT]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
   ; CHECK-BF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG3:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF3]], [[COPY]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG3]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-BF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nofpexcept FADDSrr killed [[COPY5]], killed [[COPY6]], implicit $fpcr
   ; CHECK-BF16-NEXT:   [[BFCVT1:%[0-9]+]]:fpr16 = nofpexcept BFCVT killed [[FADDSrr1]], implicit $fpcr
@@ -249,13 +225,11 @@ define bfloat @nnan_ninf_contract_fadd_sequence(bfloat %x, bfloat %y, bfloat %z)
   ; CHECK-NOBF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h2
   ; CHECK-NOBF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-NOBF16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-NOBF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY2]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
@@ -266,13 +240,11 @@ define bfloat @nnan_ninf_contract_fadd_sequence(bfloat %x, bfloat %y, bfloat %z)
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
   ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
-  ; CHECK-NOBF16-NEXT:   [[DEF2:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG2:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF2]], killed [[COPY7]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG2]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[COPY7]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
   ; CHECK-NOBF16-NEXT:   [[COPY8:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG3:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF3]], [[COPY]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG3]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[COPY8]], killed [[COPY9]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
@@ -292,27 +264,19 @@ define bfloat @nnan_ninf_contract_fadd_sequence(bfloat %x, bfloat %y, bfloat %z)
   ; CHECK-BF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h2
   ; CHECK-BF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-BF16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-BF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-BF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY2]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-BF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
-  ; CHECK-BF16-NEXT:   [[BFCVT:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept BFCVT killed [[FADDSrr]], implicit $fpcr
-  ; CHECK-BF16-NEXT:   [[DEF2:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG2:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF2]], killed [[BFCVT]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG2]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
   ; CHECK-BF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG3:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF3]], [[COPY]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG3]]
-  ; CHECK-BF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
-  ; CHECK-BF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[COPY5]], killed [[COPY6]], implicit $fpcr
-  ; CHECK-BF16-NEXT:   [[BFCVT1:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept BFCVT killed [[FADDSrr1]], implicit $fpcr
-  ; CHECK-BF16-NEXT:   $h0 = COPY [[BFCVT1]]
+  ; CHECK-BF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = nnan ninf contract nofpexcept FADDSrr killed [[FADDSrr]], killed [[COPY5]], implicit $fpcr
+  ; CHECK-BF16-NEXT:   [[BFCVT:%[0-9]+]]:fpr16 = nnan ninf contract nofpexcept BFCVT killed [[FADDSrr1]], implicit $fpcr
+  ; CHECK-BF16-NEXT:   $h0 = COPY [[BFCVT]]
   ; CHECK-BF16-NEXT:   RET_ReallyLR implicit $h0
 entry:
   %add1 = fadd nnan ninf contract bfloat %x, %y
@@ -328,13 +292,11 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h2
   ; CHECK-NOBF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-NOBF16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-NOBF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-NOBF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY2]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-NOBF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY5:%[0-9]+]]:gpr32 = COPY [[FADDSrr]]
@@ -345,13 +307,11 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-NOBF16-NEXT:   [[UBFMWri1:%[0-9]+]]:gpr32 = UBFMWri killed [[ADDWrr1]], 16, 31
   ; CHECK-NOBF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[UBFMWri1]]
   ; CHECK-NOBF16-NEXT:   [[COPY7:%[0-9]+]]:fpr16 = COPY [[COPY6]].hsub
-  ; CHECK-NOBF16-NEXT:   [[DEF2:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG2:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF2]], killed [[COPY7]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG2]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[COPY7]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
   ; CHECK-NOBF16-NEXT:   [[COPY8:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
-  ; CHECK-NOBF16-NEXT:   [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-NOBF16-NEXT:   [[INSERT_SUBREG3:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF3]], [[COPY]], %subreg.hsub
-  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG3]]
+  ; CHECK-NOBF16-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-NOBF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-NOBF16-NEXT:   [[COPY9:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-NOBF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY8]], killed [[COPY9]], implicit $fpcr
   ; CHECK-NOBF16-NEXT:   [[COPY10:%[0-9]+]]:gpr32 = COPY [[FADDSrr1]]
@@ -371,23 +331,19 @@ define bfloat @ninf_fadd_sequence(bfloat %x, bfloat %y, bfloat %z) {
   ; CHECK-BF16-NEXT:   [[COPY:%[0-9]+]]:fpr16 = COPY $h2
   ; CHECK-BF16-NEXT:   [[COPY1:%[0-9]+]]:fpr16 = COPY $h1
   ; CHECK-BF16-NEXT:   [[COPY2:%[0-9]+]]:fpr16 = COPY $h0
-  ; CHECK-BF16-NEXT:   [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY1]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG]]
   ; CHECK-BF16-NEXT:   [[COPY3:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF1:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF1]], [[COPY2]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG1]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY2]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_1:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG1]]
   ; CHECK-BF16-NEXT:   [[COPY4:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_1]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY4]], killed [[COPY3]], implicit $fpcr
   ; CHECK-BF16-NEXT:   [[BFCVT:%[0-9]+]]:fpr16 = ninf nofpexcept BFCVT killed [[FADDSrr]], implicit $fpcr
-  ; CHECK-BF16-NEXT:   [[DEF2:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG2:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF2]], killed [[BFCVT]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG2]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, killed [[BFCVT]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_2:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG2]]
   ; CHECK-BF16-NEXT:   [[COPY5:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_2]].ssub
-  ; CHECK-BF16-NEXT:   [[DEF3:%[0-9]+]]:fpr64 = IMPLICIT_DEF
-  ; CHECK-BF16-NEXT:   [[INSERT_SUBREG3:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF3]], [[COPY]], %subreg.hsub
-  ; CHECK-BF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[INSERT_SUBREG3]]
+  ; CHECK-BF16-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:fpr64 = SUBREG_TO_REG 0, [[COPY]], %subreg.hsub
+  ; CHECK-BF16-NEXT:   [[SHLLv4i16_3:%[0-9]+]]:fpr128 = SHLLv4i16 killed [[SUBREG_TO_REG3]]
   ; CHECK-BF16-NEXT:   [[COPY6:%[0-9]+]]:fpr32 = COPY [[SHLLv4i16_3]].ssub
   ; CHECK-BF16-NEXT:   [[FADDSrr1:%[0-9]+]]:fpr32 = ninf nofpexcept FADDSrr killed [[COPY5]], killed [[COPY6]], implicit $fpcr
   ; CHECK-BF16-NEXT:   [[BFCVT1:%[0-9]+]]:fpr16 = ninf nofpexcept BFCVT killed [[FADDSrr1]], implicit $fpcr
