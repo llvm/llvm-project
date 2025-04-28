@@ -35,8 +35,11 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       Builtin::evaluateRequiredTargetFeatures("gfx950-insts", CallerFeatureMap);
 
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_global_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_lds:
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_load_lds:
-  case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
+  case AMDGPU::BI__builtin_amdgcn_struct_ptr_buffer_load_lds:
+  case AMDGPU::BI__builtin_amdgcn_struct_buffer_load_lds: {
     constexpr const int SizeIdx = 2;
     llvm::APSInt Size;
     Expr *ArgExpr = TheCall->getArg(SizeIdx);
