@@ -2057,17 +2057,18 @@ bool AMDGPUDisassembler::hasKernargPreload() const {
 /// tables that describe these bits in llvm.org/docs/AMDGPUUsage.html.
 static SmallString<32> getBitRangeFromMask(uint32_t Mask, unsigned BaseBytes) {
   SmallString<32> Result;
-  raw_svector_ostream S(Result);
 
   int TrailingZeros = llvm::countr_zero(Mask);
   int PopCount = llvm::popcount(Mask);
 
   if (PopCount == 1) {
-    S << "bit (" << (TrailingZeros + BaseBytes * CHAR_BIT) << ')';
+    (Twine("bit (") + Twine(TrailingZeros + BaseBytes * CHAR_BIT) + ")")
+        .toVector(Result);
   } else {
-    S << "bits in range ("
-      << (TrailingZeros + PopCount - 1 + BaseBytes * CHAR_BIT) << ':'
-      << (TrailingZeros + BaseBytes * CHAR_BIT) << ')';
+    (Twine("bits in range (") +
+     Twine(TrailingZeros + PopCount - 1 + BaseBytes * CHAR_BIT) + ":" +
+     Twine(TrailingZeros + BaseBytes * CHAR_BIT) + ")")
+        .toVector(Result);
   }
 
   return Result;

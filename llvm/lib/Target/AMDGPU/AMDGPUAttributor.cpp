@@ -861,12 +861,11 @@ struct AAAMDSizeRangeAttribute
 
     Function *F = getAssociatedFunction();
     LLVMContext &Ctx = F->getContext();
-    SmallString<10> Buffer;
-    raw_svector_ostream OS(Buffer);
-    OS << Lower << ',' << Upper - 1;
-    return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, AttrName, OS.str())},
-                           /*ForceReplace=*/true);
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(Ctx, AttrName,
+                        (Twine(Lower) + "," + Twine(Upper - 1)).str())},
+        /*ForceReplace=*/true);
   }
 
   const std::string getAsStr(Attributor *) const override {
@@ -1054,15 +1053,15 @@ struct AAAMDMaxNumWorkgroups
   ChangeStatus manifest(Attributor &A) override {
     Function *F = getAssociatedFunction();
     LLVMContext &Ctx = F->getContext();
-    SmallString<32> Buffer;
-    raw_svector_ostream OS(Buffer);
-    OS << X.getAssumed() << ',' << Y.getAssumed() << ',' << Z.getAssumed();
 
     // TODO: Should annotate loads of the group size for this to do anything
     // useful.
     return A.manifestAttrs(
         getIRPosition(),
-        {Attribute::get(Ctx, "amdgpu-max-num-workgroups", OS.str())},
+        {Attribute::get(Ctx, "amdgpu-max-num-workgroups",
+                        (Twine(X.getAssumed()) + "," + Twine(Y.getAssumed()) +
+                         "," + Twine(Z.getAssumed()))
+                            .str())},
         /* ForceReplace= */ true);
   }
 

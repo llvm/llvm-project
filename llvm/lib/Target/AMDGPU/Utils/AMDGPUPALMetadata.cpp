@@ -28,7 +28,7 @@ using namespace llvm;
 using namespace llvm::AMDGPU;
 
 // Return the PAL metadata hardware shader stage name.
-static const char *getStageName(CallingConv::ID CC) {
+static StringRef getStageName(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::AMDGPU_PS:
     return ".ps";
@@ -261,11 +261,8 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
 
   // Set .entry_point which is defined
   // to be _amdgpu_<stage> and _amdgpu_cs for non-shader functions
-  SmallString<16> EPName("_amdgpu_");
-  raw_svector_ostream EPNameOS(EPName);
-  EPNameOS << getStageName(CC) + 1;
-  getHwStage(CC)[".entry_point"] =
-      MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
+  getHwStage(CC)[".entry_point"] = MsgPackDoc.getNode(
+      (Twine("_amdgpu_") + getStageName(CC).drop_front()).str(), /*Copy=*/true);
 }
 
 // Set the number of used vgprs in the metadata. This is an optional

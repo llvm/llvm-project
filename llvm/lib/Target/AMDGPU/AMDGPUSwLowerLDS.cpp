@@ -413,12 +413,10 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
     UpdateMaxAlignment(GV);
 
   //{StartOffset, AlignedSizeInBytes}
-  SmallString<128> MDItemStr;
-  raw_svector_ostream MDItemOS(MDItemStr);
-  MDItemOS << "llvm.amdgcn.sw.lds." << Func->getName() << ".md.item";
 
-  StructType *LDSItemTy =
-      StructType::create(Ctx, {Int32Ty, Int32Ty, Int32Ty}, MDItemOS.str());
+  StructType *LDSItemTy = StructType::create(
+      Ctx, {Int32Ty, Int32Ty, Int32Ty},
+      (Twine("llvm.amdgcn.sw.lds.") + Func->getName() + ".md.item").str());
   uint32_t &MallocSize = LDSParams.MallocSize;
   SetVector<GlobalVariable *> UniqueLDSGlobals;
   int AsanScale = AsanInfo.Scale;
@@ -469,17 +467,13 @@ void AMDGPUSwLowerLDS::populateSwMetadataGlobal(Function *Func) {
   const uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
   uint64_t AlignedSize = alignTo(SizeInBytes, MaxAlignment);
   LDSParams.LDSSize = AlignedSize;
-  SmallString<128> MDTypeStr;
-  raw_svector_ostream MDTypeOS(MDTypeStr);
-  MDTypeOS << "llvm.amdgcn.sw.lds." << Func->getName() << ".md.type";
-  StructType *MetadataStructType =
-      StructType::create(Ctx, Items, MDTypeOS.str());
-  SmallString<128> MDStr;
-  raw_svector_ostream MDOS(MDStr);
-  MDOS << "llvm.amdgcn.sw.lds." << Func->getName() << ".md";
+  StructType *MetadataStructType = StructType::create(
+      Ctx, Items,
+      (Twine("llvm.amdgcn.sw.lds.") + Func->getName() + ".md.type").str());
   LDSParams.SwLDSMetadata = new GlobalVariable(
       M, MetadataStructType, false, GlobalValue::InternalLinkage,
-      PoisonValue::get(MetadataStructType), MDOS.str(), nullptr,
+      PoisonValue::get(MetadataStructType),
+      (Twine("llvm.amdgcn.sw.lds.") + Func->getName() + ".md").str(), nullptr,
       GlobalValue::NotThreadLocal, AMDGPUAS::GLOBAL_ADDRESS, false);
   Constant *data = ConstantStruct::get(MetadataStructType, Initializers);
   LDSParams.SwLDSMetadata->setInitializer(data);

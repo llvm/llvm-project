@@ -105,26 +105,18 @@ static Instruction *generateCrashCode(Module &M, IRBuilder<> &IRB,
   SmallString<64> TypeStr{IsWrite ? "store" : "load"};
   SmallString<64> EndingStr{Recover ? "_noabort" : ""};
 
-  SmallString<128> AsanErrorCallbackSizedString;
-  raw_svector_ostream AsanErrorCallbackSizedOS(AsanErrorCallbackSizedString);
-  AsanErrorCallbackSizedOS << kAsanReportErrorTemplate << TypeStr << "_n"
-                           << EndingStr;
-
   SmallVector<Type *, 3> Args2 = {IntptrTy, IntptrTy};
   AttributeList AL2;
   FunctionCallee AsanErrorCallbackSized = M.getOrInsertFunction(
-      AsanErrorCallbackSizedOS.str(),
+      (kAsanReportErrorTemplate + TypeStr + "_n" + EndingStr).str(),
       FunctionType::get(IRB.getVoidTy(), Args2, false), AL2);
   SmallVector<Type *, 2> Args1{1, IntptrTy};
   AttributeList AL1;
 
-  SmallString<128> AsanErrorCallbackString;
-  raw_svector_ostream AsanErrorCallbackOS(AsanErrorCallbackString);
-  AsanErrorCallbackOS << kAsanReportErrorTemplate << TypeStr
-                      << (1ULL << AccessSizeIndex) << EndingStr;
-
   FunctionCallee AsanErrorCallback = M.getOrInsertFunction(
-      AsanErrorCallbackOS.str(),
+      (kAsanReportErrorTemplate + TypeStr + Twine(1ULL << AccessSizeIndex) +
+       EndingStr)
+          .str(),
       FunctionType::get(IRB.getVoidTy(), Args1, false), AL1);
   if (SizeArgument) {
     Call = IRB.CreateCall(AsanErrorCallbackSized, {Addr, SizeArgument});
