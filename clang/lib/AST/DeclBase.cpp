@@ -1428,7 +1428,7 @@ bool DeclContext::Encloses(const DeclContext *DC) const {
   return false;
 }
 
-bool DeclContext::LexicallyEncloses(const DeclContext* DC) const {
+bool DeclContext::LexicallyEncloses(const DeclContext *DC) const {
   if (getPrimaryContext() != this)
     return getPrimaryContext()->LexicallyEncloses(DC);
 
