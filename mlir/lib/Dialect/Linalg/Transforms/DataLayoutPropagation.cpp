@@ -766,13 +766,12 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   SmallVector<ReassociationIndices, 4> reassoc =
       expandOp.getReassociationIndices();
   ArrayRef<int64_t> packInnerDims = packOp.getInnerDimsPos();
-  llvm::SetVector<int64_t> packDimsPos(packInnerDims.begin(),
-                                       packInnerDims.end());
+  llvm::SetVector<int64_t> packDimsPos(llvm::from_range, packInnerDims);
 
   for (auto [idx, indices] : llvm::enumerate(reassoc)) {
     // For each expand_shape reassociation, figure out which dimensions get
     // packed if any.
-    llvm::SetVector<int64_t> expandDimPos(indices.begin(), indices.end());
+    llvm::SetVector<int64_t> expandDimPos(llvm::from_range, indices);
     llvm::SetVector<int64_t> packedDims =
         llvm::set_intersection(packDimsPos, expandDimPos);
 

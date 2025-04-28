@@ -304,8 +304,8 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   cloneConstantsIntoTheRegion(execute.getBodyRegion());
 
   // Collect all outlined function inputs.
-  SetVector<mlir::Value> functionInputs(execute.getDependencies().begin(),
-                                        execute.getDependencies().end());
+  SetVector<mlir::Value> functionInputs(llvm::from_range,
+                                        execute.getDependencies());
   functionInputs.insert_range(execute.getBodyOperands());
   getUsedValuesDefinedAbove(execute.getBodyRegion(), functionInputs);
 
