@@ -463,6 +463,18 @@ enum class FunctionEffectMode : uint8_t {
   Dependent // effect(expr) where expr is dependent.
 };
 
+/// pragma clang section kind
+enum class PragmaClangSectionKind {
+  Invalid = 0,
+  BSS = 1,
+  Data = 2,
+  Rodata = 3,
+  Text = 4,
+  Relro = 5
+};
+
+enum class PragmaClangSectionAction { Set = 0, Clear = 1 };
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -752,20 +764,6 @@ public:
   /// Check if the type is allowed to be used for the current target.
   void checkTypeSupport(QualType Ty, SourceLocation Loc,
                         ValueDecl *D = nullptr);
-
-  // /// The kind of conversion being performed.
-  // enum CheckedConversionKind {
-  //   /// An implicit conversion.
-  //   CCK_ImplicitConversion,
-  //   /// A C-style cast.
-  //   CCK_CStyleCast,
-  //   /// A functional-style cast.
-  //   CCK_FunctionalCast,
-  //   /// A cast other than a C-style cast.
-  //   CCK_OtherCast,
-  //   /// A conversion for an operand of a builtin overloaded operator.
-  //   CCK_ForBuiltinOverloadedOp
-  // };
 
   /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit
   /// cast.  If there is already an implicit cast, merge into the existing one.
@@ -1425,18 +1423,6 @@ public:
 
   /// Source location for newly created implicit MSInheritanceAttrs
   SourceLocation ImplicitMSInheritanceAttrLoc;
-
-  /// pragma clang section kind
-  enum PragmaClangSectionKind {
-    PCSK_Invalid = 0,
-    PCSK_BSS = 1,
-    PCSK_Data = 2,
-    PCSK_Rodata = 3,
-    PCSK_Text = 4,
-    PCSK_Relro = 5
-  };
-
-  enum PragmaClangSectionAction { PCSA_Set = 0, PCSA_Clear = 1 };
 
   struct PragmaClangSection {
     std::string SectionName;

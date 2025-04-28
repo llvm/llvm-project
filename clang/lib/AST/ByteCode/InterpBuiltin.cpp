@@ -1595,11 +1595,9 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
 
   assert(!ElemT);
   // Structs etc.
-  const Descriptor *Desc = S.P.createDescriptor(
-      NewCall, ElemType.getTypePtr(),
-      IsArray ? std::nullopt : Descriptor::InlineDescMD,
-      /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false,
-      /*Init=*/nullptr);
+  const Descriptor *Desc =
+      S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
+                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
 
   if (IsArray) {
     Block *B =
@@ -1643,6 +1641,13 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
 
     Source = Ptr.getDeclDesc()->asExpr();
     BlockToDelete = Ptr.block();
+
+    if (!BlockToDelete->isDynamic()) {
+      S.FFDiag(Call, diag::note_constexpr_delete_not_heap_alloc)
+          << Ptr.toDiagnosticString(S.getASTContext());
+      if (const auto *D = Ptr.getFieldDesc()->asDecl())
+        S.Note(D->getLocation(), diag::note_declared_at);
+    }
   }
   assert(BlockToDelete);
 

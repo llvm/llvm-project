@@ -10107,7 +10107,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VL, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
-  SetVector<Value *> UniqueValues(VL.begin(), VL.end());
+  SetVector<Value *> UniqueValues(llvm::from_range, VL);
   std::optional<ScheduleBundle *> BundlePtr =
       BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S);
 #ifdef EXPENSIVE_CHECKS
@@ -16160,7 +16160,7 @@ Value *BoUpSLP::gather(
     } else {
       Vec = CreateShuffle(Root, Vec, Mask);
       if (auto *OI = dyn_cast<Instruction>(OriginalRoot);
-          OI && OI->hasNUses(0) &&
+          OI && OI->use_empty() &&
           none_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
             return TE->VectorizedValue == OI;
           }))

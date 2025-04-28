@@ -2024,13 +2024,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSHL,      MVT::v16i32, Custom);
     setOperationAction(ISD::FSHR,      MVT::v16i32, Custom);
 
-    if (Subtarget.hasDQI()) {
+    if (Subtarget.hasDQI() || Subtarget.hasFP16())
       for (auto Opc : {ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::STRICT_SINT_TO_FP,
                        ISD::STRICT_UINT_TO_FP, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                        ISD::STRICT_FP_TO_SINT, ISD::STRICT_FP_TO_UINT})
         setOperationAction(Opc,           MVT::v8i64, Custom);
+
+    if (Subtarget.hasDQI())
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
-    }
 
     if (Subtarget.hasCDI()) {
       // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
@@ -6443,25 +6444,36 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   }
   case ISD::SHL:
   case ISD::SRL: {
-    // We can only decode 'whole byte' bit shifts as shuffles.
-    std::optional<uint64_t> Amt = DAG.getValidShiftAmount(N, DemandedElts);
-    if (!Amt || (*Amt % 8) != 0)
+    APInt UndefElts;
+    SmallVector<APInt, 32> EltBits;
+    if (!getTargetConstantBitsFromNode(N.getOperand(1), NumBitsPerElt,
+                                       UndefElts, EltBits,
+                                       /*AllowWholeUndefs*/ true,
+                                       /*AllowPartialUndefs*/ false))
       return false;
 
-    uint64_t ByteShift = *Amt / 8;
+    // We can only decode 'whole byte' bit shifts as shuffles.
+    for (unsigned I = 0; I != NumElts; ++I)
+      if (DemandedElts[I] && !UndefElts[I] &&
+          (EltBits[I].urem(8) != 0 || EltBits[I].uge(NumBitsPerElt)))
+        return false;
+
+    Mask.append(NumSizeInBytes, SM_SentinelUndef);
     Ops.push_back(N.getOperand(0));
 
-    // Clear mask to all zeros and insert the shifted byte indices.
-    Mask.append(NumSizeInBytes, SM_SentinelZero);
-
-    if (ISD::SHL == Opcode) {
-      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
-        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
-          Mask[i + j] = i + j - ByteShift;
-    } else {
-      for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt)
-        for (unsigned j = ByteShift; j != NumBytesPerElt; ++j)
-          Mask[i + j - ByteShift] = i + j;
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (!DemandedElts[I] || UndefElts[I])
+        continue;
+      unsigned ByteShift = EltBits[I].getZExtValue() / 8;
+      unsigned Lo = I * NumBytesPerElt;
+      unsigned Hi = Lo + NumBytesPerElt;
+      // Clear mask to all zeros and insert the shifted byte indices.
+      std::fill(Mask.begin() + Lo, Mask.begin() + Hi, SM_SentinelZero);
+      if (ISD::SHL == Opcode)
+        std::iota(Mask.begin() + Lo + ByteShift, Mask.begin() + Hi, Lo);
+      else
+        std::iota(Mask.begin() + Lo, Mask.begin() + Hi - ByteShift,
+                  Lo + ByteShift);
     }
     return true;
   }
@@ -14019,7 +14031,7 @@ static SDValue lowerV8I16GeneralSingleInputShuffle(
     // a dword. We find the adjacent index by toggling the low bit.
     int AdjIndex = InPlaceInputs[0] ^ 1;
     SourceHalfMask[AdjIndex - HalfOffset] = InPlaceInputs[1] - HalfOffset;
-    std::replace(HalfMask.begin(), HalfMask.end(), InPlaceInputs[1], AdjIndex);
+    llvm::replace(HalfMask, InPlaceInputs[1], AdjIndex);
     PSHUFDMask[AdjIndex / 2] = AdjIndex / 2;
   };
   fixInPlaceInputs(LToLInputs, HToLInputs, PSHUFLMask, LoMask, 0);
@@ -14103,8 +14115,7 @@ static SDValue lowerV8I16GeneralSingleInputShuffle(
                          SourceOffset;
         SourceHalfMask[InputFixed - SourceOffset] =
             IncomingInputs[0] - SourceOffset;
-        std::replace(HalfMask.begin(), HalfMask.end(), IncomingInputs[0],
-                     InputFixed);
+        llvm::replace(HalfMask, IncomingInputs[0], InputFixed);
         IncomingInputs[0] = InputFixed;
       }
     } else if (IncomingInputs.size() == 2) {
@@ -19850,7 +19861,7 @@ static SDValue promoteXINT_TO_FP(SDValue Op, const SDLoc &dl,
                      DAG.getNode(Op.getOpcode(), dl, NVT, Src), Rnd);
 }
 
-static bool isLegalConversion(MVT VT, bool IsSigned,
+static bool isLegalConversion(MVT VT, MVT FloatVT, bool IsSigned,
                               const X86Subtarget &Subtarget) {
   if (VT == MVT::v4i32 && Subtarget.hasSSE2() && IsSigned)
     return true;
@@ -19860,6 +19871,8 @@ static bool isLegalConversion(MVT VT, bool IsSigned,
     return true;
   if (Subtarget.useAVX512Regs()) {
     if (VT == MVT::v16i32)
+      return true;
+    if (VT == MVT::v8i64 && FloatVT == MVT::v8f16 && Subtarget.hasFP16())
       return true;
     if (VT == MVT::v8i64 && Subtarget.hasDQI())
       return true;
@@ -19882,7 +19895,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
 
   if (isSoftF16(VT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
-  else if (isLegalConversion(SrcVT, true, Subtarget))
+  else if (isLegalConversion(SrcVT, VT, true, Subtarget))
     return Op;
 
   if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
@@ -20386,7 +20399,7 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
   if (isSoftF16(DstVT, Subtarget))
     return promoteXINT_TO_FP(Op, dl, DAG);
-  else if (isLegalConversion(SrcVT, false, Subtarget))
+  else if (isLegalConversion(SrcVT, DstVT, false, Subtarget))
     return Op;
 
   if (DstVT.isVector())
@@ -21409,7 +21422,8 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
                                              {NVT, MVT::Other}, {Chain, Src})});
     return DAG.getNode(Op.getOpcode(), dl, VT,
                        DAG.getNode(ISD::FP_EXTEND, dl, NVT, Src));
-  } else if (isTypeLegal(SrcVT) && isLegalConversion(VT, IsSigned, Subtarget)) {
+  } else if (isTypeLegal(SrcVT) &&
+             isLegalConversion(VT, SrcVT, IsSigned, Subtarget)) {
     return Op;
   }
 
@@ -22034,15 +22048,20 @@ SDValue X86TargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
     }
 
     In = DAG.getBitcast(MVT::i16, In);
-    In = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i16,
-                     getZeroVector(MVT::v8i16, Subtarget, DAG, DL), In,
-                     DAG.getVectorIdxConstant(0, DL));
     SDValue Res;
     if (IsStrict) {
+      In = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i16,
+                       getZeroVector(MVT::v8i16, Subtarget, DAG, DL), In,
+                       DAG.getVectorIdxConstant(0, DL));
       Res = DAG.getNode(X86ISD::STRICT_CVTPH2PS, DL, {MVT::v4f32, MVT::Other},
                         {Chain, In});
       Chain = Res.getValue(1);
     } else {
+      In = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, In);
+      In = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v4i32,
+                       DAG.getUNDEF(MVT::v4f32), In,
+                       DAG.getVectorIdxConstant(0, DL));
+      In = DAG.getBitcast(MVT::v8i16, In);
       Res = DAG.getNode(X86ISD::CVTPH2PS, DL, MVT::v4f32, In,
                         DAG.getTargetConstant(4, DL, MVT::i32));
     }
