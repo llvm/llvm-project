@@ -4547,14 +4547,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         assert(BaseVal && "got reference to unevaluated temporary");
       } else if (const CompoundLiteralExpr *CLE =
                      dyn_cast_or_null<CompoundLiteralExpr>(Base)) {
-        // In C99, a CompoundLiteralExpr is an lvalue, and we defer evaluating
-        // the initializer until now for such expressions. Such an expression
-        // can't be an ICE in C, so this only matters for fold.
-        if (LValType.isVolatileQualified()) {
-          Info.FFDiag(E);
-          return CompleteObject();
-        }
-
         // According to GCC info page:
         //
         // 6.28 Compound Literals
