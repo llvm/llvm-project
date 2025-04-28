@@ -827,8 +827,11 @@ def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
 
-// vector_extract/vector_insert are deprecated. extractelt/insertelt
-// are preferred.
+// vector_extract/vector_insert are similar to extractelt/insertelt but allow
+// types that require promotion (a 16i8 extract where i8 is not a legal type so
+// uses i32 for example). extractelt/insertelt are preferred where the element
+// type and the extracted types match due to the extra type checking they
+// perform.
 def vector_extract : SDNode<"ISD::EXTRACT_VECTOR_ELT",
     SDTypeProfile<1, 2, [SDTCisPtrTy<2>]>, []>;
 def vector_insert : SDNode<"ISD::INSERT_VECTOR_ELT",
@@ -868,6 +871,7 @@ def SDT_assert : SDTypeProfile<1, 1,
   [SDTCisInt<0>, SDTCisInt<1>, SDTCisSameAs<1, 0>]>;
 def assertsext : SDNode<"ISD::AssertSext", SDT_assert>;
 def assertzext : SDNode<"ISD::AssertZext", SDT_assert>;
+def assertnofpclass : SDNode<"ISD::AssertNoFPClass", SDTFPUnaryOp>;
 def assertalign : SDNode<"ISD::AssertAlign", SDT_assert>;
 
 def convergencectrl_anchor : SDNode<"ISD::CONVERGENCECTRL_ANCHOR",
@@ -1324,25 +1328,21 @@ def truncstorei8 : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i8;
-  let IsTruncStore = true;
 }
 def truncstorei16 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i16;
-  let IsTruncStore = true;
 }
 def truncstorei32 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i32;
-  let IsTruncStore = true;
 }
 def truncstorei64 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
   let IsStore = true;
   let MemoryVT = i64;
-  let IsTruncStore = true;
 }
 def truncstoref16 : PatFrag<(ops node:$val, node:$ptr),
                             (truncstore node:$val, node:$ptr)> {
@@ -1838,6 +1838,13 @@ defm atomic_load_uinc_wrap : binary_atomic_op<atomic_load_uinc_wrap>;
 defm atomic_load_udec_wrap : binary_atomic_op<atomic_load_udec_wrap>;
 defm atomic_cmp_swap  : ternary_atomic_op<atomic_cmp_swap>;
 
+/// Atomic load which does not extend.
+def atomic_load_nonext :
+  PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsNonExtLoad = true;
+}
+
 /// Atomic load which zeroes the excess high bits.
 def atomic_load_zext :
   PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
@@ -1850,6 +1857,13 @@ def atomic_load_sext :
   PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
   let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
   let IsSignExtLoad = true;
+}
+
+/// Atomic load which any extends the excess high bits.
+def atomic_load_aext :
+  PatFrag<(ops node:$ptr), (atomic_load node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsAnyExtLoad = true;
 }
 
 def atomic_load_8 :
@@ -1872,10 +1886,35 @@ def atomic_load_32 :
   let IsAtomic = true;
   let MemoryVT = i32;
 }
+
 def atomic_load_64 :
   PatFrag<(ops node:$ptr),
           (atomic_load node:$ptr)> {
   let IsAtomic = true;
+  let MemoryVT = i64;
+}
+
+def atomic_load_nonext_8 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i8;
+}
+
+def atomic_load_nonext_16 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i16;
+}
+
+def atomic_load_nonext_32 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i32;
+}
+
+def atomic_load_nonext_64 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
   let MemoryVT = i64;
 }
 
@@ -1891,6 +1930,12 @@ def atomic_load_zext_16 :
   let MemoryVT = i16;
 }
 
+def atomic_load_zext_32 :
+  PatFrag<(ops node:$ptr), (atomic_load_zext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i32;
+}
+
 def atomic_load_sext_8 :
   PatFrag<(ops node:$ptr), (atomic_load_sext node:$ptr)> {
   let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
@@ -1903,15 +1948,59 @@ def atomic_load_sext_16 :
   let MemoryVT = i16;
 }
 
-// Atomic load which zeroes or anyextends the high bits.
-def atomic_load_az_8 : PatFrags<(ops node:$op),
-                                [(atomic_load_8 node:$op),
-                                 (atomic_load_zext_8 node:$op)]>;
+def atomic_load_sext_32 :
+  PatFrag<(ops node:$ptr), (atomic_load_sext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i32;
+}
+
+def atomic_load_aext_8 :
+  PatFrag<(ops node:$ptr), (atomic_load_aext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i8;
+}
+
+def atomic_load_aext_16 :
+  PatFrag<(ops node:$ptr), (atomic_load_aext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i16;
+}
+
+def atomic_load_aext_32 :
+  PatFrag<(ops node:$ptr), (atomic_load_aext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i32;
+}
 
 // Atomic load which zeroes or anyextends the high bits.
-def atomic_load_az_16 : PatFrags<(ops node:$op),
-                                 [(atomic_load_16 node:$op),
-                                  (atomic_load_zext_16 node:$op)]>;
+def atomic_load_azext_8 : PatFrags<(ops node:$op),
+                                   [(atomic_load_aext_8 node:$op),
+                                    (atomic_load_zext_8 node:$op)]>;
+
+// Atomic load which zeroes or anyextends the high bits.
+def atomic_load_azext_16 : PatFrags<(ops node:$op),
+                                    [(atomic_load_aext_16 node:$op),
+                                     (atomic_load_zext_16 node:$op)]>;
+
+// Atomic load which zeroes or anyextends the high bits.
+def atomic_load_azext_32 : PatFrags<(ops node:$op),
+                                    [(atomic_load_aext_32 node:$op),
+                                     (atomic_load_zext_32 node:$op)]>;
+
+// Atomic load which sign extends or anyextends the high bits.
+def atomic_load_asext_8 : PatFrags<(ops node:$op),
+                                   [(atomic_load_aext_8 node:$op),
+                                    (atomic_load_sext_8 node:$op)]>;
+
+// Atomic load which sign extends or anyextends the high bits.
+def atomic_load_asext_16 : PatFrags<(ops node:$op),
+                                    [(atomic_load_aext_16 node:$op),
+                                     (atomic_load_sext_16 node:$op)]>;
+
+// Atomic load which sign extends or anyextends the high bits.
+def atomic_load_asext_32 : PatFrags<(ops node:$op),
+                                    [(atomic_load_aext_32 node:$op),
+                                     (atomic_load_sext_32 node:$op)]>;
 
 def nonext_masked_gather :
   PatFrag<(ops node:$def, node:$pred, node:$ptr, node:$idx),

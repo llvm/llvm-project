@@ -1552,17 +1552,6 @@ bool SPIRVInstructionSelector::selectAtomicCmpXchg(Register ResVReg,
              .constrainAllUses(TII, TRI, RBI);
 }
 
-static bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
-  switch (SC) {
-  case SPIRV::StorageClass::Workgroup:
-  case SPIRV::StorageClass::CrossWorkgroup:
-  case SPIRV::StorageClass::Function:
-    return true;
-  default:
-    return false;
-  }
-}
-
 static bool isUSMStorageClass(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::DeviceOnlyINTEL:
@@ -3083,6 +3072,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::length, GL::Length);
   case Intrinsic::spv_degrees:
     return selectExtInst(ResVReg, ResType, I, CL::degrees, GL::Degrees);
+  case Intrinsic::spv_faceforward:
+    return selectExtInst(ResVReg, ResType, I, GL::FaceForward);
   case Intrinsic::spv_frac:
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
