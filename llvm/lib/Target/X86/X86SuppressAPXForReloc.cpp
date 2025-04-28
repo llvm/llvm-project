@@ -84,18 +84,18 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
   if (!ST.hasEGPR())
     return false;
 
-  auto suppressEGPRInRegs = [&](MachineInstr &MI,
+  auto suppressEGPRInInstrWithReloc = [&](MachineInstr &MI,
                                 ArrayRef<unsigned> OpNoArray) {
     int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                   X86II::getOperandBias(MI.getDesc());
     auto &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
     if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
         MO.getTargetFlags() == X86II::MO_GOTPCREL) {
-      LLVM_DEBUG(dbgs() << "Transform instruction with relocation type: " << MI
-                        << "\n");
+      LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
+                        << MI);
       for (auto OpNo : OpNoArray)
         suppressEGPRRegClass(MF, MI, OpNo);
-      LLVM_DEBUG(dbgs() << "to\n  " << MI << "\n");
+      LLVM_DEBUG(dbgs() << "to:\n  " << MI << "\n");
     }
   };
 
@@ -109,14 +109,14 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
         // in this pass (before emitting assembly).
       case X86::TEST32mr:
       case X86::TEST64mr: {
-        suppressEGPRInRegs(MI, {5});
+        suppressEGPRInInstrWithReloc(MI, {5});
         break;
       }
       case X86::CMP32rm:
       case X86::CMP64rm:
       case X86::MOV32rm:
       case X86::MOV64rm: {
-        suppressEGPRInRegs(MI, {0});
+        suppressEGPRInInstrWithReloc(MI, {0});
         break;
       }
       case X86::ADC32rm:
@@ -133,7 +133,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
       case X86::SBB64rm:
       case X86::SUB64rm:
       case X86::XOR64rm: {
-        suppressEGPRInRegs(MI, {0, 1});
+        suppressEGPRInInstrWithReloc(MI, {0, 1});
         break;
       }
       }
@@ -144,7 +144,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
 
 static bool handleNDDOrNFInstructions(MachineFunction &MF,
                                       const X86Subtarget &ST) {
-  if (!ST.hasNDD() && !ST.hasNF())
+  if (!ST.hasNDD())
     return false;
 
   auto TII = ST.getInstrInfo();
@@ -162,25 +162,20 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
                       X86II::getOperandBias(MI.getDesc());
         auto &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
-          LLVM_DEBUG(dbgs() << "Transform instruction with relocation type: "
-                            << MI << "\n");
+          LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
+                            << MI);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
-                                 TII->get(TargetOpcode::COPY), Reg)
-                             .addReg(MI.getOperand(1).getReg());
-          auto &NewMI =
-              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::ADD64rm),
-                      MI.getOperand(0).getReg())
-                  .addReg(Reg)
-                  .addReg(MI.getOperand(2).getReg())
-                  .addImm(MI.getOperand(3).getImm())
-                  .addReg(MI.getOperand(4).getReg())
-                  .add(MI.getOperand(5))
-                  .addReg(MI.getOperand(6).getReg());
-          suppressEGPRRegClass(MF, *NewMI, 0);
-          MI.eraseFromParent();
+          auto &CopyMI =
+              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+                      Reg)
+                  .addReg(MI.getOperand(1).getReg());
+          MI.getOperand(1).setReg(Reg);
+          const MCInstrDesc &NewDesc = TII->get(X86::ADD64rm);
+          MI.setDesc(NewDesc);
+          suppressEGPRRegClass(MF, MI, 0);
+          MI.tieOperands(0, 1);
           LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMI << "\n");
-          LLVM_DEBUG(dbgs() << "  " << *NewMI << "\n");
+          LLVM_DEBUG(dbgs() << "  " << MI << "\n");
         }
         break;
       }
@@ -188,13 +183,15 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
         int MemRefBegin = X86II::getMemoryOperandNo(MI.getDesc().TSFlags);
         auto &MO = MI.getOperand(MemRefBegin + X86::AddrDisp);
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
-          LLVM_DEBUG(dbgs() << "Transform instruction with relocation type: "
-                            << MI << "\n");
+          LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
+                            << MI);
+          suppressEGPRRegClass(MF, MI, 0);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
-                                 TII->get(TargetOpcode::COPY), Reg)
-                             .addReg(MI.getOperand(6).getReg());
-          [[maybe_unused]] auto &NewMI =
+          auto &CopyMI =
+              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+                      Reg)
+                  .addReg(MI.getOperand(6).getReg());
+          auto &NewMI =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::ADD64rm),
                       MI.getOperand(0).getReg())
                   .addReg(Reg)
@@ -203,7 +200,6 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
                   .addReg(MI.getOperand(3).getReg())
                   .add(MI.getOperand(4))
                   .addReg(MI.getOperand(5).getReg());
-          suppressEGPRRegClass(MF, *NewMI, 0);
           MI.eraseFromParent();
           LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMI << "\n");
           LLVM_DEBUG(dbgs() << "  " << *NewMI << "\n");
