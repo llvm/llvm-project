@@ -3326,6 +3326,24 @@ TEST(CompletionTest, AllScopesCompletion) {
                                  kind(CompletionItemKind::EnumMember))));
 }
 
+TEST(CompletionTest, NoCodePatternsIfDisabled) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.EnableSnippets = true;
+  Opts.CodePatterns = Config::CodePatternsPolicy::None;
+
+  auto Results = completions(R"cpp(
+    void function() {
+      /// Trying to trigger "for (init-statement; condition; inc-expression)
+      /// {statements}~" code pattern
+      for^
+    }
+  )cpp",
+                             {}, Opts);
+
+  EXPECT_THAT(Results.Completions,
+              Not(Contains(kind(CompletionItemKind::Snippet))));
+}
+
 TEST(CompletionTest, NoQualifierIfShadowed) {
   clangd::CodeCompleteOptions Opts = {};
   Opts.AllScopes = true;

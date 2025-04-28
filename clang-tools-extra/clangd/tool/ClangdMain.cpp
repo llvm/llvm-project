@@ -267,6 +267,17 @@ opt<Config::HeaderInsertionPolicy> HeaderInsertion{
             "Never insert #include directives as part of code completion")),
 };
 
+opt<Config::CodePatternsPolicy> CodePatterns{
+    "code-patterns",
+    cat(Features),
+    desc("Code completion menu will suggest code patterns and snippets."),
+    init(CodeCompleteOptions().CodePatterns),
+    values(clEnumValN(Config::CodePatternsPolicy::All, "all",
+                      "Enable all code patterns and snippets."),
+           clEnumValN(Config::CodePatternsPolicy::None, "none",
+                      "Disable all code patterns and snippets.")),
+};
+
 opt<bool> ImportInsertions{
     "import-insertions",
     cat(Features),
@@ -669,6 +680,7 @@ public:
     std::optional<Config::BackgroundPolicy> BGPolicy;
     std::optional<Config::ArgumentListsPolicy> ArgumentLists;
     std::optional<Config::HeaderInsertionPolicy> HeaderInsertionPolicy;
+    std::optional<Config::CodePatternsPolicy> CodePatternsPolicy;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -723,6 +735,10 @@ public:
                               : Config::ArgumentListsPolicy::Delimiters;
     }
 
+    if (CodePatterns == Config::CodePatternsPolicy::None) {
+      CodePatternsPolicy = Config::CodePatternsPolicy::None;
+    }
+
     Frag = [=](const config::Params &, Config &C) {
       if (CDBSearch)
         C.CompileFlags.CDBSearch = *CDBSearch;
@@ -736,6 +752,8 @@ public:
         C.Completion.HeaderInsertion = *HeaderInsertionPolicy;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
+      if (CodePatternsPolicy)
+        C.Completion.CodePatterns = *CodePatternsPolicy;
 
       if (Test)
         C.Index.StandardLibrary = false;
@@ -949,6 +967,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.CodeComplete.BundleOverloads = CompletionStyle != Detailed;
   Opts.CodeComplete.ShowOrigins = ShowOrigins;
   Opts.CodeComplete.InsertIncludes = HeaderInsertion;
+  Opts.CodeComplete.CodePatterns = CodePatterns;
   Opts.CodeComplete.ImportInsertions = ImportInsertions;
   if (!HeaderInsertionDecorators) {
     Opts.CodeComplete.IncludeIndicator.Insert.clear();
