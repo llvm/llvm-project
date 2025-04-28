@@ -316,6 +316,7 @@ MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
                                                     const ConstantInt &Val) {
+  assert(!isa<VectorType>(Val.getType()) && "Unexpected vector constant!");
   LLT Ty = Res.getLLTTy(*getMRI());
   LLT EltTy = Ty.getScalarType();
   assert(EltTy.getScalarSizeInBits() == Val.getBitWidth() &&
@@ -348,6 +349,7 @@ MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      const ConstantFP &Val) {
+  assert(!isa<VectorType>(Val.getType()) && "Unexpected vector constant!");
   LLT Ty = Res.getLLTTy(*getMRI());
   LLT EltTy = Ty.getScalarType();
 
