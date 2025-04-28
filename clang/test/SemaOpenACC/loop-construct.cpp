@@ -167,8 +167,8 @@ void LoopRules() {
   for(int f;;);
 
 #pragma acc loop
-  // expected-error@+6 2{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'loop' construct is here}}
+  // expected-error@+6{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'loop' construct is here}}
   // expected-error@+4{{OpenACC 'loop' construct must have a terminating condition}}
   // expected-note@-4{{'loop' construct is here}}
   // expected-error@+2{{OpenACC 'loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
@@ -246,8 +246,8 @@ void LoopRules() {
   for( i = 0;;);
 
 #pragma acc loop
-  // expected-error@+6 2{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'loop' construct is here}}
+  // expected-error@+6{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'loop' construct is here}}
   // expected-error@+4{{OpenACC 'loop' construct must have a terminating condition}}
   // expected-note@-4{{'loop' construct is here}}
   // expected-error@+2{{OpenACC 'loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
@@ -264,8 +264,8 @@ void LoopRules() {
   for( int j ;;);
 
 #pragma acc loop
-  // expected-error@+6 2{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'loop' construct is here}}
+  // expected-error@+6{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'loop' construct is here}}
   // expected-error@+4{{OpenACC 'loop' construct must have a terminating condition}}
   // expected-note@-4{{'loop' construct is here}}
   // expected-error@+2{{OpenACC 'loop' variable must monotonically increase or decrease ('++', '--', or compound assignment)}}
@@ -333,8 +333,8 @@ void LoopRules() {
   for(auto X : Array);
 
 #pragma acc loop
-  // expected-error@+2 2{{loop variable of loop associated with an OpenACC 'loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeIterator')}}
-  // expected-note@-2 2{{'loop' construct is here}}
+  // expected-error@+2{{loop variable of loop associated with an OpenACC 'loop' construct must be of integer, pointer, or random-access-iterator type (is 'SomeIterator')}}
+  // expected-note@-2{{'loop' construct is here}}
   for(auto X : HasIteratorCollection{});
 
 #pragma acc loop
@@ -346,8 +346,8 @@ void LoopRules() {
 
   RandAccessIterator f;
 #pragma acc loop
-  // expected-error@+2 2{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
-  // expected-note@-2 2{{'loop' construct is here}}
+  // expected-error@+2{{OpenACC 'loop' construct must have initialization clause in canonical form ('var = init' or 'T var = init'}}
+  // expected-note@-2{{'loop' construct is here}}
   for(f;f != end;f++);
 
 #pragma acc loop
@@ -373,6 +373,25 @@ void LoopRules() {
 
 #pragma acc loop
   for(f = 0;f != end;f+=1);
+
+#pragma acc loop
+  for (int i = 0; 5 >= i; ++i);
+
+  int otherI;
+  // expected-error@+3{{OpenACC 'loop' construct must have a terminating condition}}
+  // expected-note@+1{{'loop' construct is here}}
+#pragma acc loop
+  for (int i = 0; otherI != 5; ++i);
+
+  // expected-error@+3{{OpenACC 'loop' construct must have a terminating condition}}
+  // expected-note@+1{{'loop' construct is here}}
+#pragma acc loop
+  for (int i = 0; i != 5 && i < 3; ++i);
+
+  // expected-error@+3{{OpenACC 'loop' variable must monotonically increase or decrease}}
+  // expected-note@+1{{'loop' construct is here}}
+#pragma acc loop
+  for (int i = 0; i != 5; ++f);
 }
 
 void inst() {
