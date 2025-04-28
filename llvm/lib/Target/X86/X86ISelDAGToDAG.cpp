@@ -890,6 +890,12 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
       LD->getExtensionType() != ISD::NON_EXTLOAD)
     return false;
 
+  // If the load's outgoing chain has more than one use, we can't (currently)
+  // move the load since we'd most likely create a loop. TODO: Maybe it could
+  // work if moveBelowOrigChain() updated *all* the chain users.
+  if (!Callee.getValue(1).hasOneUse())
+    return false;
+
   // Now let's find the callseq_start.
   while (HasCallSeq && Chain.getOpcode() != ISD::CALLSEQ_START) {
     if (!Chain.hasOneUse())
@@ -913,11 +919,13 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
         Callee.getValue(1).hasOneUse())
       return true;
 
-    // Look past CopyToReg's.
-    if (Chain.getOperand(0).getOpcode() == ISD::CopyToReg) {
+    // Look past CopyToRegs. We only walk one path, so the chain mustn't branch.
+    if (Chain.getOperand(0).getOpcode() == ISD::CopyToReg &&
+        Chain.getOperand(0).getValue(0).hasOneUse()) {
       Chain = Chain.getOperand(0);
       continue;
     }
+
     return false;
   }
 }
@@ -1362,6 +1370,22 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
          (N->getOpcode() == X86ISD::TC_RETURN &&
           (Subtarget->is64Bit() ||
            !getTargetMachine().isPositionIndependent())))) {
+
+      if (N->getOpcode() == X86ISD::TC_RETURN) {
+        // There needs to be enough non-callee-saved GPRs available to compute
+        // the load address if folded into the tailcall. See how the
+        // X86tcret_6regs and X86tcret_1reg classes are used and defined.
+        unsigned NumRegs = 0;
+        for (unsigned I = 3, E = N->getNumOperands(); I != E; ++I) {
+          if (isa<RegisterSDNode>(N->getOperand(I)))
+            ++NumRegs;
+        }
+        if (!Subtarget->is64Bit() && NumRegs > 1)
+          continue;
+        if (NumRegs > 6)
+          continue;
+      }
+
       /// Also try moving call address load from outside callseq_start to just
       /// before the call to allow it to be folded.
       ///
