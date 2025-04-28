@@ -2518,6 +2518,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   ImplicitConversionKind SecondConv;
   switch (Conv) {
   case Sema::Compatible:
+  case Sema::CompatibleVoidPtrToNonVoidPtr: // __attribute__((overloadable))
     SecondConv = ICK_C_Only_Conversion;
     break;
   // For our purposes, discarding qualifiers is just as bad as using an
@@ -14706,6 +14707,8 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
   // the UnresolvedLookupExpr was type-dependent.
   if (OverloadResult == OR_Success) {
     const FunctionDecl *FDecl = Best->Function;
+    if (LangOpts.CUDA)
+      CUDA().recordPotentialODRUsedVariable(Args, CandidateSet);
     if (FDecl && FDecl->isTemplateInstantiation() &&
         FDecl->getReturnType()->isUndeducedType()) {
 
