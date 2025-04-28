@@ -149,6 +149,11 @@ orc.b a0, a0
 
 rev8 a0, a0
 
+# Zbc
+clmul a0, a0, a0
+clmulr a0, a0, a0
+clmulh a0, a0, a0
+
 # Zbs
 bclr a0, a1, a2
 bclri a0, a1, 1
@@ -283,6 +288,9 @@ bseti a0, a1, 1
 # CHECK-NEXT:  1      1     0.50                         1     SMX60_IEU                                  RORIW                      roriw	a0, a0, 1
 # CHECK-NEXT:  1      1     0.50                         1     SMX60_IEU                                  ORC_B                      orc.b	a0, a0
 # CHECK-NEXT:  1      1     0.50                         1     SMX60_IEU                                  REV8_RV64                  rev8	a0, a0
+# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  CLMUL                      clmul	a0, a0, a0
+# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  CLMULR                     clmulr	a0, a0, a0
+# CHECK-NEXT:  1      2     0.50                         2     SMX60_IEU                                  CLMULH                     clmulh	a0, a0, a0
 # CHECK-NEXT:  1      1     0.50                         1     SMX60_IEU                                  BCLR                       bclr	a0, a1, a2
 # CHECK-NEXT:  1      1     0.50                         1     SMX60_IEU                                  BCLRI                      bclri	a0, a1, 1
 # CHECK-NEXT:  1      1     0.50                         1     SMX60_IEU                                  BEXT                       bext	a0, a1, a2
@@ -301,7 +309,7 @@ bseti a0, a1, 1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]
-# CHECK-NEXT:  -     179.00 43.00  5.50   5.50
+# CHECK-NEXT:  -     180.50 44.50  5.50   5.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  Instructions:
@@ -410,6 +418,9 @@ bseti a0, a1, 1
 # CHECK-NEXT:  -     0.50   0.50    -      -     roriw	a0, a0, 1
 # CHECK-NEXT:  -     0.50   0.50    -      -     orc.b	a0, a0
 # CHECK-NEXT:  -     0.50   0.50    -      -     rev8	a0, a0
+# CHECK-NEXT:  -     0.50   0.50    -      -     clmul	a0, a0, a0
+# CHECK-NEXT:  -     0.50   0.50    -      -     clmulr	a0, a0, a0
+# CHECK-NEXT:  -     0.50   0.50    -      -     clmulh	a0, a0, a0
 # CHECK-NEXT:  -     0.50   0.50    -      -     bclr	a0, a1, a2
 # CHECK-NEXT:  -     0.50   0.50    -      -     bclri	a0, a1, 1
 # CHECK-NEXT:  -     0.50   0.50    -      -     bext	a0, a1, a2
