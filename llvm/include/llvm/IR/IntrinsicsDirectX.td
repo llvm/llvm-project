@@ -76,18 +76,27 @@ def int_dx_nclamp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>,
 def int_dx_cross : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
 def int_dx_saturate : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 
-def int_dx_dot2 :
-    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, Commutative] >;
-def int_dx_dot3 :
-    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, Commutative] >;
-def int_dx_dot4 :
-    DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-    [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
-    [IntrNoMem, Commutative] >;
+def int_dx_dot2 : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                        [
+                                          llvm_anyfloat_ty, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>
+                                        ],
+                                        [IntrNoMem, Commutative]>;
+def int_dx_dot3 : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                        [
+                                          llvm_anyfloat_ty, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>
+                                        ],
+                                        [IntrNoMem, Commutative]>;
+def int_dx_dot4 : DefaultAttrsIntrinsic<[LLVMMatchType<0>],
+                                        [
+                                          llvm_anyfloat_ty, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>,
+                                          LLVMMatchType<0>, LLVMMatchType<0>
+                                        ],
+                                        [IntrNoMem, Commutative]>;
 def int_dx_fdot :
     DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyfloat_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
@@ -100,9 +109,9 @@ def int_dx_udot :
     DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
     [llvm_anyint_ty, LLVMScalarOrSameVectorWidth<0, LLVMVectorElementType<0>>],
     [IntrNoMem, Commutative] >;
-def int_dx_dot2add : 
-    DefaultAttrsIntrinsic<[llvm_float_ty], 
-    [llvm_anyfloat_ty, LLVMMatchType<0>, llvm_float_ty], 
+def int_dx_dot2add :
+    DefaultAttrsIntrinsic<[llvm_float_ty],
+    [llvm_float_ty, llvm_half_ty, llvm_half_ty, llvm_half_ty, llvm_half_ty],
     [IntrNoMem, Commutative]>;
 def int_dx_dot4add_i8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 def int_dx_dot4add_u8packed : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;

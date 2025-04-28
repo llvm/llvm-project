@@ -126,8 +126,18 @@ public:
     if (!R) // Forward declaration of a Objective-C interface is safe.
       return false;
     auto Name = R->getName();
-    return !R->hasDefinition() && !RTC.isUnretained(QT) &&
-           !SystemTypes.contains(CanonicalType) &&
+    if (R->hasDefinition())
+      return false;
+    // Find a definition amongst template declarations.
+    if (auto *Specialization = dyn_cast<ClassTemplateSpecializationDecl>(R)) {
+      if (auto *S = Specialization->getSpecializedTemplate()) {
+        for (S = S->getMostRecentDecl(); S; S = S->getPreviousDecl()) {
+          if (S->isThisDeclarationADefinition())
+            return false;
+        }
+      }
+    }
+    return !RTC.isUnretained(QT) && !SystemTypes.contains(CanonicalType) &&
            !SystemTypes.contains(PointeeType) && !Name.starts_with("Opaque") &&
            Name != "_NSZone";
   }

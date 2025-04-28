@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <functional>
 
@@ -54,6 +55,7 @@ static unsigned typeToAddressSpace(const Type *Ty) {
   report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 }
 
+#ifndef NDEBUG
 static bool
 storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
@@ -85,6 +87,7 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   }
   llvm_unreachable("Unknown SPIRV::StorageClass enum");
 }
+#endif
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
@@ -173,7 +176,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-    if (ST.canUseExtension(
+    if ((!isPowerOf2_32(Width) || Width < 8) &&
+        ST.canUseExtension(
             SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers)) {
       MIRBuilder.buildInstr(SPIRV::OpExtension)
           .addImm(SPIRV::Extension::SPV_INTEL_arbitrary_precision_integers);
@@ -1741,7 +1745,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 
 SPIRVType *SPIRVGlobalRegistry::changePointerStorageClass(
     SPIRVType *PtrType, SPIRV::StorageClass::StorageClass SC, MachineInstr &I) {
-  SPIRV::StorageClass::StorageClass OldSC = getPointerStorageClass(PtrType);
+  [[maybe_unused]] SPIRV::StorageClass::StorageClass OldSC =
+      getPointerStorageClass(PtrType);
   assert(storageClassRequiresExplictLayout(OldSC) ==
          storageClassRequiresExplictLayout(SC));
 

@@ -94,10 +94,12 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
            B == LangAS::cuda_shared)) ||
-         // `this` overloading depending on address space is not ready,
-         // so this is a hack to allow generating addrspacecasts.
-         // IR legalization will be required when this address space is used.
+         // In HLSL, the this pointer for member functions points to the default
+         // address space. This causes a problem if the structure is in
+         // a different address space. We want to allow casting from these
+         // address spaces to default to work around this problem.
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
+         (A == LangAS::Default && B == LangAS::hlsl_device) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
@@ -279,10 +281,8 @@ QualType ArrayParameterType::getConstantArrayType(const ASTContext &Ctx) const {
 
 DependentSizedArrayType::DependentSizedArrayType(QualType et, QualType can,
                                                  Expr *e, ArraySizeModifier sm,
-                                                 unsigned tq,
-                                                 SourceRange brackets)
-    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e),
-      Brackets(brackets) {}
+                                                 unsigned tq)
+    : ArrayType(DependentSizedArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
 
 void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       const ASTContext &Context,
@@ -1099,8 +1099,7 @@ public:
 
     return Ctx.getVariableArrayType(elementType, T->getSizeExpr(),
                                     T->getSizeModifier(),
-                                    T->getIndexTypeCVRQualifiers(),
-                                    T->getBracketsRange());
+                                    T->getIndexTypeCVRQualifiers());
   }
 
   QualType VisitIncompleteArrayType(const IncompleteArrayType *T) {
@@ -1941,6 +1940,14 @@ TagDecl *Type::getAsTagDecl() const {
   return nullptr;
 }
 
+const TemplateSpecializationType *
+Type::getAsNonAliasTemplateSpecializationType() const {
+  const auto *TST = getAs<TemplateSpecializationType>();
+  while (TST && TST->isTypeAlias())
+    TST = TST->desugar()->getAs<TemplateSpecializationType>();
+  return TST;
+}
+
 bool Type::hasAttr(attr::Kind AK) const {
   const Type *Cur = this;
   while (const auto *AT = Cur->getAs<AttributedType>()) {
@@ -2339,16 +2346,15 @@ bool Type::isArithmeticType() const {
 }
 
 bool Type::hasBooleanRepresentation() const {
-  if (isBooleanType())
-    return true;
-
-  if (const EnumType *ET = getAs<EnumType>())
-    return ET->getDecl()->getIntegerType()->isBooleanType();
-
-  if (const AtomicType *AT = getAs<AtomicType>())
-    return AT->getValueType()->hasBooleanRepresentation();
-
-  return false;
+  if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
+    return VT->getElementType()->isBooleanType();
+  if (const auto *ET = dyn_cast<EnumType>(CanonicalType)) {
+    return ET->getDecl()->isComplete() &&
+           ET->getDecl()->getIntegerType()->isBooleanType();
+  }
+  if (const auto *IT = dyn_cast<BitIntType>(CanonicalType))
+    return IT->getNumBits() == 1;
+  return isBooleanType();
 }
 
 Type::ScalarTypeKind Type::getScalarTypeKind() const {
@@ -2492,6 +2498,22 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     return !Interface->hasDefinition();
   }
   }
+}
+
+bool Type::isAlwaysIncompleteType() const {
+  if (!isIncompleteType())
+    return false;
+
+  // Forward declarations of structs, classes, enums, and unions could be later
+  // completed in a compilation unit by providing a type definition.
+  if (getAsTagDecl())
+    return false;
+
+  // Other types are incompletable.
+  //
+  // E.g. `char[]` and `void`. The type is incomplete and no future
+  // type declarations can make the type complete.
+  return true;
 }
 
 bool Type::isSizelessBuiltinType() const {
@@ -2795,6 +2817,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType->isIncompleteType())
     return false;
 
+  if (CanonicalType.hasAddressDiscriminatedPointerAuth())
+    return false;
+
   // As an extension, Clang treats vector types as Scalar types.
   if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
     return true;
@@ -2807,7 +2832,7 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
         return ClassDecl->isTriviallyCopyable();
       }
     }
-    return true;
+    return !RT->getDecl()->isNonTrivialToPrimitiveCopy();
   }
   // No other types can match.
   return false;
@@ -2945,6 +2970,8 @@ QualType::PrimitiveCopyKind QualType::isNonTrivialToPrimitiveCopy() const {
   case Qualifiers::OCL_Weak:
     return PCK_ARCWeak;
   default:
+    if (hasAddressDiscriminatedPointerAuth())
+      return PCK_PtrAuth;
     return Qs.hasVolatile() ? PCK_VolatileTrivial : PCK_Trivial;
   }
 }
@@ -3935,6 +3962,31 @@ CountAttributedType::CountAttributedType(
     DeclSlot[i] = CoupledDecls[i];
 }
 
+StringRef CountAttributedType::getAttributeName(bool WithMacroPrefix) const {
+// TODO: This method isn't really ideal because it doesn't return the spelling
+// of the attribute that was used in the user's code. This method is used for
+// diagnostics so the fact it doesn't use the spelling of the attribute in
+// the user's code could be confusing (#113585).
+#define ENUMERATE_ATTRS(PREFIX)                                                \
+  do {                                                                         \
+    if (isCountInBytes()) {                                                    \
+      if (isOrNull())                                                          \
+        return PREFIX "sized_by_or_null";                                      \
+      return PREFIX "sized_by";                                                \
+    }                                                                          \
+    if (isOrNull())                                                            \
+      return PREFIX "counted_by_or_null";                                      \
+    return PREFIX "counted_by";                                                \
+  } while (0)
+
+  if (WithMacroPrefix)
+    ENUMERATE_ATTRS("__");
+  else
+    ENUMERATE_ATTRS("");
+
+#undef ENUMERATE_ATTRS
+}
+
 TypedefType::TypedefType(TypeClass tc, const TypedefNameDecl *D,
                          QualType Underlying, QualType can)
     : Type(tc, can, toSemanticDependence(can->getDependence())),
@@ -4055,8 +4107,8 @@ QualType DecltypeType::desugar() const {
   return QualType(this, 0);
 }
 
-DependentDecltypeType::DependentDecltypeType(Expr *E, QualType UnderlyingType)
-    : DecltypeType(E, UnderlyingType) {}
+DependentDecltypeType::DependentDecltypeType(Expr *E)
+    : DecltypeType(E, QualType()) {}
 
 void DependentDecltypeType::Profile(llvm::FoldingSetNodeID &ID,
                                     const ASTContext &Context, Expr *E) {
@@ -4126,11 +4178,6 @@ UnaryTransformType::UnaryTransformType(QualType BaseType,
                                        QualType CanonicalType)
     : Type(UnaryTransform, CanonicalType, BaseType->getDependence()),
       BaseType(BaseType), UnderlyingType(UnderlyingType), UKind(UKind) {}
-
-DependentUnaryTransformType::DependentUnaryTransformType(const ASTContext &C,
-                                                         QualType BaseType,
-                                                         UTTKind UKind)
-     : UnaryTransformType(BaseType, C.DependentTy, UKind, QualType()) {}
 
 TagType::TagType(TypeClass TC, const TagDecl *D, QualType can)
     : Type(TC, can,
@@ -4409,7 +4456,8 @@ TemplateSpecializationType::TemplateSpecializationType(
           T.getKind() == TemplateName::SubstTemplateTemplateParmPack ||
           T.getKind() == TemplateName::UsingTemplate ||
           T.getKind() == TemplateName::QualifiedTemplate ||
-          T.getKind() == TemplateName::DeducedTemplate) &&
+          T.getKind() == TemplateName::DeducedTemplate ||
+          T.getKind() == TemplateName::AssumedTemplate) &&
          "Unexpected template name for TemplateSpecializationType");
 
   auto *TemplateArgs =
@@ -4745,8 +4793,12 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<ReferenceType>(T)->getPointeeType());
   case Type::MemberPointer: {
     const auto *MPT = cast<MemberPointerType>(T);
-    LinkageInfo LV =
-        getDeclLinkageAndVisibility(MPT->getMostRecentCXXRecordDecl());
+    LinkageInfo LV;
+    if (auto *D = MPT->getMostRecentCXXRecordDecl()) {
+      LV.merge(getDeclLinkageAndVisibility(D));
+    } else if (auto *Ty = MPT->getQualifier()->getAsType()) {
+      LV.merge(computeTypeLinkageInfo(Ty));
+    }
     LV.merge(computeTypeLinkageInfo(MPT->getPointeeType()));
     return LV;
   }

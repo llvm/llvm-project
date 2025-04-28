@@ -79,8 +79,6 @@ bool X86LowerTileCopy::runOnMachineFunction(MachineFunction &MF) {
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
   BitVector GR64Regs =
       TRI->getAllocatableSet(MF, TRI->getRegClass(X86::GR64RegClassID));
-  BitVector TILERegs =
-      TRI->getAllocatableSet(MF, TRI->getRegClass(X86::TILERegClassID));
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {

@@ -3256,65 +3256,65 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP64:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ [[TMP1]], [[VECTOR_PH]] ], [ [[TMP58:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ [[TMP2]], [[VECTOR_PH]] ], [ [[TMP52:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[TMP46:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI8:%.*]] = phi <4 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[TMP40:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[TMP34:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI12:%.*]] = phi <4 x i32> [ [[TMP6]], [[VECTOR_PH]] ], [ [[TMP28:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI14:%.*]] = phi <4 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
-; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i32 0
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD16:%.*]] = load <4 x i8>, ptr [[TMP10]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = zext <4 x i8> [[WIDE_LOAD16]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = shl nsw i64 [[INDEX]], 3
-; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP15]]
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_VEC24:%.*]] = load <32 x i8>, ptr [[TMP17]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC25:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC26:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 1, i32 9, i32 17, i32 25>
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC27:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 2, i32 10, i32 18, i32 26>
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC28:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 3, i32 11, i32 19, i32 27>
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC29:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 4, i32 12, i32 20, i32 28>
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC30:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 5, i32 13, i32 21, i32 29>
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC31:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 6, i32 14, i32 22, i32 30>
-; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC32:%.*]] = shufflevector <32 x i8> [[WIDE_VEC24]], <32 x i8> poison, <4 x i32> <i32 7, i32 15, i32 23, i32 31>
-; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = sext <4 x i8> [[STRIDED_VEC25]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = mul nsw <4 x i32> [[TMP19]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP22]] = add <4 x i32> [[TMP21]], [[VEC_PHI14]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP25:%.*]] = sext <4 x i8> [[STRIDED_VEC26]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP27:%.*]] = mul nsw <4 x i32> [[TMP25]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP28]] = add <4 x i32> [[TMP27]], [[VEC_PHI12]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = sext <4 x i8> [[STRIDED_VEC27]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP33:%.*]] = mul nsw <4 x i32> [[TMP31]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP34]] = add <4 x i32> [[TMP33]], [[VEC_PHI10]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = sext <4 x i8> [[STRIDED_VEC28]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP39:%.*]] = mul nsw <4 x i32> [[TMP37]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP40]] = add <4 x i32> [[TMP39]], [[VEC_PHI8]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP43:%.*]] = sext <4 x i8> [[STRIDED_VEC29]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP45:%.*]] = mul nsw <4 x i32> [[TMP43]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP46]] = add <4 x i32> [[TMP45]], [[VEC_PHI6]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP49:%.*]] = sext <4 x i8> [[STRIDED_VEC30]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP51:%.*]] = mul nsw <4 x i32> [[TMP49]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP52]] = add <4 x i32> [[TMP51]], [[VEC_PHI4]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP55:%.*]] = sext <4 x i8> [[STRIDED_VEC31]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP57:%.*]] = mul nsw <4 x i32> [[TMP55]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP58]] = add <4 x i32> [[TMP57]], [[VEC_PHI2]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP61:%.*]] = sext <4 x i8> [[STRIDED_VEC32]] to <4 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP63:%.*]] = mul nsw <4 x i32> [[TMP61]], [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP64]] = add <4 x i32> [[TMP63]], [[VEC_PHI]]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP36:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ [[TMP1]], [[VECTOR_PH]] ], [ [[TMP33:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ [[TMP2]], [[VECTOR_PH]] ], [ [[TMP30:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[TMP27:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[TMP24:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i32> [ [[TMP6]], [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI7:%.*]] = phi <4 x i32> [ [[TMP7]], [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i32 0
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = shl nsw i64 [[INDEX]], 3
+; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP11]]
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i8>, ptr [[TMP12]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 1, i32 9, i32 17, i32 25>
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 2, i32 10, i32 18, i32 26>
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC10:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 3, i32 11, i32 19, i32 27>
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC11:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 4, i32 12, i32 20, i32 28>
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC12:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 5, i32 13, i32 21, i32 29>
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC13:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 6, i32 14, i32 22, i32 30>
+; CHECK-INTERLEAVED-NEXT:    [[STRIDED_VEC14:%.*]] = shufflevector <32 x i8> [[WIDE_VEC]], <32 x i8> poison, <4 x i32> <i32 7, i32 15, i32 23, i32 31>
+; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = sext <4 x i8> [[STRIDED_VEC]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = mul nsw <4 x i32> [[TMP13]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP15]] = add <4 x i32> [[TMP14]], [[VEC_PHI7]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = sext <4 x i8> [[STRIDED_VEC8]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = mul nsw <4 x i32> [[TMP16]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP18]] = add <4 x i32> [[TMP17]], [[VEC_PHI6]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP19:%.*]] = sext <4 x i8> [[STRIDED_VEC9]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = mul nsw <4 x i32> [[TMP19]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP21]] = add <4 x i32> [[TMP20]], [[VEC_PHI5]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = sext <4 x i8> [[STRIDED_VEC10]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP23:%.*]] = mul nsw <4 x i32> [[TMP22]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP24]] = add <4 x i32> [[TMP23]], [[VEC_PHI4]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP25:%.*]] = sext <4 x i8> [[STRIDED_VEC11]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP26:%.*]] = mul nsw <4 x i32> [[TMP25]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP27]] = add <4 x i32> [[TMP26]], [[VEC_PHI3]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP28:%.*]] = sext <4 x i8> [[STRIDED_VEC12]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP29:%.*]] = mul nsw <4 x i32> [[TMP28]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP30]] = add <4 x i32> [[TMP29]], [[VEC_PHI2]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP31:%.*]] = sext <4 x i8> [[STRIDED_VEC13]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP32:%.*]] = mul nsw <4 x i32> [[TMP31]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP33]] = add <4 x i32> [[TMP32]], [[VEC_PHI1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP34:%.*]] = sext <4 x i8> [[STRIDED_VEC14]] to <4 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP35:%.*]] = mul nsw <4 x i32> [[TMP34]], [[TMP10]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP36]] = add <4 x i32> [[TMP35]], [[VEC_PHI]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP66:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP66]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP37]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
 ; CHECK-INTERLEAVED:       middle.block:
-; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP64]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP47:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP58]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP48:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP52]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP46]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP42:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP40]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP50:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP34]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP28]])
-; CHECK-INTERLEAVED-NEXT:    [[TMP53:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP22]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP36]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP39:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP33]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP40:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP30]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP27]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP42:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP24]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP43:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP21]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP18]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP45:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
 ; CHECK-INTERLEAVED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-INTERLEAVED:       scalar.ph:
@@ -3419,7 +3419,6 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:
-;
 entry:
   %cmp100 = icmp sgt i32 %n, 0
   br i1 %cmp100, label %for.body.lr.ph, label %for.cond.cleanup

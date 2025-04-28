@@ -329,9 +329,6 @@ public:
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
-  virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
-                                     ArgListTy &Args) const {};
-
   static ISD::NodeType getExtendForContent(BooleanContent Content) {
     switch (Content) {
     case UndefinedBooleanContent:
@@ -350,7 +347,7 @@ public:
   explicit TargetLoweringBase(const TargetMachine &TM);
   TargetLoweringBase(const TargetLoweringBase &) = delete;
   TargetLoweringBase &operator=(const TargetLoweringBase &) = delete;
-  virtual ~TargetLoweringBase() = default;
+  virtual ~TargetLoweringBase();
 
   /// Return true if the target support strict float operation
   bool isStrictFPEnabled() const {
@@ -1653,6 +1650,24 @@ public:
            getCondCodeAction(CC, VT) == Custom;
   }
 
+  /// Return how a PARTIAL_REDUCE_U/SMLA node with Acc type AccVT and Input type
+  /// InputVT should be treated. Either it's legal, needs to be promoted to a
+  /// larger size, needs to be expanded to some other code sequence, or the
+  /// target has a custom expander for it.
+  LegalizeAction getPartialReduceMLAAction(EVT AccVT, EVT InputVT) const {
+    PartialReduceActionTypes TypePair = {AccVT.getSimpleVT().SimpleTy,
+                                         InputVT.getSimpleVT().SimpleTy};
+    auto It = PartialReduceMLAActions.find(TypePair);
+    return It != PartialReduceMLAActions.end() ? It->second : Expand;
+  }
+
+  /// Return true if a PARTIAL_REDUCE_U/SMLA node with the specified types is
+  /// legal or custom for this target.
+  bool isPartialReduceMLALegalOrCustom(EVT AccVT, EVT InputVT) const {
+    LegalizeAction Action = getPartialReduceMLAAction(AccVT, InputVT);
+    return Action == Legal || Action == Custom;
+  }
+
   /// If the action for this operation is to promote, this method returns the
   /// ValueType to promote to.
   MVT getTypeToPromoteTo(unsigned Op, MVT VT) const {
@@ -1826,9 +1841,13 @@ public:
   virtual bool ShouldShrinkFPConstant(EVT) const { return true; }
 
   /// Return true if it is profitable to reduce a load to a smaller type.
+  /// \p ByteOffset is only set if we know the pointer offset at compile time
+  /// otherwise we should assume that additional pointer math is required.
   /// Example: (i16 (trunc (i32 (load x))) -> i16 load x
-  virtual bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
-                                     EVT NewVT) const {
+  /// Example: (i16 (trunc (srl (i32 (load x)), 16)) -> i16 load x+2
+  virtual bool shouldReduceLoadWidth(
+      SDNode *Load, ISD::LoadExtType ExtTy, EVT NewVT,
+      std::optional<unsigned> ByteOffset = std::nullopt) const {
     // By default, assume that it is cheaper to extract a subvector from a wide
     // vector load rather than creating multiple narrow vector loads.
     if (NewVT.isVector() && !SDValue(Load, 0).hasOneUse())
@@ -2724,6 +2743,18 @@ protected:
                          LegalizeAction Action) {
     for (auto VT : VTs)
       setCondCodeAction(CCs, VT, Action);
+  }
+
+  /// Indicate how a PARTIAL_REDUCE_U/SMLA node with Acc type AccVT and Input
+  /// type InputVT should be treated by the target. Either it's legal, needs to
+  /// be promoted to a larger size, needs to be expanded to some other code
+  /// sequence, or the target has a custom expander for it.
+  void setPartialReduceMLAAction(MVT AccVT, MVT InputVT,
+                                 LegalizeAction Action) {
+    assert(AccVT.isValid() && InputVT.isValid() &&
+           "setPartialReduceMLAAction types aren't valid");
+    PartialReduceActionTypes TypePair = {AccVT.SimpleTy, InputVT.SimpleTy};
+    PartialReduceMLAActions[TypePair] = Action;
   }
 
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
@@ -3705,6 +3736,13 @@ private:
   /// up the MVT::VALUETYPE_SIZE value to the next multiple of 8.
   uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::VALUETYPE_SIZE + 7) / 8];
 
+  using PartialReduceActionTypes =
+      std::pair<MVT::SimpleValueType, MVT::SimpleValueType>;
+  /// For each result type and input type for the ISD::PARTIAL_REDUCE_U/SMLA
+  /// nodes, keep a LegalizeAction which indicates how instruction selection
+  /// should deal with this operation.
+  DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
+
   ValueTypeActionImpl ValueTypeActions;
 
 private:
@@ -3866,6 +3904,7 @@ public:
   TargetLowering &operator=(const TargetLowering &) = delete;
 
   explicit TargetLowering(const TargetMachine &TM);
+  ~TargetLowering() override;
 
   bool isPositionIndependent() const;
 
@@ -4285,6 +4324,7 @@ public:
   /// NaN. If \p sNaN is true, returns if \p Op is known to never be a signaling
   /// NaN.
   virtual bool isKnownNeverNaNForTargetNode(SDValue Op,
+                                            const APInt &DemandedElts,
                                             const SelectionDAG &DAG,
                                             bool SNaN = false,
                                             unsigned Depth = 0) const;
@@ -4591,6 +4631,9 @@ public:
       SelectionDAG & /*DAG*/, SmallVectorImpl<SDValue> & /*InVals*/) const {
     llvm_unreachable("Not Implemented");
   }
+
+  virtual void markLibCallAttributes(MachineFunction *MF, unsigned CC,
+                                     ArgListTy &Args) const {}
 
   /// This structure contains the information necessary for lowering
   /// pointer-authenticating indirect calls.  It is equivalent to the "ptrauth"

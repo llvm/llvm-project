@@ -23,6 +23,8 @@
 
 #include "mlir/IR/Value.h"
 
+#include "clang/CIR/MissingFeatures.h"
+
 namespace clang::CIRGen {
 
 /// This trivial value class is used to represent the result of an
@@ -138,6 +140,10 @@ public:
   // TODO: Add support for volatile
   bool isVolatile() const { return false; }
 
+  unsigned getVRQualifiers() const {
+    return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
+  }
+
   clang::QualType getType() const { return type; }
 
   mlir::Value getPointer() const { return v; }
@@ -152,6 +158,9 @@ public:
   }
 
   const clang::Qualifiers &getQuals() const { return quals; }
+  clang::Qualifiers &getQuals() { return quals; }
+
+  LValueBaseInfo getBaseInfo() const { return baseInfo; }
 
   static LValue makeAddr(Address address, clang::QualType t,
                          LValueBaseInfo baseInfo) {

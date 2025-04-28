@@ -12,6 +12,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -79,19 +80,20 @@ MCStreamer *Target::createMCObjectStreamer(
 
 MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<formatted_raw_ostream> OS,
-                                      MCInstPrinter *IP,
+                                      std::unique_ptr<MCInstPrinter> IP,
                                       std::unique_ptr<MCCodeEmitter> CE,
                                       std::unique_ptr<MCAsmBackend> TAB) const {
+  MCInstPrinter *Printer = IP.get();
   formatted_raw_ostream &OSRef = *OS;
   MCStreamer *S;
   if (AsmStreamerCtorFn)
-    S = AsmStreamerCtorFn(Ctx, std::move(OS), IP, std::move(CE),
+    S = AsmStreamerCtorFn(Ctx, std::move(OS), std::move(IP), std::move(CE),
                           std::move(TAB));
   else
-    S = llvm::createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                                std::move(TAB));
+    S = llvm::createAsmStreamer(Ctx, std::move(OS), std::move(IP),
+                                std::move(CE), std::move(TAB));
 
-  createAsmTargetStreamer(*S, OSRef, IP);
+  createAsmTargetStreamer(*S, OSRef, Printer);
   return S;
 }
 

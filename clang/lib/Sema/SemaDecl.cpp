@@ -247,15 +247,15 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
     return nullptr;
 
   // We found some types in dependent base classes.  Recover as if the user
-  // wrote 'typename MyClass::II' instead of 'II'.  We'll fully resolve the
-  // lookup during template instantiation.
+  // wrote 'MyClass::II' instead of 'II', and this implicit typename was
+  // allowed.  We'll fully resolve the lookup during template instantiation.
   S.Diag(NameLoc, diag::ext_found_in_dependent_base) << &II;
 
   ASTContext &Context = S.Context;
   auto *NNS = NestedNameSpecifier::Create(
       Context, nullptr, cast<Type>(Context.getRecordType(RD)));
   QualType T =
-      Context.getDependentNameType(ElaboratedTypeKeyword::Typename, NNS, &II);
+      Context.getDependentNameType(ElaboratedTypeKeyword::None, NNS, &II);
 
   CXXScopeSpec SS;
   SS.MakeTrivial(Context, NNS, SourceRange(NameLoc));
@@ -418,7 +418,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   NamedDecl *IIDecl = nullptr;
   UsingShadowDecl *FoundUsingShadow = nullptr;
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     if (CorrectedII) {
       TypeNameValidatorCCC CCC(/*AllowInvalid=*/true, isClassName,
                                AllowDeducedTemplate);
@@ -460,7 +460,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     }
     Result.suppressDiagnostics();
     return nullptr;
-  case LookupResult::NotFoundInCurrentInstantiation:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
     if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
       QualType T = Context.getDependentNameType(ElaboratedTypeKeyword::None,
                                                 SS->getScopeRep(), &II);
@@ -472,18 +472,18 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
     }
     [[fallthrough]];
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
     Result.suppressDiagnostics();
     return nullptr;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     // Recover from type-hiding ambiguities by hiding the type.  We'll
     // do the lookup again when looking for an object, and we can
     // diagnose the error then.  If we don't do this, then the error
     // about hiding the type will be immediately followed by an error
     // that only makes sense if the identifier was treated like a type.
-    if (Result.getAmbiguityKind() == LookupResult::AmbiguousTagHiding) {
+    if (Result.getAmbiguityKind() == LookupAmbiguityKind::AmbiguousTagHiding) {
       Result.suppressDiagnostics();
       return nullptr;
     }
@@ -521,7 +521,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // perform the name lookup again.
     break;
 
-  case LookupResult::Found:
+  case LookupResultKind::Found:
     IIDecl = Result.getFoundDecl();
     FoundUsingShadow = dyn_cast<UsingShadowDecl>(*Result.begin());
     break;
@@ -657,7 +657,7 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
   LookupResult R(*this, &II, SourceLocation(), LookupTagName);
   LookupName(R, S, false);
   R.suppressDiagnostics();
-  if (R.getResultKind() == LookupResult::Found)
+  if (R.getResultKind() == LookupResultKind::Found)
     if (const TagDecl *TD = R.getAsSingle<TagDecl>()) {
       switch (TD->getTagKind()) {
       case TagTypeKind::Struct:
@@ -926,7 +926,7 @@ Sema::NameClassification Sema::ClassifyName(Scope *S, CXXScopeSpec &SS,
 
 Corrected:
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound:
+  case LookupResultKind::NotFound:
     // If an unqualified-id is followed by a '(', then we have a function
     // call.
     if (SS.isEmpty() && NextToken.is(tok::l_paren)) {
@@ -1043,7 +1043,7 @@ Corrected:
     Result.suppressDiagnostics();
     return NameClassification::Unknown();
 
-  case LookupResult::NotFoundInCurrentInstantiation: {
+  case LookupResultKind::NotFoundInCurrentInstantiation: {
     // We performed name lookup into the current instantiation, and there were
     // dependent bases, so we treat this result the same way as any other
     // dependent nested-name-specifier.
@@ -1061,12 +1061,12 @@ Corrected:
     return NameClassification::DependentNonType();
   }
 
-  case LookupResult::Found:
-  case LookupResult::FoundOverloaded:
-  case LookupResult::FoundUnresolvedValue:
+  case LookupResultKind::Found:
+  case LookupResultKind::FoundOverloaded:
+  case LookupResultKind::FoundUnresolvedValue:
     break;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     if (getLangOpts().CPlusPlus && NextToken.is(tok::less) &&
         hasAnyAcceptableTemplateNames(Result, /*AllowFunctionTemplates=*/true,
                                       /*AllowDependent=*/false)) {
@@ -1498,11 +1498,11 @@ static bool AllowOverloadingOfFunction(const LookupResult &Previous,
   // to check at least two; hence the 'any_of' check below. Note that
   // the overloadable attribute is implicitly added to declarations
   // that were required to have it but did not.
-  if (Previous.getResultKind() == LookupResult::FoundOverloaded) {
+  if (Previous.getResultKind() == LookupResultKind::FoundOverloaded) {
     return llvm::any_of(Previous, [](const NamedDecl *ND) {
       return ND->hasAttr<OverloadableAttr>();
     });
-  } else if (Previous.getResultKind() == LookupResult::Found)
+  } else if (Previous.getResultKind() == LookupResultKind::Found)
     return Previous.getFoundDecl()->hasAttr<OverloadableAttr>();
 
   return false;
@@ -2994,6 +2994,21 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       continue;
     } else if (isa<UuidAttr>(NewAttribute)) {
       // msvc will allow a subsequent definition to add an uuid to a class
+      ++I;
+      continue;
+    } else if (isa<DeprecatedAttr, WarnUnusedResultAttr, UnusedAttr>(
+                   NewAttribute) &&
+               NewAttribute->isStandardAttributeSyntax()) {
+      // C++14 [dcl.attr.deprecated]p3: A name or entity declared without the
+      // deprecated attribute can later be re-declared with the attribute and
+      // vice-versa.
+      // C++17 [dcl.attr.unused]p4: A name or entity declared without the
+      // maybe_unused attribute can later be redeclared with the attribute and
+      // vice versa.
+      // C++20 [dcl.attr.nodiscard]p2: A name or entity declared without the
+      // nodiscard attribute can later be redeclared with the attribute and
+      // vice-versa.
+      // C23 6.7.13.3p3, 6.7.13.4p3. and 6.7.13.5p5 give the same allowances.
       ++I;
       continue;
     } else if (const AlignedAttr *AA = dyn_cast<AlignedAttr>(NewAttribute)) {
@@ -8275,7 +8290,7 @@ static SourceLocation getCaptureLocation(const LambdaScopeInfo *LSI,
 static bool shouldWarnIfShadowedDecl(const DiagnosticsEngine &Diags,
                                      const LookupResult &R) {
   // Only diagnose if we're shadowing an unambiguous field or variable.
-  if (R.getResultKind() != LookupResult::Found)
+  if (R.getResultKind() != LookupResultKind::Found)
     return false;
 
   // Return false if warning is ignored.
@@ -10169,10 +10184,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // deallocation function shall not be declared with the consteval
       // specifier.
       if (ConstexprKind == ConstexprSpecKind::Consteval &&
-          (NewFD->getOverloadedOperator() == OO_New ||
-           NewFD->getOverloadedOperator() == OO_Array_New ||
-           NewFD->getOverloadedOperator() == OO_Delete ||
-           NewFD->getOverloadedOperator() == OO_Array_Delete)) {
+          NewFD->getDeclName().isAnyOperatorNewOrDelete()) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(),
              diag::err_invalid_consteval_decl_kind)
             << NewFD;
@@ -10276,9 +10288,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     //   A deallocation function with no exception-specification is treated
     //   as if it were specified with noexcept(true).
     const FunctionProtoType *FPT = R->getAs<FunctionProtoType>();
-    if ((Name.getCXXOverloadedOperator() == OO_Delete ||
-         Name.getCXXOverloadedOperator() == OO_Array_Delete) &&
-        getLangOpts().CPlusPlus11 && FPT && !FPT->hasExceptionSpec())
+    if (Name.isAnyOperatorDelete() && getLangOpts().CPlusPlus11 && FPT &&
+        !FPT->hasExceptionSpec())
       NewFD->setType(Context.getFunctionType(
           FPT->getReturnType(), FPT->getParamTypes(),
           FPT->getExtProtoInfo().withExceptionSpec(EST_BasicNoexcept)));
@@ -10493,7 +10504,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // Recover gracefully from an invalid redeclaration.
       D.setRedeclaration(true);
     assert((NewFD->isInvalidDecl() || !D.isRedeclaration() ||
-            Previous.getResultKind() != LookupResult::FoundOverloaded) &&
+            Previous.getResultKind() != LookupResultKind::FoundOverloaded) &&
            "previous declaration set still overloaded");
 
     // Diagnose no-prototype function declarations with calling conventions that
@@ -10660,7 +10671,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
     assert((NewFD->isInvalidDecl() || NewFD->isMultiVersion() ||
             !D.isRedeclaration() ||
-            Previous.getResultKind() != LookupResult::FoundOverloaded) &&
+            Previous.getResultKind() != LookupResultKind::FoundOverloaded) &&
            "previous declaration set still overloaded");
 
     NamedDecl *PrincipalDecl = (FunctionTemplate
@@ -13384,6 +13395,12 @@ struct DiagNonTrivalCUnionCopyVisitor
         asDerived().visit(FD->getType(), FD, InNonTrivialUnion);
   }
 
+  void visitPtrAuth(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
+    if (InNonTrivialUnion)
+      S.Diag(FD->getLocation(), diag::note_non_trivial_c_union)
+          << 1 << 2 << QT << FD->getName();
+  }
+
   void preVisit(QualType::PrimitiveCopyKind PCK, QualType QT,
                 const FieldDecl *FD, bool InNonTrivialUnion) {}
   void visitTrivial(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {}
@@ -14320,6 +14337,16 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
                                AbstractVariableType)) {
       Var->setInvalidDecl();
       return;
+    }
+
+    // In C, if the definition is const-qualified and has no initializer, it
+    // is left uninitialized unless it has static or thread storage duration.
+    if (!getLangOpts().CPlusPlus && Type.isConstQualified()) {
+      unsigned DiagID = diag::warn_default_init_const_unsafe;
+      if (Var->getStorageDuration() == SD_Static ||
+          Var->getStorageDuration() == SD_Thread)
+        DiagID = diag::warn_default_init_const;
+      Diag(Var->getLocation(), DiagID) << Type << /*not a field*/ 0;
     }
 
     // Check for jumps past the implicit initializer.  C++0x
@@ -15443,6 +15470,12 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     New->setType(T);
   }
 
+  // __ptrauth is forbidden on parameters.
+  if (T.getPointerAuth()) {
+    Diag(NameLoc, diag::err_ptrauth_qualifier_invalid) << T << 1;
+    New->setInvalidDecl();
+  }
+
   // ISO/IEC TR 18037 S6.7.3: "The type of an object with automatic storage
   // duration shall not be qualified by an address-space qualifier."
   // Since all parameters have automatic store duration, they can not have
@@ -16133,7 +16166,13 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   if (FSI->UsesFPIntrin && FD && !FD->hasAttr<StrictFPAttr>())
     FD->addAttr(StrictFPAttr::CreateImplicit(Context));
 
-  sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
+  SourceLocation AnalysisLoc;
+  if (Body)
+    AnalysisLoc = Body->getEndLoc();
+  else if (FD)
+    AnalysisLoc = FD->getEndLoc();
+  sema::AnalysisBasedWarnings::Policy WP =
+      AnalysisWarnings.getPolicyInEffectAt(AnalysisLoc);
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
   // If we skip function body, we can't tell if a function is a coroutine.
@@ -16182,16 +16221,11 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     // This is meant to pop the context added in ActOnStartOfFunctionDef().
     ExitFunctionBodyRAII ExitRAII(*this, isLambdaCallOperator(FD));
     if (FD) {
-      // If this is called by Parser::ParseFunctionDefinition() after marking
-      // the declaration as deleted, and if the deleted-function-body contains
-      // a message (C++26), then a DefaultedOrDeletedInfo will have already been
-      // added to store that message; do not overwrite it in that case.
-      //
-      // Since this would always set the body to 'nullptr' in that case anyway,
-      // which is already done when the function decl is initially created,
-      // always skipping this irrespective of whether there is a delete message
-      // should not be a problem.
-      if (!FD->isDeletedAsWritten())
+      // The function body and the DefaultedOrDeletedInfo, if present, use
+      // the same storage; don't overwrite the latter if the former is null
+      // (the body is initialised to null anyway, so even if the latter isn't
+      // present, this would still be a no-op).
+      if (Body)
         FD->setBody(Body);
       FD->setWillHaveBody(false);
 
@@ -18645,19 +18679,19 @@ FieldDecl *Sema::HandleField(Scope *S, RecordDecl *Record,
                         RedeclarationKind::ForVisibleRedeclaration);
   LookupName(Previous, S);
   switch (Previous.getResultKind()) {
-    case LookupResult::Found:
-    case LookupResult::FoundUnresolvedValue:
-      PrevDecl = Previous.getAsSingle<NamedDecl>();
-      break;
+  case LookupResultKind::Found:
+  case LookupResultKind::FoundUnresolvedValue:
+    PrevDecl = Previous.getAsSingle<NamedDecl>();
+    break;
 
-    case LookupResult::FoundOverloaded:
-      PrevDecl = Previous.getRepresentativeDecl();
-      break;
+  case LookupResultKind::FoundOverloaded:
+    PrevDecl = Previous.getRepresentativeDecl();
+    break;
 
-    case LookupResult::NotFound:
-    case LookupResult::NotFoundInCurrentInstantiation:
-    case LookupResult::Ambiguous:
-      break;
+  case LookupResultKind::NotFound:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
+  case LookupResultKind::Ambiguous:
+    break;
   }
   Previous.suppressDiagnostics();
 
@@ -19445,9 +19479,14 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
             RecordArgPassingKind::CanNeverPassInRegs)
           Record->setArgPassingRestrictions(
               RecordArgPassingKind::CanNeverPassInRegs);
-      } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
+      } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak) {
         Record->setArgPassingRestrictions(
             RecordArgPassingKind::CanNeverPassInRegs);
+      } else if (PointerAuthQualifier Q = FT.getPointerAuth();
+                 Q && Q.isAddressDiscriminated()) {
+        Record->setArgPassingRestrictions(
+            RecordArgPassingKind::CanNeverPassInRegs);
+      }
     }
 
     if (Record && FD->getType().isVolatileQualified())

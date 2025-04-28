@@ -151,6 +151,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
   additional C++ member functions to match.
 
+- Improved :doc:`cert-err33-c
+  <clang-tidy/checks/cert/err33-c>` check by fixing false positives when
+  a function name is just prefixed with a targeted function name.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
@@ -177,6 +181,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
   ``constexpr`` and ``static``` values on member initialization and by detecting
   explicit casting of built-in types within member list initialization.
+
+- Improved :doc:`modernize-use-designated-initializers
+  <clang-tidy/checks/modernize/use-designated-initializers>` check by avoiding
+  diagnosing designated initializers for ``std::array`` initializations.
 
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 

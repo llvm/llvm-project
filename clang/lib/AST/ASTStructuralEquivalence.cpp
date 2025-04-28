@@ -580,7 +580,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const DependentTemplateStorage &S1,
                                      const DependentTemplateStorage &S2) {
-  if (!IsStructurallyEquivalent(Context, S1.getQualifier(), S2.getQualifier()))
+  if (NestedNameSpecifier *NNS1 = S1.getQualifier(), *NNS2 = S2.getQualifier();
+      !NNS1 != !NNS2 ||
+      (NNS1 && !IsStructurallyEquivalent(Context, NNS1, NNS2)))
     return false;
 
   IdentifierOrOverloadedOperator IO1 = S1.getName(), IO2 = S2.getName();
