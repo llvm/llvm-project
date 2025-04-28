@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_PLUGINLOADER_H
 
 #ifndef DONT_GET_PLUGIN_LOADER_OPTION
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/CommandLine.h"
 #endif
 
@@ -24,9 +25,9 @@
 
 namespace llvm {
   struct PluginLoader {
-    void operator=(const std::string &Filename);
-    static unsigned getNumPlugins();
-    static std::string& getPlugin(unsigned num);
+    LLVM_ABI void operator=(const std::string &Filename);
+    LLVM_ABI static unsigned getNumPlugins();
+    LLVM_ABI static std::string& getPlugin(unsigned num);
   };
 
 #ifndef DONT_GET_PLUGIN_LOADER_OPTION

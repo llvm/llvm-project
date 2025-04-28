@@ -38,15 +38,16 @@
 #ifndef LLVM_SUPPORT_XXHASH_H
 #define LLVM_SUPPORT_XXHASH_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
-uint64_t xxHash64(llvm::StringRef Data);
-uint64_t xxHash64(llvm::ArrayRef<uint8_t> Data);
+LLVM_ABI uint64_t xxHash64(llvm::StringRef Data);
+LLVM_ABI uint64_t xxHash64(llvm::ArrayRef<uint8_t> Data);
 
-uint64_t xxh3_64bits(ArrayRef<uint8_t> data);
+LLVM_ABI uint64_t xxh3_64bits(ArrayRef<uint8_t> data);
 inline uint64_t xxh3_64bits(StringRef data) {
   return xxh3_64bits(ArrayRef(data.bytes_begin(), data.size()));
 }
@@ -72,7 +73,7 @@ struct XXH128_hash_t {
 };
 
 /// XXH3's 128-bit variant.
-XXH128_hash_t xxh3_128bits(ArrayRef<uint8_t> data);
+LLVM_ABI XXH128_hash_t xxh3_128bits(ArrayRef<uint8_t> data);
 
 } // namespace llvm
 

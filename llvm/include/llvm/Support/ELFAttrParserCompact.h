@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_ELFCOMPACTATTRPARSER_H
 #define LLVM_SUPPORT_ELFCOMPACTATTRPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/ELFAttributeParser.h"
@@ -22,7 +23,7 @@ namespace llvm {
 class StringRef;
 class ScopedPrinter;
 
-class ELFCompactAttrParser : public ELFAttributeParser {
+class LLVM_ABI ELFCompactAttrParser : public ELFAttributeParser {
   StringRef vendor;
   std::unordered_map<unsigned, unsigned> attributes;
   std::unordered_map<unsigned, StringRef> attributesStr;

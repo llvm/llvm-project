@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_FILECOLLECTOR_H
 #define LLVM_SUPPORT_FILECOLLECTOR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -19,7 +20,7 @@ namespace llvm {
 class FileCollectorFileSystem;
 class Twine;
 
-class FileCollectorBase {
+class LLVM_ABI FileCollectorBase {
 public:
   FileCollectorBase();
   virtual ~FileCollectorBase();
@@ -66,7 +67,7 @@ protected:
 ///
 /// In order to preserve the relative topology of files we use their real paths
 /// as relative paths inside of the Root.
-class FileCollector : public FileCollectorBase {
+class LLVM_ABI FileCollector : public FileCollectorBase {
 public:
   /// Helper utility that encapsulates the logic for canonicalizing a virtual
   /// path and a path to copy from.
@@ -78,7 +79,7 @@ public:
     };
 
     /// Canonicalize a pair of virtual and real paths.
-    PathStorage canonicalize(StringRef SrcPath);
+    LLVM_ABI PathStorage canonicalize(StringRef SrcPath);
 
   private:
     /// Replace with a (mostly) real path, or don't modify. Resolves symlinks

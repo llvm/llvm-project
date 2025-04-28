@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_BINARYSTREAMREADER_H
 #define LLVM_SUPPORT_BINARYSTREAMREADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Alignment.h"
@@ -29,10 +30,10 @@ namespace llvm {
 class BinaryStreamReader {
 public:
   BinaryStreamReader() = default;
-  explicit BinaryStreamReader(BinaryStreamRef Ref);
-  explicit BinaryStreamReader(BinaryStream &Stream);
-  explicit BinaryStreamReader(ArrayRef<uint8_t> Data, llvm::endianness Endian);
-  explicit BinaryStreamReader(StringRef Data, llvm::endianness Endian);
+  LLVM_ABI explicit BinaryStreamReader(BinaryStreamRef Ref);
+  LLVM_ABI explicit BinaryStreamReader(BinaryStream &Stream);
+  LLVM_ABI explicit BinaryStreamReader(ArrayRef<uint8_t> Data, llvm::endianness Endian);
+  LLVM_ABI explicit BinaryStreamReader(StringRef Data, llvm::endianness Endian);
 
   BinaryStreamReader(const BinaryStreamReader &Other) = default;
 
@@ -46,7 +47,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer);
+  LLVM_ABI Error readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer);
 
   /// Read \p Size bytes from the underlying stream at the current offset and
   /// and set \p Buffer to the resulting data slice.  Whether a copy occurs
@@ -55,7 +56,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
+  LLVM_ABI Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
 
   /// Read an integer of the specified endianness into \p Dest and update the
   /// stream's offset.  The data is always copied from the stream's underlying
@@ -91,13 +92,13 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readULEB128(uint64_t &Dest);
+  LLVM_ABI Error readULEB128(uint64_t &Dest);
 
   /// Read a signed LEB128 encoded value.
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readSLEB128(int64_t &Dest);
+  LLVM_ABI Error readSLEB128(int64_t &Dest);
 
   /// Read a null terminated string from \p Dest.  Whether a copy occurs depends
   /// on the implementation of the underlying stream.  Updates the stream's
@@ -105,14 +106,14 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readCString(StringRef &Dest);
+  LLVM_ABI Error readCString(StringRef &Dest);
 
   /// Similar to readCString, however read a null-terminated UTF16 string
   /// instead.
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readWideString(ArrayRef<UTF16> &Dest);
+  LLVM_ABI Error readWideString(ArrayRef<UTF16> &Dest);
 
   /// Read a \p Length byte string into \p Dest.  Whether a copy occurs depends
   /// on the implementation of the underlying stream.  Updates the stream's
@@ -120,7 +121,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readFixedString(StringRef &Dest, uint32_t Length);
+  LLVM_ABI Error readFixedString(StringRef &Dest, uint32_t Length);
 
   /// Read the entire remainder of the underlying stream into \p Ref.  This is
   /// equivalent to calling getUnderlyingStream().slice(Offset).  Updates the
@@ -128,7 +129,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readStreamRef(BinaryStreamRef &Ref);
+  LLVM_ABI Error readStreamRef(BinaryStreamRef &Ref);
 
   /// Read \p Length bytes from the underlying stream into \p Ref.  This is
   /// equivalent to calling getUnderlyingStream().slice(Offset, Length).
@@ -137,7 +138,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readStreamRef(BinaryStreamRef &Ref, uint32_t Length);
+  LLVM_ABI Error readStreamRef(BinaryStreamRef &Ref, uint32_t Length);
 
   /// Read \p Length bytes from the underlying stream into \p Ref.  This is
   /// equivalent to calling getUnderlyingStream().slice(Offset, Length).
@@ -146,7 +147,7 @@ public:
   ///
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
-  Error readSubstream(BinarySubstreamRef &Ref, uint32_t Length);
+  LLVM_ABI Error readSubstream(BinarySubstreamRef &Ref, uint32_t Length);
 
   /// Get a pointer to an object of type T from the underlying stream, as if by
   /// memcpy, and store the result into \p Dest.  It is up to the caller to
@@ -251,17 +252,17 @@ public:
   ///
   /// \returns a success error code if at least \p Amount bytes remain in the
   /// stream, otherwise returns an appropriate error code.
-  Error skip(uint64_t Amount);
+  LLVM_ABI Error skip(uint64_t Amount);
 
   /// Examine the next byte of the underlying stream without advancing the
   /// stream's offset.  If the stream is empty the behavior is undefined.
   ///
   /// \returns the next byte in the stream.
-  uint8_t peek() const;
+  LLVM_ABI uint8_t peek() const;
 
-  Error padToAlignment(uint32_t Align);
+  LLVM_ABI Error padToAlignment(uint32_t Align);
 
-  std::pair<BinaryStreamReader, BinaryStreamReader>
+  LLVM_ABI std::pair<BinaryStreamReader, BinaryStreamReader>
   split(uint64_t Offset) const;
 
 private:

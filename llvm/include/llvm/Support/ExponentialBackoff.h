@@ -12,6 +12,7 @@
 #ifndef LLVM_EXPONENTIALBACKOFF_H
 #define LLVM_EXPONENTIALBACKOFF_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <chrono>
@@ -50,7 +51,7 @@ public:
   /// Blocks while waiting for the next attempt.
   /// \returns true if you should try again, false if the timeout has been
   /// reached.
-  bool waitForNextAttempt();
+  LLVM_ABI bool waitForNextAttempt();
 
 private:
   duration MinWait;

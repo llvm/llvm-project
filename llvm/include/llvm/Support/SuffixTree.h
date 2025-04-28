@@ -32,6 +32,7 @@
 #ifndef LLVM_SUPPORT_SUFFIXTREE_H
 #define LLVM_SUPPORT_SUFFIXTREE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/SuffixTreeNode.h"
@@ -152,7 +153,7 @@ public:
   /// \param Str The string to construct the suffix tree for.
   /// \param OutlinerLeafDescendants Whether to consider leaf descendants or
   /// only leaf children (used by Machine Outliner).
-  SuffixTree(const ArrayRef<unsigned> &Str,
+  LLVM_ABI SuffixTree(const ArrayRef<unsigned> &Str,
              bool OutlinerLeafDescendants = false);
 
   /// Iterator for finding all repeated substrings in the suffix tree.

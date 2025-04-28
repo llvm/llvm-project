@@ -25,6 +25,7 @@
 #ifndef LLVM_SUPPORT_FORMATVARIADIC_H
 #define LLVM_SUPPORT_FORMATVARIADIC_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -97,7 +98,7 @@ public:
   }
 
   // Parse and optionally validate format string (in debug builds).
-  static SmallVector<ReplacementItem, 2>
+  LLVM_ABI static SmallVector<ReplacementItem, 2>
   parseFormatString(StringRef Fmt, size_t NumArgs, bool Validate);
 
   std::string str() const {

@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_AMDGPUMETADATA_H
 #define LLVM_SUPPORT_AMDGPUMETADATA_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <string>
@@ -447,10 +448,10 @@ struct Metadata final {
 };
 
 /// Converts \p String to \p HSAMetadata.
-std::error_code fromString(StringRef String, Metadata &HSAMetadata);
+LLVM_ABI std::error_code fromString(StringRef String, Metadata &HSAMetadata);
 
 /// Converts \p HSAMetadata to \p String.
-std::error_code toString(Metadata HSAMetadata, std::string &String);
+LLVM_ABI std::error_code toString(Metadata HSAMetadata, std::string &String);
 
 //===----------------------------------------------------------------------===//
 // HSA metadata for v3 code object.

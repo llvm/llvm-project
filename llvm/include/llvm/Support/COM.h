@@ -21,9 +21,9 @@ enum class COMThreadingMode { SingleThreaded, MultiThreaded };
 
 class InitializeCOMRAII {
 public:
-  explicit InitializeCOMRAII(COMThreadingMode Threading,
+  LLVM_ABI explicit InitializeCOMRAII(COMThreadingMode Threading,
                              bool SpeedOverMemory = false);
-  ~InitializeCOMRAII();
+  LLVM_ABI ~InitializeCOMRAII();
 
 private:
   InitializeCOMRAII(const InitializeCOMRAII &) = delete;
