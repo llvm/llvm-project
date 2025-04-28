@@ -390,6 +390,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
         break;
       case SPIRV::OpPtrCastToGeneric:
       case SPIRV::OpGenericCastToPtr:
+      case SPIRV::OpGenericCastToPtrExplicit:
         validateAccessChain(STI, MRI, GR, MI);
         break;
       case SPIRV::OpPtrAccessChain:
