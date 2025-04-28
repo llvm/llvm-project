@@ -196,10 +196,6 @@ define dllexport amdgpu_hs void @hs_shader() {
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 
-declare ptr addrspace(7) @lgc.buffer.desc.to.ptr(<4 x i32>) #1
-declare i64 @llvm.amdgcn.s.getpc()
-declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg) #3
-
 attributes #0 = { nounwind memory(readwrite) "target-features"=",+wavefrontsize64,+cumode" }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" }
