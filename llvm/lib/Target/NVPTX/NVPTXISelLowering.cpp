@@ -478,12 +478,11 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
                      Align ParamAlignment, bool IsVAArg = false) {
   // Set vector size to match ValueVTs and mark all elements as
   // scalars by default.
-  SmallVector<unsigned, 16> VectorInfo;
 
-  if (IsVAArg) {
-    VectorInfo.assign(ValueVTs.size(), 1);
-    return VectorInfo;
-  }
+  if (IsVAArg)
+    return SmallVector<unsigned>(ValueVTs.size(), 1);
+
+  SmallVector<unsigned, 16> VectorInfo;
 
   const auto GetNumElts = [&](unsigned I) -> unsigned {
     for (const unsigned AccessSize : {16, 8, 4, 2}) {
@@ -1786,8 +1785,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     std::string Proto = getPrototype(
         DL, RetTy, Args, CLI.Outs, RetAlign,
         HasVAArgs
-            ? std::optional<std::pair<unsigned, unsigned>>(std::make_pair(
-                  CLI.NumFixedArgs, VADeclareParam.getConstantOperandVal(1)))
+            ? std::optional(std::pair(CLI.NumFixedArgs,
+                                      VADeclareParam.getConstantOperandVal(1)))
             : std::nullopt,
         *CB, UniqueCallSite);
     const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
