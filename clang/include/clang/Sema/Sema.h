@@ -473,6 +473,8 @@ enum class PragmaClangSectionKind {
   Relro = 5
 };
 
+enum class PragmaClangSectionAction { Set = 0, Clear = 1 };
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -1421,8 +1423,6 @@ public:
 
   /// Source location for newly created implicit MSInheritanceAttrs
   SourceLocation ImplicitMSInheritanceAttrLoc;
-
-  enum PragmaClangSectionAction { PCSA_Set = 0, PCSA_Clear = 1 };
 
   struct PragmaClangSection {
     std::string SectionName;
