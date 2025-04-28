@@ -16567,7 +16567,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                    ST->getBasePtr(), ST->getOffset(), MemVT,
                                    ST->getMemOperand(), ST->getAddressingMode(),
                                    /*IsTruncating=*/true);
-      // Note we use CombineTo here to prevent DAGCombine from visiting the
+      // Note we use CombineTo here to prevent DAGCombiner from visiting the
       // new store which will change the constant by removing non-demanded bits.
       return ST->isUnindexed()
                  ? DCI.CombineTo(N, NewST, /*AddTo=*/false)
