@@ -23,6 +23,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 #include <optional>
 
 namespace mlir {
@@ -826,19 +827,20 @@ mfmaOpToScaledIntrinsic(Type aType, Type bType, Type destType, uint32_t m,
 }
 
 static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
-mfmaOpToScaledIntrinsic(MFMAOp mfma, Chipset chipset) {
-  return mfmaOpToScaledIntrinsic(
-      mfma.getSourceA().getType(), mfma.getSourceB().getType(),
-      mfma.getDestC().getType(), mfma.getM(), mfma.getN(), mfma.getK(),
-      mfma.getBlocks(), chipset);
-}
-
-static std::optional<std::tuple<StringRef, uint32_t, uint32_t>>
-mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, Chipset chipset) {
-  return mfmaOpToScaledIntrinsic(smfma.getSourceA().getType(),
-                                 smfma.getSourceB().getType(),
-                                 smfma.getDestC().getType(), smfma.getM(),
-                                 smfma.getN(), smfma.getK(), 1u, chipset);
+mfmaOpToScaledIntrinsic(Operation *op, Chipset chipset) {
+  if (auto mfma = llvm::dyn_cast_or_null<MFMAOp>(op)) {
+    return mfmaOpToScaledIntrinsic(
+        mfma.getSourceA().getType(), mfma.getSourceB().getType(),
+        mfma.getDestC().getType(), mfma.getM(), mfma.getN(), mfma.getK(),
+        mfma.getBlocks(), chipset);
+  }
+  if (auto smfma = llvm::dyn_cast_or_null<ScaledMFMAOp>(op)) {
+    return mfmaOpToScaledIntrinsic(smfma.getSourceA().getType(),
+                                   smfma.getSourceB().getType(),
+                                   smfma.getDestC().getType(), smfma.getM(),
+                                   smfma.getN(), smfma.getK(), 1u, chipset);
+  }
+  return std::nullopt;
 }
 
 /// Return the `rocdl` intrinsic corresponding to a WMMA operation `wmma`
@@ -964,7 +966,7 @@ struct MFMAOpLowering : public ConvertOpToLLVMPattern<MFMAOp> {
 
 struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
   ScaledMFMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
-      : ConvertOpToLLVMPattern<ScaledMFMAOp>(converter), chipset(chipset) {}
+      : ConvertOpToLLVMPattern(converter), chipset(chipset) {}
 
   Chipset chipset;
 
@@ -986,7 +988,7 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
       return op.emitOpError(
           "no intrinsic matching Scaled MFMA size on given chipset");
 
-    StringRef intrinsicName = std::get<0>(*maybeScaledIntrinsic);
+    auto [intrinsicName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
     OperationState loweredOp(loc, intrinsicName);
     loweredOp.addTypes(intrinsicOutType);
     loweredOp.addOperands(
@@ -997,7 +999,6 @@ struct ScaledMFMAOpLowering : public ConvertOpToLLVMPattern<ScaledMFMAOp> {
     Value scaleB = createI32Constant(rewriter, loc, adaptor.getScaleB());
     Value opselA = createI32Constant(rewriter, loc, adaptor.getOpselA());
     Value opselB = createI32Constant(rewriter, loc, adaptor.getOpselB());
-    auto [_scaledName, aTypeCode, bTypeCode] = *maybeScaledIntrinsic;
     loweredOp.addOperands({createI32Constant(rewriter, loc, aTypeCode),
                            createI32Constant(rewriter, loc, bTypeCode),
                            /*scale A byte=*/opselA, /*scale A=*/scaleA,

@@ -804,7 +804,7 @@ def AMDGPU_GatherToLDSOp :
                    TypeAttr:$transferType
                    )>,
     Results<(outs)> {
-  let summary = "MLIR wrapper for CDNA mfma instructions";
+  let summary = "MLIR wrapper for CDNA Gather to LDS instructions";
   let description = [{
     The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
 
@@ -845,7 +845,7 @@ def AMDGPU_ScaledMFMAOp :
                    I32Attr:$opselA,
                    I32Attr:$opselB)>,
     Results<(outs MFMAOutTypes: $destD)> {
-  let summary = "MLIR wrapper for CDNA mfma instructions";
+  let summary = "MLIR wrapper for CDNA scaled mfma instructions";
   let description = [{
     The `amdgpu.scaled_mfma` op is an MLIR wrapper around intrinsics
     for various scaled versions of `mfma` instructions in the CDNA architecture, which perform
@@ -857,7 +857,7 @@ def AMDGPU_ScaledMFMAOp :
 
     Note, this wrapper allows specifying `vector<4Kxi8>` arguments to MFMA
     intrinsics that take an integer type of width `4K`. For example,
-    one can provide a vector<4xi8> as an argument to an MFMA instruction that
+    one can provide a `vector<4xi8>` as an argument to an MFMA instruction that
     logically takes 4 i8s but whose intrinsics are specified to take an i32.
     In these cases, the bytes in the vector will be concatenated in little-endian
     order (that is, v[0] will go to arg[7:0], v[1] to arg[15:8] and so on).
@@ -868,7 +868,7 @@ def AMDGPU_ScaledMFMAOp :
     size. 
     - `amdgpu.scaled_mfma` does not support broadcasting. So, `cbsz`, `abid`, and `blgp` 
     are omitted from this wrapper.
-    - The negateA, negateB, and negateC flags in `amdgpu.mfma` are only supported for 
+    - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for 
     double-precision operations on gfx94x and so are not included here. 
   }];
   let assemblyFormat = [{

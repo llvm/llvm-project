@@ -507,36 +507,27 @@ LogicalResult GatherToLDSOp::verify() {
 }
 
 LogicalResult ScaledMFMAOp::verify() {
-  unsigned opselA = getOpselA();
-  unsigned opselB = getOpselB();
-
-  opselA >>= 8;
-  opselB >>= 8;
+  unsigned opselA = getOpselA() >> 8;
+  unsigned opselB = getOpselB() >> 8;
 
   if (opselA != 0)
-    return emitOpError("Opsel A must be a zero extended 8 bit value.");
+    return emitOpError("Opsel A must be a zero extended 8 bit value");
 
   if (opselB != 0)
-    return emitOpError("Opsel B must be a zero extended 8 bit value.");
+    return emitOpError("Opsel B must be a zero extended 8 bit value");
 
-  auto validType = [&](Type mlirElemType) {
-    return llvm::TypeSwitch<Type, bool>(mlirElemType)
-        .Case([](Float8E4M3FNType) { return true; })
-        .Case([](Float8E5M2Type) { return true; })
-        .Case([](Float6E2M3FNType) { return true; })
-        .Case([](Float6E3M2FNType) { return true; })
-        .Case([](Float4E2M1FNType) { return true; })
-        .Default([](Type) { return false; });
-  };
+  auto isValidType =
+      llvm::IsaPred<Float8E4M3FNType, Float8E5M2Type, Float6E2M3FNType,
+                    Float6E3M2FNType, Float4E2M1FNType>;
 
   Type aType = getSourceA().getType();
   Type bType = getSourceB().getType();
   aType = getElementTypeOrSelf(aType);
   bType = getElementTypeOrSelf(bType);
-  if (!validType(aType))
-    return emitOpError("Source A must be of element type fp4, fp6 or fp8.");
-  if (!validType(bType))
-    return emitOpError("Source B must be of element type fp4, fp6 or fp8.");
+  if (!isValidType(aType))
+    return emitOpError("Source A must be of element type fp4, fp6 or fp8");
+  if (!isValidType(bType))
+    return emitOpError("Source B must be of element type fp4, fp6 or fp8");
 
   unsigned m = getM();
   unsigned n = getN();
@@ -544,7 +535,7 @@ LogicalResult ScaledMFMAOp::verify() {
   bool tileConfig1 = (m == n && n == 32 && k == 64);
   bool tileConfig2 = (m == n && n == 16 && k == 128);
   if (!tileConfig1 && !tileConfig2)
-    return emitOpError("Invalid tile size for scaled mfma.");
+    return emitOpError("Invalid tile size for scaled mfma");
 
   return success();
 }
