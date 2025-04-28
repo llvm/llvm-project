@@ -23,7 +23,7 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 endif()
 
-# The implementaiton of ConstantFolding.cpp relies on the use of math functions
+# The implementation of ConstantFolding.cpp relies on the use of math functions
 # from the host. In particular, it relies on the detection of floating point
 # exceptions originating from such math functions to prevent invalid cases
 # from being constant folded. Therefore, we must ensure that fp exceptions are
