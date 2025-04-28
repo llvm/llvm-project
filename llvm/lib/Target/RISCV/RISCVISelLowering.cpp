@@ -15321,6 +15321,40 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Res);
 }
 
+static SDValue reduceANDOfAtomicLoad(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  SelectionDAG &DAG = DCI.DAG;
+  if (N->getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::ATOMIC_LOAD)
+    return SDValue();
+  if (!N0.hasOneUse())
+    return SDValue();
+
+  AtomicSDNode *ALoad = cast<AtomicSDNode>(N0.getNode());
+  if (isStrongerThanMonotonic(ALoad->getSuccessOrdering()))
+    return SDValue();
+
+  EVT LoadedVT = ALoad->getMemoryVT();
+  ConstantSDNode *MaskConst = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (!MaskConst)
+    return SDValue();
+  uint64_t Mask = MaskConst->getZExtValue();
+  uint64_t ExpectedMask = maskTrailingOnes<uint64_t>(LoadedVT.getSizeInBits());
+  if (Mask != ExpectedMask)
+    return SDValue();
+
+  SDValue ZextLoad = DAG.getAtomicLoad(
+      ISD::ZEXTLOAD, SDLoc(N), ALoad->getMemoryVT(), N->getValueType(0),
+      ALoad->getChain(), ALoad->getBasePtr(), ALoad->getMemOperand());
+  DCI.CombineTo(N, ZextLoad);
+  DAG.ReplaceAllUsesOfValueWith(SDValue(N0.getNode(), 1), ZextLoad.getValue(1));
+  DCI.recursivelyDeleteUnusedNodes(N0.getNode());
+  return SDValue(N, 0);
+}
+
 // Combines two comparison operation and logic operation to one selection
 // operation(min, max) and logic operation. Returns new constructed Node if
 // conditions for optimization are satisfied.
@@ -15354,6 +15388,8 @@ static SDValue performANDCombine(SDNode *N,
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = reduceANDOfAtomicLoad(N, DCI))
     return V;
 
   if (DCI.isAfterLegalizeDAG())
