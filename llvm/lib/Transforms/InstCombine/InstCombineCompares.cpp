@@ -5813,19 +5813,20 @@ using OffsetOp = std::pair<Instruction::BinaryOps, Value *>;
 static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
                             bool AllowRecursion) {
   Instruction *Inst = dyn_cast<Instruction>(V);
-  if (!Inst)
+  if (!Inst || !Inst->hasOneUse())
     return;
 
   switch (Inst->getOpcode()) {
-  case Instruction::Add: {
-    Constant *C;
-    if (match(Inst->getOperand(1), m_ImmConstant(C)) &&
-        !C->containsUndefOrPoisonElement()) {
-      if (Constant *NegC = ConstantExpr::getNeg(C))
-        Offsets.emplace_back(Instruction::Add, NegC);
-    }
+  case Instruction::Add:
+    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
+      Offsets.emplace_back(Instruction::Sub, Inst->getOperand(1));
+    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(0)))
+      Offsets.emplace_back(Instruction::Sub, Inst->getOperand(0));
     break;
-  }
+  case Instruction::Sub:
+    if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
+      Offsets.emplace_back(Instruction::Add, Inst->getOperand(1));
+    break;
   case Instruction::Xor:
     if (isGuaranteedNotToBeUndefOrPoison(Inst->getOperand(1)))
       Offsets.emplace_back(Instruction::Xor, Inst->getOperand(1));
@@ -5834,12 +5835,8 @@ static void collectOffsetOp(Value *V, SmallVectorImpl<OffsetOp> &Offsets,
     break;
   case Instruction::Select:
     if (AllowRecursion) {
-      Value *TrueV = Inst->getOperand(1);
-      if (TrueV->hasOneUse())
-        collectOffsetOp(TrueV, Offsets, /*AllowRecursion=*/false);
-      Value *FalseV = Inst->getOperand(2);
-      if (FalseV->hasOneUse())
-        collectOffsetOp(FalseV, Offsets, /*AllowRecursion=*/false);
+      collectOffsetOp(Inst->getOperand(1), Offsets, /*AllowRecursion=*/false);
+      collectOffsetOp(Inst->getOperand(2), Offsets, /*AllowRecursion=*/false);
     }
     break;
   default:
@@ -5887,10 +5884,8 @@ static Instruction *foldICmpEqualityWithOffset(ICmpInst &I,
     return nullptr;
 
   SmallVector<OffsetOp, 4> OffsetOps;
-  if (Op0->hasOneUse())
-    collectOffsetOp(Op0, OffsetOps, /*AllowRecursion=*/true);
-  if (Op1->hasOneUse())
-    collectOffsetOp(Op1, OffsetOps, /*AllowRecursion=*/true);
+  collectOffsetOp(Op0, OffsetOps, /*AllowRecursion=*/true);
+  collectOffsetOp(Op1, OffsetOps, /*AllowRecursion=*/true);
 
   auto ApplyOffsetImpl = [&](Value *V, unsigned BinOpc, Value *RHS) -> Value * {
     Value *Simplified = simplifyBinOp(BinOpc, V, RHS, SQ);
