@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
@@ -558,10 +559,10 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
-
   // Add mcount instrumentation if necessary.
-  if (MF.getFunction().getFnAttribute("systemz-backend").getValueAsString() ==
-      "insert-mcount") {
+  if (MF.getFunction()
+          .getFnAttribute("systemz-instrument-function-entry")
+          .getValueAsString() == "mcount") {
 
     // Store return address 8 bytes above stack pointer.
     BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::STG))
@@ -570,12 +571,16 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm(8)
         .addReg(0);
 
-    // Call mcount (Regmask 0 to ensure this will not be moved by the
-    // scheduler.).
-    const uint32_t Mask = 0;
+    // Call mcount (Regmask from CC AnyReg since mcount preserves all normal
+    // argument registers.
+    FunctionCallee FC = MF.getFunction().getParent()->getOrInsertFunction(
+        "mcount", Type::getVoidTy(MF.getFunction().getContext()));
+    const uint32_t *Mask = MF.getSubtarget<SystemZSubtarget>()
+                               .getSpecialRegisters()
+                               ->getCallPreservedMask(MF, CallingConv::AnyReg);
     BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::CallBRASL))
-        .addGlobalAddress(MF.getFunction().getParent()->getFunction("mcount"))
-        .addRegMask(&Mask);
+        .addGlobalAddress(dyn_cast<Function>(FC.getCallee()))
+        .addRegMask(Mask);
 
     // Reload return address drom 8 bytes above stack pointer.
     BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::LG))
