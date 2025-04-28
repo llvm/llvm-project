@@ -1182,7 +1182,7 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
   }
 
   bool OpHasCompleteDecoder;
-  if (Decoder != "") {
+  if (!Decoder.empty()) {
     OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -1946,7 +1946,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   // If the instruction has specified a custom decoding hook, use that instead
   // of trying to auto-generate the decoder.
   StringRef InstDecoder = EncodingDef.getValueAsString("DecoderMethod");
-  if (InstDecoder != "") {
+  if (!InstDecoder.empty()) {
     bool HasCompleteInstDecoder =
         EncodingDef.getValueAsBit("hasCompleteDecoder");
     InsnOperands.push_back(
