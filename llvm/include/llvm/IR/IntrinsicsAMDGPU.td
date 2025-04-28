@@ -2647,7 +2647,6 @@ def int_amdgcn_perm :
 /// the buffer-resource-wrapper pointers (address space 7 and 9).
 /// TODO: add support for address space 5 and scratch_load_lds.
 class AMDGPULoadToLDS :
-  ClangBuiltin<"__builtin_amdgcn_load_to_lds">,
   Intrinsic <
     [],
     [llvm_anyptr_ty,                    // Base pointer to load from. Varies per lane.

@@ -1778,7 +1778,7 @@ void test_cvt_sr_f16_f32(global half2 *out, float src, uint seed)
 // CHECK-NEXT:    ret void
 //
 void test_load_to_lds_96(global void* src, local void *dst) {
-  __builtin_amdgcn_global_load_lds(src, dst, /*size=*/12, /*offset=*/0, /*aux=*/0);
+  __builtin_amdgcn_load_to_lds(src, dst, /*size=*/12, /*offset=*/0, /*aux=*/0);
 }
 
 // CHECK-LABEL: @test_load_to_lds_128(
