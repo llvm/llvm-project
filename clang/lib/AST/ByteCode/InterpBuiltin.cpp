@@ -1413,6 +1413,7 @@ static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// (CarryIn, LHS, RHS, Result)
 static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
@@ -1423,16 +1424,17 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
       !Call->getArg(2)->getType()->isIntegerType())
     return false;
 
-  APSInt CarryIn = peekToAPSInt(
-      S.Stk, *S.getContext().classify(Call->getArg(0)),
-      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(1)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(0)))));
+  PrimType CarryInT = *S.getContext().classify(Call->getArg(0));
+  PrimType LHST = *S.getContext().classify(Call->getArg(1));
+  PrimType RHST = *S.getContext().classify(Call->getArg(2));
+  unsigned PtrSize = align(primSize(PT_Ptr));
+  APSInt CarryIn =
+      peekToAPSInt(S.Stk, CarryInT,
+                   PtrSize + align(primSize(RHST)) + align(primSize(LHST)) +
+                       align(primSize(CarryInT)));
   APSInt LHS = peekToAPSInt(
-      S.Stk, *S.getContext().classify(Call->getArg(1)),
-      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
-          align(primSize(*S.getContext().classify(Call->getArg(1)))));
-  APSInt RHS = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+      S.Stk, LHST, PtrSize + align(primSize(RHST)) + align(primSize(LHST)));
+  APSInt RHS = peekToAPSInt(S.Stk, RHST, PtrSize + align(primSize(RHST)));
 
   bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
                BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
