@@ -14,7 +14,6 @@
 #define LLDB_TOOLS_DEBUGSERVER_SOURCE_DNBTIMER_H
 
 #include "DNBDefs.h"
-#include "PThreadMutex.h"
 #include <cstdint>
 #include <mutex>
 #include <sys/time.h>
