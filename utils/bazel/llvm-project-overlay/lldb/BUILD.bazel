@@ -837,6 +837,7 @@ cc_binary(
     deps = [
         ":APIHeaders",
         ":HostHeaders",
+        ":UtilityHeaders",
         ":liblldb.wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
