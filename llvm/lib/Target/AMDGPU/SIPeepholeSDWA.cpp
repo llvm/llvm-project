@@ -1537,11 +1537,14 @@ static bool dominates(MachineBasicBlock::const_iterator A,
   if (B == MBBEnd)
     return true;
 
-  MachineBasicBlock::const_iterator I = MBB->begin();
-  for (; &*I != A && &*I != B; ++I)
-    ;
+  if (A == MBBEnd)
+    return false;
 
-  return &*I == A;
+  MachineBasicBlock::const_iterator I = A;
+  while (I != B && I != MBBEnd)
+    I++;
+
+  return (I == B);
 }
 
 // Convert MI into its SDWA version with its Dst_Sel & SrcMO_Sel set with OpSel
