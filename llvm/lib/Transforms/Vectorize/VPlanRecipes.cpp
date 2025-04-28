@@ -73,6 +73,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -120,6 +122,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -157,6 +161,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
@@ -2521,28 +2527,49 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
   FastMathFlags FMFs = getFastMathFlags();
+  std::optional<FastMathFlags> OptionalFMF =
+      ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
-  // TODO: Support any-of and in-loop reductions.
+  // TODO: Support any-of reductions.
   assert(
       (!RecurrenceDescriptor::isAnyOfRecurrenceKind(RdxKind) ||
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "Any-of reduction not implemented in VPlan-based cost model currently.");
-  assert(
-      (!cast<VPReductionPHIRecipe>(getOperand(0))->isInLoop() ||
-       ForceTargetInstructionCost.getNumOccurrences() > 0) &&
-      "In-loop reduction not implemented in VPlan-based cost model currently.");
 
-  // Cost = Reduction cost + BinOp cost
-  InstructionCost Cost =
-      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, Ctx.CostKind);
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    return Cost +
-           Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
+    return Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
-  return Cost + Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
-                                                   Ctx.CostKind);
+  return Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, OptionalFMF,
+                                            Ctx.CostKind);
+}
+
+InstructionCost
+VPExtendedReductionRecipe::computeCost(ElementCount VF,
+                                       VPCostContext &Ctx) const {
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(getRecurrenceKind());
+  Type *RedTy = Ctx.Types.inferScalarType(this);
+  auto *SrcVecTy =
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
+  assert(RedTy->isIntegerTy() &&
+         "ExtendedReduction only support integer type currently.");
+  InstructionCost Cost = Ctx.TTI.getExtendedReductionCost(
+      Opcode, isZExt(), RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
+  // The cost of this recipe should be decided by the legacy model.
+  return Cost.isValid() ? 0 : Cost;
+}
+
+InstructionCost
+VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
+                                            VPCostContext &Ctx) const {
+  Type *RedTy = Ctx.Types.inferScalarType(this);
+  auto *SrcVecTy =
+      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
+  InstructionCost Cost =
+      Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy, Ctx.CostKind);
+  // The cost of this recipe should be decided by the legacy model.
+  return Cost.isValid() ? 0 : Cost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2581,6 +2608,56 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
   getEVL()->printAsOperand(O, SlotTracker);
+  if (isConditional()) {
+    O << ", ";
+    getCondOp()->printAsOperand(O, SlotTracker);
+  }
+  O << ")";
+}
+
+void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                      VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXTENDED-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " +";
+  O << " reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
+  getVecOp()->printAsOperand(O, SlotTracker);
+  O << " extended to " << *getResultType();
+  if (isConditional()) {
+    O << ", ";
+    getCondOp()->printAsOperand(O, SlotTracker);
+  }
+  O << ")";
+}
+
+void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                           VPSlotTracker &SlotTracker) const {
+  O << Indent << "MULACC-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " + ";
+  O << "reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
+  O << "mul";
+  printFlags(O);
+  if (isExtended())
+    O << "(";
+  getVecOp0()->printAsOperand(O, SlotTracker);
+  if (isExtended())
+    O << " extended to " << *getResultType() << "), (";
+  else
+    O << ", ";
+  getVecOp1()->printAsOperand(O, SlotTracker);
+  if (isExtended())
+    O << " extended to " << *getResultType() << ")";
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
