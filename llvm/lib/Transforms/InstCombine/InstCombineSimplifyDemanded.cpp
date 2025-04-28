@@ -116,7 +116,7 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
     return false;
   }
 
-  if (Depth == MaxAnalysisRecursionDepth)
+  if (Depth == getAnalysisRecursionDepthLimit())
     return false;
 
   Value *NewVal;
@@ -166,7 +166,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
                                                  unsigned Depth,
                                                  const SimplifyQuery &Q) {
   assert(I != nullptr && "Null pointer of Value???");
-  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+  assert(Depth <= getAnalysisRecursionDepthLimit() && "Limit Search Depth");
   uint32_t BitWidth = DemandedMask.getBitWidth();
   Type *VTy = I->getType();
   assert(
@@ -1450,7 +1450,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
 
   // Limit search depth.
-  if (Depth == SimplifyDemandedVectorEltsDepthLimit)
+  if (Depth == SimplifyDemandedVectorEltsDepthLimit &&
+      Depth >= getAnalysisRecursionDepthLimit())
     return nullptr;
 
   if (!AllowMultipleUsers) {
@@ -1962,7 +1963,7 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
 Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
     Value *V, const FPClassTest DemandedMask, KnownFPClass &Known,
     unsigned Depth, Instruction *CxtI) {
-  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+  assert(Depth <= getAnalysisRecursionDepthLimit() && "Limit Search Depth");
   Type *VTy = V->getType();
 
   assert(Known == KnownFPClass() && "expected uninitialized state");
@@ -1970,7 +1971,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
   if (DemandedMask == fcNone)
     return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
 
-  if (Depth == MaxAnalysisRecursionDepth)
+  if (Depth == getAnalysisRecursionDepthLimit())
     return nullptr;
 
   Instruction *I = dyn_cast<Instruction>(V);
