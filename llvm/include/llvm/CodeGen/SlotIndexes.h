@@ -96,9 +96,11 @@ class raw_ostream;
       return lie.getPointer();
     }
 
+  public:
     unsigned getIndex() const {
       return listEntry()->getIndex() | getSlot();
     }
+  private:
 
     /// Returns the slot for this SlotIndex.
     Slot getSlot() const {

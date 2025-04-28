@@ -411,6 +411,24 @@ protected:
 /// ScheduleDAGMILive is an implementation of ScheduleDAGInstrs that schedules
 /// machine instructions while updating LiveIntervals and tracking regpressure.
 class ScheduleDAGMILive : public ScheduleDAGMI {
+
+  // Count register overlaps before and after scheduling in order to print
+  // the difference once per region along with its region ID. Enabled with
+  // -sched-print-pressures.
+  struct RegOverlaps {
+    int GPR;
+    int FP;
+    int GPRMax;
+    int FPMax;
+    RegOverlaps() : GPR(0), FP(0), GPRMax(0), FPMax(0) {}
+  };
+  void countRegOverlaps(RegOverlaps &RO, MachineBasicBlock::iterator FirstItr,
+                        MachineBasicBlock::iterator EndItr) const;
+
+  // Show liveness visually of registers before and after scheduling. Enabled
+  // with -sched-show-ints and -misched-only-block=NUM.
+  void showIntervals(std::string Msg, std::string I, MachineBasicBlock *MBB) const;
+
 protected:
   RegisterClassInfo *RegClassInfo;
 
@@ -1197,8 +1215,10 @@ protected:
   const TargetSchedModel *SchedModel = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
+public:
   MachineSchedPolicy RegionPolicy;
 
+protected:
   SchedRemainder Rem;
 
   GenericSchedulerBase(const MachineSchedContext *C) : Context(C) {}

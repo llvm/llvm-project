@@ -29,6 +29,7 @@
 #include "llvm/Support/Printable.h"
 #include <cassert>
 #include <cstdint>
+#include <set>
 
 namespace llvm {
 
@@ -954,6 +955,20 @@ public:
   /// Get the dimensions of register pressure impacted by this register unit.
   /// Returns a -1 terminated array of pressure set IDs.
   virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
+
+  /// EXPERIMENTAL: return true if Reg belongs to a prio (FP) register class.
+  /// Add some target specific methods to increase precision in counting of
+  /// live FP/GPR regs.
+private:
+  mutable std::set<unsigned> PrioRegClasses;
+  void initializePrioRegClasses() const;
+public:
+  bool isPrioRC(unsigned RegClassID) const;
+  bool isPrioVirtReg(Register Reg, const MachineRegisterInfo *MRI) const;
+  virtual unsigned getRCCountFactor(unsigned RegClassID) const { return 1; }
+  virtual bool isGPRLoRC(unsigned RegClassID) const { return false; }
+  virtual bool isGPRHiRC(unsigned RegClassID) const { return false; }
+  virtual bool isGPRLoHiRC(unsigned RegClassID) const { return false; }
 
   /// Get the scale factor of spill weight for this register class.
   virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
