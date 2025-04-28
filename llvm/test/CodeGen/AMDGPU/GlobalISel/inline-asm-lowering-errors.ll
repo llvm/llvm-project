@@ -14,18 +14,18 @@ define amdgpu_kernel void @bad_output() {
 
 ; CHECK: error: invalid constraint '{s998}': could not allocate input register for register constraint
 define amdgpu_kernel void @bad_input() {
-  tail call void asm sideeffect "s_nop", "{s998}"(i32 undef)
+  tail call void asm sideeffect "s_nop", "{s998}"(i32 poison)
   ret void
 }
 ; CHECK: error: invalid constraint '{s997}': indirect register inputs are not supported yet
 define amdgpu_kernel void @indirect_input() {
-  tail call void asm sideeffect "s_nop", "*{s997}"(ptr elementtype(i32) undef)
+  tail call void asm sideeffect "s_nop", "*{s997}"(ptr elementtype(i32) poison)
   ret void
 }
 
 ; CHECK: error: invalid constraint 'i': unsupported constraint
 define amdgpu_kernel void @badimm() {
-  tail call void asm sideeffect "s_nop", "i"(i32 undef)
+  tail call void asm sideeffect "s_nop", "i"(i32 poison)
   ret
   void
 }
