@@ -43,12 +43,6 @@ if.end:                                           ; preds = %entry
   br label %common.ret18
 }
 
-define float @test_inline_rec_true_successor(float %x, float %scale)  {
-entry:
-  %res = tail call float @inline_rec_true_successor(float %x, float %scale)
-  ret float %res
-}
-
 ; Same as previous test except that the recursive callsite is in the false successor
 define float @inline_rec_false_successor(float %x, float %scale) {
 ; CHECK-LABEL: define float @inline_rec_false_successor(
@@ -92,12 +86,6 @@ if.end:                                           ; preds = %entry
   br label %common.ret18
 }
 
-define float @test_inline_rec_false_successor(float %x, float %scale)  {
-entry:
-  %res = tail call float @inline_rec_false_successor(float %x, float %scale)
-  ret float %res
-}
-
 ; Test when the BR has Value not cmp instruction
 define float @inline_rec_no_cmp(i1 %flag, float %scale) {
 ; CHECK-LABEL: define float @inline_rec_no_cmp(
@@ -127,12 +115,6 @@ if.end:
 common.ret:
   %common.ret.res = phi float [ %sum1, %if.then ], [ %sum2, %if.end ]
   ret float %common.ret.res
-}
-
-define float @test_inline_rec_no_cmp(i1 %flag, float %scale)  {
-entry:
-  %res = tail call float @inline_rec_no_cmp(i1 %flag, float %scale)
-  ret float %res
 }
 
 define float @no_inline_rec(float %x, float %scale) {
@@ -170,10 +152,4 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   %mul = fmul float %x, %scale
   br label %common.ret18
-}
-
-define float @test_no_inline(float %x, float %scale)  {
-entry:
-  %res = tail call float @no_inline_rec(float %x, float %scale)
-  ret float %res
 }
