@@ -15,7 +15,18 @@
 #include "ByteCode.h"
 #include "llvm/Support/Debug.h"
 
+#ifdef MLIR_ENABLE_CATALOG_GENERATOR
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cxxabi.h>
+#include <mutex>
+#endif
+
 #define DEBUG_TYPE "pattern-application"
+
+#ifdef MLIR_ENABLE_CATALOG_GENERATOR
+static std::mutex catalogWriteMutex;
+#endif
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -152,6 +163,16 @@ LogicalResult PatternApplicator::matchAndRewrite(
   unsigned anyIt = 0, anyE = anyOpPatterns.size();
   unsigned pdlIt = 0, pdlE = pdlMatches.size();
   LogicalResult result = failure();
+#ifdef MLIR_ENABLE_CATALOG_GENERATOR
+  std::error_code ec;
+  llvm::raw_fd_ostream catalogOs("pattern_catalog.txt", ec,
+                                 llvm::sys::fs::OF_Append);
+  if (ec) {
+    op->emitError("Failed to open pattern catalog file: " + ec.message());
+    return failure();
+  }
+#endif
+
   do {
     // Find the next pattern with the highest benefit.
     const Pattern *bestPattern = nullptr;
@@ -206,14 +227,38 @@ LogicalResult PatternApplicator::matchAndRewrite(
           } else {
             LLVM_DEBUG(llvm::dbgs() << "Trying to match \""
                                     << bestPattern->getDebugName() << "\"\n");
-
             const auto *pattern =
                 static_cast<const RewritePattern *>(bestPattern);
-            result = pattern->matchAndRewrite(op, rewriter);
 
+#ifdef MLIR_ENABLE_CATALOG_GENERATOR
+            OpBuilder::Listener *oldListener = rewriter.getListener();
+            int status;
+            const char *mangledPatternName = typeid(*pattern).name();
+            char *demangled = abi::__cxa_demangle(mangledPatternName, nullptr,
+                                                  nullptr, &status);
+            std::string demangledPatternName;
+            if (status == 0 && demangled) {
+              demangledPatternName = demangled;
+              free(demangled);
+            } else {
+              // Fallback in case demangling fails.
+              demangledPatternName = mangledPatternName;
+            }
+
+            RewriterBase::CatalogingListener *catalogingListener =
+                new RewriterBase::CatalogingListener(
+                    oldListener, demangledPatternName, catalogOs,
+                    catalogWriteMutex);
+            rewriter.setListener(catalogingListener);
+#endif
+            result = pattern->matchAndRewrite(op, rewriter);
             LLVM_DEBUG(llvm::dbgs()
                        << "\"" << bestPattern->getDebugName() << "\" result "
                        << succeeded(result) << "\n");
+#ifdef MLIR_ENABLE_CATALOG_GENERATOR
+            rewriter.setListener(oldListener);
+            delete catalogingListener;
+#endif
           }
 
           // Process the result of the pattern application.
