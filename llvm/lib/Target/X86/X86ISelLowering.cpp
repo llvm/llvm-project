@@ -8809,8 +8809,9 @@ static SDValue lowerBuildVectorAsBlend(BuildVectorSDNode *BVOp, SDLoc const &DL,
   if (UniqueOps.size() != 2u)
     return SDValue();
 
-  SDValue Op0 = *(UniqueOps.begin());
-  SDValue Op1 = *(++UniqueOps.begin());
+  SDValue Op0 = BVOp->getOperand(0u);
+  UniqueOps.erase(Op0);
+  SDValue Op1 = *UniqueOps.begin();
 
   if (isShuffleFoldableLoad(Op0) || isShuffleFoldableLoad(Op1) ||
       Subtarget.hasAVX2()) {
