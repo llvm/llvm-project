@@ -498,7 +498,7 @@ bool Sema::DiagnoseUnexpandedParameterPackInRequiresExpr(RequiresExpr *RE) {
   // We only care about unexpanded references to the RequiresExpr's own
   // parameter packs.
   auto Parms = RE->getLocalParameters();
-  llvm::SmallPtrSet<NamedDecl*, 8> ParmSet(Parms.begin(), Parms.end());
+  llvm::SmallPtrSet<NamedDecl *, 8> ParmSet(llvm::from_range, Parms);
   SmallVector<UnexpandedParameterPack, 2> UnexpandedParms;
   for (auto Parm : Unexpanded)
     if (ParmSet.contains(Parm.first.dyn_cast<NamedDecl *>()))
