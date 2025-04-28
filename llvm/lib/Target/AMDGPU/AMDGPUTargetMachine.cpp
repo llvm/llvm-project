@@ -2192,14 +2192,14 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   addPass(RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
   addPass(SILowerWWMCopiesPass());
   addPass(VirtRegRewriterPass(false));
-  // TODO: addPass(AMDGPUReserveWWMRegsPass());
+  addPass(AMDGPUReserveWWMRegsPass());
 
   // For allocating per-thread VGPRs.
   // addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::VGPR);
   addPass(RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
 
 
-  // TODO: addPreRewrite();
+  addPreRewrite(addPass);
   addPass(VirtRegRewriterPass(true));
 
   // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
