@@ -24,10 +24,9 @@ using namespace __asan;
 
 // AIX does not intercept memcpy, so we have to use internal_memcpy.
 #if !SANITIZER_AIX
-  #define ASAN_MEMCPY_RETURN(to, from, size) \
-    return REAL(memcpy)(to, from, size)
+#  define ASAN_MEMCPY_RETURN(to, from, size) return REAL(memcpy)(to, from, size)
 #else
-  #define ASAN_MEMCPY_RETURN(to, from, size) \
+#  define ASAN_MEMCPY_RETURN(to, from, size) \
     return internal_memcpy(to, from, size)
 #endif
 

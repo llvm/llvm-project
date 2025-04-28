@@ -56,7 +56,7 @@ namespace __asan {
 #  define ASAN_READ_STRING(ctx, s, n) \
     ASAN_READ_STRING_OF_LEN((ctx), (s), internal_strlen(s), (n))
 
-#if SANITIZER_INTERCEPT_STRCAT || SANITIZER_INTERCEPT_STRCPY
+#  if SANITIZER_INTERCEPT_STRCAT || SANITIZER_INTERCEPT_STRCPY
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
   if (REAL(strnlen)) {
@@ -65,7 +65,7 @@ static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #endif
   return internal_strnlen(s, maxlen);
 }
-#endif
+#  endif
 
 void SetThreadName(const char *name) {
   AsanThread *t = GetCurrentThread();
@@ -278,11 +278,11 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
     asanThreadArgRetval().Create(detached, {start_routine, arg}, [&]() -> uptr {
       result = REAL(pthread_create)(thread, attr, asan_thread_start, t);
 // AIX pthread_t is unsigned int.
-#if SANITIZER_AIX
+#    if SANITIZER_AIX
       return result ? 0 : *(unsigned int *)(thread);
-#else
+#    else
       return result ? 0 : *(uptr *)(thread);
-#endif
+#    endif
     });
   }
   if (result != 0) {
@@ -439,14 +439,14 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
 #define siglongjmp __siglongjmp14
 #endif
 
-#if ASAN_INTERCEPT_LONGJMP
+#  if ASAN_INTERCEPT_LONGJMP
 INTERCEPTOR(void, longjmp, void *env, int val) {
   __asan_handle_no_return();
   REAL(longjmp)(env, val);
 }
-#endif
+#  endif
 
-#if ASAN_INTERCEPT__LONGJMP
+#  if ASAN_INTERCEPT__LONGJMP
 INTERCEPTOR(void, _longjmp, void *env, int val) {
   __asan_handle_no_return();
   REAL(_longjmp)(env, val);
@@ -517,7 +517,7 @@ DEFINE_REAL(char*, index, const char *string, int c)
 
 // For both strcat() and strncat() we need to check the validity of |to|
 // argument irrespective of the |from| length.
-#if SANITIZER_INTERCEPT_STRCAT
+#  if SANITIZER_INTERCEPT_STRCAT
   INTERCEPTOR(char *, strcat, char *to, const char *from) {
     void *ctx;
     ASAN_INTERCEPTOR_ENTER(ctx, strcat);
@@ -538,7 +538,7 @@ DEFINE_REAL(char*, index, const char *string, int c)
     }
     return REAL(strcat)(to, from);
   }
-#endif
+#  endif
 
 INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   void *ctx;
@@ -559,7 +559,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   return REAL(strncat)(to, from, size);
 }
 
-#if SANITIZER_INTERCEPT_STRCPY
+#  if SANITIZER_INTERCEPT_STRCPY
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strcpy);
@@ -581,7 +581,7 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   }
   return REAL(strcpy)(to, from);
 }
-#endif
+#  endif
 
 // Windows doesn't always define the strdup identifier,
 // and when it does it's a macro defined to either _strdup
@@ -618,7 +618,6 @@ INTERCEPTOR(char*, strdup, const char *s) {
 #  endif
   }
   return reinterpret_cast<char*>(new_mem);
-
 }
 
 #  if ASAN_INTERCEPT___STRDUP
@@ -634,17 +633,17 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
   if (new_mem) {
-#if SANITIZER_AIX
+#    if SANITIZER_AIX
     internal_memcpy(new_mem, s, length + 1);
-#else
+#    else
     REAL(memcpy)(new_mem, s, length + 1);
-#endif
+#    endif
   }
   return reinterpret_cast<char*>(new_mem);
 }
 #endif // ASAN_INTERCEPT___STRDUP
 
-#if SANITIZER_INTERCEPT_STRCPY
+#  if SANITIZER_INTERCEPT_STRCPY
 INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncpy);
@@ -657,7 +656,7 @@ INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   }
   return REAL(strncpy)(to, from, size);
 }
-#endif
+#  endif
 
 template <typename Fn>
 static ALWAYS_INLINE auto StrtolImpl(void *ctx, Fn real, const char *nptr,
@@ -769,15 +768,15 @@ static void AtCxaAtexit(void *unused) {
 }
 #endif
 
-#if ASAN_INTERCEPT_EXIT
+#  if ASAN_INTERCEPT_EXIT
 INTERCEPTOR(void, exit, int status) {
   AsanInitFromRtl();
   StopInitOrderChecking();
   REAL(exit)(status);
 }
-#endif
+#  endif
 
-#if ASAN_INTERCEPT___CXA_ATEXIT
+#  if ASAN_INTERCEPT___CXA_ATEXIT
 INTERCEPTOR(int, __cxa_atexit, void (*func)(void *), void *arg,
             void *dso_handle) {
   if (SANITIZER_APPLE && UNLIKELY(!AsanInited()))
@@ -838,14 +837,14 @@ void InitializeAsanInterceptors() {
   InitializeSignalInterceptors();
 
   // Intercept str* functions.
-#if SANITIZER_INTERCEPT_STRCAT
+#  if SANITIZER_INTERCEPT_STRCAT
   ASAN_INTERCEPT_FUNC(strcat);
   ASAN_INTERCEPT_FUNC(strncat);
-#endif
-#if SANITIZER_INTERCEPT_STRCPY
+#  endif
+#  if SANITIZER_INTERCEPT_STRCPY
   ASAN_INTERCEPT_FUNC(strcpy);
   ASAN_INTERCEPT_FUNC(strncpy);
-#endif
+#  endif
   ASAN_INTERCEPT_FUNC(strdup);
 #  if ASAN_INTERCEPT___STRDUP
   ASAN_INTERCEPT_FUNC(__strdup);
@@ -865,9 +864,9 @@ void InitializeAsanInterceptors() {
 #  endif
 
   // Intercept jump-related functions.
-#if ASAN_INTERCEPT_LONGJMP
+#  if ASAN_INTERCEPT_LONGJMP
   ASAN_INTERCEPT_FUNC(longjmp);
-#endif
+#  endif
 
 #  if ASAN_INTERCEPT_SWAPCONTEXT
   ASAN_INTERCEPT_FUNC(swapcontext);
@@ -934,11 +933,11 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(atexit);
 #endif
 
-#if ASAN_INTERCEPT_EXIT
+#  if ASAN_INTERCEPT_EXIT
   ASAN_INTERCEPT_FUNC(exit);
-#endif
+#  endif
 
-#if ASAN_INTERCEPT_PTHREAD_ATFORK
+#  if ASAN_INTERCEPT_PTHREAD_ATFORK
   ASAN_INTERCEPT_FUNC(pthread_atfork);
 #endif
 
