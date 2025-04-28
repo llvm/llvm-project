@@ -4316,7 +4316,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(isa<FixedVectorType>(V->getType()));
     assert(cast<FixedVectorType>(V->getType())->getNumElements() > 0);
     Value *Shadow = getShadow(V);
-    return IRB.CreateExtractElement(Shadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+    return IRB.CreateExtractElement(Shadow,
+                                    ConstantInt::get(IRB.getInt32Ty(), 0));
   }
 
   // For sh.* compiler intrinsics:
