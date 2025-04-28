@@ -366,7 +366,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
   const QualType astTy = vd->getType();
   const mlir::Type type = convertType(vd->getType());
-  if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
+  if (vd->getIdentifier()) {
     StringRef name = getMangledName(GlobalDecl(vd));
     auto varOp =
         builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()), name, type);
