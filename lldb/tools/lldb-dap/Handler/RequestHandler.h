@@ -331,11 +331,12 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class StepOutRequestHandler : public LegacyRequestHandler {
+class StepOutRequestHandler : public RequestHandler<protocol::StepOutArguments,
+                                                    protocol::StepOutResponse> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "stepOut"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Error Run(const protocol::StepOutArguments &args) const override;
 };
 
 class SetBreakpointsRequestHandler : public LegacyRequestHandler {

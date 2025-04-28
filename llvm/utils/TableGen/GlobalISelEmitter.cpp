@@ -622,16 +622,17 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
   }
 
   // G_LOAD is used for both non-extending and any-extending loads.
-  if (Predicate.isLoad() && Predicate.isNonExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
-    return InsnMatcher;
-  }
-  if ((Predicate.isLoad() || Predicate.isAtomic()) &&
-      Predicate.isAnyExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
-    return InsnMatcher;
+  if (Predicate.isLoad() || Predicate.isAtomic()) {
+    if (Predicate.isNonExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+      return InsnMatcher;
+    }
+    if (Predicate.isAnyExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      return InsnMatcher;
+    }
   }
 
   if (Predicate.isStore()) {
@@ -2272,10 +2273,10 @@ void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("GISelPredicateCode").empty();
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("GISelPredicateCode").empty();
+                });
   emitMIPredicateFnsImpl<const Record *>(
       OS,
       "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
@@ -2290,13 +2291,13 @@ void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
-                        !R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+                         !R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "I64", "int64_t", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
@@ -2306,12 +2307,12 @@ void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBitOrUnset("IsAPFloat", Unset);
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBitOrUnset("IsAPFloat", Unset);
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APFloat", "const APFloat &",
       ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
@@ -2321,11 +2322,11 @@ void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APInt", "const APInt &", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
