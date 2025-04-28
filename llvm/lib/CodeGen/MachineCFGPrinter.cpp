@@ -62,7 +62,7 @@ MachineCFGPrinterPass::run(MachineFunction &MF,
   std::string Name;
   raw_string_ostream SS(Name);
   MF.getFunction().printAsOperand(SS, /*PrintType=*/false);
-  OS << "Writing Machine CFG for function " << SS.str();
+  OS << "Writing Machine CFG for function " << Name;
   writeMCFGToDotFile(MF);
   return PreservedAnalyses::all();
 }
