@@ -871,13 +871,10 @@ IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
   return End;
 }
 
-template <typename T, std::enable_if_t<!std::is_base_of<FunctionDecl, T>::value>
-                          * = nullptr>
-inline bool isDefaultedHelper(const T *) {
+template <typename T> inline bool isDefaultedHelper(const T *FD) {
+  if constexpr (std::is_base_of_v<FunctionDecl, T>)
+    return FD->isDefaulted();
   return false;
-}
-inline bool isDefaultedHelper(const FunctionDecl *FD) {
-  return FD->isDefaulted();
 }
 
 // Metafunction to determine if type T has a member called getDecl.
