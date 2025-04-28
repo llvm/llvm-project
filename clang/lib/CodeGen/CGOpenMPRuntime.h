@@ -1657,6 +1657,11 @@ public:
 
   /// Returns true if the variable is a local variable in untied task.
   bool isLocalVarInUntiedTask(CodeGenFunction &CGF, const VarDecl *VD) const;
+
+  static llvm::Value *
+  createRuntimeFunctionArgAddrSpaceCast(CodeGenFunction &CGF,
+                                        llvm::FunctionCallee RuntimeFcn,
+                                        size_t ArgIdx, llvm::Value *Arg);
 };
 
 /// Class supports emissionof SIMD-only code.

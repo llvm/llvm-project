@@ -62,7 +62,7 @@ static const unsigned SPIRDefIsGenMap[] = {
     // used
     1, // opencl_global
     0, // opencl_local
-    0, // opencl_constant
+    2, // opencl_constant
     0, // opencl_private
     0, // opencl_generic
     0, // opencl_global_device
@@ -219,7 +219,8 @@ public:
         /*DefaultIsGeneric=*/Opts.SYCLIsDevice ||
         // The address mapping from HIP/CUDA language for device code is only
         // defined for SPIR-V.
-        (getTriple().isSPIRV() && Opts.CUDAIsDevice));
+        (getTriple().isSPIRV() &&
+         (Opts.CUDAIsDevice || Opts.OpenMPIsTargetDevice)));
   }
 
   void setSupportedOpenCLOpts() override {
