@@ -99,6 +99,17 @@ func.func @test_load_nd_vc_3(%src: memref<8x16xf16>) {
 }
 
 // -----
+func.func @test_load_nd_vc_4(%src: memref<24x32xf32>) {
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
+    !xegpu.tensor_desc<8x16xf32>
+  // expected-error@+1 {{Result shape [8, 1] is not consistent with tensor descriptor}}
+  %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
+      l2_hint = #xegpu.cache_hint<uncached>}>
+    : !xegpu.tensor_desc<8x16xf32> -> vector<8x1xf32>
+  return
+}
+
+// -----
 func.func @test_load_nd_layout(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16xf32>
   // expected-error@+1 {{Result shape [3] is not a valid distribution for tensor descriptor}}
@@ -108,13 +119,10 @@ func.func @test_load_nd_layout(%src: memref<24x32xf32>) {
 }
 
 // -----
-func.func @test_load_nd_vc_6(%src: memref<24x32xf32>) {
-  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
-    !xegpu.tensor_desc<8x16xf32>
-  // expected-error@+1 {{Result shape [8, 1] is not consistent with tensor descriptor}}
-  %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
-      l2_hint = #xegpu.cache_hint<uncached>}>
-    : !xegpu.tensor_desc<8x16xf32> -> vector<8x1xf32>
+func.func @test_load_nd_simt(%src: memref<24x32xf32>) {
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  // expected-error@+1 {{TensorDesc doesn't need LayoutAttr for SIMT code}}
+  %2 = xegpu.load_nd %1 : !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8xf32>
   return
 }
 
@@ -153,6 +161,14 @@ func.func @test_store_nd_simt(%dst: memref<24x32xf32>, %data: vector<3xf32>) {
   %1 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16xf32>
   // expected-error@+1 {{Value shape [3] is not a valid distribution for tensor descriptor}}
   xegpu.store_nd %data, %1 : vector<3xf32>, !xegpu.tensor_desc<16xf32>
+  return
+}
+
+// -----
+func.func @test_store_nd_simt(%src: memref<24x32xf32>, %data: vector<8xf32>) {
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+  // expected-error@+1 {{TensorDesc doesn't need LayoutAttr for SIMT code}}
+  xegpu.store_nd %data, %1 : vector<8xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   return
 }
 

@@ -13,6 +13,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include <numeric>
 
+using std::optional;
+
 namespace mlir {
 namespace xegpu {
 
@@ -37,18 +39,18 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
                                          xegpu::LayoutAttr attr) {
   assert(attr && "Layout attribute is missing.");
 
-  // Checks whether the given shape can be evenly distributed using the specified
-  // layout and data attributes. If successful, it returns the work size for each
-  // compute unit; otherwise, it returns `std::nullopt`. The work size per compute
-  // unit is calculated as follows:
+  // Checks whether the given shape can be evenly distributed using the
+  // specified layout and data attributes. If successful, it returns the work
+  // size for each compute unit; otherwise, it returns `std::nullopt`. The work
+  // size per compute unit is calculated as follows:
   //   - If `data` is null: newShape[i] = shape[i] / layout[i]
   //   - If `data` is not null: newShape[i] = data[i]
-  // When round-robin distribution (`use_rr`) is enabled, `shape[i]` can be smaller
-  // than `layout[i] * data[i]`, allowing multiple compute units to share the data.
-  auto tryDistribute =
-      [&](llvm::ArrayRef<int64_t> shape, DenseI32ArrayAttr layout,
-          DenseI32ArrayAttr data,
-          bool use_rr = true) -> std::optional<SmallVector<int64_t>> {
+  // When round-robin distribution (`rr`) is enabled, `shape[i]` can be
+  // smaller than `layout[i] * data[i]`, allowing multiple compute units to
+  // share the data.
+  auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
+                           DenseI32ArrayAttr layout, DenseI32ArrayAttr data,
+                           bool rr = true) -> optional<SmallVector<int64_t>> {
     llvm::SmallVector<int64_t> newShape(shape);
     if (layout) {
       auto vec = llvm::to_vector_of<int64_t>(layout.asArrayRef());
@@ -65,7 +67,7 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
       if (vec.size() != shape.size())
         return std::nullopt;
       auto ratio = computeShapeRatio(newShape, vec);
-      if (!ratio.has_value() && use_rr)
+      if (!ratio.has_value() && rr)
         ratio = computeShapeRatio(vec, newShape);
       if (!ratio.has_value())
         return std::nullopt;
@@ -91,8 +93,8 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
   auto instShape = maybeInstShape.value();
 
   // check LaneLayout and LaneData
-  auto maybeLaneShape = tryDistribute(instShape, attr.getLaneLayout(),
-                                          attr.getLaneData(), false);
+  auto maybeLaneShape =
+      tryDistribute(instShape, attr.getLaneLayout(), attr.getLaneData(), false);
   return maybeLaneShape.has_value();
 }
 
