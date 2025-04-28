@@ -460,11 +460,10 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                        {CanonicalIVIncrement, &Plan.getVectorTripCount()}, DL);
 }
 
-void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
-                                              PredicatedScalarEvolution &PSE,
-                                              bool RequiresScalarEpilogueCheck,
-                                              bool TailFolded, Loop *TheLoop,
-                                              DebugLoc IVDL) {
+void VPlanTransforms::prepareForVectorization(
+    VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+    bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
+    DebugLoc IVDL, bool HandleUncountableExit, VFRange &Range) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -491,16 +490,20 @@ void VPlanTransforms::prepareForVectorization(VPlan &Plan, Type *InductionTy,
   addCanonicalIVRecipes(Plan, cast<VPBasicBlock>(HeaderVPB),
                         cast<VPBasicBlock>(LatchVPB), InductionTy, IVDL);
 
-  // Disconnect all edges to exit blocks other than from the middle block.
-  // TODO: VPlans with early exits should be explicitly converted to a form
-  // exiting only via the latch here, including adjusting the exit condition,
-  // instead of simply disconnecting the edges and adjusting the VPlan later.
-  for (VPBlockBase *EB : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
-      if (Pred == MiddleVPBB)
-        continue;
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
-      VPBlockUtils::disconnectBlocks(Pred, EB);
+  if (HandleUncountableExit) {
+    // Convert VPlans with early exits to a form only exiting via the latch
+    // here, including adjusting the exit condition.
+    handleUncountableEarlyExit(Plan, cast<VPBasicBlock>(HeaderVPB),
+                               cast<VPBasicBlock>(LatchVPB), Range);
+  } else {
+    // Disconnect all edges to exit blocks other than from the middle block.
+    for (VPBlockBase *EB : to_vector(Plan.getExitBlocks())) {
+      for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
+        if (Pred == MiddleVPBB)
+          continue;
+        cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+        VPBlockUtils::disconnectBlocks(Pred, EB);
+      }
     }
   }
 

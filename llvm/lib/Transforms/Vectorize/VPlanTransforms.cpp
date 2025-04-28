@@ -2458,64 +2458,86 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
     R->eraseFromParent();
 }
 
-void VPlanTransforms::handleUncountableEarlyExit(
-    VPlan &Plan, Loop *OrigLoop, BasicBlock *UncountableExitingBlock,
-    VPRecipeBuilder &RecipeBuilder, VFRange &Range) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
+void VPlanTransforms::handleUncountableEarlyExit(VPlan &Plan,
+                                                 VPBasicBlock *HeaderVPBB,
+                                                 VPBasicBlock *LatchVPBB,
+                                                 VFRange &Range) {
+  // First find the uncountable early exiting block by looking at the
+  // predecessors of the exit blocks.
+  VPBlockBase *MiddleVPBB = LatchVPBB->getSuccessors()[0];
+  VPBasicBlock *EarlyExitingVPBB = nullptr;
+  VPIRBasicBlock *EarlyExitVPBB = nullptr;
+  for (auto *EB : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : EB->getPredecessors()) {
+      if (Pred != MiddleVPBB) {
+        EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+        EarlyExitVPBB = EB;
+        break;
+      }
+    }
+  }
+  assert(EarlyExitVPBB && "Must have a early exiting block.");
+  assert(all_of(Plan.getExitBlocks(),
+                [EarlyExitingVPBB, MiddleVPBB](VPIRBasicBlock *EB) {
+                  return all_of(
+                      EB->getPredecessors(),
+                      [EarlyExitingVPBB, MiddleVPBB](VPBlockBase *Pred) {
+                        return Pred == EarlyExitingVPBB || Pred == MiddleVPBB;
+                      });
+                }) &&
+         "All exit blocks must only have EarlyExitingVPBB or MiddleVPBB as "
+         "predecessors.");
+
   VPBuilder Builder(LatchVPBB->getTerminator());
-  auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPValue *IsEarlyExitTaken = nullptr;
+  VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
+  VPValue *EarlyExitCond = EarlyExitingVPBB->getTerminator()->getOperand(0);
+  auto *EarlyExitTakenCond = TrueSucc == EarlyExitVPBB
+                                 ? EarlyExitCond
+                                 : Builder.createNot(EarlyExitCond);
 
-  // Process the uncountable exiting block. Update IsEarlyExitTaken, which
-  // tracks if the uncountable early exit has been taken. Also split the middle
-  // block and have it conditionally branch to the early exit block if
-  // EarlyExitTaken.
-  auto *EarlyExitingBranch =
-      cast<BranchInst>(UncountableExitingBlock->getTerminator());
-  BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
-  BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
-  BasicBlock *EarlyExitIRBB =
-      !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
-  VPIRBasicBlock *VPEarlyExitBlock = Plan.getExitBlock(EarlyExitIRBB);
+  if (!EarlyExitVPBB->getSinglePredecessor() &&
+      EarlyExitVPBB->getPredecessors()[0] != MiddleVPBB) {
+    for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
+      // Early exit operand should always be last, i.e., 0 if EarlyExitVPBB has
+      // a single predecessor and 1 if it has two.
+      // If EarlyExitVPBB has two predecessors, they are already ordered such
+      // that early exit is second (and latch exit is first), by construction.
+      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
+      // ordered the other way around, and it is the order of the latter which
+      // corresponds to the order of operands of EarlyExitVPBB's phi recipes.
+      // Therefore, if early exit (UncountableExitingBlock) is the first
+      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
+      // thereby bringing them to match EarlyExitVPBB's predecessor order,
+      // with early exit being last (second). Otherwise they already match.
+      cast<VPIRPhi>(&R)->swapOperands();
+    }
+  }
 
-  VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
-      OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
-  IsEarlyExitTaken =
+  EarlyExitingVPBB->getTerminator()->eraseFromParent();
+  VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EarlyExitVPBB);
+
+  // Split the middle block and have it conditionally branch to the early exit
+  // block if EarlyExitTaken.
+  VPValue *IsEarlyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
-
   VPBasicBlock *NewMiddle = Plan.createVPBasicBlock("middle.split");
   VPBasicBlock *VectorEarlyExitVPBB =
       Plan.createVPBasicBlock("vector.early.exit");
-  VPBlockUtils::insertOnEdge(LoopRegion, MiddleVPBB, NewMiddle);
+  VPBlockUtils::insertOnEdge(LatchVPBB, MiddleVPBB, NewMiddle);
   VPBlockUtils::connectBlocks(NewMiddle, VectorEarlyExitVPBB);
   NewMiddle->swapSuccessors();
 
-  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
+  VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
 
   // Update the exit phis in the early exit block.
   VPBuilder MiddleBuilder(NewMiddle);
   VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-  for (VPRecipeBase &R : VPEarlyExitBlock->phis()) {
+  for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
     auto *ExitIRI = cast<VPIRPhi>(&R);
-    // Early exit operand should always be last, i.e., 0 if VPEarlyExitBlock has
+    // Early exit operand should always be last, i.e., 0 if EarlyExitVPBB has
     // a single predecessor and 1 if it has two.
     unsigned EarlyExitIdx = ExitIRI->getNumOperands() - 1;
-    if (!VPEarlyExitBlock->getSinglePredecessor()) {
-      // If VPEarlyExitBlock has two predecessors, they are already ordered such
-      // that early exit is second (and latch exit is first), by construction.
-      // But its underlying IRBB (EarlyExitIRBB) may have its predecessors
-      // ordered the other way around, and it is the order of the latter which
-      // corresponds to the order of operands of VPEarlyExitBlock's phi recipes.
-      // Therefore, if early exit (UncountableExitingBlock) is the first
-      // predecessor of EarlyExitIRBB, we swap the operands of phi recipes,
-      // thereby bringing them to match VPEarlyExitBlock's predecessor order,
-      // with early exit being last (second). Otherwise they already match.
-      if (*pred_begin(VPEarlyExitBlock->getIRBasicBlock()) ==
-          UncountableExitingBlock)
-        ExitIRI->swapOperands();
-
+    if (!EarlyExitVPBB->getSinglePredecessor()) {
       // The first of two operands corresponds to the latch exit, via MiddleVPBB
       // predecessor. Extract its last lane.
       ExitIRI->extractLastLaneOfFirstOperand(MiddleBuilder);

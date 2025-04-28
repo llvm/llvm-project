@@ -69,7 +69,8 @@ struct VPlanTransforms {
                                       PredicatedScalarEvolution &PSE,
                                       bool RequiresScalarEpilogueCheck,
                                       bool TailFolded, Loop *TheLoop,
-                                      DebugLoc IVDL);
+                                      DebugLoc IVDL, bool HandleUncountableExit,
+                                      VFRange &Range);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
@@ -179,9 +180,8 @@ struct VPlanTransforms {
   ///    exit conditions
   ///  * splitting the original middle block to branch to the early exit block
   ///    if taken.
-  static void handleUncountableEarlyExit(VPlan &Plan, Loop *OrigLoop,
-                                         BasicBlock *UncountableExitingBlock,
-                                         VPRecipeBuilder &RecipeBuilder,
+  static void handleUncountableEarlyExit(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                                         VPBasicBlock *LatchVPBB,
                                          VFRange &Range);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
