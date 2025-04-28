@@ -378,7 +378,22 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
   using UnrollPattern<xegpu::DpasOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::DpasOp op,
                                 PatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+
+    // a vector of 3 elements should be returned, representing M, K, N respectively.
+    auto maybeTargetShape = getTargetShape(options, op);
+    if (!maybeTargetShape || maybeTargetShape->size() != 3)
+      return failure();
+    auto M = (*maybeTargetShape)[0];
+    auto K = (*maybeTargetShape)[1];
+    auto N = (*maybeTargetShape)[2];
+
+    llvm::dbgs() << "\nM: " << M << ", K: " << K << ", N: " << N << "\n";
+
     return failure();
+
+
   }
 };
 
