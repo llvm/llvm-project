@@ -2734,8 +2734,8 @@ struct CSEDenseMapInfo {
 
   static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
-    return hash_combine(I->getOpcode(), hash_combine_range(I->value_op_begin(),
-                                                           I->value_op_end()));
+    return hash_combine(I->getOpcode(),
+                        hash_combine_range(I->operand_values()));
   }
 
   static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
