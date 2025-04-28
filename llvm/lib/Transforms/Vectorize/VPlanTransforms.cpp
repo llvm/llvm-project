@@ -55,6 +55,9 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
          make_early_inc_range(make_range(VPBB->begin(), EndIter))) {
 
       VPValue *VPV = Ingredient.getVPSingleValue();
+      if (!VPV->getUnderlyingValue())
+        continue;
+
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
       VPRecipeBase *NewRecipe = nullptr;
@@ -387,9 +390,13 @@ static void addReplicateRegions(VPlan &Plan) {
     SplitBlock->setName(
         OrigBB->hasName() ? OrigBB->getName() + "." + Twine(BBNum++) : "");
     // Record predicated instructions for above packing optimizations.
-    VPBlockBase *Region = createReplicateRegion(RepR, Plan);
+    VPRegionBlock *Region = createReplicateRegion(RepR, Plan);
     Region->setParent(CurrentBlock->getParent());
     VPBlockUtils::insertOnEdge(CurrentBlock, SplitBlock, Region);
+
+    VPRegionBlock *ParentRegion = Region->getParent();
+    if (ParentRegion && ParentRegion->getExiting() == CurrentBlock)
+      ParentRegion->setExiting(SplitBlock);
   }
 }
 
@@ -590,7 +597,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
 }
 
 static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
-  SetVector<VPUser *> Users(V->user_begin(), V->user_end());
+  SetVector<VPUser *> Users(llvm::from_range, V->users());
   for (unsigned I = 0; I != Users.size(); ++I) {
     VPRecipeBase *Cur = cast<VPRecipeBase>(Users[I]);
     if (isa<VPHeaderPHIRecipe>(Cur))
@@ -827,8 +834,8 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming;
-  if (!match(Op, m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                     m_VPValue(Incoming), m_SpecificInt(1))))
+  if (!match(Op, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                     m_VPValue(Incoming))))
     return nullptr;
 
   auto *WideIV = getOptimizableIVOf(Incoming);

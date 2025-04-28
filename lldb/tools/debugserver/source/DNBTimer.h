@@ -17,6 +17,7 @@
 #include "PThreadMutex.h"
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <sys/time.h>
 
 class DNBTimer {

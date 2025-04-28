@@ -322,7 +322,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 ARMBaseTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(ARMTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<ARMTTIImpl>(this, F));
 }
 
 ScheduleDAGInstrs *
