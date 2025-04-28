@@ -1279,9 +1279,9 @@ let Predicates = [PCRelativeMemops] in {
             (PLBZpc $ga, 0)>;
   def : Pat<(i32 (atomic_load_azext_16 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLHZpc $ga, 0)>;
-  def : Pat<(i32 (atomic_load_32 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i32 (atomic_load_nonext_32 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLWZpc $ga, 0)>;
-  def : Pat<(i64 (atomic_load_64 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i64 (atomic_load_nonext_64 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLDpc $ga, 0)>;
 
   // Atomic Store
@@ -2362,8 +2362,8 @@ let Predicates = [PrefixInstrs] in {
   // Atomic Load
   def : Pat<(i32 (atomic_load_azext_8 PDForm:$src)), (PLBZ memri34:$src)>;
   def : Pat<(i32 (atomic_load_azext_16 PDForm:$src)), (PLHZ memri34:$src)>;
-  def : Pat<(i32 (atomic_load_32 PDForm:$src)), (PLWZ memri34:$src)>;
-  def : Pat<(i64 (atomic_load_64 PDForm:$src)), (PLD memri34:$src)>;
+  def : Pat<(i32 (atomic_load_nonext_32 PDForm:$src)), (PLWZ memri34:$src)>;
+  def : Pat<(i64 (atomic_load_nonext_64 PDForm:$src)), (PLD memri34:$src)>;
 
   // Atomic Store
   def : Pat<(atomic_store_8 i32:$RS, PDForm:$dst), (PSTB $RS, memri34:$dst)>;

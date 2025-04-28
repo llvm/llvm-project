@@ -1892,7 +1892,7 @@ def : Pat<(atomic_fence 7, timm), (DBAR 0b10000)>; // seqcst
 
 defm : LdPat<atomic_load_asext_8, LD_B>;
 defm : LdPat<atomic_load_asext_16, LD_H>;
-defm : LdPat<atomic_load_32, LD_W>, Requires<[IsLA32]>;
+defm : LdPat<atomic_load_nonext_32, LD_W>, Requires<[IsLA32]>;
 defm : LdPat<atomic_load_asext_32, LD_W>, Requires<[IsLA64]>;
 
 class release_seqcst_store<PatFrag base>
@@ -1934,7 +1934,7 @@ def PseudoAtomicStoreD
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
 
-defm : LdPat<atomic_load_64, LD_D>;
+defm : LdPat<atomic_load_nonext_64, LD_D>;
 defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
 defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
