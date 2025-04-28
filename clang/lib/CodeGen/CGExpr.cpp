@@ -4503,7 +4503,32 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
         E->getType(), !getLangOpts().PointerOverflowDefined, SignedIndices,
         E->getExprLoc(), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
-    EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    if (!CGM.getCodeGenOpts().NewStructPathTBAA) {
+      // Since CodeGenTBAA::getTypeInfoHelper only handles array types for
+      // new struct path TBAA, we must a use a plain access.
+      EltTBAAInfo = CGM.getTBAAInfoForSubobject(ArrayLV, E->getType());
+    } else if (ArrayLV.getTBAAInfo().isMayAlias()) {
+      EltTBAAInfo = TBAAAccessInfo::getMayAliasInfo();
+    } else if (ArrayLV.getTBAAInfo().isIncomplete()) {
+      EltTBAAInfo = CGM.getTBAAAccessInfo(E->getType());
+    } else {
+      // Extend struct path from base lvalue, similar to EmitLValueForField.
+      // If no base type has been assigned for the array access, then try to
+      // generate one.
+      EltTBAAInfo = ArrayLV.getTBAAInfo();
+      if (!EltTBAAInfo.BaseType) {
+        EltTBAAInfo.BaseType = CGM.getTBAABaseTypeInfo(ArrayLV.getType());
+        assert(!EltTBAAInfo.Offset &&
+               "Nonzero offset for an access with no base type!");
+      }
+      // The index into the array is a runtime value. We use the same struct
+      // path for all array elements (that of the element at index 0). So we
+      // set the access type and size, but do not have to adjust
+      // EltTBAAInfo.Offset.
+      EltTBAAInfo.AccessType = CGM.getTBAATypeInfo(E->getType());
+      EltTBAAInfo.Size =
+          getContext().getTypeSizeInChars(E->getType()).getQuantity();
+    }
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
     Addr = EmitPointerWithAlignment(E->getBase(), &EltBaseInfo, &EltTBAAInfo);
