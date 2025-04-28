@@ -573,8 +573,8 @@ public:
   DXILResourceWrapperPass();
   ~DXILResourceWrapperPass() override;
 
-  const DXILResourceMap &getBindingMap() const { return *Map; }
-  DXILResourceMap &getBindingMap() { return *Map; }
+  const DXILResourceMap &getResourceMap() const { return *Map; }
+  DXILResourceMap &getResourceMap() { return *Map; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;

@@ -174,12 +174,12 @@ let Predicates = [HasAtomicLdSt] in {
 }
 
 let Predicates = [HasAtomicLdSt, IsRV32] in {
-  def : LdPat<relaxed_load<atomic_load_32>, LW>;
+  def : LdPat<relaxed_load<atomic_load_nonext_32>, LW>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
   def : LdPat<relaxed_load<atomic_load_asext_32>, LW>;
-  def : LdPat<relaxed_load<atomic_load_64>, LD, i64>;
+  def : LdPat<relaxed_load<atomic_load_nonext_64>, LD, i64>;
   def : StPat<relaxed_store<atomic_store_64>, SD, GPR, i64>;
 }
 

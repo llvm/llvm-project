@@ -10107,7 +10107,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VL, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
-  SetVector<Value *> UniqueValues(VL.begin(), VL.end());
+  SetVector<Value *> UniqueValues(llvm::from_range, VL);
   std::optional<ScheduleBundle *> BundlePtr =
       BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S);
 #ifdef EXPENSIVE_CHECKS
@@ -21774,7 +21774,9 @@ class HorizontalReduction {
     case RecurKind::FMax:
     case RecurKind::FMin:
     case RecurKind::FMaximum:
-    case RecurKind::FMinimum: {
+    case RecurKind::FMinimum:
+    case RecurKind::FMaximumNum:
+    case RecurKind::FMinimumNum: {
       Intrinsic::ID Id = llvm::getMinMaxReductionIntrinsicOp(Kind);
       return Builder.CreateBinaryIntrinsic(Id, LHS, RHS);
     }
@@ -23086,6 +23088,8 @@ private:
         case RecurKind::FAnyOf:
         case RecurKind::IFindLastIV:
         case RecurKind::FFindLastIV:
+        case RecurKind::FMaximumNum:
+        case RecurKind::FMinimumNum:
         case RecurKind::None:
           llvm_unreachable("Unexpected reduction kind for repeated scalar.");
         }
@@ -23220,6 +23224,8 @@ private:
     case RecurKind::FAnyOf:
     case RecurKind::IFindLastIV:
     case RecurKind::FFindLastIV:
+    case RecurKind::FMaximumNum:
+    case RecurKind::FMinimumNum:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for repeated scalar.");
     }
@@ -23319,6 +23325,8 @@ private:
     case RecurKind::FAnyOf:
     case RecurKind::IFindLastIV:
     case RecurKind::FFindLastIV:
+    case RecurKind::FMaximumNum:
+    case RecurKind::FMinimumNum:
     case RecurKind::None:
       llvm_unreachable("Unexpected reduction kind for reused scalars.");
     }
