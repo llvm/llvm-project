@@ -35,6 +35,7 @@ DEFAULT_VERSION = 5
 SUPPORTED_ANALYSES = {
     "Branch Probability Analysis",
     "Cost Model Analysis",
+    "Dependence Analysis",
     "Loop Access Analysis",
     "Scalar Evolution Analysis",
 }
@@ -73,13 +74,17 @@ class Filter(Regex):
 
     """
 
-    def __init__(self, regex, is_filter_out):
+    def __init__(self, regex, is_filter_out, is_filter_out_after):
         super(Filter, self).__init__(regex)
+        if is_filter_out and is_filter_out_after:
+            raise ValueError("cannot use both --filter-out and --filter-out-after")
         self.is_filter_out = is_filter_out
+        self.is_filter_out_after = is_filter_out_after
 
     def __deepcopy__(self, memo):
         result = copy.deepcopy(super(Filter, self), memo)
         result.is_filter_out = copy.deepcopy(self.is_filter_out, memo)
+        result.is_filter_out_after = copy.deepcopy(self.is_filter_out_after, memo)
         return result
 
 
@@ -126,7 +131,11 @@ def parse_commandline_args(parser):
 
             is_filter_out = option_string == "--filter-out"
 
-            value_list[-1] = Filter(value_list[-1].regex, is_filter_out)
+            is_filter_out_after = option_string == "--filter-out-after"
+
+            value_list[-1] = Filter(
+                value_list[-1].regex, is_filter_out, is_filter_out_after
+            )
 
             setattr(namespace, self.dest, value_list)
 
@@ -149,6 +158,13 @@ def parse_commandline_args(parser):
         dest="filters",
         metavar="REGEX",
         help="Exclude lines matching REGEX",
+    )
+    filter_group.add_argument(
+        "--filter-out-after",
+        action=FilterAction,
+        dest="filters",
+        metavar="REGEX",
+        help="Exclude all lines within a given function after line matching REGEX",
     )
 
     parser.add_argument(
@@ -670,6 +686,8 @@ def get_globals_name_prefix(raw_tool_output):
 def apply_filters(line, filters):
     has_filter = False
     for f in filters:
+        if f.is_filter_out_after:
+            continue
         if not f.is_filter_out:
             has_filter = True
         if f.search(line):
@@ -679,14 +697,34 @@ def apply_filters(line, filters):
     return False if has_filter else True
 
 
+def has_filter_out_after(filters):
+    for f in filters:
+        if f.is_filter_out_after:
+            return True
+    return False
+
+
+def filter_out_after(body, filters):
+    lines = []
+    for line in body.splitlines():
+        lines.append(line)
+        for f in filters:
+            if f.is_filter_out_after:
+                if f.search(line):
+                    return lines
+    return lines
+
+
 def do_filter(body, filters):
-    return (
-        body
-        if not filters
-        else "\n".join(
-            filter(lambda line: apply_filters(line, filters), body.splitlines())
-        )
-    )
+    if not filters:
+        return body
+    filter_out_after_flag = has_filter_out_after(filters)
+    lines = []
+    if filter_out_after_flag:
+        lines = filter_out_after(body, filters)
+    else:
+        lines = body.splitlines()
+    return "\n".join(filter(lambda line: apply_filters(line, filters), lines))
 
 
 def scrub_body(body):
@@ -787,7 +825,9 @@ class FunctionTestBuilder:
             list(
                 map(
                     lambda f: Filter(
-                        re.compile(f.pattern().strip('"'), f.flags()), f.is_filter_out
+                        re.compile(f.pattern().strip('"'), f.flags()),
+                        f.is_filter_out,
+                        f.is_filter_out_after,
                     ),
                     flags.filters,
                 )
@@ -830,7 +870,10 @@ class FunctionTestBuilder:
         return self._global_var_dict
 
     def is_filtered(self):
-        return bool(self._filters)
+        for f in self._filters:
+            if not f.is_filter_out_after:
+                return True
+        return False
 
     def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
         build_global_values_dictionary(
@@ -982,6 +1025,7 @@ class FunctionTestBuilder:
 ##### Generator of LLVM IR CHECK lines
 
 SCRUB_IR_COMMENT_RE = re.compile(r"\s*;.*")
+SCRUB_IR_FUNC_META_RE = re.compile(r"((?:\!(?!dbg\b)[a-zA-Z_]\w*(?:\s+![0-9]+)?)\s*)+")
 
 # TODO: We should also derive check lines for global, debug, loop declarations, etc..
 
@@ -1086,6 +1130,7 @@ class GeneralizerInfo:
         nameless_values: List[NamelessValue],
         regexp_prefix,
         regexp_suffix,
+        no_meta_details=False,
     ):
         self._version = version
         self._mode = mode
@@ -1093,6 +1138,7 @@ class GeneralizerInfo:
 
         self._regexp_prefix = regexp_prefix
         self._regexp_suffix = regexp_suffix
+        self._no_meta_details = no_meta_details
 
         self._regexp, _ = self._build_regexp(False, False)
         (
@@ -1146,6 +1192,9 @@ class GeneralizerInfo:
     def get_unstable_globals_regexp(self):
         return self._unstable_globals_regexp
 
+    def no_meta_details(self):
+        return self._no_meta_details
+
     # The entire match is group 0, the prefix has one group (=1), the entire
     # IR_VALUE_REGEXP_STRING is one group (=2), and then the nameless values start.
     FIRST_NAMELESS_GROUP_IN_MATCH = 3
@@ -1174,7 +1223,7 @@ class GeneralizerInfo:
         return self.get_match_info(match)[1]
 
 
-def make_ir_generalizer(version):
+def make_ir_generalizer(version, no_meta_details):
     values = []
 
     if version >= 5:
@@ -1223,7 +1272,9 @@ def make_ir_generalizer(version):
     #        not (unstable_ids_only and nameless_value.match_literally)
     # ]
 
-    return GeneralizerInfo(version, GeneralizerInfo.MODE_IR, values, prefix, suffix)
+    return GeneralizerInfo(
+        version, GeneralizerInfo.MODE_IR, values, prefix, suffix, no_meta_details
+    )
 
 
 def make_asm_generalizer(version):
@@ -1725,6 +1776,7 @@ def generalize_check_lines(
     original_check_lines=None,
     *,
     unstable_globals_only=False,
+    no_meta_details=False,
 ):
     if unstable_globals_only:
         regexp = ginfo.get_unstable_globals_regexp()
@@ -1754,6 +1806,9 @@ def generalize_check_lines(
                     break
             # Ignore any comments, since the check lines will too.
             scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
+            # Ignore the metadata details if check global is none
+            if no_meta_details:
+                scrubbed_line = SCRUB_IR_FUNC_META_RE.sub(r"{{.*}}", scrubbed_line)
             lines[i] = scrubbed_line
 
     if not preserve_names:
@@ -1985,6 +2040,7 @@ def add_checks(
                     global_vars_seen,
                     preserve_names,
                     original_check_lines=[],
+                    no_meta_details=ginfo.no_meta_details(),
                 )[0]
             func_name_separator = func_dict[checkprefix][func_name].func_name_separator
             if "[[" in args_and_sig:
@@ -2302,7 +2358,7 @@ METADATA_FILTERS = [
         r"(?<=\")(.+ )?(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
         r"{{.*}}\2{{.*}}",
     ),  # preface with glob also, to capture optional CLANG_VENDOR
-    (r'(!DIFile\(filename: ".+", directory: )".+"', r"\1{{.*}}"),
+    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )".+"', r"\1{{.*}}\3{{.*}}"),
 ]
 METADATA_FILTERS_RE = [(re.compile(f), r) for (f, r) in METADATA_FILTERS]
 
@@ -2512,7 +2568,12 @@ def get_autogennote_suffix(parser, args):
             # Create a separate option for each filter element.  The value is a list
             # of Filter objects.
             for elem in value:
-                opt_name = "filter-out" if elem.is_filter_out else "filter"
+                if elem.is_filter_out:
+                    opt_name = "filter-out"
+                elif elem.is_filter_out_after:
+                    opt_name = "filter-out-after"
+                else:
+                    opt_name = "filter"
                 opt_value = elem.pattern()
                 new_arg = '--%s "%s" ' % (opt_name, opt_value.strip('"'))
                 if new_arg not in autogenerated_note_args:

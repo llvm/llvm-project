@@ -109,12 +109,13 @@ void VTEmitter::run(raw_ostream &OS) {
   auto UpdateVTRange = [&VTRanges](const char *Key, StringRef Name,
                                    bool Valid) {
     if (Valid) {
-      if (!VTRanges.count(Key))
-        VTRanges[Key].First = Name;
-      assert(!VTRanges[Key].Closed && "Gap detected!");
-      VTRanges[Key].Last = Name;
-    } else if (VTRanges.count(Key)) {
-      VTRanges[Key].Closed = true;
+      auto [It, Inserted] = VTRanges.try_emplace(Key);
+      if (Inserted)
+        It->second.First = Name;
+      assert(!It->second.Closed && "Gap detected!");
+      It->second.Last = Name;
+    } else if (auto It = VTRanges.find(Key); It != VTRanges.end()) {
+      It->second.Closed = true;
     }
   };
 

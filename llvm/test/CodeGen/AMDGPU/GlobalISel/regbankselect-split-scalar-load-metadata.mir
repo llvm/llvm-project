@@ -17,6 +17,7 @@
   !0 = !{i96 0, i96 9223372036854775808}
   !1 = !{!"omnipotent char", !2}
   !2 = !{!"Simple C/C++ TBAA"}
+  !3 = !{i32 0, i32 2147483646}
 ...
 
 # Make sure range metadata is not preserved when widening loads, but
@@ -44,10 +45,10 @@ body: |
     ; GFX12: liveins: $sgpr0_sgpr1
     ; GFX12-NEXT: {{  $}}
     ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
-    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x s32>) = G_LOAD [[COPY]](p4) :: (load (<3 x s32>), align 8, !range !0, addrspace 4)
+    ; GFX12-NEXT: [[LOAD:%[0-9]+]]:sgpr(<3 x s32>) = G_LOAD [[COPY]](p4) :: (load (<3 x s32>), align 8
     ; GFX12-NEXT: $sgpr0_sgpr1_sgpr2 = COPY [[LOAD]](<3 x s32>)
     %0:_(p4) = COPY $sgpr0_sgpr1
-    %1:_(<3 x s32>) = G_LOAD %0 :: (load (<3 x s32>), align 8, addrspace 4, !range !0)
+    %1:_(<3 x s32>) = G_LOAD %0 :: (load (<3 x s32>), align 8, addrspace 4, !range !3)
     $sgpr0_sgpr1_sgpr2 = COPY %1
 
 ...

@@ -67,7 +67,7 @@ void CompoundAAttr::print(AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 
 Attribute TestDecimalShapeAttr::parse(AsmParser &parser, Type type) {
-  if (parser.parseLess()){
+  if (parser.parseLess()) {
     return Attribute();
   }
   SmallVector<int64_t> shape;
@@ -314,6 +314,67 @@ static ParseResult parseCustomFloatAttr(AsmParser &p, StringAttr &typeStrAttr,
 
   value.emplace(parsedValue);
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TestOpAsmAttrInterfaceAttr
+//===----------------------------------------------------------------------===//
+
+::mlir::OpAsmDialectInterface::AliasResult
+TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
+  os << "op_asm_attr_interface_";
+  os << getValue().getValue();
+  return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
+}
+
+//===----------------------------------------------------------------------===//
+// TestConstMemorySpaceAttr
+//===----------------------------------------------------------------------===//
+
+bool TestConstMemorySpaceAttr::isValidLoad(
+    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return true;
+}
+
+bool TestConstMemorySpaceAttr::isValidStore(
+    Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidAtomicOp(
+    mlir::ptr::AtomicBinOp binOp, Type type, mlir::ptr::AtomicOrdering ordering,
+    IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidAtomicXchg(
+    Type type, mlir::ptr::AtomicOrdering successOrdering,
+    mlir::ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space is read-only";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidAddrSpaceCast(
+    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space doesn't allow addrspace casts";
+  return false;
+}
+
+bool TestConstMemorySpaceAttr::isValidPtrIntCast(
+    Type intLikeTy, Type ptrLikeTy,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (emitError)
+    emitError() << "memory space doesn't allow int-ptr casts";
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

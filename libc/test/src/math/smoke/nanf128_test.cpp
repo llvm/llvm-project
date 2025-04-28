@@ -28,7 +28,7 @@ public:
     auto actual_fp = FPBits128(result);
     auto expected_fp = FPBits128(bits);
     EXPECT_EQ(actual_fp.uintval(), expected_fp.uintval());
-  };
+  }
 };
 
 TEST_F(LlvmLibcNanf128Test, NCharSeq) {
@@ -55,8 +55,8 @@ TEST_F(LlvmLibcNanf128Test, RandomString) {
            QUIET_NAN);
 }
 
-#if !defined(LIBC_HAS_ADDRESS_SANITIZER) && defined(LIBC_TARGET_OS_IS_LINUX)
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
 TEST_F(LlvmLibcNanf128Test, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf128(nullptr); }, WITH_SIGNAL(SIGSEGV));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf128(nullptr); });
 }
 #endif // LIBC_HAS_ADDRESS_SANITIZER

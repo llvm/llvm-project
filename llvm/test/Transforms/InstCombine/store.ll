@@ -49,8 +49,7 @@ define void @test2(ptr %P) {
 
 define void @store_at_gep_off_null_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_inbounds(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr null, i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    store i32 poison, ptr [[PTR]], align 4
+; CHECK-NEXT:    store i32 poison, ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr = getelementptr inbounds i32, ptr null, i64 %offset
@@ -342,6 +341,60 @@ define void @store_to_readonly_noalias(ptr readonly noalias %0) {
 ; CHECK-NEXT:    ret void
 ;
   store i32 3, ptr %0, align 4
+  ret void
+}
+
+define void @store_select_with_null(i1 %cond, ptr %p) {
+; CHECK-LABEL: @store_select_with_null(
+; CHECK-NEXT:    store i32 0, ptr [[SEL:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
+define void @store_select_with_null_commuted(i1 %cond, ptr %p) {
+; CHECK-LABEL: @store_select_with_null_commuted(
+; CHECK-NEXT:    store i32 0, ptr [[SEL:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr null, ptr %p
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
+define void @store_select_with_null_null_is_valid(i1 %cond, ptr %p) null_pointer_is_valid {
+; CHECK-LABEL: @store_select_with_null_null_is_valid(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
+; CHECK-NEXT:    store i32 0, ptr [[SEL]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
+define void @store_select_with_unknown(i1 %cond, ptr %p, ptr %p2) {
+; CHECK-LABEL: @store_select_with_unknown(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr [[P2:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[SEL]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr %p2
+  store i32 0, ptr %sel, align 4
+  ret void
+}
+
+define void @store_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
+; CHECK-LABEL: @store_select_with_null_gep(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 [[OFF:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret void
+;
+  %sel = select i1 %cond, ptr %p, ptr null
+  %gep = getelementptr i8, ptr %sel, i64 %off
+  store i32 0, ptr %gep, align 4
   ret void
 }
 

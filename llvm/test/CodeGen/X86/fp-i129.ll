@@ -96,7 +96,7 @@ define i257 @fptosi257_double(double %a) nounwind {
 ; half tests
 define i257 @fptosi_half(half %a) nounwind {
 ; X86-LABEL: fptosi_half:
-; X86: __gnu_h2f_ieee
+; X86: __extendhfsf2
 ;
 ; X64-LABEL: fptosi_half:
 ; X64: __extendhfsf2
@@ -106,7 +106,7 @@ define i257 @fptosi_half(half %a) nounwind {
 
 define half @uitofp_half(i257 %a) nounwind {
 ; X86-LABEL: uitofp_half:
-; X86: __gnu_f2h_ieee
+; X86: __truncsfhf2
 ;
 ; X64-LABEL: uitofp_half:
 ; X64: __truncsfhf2

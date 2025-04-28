@@ -2,6 +2,41 @@
 
 Sandbox IR is an IR layer on top of LLVM IR that allows you to save/restore its state.
 
+# Quick Start Notes
+
+Within your LLVM pass:
+
+``` C++
+// 1. Include the necessary Sandbox IR header files.
+#include "llvm/SandboxIR/Context.h
+#include "llvm/SandboxIR/Function.h
+
+// 2. Create a sandboxir::Context using LLVMContext `LLVMCtx`.
+sandboxir::Context Ctx(LLVMCtx);
+
+// 3. Create a sandboxir::Function using LLVM IR Function `LLVMF`.
+auto *F = Ctx.createFunction(LLVMF);
+
+// ... Use Sandbox IR in `F` as usual, e.g., iterating, modifying it etc. ...
+
+// 4. Save state when needed.
+Ctx.save();
+
+// ... Modify Sandbox IR ...
+
+// 5. Revert to the saved state.
+Ctx.revert();
+```
+
+Make sure you link against `SandboxIR` in `CMakeLists.txt`:
+
+```
+LINK_COMPONENTS
+...
+SandboxIR
+...
+```
+
 # API
 The Sandbox IR API is designed to feel like LLVM, replicating many common API classes and functions to mirror the LLVM API.
 The class hierarchy is similar (but in the `llvm::sandboxir` namespace).
@@ -69,3 +104,6 @@ Internally this will go through the changes and run any finalization required.
 
 Please note that after a call to `revert()` or `accept()` tracking will stop.
 To start tracking again, the user needs to call `save()`.
+
+# Users of Sandbox IR
+- [The Sandbox Vectorizer](project:SandboxVectorizer.md)

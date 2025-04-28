@@ -70,7 +70,7 @@ class FileManager;
 class FrontendAction;
 class HeaderSearch;
 class InputKind;
-class InMemoryModuleCache;
+class ModuleCache;
 class PCHContainerOperations;
 class PCHContainerReader;
 class Preprocessor;
@@ -110,13 +110,13 @@ private:
   IntrusiveRefCntPtr<DiagnosticsEngine>   Diagnostics;
   IntrusiveRefCntPtr<FileManager>         FileMgr;
   IntrusiveRefCntPtr<SourceManager>       SourceMgr;
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
   std::unique_ptr<HeaderSearch>           HeaderInfo;
   IntrusiveRefCntPtr<TargetInfo>          Target;
   std::shared_ptr<Preprocessor>           PP;
   IntrusiveRefCntPtr<ASTContext>          Ctx;
   std::shared_ptr<TargetOptions>          TargetOpts;
-  std::shared_ptr<HeaderSearchOptions>    HSOpts;
+  std::unique_ptr<HeaderSearchOptions> HSOpts;
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure = false;
@@ -139,6 +139,9 @@ private:
   /// Optional owned invocation, just used to make the invocation used in
   /// LoadFromCommandLine available.
   std::shared_ptr<CompilerInvocation> Invocation;
+  /// Optional owned invocation, just used to make the invocation used in
+  /// Parse available.
+  std::shared_ptr<CompilerInvocation> CCInvocation;
 
   /// Fake module loader: the AST unit doesn't need to load any modules.
   TrivialModuleLoader ModuleLoader;
@@ -696,7 +699,7 @@ public:
                   WhatToLoad ToLoad,
                   IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                   const FileSystemOptions &FileSystemOpts,
-                  std::shared_ptr<HeaderSearchOptions> HSOpts,
+                  const HeaderSearchOptions &HSOpts,
                   std::shared_ptr<LangOptions> LangOpts = nullptr,
                   bool OnlyLocalDecls = false,
                   CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,

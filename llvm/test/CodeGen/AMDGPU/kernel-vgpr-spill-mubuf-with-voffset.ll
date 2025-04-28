@@ -81,7 +81,7 @@ define amdgpu_kernel void @test_kernel(i32 %val) #0 {
   br i1 %cmp, label %store, label %end
 
 store:
-  store volatile i32 %vreg, ptr addrspace(3) undef
+  store volatile i32 %vreg, ptr addrspace(3) poison
   ret void
 
 end:
@@ -92,5 +92,3 @@ declare void @device_func(ptr addrspace(5))
 
 attributes #0 = { nounwind "frame-pointer"="all" }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -12,6 +12,8 @@
 
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringTable.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -40,7 +42,7 @@ using namespace llvm;
 
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  return IntrinsicNameTable + IntrinsicNameOffsetTable[id];
+  return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -362,6 +364,24 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::HalfVecArgument, ArgInfo));
     return;
   }
+  case IIT_ONE_THIRD_VEC_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::OneThirdVecArgument, ArgInfo));
+    return;
+  }
+  case IIT_ONE_FIFTH_VEC_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::OneFifthVecArgument, ArgInfo));
+    return;
+  }
+  case IIT_ONE_SEVENTH_VEC_ARG: {
+    unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::OneSeventhVecArgument, ArgInfo));
+    return;
+  }
   case IIT_SAME_VEC_WIDTH_ARG: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(
@@ -555,6 +575,12 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
   case IITDescriptor::HalfVecArgument:
     return VectorType::getHalfElementsVectorType(
         cast<VectorType>(Tys[D.getArgumentNumber()]));
+  case IITDescriptor::OneThirdVecArgument:
+  case IITDescriptor::OneFifthVecArgument:
+  case IITDescriptor::OneSeventhVecArgument:
+    return VectorType::getOneNthElementsVectorType(
+        cast<VectorType>(Tys[D.getArgumentNumber()]),
+        3 + (D.Kind - IITDescriptor::OneThirdVecArgument) * 2);
   case IITDescriptor::SameVecWidthArgument: {
     Type *EltTy = DecodeFixedType(Infos, Tys, Context);
     Type *Ty = Tys[D.getArgumentNumber()];
@@ -649,20 +675,20 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
       // `equal_range` requires the comparison to work with either side being an
       // offset or the value. Detect which kind each side is to set up the
       // compared strings.
-      const char *LHSStr;
+      StringRef LHSStr;
       if constexpr (std::is_integral_v<decltype(LHS)>) {
-        LHSStr = &IntrinsicNameTable[LHS];
+        LHSStr = IntrinsicNameTable[LHS];
       } else {
         LHSStr = LHS;
       }
-      const char *RHSStr;
+      StringRef RHSStr;
       if constexpr (std::is_integral_v<decltype(RHS)>) {
-        RHSStr = &IntrinsicNameTable[RHS];
+        RHSStr = IntrinsicNameTable[RHS];
       } else {
         RHSStr = RHS;
       }
-      return strncmp(LHSStr + CmpStart, RHSStr + CmpStart, CmpEnd - CmpStart) <
-             0;
+      return strncmp(LHSStr.data() + CmpStart, RHSStr.data() + CmpStart,
+                     CmpEnd - CmpStart) < 0;
     };
     LastLow = Low;
     std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
@@ -672,7 +698,7 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
 
   if (LastLow == NameOffsetTable.end())
     return -1;
-  StringRef NameFound = &IntrinsicNameTable[*LastLow];
+  StringRef NameFound = IntrinsicNameTable[*LastLow];
   if (Name == NameFound ||
       (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
     return LastLow - NameOffsetTable.begin();
@@ -716,7 +742,7 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 
   // If the intrinsic is not overloaded, require an exact match. If it is
   // overloaded, require either exact or prefix match.
-  const auto MatchSize = strlen(&IntrinsicNameTable[NameOffsetTable[Idx]]);
+  const auto MatchSize = IntrinsicNameTable[NameOffsetTable[Idx]].size();
   assert(Name.size() >= MatchSize && "Expected either exact or prefix match");
   bool IsExactMatch = Name.size() == MatchSize;
   return IsExactMatch || Intrinsic::isOverloaded(ID) ? ID
@@ -727,6 +753,14 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 #define GET_INTRINSIC_ATTRIBUTES
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
+
+AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {
+  if (id == 0)
+    return AttributeSet();
+  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
+  uint8_t FnAttrID = PackedID >> 8;
+  return getIntrinsicFnAttributeSet(C, FnAttrID);
+}
 
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys) {
@@ -931,6 +965,16 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return !isa<VectorType>(ArgTys[D.getArgumentNumber()]) ||
            VectorType::getHalfElementsVectorType(
                cast<VectorType>(ArgTys[D.getArgumentNumber()])) != Ty;
+  case IITDescriptor::OneThirdVecArgument:
+  case IITDescriptor::OneFifthVecArgument:
+  case IITDescriptor::OneSeventhVecArgument:
+    // If this is a forward reference, defer the check for later.
+    if (D.getArgumentNumber() >= ArgTys.size())
+      return IsDeferredCheck || DeferCheck(Ty);
+    return !isa<VectorType>(ArgTys[D.getArgumentNumber()]) ||
+           VectorType::getOneNthElementsVectorType(
+               cast<VectorType>(ArgTys[D.getArgumentNumber()]),
+               3 + (D.Kind - IITDescriptor::OneThirdVecArgument) * 2) != Ty;
   case IITDescriptor::SameVecWidthArgument: {
     if (D.getArgumentNumber() >= ArgTys.size()) {
       // Defer check and subsequent check for the vector element type.

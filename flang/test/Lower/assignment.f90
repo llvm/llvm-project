@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 %s -o "-" -emit-fir -cpp -flang-deprecated-no-hlfir | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-X86-64%}
+! RUN: %flang_fc1 %s -o "-" -emit-fir -cpp -flang-deprecated-no-hlfir | FileCheck %s --check-prefixes=CHECK,%if flang-supports-f128-math %{F128%} %else %{F64%}%if target=x86_64-unknown-linux{{.*}} %{,CHECK-X86-64%}
 
 subroutine sub1(a)
   integer :: a
@@ -261,27 +261,29 @@ end
 ! CHECK:         return %[[RET]] : complex<f32>
 
 subroutine real_constant()
+  integer, parameter :: rk = merge(16, 8, selected_real_kind(33, 4931)==16)
   real(2) :: a
   real(4) :: b
   real(8) :: c
 #if __x86_64__
   real(10) :: d
 #endif
-  real(16) :: e
+  real(rk) :: e
   a = 2.0_2
   b = 4.0_4
   c = 8.0_8
 #if __x86_64__
   d = 10.0_10
 #endif
-  e = 16.0_16
+  e = 16.0_rk
 end
 
 ! CHECK: %[[A:.*]] = fir.alloca f16
 ! CHECK: %[[B:.*]] = fir.alloca f32
 ! CHECK: %[[C:.*]] = fir.alloca f64
 ! CHECK-X86-64: %[[D:.*]] = fir.alloca f80
-! CHECK: %[[E:.*]] = fir.alloca f128
+! F128: %[[E:.*]] = fir.alloca f128
+! F64: %[[E:.*]] = fir.alloca f64
 ! CHECK: %[[C2:.*]] = arith.constant 2.000000e+00 : f16
 ! CHECK: fir.store %[[C2]] to %[[A]] : !fir.ref<f16>
 ! CHECK: %[[C4:.*]] = arith.constant 4.000000e+00 : f32
@@ -290,8 +292,10 @@ end
 ! CHECK: fir.store %[[C8]] to %[[C]] : !fir.ref<f64>
 ! CHECK-X86-64: %[[C10:.*]] = arith.constant 1.000000e+01 : f80
 ! CHECK-X86-64: fir.store %[[C10]] to %[[D]] : !fir.ref<f80>
-! CHECK: %[[C16:.*]] = arith.constant 1.600000e+01 : f128
-! CHECK: fir.store %[[C16]] to %[[E]] : !fir.ref<f128>
+! F128: %[[C16:.*]] = arith.constant 1.600000e+01 : f128
+! F64: %[[C16:.*]] = arith.constant 1.600000e+01 : f64
+! F128: fir.store %[[C16]] to %[[E]] : !fir.ref<f128>
+! F64: fir.store %[[C16]] to %[[E]] : !fir.ref<f64>
 
 subroutine complex_constant()
   complex(4) :: a

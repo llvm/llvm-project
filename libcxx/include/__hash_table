@@ -147,24 +147,24 @@ inline _LIBCPP_HIDE_FROM_ABI size_t __constrain_hash(size_t __h, size_t __bc) {
 }
 
 inline _LIBCPP_HIDE_FROM_ABI size_t __next_hash_pow2(size_t __n) {
-  return __n < 2 ? __n : (size_t(1) << (numeric_limits<size_t>::digits - __libcpp_clz(__n - 1)));
+  return __n < 2 ? __n : (size_t(1) << (numeric_limits<size_t>::digits - std::__countl_zero(__n - 1)));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 class __hash_table;
 
 template <class _NodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_iterator;
+class __hash_iterator;
 template <class _ConstNodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+class __hash_const_iterator;
 template <class _NodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_local_iterator;
+class __hash_local_iterator;
 template <class _ConstNodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
+class __hash_const_local_iterator;
 template <class _HashIterator>
-class _LIBCPP_TEMPLATE_VIS __hash_map_iterator;
+class __hash_map_iterator;
 template <class _HashIterator>
-class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
+class __hash_map_const_iterator;
 
 template <class _Tp>
 struct __hash_key_value_types {
@@ -273,7 +273,7 @@ struct __make_hash_node_types {
 };
 
 template <class _NodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_iterator {
+class __hash_iterator {
   typedef __hash_node_types<_NodePtr> _NodeTypes;
   typedef _NodePtr __node_pointer;
   typedef typename _NodeTypes::__next_pointer __next_pointer;
@@ -327,17 +327,17 @@ private:
   template <class, class, class, class>
   friend class __hash_table;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+  friend class __hash_const_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_map_iterator;
+  friend class __hash_map_iterator;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+  friend class unordered_map;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+  friend class unordered_multimap;
 };
 
 template <class _NodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_const_iterator {
+class __hash_const_iterator {
   static_assert(!is_const<typename pointer_traits<_NodePtr>::element_type>::value, "");
   typedef __hash_node_types<_NodePtr> _NodeTypes;
   typedef _NodePtr __node_pointer;
@@ -395,15 +395,15 @@ private:
   template <class, class, class, class>
   friend class __hash_table;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
+  friend class __hash_map_const_iterator;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+  friend class unordered_map;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+  friend class unordered_multimap;
 };
 
 template <class _NodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_local_iterator {
+class __hash_local_iterator {
   typedef __hash_node_types<_NodePtr> _NodeTypes;
   typedef _NodePtr __node_pointer;
   typedef typename _NodeTypes::__next_pointer __next_pointer;
@@ -468,13 +468,13 @@ private:
   template <class, class, class, class>
   friend class __hash_table;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
+  friend class __hash_const_local_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_map_iterator;
+  friend class __hash_map_iterator;
 };
 
 template <class _ConstNodePtr>
-class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator {
+class __hash_const_local_iterator {
   typedef __hash_node_types<_ConstNodePtr> _NodeTypes;
   typedef _ConstNodePtr __node_pointer;
   typedef typename _NodeTypes::__next_pointer __next_pointer;
@@ -553,7 +553,7 @@ private:
   template <class, class, class, class>
   friend class __hash_table;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
+  friend class __hash_map_const_iterator;
 };
 
 template <class _Alloc>
@@ -650,9 +650,9 @@ struct __enforce_unordered_container_requirements {
 
 template <class _Key, class _Hash, class _Equal>
 #ifndef _LIBCPP_CXX03_LANG
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Equal const&, _Key const&, _Key const&>::value,
+_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Equal const&, _Key const&, _Key const&>,
                          "the specified comparator type does not provide a viable const call operator")
-_LIBCPP_DIAGNOSE_WARNING(!__invokable<_Hash const&, _Key const&>::value,
+_LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Hash const&, _Key const&>,
                          "the specified hash functor does not provide a viable const call operator")
 #endif
     typename __enforce_unordered_container_requirements<_Key, _Hash, _Equal>::type
@@ -770,9 +770,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __hash_table& operator=(const __hash_table& __u);
   _LIBCPP_HIDE_FROM_ABI __hash_table& operator=(__hash_table&& __u)
-      _NOEXCEPT_(__node_traits::propagate_on_container_move_assignment::value&&
-                     is_nothrow_move_assignable<__node_allocator>::value&& is_nothrow_move_assignable<hasher>::value&&
-                         is_nothrow_move_assignable<key_equal>::value);
+      _NOEXCEPT_(is_nothrow_move_assignable<hasher>::value&& is_nothrow_move_assignable<key_equal>::value &&
+                 ((__node_traits::propagate_on_container_move_assignment::value &&
+                   is_nothrow_move_assignable<__node_allocator>::value) ||
+                  allocator_traits<__node_allocator>::is_always_equal::value));
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void __assign_unique(_InputIterator __first, _InputIterator __last);
   template <class _InputIterator>
@@ -1020,9 +1021,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI __next_pointer __detach() _NOEXCEPT;
 
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_map;
+  friend class unordered_map;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS unordered_multimap;
+  friend class unordered_multimap;
 };
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -1238,10 +1239,11 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(__hash_table& __u, 
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-inline __hash_table<_Tp, _Hash, _Equal, _Alloc>&
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(__hash_table&& __u) _NOEXCEPT_(
-    __node_traits::propagate_on_container_move_assignment::value&& is_nothrow_move_assignable<__node_allocator>::value&&
-        is_nothrow_move_assignable<hasher>::value&& is_nothrow_move_assignable<key_equal>::value) {
+inline __hash_table<_Tp, _Hash, _Equal, _Alloc>& __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(__hash_table&& __u)
+    _NOEXCEPT_(is_nothrow_move_assignable<hasher>::value&& is_nothrow_move_assignable<key_equal>::value &&
+               ((__node_traits::propagate_on_container_move_assignment::value &&
+                 is_nothrow_move_assignable<__node_allocator>::value) ||
+                allocator_traits<__node_allocator>::is_always_equal::value)) {
   __move_assign(__u, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }

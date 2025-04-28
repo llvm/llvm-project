@@ -43,6 +43,7 @@ class Tosa_QuantizedType<string n, list<int> params, bit signed>
 
 def Tosa_Int4 : I<4>;
 def Tosa_Int8 : I<8>;
+def Tosa_Int16 : I<16>;
 def Tosa_Int32 : I<32>;
 def Tosa_Int64 : I<64>;
 
@@ -54,7 +55,10 @@ def Tosa_Int : AnyTypeOf<[AnyUnsignedInteger,
                           AnySignlessInteger]>;
 
 def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
-                   	        Tosa_Int64]>;
+                                Tosa_Int64]>;
+
+def Tosa_Int16Or32 : AnyTypeOf<[Tosa_Int16,
+                                Tosa_Int32]>;
 
 //===----------------------------------------------------------------------===//
 // Quantized Integer Types.
@@ -80,11 +84,6 @@ def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
 def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat],
                                 "number">;
 
-// For weight tensors from tosa::Conv2DOp, tosa::Conv3DOp,
-// tosa::DepthwiseConv2DOp, tosa::TransposeConv2DOp, tosa::FullyConnectedOp
-def Tosa_Weight : AnyTypeOf<[Tosa_Int4, Tosa_Int8,
-                             Tosa_QuantizedInt, AnyFloat]>;
-
 //===----------------------------------------------------------------------===//
 // TOSA Tensor Conformance
 //===----------------------------------------------------------------------===//
@@ -92,6 +91,14 @@ def Tosa_Weight : AnyTypeOf<[Tosa_Int4, Tosa_Int8,
 def HasNo0Dimensions : And<[
     IsRankedTensorTypePred,
     CPred<"::llvm::all_of(::llvm::cast<::mlir::RankedTensorType>($_self).getShape(), [](auto v) { return v != 0; })">]>;
+
+def AllDimensionsAreSizeOne : And<[
+    IsRankedTensorTypePred,
+    CPred<"::llvm::all_of(::llvm::cast<::mlir::RankedTensorType>($_self).getShape(), [](auto v) { return v == 1; })">]>;
+
+def AtLeastRankOne : And<[
+  IsRankedTensorTypePred,
+  CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 1">]>;
 
 class TosaTensorOf<
     list<Type> allowedTypes, string summary = "tosa-conformant tensor">
@@ -108,6 +115,11 @@ class TosaTensorRankOf<list<Type> allowedTypes, list<int> ranks>
     : TosaRankedTensorOf<allowedTypes,
       [HasAnyRankOfPred<ranks>],
       !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tensor">;
+
+class TosaScalarTensorOf<list<Type> allowedTypes, list<int> ranks>
+    : TosaRankedTensorOf<allowedTypes,
+      [HasAnyRankOfPred<ranks>, AllDimensionsAreSizeOne],
+      "tosa-conformant scalar tensor">;
 
 //===----------------------------------------------------------------------===//
 // Tensor types
@@ -136,8 +148,11 @@ class Tosa_TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
 // Tensor types with constrained ranks.
 //===----------------------------------------------------------------------===//
 
-// Rank-0 (scalar) tensor
-def Tosa_ScalarTensor : TosaTensorRankOf<[Tosa_AnyNumber], [0]>;
+def Tosa_Rank0Tensor : TosaTensorRankOf<[Tosa_AnyNumber], [0]>;
+
+def Tosa_ScalarTensor : TosaScalarTensorOf<[Tosa_AnyNumber], [1]>;
+def Tosa_ScalarInt8Tensor : TosaScalarTensorOf<[Tosa_Int8], [1]>;
+def Tosa_ScalarIntOrFloatTensor : TosaScalarTensorOf<[Tosa_Int, AnyFloat], [1]>;
 
 // We include unranked tensors as a supported type for all possible tosa
 // Tensors as unranked does not guarantee invalid. If unranked tensors exist
@@ -151,6 +166,10 @@ def Tosa_Tensor3D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNu
 def Tosa_Tensor4D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [4]>], "4-d tosa-conformant tensor", "::mlir::TensorType">;
 def Tosa_Tensor5D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [5]>], "5-d tosa-conformant tensor", "::mlir::TensorType">;
 
+// 1D tensor of specific types
+def Tosa_1DInt8Tensor : 1DTensorOf<[Tosa_Int8]>;
+def Tosa_1DInt16Or32Tensor : 1DTensorOf<[Tosa_Int16Or32]>;
+
 // Ranked tensors up to given rank.
 def Tosa_Tensor1Dto4D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [1,2,3,4]>]>;
@@ -162,6 +181,9 @@ def Tosa_TensorUpto4D : AnyTypeOf<[
 
 def Tosa_Int32TensorUpto4D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [0,1,2,3,4]>]>;
+
+def Tosa_TensorAtLeast1D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TosaRankedTensorOf<[Tosa_AnyNumber], [AtLeastRankOne]>], "tosa-conformant tensor of at least rank 1", "::mlir::TensorType">;
 
 //===----------------------------------------------------------------------===//
 // Generic scalar, vector, or tensor of a particular type.
@@ -202,14 +224,37 @@ def Tosa_FloatAttr : Attr<CPred<"::llvm::isa<::mlir::FloatAttr>($_self)">,
   let returnType = [{ ::mlir::APFloat }];
 }
 
+def Tosa_IntegerAttr : Attr<CPred<"::llvm::isa<::mlir::IntegerAttr>($_self)">,
+                          "arbitrary integer attribute"> {
+  let storageType = [{ ::mlir::IntegerAttr }];
+  let returnType = [{ ::llvm::APInt }];
+}
+
+def Tosa_IntOrFloatAttr : AnyAttrOf<[Tosa_IntegerAttr, Tosa_FloatAttr]>;
+
 //===----------------------------------------------------------------------===//
 // Iterable attributes.
 //===----------------------------------------------------------------------===//
+// Defined in `section 3. Enumerations` of the TOSA specification.
+
 // Supported regimes for tosa.resize.
 def Tosa_ResizeTypeAttr : StringBasedAttr<
     CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"BILINEAR\"  || " #
           "::llvm::cast<StringAttr>($_self).getValue() == \"NEAREST_NEIGHBOR\"">,
     "Supported resize/upsampling strategies">;
+
+// Supported NaN propagation strategies.
+def Tosa_NanPropagationAttr : StringBasedAttr<
+    CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"PROPAGATE\"  || " #
+          "::llvm::cast<StringAttr>($_self).getValue() == \"IGNORE\"">,
+    "Supported NaN propagation strategies">;
+
+// Rounding mode for tosa.rescale
+def Tosa_RoundingTypeAttr : StringBasedAttr<
+    CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"SINGLE_ROUND\"  || " #
+          "::llvm::cast<StringAttr>($_self).getValue() == \"INEXACT_ROUND\" || " #
+          "::llvm::cast<StringAttr>($_self).getValue() == \"DOUBLE_ROUND\"">,
+    "Supported rounding modes">;
 
 def Tosa_TensorTypeAttr : TypeAttrBase<"TensorType", "Tensor type attribute">;
 

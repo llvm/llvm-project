@@ -2,14 +2,16 @@
 # for use by Lit, and delegates to LLVM's lit test handlers.
 
 llvm_canonicalize_cmake_booleans(
+  BUILD_SHARED_LIBS
   CLANG_BUILD_EXAMPLES
   CLANG_BUILT_STANDALONE
   CLANG_DEFAULT_PIE_ON_LINUX
-  CLANG_ENABLE_ARCMT
   CLANG_ENABLE_STATIC_ANALYZER
   CLANG_PLUGIN_SUPPORT
   CLANG_SPAWN_CC1
   CLANG_ENABLE_CIR
+  CLANG_ENABLE_OBJC_REWRITER
+  CLANG_LINK_CLANG_DYLIB
   ENABLE_BACKTRACES
   LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
@@ -19,9 +21,11 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
   LLVM_ENABLE_REVERSE_ITERATION
+  LLVM_LINK_LLVM_DYLIB
   LLVM_WITH_Z3
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
+  LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   )
 
 configure_lit_site_cfg(
@@ -84,20 +88,20 @@ list(APPEND CLANG_TEST_DEPS
   diagtool
   hmaptool
   )
-  
+
+if(CLANG_ENABLE_CIR)
+  list(APPEND CLANG_TEST_DEPS
+    cir-opt
+    cir-translate
+    )
+endif()
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
     clang-extdef-mapping
     )
 endif()
-
-if (CLANG_ENABLE_ARCMT)
-  list(APPEND CLANG_TEST_DEPS
-    arcmt-test
-    c-arcmt-test
-  )
-endif ()
 
 if(CLANG_BUILD_EXAMPLES AND CLANG_PLUGIN_SUPPORT)
   list(APPEND CLANG_TEST_DEPS
@@ -109,6 +113,15 @@ if(CLANG_BUILD_EXAMPLES AND CLANG_PLUGIN_SUPPORT)
     LLVMPrintFunctionNames
     )
 endif ()
+
+if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+  list(APPEND CLANG_TEST_DEPS
+    spirv-dis
+    spirv-val
+    spirv-as
+    spirv-link
+    )
+endif()    
 
 set(CLANG_TEST_PARAMS
   USE_Z3_SOLVER=0
@@ -127,6 +140,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dis
     llvm-dwarfdump
     llvm-ifs
+    llvm-link
     llvm-lto2
     llvm-mc
     llvm-modextract

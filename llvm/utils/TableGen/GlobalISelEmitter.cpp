@@ -63,7 +63,7 @@ STATISTIC(NumPatternImportsSkipped, "Number of SelectionDAG imports skipped");
 STATISTIC(NumPatternsTested,
           "Number of patterns executed according to coverage information");
 
-cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
+static cl::OptionCategory GlobalISelEmitterCat("Options for -gen-global-isel");
 
 static cl::opt<bool> WarnOnSkippedPatterns(
     "warn-on-skipped-patterns",
@@ -217,6 +217,9 @@ static Error isTrivialOperatorNode(const TreePatternNode &N) {
       continue;
 
     if (Predicate.isLoad() && Predicate.getMemoryVT())
+      continue;
+
+    if (Predicate.isStore() && Predicate.getMemoryVT())
       continue;
 
     if (Predicate.isLoad() || Predicate.isStore()) {
@@ -619,15 +622,17 @@ Expected<InstructionMatcher &> GlobalISelEmitter::addBuiltinPredicates(
   }
 
   // G_LOAD is used for both non-extending and any-extending loads.
-  if (Predicate.isLoad() && Predicate.isNonExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
-    return InsnMatcher;
-  }
-  if (Predicate.isLoad() && Predicate.isAnyExtLoad()) {
-    InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
-        0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
-    return InsnMatcher;
+  if (Predicate.isLoad() || Predicate.isAtomic()) {
+    if (Predicate.isNonExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::EqualTo, 0);
+      return InsnMatcher;
+    }
+    if (Predicate.isAnyExtLoad()) {
+      InsnMatcher.addPredicate<MemoryVsLLTSizePredicateMatcher>(
+          0, MemoryVsLLTSizePredicateMatcher::LessThan, 0);
+      return InsnMatcher;
+    }
   }
 
   if (Predicate.isStore()) {
@@ -2268,10 +2273,10 @@ void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("GISelPredicateCode").empty();
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("GISelPredicateCode").empty();
+                });
   emitMIPredicateFnsImpl<const Record *>(
       OS,
       "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
@@ -2286,13 +2291,13 @@ void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
-                        !R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+                         !R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "I64", "int64_t", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
@@ -2302,12 +2307,12 @@ void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 bool Unset;
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBitOrUnset("IsAPFloat", Unset);
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  bool Unset;
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBitOrUnset("IsAPFloat", Unset);
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APFloat", "const APFloat &",
       ArrayRef<const Record *>(MatchedRecords), &getPatFragPredicateEnumName,
@@ -2317,11 +2322,11 @@ void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
 
 void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
   std::vector<const Record *> MatchedRecords;
-  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
-               std::back_inserter(MatchedRecords), [](const Record *R) {
-                 return !R->getValueAsString("ImmediateCode").empty() &&
-                        R->getValueAsBit("IsAPInt");
-               });
+  llvm::copy_if(AllPatFrags, std::back_inserter(MatchedRecords),
+                [](const Record *R) {
+                  return !R->getValueAsString("ImmediateCode").empty() &&
+                         R->getValueAsBit("IsAPInt");
+                });
   emitImmPredicateFnsImpl<const Record *>(
       OS, "APInt", "const APInt &", ArrayRef<const Record *>(MatchedRecords),
       &getPatFragPredicateEnumName,
@@ -2344,6 +2349,20 @@ void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
      << "    llvm_unreachable(\"" + getClassName() +
             " does not support custom C++ actions!\");\n"
      << "}\n";
+}
+
+bool hasBFloatType(const TreePatternNode &Node) {
+  for (unsigned I = 0, E = Node.getNumTypes(); I < E; I++) {
+    auto Ty = Node.getType(I);
+    for (auto T : Ty)
+      if (T.second == MVT::bf16 ||
+          (T.second.isVector() && T.second.getScalarType() == MVT::bf16))
+        return true;
+  }
+  for (const TreePatternNode &C : Node.children())
+    if (hasBFloatType(C))
+      return true;
+  return false;
 }
 
 void GlobalISelEmitter::run(raw_ostream &OS) {
@@ -2382,6 +2401,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
     if (Pat.getGISelShouldIgnore())
       continue; // skip without warning
+
+    // Skip any patterns containing BF16 types, as GISel cannot currently tell
+    // the difference between fp16 and bf16. FIXME: This can be removed once
+    // BF16 is supported properly.
+    if (hasBFloatType(Pat.getSrcPattern()))
+      continue;
+
     auto MatcherOrErr = runOnPattern(Pat);
 
     // The pattern analysis can fail, indicating an unsupported pattern.

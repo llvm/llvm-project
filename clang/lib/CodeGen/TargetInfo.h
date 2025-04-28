@@ -400,7 +400,7 @@ public:
   virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
-
+  virtual void setOCLKernelStubCallingConvention(const FunctionType *&FT) const;
   /// Return the device-side type for the CUDA device builtin surface type.
   virtual llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const {
     // By default, no change from the original one.
@@ -439,7 +439,9 @@ public:
   }
 
   /// Return an LLVM type that corresponds to a HLSL type
-  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T) const {
+  virtual llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *T,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const {
     return nullptr;
   }
 
@@ -521,6 +523,9 @@ createM68kTargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>
 createMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
+
+std::unique_ptr<TargetCodeGenInfo>
+createWindowsMIPSTargetCodeGenInfo(CodeGenModule &CGM, bool IsOS32);
 
 std::unique_ptr<TargetCodeGenInfo>
 createMSP430TargetCodeGenInfo(CodeGenModule &CGM);

@@ -1150,7 +1150,8 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
   OSType OS = UnknownOS;
   if (Components.size() > 2) {
     OS = parseOS(Components[2]);
-    IsCygwin = Components[2].starts_with("cygwin");
+    IsCygwin = Components[2].starts_with("cygwin") ||
+               Components[2].starts_with("msys");
     IsMinGW32 = Components[2].starts_with("mingw");
   }
   EnvironmentType Environment = UnknownEnvironment;
@@ -1195,7 +1196,7 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
         break;
       case 2:
         OS = parseOS(Comp);
-        IsCygwin = Comp.starts_with("cygwin");
+        IsCygwin = Comp.starts_with("cygwin") || Comp.starts_with("msys");
         IsMinGW32 = Comp.starts_with("mingw");
         Valid = OS != UnknownOS || IsCygwin || IsMinGW32;
         break;
@@ -1709,6 +1710,26 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
     return 64;
   }
   llvm_unreachable("Invalid architecture value");
+}
+
+unsigned Triple::getTrampolineSize() const {
+  switch (getArch()) {
+  default:
+    break;
+  case Triple::ppc:
+  case Triple::ppcle:
+    if (isOSLinux())
+      return 40;
+    break;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    if (isOSLinux())
+      return 48;
+    break;
+  case Triple::aarch64:
+    return 36;
+  }
+  return 32;
 }
 
 bool Triple::isArch64Bit() const {

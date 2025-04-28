@@ -78,6 +78,7 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
+  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -190,6 +191,9 @@ protected:
   /// indicates a lack of S_CLAUSE support.
   unsigned MaxHardClauseLength = 0;
   bool SupportsSRAMECC = false;
+  bool DynamicVGPR = false;
+  bool DynamicVGPRBlockSize32 = false;
+  bool HasVMemToLDSLoad = false;
 
   // This should not be used directly. 'TargetID' tracks the dynamic settings
   // for SRAMECC.
@@ -226,12 +230,14 @@ protected:
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
   bool HasPrngInst = false;
+  bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
   bool HasPermlane32Swap = false;
   bool HasVcmpxPermlaneHazard = false;
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasSafeSmemPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -246,15 +252,17 @@ protected:
   bool HasMADIntraFwdBug = false;
   bool HasVOPDInsts = false;
   bool HasVALUTransUseHazard = false;
-  bool HasForceStoreSC0SC1 = false;
   bool HasRequiredExportPriority = false;
   bool HasVmemWriteVgprInOrder = false;
   bool HasAshrPkInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
+  bool HasLshlAddU64Inst = false;
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
+  bool UseBlockVGPROpsForCSR = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -607,6 +615,8 @@ public:
   bool hasUnalignedAccessMode() const {
     return UnalignedAccessMode;
   }
+
+  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
 
   bool hasApertureRegs() const {
     return HasApertureRegs;
@@ -961,6 +971,8 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
+
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
@@ -1132,7 +1144,7 @@ public:
 
   bool hasMovB64() const { return GFX940Insts; }
 
-  bool hasLshlAddB64() const { return GFX940Insts; }
+  bool hasLshlAddU64Inst() const { return HasLshlAddU64Inst; }
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
@@ -1264,9 +1276,9 @@ public:
 
   bool hasCvtScaleForwardingHazard() const { return GFX950Insts; }
 
-  bool hasForceStoreSC0SC1() const { return HasForceStoreSC0SC1; }
-
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
+
+  bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
@@ -1297,11 +1309,11 @@ public:
 
   bool hasPackedTID() const { return HasPackedTID; }
 
-  // GFX940 is a derivation to GFX90A. hasGFX940Insts() being true implies that
+  // GFX94* is a derivation to GFX90A. hasGFX940Insts() being true implies that
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
-  // GFX950 is a derivation to GFX940. hasGFX950Insts() implies that
+  // GFX950 is a derivation to GFX94*. hasGFX950Insts() implies that
   // hasGFX940Insts and hasGFX90AInsts are also true.
   bool hasGFX950Insts() const { return GFX950Insts; }
 
@@ -1311,6 +1323,8 @@ public:
   bool hasLDSLoadB96_B128() const {
     return hasGFX950Insts();
   }
+
+  bool hasVMemToLDSLoad() const { return HasVMemToLDSLoad; }
 
   bool hasSALUFloatInsts() const { return HasSALUFloatInsts; }
 
@@ -1353,12 +1367,16 @@ public:
     return HasMinimum3Maximum3PKF16;
   }
 
+  bool hasPointSampleAccel() const { return HasPointSampleAccel; }
+
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
   /// instruction.
   unsigned maxHardClauseLength() const { return MaxHardClauseLength; }
 
   bool hasPrngInst() const { return HasPrngInst; }
+
+  bool hasBVHDualAndBVH8Insts() const { return HasBVHDualAndBVH8Insts; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
@@ -1368,12 +1386,18 @@ public:
   /// VGPRs
   unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
 
-  /// Return occupancy for the given function. Used LDS and a number of
-  /// registers if provided.
-  /// Note, occupancy can be affected by the scratch allocation as well, but
+  /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
+  /// be achieved when the only function running on a CU is \p F, each workgroup
+  /// uses \p LDSSize bytes of LDS, and each wave uses \p NumSGPRs SGPRs and \p
+  /// NumVGPRs VGPRs. The flat workgroup sizes associated to the function are a
+  /// range, so this returns a range as well.
+  ///
+  /// Note that occupancy can be affected by the scratch allocation as well, but
   /// we do not have enough information to compute it.
-  unsigned computeOccupancy(const Function &F, unsigned LDSSize = 0,
-                            unsigned NumSGPRs = 0, unsigned NumVGPRs = 0) const;
+  std::pair<unsigned, unsigned> computeOccupancy(const Function &F,
+                                                 unsigned LDSSize = 0,
+                                                 unsigned NumSGPRs = 0,
+                                                 unsigned NumVGPRs = 0) const;
 
   /// \returns true if the flat_scratch register should be initialized with the
   /// pointer to the wave's scratch memory rather than a size and offset.
@@ -1575,13 +1599,6 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
-  void getPostRAMutations(
-      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
-      const override;
-
-  std::unique_ptr<ScheduleDAGMutation>
-  createFillMFMAShadowMutation(const TargetInstrInfo *TII) const;
-
   bool isWave32() const {
     return getWavefrontSize() == 32;
   }
@@ -1650,6 +1667,8 @@ public:
     // the nop.
     return true;
   }
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated

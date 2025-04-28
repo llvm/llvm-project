@@ -496,12 +496,10 @@ public:
       return;
     case NestedNameSpecifier::Identifier:
       if (Resolver) {
-        add(QualType(Resolver->resolveNestedNameSpecifierToType(NNS), 0),
-            Flags);
+        add(Resolver->resolveNestedNameSpecifierToType(NNS), Flags);
       }
       return;
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
       add(QualType(NNS->getAsType(), 0), Flags);
       return;
     case NestedNameSpecifier::Global:

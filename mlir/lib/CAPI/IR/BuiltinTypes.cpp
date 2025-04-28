@@ -90,7 +90,7 @@ MlirTypeID mlirFloat4E2M1FNTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat4E2M1FN(MlirType type) {
-  return unwrap(type).isFloat4E2M1FN();
+  return llvm::isa<Float4E2M1FNType>(unwrap(type));
 }
 
 MlirType mlirFloat4E2M1FNTypeGet(MlirContext ctx) {
@@ -102,7 +102,7 @@ MlirTypeID mlirFloat6E2M3FNTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat6E2M3FN(MlirType type) {
-  return unwrap(type).isFloat6E2M3FN();
+  return llvm::isa<Float6E2M3FNType>(unwrap(type));
 }
 
 MlirType mlirFloat6E2M3FNTypeGet(MlirContext ctx) {
@@ -114,7 +114,7 @@ MlirTypeID mlirFloat6E3M2FNTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat6E3M2FN(MlirType type) {
-  return unwrap(type).isFloat6E3M2FN();
+  return llvm::isa<Float6E3M2FNType>(unwrap(type));
 }
 
 MlirType mlirFloat6E3M2FNTypeGet(MlirContext ctx) {
@@ -126,7 +126,7 @@ MlirTypeID mlirFloat8E5M2TypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E5M2(MlirType type) {
-  return unwrap(type).isFloat8E5M2();
+  return llvm::isa<Float8E5M2Type>(unwrap(type));
 }
 
 MlirType mlirFloat8E5M2TypeGet(MlirContext ctx) {
@@ -138,7 +138,7 @@ MlirTypeID mlirFloat8E4M3TypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E4M3(MlirType type) {
-  return unwrap(type).isFloat8E4M3();
+  return llvm::isa<Float8E4M3Type>(unwrap(type));
 }
 
 MlirType mlirFloat8E4M3TypeGet(MlirContext ctx) {
@@ -150,7 +150,7 @@ MlirTypeID mlirFloat8E4M3FNTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E4M3FN(MlirType type) {
-  return unwrap(type).isFloat8E4M3FN();
+  return llvm::isa<Float8E4M3FNType>(unwrap(type));
 }
 
 MlirType mlirFloat8E4M3FNTypeGet(MlirContext ctx) {
@@ -162,7 +162,7 @@ MlirTypeID mlirFloat8E5M2FNUZTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E5M2FNUZ(MlirType type) {
-  return unwrap(type).isFloat8E5M2FNUZ();
+  return llvm::isa<Float8E5M2FNUZType>(unwrap(type));
 }
 
 MlirType mlirFloat8E5M2FNUZTypeGet(MlirContext ctx) {
@@ -174,7 +174,7 @@ MlirTypeID mlirFloat8E4M3FNUZTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E4M3FNUZ(MlirType type) {
-  return unwrap(type).isFloat8E4M3FNUZ();
+  return llvm::isa<Float8E4M3FNUZType>(unwrap(type));
 }
 
 MlirType mlirFloat8E4M3FNUZTypeGet(MlirContext ctx) {
@@ -186,7 +186,7 @@ MlirTypeID mlirFloat8E4M3B11FNUZTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E4M3B11FNUZ(MlirType type) {
-  return unwrap(type).isFloat8E4M3B11FNUZ();
+  return llvm::isa<Float8E4M3B11FNUZType>(unwrap(type));
 }
 
 MlirType mlirFloat8E4M3B11FNUZTypeGet(MlirContext ctx) {
@@ -198,7 +198,7 @@ MlirTypeID mlirFloat8E3M4TypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E3M4(MlirType type) {
-  return unwrap(type).isFloat8E3M4();
+  return llvm::isa<Float8E3M4Type>(unwrap(type));
 }
 
 MlirType mlirFloat8E3M4TypeGet(MlirContext ctx) {
@@ -210,7 +210,7 @@ MlirTypeID mlirFloat8E8M0FNUTypeGetTypeID() {
 }
 
 bool mlirTypeIsAFloat8E8M0FNU(MlirType type) {
-  return unwrap(type).isFloat8E8M0FNU();
+  return llvm::isa<Float8E8M0FNUType>(unwrap(type));
 }
 
 MlirType mlirFloat8E8M0FNUTypeGet(MlirContext ctx) {
@@ -221,7 +221,9 @@ MlirTypeID mlirBFloat16TypeGetTypeID() {
   return wrap(BFloat16Type::getTypeID());
 }
 
-bool mlirTypeIsABF16(MlirType type) { return unwrap(type).isBF16(); }
+bool mlirTypeIsABF16(MlirType type) {
+  return llvm::isa<BFloat16Type>(unwrap(type));
+}
 
 MlirType mlirBF16TypeGet(MlirContext ctx) {
   return wrap(BFloat16Type::get(unwrap(ctx)));
@@ -229,7 +231,9 @@ MlirType mlirBF16TypeGet(MlirContext ctx) {
 
 MlirTypeID mlirFloat16TypeGetTypeID() { return wrap(Float16Type::getTypeID()); }
 
-bool mlirTypeIsAF16(MlirType type) { return unwrap(type).isF16(); }
+bool mlirTypeIsAF16(MlirType type) {
+  return llvm::isa<Float16Type>(unwrap(type));
+}
 
 MlirType mlirF16TypeGet(MlirContext ctx) {
   return wrap(Float16Type::get(unwrap(ctx)));
@@ -239,7 +243,9 @@ MlirTypeID mlirFloatTF32TypeGetTypeID() {
   return wrap(FloatTF32Type::getTypeID());
 }
 
-bool mlirTypeIsATF32(MlirType type) { return unwrap(type).isTF32(); }
+bool mlirTypeIsATF32(MlirType type) {
+  return llvm::isa<FloatTF32Type>(unwrap(type));
+}
 
 MlirType mlirTF32TypeGet(MlirContext ctx) {
   return wrap(FloatTF32Type::get(unwrap(ctx)));
@@ -247,7 +253,9 @@ MlirType mlirTF32TypeGet(MlirContext ctx) {
 
 MlirTypeID mlirFloat32TypeGetTypeID() { return wrap(Float32Type::getTypeID()); }
 
-bool mlirTypeIsAF32(MlirType type) { return unwrap(type).isF32(); }
+bool mlirTypeIsAF32(MlirType type) {
+  return llvm::isa<Float32Type>(unwrap(type));
+}
 
 MlirType mlirF32TypeGet(MlirContext ctx) {
   return wrap(Float32Type::get(unwrap(ctx)));
@@ -255,7 +263,9 @@ MlirType mlirF32TypeGet(MlirContext ctx) {
 
 MlirTypeID mlirFloat64TypeGetTypeID() { return wrap(Float64Type::getTypeID()); }
 
-bool mlirTypeIsAF64(MlirType type) { return unwrap(type).isF64(); }
+bool mlirTypeIsAF64(MlirType type) {
+  return llvm::isa<Float64Type>(unwrap(type));
+}
 
 MlirType mlirF64TypeGet(MlirContext ctx) {
   return wrap(Float64Type::get(unwrap(ctx)));
@@ -514,7 +524,7 @@ MlirLogicalResult mlirMemRefTypeGetStridesAndOffset(MlirType type,
                                                     int64_t *offset) {
   MemRefType memrefType = llvm::cast<MemRefType>(unwrap(type));
   SmallVector<int64_t> strides_;
-  if (failed(getStridesAndOffset(memrefType, strides_, *offset)))
+  if (failed(memrefType.getStridesAndOffset(strides_, *offset)))
     return mlirLogicalResultFailure();
 
   (void)std::copy(strides_.begin(), strides_.end(), strides);

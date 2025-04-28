@@ -29,6 +29,12 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+void SymbolTable::redirect(Symbol *from, Symbol *to) {
+  int &fromIdx = symMap[CachedHashStringRef(from->getName())];
+  const int toIdx = symMap[CachedHashStringRef(to->getName())];
+  fromIdx = toIdx;
+}
+
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
   int &idx1 = symMap[CachedHashStringRef(sym->getName())];
@@ -203,7 +209,7 @@ void SymbolTable::handleDynamicList() {
       syms = findByVersion(ver);
 
     for (Symbol *sym : syms)
-      sym->exportDynamic = sym->inDynamicList = true;
+      sym->isExported = sym->inDynamicList = true;
   }
 }
 
@@ -350,10 +356,8 @@ void SymbolTable::scanVersionScript() {
         assignAsterisk(pat, &v, true);
   }
 
-  // isPreemptible is false at this point. To correctly compute the binding of a
-  // Defined (which is used by includeInDynsym(ctx)), we need to know if it is
-  // VER_NDX_LOCAL or not. Compute symbol versions before handling
-  // --dynamic-list.
+  // Handle --dynamic-list. If a specified symbol is also matched by local: in a
+  // version script, the version script takes precedence.
   handleDynamicList();
 }
 

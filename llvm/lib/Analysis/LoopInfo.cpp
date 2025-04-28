@@ -103,7 +103,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
       return false;
 
   // Hoist.
-  I->moveBefore(InsertPt);
+  I->moveBefore(InsertPt->getIterator());
   if (MSSAU)
     if (auto *MUD = MSSAU->getMemorySSA()->getMemoryAccess(I))
       MSSAU->moveToPlace(MUD, InsertPt->getParent(),
@@ -1210,9 +1210,7 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
 // LoopInfo implementation
 //
 
-LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {
-  initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {}
 
 char LoopInfoWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopInfoWrapperPass, "loops", "Natural Loop Information",

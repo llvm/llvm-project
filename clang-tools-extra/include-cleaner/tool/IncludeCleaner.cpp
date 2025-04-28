@@ -216,10 +216,9 @@ private:
       ++Errors;
       return;
     }
-    writeHTMLReport(
-        AST.Ctx->getSourceManager().getMainFileID(), PP.Includes, AST.Roots,
-        PP.MacroReferences, *AST.Ctx,
-        getCompilerInstance().getPreprocessor().getHeaderSearchInfo(), &PI, OS);
+    writeHTMLReport(AST.Ctx->getSourceManager().getMainFileID(), PP.Includes,
+                    AST.Roots, PP.MacroReferences, *AST.Ctx,
+                    getCompilerInstance().getPreprocessor(), &PI, OS);
   }
 };
 class ActionFactory : public tooling::FrontendActionFactory {

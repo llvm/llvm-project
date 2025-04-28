@@ -14,10 +14,10 @@
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test1
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
 
 define void @test1() {
 entry:
@@ -54,10 +54,10 @@ for.cond.for.end5_crit_edge:                      ; preds = %for.inc3
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            InterchangeNotProfitable
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        test2
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:  - String:          Interchanging loops is not considered to improve cache locality nor vectorization.
+; CHECK-NEXT:  - String:       Cannot interchange loops due to dependences.
 
 define void @test2() {
 entry:

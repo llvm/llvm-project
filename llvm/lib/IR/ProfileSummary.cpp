@@ -251,7 +251,7 @@ ProfileSummary *ProfileSummary::getFromMD(Metadata *MD) {
 void ProfileSummary::printSummary(raw_ostream &OS) const {
   OS << "Total functions: " << NumFunctions << "\n";
   OS << "Maximum function count: " << MaxFunctionCount << "\n";
-  OS << "Maximum block count: " << MaxCount << "\n";
+  OS << "Maximum internal block count: " << MaxInternalCount << "\n";
   OS << "Total number of blocks: " << NumCounts << "\n";
   OS << "Total count: " << TotalCount << "\n";
 }
@@ -259,9 +259,11 @@ void ProfileSummary::printSummary(raw_ostream &OS) const {
 void ProfileSummary::printDetailedSummary(raw_ostream &OS) const {
   OS << "Detailed summary:\n";
   for (const auto &Entry : DetailedSummary) {
-    OS << Entry.NumCounts << " blocks with count >= " << Entry.MinCount
-       << " account for "
-       << format("%0.6g", (float)Entry.Cutoff / Scale * 100)
-       << " percentage of the total counts.\n";
+    OS << Entry.NumCounts << " blocks "
+       << format("(%.2f%%)",
+                 NumCounts ? (100.f * Entry.NumCounts / NumCounts) : 0)
+       << " with count >= " << Entry.MinCount << " account for "
+       << format("%0.6g", 100.f * Entry.Cutoff / Scale)
+       << "% of the total counts.\n";
   }
 }

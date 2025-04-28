@@ -14,167 +14,168 @@ define amdgpu_cs void @memcpy_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src)
 ; LOOP-NEXT:    v_mov_b32_e32 v4, s0
 ; LOOP-NEXT:  .LBB0_1: ; %load-store-loop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
+; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v2, v4
+; LOOP-NEXT:    v_addc_u32_e32 v7, vcc, v3, v5, vcc
+; LOOP-NEXT:    buffer_load_ubyte v26, v[6:7], s[0:3], 0 addr64
+; LOOP-NEXT:    s_waitcnt expcnt(5)
+; LOOP-NEXT:    buffer_load_ubyte v29, v[6:7], s[0:3], 0 addr64 offset:1
 ; LOOP-NEXT:    s_waitcnt expcnt(2)
-; LOOP-NEXT:    v_add_i32_e32 v29, vcc, v2, v4
-; LOOP-NEXT:    v_addc_u32_e32 v30, vcc, v3, v5, vcc
-; LOOP-NEXT:    buffer_load_ubyte v24, v[29:30], s[0:3], 0 addr64
-; LOOP-NEXT:    buffer_load_ubyte v27, v[29:30], s[0:3], 0 addr64 offset:1
-; LOOP-NEXT:    buffer_load_ubyte v34, v[29:30], s[0:3], 0 addr64 offset:2
-; LOOP-NEXT:    buffer_load_ubyte v35, v[29:30], s[0:3], 0 addr64 offset:3
-; LOOP-NEXT:    buffer_load_ubyte v36, v[29:30], s[0:3], 0 addr64 offset:4
-; LOOP-NEXT:    buffer_load_ubyte v37, v[29:30], s[0:3], 0 addr64 offset:5
-; LOOP-NEXT:    buffer_load_ubyte v38, v[29:30], s[0:3], 0 addr64 offset:6
-; LOOP-NEXT:    buffer_load_ubyte v39, v[29:30], s[0:3], 0 addr64 offset:7
-; LOOP-NEXT:    buffer_load_ubyte v6, v[29:30], s[0:3], 0 addr64 offset:8
-; LOOP-NEXT:    buffer_load_ubyte v9, v[29:30], s[0:3], 0 addr64 offset:9
-; LOOP-NEXT:    buffer_load_ubyte v10, v[29:30], s[0:3], 0 addr64 offset:10
+; LOOP-NEXT:    buffer_load_ubyte v31, v[6:7], s[0:3], 0 addr64 offset:2
+; LOOP-NEXT:    buffer_load_ubyte v32, v[6:7], s[0:3], 0 addr64 offset:3
+; LOOP-NEXT:    buffer_load_ubyte v36, v[6:7], s[0:3], 0 addr64 offset:4
+; LOOP-NEXT:    buffer_load_ubyte v37, v[6:7], s[0:3], 0 addr64 offset:5
+; LOOP-NEXT:    buffer_load_ubyte v38, v[6:7], s[0:3], 0 addr64 offset:6
+; LOOP-NEXT:    buffer_load_ubyte v39, v[6:7], s[0:3], 0 addr64 offset:7
+; LOOP-NEXT:    buffer_load_ubyte v8, v[6:7], s[0:3], 0 addr64 offset:8
+; LOOP-NEXT:    buffer_load_ubyte v11, v[6:7], s[0:3], 0 addr64 offset:9
+; LOOP-NEXT:    buffer_load_ubyte v12, v[6:7], s[0:3], 0 addr64 offset:10
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    buffer_load_ubyte v11, v[29:30], s[0:3], 0 addr64 offset:11
-; LOOP-NEXT:    buffer_load_ubyte v7, v[29:30], s[0:3], 0 addr64 offset:12
-; LOOP-NEXT:    buffer_load_ubyte v13, v[29:30], s[0:3], 0 addr64 offset:13
-; LOOP-NEXT:    buffer_load_ubyte v14, v[29:30], s[0:3], 0 addr64 offset:14
-; LOOP-NEXT:    buffer_load_ubyte v15, v[29:30], s[0:3], 0 addr64 offset:15
-; LOOP-NEXT:    buffer_load_ubyte v8, v[29:30], s[0:3], 0 addr64 offset:16
-; LOOP-NEXT:    buffer_load_ubyte v17, v[29:30], s[0:3], 0 addr64 offset:17
-; LOOP-NEXT:    buffer_load_ubyte v18, v[29:30], s[0:3], 0 addr64 offset:18
-; LOOP-NEXT:    buffer_load_ubyte v19, v[29:30], s[0:3], 0 addr64 offset:19
-; LOOP-NEXT:    buffer_load_ubyte v12, v[29:30], s[0:3], 0 addr64 offset:20
-; LOOP-NEXT:    buffer_load_ubyte v21, v[29:30], s[0:3], 0 addr64 offset:21
-; LOOP-NEXT:    buffer_load_ubyte v22, v[29:30], s[0:3], 0 addr64 offset:22
-; LOOP-NEXT:    buffer_load_ubyte v23, v[29:30], s[0:3], 0 addr64 offset:23
-; LOOP-NEXT:    buffer_load_ubyte v16, v[29:30], s[0:3], 0 addr64 offset:24
-; LOOP-NEXT:    buffer_load_ubyte v25, v[29:30], s[0:3], 0 addr64 offset:25
-; LOOP-NEXT:    buffer_load_ubyte v26, v[29:30], s[0:3], 0 addr64 offset:26
-; LOOP-NEXT:    buffer_load_ubyte v28, v[29:30], s[0:3], 0 addr64 offset:27
-; LOOP-NEXT:    buffer_load_ubyte v20, v[29:30], s[0:3], 0 addr64 offset:28
-; LOOP-NEXT:    buffer_load_ubyte v31, v[29:30], s[0:3], 0 addr64 offset:29
-; LOOP-NEXT:    buffer_load_ubyte v32, v[29:30], s[0:3], 0 addr64 offset:30
-; LOOP-NEXT:    buffer_load_ubyte v33, v[29:30], s[0:3], 0 addr64 offset:31
+; LOOP-NEXT:    buffer_load_ubyte v13, v[6:7], s[0:3], 0 addr64 offset:11
+; LOOP-NEXT:    buffer_load_ubyte v9, v[6:7], s[0:3], 0 addr64 offset:12
+; LOOP-NEXT:    buffer_load_ubyte v15, v[6:7], s[0:3], 0 addr64 offset:13
+; LOOP-NEXT:    buffer_load_ubyte v16, v[6:7], s[0:3], 0 addr64 offset:14
+; LOOP-NEXT:    buffer_load_ubyte v17, v[6:7], s[0:3], 0 addr64 offset:15
+; LOOP-NEXT:    buffer_load_ubyte v10, v[6:7], s[0:3], 0 addr64 offset:16
+; LOOP-NEXT:    buffer_load_ubyte v19, v[6:7], s[0:3], 0 addr64 offset:17
+; LOOP-NEXT:    buffer_load_ubyte v20, v[6:7], s[0:3], 0 addr64 offset:18
+; LOOP-NEXT:    buffer_load_ubyte v21, v[6:7], s[0:3], 0 addr64 offset:19
+; LOOP-NEXT:    buffer_load_ubyte v14, v[6:7], s[0:3], 0 addr64 offset:20
+; LOOP-NEXT:    buffer_load_ubyte v23, v[6:7], s[0:3], 0 addr64 offset:21
+; LOOP-NEXT:    buffer_load_ubyte v24, v[6:7], s[0:3], 0 addr64 offset:22
+; LOOP-NEXT:    buffer_load_ubyte v25, v[6:7], s[0:3], 0 addr64 offset:23
+; LOOP-NEXT:    buffer_load_ubyte v18, v[6:7], s[0:3], 0 addr64 offset:24
+; LOOP-NEXT:    buffer_load_ubyte v27, v[6:7], s[0:3], 0 addr64 offset:25
+; LOOP-NEXT:    buffer_load_ubyte v28, v[6:7], s[0:3], 0 addr64 offset:26
+; LOOP-NEXT:    buffer_load_ubyte v30, v[6:7], s[0:3], 0 addr64 offset:27
+; LOOP-NEXT:    buffer_load_ubyte v22, v[6:7], s[0:3], 0 addr64 offset:28
+; LOOP-NEXT:    buffer_load_ubyte v33, v[6:7], s[0:3], 0 addr64 offset:29
+; LOOP-NEXT:    buffer_load_ubyte v34, v[6:7], s[0:3], 0 addr64 offset:30
+; LOOP-NEXT:    buffer_load_ubyte v35, v[6:7], s[0:3], 0 addr64 offset:31
 ; LOOP-NEXT:    s_waitcnt vmcnt(14)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v27, 8, v27
-; LOOP-NEXT:    v_or_b32_e32 v24, v27, v24
-; LOOP-NEXT:    v_lshlrev_b32_e32 v27, 24, v35
-; LOOP-NEXT:    v_lshlrev_b32_e32 v29, 16, v34
-; LOOP-NEXT:    v_or_b32_e32 v27, v27, v29
-; LOOP-NEXT:    v_lshlrev_b32_e32 v29, 8, v37
-; LOOP-NEXT:    v_lshlrev_b32_e32 v30, 24, v39
-; LOOP-NEXT:    v_lshlrev_b32_e32 v34, 16, v38
-; LOOP-NEXT:    v_or_b32_e32 v29, v29, v36
-; LOOP-NEXT:    v_or_b32_e32 v30, v30, v34
-; LOOP-NEXT:    v_add_i32_e32 v34, vcc, v0, v4
-; LOOP-NEXT:    v_addc_u32_e32 v35, vcc, v1, v5, vcc
+; LOOP-NEXT:    v_lshlrev_b32_e32 v6, 8, v29
+; LOOP-NEXT:    v_or_b32_e32 v26, v6, v26
+; LOOP-NEXT:    v_lshlrev_b32_e32 v6, 24, v32
+; LOOP-NEXT:    v_lshlrev_b32_e32 v7, 16, v31
+; LOOP-NEXT:    v_or_b32_e32 v29, v6, v7
+; LOOP-NEXT:    v_lshlrev_b32_e32 v6, 8, v37
+; LOOP-NEXT:    v_lshlrev_b32_e32 v7, 24, v39
+; LOOP-NEXT:    v_lshlrev_b32_e32 v32, 16, v38
+; LOOP-NEXT:    v_or_b32_e32 v31, v6, v36
+; LOOP-NEXT:    v_or_b32_e32 v32, v7, v32
+; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v0, v4
+; LOOP-NEXT:    v_addc_u32_e32 v7, vcc, v1, v5, vcc
 ; LOOP-NEXT:    v_add_i32_e32 v4, vcc, 32, v4
 ; LOOP-NEXT:    v_addc_u32_e32 v5, vcc, 0, v5, vcc
 ; LOOP-NEXT:    v_cmp_gt_u32_e32 vcc, 32, v4
-; LOOP-NEXT:    v_lshlrev_b32_e32 v9, 8, v9
-; LOOP-NEXT:    v_lshlrev_b32_e32 v11, 24, v11
-; LOOP-NEXT:    v_lshlrev_b32_e32 v10, 16, v10
-; LOOP-NEXT:    v_lshlrev_b32_e32 v13, 8, v13
-; LOOP-NEXT:    v_lshlrev_b32_e32 v15, 24, v15
-; LOOP-NEXT:    v_lshlrev_b32_e32 v14, 16, v14
-; LOOP-NEXT:    v_lshlrev_b32_e32 v17, 8, v17
+; LOOP-NEXT:    v_lshlrev_b32_e32 v11, 8, v11
+; LOOP-NEXT:    v_lshlrev_b32_e32 v13, 24, v13
+; LOOP-NEXT:    v_lshlrev_b32_e32 v12, 16, v12
+; LOOP-NEXT:    v_lshlrev_b32_e32 v15, 8, v15
+; LOOP-NEXT:    v_lshlrev_b32_e32 v17, 24, v17
+; LOOP-NEXT:    v_lshlrev_b32_e32 v16, 16, v16
+; LOOP-NEXT:    v_lshlrev_b32_e32 v19, 8, v19
 ; LOOP-NEXT:    s_waitcnt vmcnt(12)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v19, 24, v19
-; LOOP-NEXT:    v_lshlrev_b32_e32 v18, 16, v18
+; LOOP-NEXT:    v_lshlrev_b32_e32 v21, 24, v21
+; LOOP-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
 ; LOOP-NEXT:    s_waitcnt vmcnt(10)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v21, 8, v21
+; LOOP-NEXT:    v_lshlrev_b32_e32 v23, 8, v23
 ; LOOP-NEXT:    s_waitcnt vmcnt(8)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v23, 24, v23
-; LOOP-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
+; LOOP-NEXT:    v_lshlrev_b32_e32 v25, 24, v25
+; LOOP-NEXT:    v_lshlrev_b32_e32 v24, 16, v24
 ; LOOP-NEXT:    s_waitcnt vmcnt(6)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v25, 8, v25
+; LOOP-NEXT:    v_lshlrev_b32_e32 v27, 8, v27
 ; LOOP-NEXT:    s_waitcnt vmcnt(4)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v28, 24, v28
-; LOOP-NEXT:    v_lshlrev_b32_e32 v26, 16, v26
+; LOOP-NEXT:    v_lshlrev_b32_e32 v30, 24, v30
+; LOOP-NEXT:    v_lshlrev_b32_e32 v28, 16, v28
 ; LOOP-NEXT:    s_waitcnt vmcnt(2)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v31, 8, v31
+; LOOP-NEXT:    v_lshlrev_b32_e32 v33, 8, v33
 ; LOOP-NEXT:    s_waitcnt vmcnt(0)
-; LOOP-NEXT:    v_lshlrev_b32_e32 v33, 24, v33
-; LOOP-NEXT:    v_lshlrev_b32_e32 v32, 16, v32
-; LOOP-NEXT:    v_or_b32_e32 v6, v9, v6
-; LOOP-NEXT:    v_or_b32_e32 v9, v11, v10
-; LOOP-NEXT:    v_or_b32_e32 v7, v13, v7
-; LOOP-NEXT:    v_or_b32_e32 v10, v15, v14
-; LOOP-NEXT:    v_or_b32_e32 v8, v17, v8
-; LOOP-NEXT:    v_or_b32_e32 v11, v19, v18
-; LOOP-NEXT:    v_or_b32_e32 v12, v21, v12
-; LOOP-NEXT:    v_or_b32_e32 v13, v23, v22
-; LOOP-NEXT:    v_or_b32_e32 v14, v25, v16
-; LOOP-NEXT:    v_or_b32_e32 v15, v28, v26
-; LOOP-NEXT:    v_or_b32_e32 v16, v31, v20
-; LOOP-NEXT:    v_or_b32_e32 v17, v33, v32
-; LOOP-NEXT:    v_or_b32_e32 v18, v27, v24
-; LOOP-NEXT:    v_or_b32_e32 v19, v30, v29
-; LOOP-NEXT:    v_or_b32_e32 v6, v9, v6
-; LOOP-NEXT:    v_or_b32_e32 v7, v10, v7
+; LOOP-NEXT:    v_lshlrev_b32_e32 v35, 24, v35
+; LOOP-NEXT:    v_lshlrev_b32_e32 v34, 16, v34
 ; LOOP-NEXT:    v_or_b32_e32 v8, v11, v8
-; LOOP-NEXT:    v_or_b32_e32 v9, v13, v12
-; LOOP-NEXT:    v_or_b32_e32 v10, v15, v14
-; LOOP-NEXT:    v_or_b32_e32 v11, v17, v16
-; LOOP-NEXT:    v_lshrrev_b32_e32 v12, 16, v18
-; LOOP-NEXT:    v_bfe_u32 v13, v18, 8, 8
-; LOOP-NEXT:    buffer_store_byte v18, v[34:35], s[0:3], 0 addr64
-; LOOP-NEXT:    v_lshrrev_b32_e32 v14, 24, v18
-; LOOP-NEXT:    v_lshrrev_b32_e32 v15, 16, v19
-; LOOP-NEXT:    v_bfe_u32 v16, v19, 8, 8
-; LOOP-NEXT:    buffer_store_byte v19, v[34:35], s[0:3], 0 addr64 offset:4
-; LOOP-NEXT:    v_lshrrev_b32_e32 v17, 24, v19
+; LOOP-NEXT:    v_or_b32_e32 v11, v13, v12
+; LOOP-NEXT:    v_or_b32_e32 v9, v15, v9
+; LOOP-NEXT:    v_or_b32_e32 v12, v17, v16
+; LOOP-NEXT:    v_or_b32_e32 v10, v19, v10
+; LOOP-NEXT:    v_or_b32_e32 v13, v21, v20
+; LOOP-NEXT:    v_or_b32_e32 v14, v23, v14
+; LOOP-NEXT:    v_or_b32_e32 v15, v25, v24
+; LOOP-NEXT:    v_or_b32_e32 v16, v27, v18
+; LOOP-NEXT:    v_or_b32_e32 v17, v30, v28
+; LOOP-NEXT:    v_or_b32_e32 v18, v33, v22
+; LOOP-NEXT:    v_or_b32_e32 v19, v35, v34
+; LOOP-NEXT:    v_or_b32_e32 v20, v29, v26
+; LOOP-NEXT:    v_or_b32_e32 v21, v32, v31
+; LOOP-NEXT:    v_or_b32_e32 v8, v11, v8
+; LOOP-NEXT:    v_or_b32_e32 v9, v12, v9
+; LOOP-NEXT:    v_or_b32_e32 v10, v13, v10
+; LOOP-NEXT:    v_or_b32_e32 v11, v15, v14
+; LOOP-NEXT:    v_or_b32_e32 v12, v17, v16
+; LOOP-NEXT:    v_or_b32_e32 v13, v19, v18
+; LOOP-NEXT:    v_lshrrev_b32_e32 v14, 16, v20
+; LOOP-NEXT:    v_bfe_u32 v15, v20, 8, 8
+; LOOP-NEXT:    buffer_store_byte v20, v[6:7], s[0:3], 0 addr64
+; LOOP-NEXT:    v_lshrrev_b32_e32 v16, 24, v20
+; LOOP-NEXT:    v_lshrrev_b32_e32 v17, 16, v21
+; LOOP-NEXT:    v_bfe_u32 v18, v21, 8, 8
+; LOOP-NEXT:    buffer_store_byte v21, v[6:7], s[0:3], 0 addr64 offset:4
+; LOOP-NEXT:    v_lshrrev_b32_e32 v19, 24, v21
 ; LOOP-NEXT:    s_waitcnt expcnt(1)
-; LOOP-NEXT:    v_lshrrev_b32_e32 v18, 16, v6
+; LOOP-NEXT:    v_lshrrev_b32_e32 v20, 16, v8
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    v_bfe_u32 v19, v6, 8, 8
-; LOOP-NEXT:    buffer_store_byte v6, v[34:35], s[0:3], 0 addr64 offset:8
-; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    v_lshrrev_b32_e32 v6, 24, v6
-; LOOP-NEXT:    v_lshrrev_b32_e32 v20, 16, v7
-; LOOP-NEXT:    v_bfe_u32 v21, v7, 8, 8
-; LOOP-NEXT:    buffer_store_byte v7, v[34:35], s[0:3], 0 addr64 offset:12
-; LOOP-NEXT:    s_waitcnt expcnt(0)
-; LOOP-NEXT:    v_lshrrev_b32_e32 v7, 24, v7
-; LOOP-NEXT:    v_lshrrev_b32_e32 v22, 16, v8
-; LOOP-NEXT:    v_bfe_u32 v23, v8, 8, 8
-; LOOP-NEXT:    buffer_store_byte v8, v[34:35], s[0:3], 0 addr64 offset:16
+; LOOP-NEXT:    v_bfe_u32 v21, v8, 8, 8
+; LOOP-NEXT:    buffer_store_byte v8, v[6:7], s[0:3], 0 addr64 offset:8
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
 ; LOOP-NEXT:    v_lshrrev_b32_e32 v8, 24, v8
-; LOOP-NEXT:    v_lshrrev_b32_e32 v24, 16, v9
-; LOOP-NEXT:    v_bfe_u32 v25, v9, 8, 8
-; LOOP-NEXT:    buffer_store_byte v9, v[34:35], s[0:3], 0 addr64 offset:20
+; LOOP-NEXT:    v_lshrrev_b32_e32 v22, 16, v9
+; LOOP-NEXT:    v_bfe_u32 v23, v9, 8, 8
+; LOOP-NEXT:    buffer_store_byte v9, v[6:7], s[0:3], 0 addr64 offset:12
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
 ; LOOP-NEXT:    v_lshrrev_b32_e32 v9, 24, v9
-; LOOP-NEXT:    v_lshrrev_b32_e32 v26, 16, v10
-; LOOP-NEXT:    v_bfe_u32 v27, v10, 8, 8
-; LOOP-NEXT:    buffer_store_byte v10, v[34:35], s[0:3], 0 addr64 offset:24
+; LOOP-NEXT:    v_lshrrev_b32_e32 v24, 16, v10
+; LOOP-NEXT:    v_bfe_u32 v25, v10, 8, 8
+; LOOP-NEXT:    buffer_store_byte v10, v[6:7], s[0:3], 0 addr64 offset:16
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
 ; LOOP-NEXT:    v_lshrrev_b32_e32 v10, 24, v10
-; LOOP-NEXT:    v_lshrrev_b32_e32 v28, 16, v11
-; LOOP-NEXT:    v_bfe_u32 v29, v11, 8, 8
-; LOOP-NEXT:    buffer_store_byte v11, v[34:35], s[0:3], 0 addr64 offset:28
+; LOOP-NEXT:    v_lshrrev_b32_e32 v26, 16, v11
+; LOOP-NEXT:    v_bfe_u32 v27, v11, 8, 8
+; LOOP-NEXT:    buffer_store_byte v11, v[6:7], s[0:3], 0 addr64 offset:20
 ; LOOP-NEXT:    s_waitcnt expcnt(0)
 ; LOOP-NEXT:    v_lshrrev_b32_e32 v11, 24, v11
-; LOOP-NEXT:    buffer_store_byte v13, v[34:35], s[0:3], 0 addr64 offset:1
-; LOOP-NEXT:    buffer_store_byte v12, v[34:35], s[0:3], 0 addr64 offset:2
-; LOOP-NEXT:    buffer_store_byte v14, v[34:35], s[0:3], 0 addr64 offset:3
-; LOOP-NEXT:    buffer_store_byte v16, v[34:35], s[0:3], 0 addr64 offset:5
-; LOOP-NEXT:    buffer_store_byte v15, v[34:35], s[0:3], 0 addr64 offset:6
-; LOOP-NEXT:    buffer_store_byte v17, v[34:35], s[0:3], 0 addr64 offset:7
-; LOOP-NEXT:    buffer_store_byte v19, v[34:35], s[0:3], 0 addr64 offset:9
-; LOOP-NEXT:    buffer_store_byte v18, v[34:35], s[0:3], 0 addr64 offset:10
-; LOOP-NEXT:    buffer_store_byte v6, v[34:35], s[0:3], 0 addr64 offset:11
-; LOOP-NEXT:    buffer_store_byte v21, v[34:35], s[0:3], 0 addr64 offset:13
-; LOOP-NEXT:    buffer_store_byte v20, v[34:35], s[0:3], 0 addr64 offset:14
-; LOOP-NEXT:    buffer_store_byte v7, v[34:35], s[0:3], 0 addr64 offset:15
-; LOOP-NEXT:    buffer_store_byte v23, v[34:35], s[0:3], 0 addr64 offset:17
-; LOOP-NEXT:    buffer_store_byte v22, v[34:35], s[0:3], 0 addr64 offset:18
-; LOOP-NEXT:    buffer_store_byte v8, v[34:35], s[0:3], 0 addr64 offset:19
-; LOOP-NEXT:    buffer_store_byte v25, v[34:35], s[0:3], 0 addr64 offset:21
-; LOOP-NEXT:    buffer_store_byte v24, v[34:35], s[0:3], 0 addr64 offset:22
-; LOOP-NEXT:    buffer_store_byte v9, v[34:35], s[0:3], 0 addr64 offset:23
-; LOOP-NEXT:    buffer_store_byte v27, v[34:35], s[0:3], 0 addr64 offset:25
-; LOOP-NEXT:    buffer_store_byte v26, v[34:35], s[0:3], 0 addr64 offset:26
-; LOOP-NEXT:    buffer_store_byte v10, v[34:35], s[0:3], 0 addr64 offset:27
-; LOOP-NEXT:    buffer_store_byte v29, v[34:35], s[0:3], 0 addr64 offset:29
-; LOOP-NEXT:    buffer_store_byte v28, v[34:35], s[0:3], 0 addr64 offset:30
-; LOOP-NEXT:    buffer_store_byte v11, v[34:35], s[0:3], 0 addr64 offset:31
+; LOOP-NEXT:    v_lshrrev_b32_e32 v28, 16, v12
+; LOOP-NEXT:    v_bfe_u32 v29, v12, 8, 8
+; LOOP-NEXT:    buffer_store_byte v12, v[6:7], s[0:3], 0 addr64 offset:24
+; LOOP-NEXT:    s_waitcnt expcnt(0)
+; LOOP-NEXT:    v_lshrrev_b32_e32 v12, 24, v12
+; LOOP-NEXT:    v_lshrrev_b32_e32 v30, 16, v13
+; LOOP-NEXT:    v_bfe_u32 v31, v13, 8, 8
+; LOOP-NEXT:    buffer_store_byte v13, v[6:7], s[0:3], 0 addr64 offset:28
+; LOOP-NEXT:    s_waitcnt expcnt(0)
+; LOOP-NEXT:    v_lshrrev_b32_e32 v13, 24, v13
+; LOOP-NEXT:    buffer_store_byte v15, v[6:7], s[0:3], 0 addr64 offset:1
+; LOOP-NEXT:    buffer_store_byte v14, v[6:7], s[0:3], 0 addr64 offset:2
+; LOOP-NEXT:    buffer_store_byte v16, v[6:7], s[0:3], 0 addr64 offset:3
+; LOOP-NEXT:    buffer_store_byte v18, v[6:7], s[0:3], 0 addr64 offset:5
+; LOOP-NEXT:    buffer_store_byte v17, v[6:7], s[0:3], 0 addr64 offset:6
+; LOOP-NEXT:    buffer_store_byte v19, v[6:7], s[0:3], 0 addr64 offset:7
+; LOOP-NEXT:    buffer_store_byte v21, v[6:7], s[0:3], 0 addr64 offset:9
+; LOOP-NEXT:    buffer_store_byte v20, v[6:7], s[0:3], 0 addr64 offset:10
+; LOOP-NEXT:    buffer_store_byte v8, v[6:7], s[0:3], 0 addr64 offset:11
+; LOOP-NEXT:    buffer_store_byte v23, v[6:7], s[0:3], 0 addr64 offset:13
+; LOOP-NEXT:    buffer_store_byte v22, v[6:7], s[0:3], 0 addr64 offset:14
+; LOOP-NEXT:    buffer_store_byte v9, v[6:7], s[0:3], 0 addr64 offset:15
+; LOOP-NEXT:    buffer_store_byte v25, v[6:7], s[0:3], 0 addr64 offset:17
+; LOOP-NEXT:    buffer_store_byte v24, v[6:7], s[0:3], 0 addr64 offset:18
+; LOOP-NEXT:    buffer_store_byte v10, v[6:7], s[0:3], 0 addr64 offset:19
+; LOOP-NEXT:    buffer_store_byte v27, v[6:7], s[0:3], 0 addr64 offset:21
+; LOOP-NEXT:    buffer_store_byte v26, v[6:7], s[0:3], 0 addr64 offset:22
+; LOOP-NEXT:    buffer_store_byte v11, v[6:7], s[0:3], 0 addr64 offset:23
+; LOOP-NEXT:    buffer_store_byte v29, v[6:7], s[0:3], 0 addr64 offset:25
+; LOOP-NEXT:    buffer_store_byte v28, v[6:7], s[0:3], 0 addr64 offset:26
+; LOOP-NEXT:    buffer_store_byte v12, v[6:7], s[0:3], 0 addr64 offset:27
+; LOOP-NEXT:    buffer_store_byte v31, v[6:7], s[0:3], 0 addr64 offset:29
+; LOOP-NEXT:    buffer_store_byte v30, v[6:7], s[0:3], 0 addr64 offset:30
+; LOOP-NEXT:    buffer_store_byte v13, v[6:7], s[0:3], 0 addr64 offset:31
 ; LOOP-NEXT:    s_cbranch_vccnz .LBB0_1
 ; LOOP-NEXT:  ; %bb.2: ; %memcpy-split
 ; LOOP-NEXT:    s_mov_b32 s2, 0

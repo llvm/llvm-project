@@ -344,12 +344,9 @@ bool TemplateArgument::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateArgumentDependence::UnexpandedPack;
 }
 
-std::optional<unsigned> TemplateArgument::getNumTemplateExpansions() const {
+UnsignedOrNone TemplateArgument::getNumTemplateExpansions() const {
   assert(getKind() == TemplateExpansion);
-  if (TemplateArg.NumExpansions)
-    return TemplateArg.NumExpansions - 1;
-
-  return std::nullopt;
+  return TemplateArg.NumExpansions;
 }
 
 QualType TemplateArgument::getNonTypeTemplateArgumentType() const {
@@ -401,7 +398,7 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     break;
 
   case TemplateExpansion:
-    ID.AddInteger(TemplateArg.NumExpansions);
+    ID.AddInteger(TemplateArg.NumExpansions.toInternalRepresentation());
     [[fallthrough]];
   case Template:
     ID.AddPointer(TemplateArg.Name);
@@ -417,9 +414,16 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     getAsStructuralValue().Profile(ID);
     break;
 
-  case Expression:
-    getAsExpr()->Profile(ID, Context, true);
+  case Expression: {
+    const Expr *E = getAsExpr();
+    bool IsCanonical = isCanonicalExpr();
+    ID.AddBoolean(IsCanonical);
+    if (IsCanonical)
+      E->Profile(ID, Context, true);
+    else
+      ID.AddPointer(E);
     break;
+  }
 
   case Pack:
     ID.AddInteger(Args.NumArgs);
@@ -434,9 +438,11 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
   switch (getKind()) {
   case Null:
   case Type:
-  case Expression:
   case NullPtr:
     return TypeOrValue.V == Other.TypeOrValue.V;
+  case Expression:
+    return TypeOrValue.V == Other.TypeOrValue.V &&
+           TypeOrValue.IsCanonicalExpr == Other.TypeOrValue.IsCanonicalExpr;
 
   case Template:
   case TemplateExpansion:
@@ -481,7 +487,8 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
     return getAsType()->castAs<PackExpansionType>()->getPattern();
 
   case Expression:
-    return cast<PackExpansionExpr>(getAsExpr())->getPattern();
+    return TemplateArgument(cast<PackExpansionExpr>(getAsExpr())->getPattern(),
+                            isCanonicalExpr());
 
   case TemplateExpansion:
     return TemplateArgument(getAsTemplateOrTemplatePattern());
@@ -515,19 +522,17 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
   }
 
   case Declaration: {
-    NamedDecl *ND = getAsDecl();
+    ValueDecl *VD = getAsDecl();
     if (getParamTypeForDecl()->isRecordType()) {
-      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+      if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD)) {
         TPO->getType().getUnqualifiedType().print(Out, Policy);
         TPO->printAsInit(Out, Policy);
         break;
       }
     }
-    if (auto *VD = dyn_cast<ValueDecl>(ND)) {
-      if (needsAmpersandOnTemplateArg(getParamTypeForDecl(), VD->getType()))
-        Out << "&";
-    }
-    ND->printQualifiedName(Out);
+    if (needsAmpersandOnTemplateArg(getParamTypeForDecl(), VD->getType()))
+      Out << "&";
+    VD->printQualifiedName(Out);
     break;
   }
 
@@ -554,9 +559,12 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     printIntegral(*this, Out, Policy, IncludeType);
     break;
 
-  case Expression:
-    getAsExpr()->printPretty(Out, nullptr, Policy);
+  case Expression: {
+    PrintingPolicy ExprPolicy = Policy;
+    ExprPolicy.PrintAsCanonical = isCanonicalExpr();
+    getAsExpr()->printPretty(Out, nullptr, ExprPolicy);
     break;
+  }
 
   case Pack:
     Out << "<";
@@ -659,18 +667,9 @@ static const T &DiagTemplateArg(const T &DB, const TemplateArgument &Arg) {
   case TemplateArgument::TemplateExpansion:
     return DB << Arg.getAsTemplateOrTemplatePattern() << "...";
 
-  case TemplateArgument::Expression: {
-    // This shouldn't actually ever happen, so it's okay that we're
-    // regurgitating an expression here.
-    // FIXME: We're guessing at LangOptions!
-    SmallString<32> Str;
-    llvm::raw_svector_ostream OS(Str);
-    LangOptions LangOpts;
-    LangOpts.CPlusPlus = true;
-    PrintingPolicy Policy(LangOpts);
-    Arg.getAsExpr()->printPretty(OS, nullptr, Policy);
-    return DB << OS.str();
-  }
+  case TemplateArgument::Expression:
+    // FIXME: Support printing expressions as canonical
+    return DB << Arg.getAsExpr();
 
   case TemplateArgument::Pack: {
     // FIXME: We're guessing at LangOptions!

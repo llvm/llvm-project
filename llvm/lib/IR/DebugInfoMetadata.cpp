@@ -13,7 +13,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugProgramInstruction.h"
@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CommandLine.h"
 
 #include <numeric>
 #include <optional>
@@ -33,6 +34,12 @@ cl::opt<bool> EnableFSDiscriminator(
     "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
 } // namespace llvm
+
+// When true, preserves line and column number by picking one of the merged
+// location info in a deterministic manner to assist sample based PGO.
+static cl::opt<bool> PickMergedSourceLocations(
+    "pick-merged-source-locations", cl::init(false), cl::Hidden,
+    cl::desc("Preserve line and column number when merging locations."));
 
 uint32_t DIType::getAlignInBits() const {
   return (getTag() == dwarf::DW_TAG_LLVM_ptrauth_type ? 0 : SubclassData32);
@@ -118,12 +125,118 @@ DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
   return Merged;
 }
 
+static DILexicalBlockBase *cloneAndReplaceParentScope(DILexicalBlockBase *LBB,
+                                                      DIScope *NewParent) {
+  TempMDNode ClonedScope = LBB->clone();
+  cast<DILexicalBlockBase>(*ClonedScope).replaceScope(NewParent);
+  return cast<DILexicalBlockBase>(
+      MDNode::replaceWithUniqued(std::move(ClonedScope)));
+}
+
+using LineColumn = std::pair<unsigned /* Line */, unsigned /* Column */>;
+
+/// Returns the location of DILocalScope, if present, or a default value.
+static LineColumn getLocalScopeLocationOr(DIScope *S, LineColumn Default) {
+  assert(isa<DILocalScope>(S) && "Expected DILocalScope.");
+
+  if (isa<DILexicalBlockFile>(S))
+    return Default;
+  if (auto *LB = dyn_cast<DILexicalBlock>(S))
+    return {LB->getLine(), LB->getColumn()};
+  if (auto *SP = dyn_cast<DISubprogram>(S))
+    return {SP->getLine(), 0u};
+
+  llvm_unreachable("Unhandled type of DILocalScope.");
+}
+
+// Returns the nearest matching scope inside a subprogram.
+template <typename MatcherT>
+static std::pair<DIScope *, LineColumn>
+getNearestMatchingScope(const DILocation *L1, const DILocation *L2) {
+  MatcherT Matcher;
+
+  DIScope *S1 = L1->getScope();
+  DIScope *S2 = L2->getScope();
+
+  LineColumn Loc1(L1->getLine(), L1->getColumn());
+  for (; S1; S1 = S1->getScope()) {
+    Loc1 = getLocalScopeLocationOr(S1, Loc1);
+    Matcher.insert(S1, Loc1);
+    if (isa<DISubprogram>(S1))
+      break;
+  }
+
+  LineColumn Loc2(L2->getLine(), L2->getColumn());
+  for (; S2; S2 = S2->getScope()) {
+    Loc2 = getLocalScopeLocationOr(S2, Loc2);
+
+    if (DIScope *S = Matcher.match(S2, Loc2))
+      return std::make_pair(S, Loc2);
+
+    if (isa<DISubprogram>(S2))
+      break;
+  }
+  return std::make_pair(nullptr, LineColumn(L2->getLine(), L2->getColumn()));
+}
+
+// Matches equal scopes.
+struct EqualScopesMatcher {
+  SmallPtrSet<DIScope *, 8> Scopes;
+
+  void insert(DIScope *S, LineColumn Loc) { Scopes.insert(S); }
+
+  DIScope *match(DIScope *S, LineColumn Loc) {
+    return Scopes.contains(S) ? S : nullptr;
+  }
+};
+
+// Matches scopes with the same location.
+struct ScopeLocationsMatcher {
+  SmallMapVector<std::pair<DIFile *, LineColumn>, SmallSetVector<DIScope *, 8>,
+                 8>
+      Scopes;
+
+  void insert(DIScope *S, LineColumn Loc) {
+    Scopes[{S->getFile(), Loc}].insert(S);
+  }
+
+  DIScope *match(DIScope *S, LineColumn Loc) {
+    auto ScopesAtLoc = Scopes.find({S->getFile(), Loc});
+    // No scope found with the given location.
+    if (ScopesAtLoc == Scopes.end())
+      return nullptr;
+
+    // Prefer S over other scopes with the same location.
+    if (ScopesAtLoc->second.contains(S))
+      return S;
+
+    if (!ScopesAtLoc->second.empty())
+      return *ScopesAtLoc->second.begin();
+
+    llvm_unreachable("Scopes must not have empty entries.");
+  }
+};
+
 DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   if (!LocA || !LocB)
     return nullptr;
 
   if (LocA == LocB)
     return LocA;
+
+  // For some use cases (SamplePGO), it is important to retain distinct source
+  // locations. When this flag is set, we choose arbitrarily between A and B,
+  // rather than computing a merged location using line 0, which is typically
+  // not useful for PGO.
+  if (PickMergedSourceLocations) {
+    auto A = std::make_tuple(LocA->getLine(), LocA->getColumn(),
+                             LocA->getDiscriminator(), LocA->getFilename(),
+                             LocA->getDirectory());
+    auto B = std::make_tuple(LocB->getLine(), LocB->getColumn(),
+                             LocB->getDiscriminator(), LocB->getFilename(),
+                             LocB->getDirectory());
+    return A < B ? LocA : LocB;
+  }
 
   LLVMContext &C = LocA->getContext();
 
@@ -187,27 +300,30 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     if (L1->getScope()->getSubprogram() != L2->getScope()->getSubprogram())
       return nullptr;
 
-    // Return the nearest common scope inside a subprogram.
-    auto GetNearestCommonScope = [](DIScope *S1, DIScope *S2) -> DIScope * {
-      SmallPtrSet<DIScope *, 8> Scopes;
-      for (; S1; S1 = S1->getScope()) {
-        Scopes.insert(S1);
-        if (isa<DISubprogram>(S1))
-          break;
-      }
-
-      for (; S2; S2 = S2->getScope()) {
-        if (Scopes.count(S2))
-          return S2;
-        if (isa<DISubprogram>(S2))
-          break;
-      }
-
-      return nullptr;
-    };
-
-    auto Scope = GetNearestCommonScope(L1->getScope(), L2->getScope());
+    // Find nearest common scope inside subprogram.
+    DIScope *Scope = getNearestMatchingScope<EqualScopesMatcher>(L1, L2).first;
     assert(Scope && "No common scope in the same subprogram?");
+
+    // Try using the nearest scope with common location if files are different.
+    if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile()) {
+      auto [CommonLocScope, CommonLoc] =
+          getNearestMatchingScope<ScopeLocationsMatcher>(L1, L2);
+
+      // If CommonLocScope is a DILexicalBlockBase, clone it and locate
+      // a new scope inside the nearest common scope to preserve
+      // lexical blocks structure.
+      if (auto *LBB = dyn_cast<DILexicalBlockBase>(CommonLocScope);
+          LBB && LBB != Scope)
+        CommonLocScope = cloneAndReplaceParentScope(LBB, Scope);
+
+      Scope = CommonLocScope;
+
+      // If files are still different, assume that L1 and L2 were "included"
+      // from CommonLoc. Use it as merged location.
+      if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile())
+        return DILocation::get(C, CommonLoc.first, CommonLoc.second,
+                               CommonLocScope, InlinedAt);
+    }
 
     bool SameLine = L1->getLine() == L2->getLine();
     bool SameCol = L1->getColumn() == L2->getColumn();
@@ -644,6 +760,48 @@ DIGenericSubrange::BoundType DIGenericSubrange::getStride() const {
   return BoundType();
 }
 
+DISubrangeType::DISubrangeType(LLVMContext &C, StorageType Storage,
+                               unsigned Line, uint64_t SizeInBits,
+                               uint32_t AlignInBits, DIFlags Flags,
+                               ArrayRef<Metadata *> Ops)
+    : DIType(C, DISubrangeTypeKind, Storage, dwarf::DW_TAG_subrange_type, Line,
+             SizeInBits, AlignInBits, 0, 0, Flags, Ops) {}
+
+DISubrangeType *DISubrangeType::getImpl(
+    LLVMContext &Context, MDString *Name, Metadata *File, unsigned Line,
+    Metadata *Scope, uint64_t SizeInBits, uint32_t AlignInBits, DIFlags Flags,
+    Metadata *BaseType, Metadata *LowerBound, Metadata *UpperBound,
+    Metadata *Stride, Metadata *Bias, StorageType Storage, bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DISubrangeType, (Name, File, Line, Scope, SizeInBits,
+                                         AlignInBits, Flags, BaseType,
+                                         LowerBound, UpperBound, Stride, Bias));
+  Metadata *Ops[] = {File,       Scope,      Name,   BaseType,
+                     LowerBound, UpperBound, Stride, Bias};
+  DEFINE_GETIMPL_STORE(DISubrangeType, (Line, SizeInBits, AlignInBits, Flags),
+                       Ops);
+}
+
+DISubrangeType::BoundType
+DISubrangeType::convertRawToBound(Metadata *IN) const {
+  if (!IN)
+    return BoundType();
+
+  assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
+         isa<DIExpression>(IN));
+
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
+
+  if (auto *MD = dyn_cast<DIVariable>(IN))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(IN))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
 DIEnumerator::DIEnumerator(LLVMContext &C, StorageType Storage,
                            const APInt &Value, bool IsUnsigned,
                            ArrayRef<Metadata *> Ops)
@@ -679,13 +837,56 @@ std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   switch (getEncoding()) {
   case dwarf::DW_ATE_signed:
   case dwarf::DW_ATE_signed_char:
+  case dwarf::DW_ATE_signed_fixed:
     return Signedness::Signed;
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_unsigned_fixed:
     return Signedness::Unsigned;
   default:
     return std::nullopt;
   }
+}
+
+DIFixedPointType *
+DIFixedPointType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                          uint64_t SizeInBits, uint32_t AlignInBits,
+                          unsigned Encoding, DIFlags Flags, unsigned Kind,
+                          int Factor, APInt Numerator, APInt Denominator,
+                          StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIFixedPointType,
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                         Kind, Factor, Numerator, Denominator));
+  Metadata *Ops[] = {nullptr, nullptr, Name};
+  DEFINE_GETIMPL_STORE(DIFixedPointType,
+                       (Tag, SizeInBits, AlignInBits, Encoding, Flags, Kind,
+                        Factor, Numerator, Denominator),
+                       Ops);
+}
+
+bool DIFixedPointType::isSigned() const {
+  return getEncoding() == dwarf::DW_ATE_signed_fixed;
+}
+
+std::optional<DIFixedPointType::FixedPointKind>
+DIFixedPointType::getFixedPointKind(StringRef Str) {
+  return StringSwitch<std::optional<FixedPointKind>>(Str)
+      .Case("Binary", FixedPointBinary)
+      .Case("Decimal", FixedPointDecimal)
+      .Case("Rational", FixedPointRational)
+      .Default(std::nullopt);
+}
+
+const char *DIFixedPointType::fixedPointKindString(FixedPointKind V) {
+  switch (V) {
+  case FixedPointBinary:
+    return "Binary";
+  case FixedPointDecimal:
+    return "Decimal";
+  case FixedPointRational:
+    return "Rational";
+  }
+  return nullptr;
 }
 
 DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
@@ -767,11 +968,12 @@ DICompositeType *DICompositeType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
     uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
-    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
-    Metadata *TemplateParams, MDString *Identifier, Metadata *Discriminator,
-    Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations, Metadata *Specification,
-    uint32_t NumExtraInhabitants, StorageType Storage, bool ShouldCreate) {
+    Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
+    Metadata *VTableHolder, Metadata *TemplateParams, MDString *Identifier,
+    Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
+    Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
+    Metadata *Specification, uint32_t NumExtraInhabitants, Metadata *BitStride,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
   // Keep this in sync with buildODRType.
@@ -780,14 +982,14 @@ DICompositeType *DICompositeType::getImpl(
       (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
        Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
-       Annotations, Specification, NumExtraInhabitants));
+       Annotations, Specification, NumExtraInhabitants, BitStride));
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations,  Specification};
+                     Rank,          Annotations,  Specification,  BitStride};
   DEFINE_GETIMPL_STORE(DICompositeType,
                        (Tag, Line, RuntimeLang, SizeInBits, AlignInBits,
-                        OffsetInBits, NumExtraInhabitants, Flags),
+                        OffsetInBits, NumExtraInhabitants, EnumKind, Flags),
                        Ops);
 }
 
@@ -796,10 +998,10 @@ DICompositeType *DICompositeType::buildODRType(
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
-    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
-    Metadata *TemplateParams, Metadata *Discriminator, Metadata *DataLocation,
-    Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-    Metadata *Annotations) {
+    Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
+    Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
+    Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
+    Metadata *Rank, Metadata *Annotations, Metadata *BitStride) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -808,9 +1010,9 @@ DICompositeType *DICompositeType::buildODRType(
     return CT = DICompositeType::getDistinct(
                Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-               VTableHolder, TemplateParams, &Identifier, Discriminator,
-               DataLocation, Associated, Allocated, Rank, Annotations,
-               Specification, NumExtraInhabitants);
+               EnumKind, VTableHolder, TemplateParams, &Identifier,
+               Discriminator, DataLocation, Associated, Allocated, Rank,
+               Annotations, Specification, NumExtraInhabitants, BitStride);
   if (CT->getTag() != Tag)
     return nullptr;
 
@@ -821,11 +1023,11 @@ DICompositeType *DICompositeType::buildODRType(
 
   // Mutate CT in place.  Keep this in sync with getImpl.
   CT->mutate(Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits,
-             NumExtraInhabitants, Flags);
+             NumExtraInhabitants, EnumKind, Flags);
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, &Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations,  Specification};
+                     Rank,          Annotations,  Specification,  BitStride};
   assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
@@ -839,10 +1041,10 @@ DICompositeType *DICompositeType::getODRType(
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
     Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
-    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
-    Metadata *TemplateParams, Metadata *Discriminator, Metadata *DataLocation,
-    Metadata *Associated, Metadata *Allocated, Metadata *Rank,
-    Metadata *Annotations) {
+    Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
+    Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
+    Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
+    Metadata *Rank, Metadata *Annotations, Metadata *BitStride) {
   assert(!Identifier.getString().empty() && "Expected valid identifier");
   if (!Context.isODRUniquingDebugTypes())
     return nullptr;
@@ -850,9 +1052,10 @@ DICompositeType *DICompositeType::getODRType(
   if (!CT) {
     CT = DICompositeType::getDistinct(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-        AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
-        TemplateParams, &Identifier, Discriminator, DataLocation, Associated,
-        Allocated, Rank, Annotations, Specification, NumExtraInhabitants);
+        AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, EnumKind,
+        VTableHolder, TemplateParams, &Identifier, Discriminator, DataLocation,
+        Associated, Allocated, Rank, Annotations, Specification,
+        NumExtraInhabitants, BitStride);
   } else {
     if (CT->getTag() != Tag)
       return nullptr;
@@ -1079,10 +1282,8 @@ DILocalScope *DILocalScope::cloneScopeForSubprogram(
   // cached result).
   DIScope *UpdatedScope = CachedResult ? CachedResult : &NewSP;
   for (DIScope *ScopeToUpdate : reverse(ScopeChain)) {
-    TempMDNode ClonedScope = ScopeToUpdate->clone();
-    cast<DILexicalBlockBase>(*ClonedScope).replaceScope(UpdatedScope);
-    UpdatedScope =
-        cast<DIScope>(MDNode::replaceWithUniqued(std::move(ClonedScope)));
+    UpdatedScope = cloneAndReplaceParentScope(
+        cast<DILexicalBlockBase>(ScopeToUpdate), UpdatedScope);
     Cache[ScopeToUpdate] = UpdatedScope;
   }
 
@@ -1882,7 +2083,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
     }
     Op.appendToVector(NewOps);
     if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
-      NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
+      llvm::append_range(NewOps, Ops);
   }
   if (StackValue)
     NewOps.push_back(dwarf::DW_OP_stack_value);

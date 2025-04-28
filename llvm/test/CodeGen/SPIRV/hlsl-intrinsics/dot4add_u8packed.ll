@@ -11,7 +11,7 @@
 
 ; CHECK: %[[#int_32:]] = OpTypeInt 32 0
 ; CHECK-EXP-DAG: %[[#int_8:]] = OpTypeInt 8 0
-; CHECK-EXP-DAG: %[[#zero:]] = OpConstantNull %[[#int_8]]
+; CHECK-EXP-DAG: %[[#zero:]] = OpConstant %[[#int_8]] 0{{$}}
 ; CHECK-EXP-DAG: %[[#eight:]] = OpConstant %[[#int_8]] 8
 ; CHECK-EXP-DAG: %[[#sixteen:]] = OpConstant %[[#int_8]] 16
 ; CHECK-EXP-DAG: %[[#twentyfour:]] = OpConstant %[[#int_8]] 24

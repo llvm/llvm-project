@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 #define LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 
+#include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace clang::CIRGen {
@@ -47,6 +48,18 @@ struct CIRGenTypeCache {
   cir::DoubleType DoubleTy;
   cir::FP80Type FP80Ty;
   cir::FP128Type FP128Ty;
+
+  mlir::Type PtrDiffTy;
+
+  /// The size and alignment of a pointer into the generic address space.
+  union {
+    unsigned char PointerAlignInBytes;
+    unsigned char PointerSizeInBytes;
+  };
+
+  clang::CharUnits getPointerAlign() const {
+    return clang::CharUnits::fromQuantity(PointerAlignInBytes);
+  }
 };
 
 } // namespace clang::CIRGen

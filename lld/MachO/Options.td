@@ -100,6 +100,9 @@ def lto_CGO: Joined<["--"], "lto-CGO">,
     HelpText<"Set codegen optimization level for LTO (default: 2)">,
     MetaVarName<"<cgopt-level>">,
     Group<grp_lld>;
+def disable_verify : Flag<["--"], "disable_verify">,
+                     HelpText<"Do not verify LLVM modules during LTO">,
+                     Group<grp_lld>;
 def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
     Group<grp_lld>;
@@ -389,6 +392,9 @@ def grp_opts : OptionGroup<"opts">, HelpText<"OPTIMIZATIONS">;
 
 def dead_strip : Flag<["-"], "dead_strip">,
     HelpText<"Remove unreachable functions and data">,
+    Group<grp_opts>;
+def interposable : Flag<["-"], "interposable">,
+    HelpText<"Indirects access to all exported symbols in an image">,
     Group<grp_opts>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
@@ -871,10 +877,6 @@ def root_safe : Flag<["-"], "root_safe">,
     Group<grp_rare>;
 def setuid_safe : Flag<["-"], "setuid_safe">,
     HelpText<"Set the MH_SETUID_SAFE bit in the mach-o header">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
-def interposable : Flag<["-"], "interposable">,
-    HelpText<"Indirects access to all to exported symbols in a dylib">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def multi_module : Flag<["-"], "multi_module">,
@@ -1476,3 +1478,8 @@ def no_warn_duplicate_libraries : Flag<["-"], "no_warn_duplicate_libraries">,
     HelpText<"Do not warn if the input contains duplicate library options.">,
     Flags<[HelpHidden]>,
     Group<grp_ignored_silently>;
+
+// Add this with the other flags in the rare options group
+def no_deduplicate_symbol_strings : Flag<["-"], "no-deduplicate-symbol-strings">,
+    HelpText<"Do not deduplicate strings in the symbol string table. Might result in larger binaries but slightly faster link times.">,
+    Group<grp_rare>;

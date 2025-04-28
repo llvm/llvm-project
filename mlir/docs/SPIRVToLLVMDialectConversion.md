@@ -817,7 +817,7 @@ to LLVM ops. At the moment, SPIR-V module attributes are ignored.
 
 ## SPIR-V CPU Runner Tests
 
-The `mlir-cpu-runner` has support for executing a `gpu` dialect kernel on the
+The `mlir-runner` has support for executing a `gpu` dialect kernel on the
 CPU via SPIR-V to LLVM dialect conversion. This is referred to as the "SPIR-V
 CPU Runner". The `--link-nested-modules` flag needs to be passed for this.
 Currently, only single-threaded kernels are supported.

@@ -10,6 +10,7 @@ program test_event_wait
   implicit none
 
   ! event_type variables must be coarrays
+  !ERROR: Variable 'non_coarray' with EVENT_TYPE or LOCK_TYPE must be a coarray
   type(event_type) non_coarray
 
   type(event_type) concert[*], occurrences(2)[*]
@@ -17,15 +18,26 @@ program test_event_wait
   character(len=128) error_message, non_scalar_char(1), co_indexed_character[*], superfluous_errmsg
   logical invalid_type
 
+  type t
+    type(event_type) event
+  end type
+  !ERROR: Entity 'badfunc0' with EVENT_TYPE or LOCK_TYPE must be an object
+  procedure(type(event_type)) :: badfunc0
+  !ERROR: Entity 'badfunc1' with EVENT_TYPE or LOCK_TYPE must be an object
+  procedure(type(event_type)), pointer :: badfunc1
+  !ERROR: Entity 'badfunc2' with EVENT_TYPE or LOCK_TYPE potential subobject component '%event' must be an object
+  procedure(type(t)) badfunc2
+  !ERROR: Entity 'badfunc3' with EVENT_TYPE or LOCK_TYPE must be an object
+  type(event_type), external :: badfunc3
+  !ERROR: Entity 'badfunc4' with EVENT_TYPE or LOCK_TYPE potential subobject component '%event' must be an object
+  type(t), external :: badfunc4
+
   !____________________ non-standard-conforming statements __________________________
 
   !_________________________ invalid event-variable ________________________________
 
   !ERROR: The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV
   event wait(non_event)
-
-  !ERROR: The event-variable must be a coarray
-  event wait(non_coarray)
 
   !ERROR: A event-variable in a EVENT WAIT statement may not be a coindexed object
   event wait(concert[1])

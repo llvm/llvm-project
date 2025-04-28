@@ -75,6 +75,7 @@ public:
 
   void setSelection(int Selection) const;
 
+  bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,

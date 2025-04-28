@@ -45,7 +45,7 @@ entry:
 ; CHECK-NEXT: call void @consume(i32 noundef %[[a1]])
 
 ; CHECK:      declare i32
-; CHECK-SAME:    @llvm.bpf.getelementptr.and.load.i32(ptr nocapture, {{.*}}) #[[v2:.*]]
+; CHECK-SAME:    @llvm.bpf.getelementptr.and.load.i32(ptr captures(none), {{.*}}) #[[v2:.*]]
 
 ; CHECK:      attributes #[[v2]] = { nocallback nofree nounwind willreturn }
 ; CHECK:      attributes #[[v1]] = { memory(argmem: read) }

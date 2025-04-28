@@ -329,7 +329,7 @@ size_t SBValue::GetByteSize() {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    result = value_sp->GetByteSize().value_or(0);
+    result = llvm::expectedToOptional(value_sp->GetByteSize()).value_or(0);
   }
 
   return result;

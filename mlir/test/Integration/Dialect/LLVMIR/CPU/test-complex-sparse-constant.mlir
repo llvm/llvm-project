@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s --finalize-memref-to-llvm | \
-// RUN:   mlir-cpu-runner -e entry -entry-point-result=void
+// RUN:   mlir-runner -e entry -entry-point-result=void
 
 //
 // Code should not crash on the complex32 sparse constant.

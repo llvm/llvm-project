@@ -16,6 +16,7 @@
 #include "ABIInfo.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGVTables.h"
 #include "CodeGenModule.h"
 #include "CodeGenTypes.h"
@@ -368,7 +369,7 @@ public:
     MicrosoftVTableContext &VTContext = CGM.getMicrosoftVTableContext();
     unsigned NumEntries = 1 + SrcRD->getNumVBases();
     SmallVector<llvm::Constant *, 4> Map(NumEntries,
-                                         llvm::UndefValue::get(CGM.IntTy));
+                                         llvm::PoisonValue::get(CGM.IntTy));
     Map[0] = llvm::ConstantInt::get(CGM.IntTy, 0);
     bool AnyDifferent = false;
     for (const auto &I : SrcRD->vbases()) {
@@ -687,10 +688,10 @@ public:
                                           llvm::Value *MemPtr,
                                           const MemberPointerType *MPT) override;
 
-  llvm::Value *
-  EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
-                               Address Base, llvm::Value *MemPtr,
-                               const MemberPointerType *MPT) override;
+  llvm::Value *EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
+                                            Address Base, llvm::Value *MemPtr,
+                                            const MemberPointerType *MPT,
+                                            bool IsInBounds) override;
 
   llvm::Value *EmitNonNullMemberPointerConversion(
       const MemberPointerType *SrcTy, const MemberPointerType *DstTy,
@@ -918,7 +919,7 @@ void MicrosoftCXXABI::emitBeginCatch(CodeGenFunction &CGF,
   VarDecl *CatchParam = S->getExceptionDecl();
   llvm::BasicBlock *CatchPadBB = CGF.Builder.GetInsertBlock();
   llvm::CatchPadInst *CPI =
-      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHI());
+      cast<llvm::CatchPadInst>(CatchPadBB->getFirstNonPHIIt());
   CGF.CurrentFuncletPad = CPI;
 
   // If this is a catch-all or the catch parameter is unnamed, we don't need to
@@ -1172,7 +1173,9 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    FI.getReturnInfo() = ABIArgInfo::getIndirect(
+        Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/false);
 
     // MSVC always passes `this` before the `sret` parameter.
     FI.getReturnInfo().setSRetAfterThis(FI.isInstanceMethod());
@@ -1996,8 +1999,8 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
     Address This, DeleteOrMemberCallExpr E, llvm::CallBase **CallOrInvoke) {
-  auto *CE = E.dyn_cast<const CXXMemberCallExpr *>();
-  auto *D = E.dyn_cast<const CXXDeleteExpr *>();
+  auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
+  auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
   assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
   assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
@@ -2926,9 +2929,9 @@ llvm::Constant *MicrosoftCXXABI::EmitMemberPointer(const APValue &MP,
 
   if (!MemberPointerPath.empty()) {
     const CXXRecordDecl *SrcRD = cast<CXXRecordDecl>(MPD->getDeclContext());
-    const Type *SrcRecTy = Ctx.getTypeDeclType(SrcRD).getTypePtr();
     const MemberPointerType *SrcTy =
-        Ctx.getMemberPointerType(DstTy->getPointeeType(), SrcRecTy)
+        Ctx.getMemberPointerType(DstTy->getPointeeType(), /*Qualifier=*/nullptr,
+                                 SrcRD)
             ->castAs<MemberPointerType>();
 
     bool DerivedMember = MP.isMemberPointerToDerivedMember();
@@ -3225,7 +3228,7 @@ llvm::Value *MicrosoftCXXABI::AdjustVirtualBase(
 
 llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
-    const MemberPointerType *MPT) {
+    const MemberPointerType *MPT, bool IsInBounds) {
   assert(MPT->isMemberDataPointer());
   CGBuilderTy &Builder = CGF.Builder;
   const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
@@ -3254,9 +3257,10 @@ llvm::Value *MicrosoftCXXABI::EmitMemberDataPointerAddress(
     Addr = Base.emitRawPointer(CGF);
   }
 
-  // Apply the offset, which we assume is non-null.
-  return Builder.CreateInBoundsGEP(CGF.Int8Ty, Addr, FieldOffset,
-                                   "memptr.offset");
+  // Apply the offset.
+  return Builder.CreateGEP(CGF.Int8Ty, Addr, FieldOffset, "memptr.offset",
+                           IsInBounds ? llvm::GEPNoWrapFlags::inBounds()
+                                      : llvm::GEPNoWrapFlags::none());
 }
 
 llvm::Value *
@@ -3943,7 +3947,8 @@ static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
   // for "int A::*" and separately storing the const qualifier.
   if (const auto *MPTy = T->getAs<MemberPointerType>())
     T = Context.getMemberPointerType(PointeeType.getUnqualifiedType(),
-                                     MPTy->getClass());
+                                     MPTy->getQualifier(),
+                                     MPTy->getMostRecentCXXRecordDecl());
 
   // Pointer types like "const int * const *" are represented by having RTTI
   // for "const int **" and separately storing the const qualifier.

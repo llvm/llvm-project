@@ -69,7 +69,7 @@ mlir::inferExpandShapeOutputShape(OpBuilder &b, Location loc,
     Value indexGroupSize = cast<Value>(inputShape[inputIndex]);
     Value indexGroupStaticSizesProduct =
         b.create<arith::ConstantIndexOp>(loc, indexGroupStaticSizesProductInt);
-    Value dynamicDimSize = b.createOrFold<arith::DivUIOp>(
+    Value dynamicDimSize = b.createOrFold<arith::DivSIOp>(
         loc, indexGroupSize, indexGroupStaticSizesProduct);
     outputShapeValues.push_back(dynamicDimSize);
   }
@@ -315,17 +315,17 @@ Value ArithBuilder::_and(Value lhs, Value rhs) {
 Value ArithBuilder::add(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
     return b.create<arith::AddFOp>(loc, lhs, rhs);
-  return b.create<arith::AddIOp>(loc, lhs, rhs);
+  return b.create<arith::AddIOp>(loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::sub(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
     return b.create<arith::SubFOp>(loc, lhs, rhs);
-  return b.create<arith::SubIOp>(loc, lhs, rhs);
+  return b.create<arith::SubIOp>(loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::mul(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))
     return b.create<arith::MulFOp>(loc, lhs, rhs);
-  return b.create<arith::MulIOp>(loc, lhs, rhs);
+  return b.create<arith::MulIOp>(loc, lhs, rhs, ovf);
 }
 Value ArithBuilder::sgt(Value lhs, Value rhs) {
   if (isa<FloatType>(lhs.getType()))

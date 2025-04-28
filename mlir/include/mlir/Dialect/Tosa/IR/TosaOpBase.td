@@ -14,7 +14,14 @@
 #define TOSA_OP_BASE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
+
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/LoopLikeInterface.td"
+
+include "mlir/Dialect/Tosa/IR/TosaInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // The TOSA Dialect.
@@ -65,7 +72,7 @@ class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 // feed numerical precision parameters to the functional implementation of TOSA
 // operators.
 // The functional behavior is defined in the TOSA specification maintained at
-// https://developer.mlplatform.org/w/tosa/. TOSA leverages MLIR's built in
+// https://www.mlplatform.org/tosa/tosa_spec.html. TOSA leverages MLIR's built in
 // quantization support: https://mlir.llvm.org/docs/Quantization/, and supports
 // uniform quantization. Depending on datatype, asymmetric and symmetric
 // quantization are supported. The types themselves are described in
@@ -141,22 +148,11 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
        "::mlir::Value":$weight, "mlir::Value":$bias,
        "::mlir::DenseI64ArrayAttr":$outpad,
        "::mlir::DenseI64ArrayAttr":$stride,
-       "::mlir::DenseI64ArrayAttr":$outputShape,
        "::mlir::TypeAttr":$acc_type),
   [{
     buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
                                   input, weight, bias,
-                                  outpad, stride,
-                                  outputShape, acc_type);
-  }]>;
-
-// The tosa.fully_connected op has its own builder as it does not have
-// strides/dilation/padding.
-def Tosa_FCOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "Value":$weight, "Value":$bias),
-  [{
-    buildFCOpWithQuantInfo($_builder, $_state, outputType,
-                           input, weight, bias);
+                                  outpad, stride, acc_type);
   }]>;
 
 // The tosa.matmul op is also intended to be generated where a fully_connected
@@ -182,13 +178,13 @@ def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
                                   input, kernel, stride, pad, acc_type);
   }]>;
 
-// This builder is called on single-parameter unary operators that have a scale
+// This builder is called on single-parameter negate operators that have a scale
 // relationship between their input and output, expressed by the
 // UnaryOpQuantizationAttr.
-def Tosa_UnaryOpQuantInfoBuilder : OpBuilder<
+def Tosa_NegateOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input),
   [{
-    buildUnaryOpWithQuantInfo($_builder, $_state, outputType, input);
+    buildNegateOpWithQuantInfo($_builder, $_state, outputType, input);
   }]>;
 
 // These builders are called on the TOSA pad operator that needs to create its
@@ -201,13 +197,199 @@ def Tosa_PadOpQuantInfoBuilder : OpBuilder<
                             input, paddings);
   }]>;
 
-def Tosa_ExplicitValuePadOpQuantInfoBuilder : OpBuilder<
-  (ins "Type":$outputType, "Value":$input, "Value":$paddings,
-       "Value":$pad_value),
-  [{
-    buildExplicitValuePadOpWithQuantInfo($_builder, $_state, outputType,
-                                         input, paddings, pad_value);
-  }]>;
+// Wrapper over base I32EnumAttr to set common fields.
+class Tosa_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
+     : I32EnumAttr<name, description, cases> {
+   let genSpecializedAttr = 0;
+   let cppNamespace = "::mlir::tosa";
+}
+
+class Tosa_I32EnumAttr<string name, string description, string mnemonic,
+                         list<I32EnumAttrCase> cases>
+    : EnumAttr<Tosa_Dialect, Tosa_I32Enum<name, description, cases>, mnemonic> {
+   let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// TOSA Spec Section 1.5.
+//
+// Profile:
+// INT : Integer Inference. Integer operations, primarily 8 and 32-bit values.
+// FP  : Floating-Point Inference. Primarily FP16 and FP32 operations.
+//
+// Extension:
+// INT16        : 16-bit integer operations.
+// INT4         : 4-bit integer weights.
+// BF16         : BFloat16 operations.
+// FP8E4M3      : 8-bit floating-point operations E4M3.
+// FP8E5M2      : 8-bit floating-point operations E5M2.
+// FFT          : Fast Fourier Transform operations.
+// VARIABLE     : Stateful variable operations.
+// CONTROLFLOW  : Control Flow operations.
+// DOUBLEROUND  : Adds double rounding support to the RESCALE operator.
+// INEXACTROUND : Adds inexact rounding support to the RESCALE operator.
+// DYNAMIC      : Removes all Compile Time Constant state for CTC inputs.
+//===----------------------------------------------------------------------===//
+
+def Tosa_NONE : I32EnumAttrCase<"none", 0>;
+def Tosa_PRO_INT   : I32EnumAttrCase<"pro_int", 1>;
+def Tosa_PRO_FP   : I32EnumAttrCase<"pro_fp", 2>;
+
+def Tosa_EXT_NONE         : I32EnumAttrCase<"none", 0>;
+def Tosa_EXT_INT16        : I32EnumAttrCase<"int16", 1>;
+def Tosa_EXT_INT4         : I32EnumAttrCase<"int4", 2>;
+def Tosa_EXT_BF16         : I32EnumAttrCase<"bf16", 3>;
+def Tosa_EXT_FP8E4M3      : I32EnumAttrCase<"fp8e4m3", 4>;
+def Tosa_EXT_FP8E5M2      : I32EnumAttrCase<"fp8e5m2", 5>;
+def Tosa_EXT_FFT          : I32EnumAttrCase<"fft", 6>;
+def Tosa_EXT_VARIABLE     : I32EnumAttrCase<"variable", 7>;
+def Tosa_EXT_CONTROLFLOW  : I32EnumAttrCase<"controlflow", 8>;
+def Tosa_EXT_DOUBLEROUND  : I32EnumAttrCase<"doubleround", 9>;
+def Tosa_EXT_INEXACTROUND : I32EnumAttrCase<"inexactround", 10>;
+def Tosa_EXT_DYNAMIC      : I32EnumAttrCase<"dynamic", 11>;
+
+def Tosa_ExtensionAttr
+    : Tosa_I32EnumAttr<"Extension", "supported TOSA extensions", "ext", [
+      Tosa_EXT_NONE, Tosa_EXT_INT16, Tosa_EXT_INT4, Tosa_EXT_BF16,
+      Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_FFT, Tosa_EXT_VARIABLE,
+      Tosa_EXT_CONTROLFLOW, Tosa_EXT_DOUBLEROUND, Tosa_EXT_INEXACTROUND,
+      Tosa_EXT_DYNAMIC
+    ]>;
+
+def Tosa_ExtensionArrayAttr
+    : TypedArrayAttrBase<Tosa_ExtensionAttr, "TOSA extension array attribute">;
+
+def Tosa_ProfileAttr
+    : Tosa_I32EnumAttr<"Profile", "supported TOSA profiles", "prof",
+                       [Tosa_PRO_INT, Tosa_PRO_FP, Tosa_NONE]>;
+
+def Tosa_ProfileArrayAttr
+    : TypedArrayAttrBase<Tosa_ProfileAttr, "TOSA profile array attribute">;
+
+// The base class for defining op availability dimensions.
+class Availability {
+  // The following are fields for controlling the generated C++ OpInterface.
+
+  // The namespace for the generated C++ OpInterface subclass.
+  string cppNamespace = "::mlir::tosa";
+
+  // The name for the generated C++ OpInterface subclass.
+  string interfaceName = ?;
+
+  // The description for the generated C++ OpInterface subclass.
+  string interfaceDescription = "";
+
+  // The query function's return type in the generated C++ OpInterface subclass.
+  string queryFnRetType = ?;
+
+  // The query function's name in the generated C++ OpInterface subclass.
+  string queryFnName = ?;
+
+  // The logic for merging two availability requirements.
+  code mergeAction = ?;
+
+  // The initializer for the final availability requirement.
+  string initializer = ?;
+
+  // An availability instance's type.
+  string instanceType = ?;
+
+  // The following are fields for a concrete availability instance.
+
+  // The code for preparing a concrete instance. This should be C++ statements
+  // and will be generated before the `mergeAction` logic.
+  code instancePreparation = "";
+
+  // The availability requirement carried by a concrete instance.
+  string instance = ?;
+}
+
+
+class Profile<list<I32EnumAttrCase> profiles> : Availability {
+  let interfaceName = "QueryProfileInterface";
+  let interfaceDescription = [{
+    Querying interface for the supported set of Tosa profile.
+
+    This interface provides a `getProfiles()` method to query
+    the supported set of Tosa profile. The returned value is a
+    list of `mlir::Tosa::Profile` enum number.
+  }];
+
+  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
+                          "::mlir::tosa::Profile>, 1>";
+  let queryFnName = "getProfiles";
+
+  let mergeAction = !if(
+      !empty(profiles), "", "$overall.emplace_back($instance)");
+
+  let initializer = "{}";
+
+  let instanceType = "::llvm::ArrayRef<::mlir::tosa::Profile>";
+
+  // Pack all profiles as a static array and get its reference.
+  let instancePreparation = !if(!empty(profiles), "",
+    "static const ::mlir::tosa::Profile profs[] = {" #
+    !interleave(!foreach(prof, profiles,
+                         "::mlir::tosa::Profile::" # prof.symbol), ", ") #
+    "}; " #
+    "ArrayRef<::mlir::tosa::Profile> " #
+      "ref(profs, std::size(profs));");
+
+  let instance = "ref";
+}
+
+class Extension<list<I32EnumAttrCase> extensions> : Availability {
+  let interfaceName = "QueryExtensionInterface";
+  let interfaceDescription = [{
+    Querying interface for the supported set of TOSA extension.
+
+    This interface provides a `getExtensions()` method to query
+    the supported set of Tosa extension. The returned value is a
+    list of `mlir::Tosa::Extension` enum number.
+  }];
+
+  let queryFnRetType = "::llvm::SmallVector<::llvm::ArrayRef<"
+                          "::mlir::tosa::Extension>, 1>";
+  let queryFnName = "getExtensions";
+
+  let mergeAction = !if(
+      !empty(extensions), "", "$overall.emplace_back($instance)");
+
+  let initializer = "{}";
+
+  let instanceType = "::llvm::ArrayRef<::mlir::tosa::Extension>";
+
+  // Pack all extensions as a static array and get its reference.
+  let instancePreparation = !if(!empty(extensions), "",
+    "static const ::mlir::tosa::Extension exts[] = {" #
+    !interleave(!foreach(ext, extensions,
+                         "::mlir::tosa::Extension::" # ext.symbol), ", ") #
+    "}; " #
+    "ArrayRef<::mlir::tosa::Extension> " #
+      "ref(exts, std::size(exts));");
+
+  let instance = "ref";
+}
+
+//===----------------------------------------------------------------------===//
+// TOSA Interfaces.
+//===----------------------------------------------------------------------===//
+
+def QueryProfileInterface : OpInterface<"QueryProfileInterface"> {
+  let cppNamespace = "::mlir::tosa";
+  let methods = [InterfaceMethod<
+    "get supported profiles",
+    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::tosa::Profile>, 1>",
+    "getProfiles">];
+}
+
+def QueryExtensionInterface : OpInterface<"QueryExtensionInterface"> {
+  let cppNamespace = "::mlir::tosa";
+  let methods = [InterfaceMethod<
+    "get supported extensions",
+    "::llvm::SmallVector<::llvm::ArrayRef<::mlir::tosa::Extension>, 1>",
+    "getExtensions">];
+}
 
 //===----------------------------------------------------------------------===//
 // TOSA Operator Trait.
@@ -231,8 +413,18 @@ def TosaResolvableShapeOperands : NativeOpTrait<"TosaResolvableShapeOperands"> {
 //===----------------------------------------------------------------------===//
 
 class Tosa_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface, 
+    Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface,
+    DeclareOpInterfaceMethods<QueryProfileInterface>,
+    DeclareOpInterfaceMethods<QueryExtensionInterface>,
     TosaResolvableShapeOperands])> {
+
+  // Default availability specification.
+  list<Availability> availability = [
+    Profile<[]>,
+    Extension<[]>];
+
+  // When not set, manual implementation of these methods is required.
+  bit autogenAvailability = 1;
 }
 
 class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
@@ -241,6 +433,7 @@ class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
                                         ["inferReturnTypeComponents"]>,
               ResultsBroadcastableShape,
               TosaElementwiseOperator,
+              SameOperandsAndResultRank,
               Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -261,6 +454,13 @@ class Tosa_InferShapedTypeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [InferShapedTypeOpAdaptor, Pure])> {
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
+}
+
+// The "SameVariadicOperandSize" trait allows us to pass optional arguments
+// for multiple zero points in convolution ops.
+class Tosa_ConvOp<string mnemonic, list<Trait> traits = []>
+    : Tosa_InferShapedTypeOp<mnemonic, !listconcat(traits,
+      [SameVariadicOperandSize])> {
 }
 
 #endif // TOSA_OP_BASE

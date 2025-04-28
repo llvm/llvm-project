@@ -51,14 +51,26 @@ public:
   SBProgress(const char *title, const char *details, uint64_t total_units,
              SBDebugger &debugger);
 
+#ifndef SWIG
+  SBProgress(SBProgress &&rhs);
+#endif
+
   ~SBProgress();
 
   void Increment(uint64_t amount, const char *description = nullptr);
+
+  /// Explicitly finalize an SBProgress, this can be used to terminate a
+  /// progress on command instead of waiting for a garbage collection or other
+  /// RAII to destroy the contained progress object.
+  void Finalize();
 
 protected:
   lldb_private::Progress &ref() const;
 
 private:
+  SBProgress(const SBProgress &rhs) = delete;
+  const SBProgress &operator=(const SBProgress &rhs) = delete;
+
   std::unique_ptr<lldb_private::Progress> m_opaque_up;
 }; // SBProgress
 } // namespace lldb

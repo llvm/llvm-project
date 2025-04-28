@@ -67,6 +67,7 @@ struct Entry {
     ScriptThread,
     ThreadInfo,
     TargetArch,
+    TargetFile,
     ScriptTarget,
     ModuleFile,
     File,
@@ -87,6 +88,13 @@ struct Entry {
     FunctionNameWithArgs,
     FunctionNameNoArgs,
     FunctionMangledName,
+    FunctionScope,
+    FunctionBasename,
+    FunctionTemplateArguments,
+    FunctionFormattedArguments,
+    FunctionReturnLeft,
+    FunctionReturnRight,
+    FunctionQualifiers,
     FunctionAddrOffset,
     FunctionAddrOffsetConcrete,
     FunctionLineOffset,
@@ -99,7 +107,10 @@ struct Entry {
     LineEntryColumn,
     LineEntryStartAddress,
     LineEntryEndAddress,
-    CurrentPCArrow
+    CurrentPCArrow,
+    ProgressCount,
+    ProgressMessage,
+    Separator,
   };
 
   struct Definition {
@@ -213,11 +224,6 @@ bool FormatStringRef(const llvm::StringRef &format, Stream &s,
                      const SymbolContext *sc, const ExecutionContext *exe_ctx,
                      const Address *addr, ValueObject *valobj,
                      bool function_changed, bool initial_function);
-
-bool FormatCString(const char *format, Stream &s, const SymbolContext *sc,
-                   const ExecutionContext *exe_ctx, const Address *addr,
-                   ValueObject *valobj, bool function_changed,
-                   bool initial_function);
 
 Status Parse(const llvm::StringRef &format, Entry &entry);
 

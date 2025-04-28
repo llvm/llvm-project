@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-select-rank.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran.h"
 #include <list>
 #include <optional>
 #include <set>

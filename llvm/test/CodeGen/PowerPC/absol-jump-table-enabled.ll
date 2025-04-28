@@ -48,7 +48,7 @@ define zeroext i32 @jumpTableTest(ptr readonly %list) {
 ; CHECK-LE-LABEL: jumpTableTest:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE:       rldic r[[REG:[0-9]+]], r[[REG]], 3, 29
-; CHECK-LE:       ldx r[[REG]], r[[REG]], r[[REG1:[0-9]+]]
+; CHECK-LE:       ldx r[[REG]], r[[REG1:[0-9]+]], r[[REG]]
 ; CHECK-LE:       mtctr r[[REG]]
 ; CHECK-LE:       bctr
 ; CHECK-LE:       blr
@@ -56,7 +56,7 @@ define zeroext i32 @jumpTableTest(ptr readonly %list) {
 ; CHECK-BE-LABEL: jumpTableTest:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE:       rldic r[[REG:[0-9]+]], r[[REG]], 2, 30
-; CHECK-BE:       lwax r[[REG]], r[[REG]], r[[REG1:[0-9]+]]
+; CHECK-BE:       lwax r[[REG]], r[[REG1:[0-9]+]], r[[REG]]
 ; CHECK-BE:       mtctr r[[REG]]
 ; CHECK-BE:       bctr
 ; CHECK-BE:       blr
@@ -64,7 +64,7 @@ define zeroext i32 @jumpTableTest(ptr readonly %list) {
 ; CHECK-AIX-LABEL: jumpTableTest:
 ; CHECK-AIX:       # %bb.0: # %entry
 ; CHECK-AIX:       rldic r[[REG:[0-9]+]], r[[REG]], 2, 30
-; CHECK-AIX:       lwax r[[REG]], r[[REG]], r[[REG1:[0-9]+]]
+; CHECK-AIX:       lwax r[[REG]], r[[REG1:[0-9]+]], r[[REG]]
 ; CHECK-AIX:       mtctr r[[REG]]
 ; CHECK-AIX:       bctr
 ; CHECK-AIX:       blr
