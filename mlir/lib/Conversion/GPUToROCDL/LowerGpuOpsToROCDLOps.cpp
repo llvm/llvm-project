@@ -90,7 +90,6 @@ static Value truncOrExtToLLVMType(ConversionPatternRewriter &rewriter,
   int64_t indexBitwidth = converter.getIndexTypeBitwidth();
   auto indexBitwidthType =
       IntegerType::get(rewriter.getContext(), converter.getIndexTypeBitwidth());
-  // TODO: use <=> in C++20.
   if (indexBitwidth > intWidth) {
     return rewriter.create<LLVM::SExtOp>(loc, indexBitwidthType, value);
   }
@@ -281,7 +280,7 @@ struct GPUSubgroupIdOpToROCDL final
         rewriter.create<LLVM::AddOp>(loc, int32Type, workitemIdX,
                                      dimYxIdZPlusIdYTimesDimX, flags);
     Value subgroupSize = rewriter.create<ROCDL::WavefrontSizeOp>(
-        loc, rewriter.getI32Type(), nullptr);
+        loc, rewriter.getI32Type(), /*upper_bound = */ nullptr);
     Value waveIdOp = rewriter.create<LLVM::UDivOp>(
         loc, workitemIdXPlusDimYxIdZPlusIdYTimesDimX, subgroupSize);
     rewriter.replaceOp(op, {truncOrExtToLLVMType(rewriter, loc, waveIdOp,

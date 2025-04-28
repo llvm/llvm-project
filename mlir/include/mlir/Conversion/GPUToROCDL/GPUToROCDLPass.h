@@ -10,7 +10,6 @@
 
 #include "mlir/Conversion/GPUToROCDL/Runtimes.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
-#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include <memory>
 
 namespace mlir {
