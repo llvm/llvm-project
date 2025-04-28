@@ -1593,7 +1593,7 @@ cleanupPrivateVars(llvm::IRBuilderBase &builder,
 /// Returns true if the construct contains omp.cancel or omp.cancellation_point
 static bool constructIsCancellable(Operation *op) {
   // omp.cancel and omp.cancellation_point must be "closely nested" so they will
-  // be visible and not inside of funcion calls. This is enforced by the
+  // be visible and not inside of function calls. This is enforced by the
   // verifier.
   return op
       ->walk([](Operation *child) {
