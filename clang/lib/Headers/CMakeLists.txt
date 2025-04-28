@@ -289,6 +289,7 @@ set(gpu_files
   gpuintrin.h
   nvptxintrin.h
   amdgpuintrin.h
+  spirvintrin.h
   )
 
 set(windows_only_files
