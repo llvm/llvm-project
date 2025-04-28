@@ -12268,7 +12268,7 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       *ICContext = true;
     }
 
-    return DiagnoseImpCast(*this, E, T, CC, DiagID);
+    DiagnoseImpCast(*this, E, T, CC, DiagID);
   }
 
   // If we're implicitly converting from an integer into an enumeration, that
