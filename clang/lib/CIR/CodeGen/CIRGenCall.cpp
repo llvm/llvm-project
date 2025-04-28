@@ -110,7 +110,6 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   assert(!cir::MissingFeatures::opCallMustTail());
   assert(!cir::MissingFeatures::opCallReturn());
 
-  RValue ret;
   switch (retInfo.getKind()) {
   case cir::ABIArgInfo::Direct: {
     mlir::Type retCIRTy = convertType(retTy);
@@ -132,23 +131,22 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
 
         return RValue::get(results[0]);
       }
-      default:
+      case cir::TEK_Complex:
+      case cir::TEK_Aggregate:
         cgm.errorNYI(loc,
                      "unsupported evaluation kind of function call result");
+        return getUndefRValue(retTy);
       }
-    } else
-      cgm.errorNYI(loc, "unsupported function call form");
-
-    break;
+      llvm_unreachable("Invalid evaluation kind");
+    }
+    cgm.errorNYI(loc, "unsupported function call form");
+    return getUndefRValue(retTy);
   }
   case cir::ABIArgInfo::Ignore:
     // If we are ignoring an argument that had a result, make sure to construct
     // the appropriate return value for our caller.
-    ret = getUndefRValue(retTy);
-    break;
-  default:
-    cgm.errorNYI(loc, "unsupported return value information");
+    return getUndefRValue(retTy);
   }
 
-  return ret;
+  llvm_unreachable("Invalid return info kind");
 }
