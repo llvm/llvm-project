@@ -214,6 +214,12 @@ static cl::opt<bool> ListIgnored("list-ignored",
                                  cl::desc("List ignored files."),
                                  cl::cat(ClangFormatCategory), cl::Hidden);
 
+static cl::opt<bool>
+    DisableFormat("disable-format",
+                  cl::desc("If set, only sort includes if include sorting\n"
+                           "is enabled"),
+                  cl::cat(ClangFormatCategory));
+
 namespace clang {
 namespace format {
 
@@ -506,9 +512,12 @@ static bool format(StringRef FileName, bool ErrorOnIncompleteFormat = false) {
   // Get new affected ranges after sorting `#includes`.
   Ranges = tooling::calculateRangesAfterReplacements(Replaces, Ranges);
   FormattingAttemptStatus Status;
-  Replacements FormatChanges =
-      reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
-  Replaces = Replaces.merge(FormatChanges);
+  Replacements FormatChanges;
+  if (DisableFormat.getNumOccurrences() == 0 || !DisableFormat) {
+    FormatChanges =
+        reformat(*FormatStyle, *ChangedCode, Ranges, AssumedFileName, &Status);
+    Replaces = Replaces.merge(FormatChanges);
+  }
   if (DryRun) {
     return Replaces.size() > (IsJson ? 1u : 0u) &&
            emitReplacementWarnings(Replaces, AssumedFileName, Code);

@@ -58,6 +58,8 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
                                        Verilog: .sv .svh .v .vh
     --cursor=<uint>                - The position of the cursor when invoking
                                      clang-format from an editor integration
+    --disable-format               - If set, only sort includes if include sorting
+                                     is enabled
     --dry-run                      - If set, do not actually make the formatting changes
     --dump-config                  - Dump configuration options to stdout and exit.
                                      Can be used with -style option.
