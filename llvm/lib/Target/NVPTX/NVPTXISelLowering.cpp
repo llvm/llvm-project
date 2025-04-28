@@ -116,7 +116,7 @@ static cl::opt<bool> ForceMinByValParamAlign(
 
 NVPTX::DivPrecisionLevel
 NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
-                                    const SDNode *N) const {
+                                    const SDNode &N) const {
   // If nvptx-prec-div32=N is used on the command-line, always honor it
   if (UsePrecDivF32.getNumOccurrences() > 0)
     return UsePrecDivF32;
@@ -125,11 +125,9 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   if (allowUnsafeFPMath(MF))
     return NVPTX::DivPrecisionLevel::Approx;
 
-  if (N) {
-    const SDNodeFlags Flags = N->getFlags();
-    if (Flags.hasApproximateFuncs())
-      return NVPTX::DivPrecisionLevel::Approx;
-  }
+  const SDNodeFlags Flags = N.getFlags();
+  if (Flags.hasApproximateFuncs())
+    return NVPTX::DivPrecisionLevel::Approx;
 
   return NVPTX::DivPrecisionLevel::IEEE754;
 }
