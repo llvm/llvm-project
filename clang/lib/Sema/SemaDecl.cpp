@@ -6128,20 +6128,21 @@ static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo *II) {
   // or not. Note, this treats all keywords as being enabled, regardless of the
   // setting of other language options. It intentionally disables the modules
   // keywords because those are conditional keywords, so may be safe to use.
-  static std::array<uintptr_t, countCPlusPlusKeywords()> Keywords = {};
-  if (!Keywords[0]) {
+  static auto Keywords = [&S] {
+    std::array<uintptr_t, countCPlusPlusKeywords()> Ret;
     unsigned Idx = 0;
 #define MODULES_KEYWORD(NAME)
 #define KEYWORD(NAME, FLAGS)                                                   \
-  Keywords[Idx++] = reinterpret_cast<uint64_t>(                                \
+  Ret[Idx++] = reinterpret_cast<uint64_t>(                                     \
       &S.getPreprocessor().getIdentifierTable().get(#NAME));
 #define CXX_KEYWORD_OPERATOR(NAME, TOK)                                        \
-  Keywords[Idx++] = reinterpret_cast<uint64_t>(                                \
+  Ret[Idx++] = reinterpret_cast<uint64_t>(                                     \
       &S.getPreprocessor().getIdentifierTable().get(#NAME));
 #include "clang/Basic/TokenKinds.def"
-    assert(Idx == Keywords.size() && "expected to fill every member!");
-    llvm::sort(Keywords);
-  }
+    assert(Idx == Ret.size() && "expected to fill every member!");
+    llvm::sort(Ret);
+    return Ret;
+  }();
 
   return llvm::binary_search(Keywords, reinterpret_cast<uintptr_t>(II));
 }
