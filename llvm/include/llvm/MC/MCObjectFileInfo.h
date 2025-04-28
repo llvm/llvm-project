@@ -68,7 +68,7 @@ protected:
   /// Language Specific Data Area information is emitted to.
   MCSection *LSDASection = nullptr;
 
-  /// Section containing metadata on call graph.
+  /// Section containing call graph metadata.
   MCSection *CallGraphSection = nullptr;
 
   /// If exception handling is supported by the target and the target can

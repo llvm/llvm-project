@@ -200,6 +200,10 @@ private:
     SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
   };
 
+  enum CallGraphSectionFormatVersion : uint64_t {
+    V_0 = 0,
+  };
+
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
