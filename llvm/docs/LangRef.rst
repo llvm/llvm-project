@@ -4574,12 +4574,17 @@ do not have a body specified. This corresponds (for example) to the C
 notion of a forward declared structure. They can be named (``%X``) or
 unnamed (``%52``).
 
+It is not possible to create SSA values with an opaque structure type. In
+practice, this largely limits their use to the value type of external globals.
+
 :Syntax:
 
 ::
 
       %X = type opaque
       %52 = type opaque
+
+      @g = external global %X
 
 :Examples:
 
