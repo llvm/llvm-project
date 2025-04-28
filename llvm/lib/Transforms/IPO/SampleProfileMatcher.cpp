@@ -738,6 +738,9 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
     if (Demangler.partialDemangle(FunctionName.c_str()))
       return std::string();
     size_t BaseNameSize = 0;
+    // The demangler API follows the __cxa_demangle one, and thus needs a
+    // pointer that originates from malloc (or nullptr) and the caller is
+    // responsible for free()-ing the buffer.
     char *BaseNamePtr = Demangler.getFunctionBaseName(nullptr, &BaseNameSize);
     std::string Result = (BaseNamePtr && BaseNameSize)
                              ? std::string(BaseNamePtr, BaseNameSize)
