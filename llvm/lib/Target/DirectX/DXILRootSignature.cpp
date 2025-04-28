@@ -301,10 +301,10 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
           RS.ParametersContainer.getParameter(&Info);
       if (!P)
         continue;
-      if (std::holds_alternative<const dxbc::RootConstants*>(*P)) {
-        auto* Constants = std::get<const dxbc::RootConstants*>(*P);
-        OS << indent(Space + 2) << "Register Space: " << Constants->RegisterSpace
-           << "\n";
+      if (std::holds_alternative<const dxbc::RootConstants *>(*P)) {
+        auto *Constants = std::get<const dxbc::RootConstants *>(*P);
+        OS << indent(Space + 2)
+           << "Register Space: " << Constants->RegisterSpace << "\n";
         OS << indent(Space + 2)
            << "Shader Register: " << Constants->ShaderRegister << "\n";
         OS << indent(Space + 2)

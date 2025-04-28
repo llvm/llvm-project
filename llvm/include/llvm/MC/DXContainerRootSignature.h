@@ -29,11 +29,11 @@ struct RootParameterInfo {
       : Header(H), Location(L) {}
 };
 
-using RootDescriptor = std::variant<dxbc::RST0::v0::RootDescriptor*,
-                                    dxbc::RST0::v1::RootDescriptor*>;
-using ParametersView =
-    std::variant<const dxbc::RootConstants*, const dxbc::RST0::v0::RootDescriptor*,
-                 const dxbc::RST0::v1::RootDescriptor*>;
+using RootDescriptor = std::variant<dxbc::RST0::v0::RootDescriptor *,
+                                    dxbc::RST0::v1::RootDescriptor *>;
+using ParametersView = std::variant<const dxbc::RootConstants *,
+                                    const dxbc::RST0::v0::RootDescriptor *,
+                                    const dxbc::RST0::v1::RootDescriptor *>;
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
@@ -69,10 +69,10 @@ struct RootParametersContainer {
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
       RootDescriptor VersionedParam = Descriptors[H->Location];
-      if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor*>(
+      if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor *>(
               VersionedParam))
-        return std::get<dxbc::RST0::v0::RootDescriptor*>(VersionedParam);
-      return std::get<dxbc::RST0::v1::RootDescriptor*>(VersionedParam);
+        return std::get<dxbc::RST0::v0::RootDescriptor *>(VersionedParam);
+      return std::get<dxbc::RST0::v1::RootDescriptor *>(VersionedParam);
     }
 
     return std::nullopt;
@@ -85,11 +85,6 @@ struct RootParametersContainer {
   }
   SmallVector<RootParameterInfo>::const_iterator end() const {
     return ParametersInfo.end();
-  }
-
-  llvm::iterator_range<SmallVector<RootParameterInfo>::const_iterator>
-  getInfo() const {
-    return llvm::make_range(begin(), end());
   }
 };
 struct RootSignatureDesc {
