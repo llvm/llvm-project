@@ -483,7 +483,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // diagnose the error then.  If we don't do this, then the error
     // about hiding the type will be immediately followed by an error
     // that only makes sense if the identifier was treated like a type.
-    if (Result.getAmbiguityKind() == LookupResult::AmbiguousTagHiding) {
+    if (Result.getAmbiguityKind() == LookupAmbiguityKind::AmbiguousTagHiding) {
       Result.suppressDiagnostics();
       return nullptr;
     }

@@ -337,11 +337,13 @@ bool LookupResult::checkDebugAssumptions() const {
           isa<FunctionTemplateDecl>((*begin())->getUnderlyingDecl())));
   assert(ResultKind != FoundUnresolvedValue || checkUnresolved());
   assert(ResultKind != Ambiguous || Decls.size() > 1 ||
-         (Decls.size() == 1 && (Ambiguity == AmbiguousBaseSubobjects ||
-                                Ambiguity == AmbiguousBaseSubobjectTypes)));
-  assert((Paths != nullptr) == (ResultKind == Ambiguous &&
-                                (Ambiguity == AmbiguousBaseSubobjectTypes ||
-                                 Ambiguity == AmbiguousBaseSubobjects)));
+         (Decls.size() == 1 &&
+          (Ambiguity == LookupAmbiguityKind::AmbiguousBaseSubobjects ||
+           Ambiguity == LookupAmbiguityKind::AmbiguousBaseSubobjectTypes)));
+  assert((Paths != nullptr) ==
+         (ResultKind == Ambiguous &&
+          (Ambiguity == LookupAmbiguityKind::AmbiguousBaseSubobjectTypes ||
+           Ambiguity == LookupAmbiguityKind::AmbiguousBaseSubobjects)));
   return true;
 }
 
@@ -641,9 +643,9 @@ void LookupResult::resolveKind() {
     Ambiguous = true;
 
   if (Ambiguous && ReferenceToPlaceHolderVariable)
-    setAmbiguous(LookupResult::AmbiguousReferenceToPlaceholderVariable);
+    setAmbiguous(LookupAmbiguityKind::AmbiguousReferenceToPlaceholderVariable);
   else if (Ambiguous)
-    setAmbiguous(LookupResult::AmbiguousReference);
+    setAmbiguous(LookupAmbiguityKind::AmbiguousReference);
   else if (HasUnresolved)
     ResultKind = LookupResult::FoundUnresolvedValue;
   else if (N > 1 || HasFunctionTemplate)
@@ -665,7 +667,7 @@ void LookupResult::setAmbiguousBaseSubobjects(CXXBasePaths &P) {
   Paths->swap(P);
   addDeclsFromBasePaths(*Paths);
   resolveKind();
-  setAmbiguous(AmbiguousBaseSubobjects);
+  setAmbiguous(LookupAmbiguityKind::AmbiguousBaseSubobjects);
 }
 
 void LookupResult::setAmbiguousBaseSubobjectTypes(CXXBasePaths &P) {
@@ -673,7 +675,7 @@ void LookupResult::setAmbiguousBaseSubobjectTypes(CXXBasePaths &P) {
   Paths->swap(P);
   addDeclsFromBasePaths(*Paths);
   resolveKind();
-  setAmbiguous(AmbiguousBaseSubobjectTypes);
+  setAmbiguous(LookupAmbiguityKind::AmbiguousBaseSubobjectTypes);
 }
 
 void LookupResult::print(raw_ostream &Out) {
@@ -2769,7 +2771,7 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
   SourceRange LookupRange = Result.getContextRange();
 
   switch (Result.getAmbiguityKind()) {
-  case LookupResult::AmbiguousBaseSubobjects: {
+  case LookupAmbiguityKind::AmbiguousBaseSubobjects: {
     CXXBasePaths *Paths = Result.getBasePaths();
     QualType SubobjectType = Paths->front().back().Base->getType();
     Diag(NameLoc, diag::err_ambiguous_member_multiple_subobjects)
@@ -2785,7 +2787,7 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
     break;
   }
 
-  case LookupResult::AmbiguousBaseSubobjectTypes: {
+  case LookupAmbiguityKind::AmbiguousBaseSubobjectTypes: {
     Diag(NameLoc, diag::err_ambiguous_member_multiple_subobject_types)
       << Name << LookupRange;
 
@@ -2811,7 +2813,7 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
     break;
   }
 
-  case LookupResult::AmbiguousTagHiding: {
+  case LookupAmbiguityKind::AmbiguousTagHiding: {
     Diag(NameLoc, diag::err_ambiguous_tag_hiding) << Name << LookupRange;
 
     llvm::SmallPtrSet<NamedDecl*, 8> TagDecls;
@@ -2836,7 +2838,7 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
     break;
   }
 
-  case LookupResult::AmbiguousReferenceToPlaceholderVariable: {
+  case LookupAmbiguityKind::AmbiguousReferenceToPlaceholderVariable: {
     Diag(NameLoc, diag::err_using_placeholder_variable) << Name << LookupRange;
     DeclContext *DC = nullptr;
     for (auto *D : Result) {
@@ -2848,7 +2850,7 @@ void Sema::DiagnoseAmbiguousLookup(LookupResult &Result) {
     break;
   }
 
-  case LookupResult::AmbiguousReference: {
+  case LookupAmbiguityKind::AmbiguousReference: {
     Diag(NameLoc, diag::err_ambiguous_reference) << Name << LookupRange;
 
     for (auto *D : Result)
