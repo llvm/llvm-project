@@ -118,7 +118,7 @@ static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
   Value fill = builder.create<vector::SplatOp>(loc, unbroadcastedVectorType,
                                                readOp.getPadding());
   Value load = builder.create<vector::LoadOp>(
-      loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
+      loc, unbroadcastedVectorType, readOp.getBase(), readOp.getIndices());
   Value res = builder.create<arith::SelectOp>(loc, unbroadcastedVectorType,
                                               readOp.getMask(), load, fill);
   // Insert a broadcasting op if required.
@@ -149,7 +149,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     }
 
     Location loc = readOp.getLoc();
-    Value src = readOp.getSource();
+    Value src = readOp.getBase();
 
     VectorType vectorType = readOp.getVectorType();
     int64_t vectorSize = vectorType.getNumElements();
