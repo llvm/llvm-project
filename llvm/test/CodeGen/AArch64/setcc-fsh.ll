@@ -252,7 +252,8 @@ define i1 @fshl_or_ne_2(i32 %x, i32 %y) {
 define i1 @fshr_0_or_eq_0(i16 %x, i16 %y) {
 ; CHECK-LABEL: fshr_0_or_eq_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    tst w0, #0xffff
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %or = or i16 %x, %y
   %f = call i16 @llvm.fshr.i16(i16 %or, i16 %x, i16 0)
@@ -261,7 +262,7 @@ define i1 @fshr_0_or_eq_0(i16 %x, i16 %y) {
 }
 
 define i1 @fshr_32_or_eq_0(i16 %x, i16 %y) {
-; CHECK-LABEL: fshr_16_or_eq_0:
+; CHECK-LABEL: fshr_32_or_eq_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0xffff
 ; CHECK-NEXT:    cset w0, eq
