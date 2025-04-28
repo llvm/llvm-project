@@ -17,7 +17,7 @@
   _CLC_VLOAD_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE##8, 8, ADDR_SPACE)               \
   _CLC_VLOAD_DECL(SUFFIX, MEM_TYPE, PRIM_TYPE##16, 16, ADDR_SPACE)
 
-#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+#if _CLC_GENERIC_AS_SUPPORTED
 #define _CLC_VECTOR_VLOAD_GENERIC_DECL _CLC_VECTOR_VLOAD_DECL
 #else
 // The generic address space isn't available, so make the macro do nothing
@@ -69,7 +69,7 @@ _CLC_VLOAD_DECL(a_half, half, float, , __global)
 _CLC_VLOAD_DECL(a_half, half, float, , __local)
 _CLC_VLOAD_DECL(a_half, half, float, , __private)
 
-#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+#if _CLC_GENERIC_AS_SUPPORTED
 _CLC_VLOAD_DECL(_half, half, float, , __generic)
 _CLC_VLOAD_DECL(a_half, half, float, , __generic)
 #endif
