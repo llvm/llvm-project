@@ -3260,6 +3260,3 @@ define <32 x half> @test_mm512_castph256_ph512_freeze(<16 x half> %a0) nounwind 
 }
 
 attributes #0 = { sanitize_memory }
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
