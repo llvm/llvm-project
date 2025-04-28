@@ -3914,6 +3914,10 @@ following flags to enable otherwise unsafe floating-point transformations.
    No Signed Zeros - Allow optimizations to treat the sign of a zero
    argument or zero result as insignificant. This does not imply that -0.0
    is poison and/or guaranteed to not exist in the operation.
+   Don't require +0.0>-0.0 for min/max operations - Allow optimizations of the
+   min/max operation not to treat +0.0>-0.0. Note the result should be either of
+   the operands. (max|min)(-0.0, -0.0) should never return +0.0, and vice versa.
+   Note: floating compare operations always imply -0.0 == +0.0.
 
 Note: For :ref:`phi <i_phi>`, :ref:`select <i_select>`, and :ref:`call <i_call>`
 instructions, the following return types are considered to be floating-point
