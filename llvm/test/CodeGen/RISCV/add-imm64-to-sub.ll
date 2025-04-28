@@ -5,9 +5,8 @@
 define i64 @add_b31(i64 %x) {
 ; NOZBS-LABEL: add_b31:
 ; NOZBS:       # %bb.0:
-; NOZBS-NEXT:    li a1, 1
-; NOZBS-NEXT:    slli a1, a1, 31
-; NOZBS-NEXT:    add a0, a0, a1
+; NOZBS-NEXT:    lui a1, 524288
+; NOZBS-NEXT:    sub a0, a0, a1
 ; NOZBS-NEXT:    ret
 ;
 ; ZBS-LABEL: add_b31:
@@ -20,12 +19,18 @@ define i64 @add_b31(i64 %x) {
 }
 
 define i64 @add_b32(i64 %x) {
-; CHECK-LABEL: add_b32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    slli a1, a1, 32
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; NOZBS-LABEL: add_b32:
+; NOZBS:       # %bb.0:
+; NOZBS-NEXT:    li a1, -1
+; NOZBS-NEXT:    slli a1, a1, 32
+; NOZBS-NEXT:    add a0, a0, a1
+; NOZBS-NEXT:    ret
+;
+; ZBS-LABEL: add_b32:
+; ZBS:       # %bb.0:
+; ZBS-NEXT:    bseti a1, zero, 32
+; ZBS-NEXT:    sub a0, a0, a1
+; ZBS-NEXT:    ret
   %add = add i64 %x, -4294967296
   ret i64 %add
 }
@@ -34,9 +39,8 @@ define i64 @sub_0xffffffffff(i64 %x) {
 ; CHECK-LABEL: sub_0xffffffffff:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    slli a1, a1, 40
-; CHECK-NEXT:    addi a1, a1, 1
-; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    srli a1, a1, 24
+; CHECK-NEXT:    sub a0, a0, a1
 ; CHECK-NEXT:    ret
   %sub = sub i64 %x, 1099511627775
   ret i64 %sub
