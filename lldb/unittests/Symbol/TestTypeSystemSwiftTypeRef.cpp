@@ -23,6 +23,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
+namespace lldb_private {
 struct TestTypeSystemSwiftTypeRef : public testing::Test {
   std::shared_ptr<TypeSystemSwiftTypeRef> m_swift_ts;
 
@@ -32,7 +33,13 @@ struct TestTypeSystemSwiftTypeRef : public testing::Test {
     ConstString internalized(mangled_name);
     return m_swift_ts->GetTypeFromMangledTypename(internalized);
   }
+  swift::Demangle::NodePointer
+  DemangleCanonicalOutermostType(swift::Demangle::Demangler &dem,
+                                 lldb::opaque_compiler_type_t type) {
+    return m_swift_ts->DemangleCanonicalOutermostType(dem, type);
+  }
 };
+} // namespace lldb_private
 
 /// Helper class to conveniently construct demangle tree hierarchies.
 class NodeBuilder {
@@ -78,6 +85,15 @@ public:
         Node(Node::Kind::Structure,
              Node(Node::Kind::Module, swift::STDLIB_NAME),
              Node(Node::Kind::Identifier, swift::BUILTIN_TYPE_NAME_FLOAT)));
+  }
+  NodePointer DesugaredOptionalType(NodePointer type) {
+    return Node(Node::Kind::Type,
+                Node(Node::Kind::BoundGenericEnum,
+                     Node(Node::Kind::Type,
+                          Node(Node::Kind::Enum,
+                               Node(Node::Kind::Module, swift::STDLIB_NAME),
+                               Node(Node::Kind::Identifier, "Optional"))),
+                     Node(Node::Kind::TypeList, type)));
   }
   NodePointer GlobalTypeMangling(NodePointer type) {
     assert(type && type->getKind() == Node::Kind::Type);
@@ -1023,5 +1039,44 @@ TEST_F(TestTypeSystemSwiftTypeRef, Error) {
     CompilerType t = GetCompilerType(b.Mangle(n));
     lldb::opaque_compiler_type_t opaque = t.GetOpaqueQualType();
     ASSERT_TRUE(m_swift_ts->ContainsError(opaque));
+  }
+}
+
+TEST_F(TestTypeSystemSwiftTypeRef, Canonicalize) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodeBuilder b(dem);
+  {
+    {
+      NodePointer n0 =
+          b.GlobalType(b.Node(Node::Kind::SugaredOptional, b.IntType()));
+      NodePointer n1 =
+          b.GlobalTypeMangling(b.DesugaredOptionalType(b.IntType()));
+      CompilerType sugared = GetCompilerType(b.Mangle(n0));
+      CompilerType desugared = GetCompilerType(b.Mangle(n1));
+      ASSERT_EQ(sugared.GetCanonicalType().GetMangledTypeName(),
+                desugared.GetMangledTypeName());
+    }
+    {
+      NodePointer n0 = b.GlobalType(
+          b.Node(Node::Kind::SugaredOptional,
+                 b.Node(Node::Kind::Type,
+                        b.Node(Node::Kind::SugaredOptional, b.IntType()))));
+      NodePointer n1 = b.GlobalTypeMangling(
+          b.DesugaredOptionalType(b.DesugaredOptionalType(b.IntType())));
+      CompilerType sugared = GetCompilerType(b.Mangle(n0));
+      CompilerType desugared = GetCompilerType(b.Mangle(n1));
+      ASSERT_EQ(sugared.GetCanonicalType().GetMangledTypeName(),
+                desugared.GetMangledTypeName());
+
+      NodePointer n2 = b.GlobalType(
+          DemangleCanonicalOutermostType(dem, sugared.GetOpaqueQualType()));
+      NodePointer n3 = b.GlobalTypeMangling(b.DesugaredOptionalType(
+          b.Node(Node::Kind::SugaredOptional, b.IntType())));
+      CompilerType single_desugared2 = GetCompilerType(b.Mangle(n2));
+      CompilerType single_desugared3 = GetCompilerType(b.Mangle(n3));
+      ASSERT_EQ(single_desugared2.GetMangledTypeName(),
+                single_desugared3.GetMangledTypeName());
+    }
   }
 }

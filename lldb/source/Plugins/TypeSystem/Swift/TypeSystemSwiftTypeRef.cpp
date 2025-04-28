@@ -1294,9 +1294,7 @@ TypeSystemSwiftTypeRef::GetCanonicalNode(swift::Demangle::Demangler &dem,
   // SomeAlias<WhatSomeOtherAliasResolvesTo> because it tries to
   // preserve all sugar.
   using namespace swift::Demangle;
-  NodePointer transformed = Canonicalize(dem, node, flavor);
-  if (node != transformed)
-    return transformed;
+  node = Canonicalize(dem, node, flavor);
 
   llvm::SmallVector<NodePointer, 2> children;
   bool changed = false;

@@ -67,7 +67,10 @@ public:
   /// \}
 
   /// Provided only for unit tests.
+  /// \{
+  friend struct TestTypeSystemSwiftTypeRef;
   TypeSystemSwiftTypeRef();
+  /// \}
   ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
   /// Get the corresponding SwiftASTContext, and create one if necessary.
