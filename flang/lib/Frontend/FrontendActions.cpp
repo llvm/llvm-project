@@ -896,18 +896,6 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
   delete tlii;
 }
 
-// Default filename used for profile generation.
-namespace llvm {
-extern llvm::cl::opt<bool> DebugInfoCorrelate;
-extern llvm::cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
-
-std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate ||
-                 ProfileCorrelate != llvm::InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
-}
-} // namespace llvm
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   CompilerInstance &ci = getInstance();
