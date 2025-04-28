@@ -2910,6 +2910,8 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
     assert(dataClauseOptional.has_value() &&
            "declare operands can only be data entry operations which must have "
            "dataClause");
+  }
+
   return success();
 }
 
