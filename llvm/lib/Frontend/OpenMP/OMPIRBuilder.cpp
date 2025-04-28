@@ -394,7 +394,7 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
 // This function creates a fake integer value and a fake use for the integer
 // value. It returns the fake value created. This is useful in modeling the
 // extra arguments to the outlined functions.
-Value *createFakeIntVal(IRBuilderBase &Builder,
+Value *createFakeIntVal(IRBuilderBase &Builder, Module &M,
                         OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
                         llvm::SmallVectorImpl<Instruction *> &ToBeDeleted,
                         OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
@@ -402,12 +402,20 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
   Builder.restoreIP(OuterAllocaIP);
   Instruction *FakeVal;
   AllocaInst *FakeValAddr =
-      Builder.CreateAlloca(Builder.getInt32Ty(), 0, nullptr, Name + ".addr");
+      Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
+  FakeVal = FakeValAddr;
+
+  if (M.getDataLayout().getAllocaAddrSpace() != 0) {
+    // Add additional casts to enforce pointers in zero address space
+    FakeVal = new AddrSpaceCastInst(
+        FakeValAddr, PointerType ::get(M.getContext(), 0), "tid.addr.ascast");
+    FakeVal->insertAfter(FakeValAddr->getIterator());
+    ToBeDeleted.push_back(FakeVal);
+  }
+
   ToBeDeleted.push_back(FakeValAddr);
 
-  if (AsPtr) {
-    FakeVal = FakeValAddr;
-  } else {
+  if (!AsPtr) {
     FakeVal =
         Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
     ToBeDeleted.push_back(FakeVal);
@@ -1941,7 +1949,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
   // Add the thread ID argument.
   SmallVector<Instruction *, 4> ToBeDeleted;
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
+      Builder, M, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
 
   OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
                       Mergeable, Priority, EventHandle, TaskAllocaBB,
@@ -7541,8 +7549,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
 
   // Add the thread ID argument.
   SmallVector<Instruction *, 4> ToBeDeleted;
-  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, AllocaIP, ToBeDeleted, TargetTaskAllocaIP, "global.tid", false));
+  OI.ExcludeArgsFromAggregate.push_back(
+      createFakeIntVal(Builder, M, AllocaIP, ToBeDeleted, TargetTaskAllocaIP,
+                       "global.tid", false));
 
   // Generate the task body which will subsequently be outlined.
   Builder.restoreIP(TargetTaskBodyIP);
@@ -9532,9 +9541,9 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   SmallVector<Instruction *, 8> ToBeDeleted;
   InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
+      Builder, M, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
   OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
-      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "tid", true));
+      Builder, M, OuterAllocaIP, ToBeDeleted, AllocaIP, "tid", true));
 
   auto HostPostOutlineCB = [this, Ident,
                             ToBeDeleted](Function &OutlinedFn) mutable {
