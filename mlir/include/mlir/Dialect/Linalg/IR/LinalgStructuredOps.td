@@ -691,9 +691,9 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     Example Transpose:
     ```
     linalg.matmul
-        indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
-                         affine_map<(d0, d1, d2) -> (d2, d1)>,
-                         affine_map<(d0, d1, d2) -> (d0, d1)>]
+        indexing_maps = [affine_map<(m, n, k) -> (k, m)>, // transpose
+                         affine_map<(m, n, k) -> (k, n)>,
+                         affine_map<(m, n, k) -> (m, n)>]
         ins(%arg0, %arg1 : memref<5x3xf32>,memref<5x7xf32>)
         outs(%arg2: memref<3x7xf32>)
      ```
@@ -701,9 +701,9 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     Example Broadcast:
      ```
     linalg.matmul
-        indexing_maps = [affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
-                         affine_map<(d0, d1, d2) -> (d2, d1)>,
-                         affine_map<(d0, d1, d2) -> (d0, d1)>]
+        indexing_maps = [affine_map<(m, n, k) -> (k)>,     // broadcast
+                         affine_map<(m, n, k) -> (k, n)>,
+                         affine_map<(m, n, k) -> (m, n)>]
         ins(%arg0, %arg1 : memref<3xf32>, memref<5x7xf32>)
         outs(%arg2: memref<3x7xf32>)
     ```
@@ -711,9 +711,9 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     Example Broadcast and transpose:
     ```
     linalg.matmul
-        indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d0)>, // transpose
-                         affine_map<(d0, d1, d2) -> (d2)>,     // broadcast
-                         affine_map<(d0, d1, d2) -> (d0, d1)>]
+        indexing_maps = [affine_map<(m, n, k) -> (k, m)>, // transpose
+                         affine_map<(m, n, k) -> (k)>,    // broadcast
+                         affine_map<(m, n, k) -> (m, n)>]
         ins(%arg0, %arg1 : memref<5x3xf32>, memref<7xf32>)
         outs(%arg2: memref<3x7xf32>)
     ```
@@ -773,7 +773,7 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
       static void regionBuilder(ImplicitLocOpBuilder &b,
                                 Block &block, ArrayRef<NamedAttribute> attrs);
 
-      /// Returns a list of AffineMap with the typical matmul indexing charactristic.
+      /// Returns a list of AffineMap with the default matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
@@ -953,9 +953,9 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     Example Transpose:
     ```
     linalg.batch_matmul
-        indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>, // transpose
-                         affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
-                         affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>]
+        indexing_maps = [affine_map<(batch, m, n, k) -> (batch, k, m)>, // transpose
+                         affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                         affine_map<(batch, m, n, k) -> (batch, m, n)>]
         ins(%arg0, %arg1 : memref<2x5x3xf32>,memref<2x5x7xf32>)
         outs(%arg2: memref<2x3x7xf32>)
     ```
@@ -963,9 +963,9 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     Example Broadcast:
     ```
     linalg.batch_matmul
-        indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d3)>,         // broadcast
-                         affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
-                         affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>]
+        indexing_maps = [affine_map<(batch, m, n, k) -> (k)>,           // broadcast
+                         affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                         affine_map<(batch, m, n, k) -> (batch, m, n)>]
         ins(%arg0, %arg1 : memref<5xf32>, memref<2x5x7xf32>)
         outs(%arg2: memref<2x3x7xf32>)
     ```
@@ -973,9 +973,9 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     Example Broadcast and Transpose:
     ```
     linalg.batch_matmul
-        indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d1, d3)>,     // broadcast
-                         affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>, // transpose
-                         affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>]
+        indexing_maps = [affine_map<(batch, m, n, k) -> (m, k)>,        // broadcast
+                         affine_map<(batch, m, n, k) -> (batch, n, k)>, // transpose
+                         affine_map<(batch, m, n, k) -> (batch, m, n)>]
         ins(%arg0, %arg1 : memref<3x5xf32>, memref<2x7x5xf32>)
         outs(%arg2: memref<2x3x7xf32>)
     ```
@@ -1081,9 +1081,9 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
     Example Transpose:
     ```
     linalg.batch_reduce_matmul
-        indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>, // transpose
-                         affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
-                         affine_map<(d0, d1, d2, d3) -> (d1, d2)>]
+        indexing_maps = [affine_map<(batch, m, n, k) -> (batch, k, m)>, // transpose
+                         affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                         affine_map<(batch, m, n, k) -> (m, n)>]
         ins(%arg0, %arg1 : memref<2x5x3xf32>,memref<2x5x7xf32>)
         outs(%arg2: memref<3x7xf32>)
     ```
@@ -1091,9 +1091,9 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
     Example Broadcast:
     ```
     linalg.batch_reduce_matmul
-        indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d3)>,         // broadcast
-                         affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
-                         affine_map<(d0, d1, d2, d3) -> (d1, d2)>]
+        indexing_maps = [affine_map<(batch, m, n, k) -> (k)>,         // broadcast
+                         affine_map<(batch, m, n, k) -> (batch, k, n)>,
+                         affine_map<(batch, m, n, k) -> (m, n)>]
         ins(%arg0, %arg1 : memref<5xf32>, memref<2x5x7xf32>)
         outs(%arg2: memref<3x7xf32>)
     ```
@@ -1101,9 +1101,9 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
     Example Broadcast and Transpose:
     ```
     linalg.batch_reduce_matmul
-        indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d1, d3)>,     // broadcast
-                         affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>, // transpose
-                         affine_map<(d0, d1, d2, d3) -> (d1, d2)>]
+        indexing_maps = [affine_map<(batch, m, n, k) -> (m, k)>,        // broadcast
+                         affine_map<(batch, m, n, k) -> (batch, n, k)>, // transpose
+                         affine_map<(batch, m, n, k) -> (m, n)>]
         ins(%arg0, %arg1 : memref<3x5xf32>, memref<2x7x5xf32>)
         outs(%arg2: memref<3x7xf32>)
     ```
@@ -1163,7 +1163,7 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
       static void regionBuilder(ImplicitLocOpBuilder &b,
                                 Block &block, ArrayRef<NamedAttribute> attrs);
 
-      /// Returns a list of AffineMap with the typical batch_reducematmul indexing charactristic.
+      /// Returns a list of AffineMap with the default batch_reduce_matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.

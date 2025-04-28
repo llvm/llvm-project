@@ -1029,9 +1029,9 @@ func.func @batch_matmul(%arg0: tensor<2x3x5xf32>, %arg1: tensor<2x5x7xf32>, %arg
 // CHECK: #[[$ACCESS_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
 
 // CHECK-LABEL:   func.func @batch_reduce_matmul(
-// CHECK-SAME:        %[[ARG_A:.*]]: tensor<2x3x5xf32>,
-// CHECK-SAME:        %[[ARG_B:.*]]: tensor<2x5x7xf32>,
-// CHECK-SAME:        %[[ARG_C:.*]]: tensor<3x7xf32>) -> tensor<3x7xf32> {
+// CHECK-SAME:        %[[A:.*]]: tensor<2x3x5xf32>,
+// CHECK-SAME:        %[[B:.*]]: tensor<2x5x7xf32>,
+// CHECK-SAME:        %[[C:.*]]: tensor<3x7xf32>) -> tensor<3x7xf32> {
 // CHECK:           linalg.generic
 // CHECK-SAME:          indexing_maps = [#[[$ACCESS_A]], #[[$ACCESS_B]], #[[$ACCESS_C]]],
 // CHECK-SAME:          iterator_types = ["reduction", "parallel", "parallel", "reduction"]}
@@ -1039,14 +1039,14 @@ func.func @batch_matmul(%arg0: tensor<2x3x5xf32>, %arg1: tensor<2x5x7xf32>, %arg
 // CHECK:           arith.addf
 // CHECK:           linalg.yield
 
-func.func @batch_reduce_matmul(%arg0: tensor<2x3x5xf32>, %arg1: tensor<2x5x7xf32>, %arg2: tensor<3x7xf32>) -> tensor<3x7xf32> {
+func.func @batch_reduce_matmul(%A: tensor<2x3x5xf32>, %B: tensor<2x5x7xf32>, %C: tensor<3x7xf32>) -> tensor<3x7xf32> {
   %0 = linalg.batch_reduce_matmul indexing_maps = [
                             affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
                             affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>,
                             affine_map<(d0, d1, d2, d3) -> (d1, d2)>
                            ]
-    ins(%arg0, %arg1: tensor<2x3x5xf32>, tensor<2x5x7xf32>)
-    outs(%arg2: tensor<3x7xf32>) -> tensor<3x7xf32>
+    ins(%A, %B: tensor<2x3x5xf32>, tensor<2x5x7xf32>)
+    outs(%C: tensor<3x7xf32>) -> tensor<3x7xf32>
   return %0 : tensor<3x7xf32>
 }
 

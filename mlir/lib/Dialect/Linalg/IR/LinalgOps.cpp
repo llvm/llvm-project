@@ -3996,9 +3996,12 @@ bool BatchMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS) {
   } else if (bcastMap.getNumResults() == 2) {
     AffineExpr exp0 = bcastMap.getResult(0);
     AffineExpr exp1 = bcastMap.getResult(1);
-    isValid = isLHS
-                  ? (exp0.isFunctionOfDim(mPos) && exp1.isFunctionOfDim(kPos))
-                  : (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos));
+    isValid =
+        isLHS
+            ? ((exp0.isFunctionOfDim(batchPos) || exp0.isFunctionOfDim(mPos)) &&
+               exp1.isFunctionOfDim(kPos))
+            : ((exp0.isFunctionOfDim(batchPos) && exp1.isFunctionOfDim(kPos)) ||
+               (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos)));
   }
   return isValid;
 }
@@ -5459,9 +5462,12 @@ bool BatchReduceMatmulOp::isValidLhsRhsBroadcastMap(AffineMap bcastMap,
   } else if (bcastMap.getNumResults() == 2) {
     AffineExpr exp0 = bcastMap.getResult(0);
     AffineExpr exp1 = bcastMap.getResult(1);
-    isValid = isLHS
-                  ? (exp0.isFunctionOfDim(mPos) && exp1.isFunctionOfDim(kPos))
-                  : (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos));
+    isValid =
+        isLHS
+            ? ((exp0.isFunctionOfDim(batchPos) || exp0.isFunctionOfDim(mPos)) &&
+               exp1.isFunctionOfDim(kPos))
+            : ((exp0.isFunctionOfDim(batchPos) && exp1.isFunctionOfDim(kPos)) ||
+               (exp0.isFunctionOfDim(kPos) && exp1.isFunctionOfDim(nPos)));
   }
   return isValid;
 }
