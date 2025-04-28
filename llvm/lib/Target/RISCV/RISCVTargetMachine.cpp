@@ -281,7 +281,7 @@ MachineFunctionInfo *RISCVTargetMachine::createMachineFunctionInfo(
 
 TargetTransformInfo
 RISCVTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(RISCVTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<RISCVTTIImpl>(this, F));
 }
 
 // A RISC-V hart has a single byte-addressable address space of 2^XLEN bytes

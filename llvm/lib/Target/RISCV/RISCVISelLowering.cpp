@@ -985,6 +985,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     static const unsigned ZvfhminZvfbfminPromoteOps[] = {
         ISD::FMINNUM,
         ISD::FMAXNUM,
+        ISD::FMINIMUMNUM,
+        ISD::FMAXIMUMNUM,
         ISD::FADD,
         ISD::FSUB,
         ISD::FMUL,
@@ -1053,7 +1055,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // Expand various condition codes (explained above).
       setCondCodeAction(VFPCCToExpand, VT, Expand);
 
-      setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, VT, Legal);
+      setOperationAction(
+          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM}, VT,
+          Legal);
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, VT, Custom);
 
       setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
@@ -1471,7 +1475,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                             ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
                             ISD::FMA, ISD::FMINNUM, ISD::FMAXNUM,
-                            ISD::IS_FPCLASS, ISD::FMAXIMUM, ISD::FMINIMUM},
+                            ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM, ISD::IS_FPCLASS,
+                            ISD::FMAXIMUM, ISD::FMINIMUM},
                            VT, Custom);
 
         setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
@@ -6941,9 +6946,11 @@ static unsigned getRISCVVLOp(SDValue Op) {
   case ISD::VP_FP_TO_UINT:
     return RISCVISD::VFCVT_RTZ_XU_F_VL;
   case ISD::FMINNUM:
+  case ISD::FMINIMUMNUM:
   case ISD::VP_FMINNUM:
     return RISCVISD::VFMIN_VL;
   case ISD::FMAXNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::VP_FMAXNUM:
     return RISCVISD::VFMAX_VL;
   case ISD::LRINT:
@@ -6963,7 +6970,7 @@ static bool hasPassthruOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 134 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
@@ -6987,7 +6994,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(
-      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 133 &&
+      RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 134 &&
       RISCVISD::LAST_STRICTFP_OPCODE - RISCVISD::FIRST_STRICTFP_OPCODE == 21 &&
       "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
@@ -7979,6 +7986,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FMA:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
     if (isPromotedOpNeedingSplit(Op, Subtarget))
       return SplitVectorOp(Op, DAG);
     [[fallthrough]];
@@ -8751,7 +8760,7 @@ foldBinOpIntoSelectIfProfitable(SDNode *BO, SelectionDAG &DAG,
 
   unsigned ConstSelOpNo = 1;
   unsigned OtherSelOpNo = 2;
-  if (!dyn_cast<ConstantSDNode>(Sel->getOperand(ConstSelOpNo))) {
+  if (!isa<ConstantSDNode>(Sel->getOperand(ConstSelOpNo))) {
     ConstSelOpNo = 2;
     OtherSelOpNo = 1;
   }
@@ -9595,6 +9604,13 @@ getSmallestVTForIndex(MVT VecVT, unsigned MaxIdx, SDLoc DL, SelectionDAG &DAG,
   return SmallerVT;
 }
 
+static bool isValidVisniInsertExtractIndex(SDValue Idx) {
+  auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
+  if (!IdxC || isNullConstant(Idx))
+    return false;
+  return isUInt<5>(IdxC->getZExtValue());
+}
+
 // Custom-legalize INSERT_VECTOR_ELT so that the value is inserted into the
 // first position of a vector, and that vector is slid up to the insert index.
 // By limiting the active vector length to index+1 and merging with the
@@ -9705,6 +9721,23 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         return Vec;
       return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
     }
+
+    // Use ri.vinsert.v.x if available.
+    if (Subtarget.hasVendorXRivosVisni() && VecVT.isInteger() &&
+        isValidVisniInsertExtractIndex(Idx)) {
+      // Tail policy applies to elements past VLMAX (by assumption Idx < VLMAX)
+      SDValue PolicyOp =
+          DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT);
+      Vec = DAG.getNode(RISCVISD::RI_VINSERT_VL, DL, ContainerVT, Vec, Val, Idx,
+                        VL, PolicyOp);
+      if (AlignedIdx)
+        Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, OrigContainerVT, OrigVec,
+                          Vec, AlignedIdx);
+      if (!VecVT.isFixedLengthVector())
+        return Vec;
+      return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
+    }
+
     ValInVec = lowerScalarInsert(Val, VL, ContainerVT, DL, DAG, Subtarget);
   } else {
     // On RV32, i64-element vectors must be specially handled to place the
@@ -9902,6 +9935,14 @@ SDValue RISCVTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
       Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ContainerVT, Vec,
                         DAG.getConstant(0, DL, XLenVT));
     }
+  }
+
+  // Use ri.vextract.x.v if available.
+  // TODO: Avoid index 0 and just use the vmv.x.s
+  if (Subtarget.hasVendorXRivosVisni() && EltVT.isInteger() &&
+      isValidVisniInsertExtractIndex(Idx)) {
+    SDValue Elt = DAG.getNode(RISCVISD::RI_VEXTRACT, DL, XLenVT, Vec, Idx);
+    return DAG.getNode(ISD::TRUNCATE, DL, EltVT, Elt);
   }
 
   // If after narrowing, the required slide is still greater than LMUL2,
@@ -21391,15 +21432,28 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
         "supervisor",
         "qci-nest",
         "qci-nonest",
+        "SiFive-CLIC-preemptible",
+        "SiFive-CLIC-stack-swap",
+        "SiFive-CLIC-preemptible-stack-swap",
     };
     if (llvm::find(SupportedInterruptKinds, Kind) ==
         std::end(SupportedInterruptKinds))
       report_fatal_error(
         "Function interrupt attribute argument not supported!");
 
-    if ((Kind == "qci-nest" || Kind == "qci-nonest") &&
-        !Subtarget.hasVendorXqciint())
+    if (Kind.starts_with("qci-") && !Subtarget.hasVendorXqciint())
       report_fatal_error("'qci-*' interrupt kinds require Xqciint extension");
+
+    if (Kind.starts_with("SiFive-CLIC-") && !Subtarget.hasVendorXSfmclic())
+      report_fatal_error(
+          "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension",
+          /*gen_crash_diag=*/false);
+
+    const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
+    if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
+      report_fatal_error("'SiFive-CLIC-preemptible' interrupt kinds cannot "
+                         "have a frame pointer",
+                         /*gen_crash_diag=*/false);
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -22321,12 +22375,14 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VCPOP_VL)
   NODE_NAME_CASE(VFIRST_VL)
+  NODE_NAME_CASE(RI_VINSERT_VL)
   NODE_NAME_CASE(RI_VZIPEVEN_VL)
   NODE_NAME_CASE(RI_VZIPODD_VL)
   NODE_NAME_CASE(RI_VZIP2A_VL)
   NODE_NAME_CASE(RI_VZIP2B_VL)
   NODE_NAME_CASE(RI_VUNZIP2A_VL)
   NODE_NAME_CASE(RI_VUNZIP2B_VL)
+  NODE_NAME_CASE(RI_VEXTRACT)
   NODE_NAME_CASE(READ_CSR)
   NODE_NAME_CASE(WRITE_CSR)
   NODE_NAME_CASE(SWAP_CSR)

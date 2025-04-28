@@ -285,6 +285,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//llvm:Support",
+        "//llvm:Telemetry",
     ],
 )
 
@@ -830,7 +831,7 @@ cc_binary(
     deps = [
         ":APIHeaders",
         ":Host",
-        ":UtilityHeaders",
+        ":Utility",
         ":liblldb.wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
