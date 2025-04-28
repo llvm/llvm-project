@@ -59,6 +59,8 @@ class LowerNontemporalPass
       else if (auto storeOp = llvm::dyn_cast<fir::StoreOp>(op))
         operand = storeOp.getMemref();
 
+      // Skip load and store operations involving boxes (allocatable or pointer
+      // types).
       if (operand && !(fir::isAllocatableType(operand.getType()) ||
                        fir::isPointerType((operand.getType())))) {
         operand = getBaseOperand(operand);
