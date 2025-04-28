@@ -70,9 +70,12 @@ def : WriteRes<WriteIMul32, [SMX60_IEU]>  { let Latency = 3; }
 def : WriteRes<WriteIMul, [SMX60_IEU]>  { let Latency = 6; }
 
 // Integer division/remainder
-let Latency = 3, ReleaseAtCycles = [3] in {
+// Worst case latency is used
+let Latency = 12, ReleaseAtCycles = [12] in {
   def : WriteRes<WriteIDiv32, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem32, [SMX60_IEUA]>;
+}
+let Latency = 20, ReleaseAtCycles = [20] in {
   def : WriteRes<WriteIDiv, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem, [SMX60_IEUA]>;
 }
