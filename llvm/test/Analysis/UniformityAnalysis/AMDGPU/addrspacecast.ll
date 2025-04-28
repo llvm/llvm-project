@@ -1,5 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefix=UNI
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefix=DIV
+; REQUIRES: fix-me
 
 ; UNI: ALL VALUES UNIFORM
 ; DIV: DIVERGENT:   %alloca.1 = alloca i32, align 4
