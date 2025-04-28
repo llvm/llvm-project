@@ -110,14 +110,14 @@ def : StPat<truncstorei8, SB, GPR, i16>;
 
 let Predicates = [HasAtomicLdSt] in {
   def : LdPat<atomic_load_aext_8,  LB, i16>;
-  def : LdPat<atomic_load_16, LH, i16>;
+  def : LdPat<atomic_load_nonext_16, LH, i16>;
 
   def : StPat<atomic_store_8,  SB, GPR, i16>;
   def : StPat<atomic_store_16, SH, GPR, i16>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_32, LW, i32>;
+  def : LdPat<atomic_load_nonext_32, LW, i32>;
   def : StPat<atomic_store_32, SW, GPR, i32>;
 }
 
