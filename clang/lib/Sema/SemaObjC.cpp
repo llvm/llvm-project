@@ -2259,7 +2259,7 @@ void SemaObjC::handleExternallyRetainedAttr(Decl *D, const ParsedAttr &AL) {
 
 bool SemaObjC::GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx) {
   Sema::FormatStringInfo FSI;
-  if ((SemaRef.GetFormatStringType(Format) == Sema::FST_NSString) &&
+  if ((SemaRef.GetFormatStringType(Format) == FormatStringType::NSString) &&
       SemaRef.getFormatStringInfo(Format->getFormatIdx(), Format->getFirstArg(),
                                   false, true, &FSI)) {
     Idx = FSI.FormatIdx;
