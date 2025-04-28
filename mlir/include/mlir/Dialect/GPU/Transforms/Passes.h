@@ -92,7 +92,6 @@ inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
   populateGpuAllReducePatterns(patterns);
   populateGpuGlobalIdPatterns(patterns);
   populateGpuShufflePatterns(patterns);
-  populateGpuSubgroupIdPatterns(patterns);
 }
 
 namespace gpu {
