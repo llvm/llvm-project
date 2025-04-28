@@ -4131,9 +4131,8 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
             },
             [&](const Fortran::parser::Name &name) {
               if (const auto *symbol = name.symbol) {
-                if (const auto *commonBlockDetails =
-                        symbol->detailsIf<
-                            Fortran::semantics::CommonBlockDetails>()) {
+                if (symbol
+                        ->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
                   genCtors(operandLocation, *symbol);
                 } else {
                   TODO(operandLocation,
