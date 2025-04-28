@@ -235,8 +235,7 @@ bool InlineAsmLowering::lowerInlineAsm(
   const auto ConstraintError = [&](const GISelAsmOperandInfo &Info, Twine Msg) {
     LLVMContext &Ctx = MIRBuilder.getContext();
     Ctx.diagnose(DiagnosticInfoInlineAsm(
-        Call, "invalid constraint '" + Info.ConstraintCode + "' in '" +
-                  MF.getName() + "': " + Msg));
+        Call, "invalid constraint '" + Info.ConstraintCode + "': " + Msg));
     // TODO: Recover if fallback isn't used. Otherwise let the fallback to DAG
     // kick in.
     return false;
