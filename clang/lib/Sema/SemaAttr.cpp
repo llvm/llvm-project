@@ -415,7 +415,7 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc,
       llvm_unreachable("invalid clang section kind");
   }
 
-  if (Action == PragmaClangSectionAction::PCSA_Clear) {
+  if (Action == PragmaClangSectionAction::Clear) {
     CSec->Valid = false;
     return;
   }
