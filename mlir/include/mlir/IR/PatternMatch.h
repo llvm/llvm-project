@@ -475,6 +475,80 @@ public:
     RewriterBase::Listener *rewriteListener;
   };
 
+  struct CatalogingListener : public RewriterBase::ForwardingListener {
+    CatalogingListener(OpBuilder::Listener *listener,
+                       const std::string &patternName, raw_ostream &os,
+                       std::mutex &writeMutex)
+        : RewriterBase::ForwardingListener(listener), patternName(patternName),
+          os(os), writeMutex(writeMutex) {}
+
+    void notifyOperationInserted(Operation *op, InsertPoint previous) override {
+      {
+        std::lock_guard<std::mutex> lock(writeMutex);
+        os << patternName << " | notifyOperationInserted"
+           << " | " << op->getName() << "\n";
+        os.flush();
+      }
+      ForwardingListener::notifyOperationInserted(op, previous);
+    }
+
+    void notifyOperationModified(Operation *op) override {
+      {
+        std::lock_guard<std::mutex> lock(writeMutex);
+        os << patternName << " | notifyOperationModified"
+           << " | " << op->getName() << "\n";
+        os.flush();
+      }
+      ForwardingListener::notifyOperationModified(op);
+    }
+
+    void notifyOperationReplaced(Operation *op, Operation *newOp) override {
+      {
+        std::lock_guard<std::mutex> lock(writeMutex);
+        os << patternName << " | notifyOperationReplaced (with op)"
+           << " | " << op->getName() << " | " << newOp->getName() << "\n";
+        os.flush();
+      }
+      ForwardingListener::notifyOperationReplaced(op, newOp);
+    }
+
+    void notifyOperationReplaced(Operation *op,
+                                 ValueRange replacement) override {
+      {
+        std::lock_guard<std::mutex> lock(writeMutex);
+        os << patternName << " | notifyOperationReplaced (with values)"
+           << " | " << op->getName() << "\n";
+        os.flush();
+      }
+      ForwardingListener::notifyOperationReplaced(op, replacement);
+    }
+
+    void notifyOperationErased(Operation *op) override {
+      {
+        std::lock_guard<std::mutex> lock(writeMutex);
+        os << patternName << " | notifyOperationErased"
+           << " | " << op->getName() << "\n";
+        os.flush();
+      }
+      ForwardingListener::notifyOperationErased(op);
+    }
+
+    void notifyPatternBegin(const Pattern &pattern, Operation *op) override {
+      {
+        std::lock_guard<std::mutex> lock(writeMutex);
+        os << patternName << " | notifyPatternBegin"
+           << " | " << op->getName() << "\n";
+        os.flush();
+      }
+      ForwardingListener::notifyPatternBegin(pattern, op);
+    }
+
+  private:
+    const std::string &patternName;
+    raw_ostream &os;
+    std::mutex &writeMutex;
+  };
+
   /// Move the blocks that belong to "region" before the given position in
   /// another region "parent". The two regions must be different. The caller
   /// is responsible for creating or updating the operation transferring flow
