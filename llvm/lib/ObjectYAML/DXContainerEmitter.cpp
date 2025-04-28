@@ -305,6 +305,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
           RS.ParametersContainer.addInfo(Header, -1);
         }
       }
+    }
 
       RS.write(OS);
       break;
