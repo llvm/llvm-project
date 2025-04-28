@@ -37,6 +37,6 @@ class TestSwiftMetatype(TestBase):
         var_p = frame.FindVariable("p")
         lldbutil.check_variable(self, var_s, False, "String")
         lldbutil.check_variable(self, var_c, False, "@thick a.D.Type")
-        lldbutil.check_variable(self, var_f, False, '@thick ((Int) -> Int).Type')
+        lldbutil.check_variable(self, var_f, True, '@thick ((Int) -> Int).Type')
         lldbutil.check_variable(self, var_t, False, "(Int, Int, String)")
         lldbutil.check_variable(self, var_p, False, "a.P")

@@ -1541,6 +1541,8 @@ def check_variable(
             valobj.IsDynamic(),
             "dynamic value of %s is not dynamic" % (name if valobj else "<unknown>"),
         )
+    else:
+        valobj = valobj.GetStaticValue()
     if use_synthetic:
         valobj.SetPreferSyntheticValue(True)
     if summary:

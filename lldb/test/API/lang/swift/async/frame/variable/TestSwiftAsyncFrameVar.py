@@ -25,7 +25,7 @@ class TestCase(lldbtest.TestBase):
         b = frame.FindVariable("b")
         self.assertFalse(b.IsValid())
         d = frame.FindVariable("d")
-        lldbutil.check_variable(self, d, False, value='23')
+        lldbutil.check_variable(self, d, use_dynamic=True, value='23')
 
         # The first breakpoint resolves to multiple locations, but only the
         # first location is needed. Now that we've stopped, delete it to
@@ -46,4 +46,4 @@ class TestCase(lldbtest.TestBase):
         self.assertTrue(b.IsValid())
         self.assertGreater(b.unsigned, 0)
         d = frame.FindVariable("d")
-        lldbutil.check_variable(self, d, False, value='23')
+        lldbutil.check_variable(self, d, use_dynamic=True, value='23')
