@@ -1,27 +1,20 @@
 ; RUN: opt -mattr=+simd128 -passes=loop-vectorize %s | llc -mtriple=wasm32 -mattr=+simd128 -verify-machineinstrs -o - | FileCheck %s
-; RUN: opt -mattr=+simd128 -passes=loop-vectorize -vectorizer-maximize-bandwidth %s | llc -mtriple=wasm32 -mattr=+simd128 -verify-machineinstrs -o - | FileCheck %s --check-prefix=MAX-BANDWIDTH
+; RUN: opt -mattr=+simd128 -passes=loop-vectorize -vectorizer-maximize-bandwidth %s | llc -mtriple=wasm32 -mattr=+simd128 -verify-machineinstrs -o - | FileCheck %s
 
 target triple = "wasm32"
 
 define hidden i32 @i32_mac_s8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i32_mac_s8:
-; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_s
-; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_s
-; CHECK:    i32x4.extmul_low_i16x8_s
-; CHECK:    i32x4.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.dot_i16x8_s
-; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
-; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
-; MAX-BANDWIDTH: i32x4.dot_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
+; CHECK: v128.load
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: v128.load
+; CHECK: i16x8.extend_low_i8x16_s
+; CHECK: i32x4.dot_i16x8_s
+; CHECK: i16x8.extend_high_i8x16_s
+; CHECK: i16x8.extend_high_i8x16_s
+; CHECK: i32x4.dot_i16x8_s
+; CHECK: i32x4.add
+; CHECK: i32x4.add
 
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -49,14 +42,9 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i32 @i32_mac_s16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i32_mac_s16:
-; CHECK:    i32x4.load16x4_s 0:p2align=1
-; CHECK:    i32x4.load16x4_s 0:p2align=1
-; CHECK:    i32x4.mul
-; CHECK:    i32x4.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.dot_i16x8_s
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i32x4.dot_i16x8_s
 
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -84,37 +72,30 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i64 @i64_mac_s16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i64_mac_s16:
-; CHECK:    v128.load32_zero 0:p2align=1
-; CHECK:    i32x4.extend_low_i16x8_s
-; CHECK:    v128.load32_zero 0:p2align=1
-; CHECK:    i32x4.extend_low_i16x8_s
-; CHECK:    i64x2.extmul_low_i32x4_s
-; CHECK:    i64x2.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_s
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_s
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_s
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_s
-; MAX-BANDWIDTH: i64x2.add
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i64x2.extmul_low_i32x4_s
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i64x2.extmul_low_i32x4_s
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i64x2.extmul_low_i32x4_s
+; CHECK: i64x2.add
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i64x2.extmul_low_i32x4_s
+; CHECK: i64x2.add
 
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -142,19 +123,13 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i64 @i64_mac_s32(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i64_mac_s32:
-; CHECK:    v128.load64_zero 0:p2align=2
-; CHECK:    v128.load64_zero 0:p2align=2
-; CHECK:    i32x4.mul
-; CHECK:    i64x2.extend_low_i32x4_s
-; CHECK:    i64x2.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.mul
-; MAX-BANDWIDTH: i64x2.extend_high_i32x4_s
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i64x2.extend_low_i32x4_s
-; MAX-BANDWIDTH: i64x2.add
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i32x4.mul
+; CHECK: i64x2.extend_high_i32x4_s
+; CHECK: i64x2.add
+; CHECK: i64x2.extend_low_i32x4_s
+; CHECK: i64x2.add
 
 entry:
   %cmp6.not = icmp eq i32 %N, 0
@@ -181,25 +156,18 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i32 @i32_mac_u8(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i32_mac_u8:
-; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_u
-; CHECK:    v128.load32_zero 0:p2align=0
-; CHECK:    i16x8.extend_low_i8x16_u
-; CHECK:    i32x4.extmul_low_i16x8_u
-; CHECK:    i32x4.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_u
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_u
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i16x8.extmul_low_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.extend_high_i16x8_u
+; CHECK: i32x4.add
+; CHECK: i16x8.extmul_high_i8x16_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.extend_high_i16x8_u
+; CHECK: i32x4.add
+; CHECK: i32x4.add
+; CHECK: i32x4.add
 
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -227,17 +195,12 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i32 @i32_mac_u16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i32_mac_u16:
-; CHECK:    i32x4.load16x4_u 0:p2align=1
-; CHECK:    i32x4.load16x4_u 0:p2align=1
-; CHECK:    i32x4.mul
-; CHECK:    i32x4.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extmul_low_i16x8_u
-; MAX-BANDWIDTH: i32x4.extmul_high_i16x8_u
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i32x4.extmul_low_i16x8_u
+; CHECK: i32x4.extmul_high_i16x8_u
+; CHECK: i32x4.add
+; CHECK: i32x4.add
 
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -265,21 +228,16 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i32 @i32_mac_u16_s16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i32_mac_u16_s16:
-; CHECK:    i32x4.load16x4_s 0:p2align=1
-; CHECK:    i32x4.load16x4_u 0:p2align=1
-; CHECK:    i32x4.mul
-; CHECK:    i32x4.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
-; MAX-BANDWIDTH: i32x4.mul
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i32x4.mul
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.add
+; CHECK: v128.load
+; CHECK: i32x4.extend_high_i16x8_s
+; CHECK: v128.load
+; CHECK: i32x4.extend_high_i16x8_u
+; CHECK: i32x4.mul
+; CHECK: i32x4.extend_low_i16x8_s
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.mul
+; CHECK: i32x4.add
+; CHECK: i32x4.add
 
 entry:
   %cmp7.not = icmp eq i32 %N, 0
@@ -307,37 +265,30 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i64 @i64_mac_u16(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i64_mac_u16:
-; CHECK:    v128.load32_zero 0:p2align=1
-; CHECK:    i32x4.extend_low_i16x8_u
-; CHECK:    v128.load32_zero 0:p2align=1
-; CHECK:    i32x4.extend_low_i16x8_u
-; CHECK:    i64x2.extmul_low_i32x4_u
-; CHECK:    i64x2.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_u
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_u
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_u
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i64x2.extmul_low_i32x4_u
-; MAX-BANDWIDTH: i64x2.add
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: v128.load
+; CHECK: i8x16.shuffle	12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i64x2.extmul_low_i32x4_u
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i8x16.shuffle	8, 9, 10, 11, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i64x2.extmul_low_i32x4_u
+; CHECK: i64x2.add
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i8x16.shuffle	4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i64x2.extmul_low_i32x4_u
+; CHECK: i64x2.add
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i32x4.extend_low_i16x8_u
+; CHECK: i64x2.extmul_low_i32x4_u
+; CHECK: i64x2.add
 
 entry:
   %cmp8.not = icmp eq i32 %N, 0
@@ -365,19 +316,13 @@ for.body:                                         ; preds = %entry, %for.body
 
 define hidden i64 @i64_mac_u32(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %N) {
 ; CHECK-LABEL: i64_mac_u32:
-; CHECK:    v128.load64_zero 0:p2align=2
-; CHECK:    v128.load64_zero 0:p2align=2
-; CHECK:    i32x4.mul
-; CHECK:    i64x2.extend_low_i32x4_u
-; CHECK:    i64x2.add
-
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.mul
-; MAX-BANDWIDTH: i64x2.extend_high_i32x4_u
-; MAX-BANDWIDTH: i64x2.add
-; MAX-BANDWIDTH: i64x2.extend_low_i32x4_u
-; MAX-BANDWIDTH: i64x2.add
+; CHECK: v128.load
+; CHECK: v128.load
+; CHECK: i32x4.mul
+; CHECK: i64x2.extend_high_i32x4_u
+; CHECK: i64x2.add
+; CHECK: i64x2.extend_low_i32x4_u
+; CHECK: i64x2.add
 
 entry:
   %cmp6.not = icmp eq i32 %N, 0

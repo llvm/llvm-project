@@ -15,7 +15,7 @@ define i64 @test(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 16: 56
-; CHECK: LV: Selecting VF: 16
+; CHECK: LV: Selecting VF: vscale x 8
 entry:
   br label %for.body
 
@@ -50,7 +50,7 @@ define i64 @test_external_iv_user(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 16: 57
-; CHECK: LV: Selecting VF: vscale x 2
+; CHECK: LV: Selecting VF: vscale x 8
 entry:
   br label %for.body
 
@@ -87,7 +87,7 @@ define i64 @test_two_ivs(ptr %a, ptr %b, i64 %start) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost for VF 16: 48
-; CHECK: LV: Selecting VF: 16
+; CHECK: LV: Selecting VF: vscale x 8
 entry:
   br label %for.body
 

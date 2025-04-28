@@ -8,8 +8,8 @@
 ; (maximized bandwidth for i8 in the loop).
 define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK: LV: Checking a loop in 'test0'
-; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 4
-; CHECK_SCALABLE_ON: LV: Selecting VF: 16
+; CHECK_SCALABLE_ON: LV: Found feasible scalable VF = vscale x 16
+; CHECK_SCALABLE_ON: LV: Selecting VF: vscale x 16
 ; CHECK_SCALABLE_DISABLED-NOT: LV: Found feasible scalable VF
 ; CHECK_SCALABLE_DISABLED: LV: Selecting VF: 16
 ; CHECK_SCALABLE_ON_MAXBW: LV: Found feasible scalable VF = vscale x 16

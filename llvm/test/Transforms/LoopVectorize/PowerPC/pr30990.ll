@@ -31,8 +31,8 @@ while.end:                                        ; preds = %while.end.loopexit,
   %count.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %while.end.loopexit ]
   ret i32 %count.0.lcssa
 
-; CHECK: load <4 x i8>
-; CHECK: icmp slt <4 x i8>
+; CHECK: load <16 x i8>
+; CHECK: icmp slt <16 x i8>
 }
 
 
@@ -66,8 +66,8 @@ while.end:                                        ; preds = %while.end.loopexit,
   ret i16 %count.0.lcssa
 
 ; CHECK-LABEL: foo2
-; CHECK: load <8 x i8>
-; CHECK: icmp slt <8 x i8>
+; CHECK: load <16 x i8>
+; CHECK: icmp slt <16 x i8>
 }
 
 define signext i32 @foo3(ptr readonly %ptr, i32 signext %l) {
@@ -100,8 +100,8 @@ while.end:                                        ; preds = %while.end.loopexit,
   ret i32 %count.0.lcssa
 
 ; CHECK-LABEL: foo3
-; CHECK: load <4 x i16>
-; CHECK: icmp slt <4 x i16>
+; CHECK: load <8 x i16>
+; CHECK: icmp slt <8 x i16>
 }
 
 define i64 @foo4(ptr readonly %ptr, i32 signext %l) {
@@ -134,7 +134,7 @@ while.end:                                        ; preds = %while.end.loopexit,
   ret i64 %count.0.lcssa
 
 ; CHECK-LABEL: foo4
-; CHECK: load <2 x i16>
-; CHECK: icmp slt <2 x i16>
+; CHECK: load <8 x i16>
+; CHECK: icmp slt <8 x i16>
 }
 

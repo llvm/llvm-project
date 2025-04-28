@@ -88,12 +88,12 @@ for.body:
 define void @mixed_types(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture %D, ptr noalias nocapture readonly %E, ptr noalias nocapture readonly %F) #0 {
 ; CHECK-LABEL:        mixed_types(
 ; PREFER-FOLDING:     vector.body:
-; PREFER-FOLDING:     call <4 x i16> @llvm.masked.load.v4i16.p0
-; PREFER-FOLDING:     call <4 x i16> @llvm.masked.load.v4i16.p0
-; PREFER-FOLDING:     call void @llvm.masked.store.v4i16.p0
-; PREFER-FOLDING:     call <4 x i32> @llvm.masked.load.v4i32.p0
-; PREFER-FOLDING:     call <4 x i32> @llvm.masked.load.v4i32.p0
-; PREFER-FOLDING:     call void @llvm.masked.store.v4i32.p0
+; PREFER-FOLDING:     call <8 x i16> @llvm.masked.load.v8i16.p0
+; PREFER-FOLDING:     call <8 x i16> @llvm.masked.load.v8i16.p0
+; PREFER-FOLDING:     call void @llvm.masked.store.v8i16.p0
+; PREFER-FOLDING:     call <8 x i32> @llvm.masked.load.v8i32.p0
+; PREFER-FOLDING:     call <8 x i32> @llvm.masked.load.v8i32.p0
+; PREFER-FOLDING:     call void @llvm.masked.store.v8i32.p0
 ; PREFER-FOLDING:     br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body
@@ -180,7 +180,7 @@ for.body:
 
 define void @narrowing_store_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL:    narrowing_store_allowed(
-; PREFER-FOLDING: call void @llvm.masked.store.v4i8.p0
+; PREFER-FOLDING: call void @llvm.masked.store.v16i8.p0
 ; PREFER-FOLDING: br i1 %{{.*}}, label %{{.*}}, label %vector.body
 entry:
   br label %for.body

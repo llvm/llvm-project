@@ -10,166 +10,213 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-SAME: ptr noalias [[R:%.*]], ptr noalias [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP24:%.*]] = icmp sgt i32 [[N]], 0
-; CHECK-NEXT:    br i1 [[CMP24]], label %[[FOR_COND1_PREHEADER_PREHEADER:.*]], label %[[FOR_END13:.*]]
-; CHECK:       [[FOR_COND1_PREHEADER_PREHEADER]]:
+; CHECK-NEXT:    br i1 [[CMP24]], label %[[ITER_CHECK:.*]], label %[[FOR_END13:.*]]
+; CHECK:       [[ITER_CHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP69:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP65:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP66:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP67:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP64:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP65:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP66:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP67:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 6
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDEX]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP1]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP2]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP4]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP3]], i64 0, i32 0
-; CHECK-NEXT:    [[WIDE_VEC35:%.*]] = load <12 x float>, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC36:%.*]] = shufflevector <12 x float> [[WIDE_VEC35]], <12 x float> poison, <2 x i32> <i32 0, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC37:%.*]] = shufflevector <12 x float> [[WIDE_VEC35]], <12 x float> poison, <2 x i32> <i32 1, i32 7>
-; CHECK-NEXT:    [[STRIDED_VEC38:%.*]] = shufflevector <12 x float> [[WIDE_VEC35]], <12 x float> poison, <2 x i32> <i32 2, i32 8>
-; CHECK-NEXT:    [[STRIDED_VEC39:%.*]] = shufflevector <12 x float> [[WIDE_VEC35]], <12 x float> poison, <2 x i32> <i32 3, i32 9>
-; CHECK-NEXT:    [[STRIDED_VEC40:%.*]] = shufflevector <12 x float> [[WIDE_VEC35]], <12 x float> poison, <2 x i32> <i32 4, i32 10>
-; CHECK-NEXT:    [[STRIDED_VEC41:%.*]] = shufflevector <12 x float> [[WIDE_VEC35]], <12 x float> poison, <2 x i32> <i32 5, i32 11>
-; CHECK-NEXT:    [[WIDE_VEC42:%.*]] = load <12 x float>, ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC43:%.*]] = shufflevector <12 x float> [[WIDE_VEC42]], <12 x float> poison, <2 x i32> <i32 0, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC44:%.*]] = shufflevector <12 x float> [[WIDE_VEC42]], <12 x float> poison, <2 x i32> <i32 1, i32 7>
-; CHECK-NEXT:    [[STRIDED_VEC45:%.*]] = shufflevector <12 x float> [[WIDE_VEC42]], <12 x float> poison, <2 x i32> <i32 2, i32 8>
-; CHECK-NEXT:    [[STRIDED_VEC46:%.*]] = shufflevector <12 x float> [[WIDE_VEC42]], <12 x float> poison, <2 x i32> <i32 3, i32 9>
-; CHECK-NEXT:    [[STRIDED_VEC47:%.*]] = shufflevector <12 x float> [[WIDE_VEC42]], <12 x float> poison, <2 x i32> <i32 4, i32 10>
-; CHECK-NEXT:    [[STRIDED_VEC48:%.*]] = shufflevector <12 x float> [[WIDE_VEC42]], <12 x float> poison, <2 x i32> <i32 5, i32 11>
-; CHECK-NEXT:    [[WIDE_VEC49:%.*]] = load <12 x float>, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC50:%.*]] = shufflevector <12 x float> [[WIDE_VEC49]], <12 x float> poison, <2 x i32> <i32 0, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC51:%.*]] = shufflevector <12 x float> [[WIDE_VEC49]], <12 x float> poison, <2 x i32> <i32 1, i32 7>
-; CHECK-NEXT:    [[STRIDED_VEC52:%.*]] = shufflevector <12 x float> [[WIDE_VEC49]], <12 x float> poison, <2 x i32> <i32 2, i32 8>
-; CHECK-NEXT:    [[STRIDED_VEC53:%.*]] = shufflevector <12 x float> [[WIDE_VEC49]], <12 x float> poison, <2 x i32> <i32 3, i32 9>
-; CHECK-NEXT:    [[STRIDED_VEC54:%.*]] = shufflevector <12 x float> [[WIDE_VEC49]], <12 x float> poison, <2 x i32> <i32 4, i32 10>
-; CHECK-NEXT:    [[STRIDED_VEC55:%.*]] = shufflevector <12 x float> [[WIDE_VEC49]], <12 x float> poison, <2 x i32> <i32 5, i32 11>
-; CHECK-NEXT:    [[WIDE_VEC56:%.*]] = load <12 x float>, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC57:%.*]] = shufflevector <12 x float> [[WIDE_VEC56]], <12 x float> poison, <2 x i32> <i32 0, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC58:%.*]] = shufflevector <12 x float> [[WIDE_VEC56]], <12 x float> poison, <2 x i32> <i32 1, i32 7>
-; CHECK-NEXT:    [[STRIDED_VEC59:%.*]] = shufflevector <12 x float> [[WIDE_VEC56]], <12 x float> poison, <2 x i32> <i32 2, i32 8>
-; CHECK-NEXT:    [[STRIDED_VEC60:%.*]] = shufflevector <12 x float> [[WIDE_VEC56]], <12 x float> poison, <2 x i32> <i32 3, i32 9>
-; CHECK-NEXT:    [[STRIDED_VEC61:%.*]] = shufflevector <12 x float> [[WIDE_VEC56]], <12 x float> poison, <2 x i32> <i32 4, i32 10>
-; CHECK-NEXT:    [[STRIDED_VEC62:%.*]] = shufflevector <12 x float> [[WIDE_VEC56]], <12 x float> poison, <2 x i32> <i32 5, i32 11>
-; CHECK-NEXT:    [[TMP64:%.*]] = fmul fast <2 x float> [[STRIDED_VEC36]], [[STRIDED_VEC36]]
-; CHECK-NEXT:    [[TMP97:%.*]] = fmul fast <2 x float> [[STRIDED_VEC43]], [[STRIDED_VEC43]]
-; CHECK-NEXT:    [[TMP98:%.*]] = fmul fast <2 x float> [[STRIDED_VEC50]], [[STRIDED_VEC50]]
-; CHECK-NEXT:    [[TMP99:%.*]] = fmul fast <2 x float> [[STRIDED_VEC57]], [[STRIDED_VEC57]]
-; CHECK-NEXT:    [[TMP72:%.*]] = fmul fast <2 x float> [[STRIDED_VEC37]], [[STRIDED_VEC37]]
-; CHECK-NEXT:    [[TMP105:%.*]] = fmul fast <2 x float> [[STRIDED_VEC44]], [[STRIDED_VEC44]]
-; CHECK-NEXT:    [[TMP106:%.*]] = fmul fast <2 x float> [[STRIDED_VEC51]], [[STRIDED_VEC51]]
-; CHECK-NEXT:    [[TMP107:%.*]] = fmul fast <2 x float> [[STRIDED_VEC58]], [[STRIDED_VEC58]]
-; CHECK-NEXT:    [[TMP80:%.*]] = fadd fast <2 x float> [[TMP72]], [[TMP64]]
-; CHECK-NEXT:    [[TMP113:%.*]] = fadd fast <2 x float> [[TMP105]], [[TMP97]]
-; CHECK-NEXT:    [[TMP114:%.*]] = fadd fast <2 x float> [[TMP106]], [[TMP98]]
-; CHECK-NEXT:    [[TMP115:%.*]] = fadd fast <2 x float> [[TMP107]], [[TMP99]]
-; CHECK-NEXT:    [[TMP21:%.*]] = fpext <2 x float> [[TMP80]] to <2 x double>
-; CHECK-NEXT:    [[TMP22:%.*]] = fpext <2 x float> [[TMP113]] to <2 x double>
-; CHECK-NEXT:    [[TMP23:%.*]] = fpext <2 x float> [[TMP114]] to <2 x double>
-; CHECK-NEXT:    [[TMP24:%.*]] = fpext <2 x float> [[TMP115]] to <2 x double>
-; CHECK-NEXT:    [[TMP25:%.*]] = fadd fast <2 x double> [[TMP21]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP26:%.*]] = fadd fast <2 x double> [[TMP22]], [[VEC_PHI1]]
-; CHECK-NEXT:    [[TMP27:%.*]] = fadd fast <2 x double> [[TMP23]], [[VEC_PHI2]]
-; CHECK-NEXT:    [[TMP28:%.*]] = fadd fast <2 x double> [[TMP24]], [[VEC_PHI3]]
-; CHECK-NEXT:    [[TMP100:%.*]] = fmul fast <2 x float> [[STRIDED_VEC38]], [[STRIDED_VEC38]]
-; CHECK-NEXT:    [[TMP101:%.*]] = fmul fast <2 x float> [[STRIDED_VEC45]], [[STRIDED_VEC45]]
-; CHECK-NEXT:    [[TMP102:%.*]] = fmul fast <2 x float> [[STRIDED_VEC52]], [[STRIDED_VEC52]]
-; CHECK-NEXT:    [[TMP103:%.*]] = fmul fast <2 x float> [[STRIDED_VEC59]], [[STRIDED_VEC59]]
-; CHECK-NEXT:    [[TMP108:%.*]] = fmul fast <2 x float> [[STRIDED_VEC39]], [[STRIDED_VEC39]]
-; CHECK-NEXT:    [[TMP109:%.*]] = fmul fast <2 x float> [[STRIDED_VEC46]], [[STRIDED_VEC46]]
-; CHECK-NEXT:    [[TMP110:%.*]] = fmul fast <2 x float> [[STRIDED_VEC53]], [[STRIDED_VEC53]]
-; CHECK-NEXT:    [[TMP111:%.*]] = fmul fast <2 x float> [[STRIDED_VEC60]], [[STRIDED_VEC60]]
-; CHECK-NEXT:    [[TMP116:%.*]] = fadd fast <2 x float> [[TMP108]], [[TMP100]]
-; CHECK-NEXT:    [[TMP117:%.*]] = fadd fast <2 x float> [[TMP109]], [[TMP101]]
-; CHECK-NEXT:    [[TMP118:%.*]] = fadd fast <2 x float> [[TMP110]], [[TMP102]]
-; CHECK-NEXT:    [[TMP119:%.*]] = fadd fast <2 x float> [[TMP111]], [[TMP103]]
-; CHECK-NEXT:    [[TMP41:%.*]] = fpext <2 x float> [[TMP116]] to <2 x double>
-; CHECK-NEXT:    [[TMP42:%.*]] = fpext <2 x float> [[TMP117]] to <2 x double>
-; CHECK-NEXT:    [[TMP43:%.*]] = fpext <2 x float> [[TMP118]] to <2 x double>
-; CHECK-NEXT:    [[TMP44:%.*]] = fpext <2 x float> [[TMP119]] to <2 x double>
-; CHECK-NEXT:    [[TMP45:%.*]] = fadd fast <2 x double> [[TMP41]], [[TMP25]]
-; CHECK-NEXT:    [[TMP46:%.*]] = fadd fast <2 x double> [[TMP42]], [[TMP26]]
-; CHECK-NEXT:    [[TMP47:%.*]] = fadd fast <2 x double> [[TMP43]], [[TMP27]]
-; CHECK-NEXT:    [[TMP48:%.*]] = fadd fast <2 x double> [[TMP44]], [[TMP28]]
-; CHECK-NEXT:    [[TMP104:%.*]] = fmul fast <2 x float> [[STRIDED_VEC40]], [[STRIDED_VEC40]]
-; CHECK-NEXT:    [[TMP142:%.*]] = fmul fast <2 x float> [[STRIDED_VEC47]], [[STRIDED_VEC47]]
-; CHECK-NEXT:    [[TMP147:%.*]] = fmul fast <2 x float> [[STRIDED_VEC54]], [[STRIDED_VEC54]]
-; CHECK-NEXT:    [[TMP152:%.*]] = fmul fast <2 x float> [[STRIDED_VEC61]], [[STRIDED_VEC61]]
-; CHECK-NEXT:    [[TMP112:%.*]] = fmul fast <2 x float> [[STRIDED_VEC41]], [[STRIDED_VEC41]]
-; CHECK-NEXT:    [[TMP143:%.*]] = fmul fast <2 x float> [[STRIDED_VEC48]], [[STRIDED_VEC48]]
-; CHECK-NEXT:    [[TMP148:%.*]] = fmul fast <2 x float> [[STRIDED_VEC55]], [[STRIDED_VEC55]]
-; CHECK-NEXT:    [[TMP153:%.*]] = fmul fast <2 x float> [[STRIDED_VEC62]], [[STRIDED_VEC62]]
-; CHECK-NEXT:    [[TMP120:%.*]] = fadd fast <2 x float> [[TMP112]], [[TMP104]]
-; CHECK-NEXT:    [[TMP144:%.*]] = fadd fast <2 x float> [[TMP143]], [[TMP142]]
-; CHECK-NEXT:    [[TMP149:%.*]] = fadd fast <2 x float> [[TMP148]], [[TMP147]]
-; CHECK-NEXT:    [[TMP154:%.*]] = fadd fast <2 x float> [[TMP153]], [[TMP152]]
-; CHECK-NEXT:    [[TMP61:%.*]] = fpext <2 x float> [[TMP120]] to <2 x double>
-; CHECK-NEXT:    [[TMP62:%.*]] = fpext <2 x float> [[TMP144]] to <2 x double>
-; CHECK-NEXT:    [[TMP63:%.*]] = fpext <2 x float> [[TMP149]] to <2 x double>
-; CHECK-NEXT:    [[TMP155:%.*]] = fpext <2 x float> [[TMP154]] to <2 x double>
-; CHECK-NEXT:    [[TMP69]] = fadd fast <2 x double> [[TMP61]], [[TMP45]]
-; CHECK-NEXT:    [[TMP65]] = fadd fast <2 x double> [[TMP62]], [[TMP46]]
-; CHECK-NEXT:    [[TMP66]] = fadd fast <2 x double> [[TMP63]], [[TMP47]]
-; CHECK-NEXT:    [[TMP67]] = fadd fast <2 x double> [[TMP155]], [[TMP48]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <24 x float>, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <24 x float> [[WIDE_VEC]], <24 x float> poison, <4 x i32> <i32 0, i32 6, i32 12, i32 18>
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <24 x float> [[WIDE_VEC]], <24 x float> poison, <4 x i32> <i32 1, i32 7, i32 13, i32 19>
+; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <24 x float> [[WIDE_VEC]], <24 x float> poison, <4 x i32> <i32 2, i32 8, i32 14, i32 20>
+; CHECK-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <24 x float> [[WIDE_VEC]], <24 x float> poison, <4 x i32> <i32 3, i32 9, i32 15, i32 21>
+; CHECK-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <24 x float> [[WIDE_VEC]], <24 x float> poison, <4 x i32> <i32 4, i32 10, i32 16, i32 22>
+; CHECK-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <24 x float> [[WIDE_VEC]], <24 x float> poison, <4 x i32> <i32 5, i32 11, i32 17, i32 23>
+; CHECK-NEXT:    [[WIDE_VEC10:%.*]] = load <24 x float>, ptr [[TMP15]], align 8
+; CHECK-NEXT:    [[STRIDED_VEC11:%.*]] = shufflevector <24 x float> [[WIDE_VEC10]], <24 x float> poison, <4 x i32> <i32 0, i32 6, i32 12, i32 18>
+; CHECK-NEXT:    [[STRIDED_VEC12:%.*]] = shufflevector <24 x float> [[WIDE_VEC10]], <24 x float> poison, <4 x i32> <i32 1, i32 7, i32 13, i32 19>
+; CHECK-NEXT:    [[STRIDED_VEC13:%.*]] = shufflevector <24 x float> [[WIDE_VEC10]], <24 x float> poison, <4 x i32> <i32 2, i32 8, i32 14, i32 20>
+; CHECK-NEXT:    [[STRIDED_VEC14:%.*]] = shufflevector <24 x float> [[WIDE_VEC10]], <24 x float> poison, <4 x i32> <i32 3, i32 9, i32 15, i32 21>
+; CHECK-NEXT:    [[STRIDED_VEC15:%.*]] = shufflevector <24 x float> [[WIDE_VEC10]], <24 x float> poison, <4 x i32> <i32 4, i32 10, i32 16, i32 22>
+; CHECK-NEXT:    [[STRIDED_VEC16:%.*]] = shufflevector <24 x float> [[WIDE_VEC10]], <24 x float> poison, <4 x i32> <i32 5, i32 11, i32 17, i32 23>
+; CHECK-NEXT:    [[WIDE_VEC17:%.*]] = load <24 x float>, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[STRIDED_VEC18:%.*]] = shufflevector <24 x float> [[WIDE_VEC17]], <24 x float> poison, <4 x i32> <i32 0, i32 6, i32 12, i32 18>
+; CHECK-NEXT:    [[STRIDED_VEC19:%.*]] = shufflevector <24 x float> [[WIDE_VEC17]], <24 x float> poison, <4 x i32> <i32 1, i32 7, i32 13, i32 19>
+; CHECK-NEXT:    [[STRIDED_VEC20:%.*]] = shufflevector <24 x float> [[WIDE_VEC17]], <24 x float> poison, <4 x i32> <i32 2, i32 8, i32 14, i32 20>
+; CHECK-NEXT:    [[STRIDED_VEC21:%.*]] = shufflevector <24 x float> [[WIDE_VEC17]], <24 x float> poison, <4 x i32> <i32 3, i32 9, i32 15, i32 21>
+; CHECK-NEXT:    [[STRIDED_VEC22:%.*]] = shufflevector <24 x float> [[WIDE_VEC17]], <24 x float> poison, <4 x i32> <i32 4, i32 10, i32 16, i32 22>
+; CHECK-NEXT:    [[STRIDED_VEC23:%.*]] = shufflevector <24 x float> [[WIDE_VEC17]], <24 x float> poison, <4 x i32> <i32 5, i32 11, i32 17, i32 23>
+; CHECK-NEXT:    [[WIDE_VEC24:%.*]] = load <24 x float>, ptr [[TMP16]], align 8
+; CHECK-NEXT:    [[STRIDED_VEC25:%.*]] = shufflevector <24 x float> [[WIDE_VEC24]], <24 x float> poison, <4 x i32> <i32 0, i32 6, i32 12, i32 18>
+; CHECK-NEXT:    [[STRIDED_VEC26:%.*]] = shufflevector <24 x float> [[WIDE_VEC24]], <24 x float> poison, <4 x i32> <i32 1, i32 7, i32 13, i32 19>
+; CHECK-NEXT:    [[STRIDED_VEC27:%.*]] = shufflevector <24 x float> [[WIDE_VEC24]], <24 x float> poison, <4 x i32> <i32 2, i32 8, i32 14, i32 20>
+; CHECK-NEXT:    [[STRIDED_VEC28:%.*]] = shufflevector <24 x float> [[WIDE_VEC24]], <24 x float> poison, <4 x i32> <i32 3, i32 9, i32 15, i32 21>
+; CHECK-NEXT:    [[STRIDED_VEC29:%.*]] = shufflevector <24 x float> [[WIDE_VEC24]], <24 x float> poison, <4 x i32> <i32 4, i32 10, i32 16, i32 22>
+; CHECK-NEXT:    [[STRIDED_VEC30:%.*]] = shufflevector <24 x float> [[WIDE_VEC24]], <24 x float> poison, <4 x i32> <i32 5, i32 11, i32 17, i32 23>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[STRIDED_VEC]], [[STRIDED_VEC]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x float> [[STRIDED_VEC11]], [[STRIDED_VEC11]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <4 x float> [[STRIDED_VEC18]], [[STRIDED_VEC18]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x float> [[STRIDED_VEC25]], [[STRIDED_VEC25]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <4 x float> [[STRIDED_VEC5]], [[STRIDED_VEC5]]
+; CHECK-NEXT:    [[TMP71:%.*]] = fmul fast <4 x float> [[STRIDED_VEC12]], [[STRIDED_VEC12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[STRIDED_VEC19]], [[STRIDED_VEC19]]
+; CHECK-NEXT:    [[TMP89:%.*]] = fmul fast <4 x float> [[STRIDED_VEC26]], [[STRIDED_VEC26]]
+; CHECK-NEXT:    [[TMP90:%.*]] = fadd fast <4 x float> [[TMP12]], [[TMP8]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[TMP71]], [[TMP9]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP10]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd fast <4 x float> [[TMP89]], [[TMP11]]
+; CHECK-NEXT:    [[TMP20:%.*]] = fpext <4 x float> [[TMP90]] to <4 x double>
+; CHECK-NEXT:    [[TMP21:%.*]] = fpext <4 x float> [[TMP17]] to <4 x double>
+; CHECK-NEXT:    [[TMP22:%.*]] = fpext <4 x float> [[TMP18]] to <4 x double>
+; CHECK-NEXT:    [[TMP23:%.*]] = fpext <4 x float> [[TMP19]] to <4 x double>
+; CHECK-NEXT:    [[TMP24:%.*]] = fadd fast <4 x double> [[TMP20]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fadd fast <4 x double> [[TMP21]], [[VEC_PHI2]]
+; CHECK-NEXT:    [[TMP26:%.*]] = fadd fast <4 x double> [[TMP22]], [[VEC_PHI3]]
+; CHECK-NEXT:    [[TMP27:%.*]] = fadd fast <4 x double> [[TMP23]], [[VEC_PHI4]]
+; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast <4 x float> [[STRIDED_VEC6]], [[STRIDED_VEC6]]
+; CHECK-NEXT:    [[TMP29:%.*]] = fmul fast <4 x float> [[STRIDED_VEC13]], [[STRIDED_VEC13]]
+; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast <4 x float> [[STRIDED_VEC20]], [[STRIDED_VEC20]]
+; CHECK-NEXT:    [[TMP31:%.*]] = fmul fast <4 x float> [[STRIDED_VEC27]], [[STRIDED_VEC27]]
+; CHECK-NEXT:    [[TMP32:%.*]] = fmul fast <4 x float> [[STRIDED_VEC7]], [[STRIDED_VEC7]]
+; CHECK-NEXT:    [[TMP33:%.*]] = fmul fast <4 x float> [[STRIDED_VEC14]], [[STRIDED_VEC14]]
+; CHECK-NEXT:    [[TMP34:%.*]] = fmul fast <4 x float> [[STRIDED_VEC21]], [[STRIDED_VEC21]]
+; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast <4 x float> [[STRIDED_VEC28]], [[STRIDED_VEC28]]
+; CHECK-NEXT:    [[TMP36:%.*]] = fadd fast <4 x float> [[TMP32]], [[TMP28]]
+; CHECK-NEXT:    [[TMP37:%.*]] = fadd fast <4 x float> [[TMP33]], [[TMP29]]
+; CHECK-NEXT:    [[TMP38:%.*]] = fadd fast <4 x float> [[TMP34]], [[TMP30]]
+; CHECK-NEXT:    [[TMP39:%.*]] = fadd fast <4 x float> [[TMP35]], [[TMP31]]
+; CHECK-NEXT:    [[TMP40:%.*]] = fpext <4 x float> [[TMP36]] to <4 x double>
+; CHECK-NEXT:    [[TMP41:%.*]] = fpext <4 x float> [[TMP37]] to <4 x double>
+; CHECK-NEXT:    [[TMP42:%.*]] = fpext <4 x float> [[TMP38]] to <4 x double>
+; CHECK-NEXT:    [[TMP43:%.*]] = fpext <4 x float> [[TMP39]] to <4 x double>
+; CHECK-NEXT:    [[TMP44:%.*]] = fadd fast <4 x double> [[TMP40]], [[TMP24]]
+; CHECK-NEXT:    [[TMP45:%.*]] = fadd fast <4 x double> [[TMP41]], [[TMP25]]
+; CHECK-NEXT:    [[TMP46:%.*]] = fadd fast <4 x double> [[TMP42]], [[TMP26]]
+; CHECK-NEXT:    [[TMP47:%.*]] = fadd fast <4 x double> [[TMP43]], [[TMP27]]
+; CHECK-NEXT:    [[TMP48:%.*]] = fmul fast <4 x float> [[STRIDED_VEC8]], [[STRIDED_VEC8]]
+; CHECK-NEXT:    [[TMP49:%.*]] = fmul fast <4 x float> [[STRIDED_VEC15]], [[STRIDED_VEC15]]
+; CHECK-NEXT:    [[TMP50:%.*]] = fmul fast <4 x float> [[STRIDED_VEC22]], [[STRIDED_VEC22]]
+; CHECK-NEXT:    [[TMP51:%.*]] = fmul fast <4 x float> [[STRIDED_VEC29]], [[STRIDED_VEC29]]
+; CHECK-NEXT:    [[TMP52:%.*]] = fmul fast <4 x float> [[STRIDED_VEC9]], [[STRIDED_VEC9]]
+; CHECK-NEXT:    [[TMP53:%.*]] = fmul fast <4 x float> [[STRIDED_VEC16]], [[STRIDED_VEC16]]
+; CHECK-NEXT:    [[TMP54:%.*]] = fmul fast <4 x float> [[STRIDED_VEC23]], [[STRIDED_VEC23]]
+; CHECK-NEXT:    [[TMP55:%.*]] = fmul fast <4 x float> [[STRIDED_VEC30]], [[STRIDED_VEC30]]
+; CHECK-NEXT:    [[TMP56:%.*]] = fadd fast <4 x float> [[TMP52]], [[TMP48]]
+; CHECK-NEXT:    [[TMP57:%.*]] = fadd fast <4 x float> [[TMP53]], [[TMP49]]
+; CHECK-NEXT:    [[TMP58:%.*]] = fadd fast <4 x float> [[TMP54]], [[TMP50]]
+; CHECK-NEXT:    [[TMP59:%.*]] = fadd fast <4 x float> [[TMP55]], [[TMP51]]
+; CHECK-NEXT:    [[TMP60:%.*]] = fpext <4 x float> [[TMP56]] to <4 x double>
+; CHECK-NEXT:    [[TMP61:%.*]] = fpext <4 x float> [[TMP57]] to <4 x double>
+; CHECK-NEXT:    [[TMP62:%.*]] = fpext <4 x float> [[TMP58]] to <4 x double>
+; CHECK-NEXT:    [[TMP63:%.*]] = fpext <4 x float> [[TMP59]] to <4 x double>
+; CHECK-NEXT:    [[TMP64]] = fadd fast <4 x double> [[TMP60]], [[TMP44]]
+; CHECK-NEXT:    [[TMP65]] = fadd fast <4 x double> [[TMP61]], [[TMP45]]
+; CHECK-NEXT:    [[TMP66]] = fadd fast <4 x double> [[TMP62]], [[TMP46]]
+; CHECK-NEXT:    [[TMP67]] = fadd fast <4 x double> [[TMP63]], [[TMP47]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP68:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP68]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x double> [[TMP65]], [[TMP69]]
-; CHECK-NEXT:    [[BIN_RDX30:%.*]] = fadd fast <2 x double> [[TMP66]], [[BIN_RDX]]
-; CHECK-NEXT:    [[TMP156:%.*]] = fadd fast <2 x double> [[TMP67]], [[BIN_RDX30]]
-; CHECK-NEXT:    [[TMP158:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP156]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x double> [[TMP65]], [[TMP64]]
+; CHECK-NEXT:    [[BIN_RDX31:%.*]] = fadd fast <4 x double> [[TMP66]], [[BIN_RDX]]
+; CHECK-NEXT:    [[BIN_RDX32:%.*]] = fadd fast <4 x double> [[TMP67]], [[BIN_RDX31]]
+; CHECK-NEXT:    [[TMP69:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[BIN_RDX32]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_FOR_END13_CRIT_EDGE:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_COND1_PREHEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP158]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_FOR_END13_CRIT_EDGE:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
+; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], 4
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
+; CHECK:       [[VEC_EPILOG_PH]]:
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[TMP69]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; CHECK-NEXT:    [[N_MOD_VF33:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_VEC34:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF33]]
+; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <4 x double> zeroinitializer, double [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT44:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI36:%.*]] = phi <4 x double> [ [[TMP70]], %[[VEC_EPILOG_PH]] ], [ [[TMP86:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX5_REALP:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV]], i64 0, i32 0
+; CHECK-NEXT:    [[WIDE_VEC37:%.*]] = load <24 x float>, ptr [[ARRAYIDX5_REALP]], align 8
+; CHECK-NEXT:    [[STRIDED_VEC38:%.*]] = shufflevector <24 x float> [[WIDE_VEC37]], <24 x float> poison, <4 x i32> <i32 0, i32 6, i32 12, i32 18>
+; CHECK-NEXT:    [[STRIDED_VEC39:%.*]] = shufflevector <24 x float> [[WIDE_VEC37]], <24 x float> poison, <4 x i32> <i32 1, i32 7, i32 13, i32 19>
+; CHECK-NEXT:    [[STRIDED_VEC40:%.*]] = shufflevector <24 x float> [[WIDE_VEC37]], <24 x float> poison, <4 x i32> <i32 2, i32 8, i32 14, i32 20>
+; CHECK-NEXT:    [[STRIDED_VEC41:%.*]] = shufflevector <24 x float> [[WIDE_VEC37]], <24 x float> poison, <4 x i32> <i32 3, i32 9, i32 15, i32 21>
+; CHECK-NEXT:    [[STRIDED_VEC42:%.*]] = shufflevector <24 x float> [[WIDE_VEC37]], <24 x float> poison, <4 x i32> <i32 4, i32 10, i32 16, i32 22>
+; CHECK-NEXT:    [[STRIDED_VEC43:%.*]] = shufflevector <24 x float> [[WIDE_VEC37]], <24 x float> poison, <4 x i32> <i32 5, i32 11, i32 17, i32 23>
+; CHECK-NEXT:    [[TMP72:%.*]] = fmul fast <4 x float> [[STRIDED_VEC38]], [[STRIDED_VEC38]]
+; CHECK-NEXT:    [[TMP73:%.*]] = fmul fast <4 x float> [[STRIDED_VEC39]], [[STRIDED_VEC39]]
+; CHECK-NEXT:    [[TMP74:%.*]] = fadd fast <4 x float> [[TMP73]], [[TMP72]]
+; CHECK-NEXT:    [[TMP75:%.*]] = fpext <4 x float> [[TMP74]] to <4 x double>
+; CHECK-NEXT:    [[TMP76:%.*]] = fadd fast <4 x double> [[TMP75]], [[VEC_PHI36]]
+; CHECK-NEXT:    [[TMP77:%.*]] = fmul fast <4 x float> [[STRIDED_VEC40]], [[STRIDED_VEC40]]
+; CHECK-NEXT:    [[TMP78:%.*]] = fmul fast <4 x float> [[STRIDED_VEC41]], [[STRIDED_VEC41]]
+; CHECK-NEXT:    [[TMP79:%.*]] = fadd fast <4 x float> [[TMP78]], [[TMP77]]
+; CHECK-NEXT:    [[TMP80:%.*]] = fpext <4 x float> [[TMP79]] to <4 x double>
+; CHECK-NEXT:    [[TMP81:%.*]] = fadd fast <4 x double> [[TMP80]], [[TMP76]]
+; CHECK-NEXT:    [[TMP82:%.*]] = fmul fast <4 x float> [[STRIDED_VEC42]], [[STRIDED_VEC42]]
+; CHECK-NEXT:    [[TMP83:%.*]] = fmul fast <4 x float> [[STRIDED_VEC43]], [[STRIDED_VEC43]]
+; CHECK-NEXT:    [[TMP84:%.*]] = fadd fast <4 x float> [[TMP83]], [[TMP82]]
+; CHECK-NEXT:    [[TMP85:%.*]] = fpext <4 x float> [[TMP84]] to <4 x double>
+; CHECK-NEXT:    [[TMP86]] = fadd fast <4 x double> [[TMP85]], [[TMP81]]
+; CHECK-NEXT:    [[INDEX_NEXT44]] = add nuw i64 [[INDVARS_IV]], 4
+; CHECK-NEXT:    [[TMP87:%.*]] = icmp eq i64 [[INDEX_NEXT44]], [[N_VEC34]]
+; CHECK-NEXT:    br i1 [[TMP87]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP88:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP86]])
+; CHECK-NEXT:    [[CMP_N45:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC34]]
+; CHECK-NEXT:    br i1 [[CMP_N45]], label %[[FOR_COND_FOR_END13_CRIT_EDGE]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC34]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX46:%.*]] = phi double [ [[TMP88]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP69]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_COND1_PREHEADER]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[SUM_026:%.*]] = phi double [ [[ADD10_2:%.*]], %[[FOR_COND1_PREHEADER]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX5_REALP:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV]], i64 0, i32 0
-; CHECK-NEXT:    [[ARRAYIDX5_REAL:%.*]] = load float, ptr [[ARRAYIDX5_REALP]], align 8
-; CHECK-NEXT:    [[ARRAYIDX5_IMAGP:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV]], i64 0, i32 1
+; CHECK-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_COND1_PREHEADER]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[SUM_026:%.*]] = phi double [ [[ADD10_2:%.*]], %[[FOR_COND1_PREHEADER]] ], [ [[BC_MERGE_RDX46]], %[[VEC_EPILOG_SCALAR_PH]] ]
+; CHECK-NEXT:    [[ARRAYIDX5_REALP1:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 0, i32 0
+; CHECK-NEXT:    [[ARRAYIDX5_REAL:%.*]] = load float, ptr [[ARRAYIDX5_REALP1]], align 8
+; CHECK-NEXT:    [[ARRAYIDX5_IMAGP:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 0, i32 1
 ; CHECK-NEXT:    [[ARRAYIDX5_IMAG:%.*]] = load float, ptr [[ARRAYIDX5_IMAGP]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[ARRAYIDX5_REAL]], [[ARRAYIDX5_REAL]]
 ; CHECK-NEXT:    [[MUL9:%.*]] = fmul fast float [[ARRAYIDX5_IMAG]], [[ARRAYIDX5_IMAG]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[MUL9]], [[MUL]]
 ; CHECK-NEXT:    [[CONV:%.*]] = fpext float [[ADD]] to double
 ; CHECK-NEXT:    [[ADD10:%.*]] = fadd fast double [[CONV]], [[SUM_026]]
-; CHECK-NEXT:    [[ARRAYIDX5_REALP_1:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV]], i64 1, i32 0
+; CHECK-NEXT:    [[ARRAYIDX5_REALP_1:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 1, i32 0
 ; CHECK-NEXT:    [[ARRAYIDX5_REAL_1:%.*]] = load float, ptr [[ARRAYIDX5_REALP_1]], align 8
-; CHECK-NEXT:    [[ARRAYIDX5_IMAGP_1:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV]], i64 1, i32 1
+; CHECK-NEXT:    [[ARRAYIDX5_IMAGP_1:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 1, i32 1
 ; CHECK-NEXT:    [[ARRAYIDX5_IMAG_1:%.*]] = load float, ptr [[ARRAYIDX5_IMAGP_1]], align 8
 ; CHECK-NEXT:    [[MUL_1:%.*]] = fmul fast float [[ARRAYIDX5_REAL_1]], [[ARRAYIDX5_REAL_1]]
 ; CHECK-NEXT:    [[MUL9_1:%.*]] = fmul fast float [[ARRAYIDX5_IMAG_1]], [[ARRAYIDX5_IMAG_1]]
 ; CHECK-NEXT:    [[ADD_1:%.*]] = fadd fast float [[MUL9_1]], [[MUL_1]]
 ; CHECK-NEXT:    [[CONV_1:%.*]] = fpext float [[ADD_1]] to double
 ; CHECK-NEXT:    [[ADD10_1:%.*]] = fadd fast double [[CONV_1]], [[ADD10]]
-; CHECK-NEXT:    [[ARRAYIDX5_REALP_2:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV]], i64 2, i32 0
+; CHECK-NEXT:    [[ARRAYIDX5_REALP_2:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 2, i32 0
 ; CHECK-NEXT:    [[ARRAYIDX5_REAL_2:%.*]] = load float, ptr [[ARRAYIDX5_REALP_2]], align 8
-; CHECK-NEXT:    [[ARRAYIDX5_IMAGP_2:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV]], i64 2, i32 1
+; CHECK-NEXT:    [[ARRAYIDX5_IMAGP_2:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDVARS_IV1]], i64 2, i32 1
 ; CHECK-NEXT:    [[ARRAYIDX5_IMAG_2:%.*]] = load float, ptr [[ARRAYIDX5_IMAGP_2]], align 8
 ; CHECK-NEXT:    [[MUL_2:%.*]] = fmul fast float [[ARRAYIDX5_REAL_2]], [[ARRAYIDX5_REAL_2]]
 ; CHECK-NEXT:    [[MUL9_2:%.*]] = fmul fast float [[ARRAYIDX5_IMAG_2]], [[ARRAYIDX5_IMAG_2]]
 ; CHECK-NEXT:    [[ADD_2:%.*]] = fadd fast float [[MUL9_2]], [[MUL_2]]
 ; CHECK-NEXT:    [[CONV_2:%.*]] = fpext float [[ADD_2]] to double
 ; CHECK-NEXT:    [[ADD10_2]] = fadd fast double [[CONV_2]], [[ADD10_1]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV1]], 1
 ; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_FOR_END13_CRIT_EDGE]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_COND_FOR_END13_CRIT_EDGE]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[FOR_COND_FOR_END13_CRIT_EDGE]]:
-; CHECK-NEXT:    [[ADD10_2_LCSSA:%.*]] = phi double [ [[ADD10_2]], %[[FOR_COND1_PREHEADER]] ], [ [[TMP158]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[ADD10_2_LCSSA:%.*]] = phi double [ [[ADD10_2]], %[[FOR_COND1_PREHEADER]] ], [ [[TMP69]], %[[MIDDLE_BLOCK]] ], [ [[TMP88]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PHITMP:%.*]] = fptrunc double [[ADD10_2_LCSSA]] to float
 ; CHECK-NEXT:    br label %[[FOR_END13]]
 ; CHECK:       [[FOR_END13]]:
@@ -234,5 +281,6 @@ for.end13:                                        ; preds = %for.cond.for.end13_
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]], [[META1]]}
 ;.
