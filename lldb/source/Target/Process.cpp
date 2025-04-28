@@ -2832,7 +2832,7 @@ Status Process::LoadCore() {
     RestoreProcessEvents();
     // Since we hijacked the event stream, we will have we won't have run the
     // stop hooks.  Make sure we do that here:
-    GetTarget().RunStopHooks(true /* at_initial_stop */);
+    GetTarget().RunStopHooks(/* at_initial_stop= */ true);
   }
   return error;
 }
@@ -3205,7 +3205,7 @@ void Process::CompleteAttach() {
   }
   // Since we hijacked the event stream, we will have we won't have run the
   // stop hooks.  Make sure we do that here:
-  GetTarget().RunStopHooks(true /* at_initial_stop */);
+  GetTarget().RunStopHooks(/* at_initial_stop= */ true);
 }
 
 Status Process::ConnectRemote(llvm::StringRef remote_url) {

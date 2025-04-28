@@ -50,7 +50,7 @@ class TestStopHooks(TestBase):
 
     def test_stop_hooks_scripted(self):
         """Test that a scripted stop hook works with no specifiers"""
-        self.stop_hooks_scripted(5, "-F false")
+        self.stop_hooks_scripted(5, "-I false")
 
     def test_stop_hooks_scripted_no_entry(self):
         """Test that a scripted stop hook works with no specifiers"""

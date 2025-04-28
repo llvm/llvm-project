@@ -3056,7 +3056,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
 
   bool no_active_hooks =
       llvm::none_of(m_stop_hooks, [at_initial_stop](auto &p) {
-        bool should_run_now = !at_initial_stop || p.second->GetRunAtFirstStop();
+        bool should_run_now = !at_initial_stop || p.second->GetRunAtInitialStop();
         return p.second->IsActive() && should_run_now;
       });
   if (no_active_hooks)
@@ -3100,8 +3100,9 @@ bool Target::RunStopHooks(bool at_initial_stop) {
           m_process_sp.get(), thread_to_use_sp.get(),
           thread_to_use_sp->GetStackFrameAtIndex(0).get());
       num_exe_ctx = 1;
-    } else
+    } else {
       return false;
+    }
   }
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
@@ -3116,7 +3117,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
     StopHookSP cur_hook_sp = stop_entry.second;
     if (!cur_hook_sp->IsActive())
       continue;
-    if (at_initial_stop && !cur_hook_sp->GetRunAtFirstStop())
+    if (at_initial_stop && !cur_hook_sp->GetRunAtInitialStop())
       continue;
 
     bool any_thread_matched = false;
@@ -3606,7 +3607,7 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
 
       // Run the stop hooks here.  Since we were hijacking the events, they
       // wouldn't have gotten run as part of event delivery.
-      RunStopHooks(true /* at_initial_stop */);
+      RunStopHooks(/* at_initial_stop= */ true);
 
       if (state != eStateStopped) {
         const char *exit_desc = process_sp->GetExitDescription();

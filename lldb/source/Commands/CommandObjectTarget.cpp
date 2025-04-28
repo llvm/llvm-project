@@ -4796,12 +4796,12 @@ public:
         m_one_liner.push_back(std::string(option_arg));
         break;
 
-      case 'F': {
+      case 'I': {
         bool value, success;
         value = OptionArgParser::ToBoolean(option_arg, false, &success);
-        if (success) {
-          m_at_first_stop = value;
-        } else
+        if (success)
+          m_at_initial_stop = value;
+        else
           error = Status::FromErrorStringWithFormat(
               "invalid boolean value '%s' passed for -F option",
               option_arg.str().c_str());
@@ -4833,7 +4833,7 @@ public:
       m_use_one_liner = false;
       m_one_liner.clear();
       m_auto_continue = false;
-      m_at_first_stop = true;
+      m_at_initial_stop = true;
     }
 
     std::string m_class_name;
@@ -4854,7 +4854,7 @@ public:
     // Instance variables to hold the values for one_liner options.
     bool m_use_one_liner = false;
     std::vector<std::string> m_one_liner;
-    bool m_at_first_stop;
+    bool m_at_initial_stop;
 
     bool m_auto_continue = false;
   };
@@ -5020,8 +5020,8 @@ protected:
     if (specifier_up)
       new_hook_sp->SetSpecifier(specifier_up.release());
 
-    // Should we run at first stop:
-    new_hook_sp->SetRunAtFirstStop(m_options.m_at_first_stop);
+    // Should we run at the initial stop:
+    new_hook_sp->SetRunAtInitialStop(m_options.m_at_initial_stop);
 
     // Next see if any of the thread options have been entered:
 
