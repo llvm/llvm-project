@@ -472,9 +472,9 @@ let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
 
 let Predicates = [Is64Bit] in {
 
-// atomic_load_64 addr -> load addr
-def : Pat<(i64 (atomic_load_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
-def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
+// atomic_load_nonext_64 addr -> load addr
+def : Pat<(i64 (atomic_load_nonext_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
+def : Pat<(i64 (atomic_load_nonext_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 
 // atomic_store_64 val, addr -> store val, addr
 def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;
