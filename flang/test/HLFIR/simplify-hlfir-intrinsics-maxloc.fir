@@ -417,6 +417,56 @@ func.func @test_partial_var_nomask(%input: !fir.box<!fir.array<?x?x?xf32>>) -> !
 // CHECK:           return %[[VAL_11]] : !hlfir.expr<?x?xi32>
 // CHECK:         }
 
+// Test that 'nnan' allows using -LARGEST value as the reduction init.
+func.func @test_total_expr_nnan(%input: !hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32> {
+  %0 = hlfir.maxloc %input {fastmath = #arith.fastmath<nnan>} : (!hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32>
+  return %0 : !hlfir.expr<3xi32>
+}
+// CHECK-LABEL:   func.func @test_total_expr_nnan(
+// CHECK-SAME:                                    %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !hlfir.expr<?x?x?xf32>) -> !hlfir.expr<3xi32> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant false
+// CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant 2 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_5:.*]] = arith.constant -3.40282347E+38 : f32
+// CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<3xi32>
+// CHECK:           %[[VAL_8:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?x?xf32>) -> !fir.shape<3>
+// CHECK:           %[[VAL_9:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 0 : index} : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_10:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 1 : index} : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_11:.*]] = hlfir.get_extent %[[VAL_8]] {dim = 2 : index} : (!fir.shape<3>) -> index
+// CHECK:           %[[VAL_12:.*]]:4 = fir.do_loop %[[VAL_13:.*]] = %[[VAL_4]] to %[[VAL_11]] step %[[VAL_4]] iter_args(%[[VAL_14:.*]] = %[[VAL_6]], %[[VAL_15:.*]] = %[[VAL_6]], %[[VAL_16:.*]] = %[[VAL_6]], %[[VAL_17:.*]] = %[[VAL_5]]) -> (i32, i32, i32, f32) {
+// CHECK:             %[[VAL_18:.*]]:4 = fir.do_loop %[[VAL_19:.*]] = %[[VAL_4]] to %[[VAL_10]] step %[[VAL_4]] iter_args(%[[VAL_20:.*]] = %[[VAL_14]], %[[VAL_21:.*]] = %[[VAL_15]], %[[VAL_22:.*]] = %[[VAL_16]], %[[VAL_23:.*]] = %[[VAL_17]]) -> (i32, i32, i32, f32) {
+// CHECK:               %[[VAL_24:.*]]:4 = fir.do_loop %[[VAL_25:.*]] = %[[VAL_4]] to %[[VAL_9]] step %[[VAL_4]] iter_args(%[[VAL_26:.*]] = %[[VAL_20]], %[[VAL_27:.*]] = %[[VAL_21]], %[[VAL_28:.*]] = %[[VAL_22]], %[[VAL_29:.*]] = %[[VAL_23]]) -> (i32, i32, i32, f32) {
+// CHECK:                 %[[VAL_30:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_25]], %[[VAL_19]], %[[VAL_13]] : (!hlfir.expr<?x?x?xf32>, index, index, index) -> f32
+// CHECK:                 %[[VAL_31:.*]] = arith.cmpf ogt, %[[VAL_30]], %[[VAL_29]] fastmath<nnan> : f32
+// CHECK:                 %[[VAL_32:.*]] = arith.cmpf une, %[[VAL_29]], %[[VAL_29]] fastmath<nnan> : f32
+// CHECK:                 %[[VAL_33:.*]] = arith.cmpf oeq, %[[VAL_30]], %[[VAL_30]] fastmath<nnan> : f32
+// CHECK:                 %[[VAL_34:.*]] = arith.andi %[[VAL_32]], %[[VAL_33]] : i1
+// CHECK:                 %[[VAL_35:.*]] = arith.ori %[[VAL_31]], %[[VAL_34]] : i1
+// CHECK:                 %[[VAL_36:.*]] = fir.convert %[[VAL_25]] : (index) -> i32
+// CHECK:                 %[[VAL_37:.*]] = arith.select %[[VAL_35]], %[[VAL_36]], %[[VAL_26]] : i32
+// CHECK:                 %[[VAL_38:.*]] = fir.convert %[[VAL_19]] : (index) -> i32
+// CHECK:                 %[[VAL_39:.*]] = arith.select %[[VAL_35]], %[[VAL_38]], %[[VAL_27]] : i32
+// CHECK:                 %[[VAL_40:.*]] = fir.convert %[[VAL_13]] : (index) -> i32
+// CHECK:                 %[[VAL_41:.*]] = arith.select %[[VAL_35]], %[[VAL_40]], %[[VAL_28]] : i32
+// CHECK:                 %[[VAL_42:.*]] = arith.select %[[VAL_35]], %[[VAL_30]], %[[VAL_29]] : f32
+// CHECK:                 fir.result %[[VAL_37]], %[[VAL_39]], %[[VAL_41]], %[[VAL_42]] : i32, i32, i32, f32
+// CHECK:               }
+// CHECK:               fir.result %[[VAL_43:.*]]#0, %[[VAL_43]]#1, %[[VAL_43]]#2, %[[VAL_43]]#3 : i32, i32, i32, f32
+// CHECK:             }
+// CHECK:             fir.result %[[VAL_44:.*]]#0, %[[VAL_44]]#1, %[[VAL_44]]#2, %[[VAL_44]]#3 : i32, i32, i32, f32
+// CHECK:           }
+// CHECK:           %[[VAL_45:.*]] = hlfir.designate %[[VAL_7]] (%[[VAL_4]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
+// CHECK:           hlfir.assign %[[VAL_46:.*]]#0 to %[[VAL_45]] : i32, !fir.ref<i32>
+// CHECK:           %[[VAL_47:.*]] = hlfir.designate %[[VAL_7]] (%[[VAL_3]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
+// CHECK:           hlfir.assign %[[VAL_46]]#1 to %[[VAL_47]] : i32, !fir.ref<i32>
+// CHECK:           %[[VAL_48:.*]] = hlfir.designate %[[VAL_7]] (%[[VAL_2]])  : (!fir.ref<!fir.array<3xi32>>, index) -> !fir.ref<i32>
+// CHECK:           hlfir.assign %[[VAL_46]]#2 to %[[VAL_48]] : i32, !fir.ref<i32>
+// CHECK:           %[[VAL_49:.*]] = hlfir.as_expr %[[VAL_7]] move %[[VAL_1]] : (!fir.ref<!fir.array<3xi32>>, i1) -> !hlfir.expr<3xi32>
+// CHECK:           return %[[VAL_49]] : !hlfir.expr<3xi32>
+// CHECK:         }
+
 // Character comparisons are not supported yet.
 func.func @test_character(%input: !fir.box<!fir.array<?x!fir.char<1>>>) -> !hlfir.expr<1xi32> {
   %0 = hlfir.maxloc %input : (!fir.box<!fir.array<?x!fir.char<1>>>) -> !hlfir.expr<1xi32>

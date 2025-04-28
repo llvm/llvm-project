@@ -469,7 +469,7 @@ class MinMaxlocAsElementalConverter : public ReductionAsElementalConverter {
   //   * 1 boolean indicating whether it is the first time
   //     the mask is true.
   //
-  // If precomputeFirst() returns true, then the boolean loop-carried
+  // If useIsFirst() returns false, then the boolean loop-carried
   // value is not used.
   static constexpr unsigned maxNumReductions = Fortran::common::maxRank + 2;
   static constexpr bool isMax = std::is_same_v<T, hlfir::MaxlocOp>;
@@ -523,7 +523,7 @@ private:
 
   void
   checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
-    if (precomputeFirst())
+    if (!useIsFirst())
       assert(reductions.size() == getNumCoors() + 1 &&
              "invalid number of reductions for MINLOC/MAXLOC");
     else
@@ -540,15 +540,24 @@ private:
   mlir::Value
   getIsFirst(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
     checkReductions(reductions);
-    assert(!precomputeFirst() && "IsFirst predicate must not be used");
+    assert(useIsFirst() && "IsFirst predicate must not be used");
     return reductions[getNumCoors() + 1];
   }
 
-  // Return true iff the reductions can be initialized
-  // by reading the first element of the array (or its section).
-  // If it returns false, then we use an auxiliary boolean
-  // to identify the very first reduction update.
-  bool precomputeFirst() const { return !getMask(); }
+  // Return true iff the input can contain NaNs, and they should be
+  // honored, such that all-NaNs input must produce the location
+  // of the first unmasked NaN.
+  bool honorNans() const {
+    return !static_cast<bool>(getFastMath() & mlir::arith::FastMathFlags::nnan);
+  }
+
+  // Return true iff we have to use the loop-carried IsFirst predicate.
+  // If there is no mask, we can initialize the reductions using
+  // the first elements of the input.
+  // If NaNs are not honored, we can initialize the starting MIN/MAX
+  // value to +/-LARGEST; the coordinates are guaranteed to be updated
+  // properly for non-empty input without NaNs.
+  bool useIsFirst() const { return getMask() && honorNans(); }
 };
 
 template <typename T>
@@ -557,9 +566,10 @@ MinMaxlocAsElementalConverter<T>::genReductionInitValues(
     mlir::ValueRange oneBasedIndices,
     const llvm::SmallVectorImpl<mlir::Value> &extents) {
   fir::IfOp ifOp;
-  if (precomputeFirst()) {
+  if (!useIsFirst() && honorNans()) {
     // Check if we can load the value of the first element in the array
     // or its section (for partial reduction).
+    assert(!getMask() && "cannot fetch first element when mask is present");
     assert(extents.size() == getNumCoors() &&
            "wrong number of extents for MINLOC/MAXLOC reduction");
     mlir::Value isNotEmpty = genIsNotEmptyArrayExtents(loc, builder, extents);
@@ -600,7 +610,7 @@ MinMaxlocAsElementalConverter<T>::genReductionInitValues(
     builder.create<fir::ResultOp>(loc, result);
     builder.setInsertionPointAfter(ifOp);
     result = ifOp.getResults();
-  } else {
+  } else if (useIsFirst()) {
     // Initial value for isFirst predicate. It is switched to false,
     // when the reduction update dynamically happens inside the reduction
     // loop.
@@ -621,7 +631,7 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
       hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
   mlir::Value cmp = genMinMaxComparison<isMax>(loc, builder, elementValue,
                                                getCurrentMinMax(currentValue));
-  if (!precomputeFirst()) {
+  if (useIsFirst()) {
     // If isFirst is true, then do the reduction update regardless
     // of the FP comparison.
     cmp =
@@ -652,7 +662,7 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
       loc, cmp, elementValue, getCurrentMinMax(currentValue));
   newIndices.push_back(newMinMax);
 
-  if (!precomputeFirst()) {
+  if (useIsFirst()) {
     mlir::Value newIsFirst = builder.createBool(loc, false);
     newIndices.push_back(newIsFirst);
   }
@@ -746,7 +756,7 @@ class MinMaxvalAsElementalConverter
   //
   // The boolean flag is used to replace the initial value
   // with the first input element even if it is NaN.
-  // If precomputeFirst() returns true, then the boolean loop-carried
+  // If useIsFirst() returns false, then the boolean loop-carried
   // value is not used.
   static constexpr bool isMax = std::is_same_v<T, hlfir::MaxvalOp>;
   using Base = NumericReductionAsElementalConverterBase<T>;
@@ -781,13 +791,13 @@ private:
     mlir::Value currentMinMax = getCurrentMinMax(currentValue);
     mlir::Value cmp =
         genMinMaxComparison<isMax>(loc, builder, elementValue, currentMinMax);
-    if (!precomputeFirst())
+    if (useIsFirst())
       cmp = builder.create<mlir::arith::OrIOp>(loc, cmp,
                                                getIsFirst(currentValue));
     mlir::Value newMinMax = builder.create<mlir::arith::SelectOp>(
         loc, cmp, elementValue, currentMinMax);
     result.push_back(newMinMax);
-    if (!precomputeFirst())
+    if (useIsFirst())
       result.push_back(builder.createBool(loc, false));
     return result;
   }
@@ -813,17 +823,25 @@ private:
   mlir::Value
   getIsFirst(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
     this->checkReductions(reductions);
-    assert(!precomputeFirst() && "IsFirst predicate must not be used");
+    assert(useIsFirst() && "IsFirst predicate must not be used");
     return reductions[1];
   }
 
-  // Return true iff the reductions can be initialized
-  // by reading the first element of the array (or its section).
-  // If it returns false, then we use an auxiliary boolean
-  // to identify the very first reduction update.
-  bool precomputeFirst() const { return !this->getMask(); }
+  // Return true iff the input can contain NaNs, and they should be
+  // honored, such that all-NaNs input must produce NaN result.
+  bool honorNans() const {
+    return !static_cast<bool>(this->getFastMath() &
+                              mlir::arith::FastMathFlags::nnan);
+  }
 
-  std::size_t getNumReductions() const { return precomputeFirst() ? 1 : 2; }
+  // Return true iff we have to use the loop-carried IsFirst predicate.
+  // If there is no mask, we can initialize the reductions using
+  // the first elements of the input.
+  // If NaNs are not honored, we can initialize the starting MIN/MAX
+  // value to +/-LARGEST.
+  bool useIsFirst() const { return this->getMask() && honorNans(); }
+
+  std::size_t getNumReductions() const { return useIsFirst() ? 2 : 1; }
 };
 
 template <typename T>
@@ -836,12 +854,14 @@ MinMaxvalAsElementalConverter<T>::genReductionInitValues(
   mlir::Location loc = this->loc;
 
   fir::IfOp ifOp;
-  if (precomputeFirst()) {
+  if (!useIsFirst() && honorNans()) {
     // Check if we can load the value of the first element in the array
     // or its section (for partial reduction).
-    assert(extents.size() == this->isTotalReduction()
-               ? this->getSourceRank()
-               : 1u && "wrong number of extents for MINVAL/MAXVAL reduction");
+    assert(!this->getMask() &&
+           "cannot fetch first element when mask is present");
+    assert(extents.size() ==
+               (this->isTotalReduction() ? this->getSourceRank() : 1u) &&
+           "wrong number of extents for MINVAL/MAXVAL reduction");
     mlir::Value isNotEmpty = genIsNotEmptyArrayExtents(loc, builder, extents);
     llvm::SmallVector<mlir::Value> indices = genFirstElementIndicesForReduction(
         loc, builder, this->isTotalReduction(), this->getConstDim(),
@@ -867,7 +887,7 @@ MinMaxvalAsElementalConverter<T>::genReductionInitValues(
     builder.create<fir::ResultOp>(loc, result);
     builder.setInsertionPointAfter(ifOp);
     result = ifOp.getResults();
-  } else {
+  } else if (useIsFirst()) {
     // Initial value for isFirst predicate. It is switched to false,
     // when the reduction update dynamically happens inside the reduction
     // loop.

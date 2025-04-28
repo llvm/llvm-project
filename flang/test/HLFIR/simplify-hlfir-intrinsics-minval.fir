@@ -268,3 +268,34 @@ func.func @test_total_var_nomask(%input: !fir.box<!fir.array<?x?xf16>>) -> f16 {
 // CHECK:           }
 // CHECK:           return %[[VAL_14]] : f16
 // CHECK:         }
+
+// Test that 'nnan' allows using LARGEST value as the reduction init.
+func.func @test_partial_expr_nnan(%input: !hlfir.expr<?x?xf64>) -> !hlfir.expr<?xf64> {
+  %dim = arith.constant 1 : i32
+  %0 = hlfir.minval %input dim %dim {fastmath = #arith.fastmath<nnan>} : (!hlfir.expr<?x?xf64>, i32) -> !hlfir.expr<?xf64>
+  return %0 : !hlfir.expr<?xf64>
+}
+// CHECK-LABEL:   func.func @test_partial_expr_nnan(
+// CHECK-SAME:                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !hlfir.expr<?x?xf64>) -> !hlfir.expr<?xf64> {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 1.7976931348623157E+308 : f64
+// CHECK:           %[[VAL_3:.*]] = hlfir.shape_of %[[VAL_0]] : (!hlfir.expr<?x?xf64>) -> !fir.shape<2>
+// CHECK:           %[[VAL_4:.*]] = hlfir.get_extent %[[VAL_3]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_5:.*]] = hlfir.get_extent %[[VAL_3]] {dim = 1 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_7:.*]] = hlfir.elemental %[[VAL_6]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf64> {
+// CHECK:           ^bb0(%[[VAL_8:.*]]: index):
+// CHECK:             %[[VAL_9:.*]] = fir.do_loop %[[VAL_10:.*]] = %[[VAL_1]] to %[[VAL_4]] step %[[VAL_1]] iter_args(%[[VAL_11:.*]] = %[[VAL_2]]) -> (f64) {
+// CHECK:               %[[VAL_12:.*]] = hlfir.apply %[[VAL_0]], %[[VAL_10]], %[[VAL_8]] : (!hlfir.expr<?x?xf64>, index, index) -> f64
+// CHECK:               %[[VAL_13:.*]] = arith.cmpf olt, %[[VAL_12]], %[[VAL_11]] fastmath<nnan> : f64
+// CHECK:               %[[VAL_14:.*]] = arith.cmpf une, %[[VAL_11]], %[[VAL_11]] fastmath<nnan> : f64
+// CHECK:               %[[VAL_15:.*]] = arith.cmpf oeq, %[[VAL_12]], %[[VAL_12]] fastmath<nnan> : f64
+// CHECK:               %[[VAL_16:.*]] = arith.andi %[[VAL_14]], %[[VAL_15]] : i1
+// CHECK:               %[[VAL_17:.*]] = arith.ori %[[VAL_13]], %[[VAL_16]] : i1
+// CHECK:               %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_12]], %[[VAL_11]] : f64
+// CHECK:               fir.result %[[VAL_18]] : f64
+// CHECK:             }
+// CHECK:             hlfir.yield_element %[[VAL_9]] : f64
+// CHECK:           }
+// CHECK:           return %[[VAL_7]] : !hlfir.expr<?xf64>
+// CHECK:         }
