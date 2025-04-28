@@ -137,7 +137,7 @@ void SBLineEntry::SetLine(uint32_t line) {
 void SBLineEntry::SetColumn(uint32_t column) {
   LLDB_INSTRUMENT_VA(this, column);
 
-  ref().column = column;
+  ref().line = column;
 }
 
 bool SBLineEntry::operator==(const SBLineEntry &rhs) const {

@@ -208,7 +208,9 @@ namespace {
 
   class MipsDelaySlotFiller : public MachineFunctionPass {
   public:
-    MipsDelaySlotFiller() : MachineFunctionPass(ID) {}
+    MipsDelaySlotFiller() : MachineFunctionPass(ID) {
+      initializeMipsDelaySlotFillerPass(*PassRegistry::getPassRegistry());
+    }
 
     StringRef getPassName() const override { return "Mips Delay Slot Filler"; }
 

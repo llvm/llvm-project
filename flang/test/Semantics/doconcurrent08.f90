@@ -85,13 +85,13 @@ subroutine s1()
         type(HasAllocPolyType) :: nonAllocatableWithAllocPoly
 
         ! OK because the declared variable is not allocatable
-        type(HasAllocPolyCoarrayType), save :: nonAllocatableWithAllocPolyCoarray
+        type(HasAllocPolyCoarrayType) :: nonAllocatableWithAllocPolyCoarray
 
         ! Bad because even though the declared the allocatable component is a coarray
         type(HasAllocPolyCoarrayType), allocatable :: allocWithAllocPolyCoarray
 
         ! OK since it has no polymorphic component
-        type(HasAllocCoarrayType), save :: nonAllocWithAllocCoarray
+        type(HasAllocCoarrayType) :: nonAllocWithAllocCoarray
 
         ! OK since it has no component that's polymorphic, oops
         type(HasPointerPolyType), allocatable :: allocatableWithPointerPoly
@@ -124,8 +124,6 @@ subroutine s2()
 
   class(Base), allocatable, codimension[:] :: allocPolyComponentVar
   class(Base), allocatable, codimension[:] :: allocPolyComponentVar1
-
-  class(*), allocatable :: unlimitedPoly
 
   allocate(ChildType :: localVar)
   allocate(ChildType :: localVar1)
@@ -163,16 +161,6 @@ subroutine s2()
     ! applies to components
 !ERROR: Deallocation of a polymorphic entity caused by assignment not allowed in DO CONCURRENT
     allocPolyCoarray = allocPolyCoarray1
-
-!ERROR: Deallocation of a polymorphic entity caused by assignment not allowed in DO CONCURRENT
-    unlimitedPoly = 1
-    select type (unlimitedPoly)
-    type is (integer)
-      unlimitedPoly = 1 ! ok
-    class default
-!ERROR: Deallocation of a polymorphic entity caused by assignment not allowed in DO CONCURRENT
-      unlimitedPoly = 1
-    end select
 
   end do
 end subroutine s2

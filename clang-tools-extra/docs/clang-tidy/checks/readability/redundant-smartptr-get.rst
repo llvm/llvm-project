@@ -14,8 +14,6 @@ Examples:
   *ptr->get()  ==>  **ptr
   if (ptr.get() == nullptr) ... => if (ptr == nullptr) ...
 
-Options
--------
 
 .. option:: IgnoreMacros
 

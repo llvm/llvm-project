@@ -1,3 +1,4 @@
+// XFAIL: *
 // REQUIRES: comgr-has-spirv
 // COM: Generate a SPIRV file from a HIP kernel
 // RUN: clang -x hip --offload-arch=amdgcnspirv -nogpulib -nogpuinc \

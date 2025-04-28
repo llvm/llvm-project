@@ -12,7 +12,6 @@ target_link_libraries(fir-lsp-server PRIVATE
   CUFDialect
   FIRDialect
   FIROpenACCSupport
-  FIROpenMPSupport
   HLFIRDialect)
 
 mlir_target_link_libraries(fir-lsp-server PRIVATE

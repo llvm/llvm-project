@@ -43,9 +43,8 @@ void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              StringRef TcTargetID = StringRef());
 
 namespace dlr {
-llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                        const SanitizerArgs &SanArgs, const Driver &D,
+llvm::SmallVector<std::string, 12>
+getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs, const Driver &D,
                         const std::string &GPUArch, bool isOpenMP,
                         const RocmInstallationDetector &RocmInstallation);
 
@@ -83,8 +82,6 @@ const char *getLldCommandArgs(
     const std::optional<std::string> OutputFilePrefix = std::nullopt);
 } // end namespace dlr
 
-void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
-                               llvm::opt::ArgStringList &CmdArgs);
 } // end namespace amdgpu
 } // end namespace tools
 
@@ -191,7 +188,7 @@ public:
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   // Returns a list of device library names shared by different languages
-  llvm::SmallVector<BitCodeLibraryInfo, 12>
+  llvm::SmallVector<std::string, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                           const std::string &GPUArch,
                           bool isOpenMP = false) const;

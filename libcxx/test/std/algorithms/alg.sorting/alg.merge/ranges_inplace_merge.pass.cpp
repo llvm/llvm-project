@@ -13,14 +13,13 @@
 // template<bidirectional_iterator I, sentinel_for<I> S, class Comp = ranges::less,
 //          class Proj = identity>
 //   requires sortable<I, Comp, Proj>
-//   constexpr I                                                                            // constexpr since C++26
-//     inplace_merge(I first, I middle, S last, Comp comp = {}, Proj proj = {});            // Since C++20
+//   I inplace_merge(I first, I middle, S last, Comp comp = {}, Proj proj = {});                    // Since C++20
 //
 // template<bidirectional_range R, class Comp = ranges::less, class Proj = identity>
 //   requires sortable<iterator_t<R>, Comp, Proj>
-//   constexpr borrowed_iterator_t<R>                                                       // constexpr since C++26
+//   borrowed_iterator_t<R>
 //     inplace_merge(R&& r, iterator_t<R> middle, Comp comp = {},
-//                   Proj proj = {});                                                       // Since C++20
+//                   Proj proj = {});                                                               // Since C++20
 
 #include <algorithm>
 #include <array>
@@ -87,7 +86,7 @@ static_assert(!HasInplaceMergeRange<R<int*>, int*, ComparatorNotCopyable<int*>>)
 static_assert(!HasInplaceMergeIter<R<const int*>, const int*>);
 
 template <class In, template <class> class SentWrapper, std::size_t N1, std::size_t N2>
-TEST_CONSTEXPR_CXX26 void testInplaceMergeImpl(std::array<int, N1> input, int midIdx, std::array<int, N2> expected) {
+void testInplaceMergeImpl(std::array<int, N1> input, int midIdx, std::array<int, N2> expected) {
   assert(std::is_sorted(input.begin(), input.begin() + midIdx));
   assert(std::is_sorted(input.begin() + midIdx, input.end()));
   assert(std::is_sorted(expected.begin(), expected.end()));
@@ -114,7 +113,7 @@ TEST_CONSTEXPR_CXX26 void testInplaceMergeImpl(std::array<int, N1> input, int mi
 }
 
 template <class In, template <class> class SentWrapper>
-TEST_CONSTEXPR_CXX26 void testImpl() {
+void testImpl() {
   // sorted range
   {
     std::array in{0, 1, 5, 6, 9, 10};
@@ -194,14 +193,14 @@ TEST_CONSTEXPR_CXX26 void testImpl() {
 }
 
 template < template <class> class SentWrapper>
-TEST_CONSTEXPR_CXX26 void withAllPermutationsOfIter() {
+void withAllPermutationsOfIter() {
   testImpl<bidirectional_iterator<int*>, SentWrapper>();
   testImpl<random_access_iterator<int*>, SentWrapper>();
   testImpl<contiguous_iterator<int*>, SentWrapper>();
   testImpl<int*, SentWrapper>();
 }
 
-TEST_CONSTEXPR_CXX26 bool test() {
+bool test() {
   withAllPermutationsOfIter<std::type_identity_t>();
   withAllPermutationsOfIter<sentinel_wrapper>();
 
@@ -335,9 +334,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
+  // inplace_merge is not constexpr in the latest finished Standard (C++20)
 
   return 0;
 }

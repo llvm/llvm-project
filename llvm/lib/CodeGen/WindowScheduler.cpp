@@ -96,7 +96,7 @@ cl::opt<unsigned> WindowDiffLimit(
 
 // WindowIILimit serves as an indicator of abnormal scheduling results and could
 // potentially be referenced by the derived target window scheduler.
-static cl::opt<unsigned>
+cl::opt<unsigned>
     WindowIILimit("window-ii-limit",
                   cl::desc("The upper limit of II in the window algorithm."),
                   cl::Hidden, cl::init(1000));
@@ -283,7 +283,8 @@ void WindowScheduler::restoreMBB() {
     MI.eraseFromParent();
   }
   // Restore MBB to the state before window scheduling.
-  llvm::append_range(*MBB, OriMIs);
+  for (auto *MI : OriMIs)
+    MBB->push_back(MI);
   updateLiveIntervals();
 }
 
@@ -679,7 +680,8 @@ MachineInstr *WindowScheduler::getOriMI(MachineInstr *NewMI) {
 }
 
 unsigned WindowScheduler::getOriStage(MachineInstr *OriMI, unsigned Offset) {
-  assert(llvm::is_contained(OriMIs, OriMI) && "Cannot find OriMI in OriMIs!");
+  assert(llvm::find(OriMIs, OriMI) != OriMIs.end() &&
+         "Cannot find OriMI in OriMIs!");
   // If there is no instruction fold, all MI stages are 0.
   if (Offset == SchedPhiNum)
     return 0;

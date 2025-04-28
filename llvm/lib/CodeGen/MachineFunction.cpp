@@ -189,7 +189,10 @@ void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
   Properties.set(MachineFunctionProperties::Property::IsSSA);
   Properties.set(MachineFunctionProperties::Property::TracksLiveness);
-  RegInfo = new (Allocator) MachineRegisterInfo(this);
+  if (STI->getRegisterInfo())
+    RegInfo = new (Allocator) MachineRegisterInfo(this);
+  else
+    RegInfo = nullptr;
 
   MFInfo = nullptr;
 
@@ -956,7 +959,9 @@ void MachineFunction::eraseAdditionalCallInfo(const MachineInstr *MI) {
   if (CSIt != CallSitesInfo.end())
     CallSitesInfo.erase(CSIt);
 
-  CalledGlobalsInfo.erase(CallMI);
+  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(CallMI);
+  if (CGIt != CalledGlobalsInfo.end())
+    CalledGlobalsInfo.erase(CGIt);
 }
 
 void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,

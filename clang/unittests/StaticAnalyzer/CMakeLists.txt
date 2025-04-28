@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
 add_clang_unittest(StaticAnalysisTests
   AnalyzerOptionsTest.cpp
   APSIntTypeTest.cpp
@@ -20,7 +25,10 @@ add_clang_unittest(StaticAnalysisTests
   SValTest.cpp
   TestReturnValueUnderConstruction.cpp
   Z3CrosscheckOracleTest.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(StaticAnalysisTests
+  PRIVATE
   clangBasic
   clangAnalysis
   clangAST
@@ -31,9 +39,9 @@ add_clang_unittest(StaticAnalysisTests
   clangStaticAnalyzerCore
   clangStaticAnalyzerFrontend
   clangTooling
-  LINK_LIBS
+  )
+
+target_link_libraries(StaticAnalysisTests
+  PRIVATE
   clangTesting
-  LLVM_COMPONENTS
-  FrontendOpenMP
-  Support
   )

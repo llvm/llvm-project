@@ -26,6 +26,8 @@ class PatchEntries : public BinaryFunctionPass {
   struct Patch {
     const MCSymbol *Symbol;
     uint64_t Address;
+    uint64_t FileOffset;
+    BinarySection *Section;
   };
 
 public:

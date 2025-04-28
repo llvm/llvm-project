@@ -1220,7 +1220,7 @@ static_assert(true, message);
   const char *Args[] = {"-xc++", "-std=c++26"};
   ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args,
                                        std::size(Args), nullptr, 0, TUFlags);
-  ASSERT_EQ(clang_getNumDiagnostics(ClangTU), 0u);
+  ASSERT_EQ(clang_getNumDiagnostics(ClangTU), 0);
   std::optional<CXCursor> staticAssertCsr;
   Traverse([&](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
     if (cursor.kind == CXCursor_StaticAssert) {
@@ -1229,7 +1229,7 @@ static_assert(true, message);
     return CXChildVisit_Continue;
   });
   ASSERT_TRUE(staticAssertCsr.has_value());
-  int argCnt = 0;
+  size_t argCnt = 0;
   Traverse(*staticAssertCsr, [&argCnt](CXCursor cursor, CXCursor parent) {
     switch (argCnt) {
     case 0:
@@ -1409,53 +1409,4 @@ TEST_F(LibclangRewriteTest, RewriteRemove) {
 
   ASSERT_EQ(clang_CXRewriter_overwriteChangedFiles(Rew), 0);
   EXPECT_EQ(getFileContent(Filename), "int () { return 0; }");
-}
-
-TEST_F(LibclangParseTest, FileEqual) {
-  std::string AInc = "a.inc", BInc = "b.inc", Main = "main.cpp";
-  WriteFile(Main, "int a[] = {\n"
-                  "    #include \"a.inc\"\n"
-                  "};\n"
-                  "int b[] = {\n"
-                  "    #include \"b.inc\"\n"
-                  "};");
-  WriteFile(AInc, "1,2,3");
-  WriteFile(BInc, "1,2,3");
-
-  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
-                                       0, TUFlags);
-
-  CXFile AFile = clang_getFile(ClangTU, AInc.c_str()),
-         AFile2 = clang_getFile(ClangTU, AInc.c_str()),
-         BFile = clang_getFile(ClangTU, BInc.c_str()),
-         MainFile = clang_getFile(ClangTU, Main.c_str());
-
-  ASSERT_FALSE(clang_File_isEqual(MainFile, AFile));
-  ASSERT_FALSE(clang_File_isEqual(AFile, BFile));
-  ASSERT_TRUE(clang_File_isEqual(AFile, AFile2));
-}
-
-TEST_F(LibclangParseTest, FileEqualInMemory) {
-  std::string AInc = "a.inc", BInc = "b.inc", Main = "main.cpp";
-  MapUnsavedFile(Main, "int a[] = {\n"
-                       "    #include \"a.inc\"\n"
-                       "};\n"
-                       "int b[] = {\n"
-                       "    #include \"b.inc\"\n"
-                       "};");
-  MapUnsavedFile(AInc, "1,2,3");
-  MapUnsavedFile(BInc, "1,2,3");
-
-  ClangTU = clang_parseTranslationUnit(Index, UnsavedFiles[0].Filename, nullptr,
-                                       0, &UnsavedFiles.front(),
-                                       UnsavedFiles.size(), TUFlags);
-
-  CXFile AFile = clang_getFile(ClangTU, UnsavedFiles[1].Filename),
-         AFile2 = clang_getFile(ClangTU, UnsavedFiles[1].Filename),
-         BFile = clang_getFile(ClangTU, UnsavedFiles[2].Filename),
-         MainFile = clang_getFile(ClangTU, UnsavedFiles[0].Filename);
-
-  ASSERT_FALSE(clang_File_isEqual(MainFile, AFile));
-  ASSERT_FALSE(clang_File_isEqual(AFile, BFile));
-  ASSERT_TRUE(clang_File_isEqual(AFile, AFile2));
 }

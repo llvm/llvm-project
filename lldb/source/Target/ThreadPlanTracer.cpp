@@ -27,7 +27,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
-#include "lldb/lldb-forward.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -42,13 +41,13 @@ ThreadPlanTracer::ThreadPlanTracer(Thread &thread)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
       m_enabled(false), m_stream_sp(), m_thread(nullptr) {}
 
-StreamSP ThreadPlanTracer::GetLogStreamSP() {
+Stream *ThreadPlanTracer::GetLogStream() {
   if (m_stream_sp)
-    return m_stream_sp;
+    return m_stream_sp.get();
   else {
     TargetSP target_sp(GetThread().CalculateTarget());
     if (target_sp)
-      return target_sp->GetDebugger().GetAsyncOutputStream();
+      return &(target_sp->GetDebugger().GetOutputStream());
   }
   return nullptr;
 }
@@ -66,11 +65,12 @@ void ThreadPlanTracer::Log() {
   bool show_frame_index = false;
   bool show_fullpaths = false;
 
-  if (StreamSP stream_sp = GetLogStreamSP()) {
-    GetThread().GetStackFrameAtIndex(0)->Dump(stream_sp.get(), show_frame_index,
+  Stream *stream = GetLogStream();
+  if (stream) {
+    GetThread().GetStackFrameAtIndex(0)->Dump(stream, show_frame_index,
                                               show_fullpaths);
-    stream_sp->Printf("\n");
-    stream_sp->Flush();
+    stream->Printf("\n");
+    stream->Flush();
   }
 }
 
@@ -129,9 +129,9 @@ void ThreadPlanAssemblyTracer::TracingStarted() {
 void ThreadPlanAssemblyTracer::TracingEnded() { m_register_values.clear(); }
 
 void ThreadPlanAssemblyTracer::Log() {
-  StreamSP stream_sp = GetLogStreamSP();
+  Stream *stream = GetLogStream();
 
-  if (!stream_sp)
+  if (!stream)
     return;
 
   RegisterContext *reg_ctx = GetThread().GetRegisterContext().get();
@@ -142,10 +142,9 @@ void ThreadPlanAssemblyTracer::Log() {
   uint8_t buffer[16] = {0}; // Must be big enough for any single instruction
   addr_valid = m_process.GetTarget().ResolveLoadAddress(pc, pc_addr);
 
-  pc_addr.Dump(stream_sp.get(), &GetThread(),
-               Address::DumpStyleResolvedDescription,
+  pc_addr.Dump(stream, &GetThread(), Address::DumpStyleResolvedDescription,
                Address::DumpStyleModuleWithFileAddress);
-  stream_sp->PutCString(" ");
+  stream->PutCString(" ");
 
   Disassembler *disassembler = GetDisassembler();
   if (disassembler) {
@@ -176,7 +175,7 @@ void ThreadPlanAssemblyTracer::Log() {
             instruction_list.GetInstructionAtIndex(0).get();
         const FormatEntity::Entry *disassemble_format =
             m_process.GetTarget().GetDebugger().GetDisassemblyFormat();
-        instruction->Dump(stream_sp.get(), max_opcode_byte_size, show_address,
+        instruction->Dump(stream, max_opcode_byte_size, show_address,
                           show_bytes, show_control_flow_kind, nullptr, nullptr,
                           nullptr, disassemble_format, 0);
       }
@@ -199,12 +198,12 @@ void ThreadPlanAssemblyTracer::Log() {
 
     if (abi->GetArgumentValues(GetThread(), value_list)) {
       for (int arg_index = 0; arg_index < num_args; ++arg_index) {
-        stream_sp->Printf(
+        stream->Printf(
             "\n\targ[%d]=%llx", arg_index,
             value_list.GetValueAtIndex(arg_index)->GetScalar().ULongLong());
 
         if (arg_index + 1 < num_args)
-          stream_sp->PutCString(", ");
+          stream->PutCString(", ");
       }
     }
   }
@@ -223,14 +222,14 @@ void ThreadPlanAssemblyTracer::Log() {
       if (m_register_values[reg_num].GetType() == RegisterValue::eTypeInvalid ||
           reg_value != m_register_values[reg_num]) {
         if (reg_value.GetType() != RegisterValue::eTypeInvalid) {
-          stream_sp->PutCString("\n\t");
-          DumpRegisterValue(reg_value, *stream_sp, *reg_info, true, false,
+          stream->PutCString("\n\t");
+          DumpRegisterValue(reg_value, *stream, *reg_info, true, false,
                             eFormatDefault);
         }
       }
       m_register_values[reg_num] = reg_value;
     }
   }
-  stream_sp->EOL();
-  stream_sp->Flush();
+  stream->EOL();
+  stream->Flush();
 }

@@ -125,11 +125,11 @@ struct JITLinkLinker::Context : jitlink::JITLinkContext {
       std::string SymName = (*Symbol.first).str();
       LLVM_DEBUG(dbgs() << "BOLT: looking for " << SymName << "\n");
 
-      if (auto SymInfo = Linker.lookupSymbolInfo(SymName)) {
+      if (auto Address = Linker.lookupSymbol(SymName)) {
         LLVM_DEBUG(dbgs() << "Resolved to address 0x"
-                          << Twine::utohexstr(SymInfo->Address) << "\n");
+                          << Twine::utohexstr(*Address) << "\n");
         AllResults[Symbol.first] = orc::ExecutorSymbolDef(
-            orc::ExecutorAddr(SymInfo->Address), JITSymbolFlags());
+            orc::ExecutorAddr(*Address), JITSymbolFlags());
         continue;
       }
 

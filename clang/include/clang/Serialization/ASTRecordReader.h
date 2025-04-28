@@ -278,11 +278,8 @@ public:
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();
 
-  /// Read a list of OpenACC clauses into the passed SmallVector, during
-  /// statement reading.
+  /// Read a list of OpenACC clauses into the passed SmallVector.
   void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
-
-  void readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A);
 
   /// Read a source location, advancing Idx.
   SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {
@@ -317,10 +314,6 @@ public:
   /// Read a 64-bit unsigned value; required to satisfy BasicReader.
   uint64_t readUInt64() {
     return readInt();
-  }
-
-  UnsignedOrNone readUnsignedOrNone() {
-    return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
   }
 
   /// Read a string, advancing Idx.

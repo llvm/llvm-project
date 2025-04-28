@@ -664,14 +664,9 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
 
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
-    auto callOp = dyn_cast<LLVM::CallOp>(call);
-    if (!callOp) {
+    if (!isa<LLVM::CallOp>(call)) {
       LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is not an '"
                               << LLVM::CallOp::getOperationName() << "' op\n");
-      return false;
-    }
-    if (callOp.getNoInline()) {
-      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is marked no_inline\n");
       return false;
     }
     auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
@@ -731,10 +726,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   }
 
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
-    // The inliner cannot handle variadic function arguments and blocktag
-    // operations prevent inlining since they the blockaddress operations
-    // reference them via the callee symbol.
-    return !(isa<LLVM::VaStartOp>(op) || isa<LLVM::BlockTagOp>(op));
+    // The inliner cannot handle variadic function arguments.
+    return !isa<LLVM::VaStartOp>(op);
   }
 
   /// Handle the given inlined return by replacing it with a branch. This

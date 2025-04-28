@@ -1586,11 +1586,11 @@ Error IRLinker::run() {
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
-                SrcM->getTargetTriple().str() + "' whereas '" +
-                DstM.getModuleIdentifier() + "' is '" +
-                DstM.getTargetTriple().str() + "'\n");
+                SrcM->getTargetTriple() + "' whereas '" +
+                DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +
+                "'\n");
 
-  DstM.setTargetTriple(Triple(SrcTriple.merge(DstTriple)));
+  DstM.setTargetTriple(SrcTriple.merge(DstTriple));
 
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
@@ -1689,7 +1689,8 @@ StructType *IRMover::StructTypeKeyInfo::getTombstoneKey() {
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const KeyTy &Key) {
-  return hash_combine(hash_combine_range(Key.ETypes), Key.IsPacked);
+  return hash_combine(hash_combine_range(Key.ETypes.begin(), Key.ETypes.end()),
+                      Key.IsPacked);
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const StructType *ST) {

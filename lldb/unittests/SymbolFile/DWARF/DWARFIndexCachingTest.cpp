@@ -8,7 +8,7 @@
 
 #include "Plugins/SymbolFile/DWARF/DIERef.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
-#include "Plugins/SymbolFile/DWARF/ManualDWARFIndexSet.h"
+#include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/DataFileCache.h"
@@ -109,25 +109,27 @@ TEST(DWARFIndexCachingTest, NameToDIEEncodeDecode) {
   EncodeDecode(map);
 }
 
-static void EncodeDecode(const IndexSet<NameToDIE> &object,
+static void EncodeDecode(const ManualDWARFIndex::IndexSet &object,
                          ByteOrder byte_order) {
   const uint8_t addr_size = 8;
   DataEncoder encoder(byte_order, addr_size);
   DataEncoder strtab_encoder(byte_order, addr_size);
-  EncodeIndexSet(object, encoder);
+  object.Encode(encoder);
   llvm::ArrayRef<uint8_t> bytes = encoder.GetData();
   DataExtractor data(bytes.data(), bytes.size(), byte_order, addr_size);
+  ManualDWARFIndex::IndexSet decoded_object;
   offset_t data_offset = 0;
-  EXPECT_EQ(DecodeIndexSet(data, &data_offset), object);
+  decoded_object.Decode(data, &data_offset);
+  EXPECT_TRUE(object == decoded_object);
 }
 
-static void EncodeDecode(const IndexSet<NameToDIE> &object) {
+static void EncodeDecode(const ManualDWARFIndex::IndexSet &object) {
   EncodeDecode(object, eByteOrderLittle);
   EncodeDecode(object, eByteOrderBig);
 }
 
 TEST(DWARFIndexCachingTest, ManualDWARFIndexIndexSetEncodeDecode) {
-  IndexSet<NameToDIE> set;
+  ManualDWARFIndex::IndexSet set;
   // Make sure empty IndexSet can be encoded and decoded correctly
   EncodeDecode(set);
 

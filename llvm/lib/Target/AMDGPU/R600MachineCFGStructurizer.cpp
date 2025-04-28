@@ -41,6 +41,12 @@ STATISTIC(numIfPatternMatch,        "CFGStructurizer number of if pattern "
 STATISTIC(numClonedBlock,           "CFGStructurizer cloned blocks");
 STATISTIC(numClonedInstr,           "CFGStructurizer cloned instructions");
 
+namespace llvm {
+
+void initializeR600MachineCFGStructurizerPass(PassRegistry &);
+
+} // end namespace llvm
+
 namespace {
 
 //===----------------------------------------------------------------------===//
@@ -98,7 +104,9 @@ public:
 
   static char ID;
 
-  R600MachineCFGStructurizer() : MachineFunctionPass(ID) {}
+  R600MachineCFGStructurizer() : MachineFunctionPass(ID) {
+    initializeR600MachineCFGStructurizerPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override {
     return "AMDGPU Control Flow Graph structurizer Pass";
@@ -1005,7 +1013,9 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
   // We assume a single ExitBlk
   MBBVector ExitBlks;
   LoopRep->getExitBlocks(ExitBlks);
-  SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet(llvm::from_range, ExitBlks);
+  SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet;
+  for (MachineBasicBlock *MBB : ExitBlks)
+    ExitBlkSet.insert(MBB);
   assert(ExitBlkSet.size() == 1);
   MachineBasicBlock *ExitBlk = *ExitBlks.begin();
   assert(ExitBlk && "Loop has several exit block");

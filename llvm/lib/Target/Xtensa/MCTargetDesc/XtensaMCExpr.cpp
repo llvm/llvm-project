@@ -26,38 +26,37 @@ using namespace llvm;
 
 #define DEBUG_TYPE "xtensamcexpr"
 
-const XtensaMCExpr *XtensaMCExpr::create(const MCExpr *Expr, Specifier S,
+const XtensaMCExpr *XtensaMCExpr::create(const MCExpr *Expr, VariantKind Kind,
                                          MCContext &Ctx) {
-  return new (Ctx) XtensaMCExpr(Expr, S);
+  return new (Ctx) XtensaMCExpr(Expr, Kind);
 }
 
 void XtensaMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  bool HasSpecifier = getSpecifier() != VK_None;
-  if (HasSpecifier)
-    OS << '%' << getSpecifierName(getSpecifier()) << '(';
+  bool HasVariant = getKind() != VK_Xtensa_None;
+  if (HasVariant)
+    OS << '%' << getVariantKindName(getKind()) << '(';
   Expr->print(OS, MAI);
-  if (HasSpecifier)
+  if (HasVariant)
     OS << ')';
 }
 
 bool XtensaMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                             const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
-    return false;
-  Res.setSpecifier(specifier);
-  return !Res.getSubSym();
+                                             const MCAssembler *Asm,
+                                             const MCFixup *Fixup) const {
+  return getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup);
 }
 
 void XtensaMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
 }
 
-XtensaMCExpr::Specifier XtensaMCExpr::parseSpecifier(StringRef name) {
-  return StringSwitch<XtensaMCExpr::Specifier>(name).Default(VK_None);
+XtensaMCExpr::VariantKind XtensaMCExpr::getVariantKindForName(StringRef name) {
+  return StringSwitch<XtensaMCExpr::VariantKind>(name).Default(
+      VK_Xtensa_Invalid);
 }
 
-StringRef XtensaMCExpr::getSpecifierName(Specifier S) {
-  switch (S) {
+StringRef XtensaMCExpr::getVariantKindName(VariantKind Kind) {
+  switch (Kind) {
   default:
     llvm_unreachable("Invalid ELF symbol kind");
   }

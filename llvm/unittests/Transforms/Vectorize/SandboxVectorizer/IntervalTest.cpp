@@ -157,7 +157,9 @@ define void @foo(i8 %v0) {
 // of references.
 template <typename RangeT>
 static SmallVector<sandboxir::Instruction *> getPtrVec(RangeT Range) {
-  SmallVector<sandboxir::Instruction *> PtrVec(llvm::make_pointer_range(Range));
+  SmallVector<sandboxir::Instruction *> PtrVec;
+  for (sandboxir::Instruction &I : Range)
+    PtrVec.push_back(&I);
   return PtrVec;
 }
 

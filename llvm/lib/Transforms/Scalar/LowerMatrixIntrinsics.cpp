@@ -754,7 +754,9 @@ public:
   /// Erase \p Inst from both ShapeMap (if an entry exists) and erase \p Inst
   /// itself.
   void eraseFromParentAndRemoveFromShapeMap(Instruction *Inst) {
-    ShapeMap.erase(Inst);
+    auto Iter = ShapeMap.find(Inst);
+    if (Iter != ShapeMap.end())
+      ShapeMap.erase(Iter);
     Inst->eraseFromParent();
   }
 
@@ -790,8 +792,7 @@ public:
   /// This creates and erases instructions as needed, and returns the newly
   /// created instruction while updating the iterator to avoid invalidation. If
   /// this returns nullptr, no new instruction was created.
-  Instruction *sinkTranspose(Instruction &I, BasicBlock::reverse_iterator &II,
-                             bool &Changed) {
+  Instruction *sinkTranspose(Instruction &I, BasicBlock::reverse_iterator &II) {
     BasicBlock &BB = *I.getParent();
     IRBuilder<> IB(&I);
     MatrixBuilder Builder(IB);
@@ -802,14 +803,12 @@ public:
                        m_Value(TA), m_ConstantInt(R), m_ConstantInt(C))))
       return nullptr;
 
-    // Transpose of a transpose is a nop when the shapes match.
+    // Transpose of a transpose is a nop
     Value *TATA;
-    if (match(TA, m_Intrinsic<Intrinsic::matrix_transpose>(
-                      m_Value(TATA), m_Specific(C), m_Specific(R)))) {
+    if (match(TA, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(TATA)))) {
       updateShapeAndReplaceAllUsesWith(I, TATA);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
-      Changed = true;
       return nullptr;
     }
 
@@ -817,7 +816,6 @@ public:
     if (isSplat(TA)) {
       updateShapeAndReplaceAllUsesWith(I, TA);
       eraseFromParentAndMove(&I, II, BB);
-      Changed = true;
       return nullptr;
     }
 
@@ -836,7 +834,6 @@ public:
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
-      Changed = true;
       return NewInst;
     }
 
@@ -862,7 +859,6 @@ public:
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
-      Changed = true;
       return NewInst;
     }
 
@@ -884,14 +880,13 @@ public:
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       eraseFromParentAndMove(&I, II, BB);
       eraseFromParentAndMove(TA, II, BB);
-      Changed = true;
       return NewInst;
     }
 
     return nullptr;
   }
 
-  bool liftTranspose(Instruction &I) {
+  void liftTranspose(Instruction &I) {
     // Erase dead Instructions after lifting transposes from binops.
     auto CleanupBinOp = [this](Instruction &T, Value *A, Value *B) {
       if (T.use_empty())
@@ -919,7 +914,6 @@ public:
                                                            R->getZExtValue());
       updateShapeAndReplaceAllUsesWith(I, NewInst);
       CleanupBinOp(I, A, B);
-      return true;
     }
     // A^t + B ^t -> (A + B)^t. Pick rows and columns from first transpose. If
     // the shape of the second transpose is different, there's a shape conflict
@@ -946,14 +940,11 @@ public:
                 ShapeMap[AddI] &&
             "Shape of updated addition doesn't match cached shape.");
       }
-      return true;
     }
-    return false;
   }
 
   /// Try moving transposes in order to fold them away or into multiplies.
-  bool optimizeTransposes() {
-    bool Changed = false;
+  void optimizeTransposes() {
     // First sink all transposes inside matmuls and adds, hoping that we end up
     // with NN, NT or TN variants.
     for (BasicBlock &BB : reverse(Func)) {
@@ -961,7 +952,7 @@ public:
         Instruction &I = *II;
         // We may remove II.  By default continue on the next/prev instruction.
         ++II;
-        if (Instruction *NewInst = sinkTranspose(I, II, Changed))
+        if (Instruction *NewInst = sinkTranspose(I, II))
           II = std::next(BasicBlock::reverse_iterator(NewInst));
       }
     }
@@ -970,10 +961,9 @@ public:
     // to fold into consuming multiply or add.
     for (BasicBlock &BB : Func) {
       for (Instruction &I : llvm::make_early_inc_range(BB)) {
-        Changed |= liftTranspose(I);
+        liftTranspose(I);
       }
     }
-    return Changed;
   }
 
   bool Visit() {
@@ -1016,15 +1006,15 @@ public:
       WorkList = propagateShapeBackward(WorkList);
     }
 
-    bool Changed = false;
     if (!isMinimal()) {
-      Changed |= optimizeTransposes();
+      optimizeTransposes();
       if (PrintAfterTransposeOpt) {
         dbgs() << "Dump after matrix transpose optimization:\n";
         Func.print(dbgs());
       }
     }
 
+    bool Changed = false;
     SmallVector<CallInst *, 16> MaybeFusableInsts;
     SmallVector<Instruction *, 16> MatrixInsts;
     SmallVector<IntrinsicInst *, 16> LifetimeEnds;
@@ -1053,7 +1043,7 @@ public:
       if (!FusedInsts.contains(CI))
         LowerMatrixMultiplyFused(CI, FusedInsts, LifetimeEnds);
 
-    Changed |= !FusedInsts.empty();
+    Changed = !FusedInsts.empty();
 
     // Fourth, lower remaining instructions with shape information.
     for (Instruction *Inst : MatrixInsts) {
@@ -1982,7 +1972,7 @@ public:
         if (CurrI->mayHaveSideEffects() || CurrI->mayReadFromMemory())
           return;
         ToHoist.push_back(CurrI);
-        WorkList.insert_range(CurrI->operands());
+        WorkList.insert(CurrI->op_begin(), CurrI->op_end());
       }
 
       sort(ToHoist, [this](Instruction *A, Instruction *B) {

@@ -292,7 +292,7 @@ public:
   };
 
 private:
-  Kind K;
+  const Kind K;
   QualType T;
   const char *Name = nullptr;
   bool Ptr = false;
@@ -338,7 +338,6 @@ public:
   }
 
   MatchKind matchesType(ASTContext &C, QualType argTy) const;
-  MatchKind matchesArgType(ASTContext &C, const ArgType &other) const;
 
   QualType getRepresentativeType(ASTContext &C) const;
 

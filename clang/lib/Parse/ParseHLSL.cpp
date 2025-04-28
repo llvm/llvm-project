@@ -27,10 +27,10 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
     return false;
   DeclGroupRef Decls = DG.get();
   bool IsValid = true;
-  // Only allow function, variable, record, and empty decls inside HLSLBuffer.
+  // Only allow function, variable, record decls inside HLSLBuffer.
   for (DeclGroupRef::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
     Decl *D = *I;
-    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl>(D))
+    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl>(D))
       continue;
 
     // FIXME: support nested HLSLBuffer and namespace inside HLSLBuffer.
@@ -75,7 +75,6 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   Decl *D = Actions.HLSL().ActOnStartBuffer(getCurScope(), IsCBuffer, BufferLoc,
                                             Identifier, IdentifierLoc,
                                             T.getOpenLocation());
-  Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
 
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     // FIXME: support attribute on constants inside cbuffer/tbuffer.
@@ -99,6 +98,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   BufferScope.Exit();
   Actions.HLSL().ActOnFinishBuffer(D, DeclEnd);
 
+  Actions.ProcessDeclAttributeList(Actions.CurScope, D, Attrs);
   return D;
 }
 
@@ -115,7 +115,7 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
       << FixedArg
       << FixItHint::CreateReplacement(SourceRange(ArgLoc, EndNumLoc), FixedArg);
   ArgsUnion &Slot = ArgExprs.back();
-  Slot = new (Ctx) IdentifierLoc(ArgLoc, PP.getIdentifierInfo(FixedArg));
+  Slot = IdentifierLoc::create(Ctx, ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,

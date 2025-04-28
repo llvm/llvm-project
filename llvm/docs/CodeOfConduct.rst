@@ -159,13 +159,13 @@ following
 
 The current committee members are:
 
-* Aaron Ballman (aaron.ballman\@llvm.org)
+* Kit Barton (kbarton\@llvm.org)
 * Kristof Beyls (kristof.beyls\@llvm.org)
+* Stella Stamenova (sstamenova\@llvm.org)
 * David Blaikie (dblaikie\@llvm.org)
-* Jonas Devlieghere (jdevlieghere\@llvm.org)
+* Mike Edwards (medwards\@llvm.org)
 * Cyndy Ishida (cishida\@llvm.org)
 * Tanya Lattner (tanyalattner\@llvm.org)
-* Stella Stamenova (sstamenova\@llvm.org)
 
 
 Transparency Reports

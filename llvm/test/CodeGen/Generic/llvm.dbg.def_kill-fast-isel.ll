@@ -1,10 +1,18 @@
-; RUN: llc -O0 -fast-isel -stop-after=finalize-isel < %s 2>&1 | FileCheck %s
+; RUN: llc -O0 -fast-isel -stop-after=finalize-isel < %s | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: warning: ignoring debug info with an invalid version (4) in <stdin>
+; CHECK: !3 = distinct !DILifetime(object: !4, location: !DIExpr(DIOpReferrer(i1)))
+; CHECK: !8 = distinct !DILifetime(object: !4, location: !DIExpr(DIOpReferrer(i1)))
+; CHECK: !9 = distinct !DILifetime(object: !4, location: !DIExpr(DIOpReferrer(i128)))
+; CHECK: !10 = distinct !DILifetime(object: !4, location: !DIExpr(DIOpReferrer(float)))
+; CHECK: !11 = distinct !DILifetime(object: !4, location: !DIExpr(DIOpReferrer(i1))
+; CHECK: !12 = distinct !DILifetime(object: !4, location: !DIExpr(DIOpReferrer(i32)))
 
 define void @undef() {
 entry:
+; CHECK-LABEL: name: undef
+; CHECK: DBG_DEF !3, $noreg, debug-location !5
+; CHECK: DBG_KILL !3, debug-location !7
   call void @llvm.dbg.def(metadata !3, metadata i1 undef), !dbg !5
   call void @llvm.dbg.kill(metadata !3), !dbg !7
   unreachable
@@ -12,6 +20,9 @@ entry:
 
 define void @i1() {
 entry:
+; CHECK-LABEL: name: i1
+; CHECK: DBG_DEF !8, i1 true, debug-location !5
+; CHECK: DBG_KILL !8, debug-location !7
   call void @llvm.dbg.def(metadata !8, metadata i1 true), !dbg !5
   call void @llvm.dbg.kill(metadata !8), !dbg !7
   unreachable
@@ -19,6 +30,9 @@ entry:
 
 define void @i128() {
 entry:
+; CHECK-LABEL: name: i128
+; CHECK: DBG_DEF !9, i128 36893488147419103232, debug-location !5
+; CHECK: DBG_KILL !9, debug-location !7
   call void @llvm.dbg.def(metadata !9, metadata i128 36893488147419103232), !dbg !5
   call void @llvm.dbg.kill(metadata !9), !dbg !7
   unreachable
@@ -26,6 +40,9 @@ entry:
 
 define void @float() {
 entry:
+; CHECK-LABEL: name: float
+; CHECK: DBG_DEF !10, float 1.000000e+00, debug-location !5
+; CHECK: DBG_KILL !10, debug-location !7
   call void @llvm.dbg.def(metadata !10, metadata float 1.000000e+00), !dbg !5
   call void @llvm.dbg.kill(metadata !10), !dbg !7
   unreachable
@@ -33,6 +50,9 @@ entry:
 
 define void @alloca() {
 entry:
+; CHECK-LABEL: name: alloca
+; CHECK: DBG_DEF !11, %stack.{{[0-9]+}}, debug-location !5
+; CHECK: DBG_KILL !11, debug-location !7
   %0 = alloca i1
   call void @llvm.dbg.def(metadata !11, metadata i1* %0), !dbg !5
   call void @llvm.dbg.kill(metadata !11), !dbg !7
@@ -41,6 +61,9 @@ entry:
 
 define void @argument(i32 %0) {
 entry:
+; CHECK-LABEL: name: argument
+; CHECK: DBG_DEF !12, %{{[0-9]+}}, debug-location !5
+; CHECK: DBG_KILL !12, debug-location !7
   call void @llvm.dbg.def(metadata !12, metadata i32 %0), !dbg !5
   call void @llvm.dbg.kill(metadata !12), !dbg !7
   unreachable

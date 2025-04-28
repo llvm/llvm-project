@@ -42,9 +42,6 @@ class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VFRange;
 
-extern cl::opt<bool> EnableVPlanNativePath;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
   VPBasicBlock *BB = nullptr;
@@ -172,14 +169,6 @@ public:
           new VPInstruction(Opcode, Operands, *FMFs, DL, Name));
     return createInstruction(Opcode, Operands, DL, Name);
   }
-  VPInstruction *createNaryOp(unsigned Opcode,
-                              std::initializer_list<VPValue *> Operands,
-                              Type *ResultTy,
-                              std::optional<FastMathFlags> FMFs = {},
-                              DebugLoc DL = {}, const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Operands, ResultTy, FMFs.value_or(FastMathFlags()), DL, Name));
-  }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
                                      std::initializer_list<VPValue *> Operands,
@@ -257,10 +246,10 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
-  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                  Type *ResultTy, DebugLoc DL) {
+  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                       Type *ResultTy, DebugLoc DL) {
     return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, DL));
+        new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -270,11 +259,10 @@ public:
 
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
-                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
-                      VPValue *VF, DebugLoc DL) {
+                      FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step) {
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
-        IV, Step, VF, InductionOpcode,
-        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
+        IV, Step, InductionOpcode,
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
   }
 
   //===--------------------------------------------------------------------===//
@@ -458,15 +446,17 @@ public:
   /// TODO: \p VectorizingEpilogue indicates if the executed VPlan is for the
   /// epilogue vector loop. It should be removed once the re-use issue has been
   /// fixed.
+  /// \p ExpandedSCEVs is passed during execution of the plan for epilogue loop
+  /// to re-use expansion results generated during main plan execution.
   ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
-  DenseMap<const SCEV *, Value *> executePlan(ElementCount VF, unsigned UF,
-                                              VPlan &BestPlan,
-                                              InnerLoopVectorizer &LB,
-                                              DominatorTree *DT,
-                                              bool VectorizingEpilogue);
+  DenseMap<const SCEV *, Value *>
+  executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
+              InnerLoopVectorizer &LB, DominatorTree *DT,
+              bool VectorizingEpilogue,
+              const DenseMap<const SCEV *, Value *> *ExpandedSCEVs = nullptr);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -504,10 +494,8 @@ protected:
 private:
   /// Build a VPlan according to the information gathered by Legal. \return a
   /// VPlan for vectorization factors \p Range.Start and up to \p Range.End
-  /// exclusive, possibly decreasing \p Range.End. If no VPlan can be built for
-  /// the input range, set the largest included VF to the maximum VF for which
-  /// no plan could be built.
-  VPlanPtr tryToBuildVPlan(VFRange &Range);
+  /// exclusive, possibly decreasing \p Range.End.
+  VPlanPtr buildVPlan(VFRange &Range);
 
   /// Build a VPlan using VPRecipes according to the information gather by
   /// Legal. This method is only used for the legacy inner loop vectorizer.
@@ -543,13 +531,13 @@ private:
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.
   bool isMoreProfitable(const VectorizationFactor &A,
-                        const VectorizationFactor &B, bool HasTail) const;
+                        const VectorizationFactor &B) const;
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B in the context of vectorizing a loop with known \p MaxTripCount.
   bool isMoreProfitable(const VectorizationFactor &A,
                         const VectorizationFactor &B,
-                        const unsigned MaxTripCount, bool HasTail) const;
+                        const unsigned MaxTripCount) const;
 
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p VF.

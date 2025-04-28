@@ -406,7 +406,9 @@ public:
 
     const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
     Src.Reg = MOInsertedReg.getReg();
-    Src.SubReg = MOInsertedReg.getSubReg();
+    // If we have to compose sub-register indices, bail out.
+    if ((Src.SubReg = MOInsertedReg.getSubReg()))
+      return false;
 
     // We want to track something that is compatible with the related
     // partial definition.
@@ -419,6 +421,12 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
+    // Do not introduce new subregister uses in a reg_sequence. Until composing
+    // subregister indices is supported while folding, we're just blocking
+    // folding of subregister copies later in the function.
+    if (NewSubReg)
+      return false;
+
     MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
     MO.setReg(NewReg);
     MO.setSubReg(NewSubReg);
@@ -1902,8 +1910,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   assert(Def->getNumOperands() - Def->getNumImplicitOperands() == 2 &&
          "Invalid number of operands");
   assert(!Def->hasImplicitDef() && "Only implicit uses are allowed");
-  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
+  if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
+    // If we look for a different subreg, it means we want a subreg of src.
+    // Bails as we do not support composing subregs yet.
+    return ValueTrackerResult();
   // Otherwise, we want the whole source.
   const MachineOperand &Src = Def->getOperand(1);
   if (Src.isUndef())
@@ -1921,8 +1932,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // Bitcasts with more than one def are not supported.
   if (Def->getDesc().getNumDefs() != 1)
     return ValueTrackerResult();
-
-  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
+  const MachineOperand DefOp = Def->getOperand(DefIdx);
+  if (DefOp.getSubReg() != DefSubReg)
+    // If we look for a different subreg, it means we want a subreg of the src.
+    // Bails as we do not support composing subregs yet.
+    return ValueTrackerResult();
 
   unsigned SrcIdx = Def->getNumOperands();
   for (unsigned OpIdx = DefIdx + 1, EndOpIdx = SrcIdx; OpIdx != EndOpIdx;
@@ -1944,8 +1958,6 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // getOperand(SrcIdx) will fail below.
   if (SrcIdx >= Def->getNumOperands())
     return ValueTrackerResult();
-
-  const MachineOperand &DefOp = Def->getOperand(DefIdx);
 
   // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
   // will break the assumed guarantees for the upper bits.
@@ -1972,48 +1984,10 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 
   // We are looking at:
   // Def = REG_SEQUENCE v0, sub0, v1, sub1, ...
-  //
-  // Check if one of the operands exactly defines the subreg we are interested
-  // in.
+  // Check if one of the operand defines the subreg we are interested in.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
     if (RegSeqInput.SubIdx == DefSubReg)
       return ValueTrackerResult(RegSeqInput.Reg, RegSeqInput.SubReg);
-  }
-
-  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-
-  // If we did not find an exact match, see if we can do a composition to
-  // extract a sub-subregister.
-  for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
-    LaneBitmask DefMask = TRI->getSubRegIndexLaneMask(DefSubReg);
-    LaneBitmask ThisOpRegMask = TRI->getSubRegIndexLaneMask(RegSeqInput.SubIdx);
-
-    // Check that this extract reads a subset of this single reg_sequence input.
-    //
-    // FIXME: We should be able to filter this in terms of the indexes directly
-    // without checking the lanemasks.
-    if ((DefMask & ThisOpRegMask) != DefMask)
-      continue;
-
-    unsigned ReverseDefCompose =
-        TRI->reverseComposeSubRegIndices(RegSeqInput.SubIdx, DefSubReg);
-    if (!ReverseDefCompose)
-      continue;
-
-    unsigned ComposedDefInSrcReg1 =
-        TRI->composeSubRegIndices(RegSeqInput.SubReg, ReverseDefCompose);
-
-    // TODO: We should be able to defer checking if the result register class
-    // supports the index to continue looking for a rewritable source.
-    //
-    // TODO: Should we modify the register class to support the index?
-    const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
-    const TargetRegisterClass *SrcWithSubRC =
-        TRI->getSubClassWithSubReg(SrcRC, ComposedDefInSrcReg1);
-    if (SrcRC != SrcWithSubRC)
-      return ValueTrackerResult();
-
-    return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
   }
 
   // If the subreg we are tracking is super-defined by another subreg,
@@ -2025,7 +1999,12 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
   assert((Def->isInsertSubreg() || Def->isInsertSubregLike()) &&
          "Invalid definition");
-  assert(!Def->getOperand(DefIdx).getSubReg() && "no subreg defs in SSA");
+
+  if (Def->getOperand(DefIdx).getSubReg())
+    // If we are composing subreg, bail out.
+    // Same remark as getNextSourceFromRegSequence.
+    // I.e., this may be turned into an assert.
+    return ValueTrackerResult();
 
   RegSubRegPair BaseReg;
   RegSubRegPairAndIdx InsertedReg;
@@ -2113,6 +2092,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
 ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
   assert(Def->isPHI() && "Invalid definition");
   ValueTrackerResult Res;
+
+  // If we look for a different subreg, bail as we do not support composing
+  // subregs yet.
+  if (Def->getOperand(0).getSubReg() != DefSubReg)
+    return ValueTrackerResult();
 
   // Return all register sources for PHI instructions.
   for (unsigned i = 1, e = Def->getNumOperands(); i < e; i += 2) {

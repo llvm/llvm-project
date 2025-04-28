@@ -328,8 +328,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode() &&
         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
-      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
+      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
+      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 

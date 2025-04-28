@@ -25,8 +25,8 @@ addi a0, a1, 0
 # CHECK: # encoding:  [0xe0,0x1f]
 addi s0, sp, 1020
 
-# CHECK: .option arch, -c, -zca
-.option arch, -c, -zca
+# CHECK: .option arch, -c
+.option arch, -c
 # CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
@@ -45,8 +45,8 @@ addi a0, a1, 0
 # CHECK: # encoding:  [0xe0,0x1f]
 addi s0, sp, 1020
 
-# CHECK: .option arch, -c, -zca
-.option arch, -c, -zca
+# CHECK: .option arch, -c
+.option arch, -c
 # CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
@@ -107,12 +107,12 @@ mul a4, ra, s0
 lr.w t0, (t1)
 
 # Test +c, -c and vice-versa
-.option arch, +c, -c, -zca
+.option arch, +c, -c
 # CHECK-INST: addi a0, a1, 0x0
 # CHECK: # encoding:  [0x13,0x85,0x05,0x00]
 addi a0, a1, 0
 
-.option arch, -c, -zca, +c
+.option arch, -c, +c
 # CHECK-INST: c.mv a0, a1
 # CHECK: # encoding:  [0x2e,0x85]
 addi a0, a1, 0

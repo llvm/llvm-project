@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DWARFExpressionList.h"
+#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"

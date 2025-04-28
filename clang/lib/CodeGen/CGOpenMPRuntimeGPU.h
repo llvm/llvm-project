@@ -169,17 +169,15 @@ public:
   llvm::Value *initSpecializedKernel(CodeGenFunction &CGF);
 
   std::pair<llvm::Value *, llvm::Value *>
-  getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType,
-                          CodeGenModule::XteamRedOpKind Opcode);
+  getXteamRedFunctionPtrs(CodeGenFunction &CGF, llvm::Type *RedVarType);
 
-  /// Generate a call to cross-team operation.
-  llvm::Value *getXteamRedOperation(CodeGenFunction &CGF, llvm::Value *Val,
-                                    llvm::Value *OrigVarPtr,
-                                    llvm::Value *DTeamVals,
-                                    llvm::Value *DTeamsDonePtr,
-                                    llvm::Value *ThreadStartIndex,
-                                    llvm::Value *NumTeams, int BlockSize,
-                                    CodeGenModule::XteamRedOpKind, bool IsFast);
+  /// Call cross-team sum
+  llvm::Value *getXteamRedSum(CodeGenFunction &CGF, llvm::Value *Val,
+                              llvm::Value *SumPtr, llvm::Value *DTeamVals,
+                              llvm::Value *DTeamsDonePtr,
+                              llvm::Value *ThreadStartIndex,
+                              llvm::Value *NumTeams, int BlockSize,
+                              bool IsFast);
 
   /// Emit call to Cross-team scan entry points
   llvm::Value *
@@ -209,6 +207,11 @@ public:
                                                RValue Update,
                                                BinaryOperatorKind BO,
                                                bool IsXBinopExpr) override;
+
+  /// Return whether the current architecture must emit CAS loop runtime call
+  /// for given type and atomic operation
+  bool mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X, RValue Update,
+                          BinaryOperatorKind BO) override;
 
   // Emit call to CAS loop
   std::pair<bool, RValue> emitAtomicCASLoop(CodeGenFunction &CGF, LValue X,

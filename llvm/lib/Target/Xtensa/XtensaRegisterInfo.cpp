@@ -34,14 +34,13 @@ XtensaRegisterInfo::XtensaRegisterInfo(const XtensaSubtarget &STI)
 
 const uint16_t *
 XtensaRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return Subtarget.isWindowedABI() ? CSRW8_Xtensa_SaveList
-                                   : CSR_Xtensa_SaveList;
+  return CSR_Xtensa_SaveList;
 }
 
 const uint32_t *
 XtensaRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                          CallingConv::ID) const {
-  return Subtarget.isWindowedABI() ? CSRW8_Xtensa_RegMask : CSR_Xtensa_RegMask;
+  return CSR_Xtensa_RegMask;
 }
 
 BitVector XtensaRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
@@ -83,7 +82,7 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   //  4. Locations for eh data registers.
   // Everything else is referenced relative to whatever register
   // getFrameRegister() returns.
-  MCRegister FrameReg;
+  unsigned FrameReg;
   if ((FrameIndex >= MinCSFI && FrameIndex <= MaxCSFI))
     FrameReg = Xtensa::SP;
   else
@@ -108,7 +107,7 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MachineBasicBlock &MBB = *MI.getParent();
     DebugLoc DL = II->getDebugLoc();
     unsigned ADD = Xtensa::ADD;
-    MCRegister Reg;
+    unsigned Reg;
     const XtensaInstrInfo &TII = *static_cast<const XtensaInstrInfo *>(
         MBB.getParent()->getSubtarget().getInstrInfo());
 
@@ -130,6 +129,5 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register XtensaRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  return TFI->hasFP(MF) ? (Subtarget.isWindowedABI() ? Xtensa::A7 : Xtensa::A15)
-                        : Xtensa::SP;
+  return TFI->hasFP(MF) ? Xtensa::A15 : Xtensa::SP;
 }

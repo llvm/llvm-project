@@ -27,7 +27,6 @@ namespace ento {
 class SValExplainer : public FullSValVisitor<SValExplainer, std::string> {
 private:
   ASTContext &ACtx;
-  ProgramStateRef State;
 
   std::string printStmt(const Stmt *S) {
     std::string Str;
@@ -56,8 +55,7 @@ private:
   }
 
 public:
-  SValExplainer(ASTContext &Ctx, ProgramStateRef State)
-      : ACtx(Ctx), State(State) {}
+  SValExplainer(ASTContext &Ctx) : ACtx(Ctx) {}
 
   std::string VisitUnknownVal(UnknownVal V) {
     return "unknown value";
@@ -168,7 +166,7 @@ public:
             .getCanonicalType()->getAs<ObjCObjectPointerType>())
       return "object at " + Visit(R->getSymbol());
     // Other heap-based symbolic regions are also special.
-    if (R->hasMemorySpace<HeapSpaceRegion>(State))
+    if (isa<HeapSpaceRegion>(R->getMemorySpace()))
       return "heap segment that starts at " + Visit(R->getSymbol());
     return "pointee of " + Visit(R->getSymbol());
   }

@@ -64,25 +64,21 @@ class CGBuilderTy : public CGBuilderBaseTy {
   Address createConstGEP2_32(Address Addr, unsigned Idx0, unsigned Idx1,
                              const llvm::Twine &Name) {
     const llvm::DataLayout &DL = BB->getDataLayout();
-    llvm::Value *V;
+    llvm::GetElementPtrInst *GEP;
     if (IsInBounds)
-      V = CreateConstInBoundsGEP2_32(Addr.getElementType(),
-                                     emitRawPointerFromAddress(Addr), Idx0,
-                                     Idx1, Name);
+      GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
+          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
+          Name));
     else
-      V = CreateConstGEP2_32(Addr.getElementType(),
-                             emitRawPointerFromAddress(Addr), Idx0, Idx1, Name);
+      GEP = cast<llvm::GetElementPtrInst>(CreateConstGEP2_32(
+          Addr.getElementType(), emitRawPointerFromAddress(Addr), Idx0, Idx1,
+          Name));
     llvm::APInt Offset(
         DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
         /*isSigned=*/true);
-    if (!llvm::GEPOperator::accumulateConstantOffset(
-            Addr.getElementType(), {getInt32(Idx0), getInt32(Idx1)}, DL,
-            Offset))
-      llvm_unreachable(
-          "accumulateConstantOffset with constant indices should not fail.");
-    llvm::Type *ElementTy = llvm::GetElementPtrInst::getIndexedType(
-        Addr.getElementType(), {Idx0, Idx1});
-    return Address(V, ElementTy,
+    if (!GEP->accumulateConstantOffset(DL, Offset))
+      llvm_unreachable("offset of GEP with constants is always computable");
+    return Address(GEP, GEP->getResultElementType(),
                    Addr.getAlignment().alignmentAtOffset(
                        CharUnits::fromQuantity(Offset.getSExtValue())),
                    IsInBounds ? Addr.isKnownNonNull() : NotKnownNonNull);

@@ -47,7 +47,9 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64CompressJumpTables() : MachineFunctionPass(ID) {}
+  AArch64CompressJumpTables() : MachineFunctionPass(ID) {
+    initializeAArch64CompressJumpTablesPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

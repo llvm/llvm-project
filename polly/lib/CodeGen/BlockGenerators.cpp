@@ -76,8 +76,8 @@ Value *BlockGenerator::trySynthesizeNewValue(ScopStmt &Stmt, Value *Old,
     return nullptr;
 
   ValueMapT VTV;
-  VTV.insert_range(BBMap);
-  VTV.insert_range(GlobalMap);
+  VTV.insert(BBMap.begin(), BBMap.end());
+  VTV.insert(GlobalMap.begin(), GlobalMap.end());
 
   Scop &S = *Stmt.getParent();
   const DataLayout &DL = S.getFunction().getDataLayout();
@@ -420,7 +420,7 @@ BasicBlock *BlockGenerator::copyBB(ScopStmt &Stmt, BasicBlock *BB,
                                    ValueMapT &BBMap, LoopToScevMapT &LTS,
                                    isl_id_to_ast_expr *NewAccesses) {
   BasicBlock *CopyBB = splitBB(BB);
-  Builder.SetInsertPoint(CopyBB, CopyBB->begin());
+  Builder.SetInsertPoint(&CopyBB->front());
   generateScalarLoads(Stmt, LTS, BBMap, NewAccesses);
   generateBeginStmtTrace(Stmt, LTS, BBMap);
 
@@ -795,7 +795,7 @@ void BlockGenerator::createScalarInitialization(Scop &S) {
   BasicBlock *ExitBB = S.getExit();
   BasicBlock *PreEntryBB = S.getEnteringBlock();
 
-  Builder.SetInsertPoint(StartBlock, StartBlock->begin());
+  Builder.SetInsertPoint(&*StartBlock->begin());
 
   for (auto &Array : S.arrays()) {
     if (Array->getNumberOfDimensions() != 0)
@@ -850,7 +850,7 @@ void BlockGenerator::createScalarFinalization(Scop &S) {
   if (OptExitBB == ExitBB)
     OptExitBB = *(++pred_begin(MergeBB));
 
-  Builder.SetInsertPoint(OptExitBB, OptExitBB->getTerminator()->getIterator());
+  Builder.SetInsertPoint(OptExitBB->getTerminator());
   for (const auto &EscapeMapping : EscapeMap) {
     // Extract the escaping instruction and the escaping users as well as the
     // alloca the instruction was demoted to.
@@ -921,7 +921,7 @@ void BlockGenerator::createExitPHINodeMerges(Scop &S) {
   if (OptExitBB == ExitBB)
     OptExitBB = *(++pred_begin(MergeBB));
 
-  Builder.SetInsertPoint(OptExitBB, OptExitBB->getTerminator()->getIterator());
+  Builder.SetInsertPoint(OptExitBB->getTerminator());
 
   for (auto &SAI : S.arrays()) {
     auto *Val = SAI->getBasePtr();
@@ -1072,7 +1072,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   BasicBlock *EntryBBCopy = SplitBlock(
       Builder.GetInsertBlock(), &*Builder.GetInsertPoint(), GenDT, GenLI);
   EntryBBCopy->setName("polly.stmt." + EntryBB->getName() + ".entry");
-  Builder.SetInsertPoint(EntryBBCopy, EntryBBCopy->begin());
+  Builder.SetInsertPoint(&EntryBBCopy->front());
 
   ValueMapT &EntryBBMap = RegionMaps[EntryBBCopy];
   generateScalarLoads(Stmt, LTS, EntryBBMap, IdToAstExp);
@@ -1112,7 +1112,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     ValueMapT &RegionMap = Inserted.first->second;
 
     // Copy the block with the BlockGenerator.
-    Builder.SetInsertPoint(BBCopy, BBCopy->begin());
+    Builder.SetInsertPoint(&BBCopy->front());
     copyBB(Stmt, BB, BBCopy, RegionMap, LTS, IdToAstExp);
 
     // In order to remap PHI nodes we store also basic block mappings.
@@ -1131,7 +1131,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
     // Remember value in case it is visible after this subregion.
     if (isDominatingSubregionExit(DT, R, BB))
-      ValueMap.insert_range(RegionMap);
+      ValueMap.insert(RegionMap.begin(), RegionMap.end());
   }
 
   // Now create a new dedicated region exit block and add it to the region map.
@@ -1164,9 +1164,9 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
     Instruction *BICopy = BBCopyEnd->getTerminator();
 
     ValueMapT &RegionMap = RegionMaps[BBCopyStart];
-    RegionMap.insert_range(StartBlockMap);
+    RegionMap.insert(StartBlockMap.begin(), StartBlockMap.end());
 
-    Builder.SetInsertPoint(BBCopyEnd, BICopy->getIterator());
+    Builder.SetInsertPoint(BICopy);
     copyInstScalar(Stmt, TI, RegionMap, LTS);
     BICopy->eraseFromParent();
   }
@@ -1204,7 +1204,7 @@ void RegionGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
   }
 
   // Continue generating code in the exit block.
-  Builder.SetInsertPoint(ExitBBCopy, ExitBBCopy->getFirstInsertionPt());
+  Builder.SetInsertPoint(&*ExitBBCopy->getFirstInsertionPt());
 
   // Write values visible to other statements.
   generateScalarStores(Stmt, LTS, ValueMap, IdToAstExp);
@@ -1241,8 +1241,7 @@ PHINode *RegionGenerator::buildExitPHI(MemoryAccess *MA, LoopToScevMapT &LTS,
     BasicBlock *OrigIncomingBlock = Pair.first;
     BasicBlock *NewIncomingBlockStart = StartBlockMap.lookup(OrigIncomingBlock);
     BasicBlock *NewIncomingBlockEnd = EndBlockMap.lookup(OrigIncomingBlock);
-    Builder.SetInsertPoint(NewIncomingBlockEnd,
-                           NewIncomingBlockEnd->getTerminator()->getIterator());
+    Builder.SetInsertPoint(NewIncomingBlockEnd->getTerminator());
     assert(RegionMaps.count(NewIncomingBlockStart));
     assert(RegionMaps.count(NewIncomingBlockEnd));
     ValueMapT *LocalBBMap = &RegionMaps[NewIncomingBlockStart];
@@ -1359,11 +1358,10 @@ void RegionGenerator::addOperandToPHI(ScopStmt &Stmt, PHINode *PHI,
     // change it, otherwise do not.
     auto IP = Builder.GetInsertPoint();
     if (IP->getParent() != BBCopyEnd)
-      Builder.SetInsertPoint(BBCopyEnd,
-                             BBCopyEnd->getTerminator()->getIterator());
+      Builder.SetInsertPoint(BBCopyEnd->getTerminator());
     OpCopy = getNewValue(Stmt, Op, BBCopyMap, LTS, getLoopForStmt(Stmt));
     if (IP->getParent() != BBCopyEnd)
-      Builder.SetInsertPoint(IP);
+      Builder.SetInsertPoint(&*IP);
   } else {
     // All edges from outside the non-affine region become a single edge
     // in the new copy of the non-affine region. Make sure to only add the

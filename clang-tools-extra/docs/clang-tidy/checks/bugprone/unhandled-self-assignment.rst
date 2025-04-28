@@ -118,9 +118,6 @@ temporary object into ``this`` (needs a move assignment operator):
     }
   };
 
-Options
--------
-
 .. option:: WarnOnlyIfThisHasSuspiciousField
 
   When `true`, the check will warn only if the container class of the copy

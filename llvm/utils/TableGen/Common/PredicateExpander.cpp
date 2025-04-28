@@ -143,6 +143,7 @@ void PredicateExpander::expandCheckOpcode(raw_ostream &OS, const Record *Inst) {
 void PredicateExpander::expandCheckOpcode(raw_ostream &OS,
                                           ArrayRef<const Record *> Opcodes) {
   assert(!Opcodes.empty() && "Expected at least one opcode to check!");
+  bool First = true;
 
   if (Opcodes.size() == 1) {
     OS << "( ";
@@ -151,15 +152,19 @@ void PredicateExpander::expandCheckOpcode(raw_ostream &OS,
     return;
   }
 
-  if (shouldNegate())
-    OS << '!';
-  OS << "llvm::is_contained(";
-  ListSeparator Sep;
-  OS << '{';
-  for (const Record *Inst : Opcodes)
-    OS << Sep << Inst->getValueAsString("Namespace") << "::" << Inst->getName();
-  OS << '}';
-  OS << ", MI" << (isByRef() ? "." : "->") << "getOpcode())";
+  OS << '(';
+  ++Indent;
+  for (const Record *Rec : Opcodes) {
+    OS << '\n' << Indent;
+    if (!First)
+      OS << (shouldNegate() ? "&& " : "|| ");
+
+    expandCheckOpcode(OS, Rec);
+    First = false;
+  }
+
+  --Indent;
+  OS << '\n' << Indent << ')';
 }
 
 void PredicateExpander::expandCheckPseudo(raw_ostream &OS,

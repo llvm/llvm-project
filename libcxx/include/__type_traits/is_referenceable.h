@@ -10,7 +10,8 @@
 #define _LIBCPP___TYPE_TRAITS_IS_REFERENCEABLE_H
 
 #include <__config>
-#include <__type_traits/void_t.h>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/is_same.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,16 +19,22 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class = void>
-inline const bool __is_referenceable_v = false;
+#if __has_builtin(__is_referenceable)
+template <class _Tp>
+struct __libcpp_is_referenceable : integral_constant<bool, __is_referenceable(_Tp)> {};
+#else
+struct __libcpp_is_referenceable_impl {
+  template <class _Tp>
+  static _Tp& __test(int);
+  template <class _Tp>
+  static false_type __test(...);
+};
 
 template <class _Tp>
-inline const bool __is_referenceable_v<_Tp, __void_t<_Tp&> > = true;
-
-#if _LIBCPP_STD_VER >= 20
-template <class _Tp>
-concept __referenceable = __is_referenceable_v<_Tp>;
-#endif
+struct __libcpp_is_referenceable
+    : integral_constant<bool, _IsNotSame<decltype(__libcpp_is_referenceable_impl::__test<_Tp>(0)), false_type>::value> {
+};
+#endif // __has_builtin(__is_referenceable)
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -1,4 +1,4 @@
-// RUN: %clangxx -O0 %s -o %t && %run %t
+// RUN: %clangxx -O0 %s -o %t
 
 // REQUIRES: glibc
 

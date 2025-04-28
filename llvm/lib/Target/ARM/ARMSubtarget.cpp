@@ -226,6 +226,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   SupportsTailCall = !isThumb1Only() || hasV8MBaselineOps();
 
+  if (isTargetMachO() && isTargetIOS() && getTargetTriple().isOSVersionLT(5, 0))
+    SupportsTailCall = false;
+
   switch (IT) {
   case DefaultIT:
     RestrictIT = false;

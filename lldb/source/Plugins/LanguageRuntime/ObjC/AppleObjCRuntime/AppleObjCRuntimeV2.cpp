@@ -458,14 +458,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
 
         if (objc_opt->version == 16)
         {
-            int32_t large_offset = objc_opt_v16->largeSharedCachesClassOffset;
-            const objc_clsopt_v16_t* clsopt = (const objc_clsopt_v16_t*)((uint8_t *)objc_opt + large_offset);
-            // Work around a bug in some version shared cache builder where the offset overflows 2GiB (rdar://146432183).
-            uint32_t unsigned_offset = (uint32_t)large_offset;
-            if (unsigned_offset > 0x7fffffff && unsigned_offset < 0x82000000) {
-               clsopt = (const objc_clsopt_v16_t*)((uint8_t *)objc_opt + unsigned_offset);
-               DEBUG_PRINTF("warning: applying largeSharedCachesClassOffset overflow workaround!\n");
-            }
+            const objc_clsopt_v16_t* clsopt = (const objc_clsopt_v16_t*)((uint8_t *)objc_opt + objc_opt_v16->largeSharedCachesClassOffset);
             const size_t max_class_infos = class_infos_byte_size/sizeof(ClassInfo);
 
             DEBUG_PRINTF("max_class_infos = %llu\n", (uint64_t)max_class_infos);
@@ -1047,7 +1040,7 @@ protected:
         continue;
 
       Status error;
-      lldb::addr_t arg_addr = OptionArgParser::ToRawAddress(
+      lldb::addr_t arg_addr = OptionArgParser::ToAddress(
           &exe_ctx, arg_str, LLDB_INVALID_ADDRESS, &error);
       if (arg_addr == 0 || arg_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
         result.AppendErrorWithFormatv(
@@ -1112,7 +1105,7 @@ public:
       : CommandObjectMultiword(
             interpreter, "tagged-pointer",
             "Commands for operating on Objective-C tagged pointers.",
-            "tagged-pointer <subcommand> [<subcommand-options>]") {
+            "class-table <subcommand> [<subcommand-options>]") {
     LoadSubCommand(
         "info",
         CommandObjectSP(
@@ -2671,9 +2664,6 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
     return;
 
   if (!object_file->IsInMemory())
-    return;
-
-  if (!GetProcess()->IsLiveDebugSession())
     return;
 
   Target &target = GetProcess()->GetTarget();

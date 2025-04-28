@@ -1730,14 +1730,13 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
   return Result;
 }
 
-std::optional<DILineInfo>
-DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                    DILineInfoSpecifier Spec) {
+DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                               DILineInfoSpecifier Spec) {
+  DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address.Address);
   if (!CU)
-    return std::nullopt;
+    return Result;
 
-  DILineInfo Result;
   getFunctionNameAndStartLineForAddress(
       CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);
@@ -1752,7 +1751,7 @@ DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
-std::optional<DILineInfo>
+DILineInfo
 DWARFContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForDataAddress(Address.Address);
@@ -1870,7 +1869,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
           LineTable->getFileLineInfoForAddress(
               {Address.Address, Address.SectionIndex}, Spec.ApproximateLine,
               CU->getCompilationDir(), Spec.FLIKind, Frame);
-      } else {
+      } else if (CallLine != 0) {
         // Otherwise, use call file, call line and call column from
         // previous DIE in inlined chain.
         if (LineTable)

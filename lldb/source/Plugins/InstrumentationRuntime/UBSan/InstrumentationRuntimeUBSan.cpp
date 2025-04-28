@@ -116,6 +116,8 @@ StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
   if (!frame_sp)
     return StructuredData::ObjectSP();
 
+  StreamFileSP Stream = target.GetDebugger().GetOutputStreamSP();
+
   EvaluateExpressionOptions options;
   options.SetUnwindOnError(true);
   options.SetTryAllThreads(true);

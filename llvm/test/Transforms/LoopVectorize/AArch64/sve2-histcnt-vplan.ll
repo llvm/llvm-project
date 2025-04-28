@@ -12,7 +12,6 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ;; Check that the scalar plan contains the original instructions.
 ; CHECK: VPlan 'Initial VPlan for VF={1},UF>=1' {
-; CHECK-NEXT: Live-in [[VF:.*]] = VF
 ; CHECK-NEXT: Live-in [[VFxUF:.*]] = VF * UF
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
@@ -26,7 +25,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT [[IV:.*]] = CANONICAL-INDUCTION ir<0>, [[IV_NEXT:.*]]
-; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
+; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     CLONE [[IDX:.*]] = load [[GEP_IDX]]
 ; CHECK-NEXT:     CLONE [[EXT_IDX:.*]] = zext [[IDX]]
@@ -60,7 +59,6 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ;; Check that the vectorized plan contains a histogram recipe instead.
 ; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
-; CHECK-NEXT: Live-in [[VF:.*]] = VF
 ; CHECK-NEXT: Live-in [[VFxUF:.*]] = VF * UF
 ; CHECK-NEXT: Live-in [[VTC:.*]] = vector-trip-count
 ; CHECK-NEXT: Live-in [[OTC:.*]] = original trip-count
@@ -74,7 +72,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT [[IV:.*]] = CANONICAL-INDUCTION ir<0>, [[IV_NEXT:.*]]
-; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>, [[VF]]
+; CHECK-NEXT:     [[STEPS:vp.*]] = SCALAR-STEPS [[IV]], ir<1>
 ; CHECK-NEXT:     CLONE [[GEP_IDX:.*]] = getelementptr inbounds ir<%indices>, [[STEPS]]
 ; CHECK-NEXT:     [[VECP_IDX:vp.*]] = vector-pointer [[GEP_IDX]]
 ; CHECK-NEXT:     WIDEN [[IDX:.*]] = load [[VECP_IDX]]

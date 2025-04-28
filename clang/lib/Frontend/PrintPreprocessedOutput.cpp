@@ -974,10 +974,11 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // Loop over the contents and print them as a comma-delimited list of
       // values.
       bool PrintComma = false;
-      for (unsigned char Byte : Data->BinaryData.bytes()) {
+      for (auto Iter = Data->BinaryData.begin(), End = Data->BinaryData.end();
+           Iter != End; ++Iter) {
         if (PrintComma)
           *Callbacks->OS << ", ";
-        *Callbacks->OS << static_cast<int>(Byte);
+        *Callbacks->OS << static_cast<unsigned>(*Iter);
         PrintComma = true;
       }
     } else if (Tok.isAnnotation()) {

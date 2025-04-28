@@ -574,7 +574,7 @@ Error FileAnalysis::parseSymbolTable() {
     }
   }
   if (auto *ElfObject = dyn_cast<object::ELFObjectFileBase>(Object)) {
-    for (const auto &Plt : ElfObject->getPltEntries(*SubtargetInfo)) {
+    for (const auto &Plt : ElfObject->getPltEntries()) {
       if (!Plt.Symbol)
         continue;
       object::SymbolRef Sym(*Plt.Symbol, Object);

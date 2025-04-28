@@ -99,7 +99,8 @@ spirv::getRecursiveImpliedCapabilities(spirv::Capability cap) {
   // TODO: This is insufficient; find a better way to handle this
   // (e.g., using static lists) if this turns out to be a bottleneck.
   for (unsigned i = 0; i < allCaps.size(); ++i)
-    allCaps.insert_range(getDirectImpliedCapabilities(allCaps[i]));
+    for (Capability c : getDirectImpliedCapabilities(allCaps[i]))
+      allCaps.insert(c);
 
   return allCaps.takeVector();
 }

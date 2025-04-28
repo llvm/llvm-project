@@ -220,14 +220,13 @@ void ReplaceNodeWithTemplate::run(
     }
     }
   }
-  auto It = NodeMap.find(FromId);
-  if (It == NodeMap.end()) {
+  if (NodeMap.count(FromId) == 0) {
     llvm::errs() << "Node to be replaced " << FromId
                  << " not bound in query.\n";
     llvm::report_fatal_error("FromId node not bound in MatchResult");
   }
   auto Replacement =
-      tooling::Replacement(*Result.SourceManager, &It->second, ToText,
+      tooling::Replacement(*Result.SourceManager, &NodeMap.at(FromId), ToText,
                            Result.Context->getLangOpts());
   llvm::Error Err = Replace.add(Replacement);
   if (Err) {

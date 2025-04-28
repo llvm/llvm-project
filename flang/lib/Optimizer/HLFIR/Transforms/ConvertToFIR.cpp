@@ -418,9 +418,7 @@ class DesignateOpConversion
       firstElementIndices.push_back(indices[i]);
       i = i + (isTriplet ? 3 : 1);
     }
-    mlir::Type originalDesignateType = designate.getResult().getType();
-    const bool isVolatile = fir::isa_volatile_type(originalDesignateType);
-    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy, isVolatile);
+    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy);
     base = builder.create<fir::ArrayCoorOp>(
         loc, arrayCoorType, base, shape,
         /*slice=*/mlir::Value{}, firstElementIndices, firBaseTypeParameters);
@@ -443,7 +441,6 @@ public:
       TODO(loc, "hlfir::designate load of pointer or allocatable");
 
     mlir::Type designateResultType = designate.getResult().getType();
-    const bool isVolatile = fir::isa_volatile_type(designateResultType);
     llvm::SmallVector<mlir::Value> firBaseTypeParameters;
     auto [base, shape] = hlfir::genVariableFirBaseShapeAndParams(
         loc, builder, baseEntity, firBaseTypeParameters);
@@ -467,7 +464,7 @@ public:
         mlir::Type componentType =
             mlir::cast<fir::RecordType>(baseEleTy).getType(
                 designate.getComponent().value());
-        mlir::Type coorTy = fir::ReferenceType::get(componentType, isVolatile);
+        mlir::Type coorTy = fir::ReferenceType::get(componentType);
         base = builder.create<fir::CoordinateOp>(loc, coorTy, base, fieldIndex);
         if (mlir::isa<fir::BaseBoxType>(componentType)) {
           auto variableInterface = mlir::cast<fir::FortranVariableOpInterface>(

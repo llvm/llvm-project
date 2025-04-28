@@ -14,19 +14,13 @@ math_test(name = "acosf")
 
 math_test(name = "acoshf")
 
-math_test(name = "acosf16")
-
 math_test(name = "asinf")
-
-math_test(name = "asinf16")
 
 math_test(name = "asinhf")
 
 math_test(name = "atan2")
 
 math_test(name = "atan2f")
-
-math_test(name = "atan")
 
 math_test(name = "atanf")
 
@@ -64,19 +58,6 @@ math_test(
     ],
 )
 
-math_test(
-    name = "canonicalizef16",
-    hdrs = ["CanonicalizeTest.h"],
-    deps = [
-        "//libc:__support_integer_literals",
-    ],
-)
-
-math_test(
-    name = "iscanonicalf16",
-    hdrs = ["IsCanonicalTest.h"],
-)
-
 math_test(name = "cbrt")
 
 math_test(name = "cbrtf")
@@ -102,11 +83,6 @@ math_test(
 )
 
 math_test(
-    name = "ceilf16",
-    hdrs = ["CeilTest.h"],
-)
-
-math_test(
     name = "copysign",
     hdrs = ["CopySignTest.h"],
 )
@@ -123,11 +99,6 @@ math_test(
 
 math_test(
     name = "copysignf128",
-    hdrs = ["CopySignTest.h"],
-)
-
-math_test(
-    name = "copysignf16",
     hdrs = ["CopySignTest.h"],
 )
 
@@ -155,42 +126,12 @@ math_test(
 )
 
 math_test(
-    name = "f16add",
-    hdrs = ["AddTest.h"],
-)
-
-math_test(
-    name = "f16addf",
-    hdrs = ["AddTest.h"],
-)
-
-math_test(
-    name = "f16addl",
-    hdrs = ["AddTest.h"],
-)
-
-math_test(
     name = "ddivl",
     hdrs = ["DivTest.h"],
 )
 
 math_test(
     name = "ddivf128",
-    hdrs = ["DivTest.h"],
-)
-
-math_test(
-    name = "f16div",
-    hdrs = ["DivTest.h"],
-)
-
-math_test(
-    name = "f16divf",
-    hdrs = ["DivTest.h"],
-)
-
-math_test(
-    name = "f16divl",
     hdrs = ["DivTest.h"],
 )
 
@@ -204,22 +145,6 @@ math_test(
     hdrs = ["FmaTest.h"],
 )
 
-# TODO: Reenable these tests once they pass at Google.
-# math_test(
-#     name = "f16fma",
-#     hdrs = ["FmaTest.h"],
-# )
-#
-# math_test(
-#     name = "f16fmaf",
-#     hdrs = ["FmaTest.h"],
-# )
-#
-# math_test(
-#     name = "f16fmal",
-#     hdrs = ["FmaTest.h"],
-# )
-
 math_test(
     name = "dmull",
     hdrs = ["MulTest.h"],
@@ -228,36 +153,6 @@ math_test(
 math_test(
     name = "dmulf128",
     hdrs = ["MulTest.h"],
-)
-
-math_test(
-    name = "f16mul",
-    hdrs = ["MulTest.h"],
-)
-
-math_test(
-    name = "f16mulf",
-    hdrs = ["MulTest.h"],
-)
-
-math_test(
-    name = "f16mull",
-    hdrs = ["MulTest.h"],
-)
-
-math_test(
-    name = "fsqrt",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "fsqrtl",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "fsqrtf128",
-    hdrs = ["SqrtTest.h"],
 )
 
 math_test(
@@ -271,67 +166,12 @@ math_test(
 )
 
 math_test(
-    name = "sqrt",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "sqrtf",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "sqrtl",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "sqrtf128",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "f16sqrt",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "f16sqrtf",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "sqrtf16",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
-    name = "f16sqrtl",
-    hdrs = ["SqrtTest.h"],
-)
-
-math_test(
     name = "dsubl",
     hdrs = ["SubTest.h"],
 )
 
 math_test(
     name = "dsubf128",
-    hdrs = ["SubTest.h"],
-)
-
-math_test(
-    name = "f16sub",
-    hdrs = ["SubTest.h"],
-)
-
-math_test(
-    name = "f16subf",
-    hdrs = ["SubTest.h"],
-)
-
-math_test(
-    name = "f16subl",
     hdrs = ["SubTest.h"],
 )
 
@@ -376,11 +216,6 @@ math_test(
 )
 
 math_test(
-    name = "fabsf16",
-    hdrs = ["FAbsTest.h"],
-)
-
-math_test(
     name = "fadd",
     hdrs = ["AddTest.h"],
 )
@@ -412,11 +247,6 @@ math_test(
 
 math_test(
     name = "fdimf128",
-    hdrs = ["FDimTest.h"],
-)
-
-math_test(
-    name = "fdimf16",
     hdrs = ["FDimTest.h"],
 )
 
@@ -470,18 +300,7 @@ math_test(
     hdrs = ["FloorTest.h"],
 )
 
-math_test(
-    name = "floorf16",
-    hdrs = ["FloorTest.h"],
-)
-
 # TODO: Add fma, fmaf, fmal, fmaf128 tests.
-
-# TODO: Reenable this test once it passes at Google.
-# math_test(
-#     name = "fmaf16",
-#     hdrs = ["FmaTest.h"],
-# )
 
 math_test(
     name = "fmax",
@@ -500,11 +319,6 @@ math_test(
 
 math_test(
     name = "fmaxf128",
-    hdrs = ["FMaxTest.h"],
-)
-
-math_test(
-    name = "fmaxf16",
     hdrs = ["FMaxTest.h"],
 )
 
@@ -589,26 +403,6 @@ math_test(
 )
 
 math_test(
-    name = "fmaximum_mag_numf16",
-    hdrs = ["FMaximumMagNumTest.h"],
-)
-
-math_test(
-    name = "fmaximum_magf16",
-    hdrs = ["FMaximumMagTest.h"],
-)
-
-math_test(
-    name = "fmaximum_numf16",
-    hdrs = ["FMaximumNumTest.h"],
-)
-
-math_test(
-    name = "fmaximumf16",
-    hdrs = ["FMaximumTest.h"],
-)
-
-math_test(
     name = "fmin",
     hdrs = ["FMinTest.h"],
 )
@@ -625,11 +419,6 @@ math_test(
 
 math_test(
     name = "fminf128",
-    hdrs = ["FMinTest.h"],
-)
-
-math_test(
-    name = "fminf16",
     hdrs = ["FMinTest.h"],
 )
 
@@ -674,11 +463,6 @@ math_test(
 )
 
 math_test(
-    name = "fminimum_magf16",
-    hdrs = ["FMinimumMagTest.h"],
-)
-
-math_test(
     name = "fminimum_mag_num",
     hdrs = ["FMinimumMagNumTest.h"],
 )
@@ -695,11 +479,6 @@ math_test(
 
 math_test(
     name = "fminimum_mag_numf128",
-    hdrs = ["FMinimumMagNumTest.h"],
-)
-
-math_test(
-    name = "fminimum_mag_numf16",
     hdrs = ["FMinimumMagNumTest.h"],
 )
 
@@ -724,16 +503,6 @@ math_test(
 )
 
 math_test(
-    name = "fminimum_numf16",
-    hdrs = ["FMinimumNumTest.h"],
-)
-
-math_test(
-    name = "fminimumf16",
-    hdrs = ["FMinimumTest.h"],
-)
-
-math_test(
     name = "fmod",
     hdrs = ["FModTest.h"],
 )
@@ -750,11 +519,6 @@ math_test(
 
 math_test(
     name = "fmodf128",
-    hdrs = ["FModTest.h"],
-)
-
-math_test(
-    name = "fmodf16",
     hdrs = ["FModTest.h"],
 )
 
@@ -794,11 +558,6 @@ math_test(
 )
 
 math_test(
-    name = "frexpf16",
-    hdrs = ["FrexpTest.h"],
-)
-
-math_test(
     name = "fromfp",
     hdrs = ["FromfpTest.h"],
 )
@@ -815,11 +574,6 @@ math_test(
 
 math_test(
     name = "fromfpf128",
-    hdrs = ["FromfpTest.h"],
-)
-
-math_test(
-    name = "fromfpf16",
     hdrs = ["FromfpTest.h"],
 )
 
@@ -844,8 +598,18 @@ math_test(
 )
 
 math_test(
-    name = "fromfpxf16",
-    hdrs = ["FromfpxTest.h"],
+    name = "fsqrt",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "fsqrtl",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "fsqrtf128",
+    hdrs = ["SqrtTest.h"],
 )
 
 math_test(
@@ -880,11 +644,6 @@ math_test(
 
 math_test(
     name = "getpayloadf128",
-    hdrs = ["GetPayloadTest.h"],
-)
-
-math_test(
-    name = "getpayloadf16",
     hdrs = ["GetPayloadTest.h"],
 )
 
@@ -939,11 +698,6 @@ math_test(
 )
 
 math_test(
-    name = "ldexpf16",
-    hdrs = ["LdExpTest.h"],
-)
-
-math_test(
     name = "llogb",
     hdrs = ["ILogbTest.h"],
 )
@@ -960,16 +714,6 @@ math_test(
 
 math_test(
     name = "llogbf128",
-    hdrs = ["ILogbTest.h"],
-)
-
-math_test(
-    name = "ilogbf16",
-    hdrs = ["ILogbTest.h"],
-)
-
-math_test(
-    name = "llogbf16",
     hdrs = ["ILogbTest.h"],
 )
 
@@ -994,16 +738,6 @@ math_test(
 )
 
 math_test(
-    name = "llrintf16",
-    hdrs = ["RoundToIntegerTest.h"],
-)
-
-math_test(
-    name = "lrintf16",
-    hdrs = ["RoundToIntegerTest.h"],
-)
-
-math_test(
     name = "llround",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -1020,16 +754,6 @@ math_test(
 
 math_test(
     name = "llroundf128",
-    hdrs = ["RoundToIntegerTest.h"],
-)
-
-math_test(
-    name = "llroundf16",
-    hdrs = ["RoundToIntegerTest.h"],
-)
-
-math_test(
-    name = "lroundf16",
     hdrs = ["RoundToIntegerTest.h"],
 )
 
@@ -1066,11 +790,6 @@ math_test(
 
 math_test(
     name = "logbf128",
-    hdrs = ["LogbTest.h"],
-)
-
-math_test(
-    name = "logbf16",
     hdrs = ["LogbTest.h"],
 )
 
@@ -1134,11 +853,6 @@ math_test(
     hdrs = ["ModfTest.h"],
 )
 
-math_test(
-    name = "modff16",
-    hdrs = ["ModfTest.h"],
-)
-
 # TODO: add nan tests.
 
 math_test(
@@ -1158,11 +872,6 @@ math_test(
 
 math_test(
     name = "nearbyintf128",
-    hdrs = ["NearbyIntTest.h"],
-)
-
-math_test(
-    name = "nearbyintf16",
     hdrs = ["NearbyIntTest.h"],
 )
 
@@ -1187,11 +896,6 @@ math_test(
 )
 
 math_test(
-    name = "nextafterf16",
-    hdrs = ["NextAfterTest.h"],
-)
-
-math_test(
     name = "nextdown",
     hdrs = ["NextDownTest.h"],
 )
@@ -1212,11 +916,6 @@ math_test(
 )
 
 math_test(
-    name = "nextdownf16",
-    hdrs = ["NextDownTest.h"],
-)
-
-math_test(
     name = "nexttoward",
     hdrs = ["NextTowardTest.h"],
 )
@@ -1228,11 +927,6 @@ math_test(
 
 math_test(
     name = "nexttowardl",
-    hdrs = ["NextTowardTest.h"],
-)
-
-math_test(
-    name = "nexttowardf16",
     hdrs = ["NextTowardTest.h"],
 )
 
@@ -1253,11 +947,6 @@ math_test(
 
 math_test(
     name = "nextupf128",
-    hdrs = ["NextUpTest.h"],
-)
-
-math_test(
-    name = "nextupf16",
     hdrs = ["NextUpTest.h"],
 )
 
@@ -1286,11 +975,6 @@ math_test(
 )
 
 math_test(
-    name = "remquof16",
-    hdrs = ["RemQuoTest.h"],
-)
-
-math_test(
     name = "rint",
     hdrs = ["RIntTest.h"],
 )
@@ -1307,11 +991,6 @@ math_test(
 
 math_test(
     name = "rintf128",
-    hdrs = ["RIntTest.h"],
-)
-
-math_test(
-    name = "rintf16",
     hdrs = ["RIntTest.h"],
 )
 
@@ -1336,11 +1015,6 @@ math_test(
 )
 
 math_test(
-    name = "roundevenf16",
-    hdrs = ["RoundEvenTest.h"],
-)
-
-math_test(
     name = "round",
     hdrs = ["RoundTest.h"],
 )
@@ -1357,11 +1031,6 @@ math_test(
 
 math_test(
     name = "roundf128",
-    hdrs = ["RoundTest.h"],
-)
-
-math_test(
-    name = "roundf16",
     hdrs = ["RoundTest.h"],
 )
 
@@ -1391,22 +1060,6 @@ math_test(
 
 math_test(
     name = "scalbnf128",
-    hdrs = [
-        "LdExpTest.h",
-        "ScalbnTest.h",
-    ],
-)
-
-math_test(
-    name = "scalblnf16",
-    hdrs = [
-        "LdExpTest.h",
-        "ScalbnTest.h",
-    ],
-)
-
-math_test(
-    name = "scalbnf16",
     hdrs = [
         "LdExpTest.h",
         "ScalbnTest.h",
@@ -1466,11 +1119,6 @@ math_test(
 )
 
 math_test(
-    name = "setpayloadf16",
-    hdrs = ["SetPayloadTest.h"],
-)
-
-math_test(
     name = "setpayloadsig",
     hdrs = ["SetPayloadSigTest.h"],
 )
@@ -1490,11 +1138,6 @@ math_test(
     hdrs = ["SetPayloadSigTest.h"],
 )
 
-math_test(
-    name = "setpayloadsigf16",
-    hdrs = ["SetPayloadSigTest.h"],
-)
-
 math_test(name = "sin")
 
 math_test(name = "sinf")
@@ -1511,6 +1154,26 @@ math_test(
 )
 
 math_test(name = "sinpif")
+
+math_test(
+    name = "sqrt",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "sqrtf",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "sqrtl",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
+    name = "sqrtf128",
+    hdrs = ["SqrtTest.h"],
+)
 
 math_test(name = "tan")
 
@@ -1539,11 +1202,6 @@ math_test(
 )
 
 math_test(
-    name = "totalorderf16",
-    hdrs = ["TotalOrderTest.h"],
-)
-
-math_test(
     name = "totalordermag",
     hdrs = ["TotalOrderMagTest.h"],
 )
@@ -1560,11 +1218,6 @@ math_test(
 
 math_test(
     name = "totalordermagf128",
-    hdrs = ["TotalOrderMagTest.h"],
-)
-
-math_test(
-    name = "totalordermagf16",
     hdrs = ["TotalOrderMagTest.h"],
 )
 
@@ -1589,11 +1242,6 @@ math_test(
 )
 
 math_test(
-    name = "truncf16",
-    hdrs = ["TruncTest.h"],
-)
-
-math_test(
     name = "ufromfp",
     hdrs = ["UfromfpTest.h"],
 )
@@ -1610,11 +1258,6 @@ math_test(
 
 math_test(
     name = "ufromfpf128",
-    hdrs = ["UfromfpTest.h"],
-)
-
-math_test(
-    name = "ufromfpf16",
     hdrs = ["UfromfpTest.h"],
 )
 
@@ -1637,59 +1280,3 @@ math_test(
     name = "ufromfpxf128",
     hdrs = ["UfromfpxTest.h"],
 )
-
-math_test(
-    name = "ufromfpxf16",
-    hdrs = ["UfromfpxTest.h"],
-)
-
-math_test(name = "cosf16")
-
-math_test(name = "coshf16")
-
-math_test(name = "cospif16")
-
-math_test(name = "exp10f16")
-
-math_test(name = "exp10m1f16")
-
-math_test(name = "exp2f16")
-
-math_test(name = "exp2m1f16")
-
-math_test(name = "expf16")
-
-math_test(name = "expm1f16")
-
-math_test(
-    name = "issignalingf16",
-    hdrs = ["IsSignalingTest.h"],
-)
-
-math_test(name = "log10f16")
-
-math_test(name = "log2f16")
-
-math_test(name = "logf16")
-
-math_test(
-    name = "nanf16",
-    deps = [
-        "//libc:__support_macros_sanitizer",
-        "//libc:hdr_signal_macros",
-    ],
-)
-
-# math_test(name = "remainderf16") #TODO: add remainderf16 tests
-
-math_test(name = "sinf16")
-
-math_test(name = "sinhf16")
-
-math_test(name = "sinpif16")
-
-math_test(name = "tanf16")
-
-math_test(name = "tanhf16")
-
-math_test(name = "tanpif16")

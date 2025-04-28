@@ -78,6 +78,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+void initializeNVPTXLowerUnreachablePass(PassRegistry &);
+}
+
 namespace {
 class NVPTXLowerUnreachable : public FunctionPass {
   StringRef getPassName() const override;

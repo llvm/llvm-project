@@ -1,4 +1,5 @@
 ; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
+; RUN: opt -passes='cgscc(inline)' -S < %s --try-experimental-debuginfo-iterators | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

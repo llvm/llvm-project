@@ -30,8 +30,7 @@ static const SanitizerMask NeedsUbsanRt =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::LocalBounds | SanitizerKind::ImplicitConversion |
     SanitizerKind::Nullability | SanitizerKind::CFI |
-    SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast |
-    SanitizerKind::Vptr;
+    SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask NeedsUbsanCxxRt =
     SanitizerKind::Vptr | SanitizerKind::CFI;
 static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
@@ -54,13 +53,11 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
     SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
-    SanitizerKind::NumericalStability | SanitizerKind::Vptr |
-    SanitizerKind::CFI;
+    SanitizerKind::NumericalStability;
 static const SanitizerMask RecoverableByDefault =
     SanitizerKind::Undefined | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
-    SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast |
-    SanitizerKind::Vptr;
+    SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
 static const SanitizerMask Unrecoverable =
     SanitizerKind::Unreachable | SanitizerKind::Return;
 static const SanitizerMask AlwaysRecoverable = SanitizerKind::KernelAddress |
@@ -68,12 +65,11 @@ static const SanitizerMask AlwaysRecoverable = SanitizerKind::KernelAddress |
                                                SanitizerKind::KCFI;
 static const SanitizerMask NeedsLTO = SanitizerKind::CFI;
 static const SanitizerMask TrappingSupported =
-    SanitizerKind::Undefined | SanitizerKind::Integer |
+    (SanitizerKind::Undefined & ~SanitizerKind::Vptr) | SanitizerKind::Integer |
     SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
     SanitizerKind::LocalBounds | SanitizerKind::CFI |
     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
-static const SanitizerMask MergeDefault =
-    SanitizerKind::Undefined | SanitizerKind::Vptr;
+static const SanitizerMask MergeDefault = SanitizerKind::Undefined;
 static const SanitizerMask TrappingDefault =
     SanitizerKind::CFI | SanitizerKind::LocalBounds;
 static const SanitizerMask CFIClasses =
@@ -199,8 +195,8 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
                      {"dfsan_abilist.txt", SanitizerKind::DataFlow},
                      {"cfi_ignorelist.txt", SanitizerKind::CFI},
                      {"ubsan_ignorelist.txt",
-                      SanitizerKind::Undefined | SanitizerKind::Vptr |
-                          SanitizerKind::Integer | SanitizerKind::Nullability |
+                      SanitizerKind::Undefined | SanitizerKind::Integer |
+                          SanitizerKind::Nullability |
                           SanitizerKind::FloatDivideByZero}};
 
   for (auto BL : Ignorelists) {
@@ -262,8 +258,11 @@ static SanitizerMask setGroupBits(SanitizerMask Kinds) {
 }
 
 // Computes the sanitizer mask as:
-//     Default + Arguments (in or out) + AlwaysIn - AlwaysOut
+//     Default + Arguments (in or out)
 // with arguments parsed from left to right.
+//
+// Error messages are printed if the AlwaysIn or AlwaysOut invariants are
+// violated, but the caller must enforce these invariants themselves.
 static SanitizerMask
 parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
                   bool DiagnoseErrors, SanitizerMask Default,
@@ -313,9 +312,6 @@ parseSanitizeArgs(const Driver &D, const llvm::opt::ArgList &Args,
     }
   }
 
-  Output |= AlwaysIn;
-  Output &= ~AlwaysOut;
-
   return Output;
 }
 
@@ -325,6 +321,10 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
   SanitizerMask AlwaysTrap; // Empty
   SanitizerMask NeverTrap = ~(setGroupBits(TrappingSupported));
 
+  // N.B. We do *not* enforce NeverTrap. This maintains the behavior of
+  // '-fsanitize=undefined -fsanitize-trap=undefined'
+  // (clang/test/Driver/fsanitize.c ), which is that vptr is not enabled at all
+  // (not even in recover mode) in order to avoid the need for a ubsan runtime.
   return parseSanitizeArgs(D, Args, DiagnoseErrors, TrappingDefault, AlwaysTrap,
                            NeverTrap, options::OPT_fsanitize_trap_EQ,
                            options::OPT_fno_sanitize_trap_EQ);
@@ -350,8 +350,8 @@ bool SanitizerArgs::needsFuzzerInterceptors() const {
 bool SanitizerArgs::needsUbsanRt() const {
   // All of these include ubsan.
   if (needsAsanRt() || needsMsanRt() || needsNsanRt() || needsHwasanRt() ||
-      needsTsanRt() || needsDfsanRt() || needsLsanRt() ||
-      needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
+      needsTsanRt() || needsDfsanRt() || needsLsanRt() || needsCfiDiagRt() ||
+      (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
@@ -366,13 +366,12 @@ bool SanitizerArgs::needsUbsanCXXRt() const {
                            ~TrapSanitizers.Mask);
 }
 
-bool SanitizerArgs::needsCfiCrossDsoRt() const {
-  // Diag runtime includes cross dso runtime.
-  return !needsCfiCrossDsoDiagRt() && CfiCrossDso && !ImplicitCfiRuntime;
+bool SanitizerArgs::needsCfiRt() const {
+  return !(Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
+         CfiCrossDso && !ImplicitCfiRuntime;
 }
 
-bool SanitizerArgs::needsCfiCrossDsoDiagRt() const {
-  // UBSsan handles CFI diagnostics without cross-DSO suppport.
+bool SanitizerArgs::needsCfiDiagRt() const {
   return (Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
          CfiCrossDso && !ImplicitCfiRuntime;
 }
@@ -723,6 +722,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       D, Args, DiagnoseErrors, RecoverableByDefault, AlwaysRecoverable,
       Unrecoverable, options::OPT_fsanitize_recover_EQ,
       options::OPT_fno_sanitize_recover_EQ);
+  RecoverableKinds |= AlwaysRecoverable;
+  RecoverableKinds &= ~Unrecoverable;
   RecoverableKinds &= Kinds;
 
   TrappingKinds &= Kinds;
@@ -853,8 +854,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
     SanitizerMask NonTrappingCfi = Kinds & SanitizerKind::CFI & ~TrappingKinds;
     if (NonTrappingCfi && DiagnoseErrors)
       D.Diag(clang::diag::err_drv_argument_only_allowed_with)
-          << "-fsanitize-minimal-runtime"
-          << "-fsanitize-trap=cfi";
+          << "fsanitize-minimal-runtime"
+          << "fsanitize-trap=cfi";
   }
 
   for (const auto *Arg : Args.filtered(

@@ -560,23 +560,6 @@ def genOrderFile(args):
     return 0
 
 
-def filter_bolt_optimized(inputs, instrumented_outputs, readelf):
-    new_inputs = []
-    new_instrumented_ouputs = []
-    for input, instrumented_output in zip(inputs, instrumented_outputs):
-        output = subprocess.check_output(
-            [readelf, "-WS", input], universal_newlines=True
-        )
-
-        # This binary has already been bolt-optimized, so skip further processing.
-        if re.search("\\.bolt\\.org\\.text", output, re.MULTILINE):
-            print(f"Skipping {input}, it's already instrumented")
-        else:
-            new_inputs.append(input)
-            new_instrumented_ouputs.append(instrumented_output)
-    return new_inputs, new_instrumented_ouputs
-
-
 def bolt_optimize(args):
     parser = argparse.ArgumentParser("%prog  [options] ")
     parser.add_argument("--method", choices=["INSTRUMENT", "PERF", "LBR"])
@@ -591,68 +574,47 @@ def bolt_optimize(args):
 
     opts = parser.parse_args(args)
 
-    inputs = opts.input.split(";")
-    instrumented_outputs = opts.instrumented_output.split(";")
-    assert len(inputs) == len(
-        instrumented_outputs
-    ), "inconsistent --input / --instrumented-output arguments"
+    output = subprocess.check_output(
+        [opts.readelf, "-WS", opts.input], universal_newlines=True
+    )
 
-    inputs, instrumented_outputs = filter_bolt_optimized(inputs,
-                                                         instrumented_outputs,
-                                                         opts.readelf)
-    if not inputs:
+    # This binary has already been bolt-optimized, so skip further processing.
+    if re.search("\\.bolt\\.org\\.text", output, re.MULTILINE):
         return 0
 
-    environ = os.environ.copy()
     if opts.method == "INSTRUMENT":
-        preloads = []
-        for input, instrumented_output in zip(inputs, instrumented_outputs):
-            args = [
+        process = subprocess.run(
+            [
                 opts.bolt,
-                input,
+                opts.input,
                 "-o",
-                instrumented_output,
+                opts.instrumented_output,
                 "-instrument",
                 "--instrumentation-file-append-pid",
                 f"--instrumentation-file={opts.fdata}",
-            ]
-            print("Running: " + " ".join(args))
-            process = subprocess.run(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-            )
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
 
-            for line in process.stdout:
-                sys.stdout.write(line)
-            process.check_returncode()
+        print(process.args)
+        for line in process.stdout:
+            sys.stdout.write(line)
+        process.check_returncode()
 
-            # Shared library must be preloaded to be covered.
-            if ".so" in input:
-                preloads.append(instrumented_output)
-
-        if preloads:
-            print(
-                f"Patching execution environment for dynamic libraries: {' '.join(preloads)}"
-            )
-            environ["LD_PRELOAD"] = os.pathsep.join(preloads)
-
-    args = [
-        sys.executable,
-        opts.lit,
-        "-v",
-        os.path.join(opts.perf_training_binary_dir, f"bolt-fdata"),
-    ]
-    print("Running: " + " ".join(args))
     process = subprocess.run(
-        args,
+        [
+            sys.executable,
+            opts.lit,
+            os.path.join(opts.perf_training_binary_dir, "bolt-fdata"),
+        ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        env=environ,
     )
 
+    print(process.args)
     for line in process.stdout:
         sys.stdout.write(line)
     process.check_returncode()
@@ -662,14 +624,14 @@ def bolt_optimize(args):
 
     merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
 
-    for input in inputs:
-        shutil.copy(input, f"{input}-prebolt")
+    shutil.copy(opts.input, f"{opts.input}-prebolt")
 
-        args = [
+    process = subprocess.run(
+        [
             opts.bolt,
-            f"{input}-prebolt",
+            f"{opts.input}-prebolt",
             "-o",
-            input,
+            opts.input,
             "-data",
             opts.fdata,
             "-reorder-blocks=ext-tsp",
@@ -681,18 +643,16 @@ def bolt_optimize(args):
             "-use-gnu-stack",
             "-update-debug-sections",
             "-nl" if opts.method == "PERF" else "",
-        ]
-        print("Running: " + " ".join(args))
-        process = subprocess.run(
-            args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
 
-        for line in process.stdout:
-            sys.stdout.write(line)
-        process.check_returncode()
+    print(process.args)
+    for line in process.stdout:
+        sys.stdout.write(line)
+    process.check_returncode()
 
 
 commands = {

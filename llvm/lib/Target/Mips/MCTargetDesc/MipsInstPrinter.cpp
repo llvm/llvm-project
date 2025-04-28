@@ -138,7 +138,7 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(Op.isExpr() && "unknown operand kind in printOperand");
-  Op.getExpr()->print(O, &MAI);
+  Op.getExpr()->print(O, &MAI, true);
 }
 
 void MipsInstPrinter::printJumpOperand(const MCInst *MI, unsigned OpNo,

@@ -42,32 +42,12 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCValue &Target,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
-  switch (Target.getSpecifier()) {
-  case SparcMCExpr::VK_TLS_GD_HI22:
-  case SparcMCExpr::VK_TLS_GD_LO10:
-  case SparcMCExpr::VK_TLS_GD_ADD:
-  case SparcMCExpr::VK_TLS_LDM_HI22:
-  case SparcMCExpr::VK_TLS_LDM_LO10:
-  case SparcMCExpr::VK_TLS_LDM_ADD:
-  case SparcMCExpr::VK_TLS_LDO_HIX22:
-  case SparcMCExpr::VK_TLS_LDO_LOX10:
-  case SparcMCExpr::VK_TLS_LDO_ADD:
-  case SparcMCExpr::VK_TLS_IE_HI22:
-  case SparcMCExpr::VK_TLS_IE_LO10:
-  case SparcMCExpr::VK_TLS_IE_LD:
-  case SparcMCExpr::VK_TLS_IE_LDX:
-  case SparcMCExpr::VK_TLS_IE_ADD:
-  case SparcMCExpr::VK_TLS_LE_HIX22:
-  case SparcMCExpr::VK_TLS_LE_LOX10:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
-    break;
-  default:
-    break;
-  }
+  MCFixupKind Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return Kind - FirstLiteralRelocationKind;
 
   if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Fixup.getValue())) {
-    if (SExpr->getSpecifier() == SparcMCExpr::VK_R_DISP32)
+    if (SExpr->getKind() == SparcMCExpr::VK_Sparc_R_DISP32)
       return ELF::R_SPARC_DISP32;
   }
 

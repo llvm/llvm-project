@@ -21,7 +21,6 @@ target_link_libraries(bbc PRIVATE
   FIRDialect
   FIRDialectSupport
   FIROpenACCSupport
-  FIROpenMPSupport
   FIRSupport
   FIRTransforms
   FIRBuilder

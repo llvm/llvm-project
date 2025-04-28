@@ -14,12 +14,10 @@
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
-#include <__algorithm/rotate.h>
 #include <__assert>
 #include <__bit_reference>
 #include <__config>
 #include <__functional/unary_function.h>
-#include <__fwd/bit_reference.h> // TODO: This is a workaround for https://github.com/llvm/llvm-project/issues/131814
 #include <__fwd/functional.h>
 #include <__fwd/vector.h>
 #include <__iterator/distance.h>
@@ -75,7 +73,7 @@ struct __has_storage_type<vector<bool, _Allocator> > {
 };
 
 template <class _Allocator>
-class vector<bool, _Allocator> {
+class _LIBCPP_TEMPLATE_VIS vector<bool, _Allocator> {
 public:
   typedef vector __self;
   typedef bool value_type;
@@ -447,7 +445,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vallocate(size_type __n) {
     if (__n > max_size())
-      this->__throw_length_error();
+      __throw_length_error();
     auto __allocation = std::__allocate_at_least(__alloc_, __external_cap_to_internal(__n));
     __begin_          = __allocation.ptr;
     __size_           = 0;
@@ -519,7 +517,7 @@ private:
   friend class __bit_iterator<vector, false>;
   friend class __bit_iterator<vector, true>;
   friend struct __bit_array<vector>;
-  friend struct hash<vector>;
+  friend struct _LIBCPP_TEMPLATE_VIS hash<vector>;
 };
 
 template <class _Allocator>
@@ -549,7 +547,7 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
   const size_type __cap = capacity();
   if (__cap >= __ms / 2)
     return __ms;
-  return std::max<size_type>(2 * __cap, __align_it(__new_size));
+  return std::max(2 * __cap, __align_it(__new_size));
 }
 
 //  Default constructs __n objects starting at __end_
@@ -1109,7 +1107,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t vector<bool, _Allocator>::__hash_code() con
 }
 
 template <class _Allocator>
-struct hash<vector<bool, _Allocator> > : public __unary_function<vector<bool, _Allocator>, size_t> {
+struct _LIBCPP_TEMPLATE_VIS hash<vector<bool, _Allocator> >
+    : public __unary_function<vector<bool, _Allocator>, size_t> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t
   operator()(const vector<bool, _Allocator>& __vec) const _NOEXCEPT {
     return __vec.__hash_code();

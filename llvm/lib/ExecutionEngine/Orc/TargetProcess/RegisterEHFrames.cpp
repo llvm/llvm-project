@@ -164,17 +164,15 @@ static Error deregisterEHFrameWrapper(ExecutorAddrRange EHFrame) {
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
-llvm_orc_registerEHFrameSectionAllocAction(const char *ArgData,
-                                           size_t ArgSize) {
+llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size) {
   return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
-             ArgData, ArgSize, registerEHFrameWrapper)
+             Data, Size, registerEHFrameWrapper)
       .release();
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
-llvm_orc_deregisterEHFrameSectionAllocAction(const char *ArgData,
-                                             size_t ArgSize) {
+llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size) {
   return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
-             ArgData, ArgSize, deregisterEHFrameWrapper)
+             Data, Size, deregisterEHFrameWrapper)
       .release();
 }

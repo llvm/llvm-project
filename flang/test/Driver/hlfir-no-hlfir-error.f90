@@ -2,12 +2,12 @@
 ! options cannot be both used.
 
 !--------------------------
-! FLANG DRIVER (flang)
+! FLANG DRIVER (flang-new)
 !--------------------------
 ! RUN: not %flang -flang-experimental-hlfir -flang-deprecated-no-hlfir %s 2>&1 | FileCheck %s
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang -fc1)
+! FRONTEND FLANG DRIVER (flang-new -fc1)
 !-----------------------------------------
 ! RUN: not %flang_fc1 -emit-llvm -flang-experimental-hlfir -flang-deprecated-no-hlfir %s 2>&1 | FileCheck %s
 

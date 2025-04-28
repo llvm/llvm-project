@@ -145,9 +145,10 @@ class AttributeNamer:
         return attribute_name
 
     # Get the saved substitution name for the given attribute name. If no name
-    # has been generated for the given attribute yet, None is returned.
+    # has been generated for the given attribute yet, the source attribute name
+    # itself is returned.
     def get_name(self, source_attribute_name):
-        return self.map.get(source_attribute_name)
+        return self.map[source_attribute_name] if source_attribute_name in self.map else '?'
 
 # Return the number of SSA results in a line of type
 #   %0, %1, ... = ...
@@ -158,7 +159,7 @@ def get_num_ssa_results(input_line):
 
 
 # Process a line of input that has been split at each SSA identifier '%'.
-def process_line(line_chunks, variable_namer, strict_name_re=False):
+def process_line(line_chunks, variable_namer):
     output_line = ""
 
     # Process the rest that contained an SSA value name.
@@ -179,14 +180,7 @@ def process_line(line_chunks, variable_namer, strict_name_re=False):
         else:
             # Otherwise, generate a new variable.
             variable = variable_namer.generate_name(ssa_name)
-            if strict_name_re:
-                # Use stricter regexp for the variable name, if requested.
-                # Greedy matching may cause issues with the generic '.*'
-                # regexp when the checks are split across several
-                # lines (e.g. for CHECK-SAME).
-                output_line += "%[[" + variable + ":" + SSA_RE_STR + "]]"
-            else:
-                output_line += "%[[" + variable + ":.*]]"
+            output_line += "%[[" + variable + ":.*]]"
 
         # Append the non named group.
         output_line += chunk[len(ssa_name) :]
@@ -226,9 +220,9 @@ def process_attribute_references(line, attribute_namer):
     components = ATTR_RE.split(line)
     for component in components:
         m = ATTR_RE.match(component)
-        attribute_name = attribute_namer.get_name(m.group(1)) if m else None
-        if attribute_name:
-            output_line += f"#[[{attribute_name}]]{component[len(m.group()):]}"
+        if m:
+            output_line += '#[[' + attribute_namer.get_name(m.group(1)) + ']]'
+            output_line += component[len(m.group()):]
         else:
             output_line += component
     return output_line
@@ -236,13 +230,9 @@ def process_attribute_references(line, attribute_namer):
 # Pre-process a line of input to remove any character sequences that will be
 # problematic with FileCheck.
 def preprocess_line(line):
-    # Replace any `{{` with escaped replacements. `{{` corresponds to regex
-    # checks in FileCheck.
-    output_line = line.replace("{{", "{{\\{\\{}}")
-
     # Replace any double brackets, '[[' with escaped replacements. '[['
     # corresponds to variable names in FileCheck.
-    output_line = output_line.replace("[[", "{{\\[\\[}}")
+    output_line = line.replace("[[", "{{\\[\\[}}")
 
     # Replace any single brackets that are followed by an SSA identifier, the
     # identifier will be replace by a variable; Creating the same situation as
@@ -295,13 +285,6 @@ def main():
         help="Names to be used in FileCheck regular expression to represent "
         "attributes in the order they are defined. Separate names with commas,"
         "commas, and leave empty entries for default names (e.g.: 'MAP0,,,MAP1')")
-    parser.add_argument(
-        "--strict_name_re",
-        type=bool,
-        default=False,
-        help="Set to true to use stricter regex for CHECK-SAME directives. "
-        "Use when Greedy matching causes issues with the generic '.*'",
-    )
 
     args = parser.parse_args()
 
@@ -336,11 +319,6 @@ def main():
     # Process lines
     for input_line in input_lines:
         if not input_line:
-            continue
-
-        # When using `--starts_from_scope=0` to capture module lines, the file
-        # split needs to be skipped, otherwise a `CHECK: // -----` is inserted.
-        if input_line.startswith("// -----"):
             continue
 
         # Check if this is an attribute definition and process it
@@ -408,17 +386,11 @@ def main():
             for argument in ssa_split[1:]:
                 output_line += "// " + args.check_prefix + "-SAME:  "
 
-                # Pad to align with the original position in the line (i.e. where the label ends),
-                # unless the label is more than 20 chars long, in which case pad with 4 spaces
-                # (this is to avoid deep indentation).
-                label_length = len(ssa_split[0])
-                pad_depth = label_length if label_length < 21 else 4
-                output_line += " " * pad_depth
+                # Pad to align with the original position in the line.
+                output_line += " " * len(ssa_split[0])
 
                 # Process the rest of the line.
-                output_line += process_line(
-                    [argument], variable_namer, args.strict_name_re
-                )
+                output_line += process_line([argument], variable_namer)
 
         # Append the output line.
         output_segments[-1].append(output_line)

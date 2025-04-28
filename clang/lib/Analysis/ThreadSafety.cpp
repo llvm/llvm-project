@@ -1511,17 +1511,38 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
     return;
 
   auto *FunDecl = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
-  if (!FunDecl || !FunDecl->hasAttr<TryAcquireCapabilityAttr>())
+  if(!FunDecl || !FunDecl->hasAttrs())
     return;
 
   CapExprSet ExclusiveLocksToAdd;
   CapExprSet SharedLocksToAdd;
 
   // If the condition is a call to a Trylock function, then grab the attributes
-  for (const auto *Attr : FunDecl->specific_attrs<TryAcquireCapabilityAttr>())
-    getMutexIDs(Attr->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, Attr,
-                Exp, FunDecl, PredBlock, CurrBlock, Attr->getSuccessValue(),
-                Negate);
+  for (const auto *Attr : FunDecl->attrs()) {
+    switch (Attr->getKind()) {
+      case attr::TryAcquireCapability: {
+        auto *A = cast<TryAcquireCapabilityAttr>(Attr);
+        getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
+                    Exp, FunDecl, PredBlock, CurrBlock, A->getSuccessValue(),
+                    Negate);
+        break;
+      };
+      case attr::ExclusiveTrylockFunction: {
+        const auto *A = cast<ExclusiveTrylockFunctionAttr>(Attr);
+        getMutexIDs(ExclusiveLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
+                    A->getSuccessValue(), Negate);
+        break;
+      }
+      case attr::SharedTrylockFunction: {
+        const auto *A = cast<SharedTrylockFunctionAttr>(Attr);
+        getMutexIDs(SharedLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
+                    A->getSuccessValue(), Negate);
+        break;
+      }
+      default:
+        break;
+    }
+  }
 
   // Add and remove locks.
   SourceLocation Loc = Exp->getExprLoc();
@@ -1744,8 +1765,6 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
 void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
                                          AccessKind AK,
                                          ProtectedOperationKind POK) {
-  // Strip off paren- and cast-expressions, checking if we encounter any other
-  // operator that should be delegated to checkAccess() instead.
   while (true) {
     if (const auto *PE = dyn_cast<ParenExpr>(Exp)) {
       Exp = PE->getSubExpr();
@@ -1764,33 +1783,11 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
     break;
   }
 
-  if (const auto *UO = dyn_cast<UnaryOperator>(Exp)) {
-    if (UO->getOpcode() == UO_AddrOf) {
-      // Pointer access via pointer taken of variable, so the dereferenced
-      // variable is not actually a pointer.
-      checkAccess(FSet, UO->getSubExpr(), AK, POK);
-      return;
-    }
-  }
-
-  // Pass by reference/pointer warnings are under a different flag.
+  // Pass by reference warnings are under a different flag.
   ProtectedOperationKind PtPOK = POK_VarDereference;
-  switch (POK) {
-  case POK_PassByRef:
-    PtPOK = POK_PtPassByRef;
-    break;
-  case POK_ReturnByRef:
+  if (POK == POK_PassByRef) PtPOK = POK_PtPassByRef;
+  if (POK == POK_ReturnByRef)
     PtPOK = POK_PtReturnByRef;
-    break;
-  case POK_PassPointer:
-    PtPOK = POK_PtPassPointer;
-    break;
-  case POK_ReturnPointer:
-    PtPOK = POK_PtReturnPointer;
-    break;
-  default:
-    break;
-  }
 
   const ValueDecl *D = getValueDecl(Exp);
   if (!D || !D->hasAttrs())
@@ -1861,6 +1858,29 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       // An assert will add a lock to the lockset, but will not generate
       // a warning if it is already there, and will not generate a warning
       // if it is not removed.
+      case attr::AssertExclusiveLock: {
+        const auto *A = cast<AssertExclusiveLockAttr>(At);
+
+        CapExprSet AssertLocks;
+        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
+        for (const auto &AssertLock : AssertLocks)
+          Analyzer->addLock(
+              FSet, std::make_unique<LockableFactEntry>(
+                        AssertLock, LK_Exclusive, Loc, FactEntry::Asserted));
+        break;
+      }
+      case attr::AssertSharedLock: {
+        const auto *A = cast<AssertSharedLockAttr>(At);
+
+        CapExprSet AssertLocks;
+        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
+        for (const auto &AssertLock : AssertLocks)
+          Analyzer->addLock(
+              FSet, std::make_unique<LockableFactEntry>(
+                        AssertLock, LK_Shared, Loc, FactEntry::Asserted));
+        break;
+      }
+
       case attr::AssertCapability: {
         const auto *A = cast<AssertCapabilityAttr>(At);
         CapExprSet AssertLocks;
@@ -2114,8 +2134,6 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
     QualType Qt = (*Param)->getType();
     if (Qt->isReferenceType())
       checkAccess(*Arg, AK_Read, POK_PassByRef);
-    else if (Qt->isPointerType())
-      checkPtAccess(*Arg, AK_Read, POK_PassPointer);
   }
 }
 
@@ -2257,8 +2275,8 @@ void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
   if (!RetVal)
     return;
 
-  // If returning by reference or pointer, check that the function requires the
-  // appropriate capabilities.
+  // If returning by reference, check that the function requires the appropriate
+  // capabilities.
   const QualType ReturnType =
       Analyzer->CurrentFunction->getReturnType().getCanonicalType();
   if (ReturnType->isLValueReferenceType()) {
@@ -2266,11 +2284,6 @@ void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
         FunctionExitFSet, RetVal,
         ReturnType->getPointeeType().isConstQualified() ? AK_Read : AK_Written,
         POK_ReturnByRef);
-  } else if (ReturnType->isPointerType()) {
-    Analyzer->checkPtAccess(
-        FunctionExitFSet, RetVal,
-        ReturnType->getPointeeType().isConstQualified() ? AK_Read : AK_Written,
-        POK_ReturnPointer);
   }
 }
 
@@ -2455,6 +2468,12 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         getMutexIDs(A->isShared() ? SharedLocksAcquired
                                   : ExclusiveLocksAcquired,
                     A, nullptr, D);
+      } else if (isa<ExclusiveTrylockFunctionAttr>(Attr)) {
+        // Don't try to check trylock functions for now.
+        return;
+      } else if (isa<SharedTrylockFunctionAttr>(Attr)) {
+        // Don't try to check trylock functions for now.
+        return;
       } else if (isa<TryAcquireCapabilityAttr>(Attr)) {
         // Don't try to check trylock functions for now.
         return;

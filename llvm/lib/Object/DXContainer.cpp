@@ -96,8 +96,8 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  RootSignature = DirectX::RootSignature(Part);
-  if (Error Err = RootSignature->parse())
+  RootSignature = DirectX::RootSignature();
+  if (Error Err = RootSignature->parse(Part))
     return Err;
   return Error::success();
 }
@@ -242,16 +242,23 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Offset = Offset;
 }
 
-Error DirectX::RootSignature::parse() {
-  const char *Current = PartData.begin();
+Error DirectX::RootSignature::parse(StringRef Data) {
+  const char *Current = Data.begin();
 
   // Root Signature headers expects 6 integers to be present.
-  if (PartData.size() < 6 * sizeof(uint32_t))
+  if (Data.size() < 6 * sizeof(uint32_t))
     return parseFailed(
         "Invalid root signature, insufficient space for header.");
 
-  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  uint32_t VValue =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
+
+  Expected<uint32_t> MaybeVersion =
+      dxbc::RootSignatureValidations::validateVersion(VValue);
+  if (Error E = MaybeVersion.takeError())
+    return E;
+  Version = MaybeVersion.get();
 
   NumParameters =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -269,11 +276,15 @@ Error DirectX::RootSignature::parse() {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  uint32_t FValue =
+      support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  ParametersHeaders.Data = PartData.substr(
-      RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
+  Expected<uint32_t> MaybeFlag =
+      dxbc::RootSignatureValidations::validateRootFlag(FValue);
+  if (Error E = MaybeFlag.takeError())
+    return E;
+  Flags = MaybeFlag.get();
 
   return Error::success();
 }

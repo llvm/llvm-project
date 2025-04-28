@@ -18,8 +18,6 @@
 
 #include "llvm/Config/llvm-config.h"
 #include <optional>
-#include <tuple>
-#include <utility>
 
 #ifdef _WIN32
 typedef unsigned long DWORD;
@@ -204,8 +202,8 @@ private:
 };
 
 namespace this_thread {
-inline thread::id get_id() { return std::this_thread::get_id(); }
-} // namespace this_thread
+  inline thread::id get_id() { return std::this_thread::get_id(); }
+}
 
 #endif // LLVM_ON_UNIX || _WIN32
 

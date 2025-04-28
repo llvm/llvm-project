@@ -4,6 +4,7 @@
 ; Forked from llvm/test/CodeGen/AArch64/qshrn.ll
 ;
 ; Heuristically (but correctly) handled: llvm.smax, llvm.smin, llvm.umin
+; Incorrectly handled (handleUnknownInstruction): llvm.aarch64.neon.sqxtn, llvm.aarch64.neon.sqxtun, llvm.aarch64.neon.uqxtn
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android9001"
@@ -16,10 +17,15 @@ define <4 x i16> @NarrowAShrI32By5(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <4 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = ashr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -35,10 +41,15 @@ define <4 x i16> @NarrowAShrU32By5(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <4 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = ashr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -54,10 +65,15 @@ define <4 x i16> @NarrowAShrI32By5ToU16(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <4 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = ashr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -73,10 +89,15 @@ define <4 x i16> @NarrowLShrI32By5(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <4 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = lshr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -92,10 +113,15 @@ define <4 x i16> @NarrowLShrU32By5(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <4 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = lshr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -111,10 +137,15 @@ define <4 x i16> @NarrowLShrI32By5ToU16(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <4 x i32> [[X]], splat (i32 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = lshr <4 x i32> %x, <i32 5, i32 5, i32 5, i32 5>
@@ -131,10 +162,15 @@ define <2 x i32> @NarrowAShri64By5(<2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i64> [[TMP1]], splat (i64 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <2 x i64> [[X]], splat (i64 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i32> @llvm.aarch64.neon.sqxtn.v2i32(<2 x i64> [[S]])
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = ashr <2 x i64> %x, <i64 5, i64 5>
@@ -150,10 +186,15 @@ define <2 x i32> @NarrowAShrU64By5(<2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i64> [[TMP1]], splat (i64 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <2 x i64> [[X]], splat (i64 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i32> @llvm.aarch64.neon.uqxtn.v2i32(<2 x i64> [[S]])
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = ashr <2 x i64> %x, <i64 5, i64 5>
@@ -169,10 +210,15 @@ define <2 x i32> @NarrowAShri64By5ToU32(<2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i64> [[TMP1]], splat (i64 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <2 x i64> [[X]], splat (i64 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i32> @llvm.aarch64.neon.sqxtun.v2i32(<2 x i64> [[S]])
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = ashr <2 x i64> %x, <i64 5, i64 5>
@@ -188,10 +234,15 @@ define <2 x i32> @NarrowLShri64By5(<2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[X]], splat (i64 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i32> @llvm.aarch64.neon.sqxtn.v2i32(<2 x i64> [[S]])
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = lshr <2 x i64> %x, <i64 5, i64 5>
@@ -207,10 +258,15 @@ define <2 x i32> @NarrowLShrU64By5(<2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[X]], splat (i64 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i32> @llvm.aarch64.neon.uqxtn.v2i32(<2 x i64> [[S]])
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = lshr <2 x i64> %x, <i64 5, i64 5>
@@ -226,10 +282,15 @@ define <2 x i32> @NarrowLShri64By5ToU32(<2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i64> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[X]], splat (i64 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i32> @llvm.aarch64.neon.sqxtun.v2i32(<2 x i64> [[S]])
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %s = lshr <2 x i64> %x, <i64 5, i64 5>
@@ -246,10 +307,15 @@ define <8 x i8> @NarrowAShri16By5(<8 x i16> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <8 x i16> [[TMP1]], splat (i16 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <8 x i16> [[X]], splat (i16 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i8> @llvm.aarch64.neon.sqxtn.v8i8(<8 x i16> [[S]])
-; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %s = ashr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -265,10 +331,15 @@ define <8 x i8> @NarrowAShrU16By5(<8 x i16> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <8 x i16> [[TMP1]], splat (i16 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <8 x i16> [[X]], splat (i16 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i8> @llvm.aarch64.neon.uqxtn.v8i8(<8 x i16> [[S]])
-; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %s = ashr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -284,10 +355,15 @@ define <8 x i8> @NarrowAShri16By5ToU8(<8 x i16> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <8 x i16> [[TMP1]], splat (i16 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <8 x i16> [[X]], splat (i16 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[S]])
-; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %s = ashr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -303,10 +379,15 @@ define <8 x i8> @NarrowLShri16By5(<8 x i16> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i16> [[TMP1]], splat (i16 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <8 x i16> [[X]], splat (i16 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i8> @llvm.aarch64.neon.sqxtn.v8i8(<8 x i16> [[S]])
-; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %s = lshr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -322,10 +403,15 @@ define <8 x i8> @NarrowLShrU16By5(<8 x i16> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i16> [[TMP1]], splat (i16 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <8 x i16> [[X]], splat (i16 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i8> @llvm.aarch64.neon.uqxtn.v8i8(<8 x i16> [[S]])
-; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %s = lshr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -341,10 +427,15 @@ define <8 x i8> @NarrowLShri16By5ToU8(<8 x i16> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <8 x i16> [[TMP1]], splat (i16 5)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <8 x i16> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <8 x i16> [[X]], splat (i16 5)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i16> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i16> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i16> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <8 x i8> @llvm.aarch64.neon.sqxtun.v8i8(<8 x i16> [[S]])
-; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <8 x i8> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i8> [[R]]
 ;
   %s = lshr <8 x i16> %x, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
@@ -364,10 +455,15 @@ define <4 x i16> @NarrowAShrI32By31(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <4 x i32> [[X]], splat (i32 16)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.sqxtn.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = ashr <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
@@ -383,10 +479,15 @@ define <4 x i16> @NarrowAShrI32By31ToU16(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = ashr <4 x i32> [[X]], splat (i32 16)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.sqxtun.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = ashr <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
@@ -402,10 +503,15 @@ define <4 x i16> @NarrowLShrU32By31(<4 x i32> %x) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    [[S:%.*]] = lshr <4 x i32> [[X]], splat (i32 16)
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i32> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF1]]
+; CHECK:       5:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
+; CHECK-NEXT:    unreachable
+; CHECK:       6:
 ; CHECK-NEXT:    [[R:%.*]] = tail call <4 x i16> @llvm.aarch64.neon.uqxtn.v4i16(<4 x i32> [[S]])
-; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %s = lshr <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
@@ -642,3 +748,6 @@ entry:
 }
 
 attributes #0 = { sanitize_memory }
+;.
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
+;.

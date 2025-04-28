@@ -361,14 +361,15 @@ private:
     for (BasicBlock *BB : DeadExitBlocks) {
       // Eliminate all Phis and LandingPads from dead exits.
       // TODO: Consider removing all instructions in this dead block.
-      SmallVector<Instruction *, 4> DeadInstructions(
-          llvm::make_pointer_range(BB->phis()));
+      SmallVector<Instruction *, 4> DeadInstructions;
+      for (auto &PN : BB->phis())
+        DeadInstructions.push_back(&PN);
 
       if (auto *LandingPad = dyn_cast<LandingPadInst>(BB->getFirstNonPHIIt()))
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {
-        SE.forgetValue(I);
+        SE.forgetBlockAndLoopDispositions(I);
         I->replaceAllUsesWith(PoisonValue::get(I->getType()));
         I->eraseFromParent();
       }

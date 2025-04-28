@@ -42,8 +42,7 @@ public:
         }
         return ABIArgInfo::getDirect(CoerceTy);
       } else {
-        return getNaturalAlignIndirect(Ty,
-                                       getDataLayout().getAllocaAddrSpace());
+        return getNaturalAlignIndirect(Ty);
       }
     }
 
@@ -53,8 +52,7 @@ public:
     ASTContext &Context = getContext();
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > Context.getTypeSize(Context.Int128Ty))
-        return getNaturalAlignIndirect(Ty,
-                                       getDataLayout().getAllocaAddrSpace());
+        return getNaturalAlignIndirect(Ty);
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                               : ABIArgInfo::getDirect());
@@ -65,8 +63,7 @@ public:
       return ABIArgInfo::getIgnore();
 
     if (isAggregateTypeForABI(RetTy))
-      return getNaturalAlignIndirect(RetTy,
-                                     getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy);
 
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
@@ -75,8 +72,7 @@ public:
     ASTContext &Context = getContext();
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > Context.getTypeSize(Context.Int128Ty))
-        return getNaturalAlignIndirect(RetTy,
-                                       getDataLayout().getAllocaAddrSpace());
+        return getNaturalAlignIndirect(RetTy);
 
     // Caller will do necessary sign/zero extension.
     return ABIArgInfo::getDirect();

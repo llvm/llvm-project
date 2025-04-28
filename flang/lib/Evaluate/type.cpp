@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/type.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/target.h"
@@ -119,7 +118,7 @@ namespace Fortran::evaluate {
 
 DynamicType::DynamicType(int k, const semantics::ParamValue &pv)
     : category_{TypeCategory::Character}, kind_{k} {
-  CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
+  CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   if (auto n{ToInt64(pv.GetExplicit())}) {
     knownLength_ = *n > 0 ? *n : 0;
   } else {
@@ -661,7 +660,7 @@ std::optional<DynamicType> DynamicType::From(
   if (const auto *intrinsic{type.AsIntrinsic()}) {
     if (auto kind{ToInt64(intrinsic->kind())}) {
       TypeCategory category{intrinsic->category()};
-      if (common::IsValidKindOfIntrinsicType(category, *kind)) {
+      if (IsValidKindOfIntrinsicType(category, *kind)) {
         if (category == TypeCategory::Character) {
           const auto &charType{type.characterTypeSpec()};
           return DynamicType{static_cast<int>(*kind), charType.length()};

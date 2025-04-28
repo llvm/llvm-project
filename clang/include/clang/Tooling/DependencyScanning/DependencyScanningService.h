@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
-#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "llvm/ADT/BitmaskEnum.h"
 
 namespace clang {
@@ -68,11 +67,7 @@ enum class ScanningOptimizations {
   IgnoreCWD = (1 << 4),
 
   DSS_LAST_BITMASK_ENUM(IgnoreCWD),
-
-  // The build system needs to be aware that the current working
-  // directory is ignored. Without a good way of notifying the build
-  // system, it is less risky to default to off.
-  Default = All & (~IgnoreCWD)
+  Default = All
 };
 
 #undef DSS_LAST_BITMASK_ENUM
@@ -100,8 +95,6 @@ public:
     return SharedCache;
   }
 
-  ModuleCacheMutexes &getModuleCacheMutexes() { return ModCacheMutexes; }
-
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
@@ -113,8 +106,6 @@ private:
   const bool TraceVFS;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
-  /// The global module cache mutexes.
-  ModuleCacheMutexes ModCacheMutexes;
 };
 
 } // end namespace dependencies

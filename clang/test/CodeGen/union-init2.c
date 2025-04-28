@@ -13,7 +13,7 @@ union z {
 };
 union z y = {};
 
-// CHECK: @foo = {{.*}}global %union.Foo undef, align 1
+// CHECK: @foo = {{.*}}global %union.Foo zeroinitializer, align 1
 // CHECK-CXX: @foo = {{.*}}global %union.Foo undef, align 1
 union Foo {
   struct Empty {} val;

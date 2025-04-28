@@ -803,7 +803,8 @@ define i64 @do_schedule_instrs_for_dce_after_fixups() {
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @user_of_alloca(ptr [[ADD_PTR]])
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[C]], align 4
+; CHECK-NEXT:    ret i64 [[LD]]
 ;
 entry:
   %c = alloca i64, align 2

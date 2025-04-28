@@ -37,7 +37,9 @@ STATISTIC(NumPrefixedAligned,
 namespace {
   struct PPCBSel : public MachineFunctionPass {
     static char ID;
-    PPCBSel() : MachineFunctionPass(ID) {}
+    PPCBSel() : MachineFunctionPass(ID) {
+      initializePPCBSelPass(*PassRegistry::getPassRegistry());
+    }
 
     // The sizes of the basic blocks in the function (the first
     // element of the pair); the second element of the pair is the amount of the

@@ -190,7 +190,9 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   // execution behind a branch is better suited to handle on modern x86 chips.
   if (ForceMemOperand || ForceAll) {
     CmovGroups AllCmovGroups;
-    SmallVector<MachineBasicBlock *, 4> Blocks(llvm::make_pointer_range(MF));
+    SmallVector<MachineBasicBlock *, 4> Blocks;
+    for (auto &MBB : MF)
+      Blocks.push_back(&MBB);
     if (collectCmovCandidates(Blocks, AllCmovGroups, /*IncludeLoads*/ true)) {
       for (auto &Group : AllCmovGroups) {
         // Skip any group that doesn't do at least one memory operand cmov.
@@ -238,7 +240,8 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   // Note that we need to check size on each iteration as we accumulate child
   // loops.
   for (int i = 0; i < (int)Loops.size(); ++i)
-    llvm::append_range(Loops, Loops[i]->getSubLoops());
+    for (MachineLoop *Child : Loops[i]->getSubLoops())
+      Loops.push_back(Child);
 
   for (MachineLoop *CurrLoop : Loops) {
     // Optimize only innermost loops.
@@ -403,7 +406,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
   DepthInfo LoopDepth[LoopIterations] = {{0, 0}, {0, 0}};
   enum { PhyRegType = 0, VirRegType = 1, RegTypeNum = 2 };
   /// For each register type maps the register to its last def instruction.
-  DenseMap<Register, MachineInstr *> RegDefMaps[RegTypeNum];
+  DenseMap<unsigned, MachineInstr *> RegDefMaps[RegTypeNum];
   /// Maps register operand to its def instruction, which can be nullptr if it
   /// is unknown (e.g., operand is defined outside the loop).
   DenseMap<MachineOperand *, MachineInstr *> OperandToDefMap;
@@ -413,7 +416,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
 
   SmallPtrSet<MachineInstr *, 4> CmovInstructions;
   for (auto &Group : CmovInstGroups)
-    CmovInstructions.insert_range(Group);
+    CmovInstructions.insert(Group.begin(), Group.end());
 
   //===--------------------------------------------------------------------===//
   // Step 1: Calculate instruction depth and loop depth.
@@ -552,7 +555,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
       // This is another conservative check to avoid converting CMOV instruction
       // used with tree-search like algorithm, where the branch is unpredicted.
       auto UIs = MRI->use_instructions(MI->defs().begin()->getReg());
-      if (hasSingleElement(UIs)) {
+      if (!UIs.empty() && ++UIs.begin() == UIs.end()) {
         unsigned Op = UIs.begin()->getOpcode();
         if (Op == X86::MOV64rm || Op == X86::MOV32rm) {
           WorthOpGroup = false;
@@ -720,7 +723,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   // operand. We also need to potentially do register rewriting here, but it is
   // simpler as the memory operands are always on the false path so we can
   // simply take that input, whatever it is.
-  DenseMap<Register, Register> FalseBBRegRewriteTable;
+  DenseMap<unsigned, unsigned> FalseBBRegRewriteTable;
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd;) {
     auto &MI = *MIIt++;
     // Skip any CMOVs in this group which don't load from memory.
@@ -827,7 +830,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
   // That also means that PHI construction must work forward from earlier to
   // later, and that the code must maintain a mapping from earlier PHI's
   // destination registers, and the registers that went into the PHI.
-  DenseMap<Register, std::pair<Register, Register>> RegRewriteTable;
+  DenseMap<unsigned, std::pair<unsigned, unsigned>> RegRewriteTable;
 
   for (MachineBasicBlock::iterator MIIt = MIItBegin; MIIt != MIItEnd; ++MIIt) {
     Register DestReg = MIIt->getOperand(0).getReg();

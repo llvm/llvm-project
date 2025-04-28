@@ -22,34 +22,33 @@
 namespace llvm {
 
 namespace RISCVRI {
-enum : uint8_t {
+enum {
   // The IsVRegClass value of this RegisterClass.
   IsVRegClassShift = 0,
   IsVRegClassShiftMask = 0b1 << IsVRegClassShift,
   // The VLMul value of this RegisterClass. This value is valid iff IsVRegClass
   // is true.
   VLMulShift = IsVRegClassShift + 1,
-  VLMulShiftMask = 0b11 << VLMulShift,
+  VLMulShiftMask = 0b111 << VLMulShift,
 
   // The NF value of this RegisterClass. This value is valid iff IsVRegClass is
   // true.
-  NFShift = VLMulShift + 2,
+  NFShift = VLMulShift + 3,
   NFShiftMask = 0b111 << NFShift,
 };
 
 /// \returns the IsVRegClass for the register class.
-static inline bool isVRegClass(uint8_t TSFlags) {
+static inline bool isVRegClass(uint64_t TSFlags) {
   return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
 }
 
 /// \returns the LMUL for the register class.
-static inline RISCVVType::VLMUL getLMul(uint8_t TSFlags) {
-  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulShiftMask) >>
-                                        VLMulShift);
+static inline RISCVII::VLMUL getLMul(uint64_t TSFlags) {
+  return static_cast<RISCVII::VLMUL>((TSFlags & VLMulShiftMask) >> VLMulShift);
 }
 
 /// \returns the NF for the register class.
-static inline unsigned getNF(uint8_t TSFlags) {
+static inline unsigned getNF(uint64_t TSFlags) {
   return static_cast<unsigned>((TSFlags & NFShiftMask) >> NFShift) + 1;
 }
 } // namespace RISCVRI
@@ -60,13 +59,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
-
-  unsigned getCSRFirstUseCost() const override {
-    // The cost will be compared against BlockFrequency where entry has the
-    // value of 1 << 14. A value of 5 will choose to spill or split cold
-    // path instead of using a callee-saved register.
-    return 5;
-  }
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
@@ -136,8 +128,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
   unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
-
-  float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
                              SmallVectorImpl<MCPhysReg> &Hints,

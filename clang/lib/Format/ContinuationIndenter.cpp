@@ -158,7 +158,7 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
                                    const FormatStyle &Style) {
   if (LessTok.isNot(tok::less))
     return false;
-  return Style.isTextProto() ||
+  return Style.Language == FormatStyle::LK_TextProto ||
          (Style.Language == FormatStyle::LK_Proto &&
           (LessTok.NestingLevel > 0 ||
            (LessTok.Previous && LessTok.Previous->is(tok::equal))));
@@ -281,7 +281,7 @@ LineState ContinuationIndenter::getInitialState(unsigned FirstIndent,
   State.LowestLevelOnLine = 0;
   State.IgnoreStackForComparison = false;
 
-  if (Style.isTextProto()) {
+  if (Style.Language == FormatStyle::LK_TextProto) {
     // We need this in order to deal with the bin packing of text fields at
     // global scope.
     auto &CurrentState = State.Stack.back();
@@ -473,8 +473,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       (State.Column + State.Line->Last->TotalLength - Previous.TotalLength >
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&
-      ((!Current.isTrailingComment() && Style.ColumnLimit > 0) ||
-       Current.NewlinesBefore > 0)) {
+      (!Current.isTrailingComment() || Current.NewlinesBefore > 0) &&
+      (Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
+       Style.ColumnLimit > 0 || Current.NewlinesBefore > 0)) {
     return true;
   }
 
@@ -628,10 +629,6 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       // name.
       !Style.isJavaScript() && Previous.isNot(tok::kw_template) &&
       CurrentState.BreakBeforeParameter) {
-    for (const auto *Tok = &Previous; Tok; Tok = Tok->Previous)
-      if (Tok->FirstAfterPPLine || Tok->is(TT_LineComment))
-        return false;
-
     return true;
   }
 
@@ -924,7 +921,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     CurrentState.ContainsUnwrappedBuilder = true;
   }
 
-  if (Current.is(TT_LambdaArrow) && Style.isJava())
+  if (Current.is(TT_LambdaArrow) && Style.Language == FormatStyle::LK_Java)
     CurrentState.NoLineBreak = true;
   if (Current.isMemberAccess() && Previous.is(tok::r_paren) &&
       (Previous.MatchingParen &&
@@ -1315,7 +1312,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     NextNonComment = &Current;
 
   // Java specific bits.
-  if (Style.isJava() &&
+  if (Style.Language == FormatStyle::LK_Java &&
       Current.isOneOf(Keywords.kw_implements, Keywords.kw_extends)) {
     return std::max(CurrentState.LastSpace,
                     CurrentState.Indent + Style.ContinuationIndentWidth);
@@ -1332,14 +1329,6 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Line->First->is(tok::kw_enum)) {
     return (Style.IndentWidth * State.Line->First->IndentLevel) +
            Style.IndentWidth;
-  }
-
-  if (Style.BraceWrapping.BeforeLambdaBody &&
-      Style.BraceWrapping.IndentBraces && Current.is(TT_LambdaLBrace)) {
-    const auto From = Style.LambdaBodyIndentation == FormatStyle::LBI_Signature
-                          ? CurrentState.Indent
-                          : State.FirstIndent;
-    return From + Style.IndentWidth;
   }
 
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
@@ -1814,7 +1803,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (Style.AlignOperands != FormatStyle::OAS_DontAlign ||
          PrecedenceLevel < prec::Assignment) &&
         (!Previous || Previous->isNot(tok::kw_return) ||
-         (!Style.isJava() && PrecedenceLevel > 0)) &&
+         (Style.Language != FormatStyle::LK_Java && PrecedenceLevel > 0)) &&
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
          PrecedenceLevel > prec::Comma || Current.NestingLevel == 0) &&
         (!Style.isTableGen() ||
@@ -1933,9 +1922,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = Style.IndentWidth +
                   std::min(State.Column, CurrentState.NestedBlockIndent);
     } else if (Current.is(tok::l_brace)) {
-      const auto Width = Style.BracedInitializerIndentWidth;
-      NewIndent = CurrentState.LastSpace +
-                  (Width < 0 ? Style.ContinuationIndentWidth : Width);
+      NewIndent =
+          CurrentState.LastSpace + Style.BracedInitializerIndentWidth.value_or(
+                                       Style.ContinuationIndentWidth);
     } else {
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }
@@ -2121,8 +2110,7 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
-    const auto Indent = Style.IndentWidth * Style.BraceWrapping.IndentBraces;
-    State.Stack.back().NestedBlockIndent = State.FirstIndent + Indent;
+    State.Stack.back().NestedBlockIndent = State.FirstIndent;
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;
   // ObjC block sometimes follow special indentation rules.
@@ -2462,8 +2450,8 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
                                          ? 0
                                          : Current.UnbreakableTailLength;
 
-    if (Style.isVerilog() || Style.isJava() || Style.isJavaScript() ||
-        Style.isCSharp()) {
+    if (Style.isVerilog() || Style.Language == FormatStyle::LK_Java ||
+        Style.isJavaScript() || Style.isCSharp()) {
       BreakableStringLiteralUsingOperators::QuoteStyleType QuoteStyle;
       if (Style.isJavaScript() && Text.starts_with("'") &&
           Text.ends_with("'")) {

@@ -24,6 +24,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "hexagon_cfg"
 
+namespace llvm {
+
+FunctionPass *createHexagonCFGOptimizer();
+void initializeHexagonCFGOptimizerPass(PassRegistry&);
+
+} // end namespace llvm
+
 namespace {
 
 class HexagonCFGOptimizer : public MachineFunctionPass {
@@ -34,7 +41,9 @@ private:
 public:
   static char ID;
 
-  HexagonCFGOptimizer() : MachineFunctionPass(ID) {}
+  HexagonCFGOptimizer() : MachineFunctionPass(ID) {
+    initializeHexagonCFGOptimizerPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "Hexagon CFG Optimizer"; }
   bool runOnMachineFunction(MachineFunction &Fn) override;

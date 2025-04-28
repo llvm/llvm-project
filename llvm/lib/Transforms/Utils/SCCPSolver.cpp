@@ -1485,11 +1485,10 @@ void SCCPInstVisitor::visitSelectInst(SelectInst &I) {
   ValueLatticeElement TVal = getValueState(I.getTrueValue());
   ValueLatticeElement FVal = getValueState(I.getFalseValue());
 
-  ValueLatticeElement &State = ValueState[&I];
-  bool Changed = State.mergeIn(TVal);
-  Changed |= State.mergeIn(FVal);
+  bool Changed = ValueState[&I].mergeIn(TVal);
+  Changed |= ValueState[&I].mergeIn(FVal);
   if (Changed)
-    pushToWorkListMsg(State, &I);
+    pushToWorkListMsg(ValueState[&I], &I);
 }
 
 // Handle Unary Operators.

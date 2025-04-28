@@ -148,6 +148,8 @@ public:
                : lldb::ChildCacheState::eRefetch;
   }
 
+  bool MightHaveChildren() override { return true; }
+
   size_t GetIndexOfChildWithName(ConstString name) override {
     // NSException has 4 members:
     //   NSString *name;

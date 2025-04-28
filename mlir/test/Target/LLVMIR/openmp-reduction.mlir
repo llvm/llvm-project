@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
-// XFAIL: *
+
 // Only check the overall shape of the code and the presence of relevant
 // runtime calls. Actual IR checking is done at the OpenMPIRBuilder level.
 

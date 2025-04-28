@@ -47,8 +47,7 @@ public:
                            const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
-                           FileSpec extra_search_dir = {},
-                           lldb::TargetSP loaded_into_target_sp = {}) override;
+                           FileSpec extra_search_dir = {}) override;
 
   StructuredData::DictionarySP GetInterpreterInfo() override;
 

@@ -1,7 +1,6 @@
 executable("llvm-bolt-heatmap") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
-    "//bolt/include/bolt/Core:TargetConfig.def",
     "//bolt/lib/Profile",
     "//bolt/lib/Rewrite",
     "//bolt/lib/Utils",

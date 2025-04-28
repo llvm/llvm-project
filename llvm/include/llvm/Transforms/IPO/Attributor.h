@@ -1208,8 +1208,7 @@ struct InformationCache {
         TargetTriple(M.getTargetTriple()) {
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
-          /* ExploreInterBlock */
-          true, /* ExploreCFGForward */ true,
+          /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
           /* ExploreCFGBackward */ true,
           /* LIGetter */
           [&](const Function &F) { return AG.getAnalysis<LoopAnalysis>(F); },
@@ -1339,7 +1338,9 @@ struct InformationCache {
   bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
 
   /// Return true if the target is a GPU.
-  bool targetIsGPU() { return TargetTriple.isGPU(); }
+  bool targetIsGPU() {
+    return TargetTriple.isAMDGPU() || TargetTriple.isNVPTX();
+  }
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).
@@ -5101,7 +5102,8 @@ private:
       indicatePessimisticFixpoint();
       return;
     }
-    Set.insert_range(R.Set);
+    for (const MemberTy &C : R.Set)
+      Set.insert(C);
     UndefIsContained |= R.undefIsContained();
     checkAndInvalidate();
   }

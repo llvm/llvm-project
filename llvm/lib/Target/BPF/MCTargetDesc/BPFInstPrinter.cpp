@@ -51,7 +51,8 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
 }
 
 void BPFInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &O) {
+                                  raw_ostream &O, const char *Modifier) {
+  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     O << getRegisterName(Op.getReg());
@@ -63,8 +64,8 @@ void BPFInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void BPFInstPrinter::printMemOperand(const MCInst *MI, int OpNo,
-                                     raw_ostream &O) {
+void BPFInstPrinter::printMemOperand(const MCInst *MI, int OpNo, raw_ostream &O,
+                                     const char *Modifier) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
 

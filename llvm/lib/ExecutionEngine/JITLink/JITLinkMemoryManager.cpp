@@ -260,14 +260,28 @@ public:
     }
 
     // Run finalization actions.
-    using WrapperFunctionCall = orc::shared::WrapperFunctionCall;
-    runFinalizeActions(
-        G->allocActions(),
-        [this, OnFinalized = std::move(OnFinalized)](
-            Expected<std::vector<WrapperFunctionCall>> DeallocActions) mutable {
-          completeFinalization(std::move(OnFinalized),
-                               std::move(DeallocActions));
-        });
+    auto DeallocActions = runFinalizeActions(G->allocActions());
+    if (!DeallocActions) {
+      OnFinalized(DeallocActions.takeError());
+      return;
+    }
+
+    // Release the finalize segments slab.
+    if (auto EC = sys::Memory::releaseMappedMemory(FinalizationSegments)) {
+      OnFinalized(errorCodeToError(EC));
+      return;
+    }
+
+#ifndef NDEBUG
+    // Set 'G' to null to flag that we've been successfully finalized.
+    // This allows us to assert at destruction time that a call has been made
+    // to either finalize or abandon.
+    G = nullptr;
+#endif
+
+    // Continue with finalized allocation.
+    OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
+                                            std::move(*DeallocActions)));
   }
 
   void abandon(OnAbandonedFunction OnAbandoned) override {
@@ -288,31 +302,6 @@ public:
   }
 
 private:
-  void completeFinalization(
-      OnFinalizedFunction OnFinalized,
-      Expected<std::vector<orc::shared::WrapperFunctionCall>> DeallocActions) {
-
-    if (!DeallocActions)
-      return OnFinalized(DeallocActions.takeError());
-
-    // Release the finalize segments slab.
-    if (auto EC = sys::Memory::releaseMappedMemory(FinalizationSegments)) {
-      OnFinalized(errorCodeToError(EC));
-      return;
-    }
-
-#ifndef NDEBUG
-    // Set 'G' to null to flag that we've been successfully finalized.
-    // This allows us to assert at destruction time that a call has been made
-    // to either finalize or abandon.
-    G = nullptr;
-#endif
-
-    // Continue with finalized allocation.
-    OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
-                                            std::move(*DeallocActions)));
-  }
-
   Error applyProtections() {
     for (auto &KV : BL.segments()) {
       const auto &AG = KV.first;

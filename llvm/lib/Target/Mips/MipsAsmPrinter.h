@@ -85,10 +85,6 @@ private:
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
                         const MCSubtargetInfo *EndInfo) const override;
 
-  void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
-                          const MachineBasicBlock *MBB,
-                          unsigned uid) const override;
-
   void EmitJal(const MCSubtargetInfo &STI, MCSymbol *Symbol);
 
   void EmitInstrReg(const MCSubtargetInfo &STI, unsigned Opcode, unsigned Reg);
@@ -152,7 +148,8 @@ public:
   void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
   void printMemOperandEA(const MachineInstr *MI, int opNum, raw_ostream &O);
-  void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
+  void printFCCOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
+                       const char *Modifier = nullptr);
   void printRegisterList(const MachineInstr *MI, int opNum, raw_ostream &O);
   void emitStartOfAsmFile(Module &M) override;
   void emitEndOfAsmFile(Module &M) override;

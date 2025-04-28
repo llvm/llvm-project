@@ -469,12 +469,11 @@ void ELFNixPlatform::pushInitializersLoop(
       Worklist.pop_back();
 
       // If we've already visited this JITDylib on this iteration then continue.
-      auto [It, Inserted] = JDDepMap.try_emplace(DepJD);
-      if (!Inserted)
+      if (JDDepMap.count(DepJD))
         continue;
 
       // Add dep info.
-      auto &DM = It->second;
+      auto &DM = JDDepMap[DepJD];
       DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
         for (auto &KV : O) {
           if (KV.first == DepJD)

@@ -343,7 +343,9 @@ void InconsistentDeclarationParameterNameCheck::check(
 
 void InconsistentDeclarationParameterNameCheck::markRedeclarationsAsVisited(
     const FunctionDecl *OriginalDeclaration) {
-  VisitedDeclarations.insert_range(OriginalDeclaration->redecls());
+  for (const FunctionDecl *Redecl : OriginalDeclaration->redecls()) {
+    VisitedDeclarations.insert(Redecl);
+  }
 }
 
 } // namespace clang::tidy::readability

@@ -20,8 +20,10 @@ namespace llvm {
 class DILocation;
 class LexicalScopes;
 class DINode;
+class MachineBasicBlock;
 class MachineFunction;
 class TargetRegisterInfo;
+class DILifetime;
 
 /// Record instruction ordering so we can query their relative positions within
 /// a function. Meta instructions are given the same ordinal as the preceding
@@ -150,6 +152,59 @@ void calculateDbgEntityHistory(const MachineFunction *MF,
                                const TargetRegisterInfo *TRI,
                                DbgValueHistoryMap &DbgValues,
                                DbgLabelInstrMap &DbgLabels);
+
+/// Tracks the instruction ranges over which lifetimes are defined.
+///
+/// This acts as a sort of "streaming" consumer, to avoid the need to
+/// repeatedly iterate over all instructions of the machine function. The
+/// `clear` method should be called between functions, and `handle*` methods
+/// should be called on the corresponding instructions in the function in the
+/// order they appear.
+class DbgDefKillHistoryMap {
+  /// Describes a single instruction range over which a lifetime is defined.
+  class Entry {
+    friend DbgDefKillHistoryMap;
+
+    const MachineInstr *Begin;
+    const MachineInstr *End = nullptr;
+    const MachineBasicBlock *LastLiveBlock;
+
+  public:
+    /// Create a new entry for the DBG_DEF instruction \p Begin.
+    ///
+    /// The new entry implicitly lives through the end of the basic block
+    /// containing Begin.
+    explicit Entry(const MachineInstr &Begin);
+    /// Return the instruction after which the range begins.
+    const MachineInstr *getBegin() const;
+    /// Return the instruction after which the range end.
+    const MachineInstr *getEnd() const;
+    /// Return whether the range is considered to encompass the entire function.
+    ///
+    /// Note: there is some flexibility in what is allowed to be considered
+    /// live through the function in order to match the existing debug info
+    /// in LLVM. FIXME: Examine this hack more closely, and try to find a more
+    /// precise variant if possible.
+    bool isLiveThroughFunction() const;
+  };
+  using Entries = SmallVector<Entry>;
+  using EntriesMap = MapVector<const DILifetime *, Entries>;
+
+private:
+  EntriesMap Lifetime2Entries;
+
+public:
+  void handleDbgDef(const MachineInstr &MI, bool IsCoalescable);
+  void handleDbgKill(const MachineInstr &MI);
+  void clear() { Lifetime2Entries.clear(); }
+  bool empty() const { return Lifetime2Entries.empty(); }
+  EntriesMap::const_iterator begin() const { return Lifetime2Entries.begin(); }
+  EntriesMap::const_iterator end() const { return Lifetime2Entries.end(); }
+};
+
+void calculateHeterogeneousDbgEntityHistory(
+    const MachineFunction *MF, const TargetRegisterInfo *TRI,
+    DbgDefKillHistoryMap &DbgDefKillHistory, DbgLabelInstrMap &DbgLabels);
 
 } // end namespace llvm
 

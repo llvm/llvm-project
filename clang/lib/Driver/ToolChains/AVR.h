@@ -34,8 +34,7 @@ public:
   std::optional<std::string> findAVRLibcInstallation() const;
   StringRef getGCCInstallPath() const { return GCCInstallPath; }
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type,
-                            bool IsFortran = false) const override;
+                            FileType Type) const override;
 
   bool HasNativeLLVMSupport() const override { return true; }
 

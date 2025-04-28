@@ -1,5 +1,4 @@
-// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s --check-prefixes=CHECK,CHECK-SMALL
-// RUN: llvm-tblgen -gen-disassembler --large-decoder-table -I %p/../../include %s | FileCheck %s --check-prefixes=CHECK,CHECK-LARGE
+// RUN: llvm-tblgen -gen-disassembler -I %p/../../include %s | FileCheck %s
 
 include "llvm/Target/Target.td"
 
@@ -47,19 +46,12 @@ def FOO32 : MyVarInst<MemOp32> {
   );
 }
 
-// CHECK-SMALL:      MCD::OPC_ExtractField, 3, 5,  // Inst{7-3} ...
-// CHECK-SMALL-NEXT: MCD::OPC_FilterValue, 8, 4, 0, // Skip to: 11
-// CHECK-SMALL-NEXT: MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
-// CHECK-SMALL-NEXT: MCD::OPC_FilterValue, 9, 4, 0, // Skip to: 19
-// CHECK-SMALL-NEXT: MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
-// CHECK-SMALL-NEXT: MCD::OPC_Fail,
-
-// CHECK-LARGE:      /* 0 */       MCD::OPC_ExtractField, 3, 5,  // Inst{7-3} ...
-// CHECK-LARGE-NEXT: /* 3 */       MCD::OPC_FilterValue, 8, 4, 0, 0, // Skip to: 12
-// CHECK-LARGE-NEXT: /* 8 */       MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
-// CHECK-LARGE-NEXT: /* 12 */      MCD::OPC_FilterValue, 9, 4, 0, 0, // Skip to: 21
-// CHECK-LARGE-NEXT: /* 17 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
-// CHECK-LARGE-NEXT: /* 21 */      MCD::OPC_Fail,
+// CHECK:      MCD::OPC_ExtractField, 3, 5,  // Inst{7-3} ...
+// CHECK-NEXT: MCD::OPC_FilterValue, 8, 4, 0, 0, // Skip to: 12
+// CHECK-NEXT: MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
+// CHECK-NEXT: MCD::OPC_FilterValue, 9, 4, 0, 0, // Skip to: 21
+// CHECK-NEXT: MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
+// CHECK-NEXT: MCD::OPC_Fail,
 
 // Instruction length table
 // CHECK: 27,

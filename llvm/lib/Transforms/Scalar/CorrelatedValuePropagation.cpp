@@ -410,8 +410,9 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
       ++ReachableCaseCount;
     }
 
-    if (ReachableCaseCount > 1 && !SI->defaultDestUnreachable()) {
-      BasicBlock *DefaultDest = SI->getDefaultDest();
+    BasicBlock *DefaultDest = SI->getDefaultDest();
+    if (ReachableCaseCount > 1 &&
+        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
       ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
                                                     /*UndefAllowed*/ false);
       // The default dest is unreachable if all cases are covered.
@@ -1211,34 +1212,6 @@ static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
   return true;
 }
 
-static bool processTrunc(TruncInst *TI, LazyValueInfo *LVI) {
-  if (TI->hasNoSignedWrap() && TI->hasNoUnsignedWrap())
-    return false;
-
-  ConstantRange Range =
-      LVI->getConstantRangeAtUse(TI->getOperandUse(0), /*UndefAllowed=*/false);
-  uint64_t DestWidth = TI->getDestTy()->getScalarSizeInBits();
-  bool Changed = false;
-
-  if (!TI->hasNoUnsignedWrap()) {
-    if (Range.getActiveBits() <= DestWidth) {
-      TI->setHasNoUnsignedWrap(true);
-      ++NumNUW;
-      Changed = true;
-    }
-  }
-
-  if (!TI->hasNoSignedWrap()) {
-    if (Range.getMinSignedBits() <= DestWidth) {
-      TI->setHasNoSignedWrap(true);
-      ++NumNSW;
-      Changed = true;
-    }
-  }
-
-  return Changed;
-}
-
 static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
                     const SimplifyQuery &SQ) {
   bool FnChanged = false;
@@ -1301,9 +1274,6 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
         break;
       case Instruction::And:
         BBChanged |= processAnd(cast<BinaryOperator>(&II), LVI);
-        break;
-      case Instruction::Trunc:
-        BBChanged |= processTrunc(cast<TruncInst>(&II), LVI);
         break;
       }
     }

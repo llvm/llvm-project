@@ -780,12 +780,9 @@ define i32 @t_to_u32(fp128 %a) nounwind {
 ;
 ; X64-AVX512-WIN-LABEL: t_to_u32:
 ; X64-AVX512-WIN:       # %bb.0:
-; X64-AVX512-WIN-NEXT:    subq $56, %rsp
-; X64-AVX512-WIN-NEXT:    vmovaps (%rcx), %xmm0
-; X64-AVX512-WIN-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-AVX512-WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; X64-AVX512-WIN-NEXT:    subq $40, %rsp
 ; X64-AVX512-WIN-NEXT:    callq __fixunstfsi
-; X64-AVX512-WIN-NEXT:    addq $56, %rsp
+; X64-AVX512-WIN-NEXT:    addq $40, %rsp
 ; X64-AVX512-WIN-NEXT:    retq
 ;
 ; X64-AVX512-LIN-LABEL: t_to_u32:
@@ -818,12 +815,9 @@ define i32 @t_to_u32(fp128 %a) nounwind {
 ;
 ; X64-SSE-WIN-LABEL: t_to_u32:
 ; X64-SSE-WIN:       # %bb.0:
-; X64-SSE-WIN-NEXT:    subq $56, %rsp
-; X64-SSE-WIN-NEXT:    movaps (%rcx), %xmm0
-; X64-SSE-WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; X64-SSE-WIN-NEXT:    subq $40, %rsp
 ; X64-SSE-WIN-NEXT:    callq __fixunstfsi
-; X64-SSE-WIN-NEXT:    addq $56, %rsp
+; X64-SSE-WIN-NEXT:    addq $40, %rsp
 ; X64-SSE-WIN-NEXT:    retq
 ;
 ; X64-SSE-LIN-LABEL: t_to_u32:
@@ -878,12 +872,9 @@ define i32 @t_to_s32(fp128 %a) nounwind {
 ;
 ; X64-AVX512-WIN-LABEL: t_to_s32:
 ; X64-AVX512-WIN:       # %bb.0:
-; X64-AVX512-WIN-NEXT:    subq $56, %rsp
-; X64-AVX512-WIN-NEXT:    vmovaps (%rcx), %xmm0
-; X64-AVX512-WIN-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-AVX512-WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; X64-AVX512-WIN-NEXT:    subq $40, %rsp
 ; X64-AVX512-WIN-NEXT:    callq __fixtfsi
-; X64-AVX512-WIN-NEXT:    addq $56, %rsp
+; X64-AVX512-WIN-NEXT:    addq $40, %rsp
 ; X64-AVX512-WIN-NEXT:    retq
 ;
 ; X64-AVX512-LIN-LABEL: t_to_s32:
@@ -916,12 +907,9 @@ define i32 @t_to_s32(fp128 %a) nounwind {
 ;
 ; X64-SSE-WIN-LABEL: t_to_s32:
 ; X64-SSE-WIN:       # %bb.0:
-; X64-SSE-WIN-NEXT:    subq $56, %rsp
-; X64-SSE-WIN-NEXT:    movaps (%rcx), %xmm0
-; X64-SSE-WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; X64-SSE-WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; X64-SSE-WIN-NEXT:    subq $40, %rsp
 ; X64-SSE-WIN-NEXT:    callq __fixtfsi
-; X64-SSE-WIN-NEXT:    addq $56, %rsp
+; X64-SSE-WIN-NEXT:    addq $40, %rsp
 ; X64-SSE-WIN-NEXT:    retq
 ;
 ; X64-SSE-LIN-LABEL: t_to_s32:

@@ -20,20 +20,11 @@ entry:
   ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpComposite(2, %struct.type)), ![[#]])
   call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpComposite(2, %struct.type))), !dbg !22
 
-  ; CHECK: #dbg_value(i16 42, ![[#]], !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16)), ![[#]])
-  call void @llvm.dbg.value(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16))), !dbg !22
+  ; CHECK: #dbg_declare(i16 42, ![[#]], !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16)), ![[#]])
+  call void @llvm.dbg.declare(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16))), !dbg !22
 
-  ; CHECK: #dbg_value(i8 poison, ![[#]], !DIExpression(DIOpArg(0, i32)), ![[#]])
-  call void @llvm.dbg.value(metadata i8 poison, metadata !24, metadata !DIExpression(DIOpArg(0, i32))), !dbg !22
-
-  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr)), ![[#]])
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !26, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr))), !dbg !22
-
-  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr)), ![[#]])
-  call void @llvm.dbg.declare(metadata ptr %i, metadata !27, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr))), !dbg !22
-
-  ; CHECK: #dbg_value(i32 3, ![[#]], !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect()), ![[#]])
-  call void @llvm.dbg.value(metadata i32 3, metadata !28, metadata !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect())), !dbg !22
+  ; CHECK: #dbg_declare(i8 poison, ![[#]], !DIExpression(DIOpArg(0, i32)), ![[#]])
+  call void @llvm.dbg.declare(metadata i8 poison, metadata !24, metadata !DIExpression(DIOpArg(0, i32))), !dbg !22
 
   ret void
 }
@@ -64,10 +55,6 @@ entry:
 !22 = !DILocation(line: 12, column: 7, scope: !17)
 !23 = !DILocation(line: 13, column: 1, scope: !17)
 !24 = !DILocalVariable(name: "j", scope: !17, file: !1, line: 12, type: !10)
-!25 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_unsigned)
-!26 = !DILocalVariable(name: "k", scope: !17, file: !1, line: 12, type: !25)
-!27 = !DILocalVariable(name: "l", scope: !17, file: !1, line: 12, type: !25)
-!28 = !DILocalVariable(name: "m", scope: !17, file: !1, line: 12, type: !25)
 
 ;--- invalid.ll
 ; RUN: opt invalid.ll -S -passes=verify 2>&1 | FileCheck invalid.ll
@@ -151,19 +138,19 @@ entry:
   call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpShl())), !dbg !22
 
   ; CHECK: DIOpConvert on integers requires result type to be no wider than input type
-  call void @llvm.dbg.value(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8), DIOpConvert(i16))), !dbg !22
+  call void @llvm.dbg.declare(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8), DIOpConvert(i16))), !dbg !22
 
   ; FIXME(diexpression-poison): DIExpression must yield a location at least as wide as the variable or fragment it describes
-  ;call void @llvm.dbg.value(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8))), !dbg !22
+  ;call void @llvm.dbg.declare(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8))), !dbg !22
 
   ; FIXME(diexpression-poison): DIExpression must yield a location at least as wide as the variable or fragment it describes
   ;call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpConstant(i16 1), DIOpAdd())), !dbg !22
 
   ; FIXME(diexpression-poison): DIExpression must yield a location at least as wide as the variable or fragment it describes
-  ;call void @llvm.dbg.value(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8), DIOpFragment(0, 16))), !dbg !22
+  ;call void @llvm.dbg.declare(metadata i8 42, metadata !21, metadata !DIExpression(DIOpArg(0, i8), DIOpFragment(0, 16))), !dbg !22
 
   ; CHECK: DIOpFragment must be contained within variable
-  call void @llvm.dbg.value(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(24, 16))), !dbg !22
+  call void @llvm.dbg.declare(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(24, 16))), !dbg !22
 
   ret void
 }

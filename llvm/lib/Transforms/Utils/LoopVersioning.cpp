@@ -225,43 +225,34 @@ void LoopVersioning::annotateLoopWithNoAlias() {
   }
 }
 
-std::pair<MDNode *, MDNode *>
-LoopVersioning::getNoAliasMetadataFor(const Instruction *OrigInst) const {
+void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
+                                             const Instruction *OrigInst) {
   if (!AnnotateNoAlias)
-    return {nullptr, nullptr};
+    return;
 
   LLVMContext &Context = VersionedLoop->getHeader()->getContext();
   const Value *Ptr = isa<LoadInst>(OrigInst)
                          ? cast<LoadInst>(OrigInst)->getPointerOperand()
                          : cast<StoreInst>(OrigInst)->getPointerOperand();
 
-  MDNode *AliasScope = nullptr;
-  MDNode *NoAlias = nullptr;
   // Find the group for the pointer and then add the scope metadata.
   auto Group = PtrToGroup.find(Ptr);
   if (Group != PtrToGroup.end()) {
-    AliasScope = MDNode::concatenate(
-        OrigInst->getMetadata(LLVMContext::MD_alias_scope),
-        MDNode::get(Context, GroupToScope.lookup(Group->second)));
+    VersionedInst->setMetadata(
+        LLVMContext::MD_alias_scope,
+        MDNode::concatenate(
+            VersionedInst->getMetadata(LLVMContext::MD_alias_scope),
+            MDNode::get(Context, GroupToScope[Group->second])));
 
     // Add the no-alias metadata.
     auto NonAliasingScopeList = GroupToNonAliasingScopeList.find(Group->second);
     if (NonAliasingScopeList != GroupToNonAliasingScopeList.end())
-      NoAlias =
-          MDNode::concatenate(OrigInst->getMetadata(LLVMContext::MD_noalias),
-                              NonAliasingScopeList->second);
+      VersionedInst->setMetadata(
+          LLVMContext::MD_noalias,
+          MDNode::concatenate(
+              VersionedInst->getMetadata(LLVMContext::MD_noalias),
+              NonAliasingScopeList->second));
   }
-  return {AliasScope, NoAlias};
-}
-
-void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
-                                             const Instruction *OrigInst) {
-  const auto &[AliasScopeMD, NoAliasMD] = getNoAliasMetadataFor(OrigInst);
-  if (AliasScopeMD)
-    VersionedInst->setMetadata(LLVMContext::MD_alias_scope, AliasScopeMD);
-
-  if (NoAliasMD)
-    VersionedInst->setMetadata(LLVMContext::MD_noalias, NoAliasMD);
 }
 
 namespace {

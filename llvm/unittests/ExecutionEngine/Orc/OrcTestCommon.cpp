@@ -16,11 +16,11 @@ using namespace llvm;
 
 bool OrcNativeTarget::NativeTargetInitialized = false;
 
-ModuleBuilder::ModuleBuilder(LLVMContext &Context, StringRef TripleStr,
+ModuleBuilder::ModuleBuilder(LLVMContext &Context, StringRef Triple,
                              StringRef Name)
-    : M(new Module(Name, Context)) {
-  if (TripleStr != "")
-    M->setTargetTriple(Triple(TripleStr));
+  : M(new Module(Name, Context)) {
+  if (Triple != "")
+    M->setTargetTriple(Triple);
 }
 
 void llvm::orc::CoreAPIsBasedStandardTest::OverridableDispatcher::dispatch(

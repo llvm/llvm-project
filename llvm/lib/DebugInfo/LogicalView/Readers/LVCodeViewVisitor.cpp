@@ -155,23 +155,29 @@ class LVForwardReferences {
   }
 
   void add(StringRef Name, TypeIndex TIForward) {
-    auto [It, Inserted] =
-        ForwardTypesNames.try_emplace(Name, TIForward, TypeIndex::None());
-    if (!Inserted) {
+    if (ForwardTypesNames.find(Name) == ForwardTypesNames.end()) {
+      ForwardTypesNames.emplace(
+          std::piecewise_construct, std::forward_as_tuple(Name),
+          std::forward_as_tuple(TIForward, TypeIndex::None()));
+    } else {
       // Update a recorded definition with its reference.
-      It->second.first = TIForward;
-      add(TIForward, It->second.second);
+      ForwardTypesNames[Name].first = TIForward;
+      add(TIForward, ForwardTypesNames[Name].second);
     }
   }
 
   // Update a previously recorded forward reference with its definition.
   void update(StringRef Name, TypeIndex TIReference) {
-    auto [It, Inserted] =
-        ForwardTypesNames.try_emplace(Name, TypeIndex::None(), TIReference);
-    if (!Inserted) {
+    auto It = ForwardTypesNames.find(Name);
+    if (It != ForwardTypesNames.end()) {
       // Update the recorded forward reference with its definition.
       It->second.second = TIReference;
       add(It->second.first, TIReference);
+    } else {
+      // We have not seen the forward reference. Insert the definition.
+      ForwardTypesNames.emplace(
+          std::piecewise_construct, std::forward_as_tuple(Name),
+          std::forward_as_tuple(TypeIndex::None(), TIReference));
     }
   }
 
@@ -268,9 +274,10 @@ public:
 
   void add(TypeIndex TI, StringRef String) {
     static uint32_t Index = 0;
-    auto [It, Inserted] = Strings.try_emplace(TI);
-    if (Inserted)
-      It->second = std::make_tuple(++Index, std::string(String), nullptr);
+    if (Strings.find(TI) == Strings.end())
+      Strings.emplace(
+          std::piecewise_construct, std::forward_as_tuple(TI),
+          std::forward_as_tuple(++Index, std::string(String), nullptr));
   }
 
   StringRef find(TypeIndex TI) {

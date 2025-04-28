@@ -69,7 +69,7 @@ void StaticAccessedThroughInstanceCheck::check(
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
   PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
 
-  PrintingPolicyWithSuppressedTag.PrintAsCanonical =
+  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes =
       !BaseExpr->getType()->isTypedefNameType();
 
   std::string BaseTypeName =

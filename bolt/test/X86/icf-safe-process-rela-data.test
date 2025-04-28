@@ -12,6 +12,7 @@
 # SAFEICFCHECK:      skipping function with reference taken fooAddFunc
 # SAFEICFCHECK-NEXT: skipping function with reference taken barAddFunc
 # SAFEICFCHECK-NEXT: ICF iteration 1
+# SAFEICFCHECK-NEXT: ===---------
 
 ## clang++ main.cpp
 ## Other functions removed for brevity.

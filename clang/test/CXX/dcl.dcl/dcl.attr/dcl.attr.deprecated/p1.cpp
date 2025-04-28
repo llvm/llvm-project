@@ -58,17 +58,3 @@ template <typename T>
   FunS2 f;// No warning, entire function is deprecated, so usage here should be fine.
 
 }
-
-namespace GH58547 {
-struct A {
-  using ta [[deprecated]] = int; // expected-note 2{{marked deprecated here}}
-};
-
-using t1 = typename A::ta; // expected-warning {{'ta' is deprecated}}
-
-template <class B1> struct B {
-  using tb = typename B1::ta; // expected-warning {{'ta' is deprecated}}
-};
-
-template struct B<A>; // expected-note {{requested here}}
-} // namespace GH58547

@@ -695,7 +695,7 @@ mlir::presburger::detail::computeNumTerms(const GeneratingFunction &gf) {
   // d_{ij} and substitute x accordingly.
   std::vector<Point> allDenominators;
   for (ArrayRef<Point> den : gf.getDenominators())
-    llvm::append_range(allDenominators, den);
+    allDenominators.insert(allDenominators.end(), den.begin(), den.end());
   Point mu = getNonOrthogonalVector(allDenominators);
 
   unsigned numParams = gf.getNumParams();

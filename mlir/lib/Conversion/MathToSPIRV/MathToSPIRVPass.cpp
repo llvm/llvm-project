@@ -15,9 +15,10 @@
 #include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTMATHTOSPIRVPASS
+#define GEN_PASS_DEF_CONVERTMATHTOSPIRV
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -26,7 +27,7 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Math operations into the SPIR-V dialect.
 class ConvertMathToSPIRVPass
-    : public impl::ConvertMathToSPIRVPassBase<ConvertMathToSPIRVPass> {
+    : public impl::ConvertMathToSPIRVBase<ConvertMathToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -50,4 +51,8 @@ void ConvertMathToSPIRVPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
+}
+
+std::unique_ptr<OperationPass<>> mlir::createConvertMathToSPIRVPass() {
+  return std::make_unique<ConvertMathToSPIRVPass>();
 }

@@ -96,22 +96,19 @@ int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,
 double
 MCSchedModel::getReciprocalThroughput(const MCSubtargetInfo &STI,
                                       const MCSchedClassDesc &SCDesc) {
-  std::optional<double> MinThroughput;
+  std::optional<double> Throughput;
   const MCSchedModel &SM = STI.getSchedModel();
   const MCWriteProcResEntry *I = STI.getWriteProcResBegin(&SCDesc);
   const MCWriteProcResEntry *E = STI.getWriteProcResEnd(&SCDesc);
   for (; I != E; ++I) {
-    if (!I->ReleaseAtCycle || I->ReleaseAtCycle == I->AcquireAtCycle)
+    if (!I->ReleaseAtCycle)
       continue;
-    assert(I->ReleaseAtCycle > I->AcquireAtCycle && "invalid resource segment");
     unsigned NumUnits = SM.getProcResource(I->ProcResourceIdx)->NumUnits;
-    double Throughput =
-        double(NumUnits) / double(I->ReleaseAtCycle - I->AcquireAtCycle);
-    MinThroughput =
-        MinThroughput ? std::min(*MinThroughput, Throughput) : Throughput;
+    double Temp = NumUnits * 1.0 / I->ReleaseAtCycle;
+    Throughput = Throughput ? std::min(*Throughput, Temp) : Temp;
   }
-  if (MinThroughput)
-    return 1.0 / *MinThroughput;
+  if (Throughput)
+    return 1.0 / *Throughput;
 
   // If no throughput value was calculated, assume that we can execute at the
   // maximum issue width scaled by number of micro-ops for the schedule class.
@@ -176,38 +173,4 @@ MCSchedModel::getForwardingDelayCycles(ArrayRef<MCReadAdvanceEntry> Entries,
   }
 
   return std::abs(DelayCycles);
-}
-
-unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
-                                            const MCSchedClassDesc &SCDesc) {
-
-  ArrayRef<MCReadAdvanceEntry> Entries = STI.getReadAdvanceEntries(SCDesc);
-  if (Entries.empty())
-    return 0;
-
-  unsigned MaxLatency = 0;
-  unsigned WriteResourceID = 0;
-  unsigned DefEnd = SCDesc.NumWriteLatencyEntries;
-
-  for (unsigned DefIdx = 0; DefIdx != DefEnd; ++DefIdx) {
-    // Lookup the definition's write latency in SubtargetInfo.
-    const MCWriteLatencyEntry *WLEntry =
-        STI.getWriteLatencyEntry(&SCDesc, DefIdx);
-    unsigned Cycles = 0;
-    // If latency is Invalid (<0), consider 0 cycle latency
-    if (WLEntry->Cycles > 0)
-      Cycles = (unsigned)WLEntry->Cycles;
-    if (Cycles > MaxLatency) {
-      MaxLatency = Cycles;
-      WriteResourceID = WLEntry->WriteResourceID;
-    }
-  }
-
-  for (const MCReadAdvanceEntry &E : Entries) {
-    if (E.WriteResourceID == WriteResourceID)
-      return E.Cycles;
-  }
-
-  // Unable to find WriteResourceID in MCReadAdvanceEntry Entries
-  return 0;
 }

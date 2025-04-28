@@ -142,8 +142,6 @@ XcodeSDK::Type XcodeSDK::GetType() const {
 
 llvm::StringRef XcodeSDK::GetString() const { return m_name; }
 
-const FileSpec &XcodeSDK::GetSysroot() const { return m_sysroot; }
-
 bool XcodeSDK::Info::operator<(const Info &other) const {
   return std::tie(type, version, internal) <
          std::tie(other.type, other.version, other.internal);
@@ -162,16 +160,11 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
     *this = other;
   else {
     // The Internal flag always wins.
-    if (!l.internal && r.internal) {
-      if (llvm::StringRef(m_name).ends_with(".sdk"))
+    if (llvm::StringRef(m_name).ends_with(".sdk"))
+      if (!l.internal && r.internal)
         m_name =
             m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
-    }
   }
-
-  // We changed the SDK name. Adjust the sysroot accordingly.
-  if (m_sysroot && m_sysroot.GetFilename().GetStringRef() != m_name)
-    m_sysroot.SetFilename(m_name);
 }
 
 std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {

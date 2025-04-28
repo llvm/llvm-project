@@ -16,19 +16,19 @@ const CSKYAttributeParser::DisplayHandler
     CSKYAttributeParser::displayRoutines[] = {
         {
             CSKYAttrs::CSKY_ARCH_NAME,
-            &ELFCompactAttrParser::stringAttribute,
+            &ELFAttributeParser::stringAttribute,
         },
         {
             CSKYAttrs::CSKY_CPU_NAME,
-            &ELFCompactAttrParser::stringAttribute,
+            &ELFAttributeParser::stringAttribute,
         },
         {
             CSKYAttrs::CSKY_ISA_FLAGS,
-            &ELFCompactAttrParser::integerAttribute,
+            &ELFAttributeParser::integerAttribute,
         },
         {
             CSKYAttrs::CSKY_ISA_EXT_FLAGS,
-            &ELFCompactAttrParser::integerAttribute,
+            &ELFAttributeParser::integerAttribute,
         },
         {
             CSKYAttrs::CSKY_DSP_VERSION,
@@ -60,7 +60,7 @@ const CSKYAttributeParser::DisplayHandler
         },
         {
             CSKYAttrs::CSKY_FPU_NUMBER_MODULE,
-            &ELFCompactAttrParser::stringAttribute,
+            &ELFAttributeParser::stringAttribute,
         },
         {
             CSKYAttrs::CSKY_FPU_HARDFP,

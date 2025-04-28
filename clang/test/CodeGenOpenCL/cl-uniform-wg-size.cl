@@ -4,20 +4,14 @@
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -foffload-uniform-block -o - %s 2>&1 | FileCheck %s -check-prefixes CHECK,CHECK-UNIFORM
 
 kernel void ker() {};
-// CHECK: define{{.*}}@ker() #[[ATTR0:[0-9]+]]
-// CHECK: call void @__clang_ocl_kern_imp_ker() #[[ATTR2:[0-9]+]]
-
-// CHECK: define{{.*}}@__clang_ocl_kern_imp_ker() #[[ATTR1:[0-9]+]]
+// CHECK: define{{.*}}@ker() #0
 
 void foo() {};
-// CHECK: define{{.*}}@foo() #[[ATTR1:[0-9]+]]
+// CHECK: define{{.*}}@foo() #1
 
-// CHECK: attributes #[[ATTR0]]
+// CHECK-LABEL: attributes #0
 // CHECK-UNIFORM: "uniform-work-group-size"="true"
 // CHECK-NONUNIFORM: "uniform-work-group-size"="false"
 
-// CHECK: attributes #[[ATTR1]]
-// CHECK-NOT: uniform-work-group-size
-
-// CHECK: attributes #[[ATTR2]]
+// CHECK-LABEL: attributes #1
 // CHECK-NOT: uniform-work-group-size

@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PerfTest.h"
+#include "SingleInputSingleOutputPerf.h"
+
 #include "src/math/expf.h"
 
 #include <math.h>
 
-int main() {
-  SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::expf, ::expf,
-                                  "expf_perf.log")
-  return 0;
-}
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::expf, ::expf,
+                                "expf_perf.log")

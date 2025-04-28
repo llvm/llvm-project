@@ -43,7 +43,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
   test<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
-#if TEST_STD_VER >= 20
+#ifndef TEST_HAS_NO_NASTY_STRING
   test<nasty_string>();
 #endif
 

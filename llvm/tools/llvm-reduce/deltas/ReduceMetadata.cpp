@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceMetadata.h"
+#include "Delta.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/InstIterator.h"
@@ -47,7 +48,7 @@ static constexpr StringLiteral ListNamedMetadata[] = {
 };
 
 /// Remove unneeded arguments to named metadata.
-void llvm::reduceNamedMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+static void reduceNamedMetadataOperands(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &M = WorkItem.getModule();
 
   for (NamedMDNode &I : M.named_metadata()) {
@@ -76,7 +77,7 @@ void llvm::reduceNamedMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
 
 /// Removes all the Named and Unnamed Metadata Nodes, as well as any debug
 /// functions that aren't inside the desired Chunks.
-void llvm::reduceMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+static void extractMetadataFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   // Get out-of-chunk Named metadata nodes
@@ -120,4 +121,12 @@ void llvm::reduceMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
       }
     }
   }
+}
+
+void llvm::reduceMetadataDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractMetadataFromModule, "Reducing Metadata");
+}
+
+void llvm::reduceNamedMetadataDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceNamedMetadataOperands, "Reducing Named Metadata");
 }

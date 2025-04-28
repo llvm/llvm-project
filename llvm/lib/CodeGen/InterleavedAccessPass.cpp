@@ -349,7 +349,7 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
     return !Extracts.empty() || BinOpShuffleChanged;
   }
 
-  DeadInsts.insert_range(Shuffles);
+  DeadInsts.insert(Shuffles.begin(), Shuffles.end());
 
   DeadInsts.insert(LI);
   return true;
@@ -632,7 +632,8 @@ getVectorDeinterleaveFactor(IntrinsicInst *II,
 
 // Return the corresponded deinterleaved mask, or nullptr if there is no valid
 // mask.
-static Value *getMask(Value *WideMask, unsigned Factor) {
+static Value *getMask(Value *WideMask, unsigned Factor,
+                      VectorType *LeafValueTy) {
   using namespace llvm::PatternMatch;
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     SmallVector<Value *, 8> Operands;
@@ -675,7 +676,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
     // Check mask operand. Handle both all-true and interleaved mask.
     Value *WideMask = VPLoad->getOperand(1);
-    Value *Mask = getMask(WideMask, Factor);
+    Value *Mask = getMask(WideMask, Factor,
+                          cast<VectorType>(DeinterleaveValues[0]->getType()));
     if (!Mask)
       return false;
 
@@ -701,7 +703,7 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
   }
 
-  DeadInsts.insert_range(DeinterleaveDeadInsts);
+  DeadInsts.insert(DeinterleaveDeadInsts.begin(), DeinterleaveDeadInsts.end());
   // We now have a target-specific load, so delete the old one.
   DeadInsts.insert(cast<Instruction>(LoadedVal));
   return true;
@@ -727,7 +729,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
       return false;
 
     Value *WideMask = VPStore->getOperand(2);
-    Value *Mask = getMask(WideMask, Factor);
+    Value *Mask = getMask(WideMask, Factor,
+                          cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
 
@@ -754,7 +757,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
 
   // We now have a target-specific store, so delete the old one.
   DeadInsts.insert(cast<Instruction>(StoredBy));
-  DeadInsts.insert_range(InterleaveDeadInsts);
+  DeadInsts.insert(InterleaveDeadInsts.begin(), InterleaveDeadInsts.end());
   return true;
 }
 

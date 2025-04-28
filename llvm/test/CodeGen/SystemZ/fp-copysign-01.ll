@@ -1,4 +1,4 @@
-; Test copysign libcalls.
+; Test copysign operations.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 

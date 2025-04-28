@@ -421,8 +421,6 @@ public:
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
                             NonNeg | NoNaNs | NoInfs | SameSign,
-    FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
-                    AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -692,10 +690,8 @@ public:
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
 
-  /// Returns true if the node type is UNDEF or POISON.
-  bool isUndef() const {
-    return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
-  }
+  /// Return true if the type of the node type undefined.
+  bool isUndef() const { return NodeType == ISD::UNDEF; }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
@@ -881,21 +877,7 @@ public:
 
   /// Return true if there are exactly NUSES uses of the indicated value.
   /// This method ignores uses of other values defined by this operation.
-  bool hasNUsesOfValue(unsigned NUses, unsigned Value) const {
-    assert(Value < getNumValues() && "Bad value!");
-
-    // TODO: Only iterate over uses of a given value of the node
-    for (SDUse &U : uses()) {
-      if (U.getResNo() == Value) {
-        if (NUses == 0)
-          return false;
-        --NUses;
-      }
-    }
-
-    // Found exactly the right number of uses?
-    return NUses == 0;
-  }
+  bool hasNUsesOfValue(unsigned NUses, unsigned Value) const;
 
   /// Return true if there are any use of the indicated value.
   /// This method ignores uses of other values defined by this operation.
@@ -1006,8 +988,6 @@ public:
 
   /// Helper method returns the APInt value of a ConstantSDNode.
   inline const APInt &getAsAPIntVal() const;
-
-  inline std::optional<APInt> bitcastToAPInt() const;
 
   const SDValue &getOperand(unsigned Num) const {
     assert(Num < NumOperands && "Invalid child # of SDNode!");
@@ -1546,13 +1526,15 @@ public:
 /// This is an SDNode representing atomic operations.
 class AtomicSDNode : public MemSDNode {
 public:
-  AtomicSDNode(unsigned Order, const DebugLoc &dl, unsigned Opc, SDVTList VTL,
-               EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy)
-      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+  AtomicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTL,
+               EVT MemVT, MachineMemOperand *MMO)
+    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
-    assert((Opc == ISD::ATOMIC_LOAD || ETy == ISD::NON_EXTLOAD) &&
-           "Only atomic load uses ExtTy");
+  }
+
+  void setExtensionType(ISD::LoadExtType ETy) {
+    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
     LoadSDNodeBits.ExtTy = ETy;
   }
 
@@ -1663,15 +1645,12 @@ public:
     return Mask[Idx];
   }
 
-  bool isSplat() const { return isSplatMask(getMask()); }
+  bool isSplat() const { return isSplatMask(Mask, getValueType(0)); }
 
-  int getSplatIndex() const { return getSplatMaskIndex(getMask()); }
-
-  static bool isSplatMask(ArrayRef<int> Mask);
-
-  static int getSplatMaskIndex(ArrayRef<int> Mask) {
-    assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
-    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
+  int getSplatIndex() const {
+    assert(isSplat() && "Cannot get splat index for non-splat!");
+    EVT VT = getValueType(0);
+    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
       if (Mask[i] >= 0)
         return Mask[i];
 
@@ -1679,6 +1658,8 @@ public:
     // are undefined. Return 0 for better potential for callers to simplify.
     return 0;
   }
+
+  static bool isSplatMask(const int *Mask, EVT VT);
 
   /// Change values in a shuffle permute mask assuming
   /// the two vector operands have swapped position.
@@ -1803,14 +1784,6 @@ public:
            N->getOpcode() == ISD::TargetConstantFP;
   }
 };
-
-std::optional<APInt> SDNode::bitcastToAPInt() const {
-  if (auto *CN = dyn_cast<ConstantSDNode>(this))
-    return CN->getAPIntValue();
-  if (auto *CFPN = dyn_cast<ConstantFPSDNode>(this))
-    return CFPN->getValueAPF().bitcastToAPInt();
-  return std::nullopt;
-}
 
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);

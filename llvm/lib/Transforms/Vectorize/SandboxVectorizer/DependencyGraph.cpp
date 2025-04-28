@@ -71,12 +71,6 @@ bool PredIterator::operator==(const PredIterator &Other) const {
   return OpIt == Other.OpIt && MemIt == Other.MemIt;
 }
 
-void DGNode::setSchedBundle(SchedBundle &SB) {
-  if (this->SB != nullptr)
-    this->SB->eraseFromBundle(this);
-  this->SB = &SB;
-}
-
 DGNode::~DGNode() {
   if (SB == nullptr)
     return;
@@ -128,8 +122,6 @@ MemDGNodeIntervalBuilder::getBotMemDGNode(const Interval<Instruction> &Intvl,
 Interval<MemDGNode>
 MemDGNodeIntervalBuilder::make(const Interval<Instruction> &Instrs,
                                DependencyGraph &DAG) {
-  if (Instrs.empty())
-    return {};
   auto *TopMemN = getTopMemDGNode(Instrs, DAG);
   // If we couldn't find a mem node in range TopN - BotN then it's empty.
   if (TopMemN == nullptr)
@@ -489,52 +481,19 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
   if (Ctx->getTracker().getState() == Tracker::TrackerState::Reverting)
     // We don't maintain the DAG while reverting.
     return;
-  auto *N = getNode(I);
-  if (N == nullptr)
-    // Early return if there is no DAG node for `I`.
-    return;
-  if (auto *MemN = dyn_cast<MemDGNode>(getNode(I))) {
-    // Update the MemDGNode chain if this is a memory node.
+  // Update the MemDGNode chain if this is a memory node.
+  if (auto *MemN = dyn_cast_or_null<MemDGNode>(getNodeOrNull(I))) {
     auto *PrevMemN = getMemDGNodeBefore(MemN, /*IncludingN=*/false);
     auto *NextMemN = getMemDGNodeAfter(MemN, /*IncludingN=*/false);
     if (PrevMemN != nullptr)
       PrevMemN->NextMemN = NextMemN;
     if (NextMemN != nullptr)
       NextMemN->PrevMemN = PrevMemN;
-
-    // Drop the memory dependencies from both predecessors and successors.
-    while (!MemN->memPreds().empty()) {
-      auto *PredN = *MemN->memPreds().begin();
-      MemN->removeMemPred(PredN);
-    }
-    while (!MemN->memSuccs().empty()) {
-      auto *SuccN = *MemN->memSuccs().begin();
-      SuccN->removeMemPred(MemN);
-    }
-    // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
-  } else {
-    // If this is a non-mem node we only need to update UnscheduledSuccs.
-    if (!N->scheduled())
-      for (auto *PredN : N->preds(*this))
-        PredN->decrUnscheduledSuccs();
   }
-  // Finally erase the Node.
+
   InstrToNodeMap.erase(I);
-}
 
-void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
-  // Update the UnscheduledSuccs counter for both the current source and NewSrc
-  // if needed.
-  if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
-    if (auto *CurrSrcN = getNode(CurrSrcI)) {
-      CurrSrcN->decrUnscheduledSuccs();
-    }
-  }
-  if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
-    if (auto *NewSrcN = getNode(NewSrcI)) {
-      ++NewSrcN->UnscheduledSuccs;
-    }
-  }
+  // TODO: Update the dependencies.
 }
 
 Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
@@ -570,8 +529,8 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
       }
     }
   };
-  auto MemDAGInterval = MemDGNodeIntervalBuilder::make(DAGInterval, *this);
-  if (MemDAGInterval.empty()) {
+  if (DAGInterval.empty()) {
+    assert(NewInterval == InstrsInterval && "Expected empty DAGInterval!");
     FullScan(NewInterval);
   }
   // 2. The new section is below the old section.
@@ -591,7 +550,8 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
   // range including both NewInterval and DAGInterval until DstN, for each DstN.
   else if (DAGInterval.bottom()->comesBefore(NewInterval.top())) {
     auto DstRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
-    auto SrcRangeFull = MemDAGInterval.getUnionInterval(DstRange);
+    auto SrcRangeFull = MemDGNodeIntervalBuilder::make(
+        DAGInterval.getUnionInterval(NewInterval), *this);
     for (MemDGNode &DstN : DstRange) {
       auto SrcRange =
           Interval<MemDGNode>(SrcRangeFull.top(), DstN.getPrevNode());
@@ -629,7 +589,7 @@ Interval<Instruction> DependencyGraph::extend(ArrayRef<Instruction *> Instrs) {
     // When scanning for deps with destination in DAGInterval we need to
     // consider sources from the NewInterval only, because all intra-DAGInterval
     // dependencies have already been created.
-    auto DstRangeOld = MemDAGInterval;
+    auto DstRangeOld = MemDGNodeIntervalBuilder::make(DAGInterval, *this);
     auto SrcRange = MemDGNodeIntervalBuilder::make(NewInterval, *this);
     for (MemDGNode &DstN : DstRangeOld)
       scanAndAddDeps(DstN, SrcRange);

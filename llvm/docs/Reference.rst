@@ -14,7 +14,6 @@ LLVM and API reference documentation.
    BlockFrequencyTerminology
    BranchWeightMetadata
    Bugpoint
-   CIBestPractices
    CommandGuide/index
    ConvergenceAndUniformity
    ConvergentOperations
@@ -31,7 +30,6 @@ LLVM and API reference documentation.
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
    InAlloca
-   InterfaceExportAnnotations
    LangRef
    LibFuzzer
    MarkedUpDisassembly

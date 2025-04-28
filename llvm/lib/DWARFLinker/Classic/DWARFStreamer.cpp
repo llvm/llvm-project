@@ -14,7 +14,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
@@ -101,10 +100,10 @@ Error DwarfStreamer::init(Triple TheTriple,
 
   switch (OutFileType) {
   case DWARFLinker::OutputFileType::Assembly: {
-    std::unique_ptr<MCInstPrinter> MIP(TheTarget->createMCInstPrinter(
-        TheTriple, MAI->getAssemblerDialect(), *MAI, *MII, *MRI));
+    MIP = TheTarget->createMCInstPrinter(TheTriple, MAI->getAssemblerDialect(),
+                                         *MAI, *MII, *MRI);
     MS = TheTarget->createAsmStreamer(
-        *MC, std::make_unique<formatted_raw_ostream>(OutFile), std::move(MIP),
+        *MC, std::make_unique<formatted_raw_ostream>(OutFile), MIP,
         std::unique_ptr<MCCodeEmitter>(MCE),
         std::unique_ptr<MCAsmBackend>(MAB));
     break;
@@ -124,7 +123,7 @@ Error DwarfStreamer::init(Triple TheTriple,
                              TripleName.c_str());
 
   // Finally create the AsmPrinter we'll use to emit the DIEs.
-  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return createStringError(std::errc::invalid_argument,
@@ -810,8 +809,7 @@ void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
 
 void DwarfStreamer::emitLineTableForUnit(
     const DWARFDebugLine::LineTable &LineTable, const CompileUnit &Unit,
-    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool,
-    std::vector<uint64_t> *RowOffsets) {
+    OffsetsStringPool &DebugStrPool, OffsetsStringPool &DebugLineStrPool) {
   // Switch to the section where the table will be emitted into.
   MS->switchSection(MC->getObjectFileInfo()->getDwarfLineSection());
 
@@ -832,7 +830,7 @@ void DwarfStreamer::emitLineTableForUnit(
 
   // Emit rows.
   emitLineTableRows(LineTable, LineEndSym,
-                    Unit.getOrigUnit().getAddressByteSize(), RowOffsets);
+                    Unit.getOrigUnit().getAddressByteSize());
 }
 
 void DwarfStreamer::emitLineTablePrologue(const DWARFDebugLine::Prologue &P,
@@ -1038,7 +1036,7 @@ void DwarfStreamer::emitLineTableProloguePayload(
 
 void DwarfStreamer::emitLineTableRows(
     const DWARFDebugLine::LineTable &LineTable, MCSymbol *LineEndSym,
-    unsigned AddressByteSize, std::vector<uint64_t> *RowOffsets) {
+    unsigned AddressByteSize) {
 
   MCDwarfLineTableParams Params;
   Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -1070,11 +1068,6 @@ void DwarfStreamer::emitLineTableRows(
   unsigned RowsSinceLastSequence = 0;
 
   for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
-    // If we're tracking row offsets, record the current section size as the
-    // offset of this row.
-    if (RowOffsets)
-      RowOffsets->push_back(LineSectionSize);
-
     int64_t AddressDelta;
     if (Address == -1ULL) {
       MS->emitIntValue(dwarf::DW_LNS_extended_op, 1);

@@ -5,9 +5,6 @@
 define amdgpu_kernel void @extract_vector_elt_v1i8(ptr addrspace(1) %out, <1 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v1i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0x2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -21,9 +18,6 @@ define amdgpu_kernel void @extract_vector_elt_v1i8(ptr addrspace(1) %out, <1 x i
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -38,9 +32,6 @@ define amdgpu_kernel void @extract_vector_elt_v1i8(ptr addrspace(1) %out, <1 x i
 define amdgpu_kernel void @extract_vector_elt_v2i8(ptr addrspace(1) %out, <2 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v2i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0x2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -63,9 +54,6 @@ define amdgpu_kernel void @extract_vector_elt_v2i8(ptr addrspace(1) %out, <2 x i
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -92,9 +80,6 @@ define amdgpu_kernel void @extract_vector_elt_v2i8(ptr addrspace(1) %out, <2 x i
 define amdgpu_kernel void @extract_vector_elt_v3i8(ptr addrspace(1) %out, <3 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v3i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0x2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -117,9 +102,6 @@ define amdgpu_kernel void @extract_vector_elt_v3i8(ptr addrspace(1) %out, <3 x i
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -146,9 +128,6 @@ define amdgpu_kernel void @extract_vector_elt_v3i8(ptr addrspace(1) %out, <3 x i
 define amdgpu_kernel void @extract_vector_elt_v4i8(ptr addrspace(1) %out, <4 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v4i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0x2
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -171,9 +150,6 @@ define amdgpu_kernel void @extract_vector_elt_v4i8(ptr addrspace(1) %out, <4 x i
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x8
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -200,9 +176,6 @@ define amdgpu_kernel void @extract_vector_elt_v4i8(ptr addrspace(1) %out, <4 x i
 define amdgpu_kernel void @extract_vector_elt_v8i8(<8 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v8i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_lshr_b32 s1, s0, 16
@@ -219,13 +192,10 @@ define amdgpu_kernel void @extract_vector_elt_v8i8(<8 x i8> %foo) #0 {
 ; VI-LABEL: extract_vector_elt_v8i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s1, s0, 16
-; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_byte v[0:1], v3
@@ -243,9 +213,6 @@ define amdgpu_kernel void @extract_vector_elt_v8i8(<8 x i8> %foo) #0 {
 define amdgpu_kernel void @extract_vector_elt_v16i8(ptr addrspace(1) %out, <16 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v16i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0x4
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -268,9 +235,6 @@ define amdgpu_kernel void @extract_vector_elt_v16i8(ptr addrspace(1) %out, <16 x
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x10
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -297,9 +261,6 @@ define amdgpu_kernel void @extract_vector_elt_v16i8(ptr addrspace(1) %out, <16 x
 define amdgpu_kernel void @extract_vector_elt_v32i8(<32 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v32i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_lshr_b32 s1, s0, 16
@@ -316,13 +277,10 @@ define amdgpu_kernel void @extract_vector_elt_v32i8(<32 x i8> %foo) #0 {
 ; VI-LABEL: extract_vector_elt_v32i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s0, s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s1, s0, 16
-; VI-NEXT:    v_mov_b32_e32 v1, 0
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_byte v[0:1], v3
@@ -340,9 +298,6 @@ define amdgpu_kernel void @extract_vector_elt_v32i8(<32 x i8> %foo) #0 {
 define amdgpu_kernel void @extract_vector_elt_v64i8(ptr addrspace(1) %out, <64 x i8> %foo) #0 {
 ; SI-LABEL: extract_vector_elt_v64i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0x10
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -365,9 +320,6 @@ define amdgpu_kernel void @extract_vector_elt_v64i8(ptr addrspace(1) %out, <64 x
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x40
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s3, s2, 16
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -399,9 +351,6 @@ define amdgpu_kernel void @extract_vector_elt_v64i8(ptr addrspace(1) %out, <64 x
 define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(ptr addrspace(1) %out, [8 x i32], <2 x i8> %foo, [8 x i32], i32 %idx) #0 {
 ; SI-LABEL: dynamic_extract_vector_elt_v2i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0xa
 ; SI-NEXT:    s_load_dword s3, s[8:9], 0x13
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -421,14 +370,11 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(ptr addrspace(1) %out
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x4c
 ; VI-NEXT:    s_load_dword s3, s[8:9], 0x28
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshl_b32 s2, s2, 3
 ; VI-NEXT:    s_and_b32 s3, s3, 0xffff
 ; VI-NEXT:    s_lshr_b32 s2, s3, s2
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -442,9 +388,6 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v2i8(ptr addrspace(1) %out
 define amdgpu_kernel void @dynamic_extract_vector_elt_v3i8(ptr addrspace(1) %out, [8 x i32], <3 x i8> %foo, [8 x i32], i32 %idx) #0 {
 ; SI-LABEL: dynamic_extract_vector_elt_v3i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dword s2, s[8:9], 0x13
 ; SI-NEXT:    s_load_dword s3, s[8:9], 0xa
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -463,13 +406,10 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3i8(ptr addrspace(1) %out
 ; VI-NEXT:    s_load_dword s2, s[8:9], 0x4c
 ; VI-NEXT:    s_load_dword s3, s[8:9], 0x28
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshl_b32 s2, s2, 3
 ; VI-NEXT:    s_lshr_b32 s2, s3, s2
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    flat_store_byte v[0:1], v2
@@ -484,9 +424,6 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v3i8(ptr addrspace(1) %out
 define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, [8 x i32], i32 %idx) #0 {
 ; SI-LABEL: dynamic_extract_vector_elt_v4i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s4, s[8:9], 0xc
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -505,9 +442,6 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(ptr addrspace(1) %out
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    s_load_dword s4, s[8:9], 0x30
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -529,9 +463,6 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v4i8(ptr addrspace(1) %out
 define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(ptr addrspace(1) %out, ptr addrspace(4) %vec.ptr, i32 %idx) #0 {
 ; SI-LABEL: dynamic_extract_vector_elt_v8i8:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; SI-NEXT:    s_load_dword s4, s[8:9], 0x4
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -550,9 +481,6 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(ptr addrspace(1) %out
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; VI-NEXT:    s_load_dword s4, s[8:9], 0x10
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -574,9 +502,6 @@ define amdgpu_kernel void @dynamic_extract_vector_elt_v8i8(ptr addrspace(1) %out
 define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() #0 {
 ; SI-LABEL: reduce_load_vector_v8i8_extract_0123:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -601,9 +526,6 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s1, s0, 8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -626,19 +548,16 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0123() #0 {
   %elt1 = extractelement <8 x i8> %load, i32 1
   %elt2 = extractelement <8 x i8> %load, i32 2
   %elt3 = extractelement <8 x i8> %load, i32 3
-  store volatile i8 %elt0, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt1, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt2, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt3, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt0, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt1, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt2, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt3, ptr addrspace(1) undef, align 1
   ret void
 }
 
 define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() #0 {
 ; SI-LABEL: reduce_load_vector_v8i8_extract_0145:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -662,9 +581,6 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s2, s0, 8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -686,19 +602,16 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_0145() #0 {
   %elt1 = extractelement <8 x i8> %load, i32 1
   %elt4 = extractelement <8 x i8> %load, i32 4
   %elt5 = extractelement <8 x i8> %load, i32 5
-  store volatile i8 %elt0, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt1, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt4, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt5, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt0, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt1, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt4, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt5, ptr addrspace(1) undef, align 1
   ret void
 }
 
 define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
 ; SI-LABEL: reduce_load_vector_v8i8_extract_45:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_mov_b64 s[0:1], 4
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -715,9 +628,6 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b64 s[0:1], 4
 ; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s1, s0, 8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -730,8 +640,8 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
   %load = load <8 x i8>, ptr addrspace(4) null
   %elt4 = extractelement <8 x i8> %load, i32 4
   %elt5 = extractelement <8 x i8> %load, i32 5
-  store volatile i8 %elt4, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt5, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt4, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt5, ptr addrspace(1) undef, align 1
   ret void
 }
 
@@ -739,9 +649,6 @@ define amdgpu_kernel void @reduce_load_vector_v8i8_extract_45() #0 {
 define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() #0 {
 ; SI-LABEL: reduce_load_vector_v16i8_extract_0145:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; SI-NEXT:    s_add_i32 s12, s12, s17
-; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -765,9 +672,6 @@ define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
-; VI-NEXT:    s_add_i32 s12, s12, s17
-; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s2, s0, 8
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -789,10 +693,10 @@ define amdgpu_kernel void @reduce_load_vector_v16i8_extract_0145() #0 {
   %elt1 = extractelement <16 x i8> %load, i32 1
   %elt4 = extractelement <16 x i8> %load, i32 4
   %elt5 = extractelement <16 x i8> %load, i32 5
-  store volatile i8 %elt0, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt1, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt4, ptr addrspace(1) poison, align 1
-  store volatile i8 %elt5, ptr addrspace(1) poison, align 1
+  store volatile i8 %elt0, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt1, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt4, ptr addrspace(1) undef, align 1
+  store volatile i8 %elt5, ptr addrspace(1) undef, align 1
   ret void
 }
 

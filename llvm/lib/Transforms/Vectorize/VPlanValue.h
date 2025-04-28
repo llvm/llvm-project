@@ -175,7 +175,12 @@ public:
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
   /// inside a VPlan.
-  Value *getLiveInIRValue() const {
+  Value *getLiveInIRValue() {
+    assert(isLiveIn() &&
+           "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
+    return getUnderlyingValue();
+  }
+  const Value *getLiveInIRValue() const {
     assert(isLiveIn() &&
            "VPValue is not a live-in; it is defined by a VPDef inside a VPlan");
     return getUnderlyingValue();
@@ -194,7 +199,7 @@ public:
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
 typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
-raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
+raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
@@ -245,15 +250,6 @@ public:
     Operands[I] = New;
     New->addUser(*this);
   }
-
-  /// Swap operands of the VPUser. It must have exactly 2 operands.
-  void swapOperands() {
-    assert(Operands.size() == 2 && "must have 2 operands to swap");
-    std::swap(Operands[0], Operands[1]);
-  }
-
-  /// Replaces all uses of \p From in the VPUser with \p To.
-  void replaceUsesOfWith(VPValue *From, VPValue *To);
 
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
   typedef SmallVectorImpl<VPValue *>::const_iterator const_operand_iterator;
@@ -341,9 +337,10 @@ public:
     VPReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
+    VPScalarCastSC,
     VPScalarIVStepsSC,
     VPVectorPointerSC,
-    VPVectorEndPointerSC,
+    VPReverseVectorPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
     VPWidenCastSC,
@@ -354,6 +351,7 @@ public:
     VPWidenStoreEVLSC,
     VPWidenStoreSC,
     VPWidenSC,
+    VPWidenEVLSC,
     VPWidenSelectSC,
     VPBlendSC,
     VPHistogramSC,
@@ -368,6 +366,7 @@ public:
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
+    VPScalarPHISC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes

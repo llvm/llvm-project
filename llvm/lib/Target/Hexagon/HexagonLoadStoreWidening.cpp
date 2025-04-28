@@ -36,7 +36,6 @@
 
 //===---------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -72,6 +71,15 @@ using namespace llvm;
 static cl::opt<unsigned> MaxMBBSizeForLoadStoreWidening(
     "max-bb-size-for-load-store-widening", cl::Hidden, cl::init(1000),
     cl::desc("Limit block size to analyze in load/store widening pass"));
+
+namespace llvm {
+
+FunctionPass *createHexagonStoreWidening();
+FunctionPass *createHexagonLoadWidening();
+void initializeHexagonStoreWideningPass(PassRegistry &);
+void initializeHexagonLoadWideningPass(PassRegistry &);
+
+} // end namespace llvm
 
 namespace {
 
@@ -127,7 +135,9 @@ private:
 struct HexagonStoreWidening : public MachineFunctionPass {
   static char ID;
 
-  HexagonStoreWidening() : MachineFunctionPass(ID) {}
+  HexagonStoreWidening() : MachineFunctionPass(ID) {
+    initializeHexagonStoreWideningPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "Hexagon Store Widening"; }
 
@@ -154,7 +164,9 @@ struct HexagonStoreWidening : public MachineFunctionPass {
 struct HexagonLoadWidening : public MachineFunctionPass {
   static char ID;
 
-  HexagonLoadWidening() : MachineFunctionPass(ID) {}
+  HexagonLoadWidening() : MachineFunctionPass(ID) {
+    initializeHexagonLoadWideningPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "Hexagon Load Widening"; }
 
@@ -789,7 +801,9 @@ bool HexagonLoadStoreWidening::replaceInsts(InstrGroup &OG, InstrGroup &NG) {
   // the insertion point.
 
   // Create a set of all instructions in OG (for quick lookup).
-  InstrSet OldMemInsts(llvm::from_range, OG);
+  InstrSet OldMemInsts;
+  for (auto *I : OG)
+    OldMemInsts.insert(I);
 
   if (Mode == WideningMode::Load) {
     // Find the first load instruction in the block that is present in OG.

@@ -19,25 +19,11 @@
 #include "llvm/ProfileData/CtxInstrContextNode.h"
 
 namespace llvm {
-enum PGOCtxProfileRecords {
-  Invalid = 0,
-  Version,
-  Guid,
-  CallsiteIndex,
-  Counters,
-  TotalRootEntryCount
-};
+enum PGOCtxProfileRecords { Invalid = 0, Version, Guid, CalleeIndex, Counters };
 
 enum PGOCtxProfileBlockIDs {
-  FIRST_VALID = bitc::FIRST_APPLICATION_BLOCKID,
-  ProfileMetadataBlockID = FIRST_VALID,
-  ContextsSectionBlockID = ProfileMetadataBlockID + 1,
-  ContextRootBlockID = ContextsSectionBlockID + 1,
-  ContextNodeBlockID = ContextRootBlockID + 1,
-  FlatProfilesSectionBlockID = ContextNodeBlockID + 1,
-  FlatProfileBlockID = FlatProfilesSectionBlockID + 1,
-  UnhandledBlockID = FlatProfileBlockID + 1,
-  LAST_VALID = UnhandledBlockID
+  ProfileMetadataBlockID = bitc::FIRST_APPLICATION_BLOCKID,
+  ContextNodeBlockID = ProfileMetadataBlockID + 1
 };
 
 /// Write one or more ContextNodes to the provided raw_fd_stream.
@@ -74,39 +60,23 @@ enum PGOCtxProfileBlockIDs {
 /// like value profiling - which would appear as additional records. For
 /// example, value profiling would produce a new record with a new record ID,
 /// containing the profiled values (much like the counters)
-class PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
-  enum class EmptyContextCriteria { None, EntryIsZero, AllAreZero };
-
+class PGOCtxProfileWriter final {
   BitstreamWriter Writer;
-  const bool IncludeEmpty;
 
-  void writeGuid(ctx_profile::GUID Guid);
-  void writeCallsiteIndex(uint32_t Index);
-  void writeRootEntryCount(uint64_t EntryCount);
-  void writeCounters(ArrayRef<uint64_t> Counters);
-  void writeNode(uint32_t CallerIndex, const ctx_profile::ContextNode &Node);
-  void writeSubcontexts(const ctx_profile::ContextNode &Node);
+  void writeCounters(const ctx_profile::ContextNode &Node);
+  void writeImpl(std::optional<uint32_t> CallerIndex,
+                 const ctx_profile::ContextNode &Node);
 
 public:
   PGOCtxProfileWriter(raw_ostream &Out,
-                      std::optional<unsigned> VersionOverride = std::nullopt,
-                      bool IncludeEmpty = false);
+                      std::optional<unsigned> VersionOverride = std::nullopt);
   ~PGOCtxProfileWriter() { Writer.ExitBlock(); }
 
-  void startContextSection() override;
-  void writeContextual(const ctx_profile::ContextNode &RootNode,
-                       const ctx_profile::ContextNode *Unhandled,
-                       uint64_t TotalRootEntryCount) override;
-  void endContextSection() override;
-
-  void startFlatSection() override;
-  void writeFlat(ctx_profile::GUID Guid, const uint64_t *Buffer,
-                 size_t BufferSize) override;
-  void endFlatSection() override;
+  void write(const ctx_profile::ContextNode &);
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
-  static constexpr uint32_t CurrentVersion = 4;
+  static constexpr uint32_t CurrentVersion = 1;
   static constexpr unsigned VBREncodingBits = 6;
   static constexpr StringRef ContainerMagic = "CTXP";
 };

@@ -14,7 +14,6 @@
 
 #include "ARMMCTargetDesc.h"
 #include "ARMUnwindOpAsm.h"
-#include "MCTargetDesc/ARMMCExpr.h"
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
@@ -579,7 +578,7 @@ public:
   /// necessary.
   void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
     if (const MCSymbolRefExpr *SRE = dyn_cast_or_null<MCSymbolRefExpr>(Value)) {
-      if (getSpecifier(SRE) == ARMMCExpr::VK_SBREL && !(Size == 4)) {
+      if (SRE->getKind() == MCSymbolRefExpr::VK_ARM_SBREL && !(Size == 4)) {
         getContext().reportError(Loc, "relocated expression must be 32-bit");
         return;
       }
@@ -911,7 +910,6 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
 
   case ARM::ArchKind::ARMV8MBaseline:
   case ARM::ArchKind::ARMV8MMainline:
-  case ARM::ArchKind::ARMV8_1MMainline:
     S.setAttributeItem(THUMB_ISA_use, AllowThumbDerived, false);
     S.setAttributeItem(CPU_arch_profile, MicroControllerProfile, false);
     break;
@@ -1140,7 +1138,7 @@ void ARMTargetELFStreamer::finish() {
   // section from making the whole .text section non-execute-only, we
   // mark it execute-only if it is empty and there is at least one
   // execute-only section in the object.
-  MCContext &Ctx = getContext();
+  MCContext &Ctx = getStreamer().getContext();
   auto &Asm = getStreamer().getAssembler();
   if (any_of(Asm, [](const MCSection &Sec) {
         return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_ARM_PURECODE;
@@ -1257,7 +1255,9 @@ void ARMELFStreamer::emitFnEnd() {
     EmitPersonalityFixup(GetAEABIUnwindPersonalityName(PersonalityIndex));
 
   const MCSymbolRefExpr *FnStartRef =
-      MCSymbolRefExpr::create(FnStart, ARMMCExpr::VK_PREL31, getContext());
+    MCSymbolRefExpr::create(FnStart,
+                            MCSymbolRefExpr::VK_ARM_PREL31,
+                            getContext());
 
   emitValue(FnStartRef, 4);
 
@@ -1266,7 +1266,9 @@ void ARMELFStreamer::emitFnEnd() {
   } else if (ExTab) {
     // Emit a reference to the unwind opcodes in the ".ARM.extab" section.
     const MCSymbolRefExpr *ExTabEntryRef =
-        MCSymbolRefExpr::create(ExTab, ARMMCExpr::VK_PREL31, getContext());
+      MCSymbolRefExpr::create(ExTab,
+                              MCSymbolRefExpr::VK_ARM_PREL31,
+                              getContext());
     emitValue(ExTabEntryRef, 4);
   } else {
     // For the __aeabi_unwind_cpp_pr0, we have to emit the unwind opcodes in
@@ -1297,7 +1299,7 @@ void ARMELFStreamer::EmitPersonalityFixup(StringRef Name) {
   const MCSymbol *PersonalitySym = getContext().getOrCreateSymbol(Name);
 
   const MCSymbolRefExpr *PersonalityRef = MCSymbolRefExpr::create(
-      PersonalitySym, ARMMCExpr::VK_ARM_NONE, getContext());
+      PersonalitySym, MCSymbolRefExpr::VK_ARM_NONE, getContext());
 
   visitUsedExpr(*PersonalityRef);
   MCDataFragment *DF = getOrCreateDataFragment();
@@ -1343,8 +1345,10 @@ void ARMELFStreamer::FlushUnwindOpcodes(bool NoHandlerData) {
 
   // Emit personality
   if (Personality) {
-    const MCSymbolRefExpr *PersonalityRef = MCSymbolRefExpr::create(
-        Personality, uint16_t(ARMMCExpr::VK_PREL31), getContext());
+    const MCSymbolRefExpr *PersonalityRef =
+      MCSymbolRefExpr::create(Personality,
+                              MCSymbolRefExpr::VK_ARM_PREL31,
+                              getContext());
 
     emitValue(PersonalityRef, 4);
   }

@@ -52,13 +52,7 @@ def InstFormatCLB    : InstFormat<18>;
 def InstFormatCLH    : InstFormat<19>;
 def InstFormatCSB    : InstFormat<20>;
 def InstFormatCSH    : InstFormat<21>;
-def InstFormatQC_EAI : InstFormat<22>;
-def InstFormatQC_EI  : InstFormat<23>;
-def InstFormatQC_EB  : InstFormat<24>;
-def InstFormatQC_EJ  : InstFormat<25>;
-def InstFormatQC_ES  : InstFormat<26>;
-def InstFormatOther  : InstFormat<31>;
-
+def InstFormatOther  : InstFormat<22>;
 
 class RISCVVConstraint<bits<3> val> {
   bits<3> Value = val;
@@ -199,33 +193,36 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   bits<3> VLMul = 0;
   let TSFlags{10-8} = VLMul;
 
+  bit ForceTailAgnostic = false;
+  let TSFlags{11} = ForceTailAgnostic;
+
   bit IsTiedPseudo = 0;
-  let TSFlags{11} = IsTiedPseudo;
+  let TSFlags{12} = IsTiedPseudo;
 
   bit HasSEWOp = 0;
-  let TSFlags{12} = HasSEWOp;
+  let TSFlags{13} = HasSEWOp;
 
   bit HasVLOp = 0;
-  let TSFlags{13} = HasVLOp;
+  let TSFlags{14} = HasVLOp;
 
   bit HasVecPolicyOp = 0;
-  let TSFlags{14} = HasVecPolicyOp;
+  let TSFlags{15} = HasVecPolicyOp;
 
   bit IsRVVWideningReduction = 0;
-  let TSFlags{15} = IsRVVWideningReduction;
+  let TSFlags{16} = IsRVVWideningReduction;
 
   bit UsesMaskPolicy = 0;
-  let TSFlags{16} = UsesMaskPolicy;
+  let TSFlags{17} = UsesMaskPolicy;
 
   // Indicates that the result can be considered sign extended from bit 31. Some
   // instructions with this flag aren't W instructions, but are either sign
   // extended from a smaller size, always outputs a small integer, or put zeros
   // in bits 63:31. Used by the SExtWRemoval pass.
   bit IsSignExtendingOpW = 0;
-  let TSFlags{17} = IsSignExtendingOpW;
+  let TSFlags{18} = IsSignExtendingOpW;
 
   bit HasRoundModeOp = 0;
-  let TSFlags{18} =  HasRoundModeOp;
+  let TSFlags{19} =  HasRoundModeOp;
 
   // This is only valid when HasRoundModeOp is set to 1. HasRoundModeOp is set
   // to 1 for vector fixed-point or floating-point intrinsics. This bit is
@@ -233,7 +230,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // fixed-point / floating-point instructions and emit appropriate read/write
   // to the correct CSR.
   bit UsesVXRM = 0;
-  let TSFlags{19} =  UsesVXRM;
+  let TSFlags{20} =  UsesVXRM;
 
   // Indicates whether these instructions can partially overlap between source
   // registers and destination registers according to the vector spec.
@@ -242,19 +239,19 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 2 -> narrowing case
   // 3 -> widening case
   bits<2> TargetOverlapConstraintType = 0;
-  let TSFlags{21-20} = TargetOverlapConstraintType;
+  let TSFlags{22-21} = TargetOverlapConstraintType;
 
   // Most vector instructions are elementwise, but some may depend on the value
   // of VL (e.g. vslide1down.vx), and others may depend on the VL and mask
   // (e.g. vredsum.vs, viota.m). Mark these instructions so that peepholes avoid
   // changing their VL and/or mask.
   EltDeps ElementsDependOn = EltDepsNone;
-  let TSFlags{22} = ElementsDependOn.VL;
-  let TSFlags{23} = ElementsDependOn.Mask;
+  let TSFlags{23} = ElementsDependOn.VL;
+  let TSFlags{24} = ElementsDependOn.Mask;
 
   // Indicates the EEW of a vector instruction's destination operand.
   EEW DestEEW = EEWSEWx1;
-  let TSFlags{25-24} = DestEEW.Value;
+  let TSFlags{26-25} = DestEEW.Value;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
@@ -287,10 +284,9 @@ class RVInst64<dag outs, dag ins, string opcodestr, string argstr,
 
 // Pseudo instructions
 class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string argstr = "">
-    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
+    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatPseudo> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
-  let Size = 4;
 }
 
 class PseudoQuietFCMP<DAGOperand Ty>
@@ -301,8 +297,8 @@ class PseudoQuietFCMP<DAGOperand Ty>
 }
 
 // Pseudo load instructions.
-class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
-    : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
+class PseudoLoad<string opcodestr>
+    : Pseudo<(outs GPR:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -320,7 +316,7 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
 }
 
 // Pseudo store instructions.
-class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
+class PseudoStore<string opcodestr, RegisterClass rsty = GPR>
     : Pseudo<(outs GPR:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 0;

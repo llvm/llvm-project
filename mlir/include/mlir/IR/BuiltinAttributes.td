@@ -37,8 +37,7 @@ class Builtin_Attr<string name, string attrMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", "affine_map", [
-    MemRefLayoutAttrInterface,
-    OpAsmAttrInterface
+    MemRefLayoutAttrInterface
   ]> {
   let summary = "An Attribute containing an AffineMap object";
   let description = [{
@@ -64,16 +63,6 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", "affine_map", [
   let extraClassDeclaration = [{
     using ValueType = AffineMap;
     AffineMap getAffineMap() const { return getValue(); }
-
-    //===------------------------------------------------------------------===//
-    // OpAsmAttrInterface Methods
-    //===------------------------------------------------------------------===//
-
-    /// Get a name to use when generating an alias for this attribute.
-    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
-      os << "map";
-      return ::mlir::OpAsmAliasResult::OverridableAlias;
-    }
   }];
   let skipDefaultBuilders = 1;
 }
@@ -164,7 +153,7 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
   }];
 }
 
-def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array",
+def Builtin_DenseArray : Builtin_Attr<"DenseArray", "dense_array", 
     [BlobAttrInterface]> {
   let summary = "A dense array of integer or floating point elements.";
   let description = [{
@@ -494,7 +483,7 @@ def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements",
     /// when building the attribute. The provided `blobName` is used as a hint
     /// for the key of the new handle for the `blob` resource, but may be
     /// changed if necessary to ensure uniqueness during insertion.
-    /// This base class builder does no element type specific size or alignment
+    /// This base class builder does no element type specific size or alignment 
     /// checking. Use the typed subclasses for more safety unless if performing
     /// generic operations.
     AttrBuilderWithInferredContext<(ins
@@ -700,7 +689,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
     false // A bool, i.e. i1, value.
     ```
   }];
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type, APIntParameter<"">:$value);
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
                                         "const APInt &":$value), [{
@@ -766,7 +755,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
 // IntegerSetAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set", [OpAsmAttrInterface]> {
+def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set"> {
   let summary = "An Attribute containing an IntegerSet object";
   let description = [{
     Syntax:
@@ -787,19 +776,7 @@ def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set", [OpAsmAtt
       return $_get(value.getContext(), value);
     }]>
   ];
-  let extraClassDeclaration = [{
-    using ValueType = IntegerSet;
-
-    //===------------------------------------------------------------------===//
-    // OpAsmAttrInterface Methods
-    //===------------------------------------------------------------------===//
-
-    /// Get a name to use when generating an alias for this attribute.
-    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
-      os << "set";
-      return ::mlir::OpAsmAliasResult::OverridableAlias;
-    }
-  }];
+  let extraClassDeclaration = "using ValueType = IntegerSet;";
   let skipDefaultBuilders = 1;
 }
 
@@ -989,7 +966,7 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
     /// Flatten, and return, all of the sparse indices in this attribute in
     /// row-major order.
-    SmallVector<ptrdiff_t> getFlattenedSparseIndices() const;
+    std::vector<ptrdiff_t> getFlattenedSparseIndices() const;
 
   public:
   }];

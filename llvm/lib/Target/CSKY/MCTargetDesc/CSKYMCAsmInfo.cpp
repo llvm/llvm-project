@@ -11,18 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYMCAsmInfo.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 
 using namespace llvm;
-
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {CSKYMCExpr::VK_GOT, "GOT"},       {CSKYMCExpr::VK_GOTOFF, "GOTOFF"},
-    {CSKYMCExpr::VK_PLT, "PLT"},       {CSKYMCExpr::VK_TLSGD, "TLSGD"},
-    {CSKYMCExpr::VK_TLSLDM, "TLSLDM"}, {CSKYMCExpr::VK_TPOFF, "TPOFF"},
-};
 
 void CSKYMCAsmInfo::anchor() {}
 
@@ -35,6 +27,4 @@ CSKYMCAsmInfo::CSKYMCAsmInfo(const Triple &TargetTriple) {
   UsesELFSectionDirectiveForBSS = true;
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
-
-  initializeVariantKinds(variantKindDescs);
 }

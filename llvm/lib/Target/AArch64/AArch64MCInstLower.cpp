@@ -151,32 +151,31 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandMachO(const MachineOperand &MO,
                                                       MCSymbol *Sym) const {
   // FIXME: We would like an efficient form for this, so we don't have to do a
   // lot of extra uniquing.
-  auto Spec = AArch64MCExpr::None;
+  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
   if ((MO.getTargetFlags() & AArch64II::MO_GOT) != 0) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      Spec = AArch64MCExpr::M_GOTPAGE;
+      RefKind = MCSymbolRefExpr::VK_GOTPAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      Spec = AArch64MCExpr::M_GOTPAGEOFF;
+      RefKind = MCSymbolRefExpr::VK_GOTPAGEOFF;
     else
       llvm_unreachable("Unexpected target flags with MO_GOT on GV operand");
   } else if ((MO.getTargetFlags() & AArch64II::MO_TLS) != 0) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      Spec = AArch64MCExpr::M_TLVPPAGE;
+      RefKind = MCSymbolRefExpr::VK_TLVPPAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      Spec = AArch64MCExpr::M_TLVPPAGEOFF;
+      RefKind = MCSymbolRefExpr::VK_TLVPPAGEOFF;
     else
       llvm_unreachable("Unexpected target flags with MO_TLS on GV operand");
   } else {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      Spec = AArch64MCExpr::M_PAGE;
+      RefKind = MCSymbolRefExpr::VK_PAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      Spec = AArch64MCExpr::M_PAGEOFF;
+      RefKind = MCSymbolRefExpr::VK_PAGEOFF;
   }
-  // TODO: Migrate to AArch64MCExpr::create like ELF.
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, RefKind, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
@@ -262,13 +261,14 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   if (MO.getTargetFlags() & AArch64II::MO_NC)
     RefFlags |= AArch64MCExpr::VK_NC;
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  AArch64MCExpr::Specifier RefKind;
-  RefKind = static_cast<AArch64MCExpr::Specifier>(RefFlags);
+  AArch64MCExpr::VariantKind RefKind;
+  RefKind = static_cast<AArch64MCExpr::VariantKind>(RefFlags);
   Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);
 
   return MCOperand::createExpr(Expr);
@@ -316,12 +316,13 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
       RefFlags |= AArch64MCExpr::VK_NC;
   }
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  auto RefKind = static_cast<AArch64MCExpr::Specifier>(RefFlags);
+  auto RefKind = static_cast<AArch64MCExpr::VariantKind>(RefFlags);
   assert(RefKind != AArch64MCExpr::VK_INVALID &&
          "Invalid relocation requested");
   Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);

@@ -228,16 +228,8 @@ llvm.func @ctor() {
   llvm.return
 }
 
-// CHECK: llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
-llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
-
-// -----
-
-// CHECK: llvm.mlir.global_ctors ctors = [], priorities = [], data = []
-llvm.mlir.global_ctors ctors = [], priorities = [], data = []
-
-// CHECK: llvm.mlir.global_dtors dtors = [], priorities = [], data = []
-llvm.mlir.global_dtors dtors = [], priorities = [], data = []
+// CHECK: llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+llvm.mlir.global_ctors { ctors = [@ctor], priorities = [0 : i32]}
 
 // -----
 
@@ -245,8 +237,8 @@ llvm.func @dtor() {
   llvm.return
 }
 
-// CHECK: llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [#llvm.zero]
-llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [#llvm.zero]
+// CHECK: llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+llvm.mlir.global_dtors { dtors = [@dtor], priorities = [0 : i32]}
 
 // -----
 

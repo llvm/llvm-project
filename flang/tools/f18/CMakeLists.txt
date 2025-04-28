@@ -28,7 +28,6 @@ set(MODULES_WITHOUT_IMPLEMENTATION
   "ieee_features"
   "iso_c_binding"
   "iso_fortran_env"
-  "f90deviceio"
 )
 
 set(MODULES ${MODULES_WITH_IMPLEMENTATION} ${MODULES_WITHOUT_IMPLEMENTATION})
@@ -57,7 +56,7 @@ endif()
 set(module_objects "")
 
 # Create module files directly from the top-level module source directory.
-# If CMAKE_CROSSCOMPILING, then the newly built flang executable was
+# If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
 # cross compiled, and thus can't be executed on the build system and thus
 # can't be used for generating module files.
 if (NOT CMAKE_CROSSCOMPILING)
@@ -120,9 +119,9 @@ if (NOT CMAKE_CROSSCOMPILING)
     # TODO: We may need to flag this with conditional, in case Flang is built w/o OpenMP support
     add_custom_command(OUTPUT ${base}.mod ${object_output}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang ${opts} ${decls} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new ${opts} ${decls} -cpp ${compile_with} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${FLANG_SOURCE_DIR}/module/${filename}.f90
-      DEPENDS flang ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
+      DEPENDS flang-new ${FLANG_SOURCE_DIR}/module/${filename}.f90 ${FLANG_SOURCE_DIR}/module/__fortran_builtins.f90 ${depends}
     )
     list(APPEND MODULE_FILES ${base}.mod)
     install(FILES ${base}.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
@@ -143,13 +142,13 @@ if (NOT CMAKE_CROSSCOMPILING)
   # It also produces two module files: omp_lib.mod and omp_lib_kinds.mod.  Compile these
   # files only if OpenMP support has been configured.
   if (LLVM_TOOL_OPENMP_BUILD)
-    message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_PROJECTS, building omp_lib.mod")
+    message(STATUS "OpenMP runtime support enabled via LLVM_ENABLED_PROJECTS, building omp_lib.mod")
     set(base ${FLANG_INTRINSIC_MODULES_DIR}/omp_lib)
     add_custom_command(OUTPUT ${base}.mod ${base}_kinds.mod
       COMMAND ${CMAKE_COMMAND} -E make_directory ${FLANG_INTRINSIC_MODULES_DIR}
-      COMMAND flang -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
+      COMMAND flang-new -cpp -fsyntax-only ${opts} -module-dir ${FLANG_INTRINSIC_MODULES_DIR}
         ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90
-      DEPENDS flang ${FLANG_INTRINSIC_MODULES_DIR}/iso_c_binding.mod ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90 ${depends}
+      DEPENDS flang-new ${FLANG_INTRINSIC_MODULES_DIR}/iso_c_binding.mod ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.F90 ${depends}
     )
     add_custom_command(OUTPUT ${base}.f18.mod
       DEPENDS ${base}.mod
@@ -159,10 +158,8 @@ if (NOT CMAKE_CROSSCOMPILING)
         COMMAND ${CMAKE_COMMAND} -E copy ${base}_kinds.mod ${base}_kinds.f18.mod)
     list(APPEND MODULE_FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod)
     install(FILES ${base}.mod ${base}.f18.mod ${base}_kinds.mod ${base}_kinds.f18.mod DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang")
-  elseif ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-    message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_RUNTIMES, assuming omp_lib.mod is built there")
   else()
-    message(WARNING "Not building omp_lib.mod, no OpenMP runtime in either LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
+    message(STATUS "Not building omp_lib.mod, no OpenMP runtime in LLVM_ENABLED_PROJECTS")
   endif()
 endif()
 
@@ -172,11 +169,9 @@ set_target_properties(module_files PROPERTIES FOLDER "Flang/Resources")
 # TODO Move this to a more suitable location
 # Copy the generated omp_lib.h header file, if OpenMP support has been configured.
 if (LLVM_TOOL_OPENMP_BUILD)
-  message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_PROJECTS, building omp_lib.h")
+  message(STATUS "OpenMP runtime support enabled via LLVM_ENABLED_PROJECTS, building omp_lib.h")
   file(COPY ${CMAKE_BINARY_DIR}/projects/openmp/runtime/src/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
   install(FILES ${CMAKE_BINARY_DIR}/include/flang/OpenMP/omp_lib.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang/OpenMP")
-elseif ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
-  message(STATUS "OpenMP runtime support enabled via LLVM_ENABLE_RUNTIMES, assuming omp_lib.h is built there")
 else()
-  message(STATUS "Not copying omp_lib.h, no OpenMP runtime in either LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
+  message(STATUS "Not copying omp_lib.h, no OpenMP runtime in LLVM_ENABLED_PROJECTS")
 endif()

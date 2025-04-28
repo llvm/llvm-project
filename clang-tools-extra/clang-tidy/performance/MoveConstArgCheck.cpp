@@ -44,10 +44,6 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
                unless(isInTemplateInstantiation()))
           .bind("call-move");
 
-  // Match ternary expressions where either branch contains std::move
-  auto TernaryWithMoveMatcher =
-      conditionalOperator(hasDescendant(MoveCallMatcher));
-
   Finder->addMatcher(
       expr(anyOf(
           castExpr(hasSourceExpression(MoveCallMatcher)),
@@ -62,15 +58,13 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       qualType(rValueReferenceType()).bind("invocation-parm-type");
   // Matches respective ParmVarDecl for a CallExpr or CXXConstructExpr.
   auto ArgumentWithParamMatcher = forEachArgumentWithParam(
-      anyOf(MoveCallMatcher, TernaryWithMoveMatcher),
-      parmVarDecl(
-          anyOf(hasType(ConstTypeParmMatcher), hasType(RValueTypeParmMatcher)))
-          .bind("invocation-parm"));
+      MoveCallMatcher, parmVarDecl(anyOf(hasType(ConstTypeParmMatcher),
+                                         hasType(RValueTypeParmMatcher)))
+                           .bind("invocation-parm"));
   // Matches respective types of arguments for a CallExpr or CXXConstructExpr
   // and it works on calls through function pointers as well.
   auto ArgumentWithParamTypeMatcher = forEachArgumentWithParamType(
-      anyOf(MoveCallMatcher, TernaryWithMoveMatcher),
-      anyOf(ConstTypeParmMatcher, RValueTypeParmMatcher));
+      MoveCallMatcher, anyOf(ConstTypeParmMatcher, RValueTypeParmMatcher));
 
   Finder->addMatcher(
       invocation(anyOf(ArgumentWithParamMatcher, ArgumentWithParamTypeMatcher))
@@ -78,7 +72,7 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-bool isRValueReferenceParam(const Expr *Invocation,
+bool IsRValueReferenceParam(const Expr *Invocation,
                             const QualType *InvocationParmType,
                             const Expr *Arg) {
   if (Invocation && (*InvocationParmType)->isRValueReferenceType() &&
@@ -147,7 +141,7 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
     // std::move shouldn't be removed when an lvalue wrapped by std::move is
     // passed to the function with an rvalue reference parameter.
     bool IsRVRefParam =
-        isRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
+        IsRValueReferenceParam(ReceivingExpr, InvocationParmType, Arg);
     const auto *Var =
         IsVariable ? dyn_cast<DeclRefExpr>(Arg)->getDecl() : nullptr;
 

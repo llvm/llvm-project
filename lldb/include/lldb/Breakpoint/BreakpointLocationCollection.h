@@ -165,7 +165,8 @@ private:
   mutable std::mutex m_collection_mutex;
 
 public:
-  typedef llvm::iterator_range<collection::const_iterator>
+  typedef AdaptedIterable<collection, lldb::BreakpointLocationSP,
+                          vector_adapter>
       BreakpointLocationCollectionIterable;
   BreakpointLocationCollectionIterable BreakpointLocations() {
     return BreakpointLocationCollectionIterable(m_break_loc_collection);

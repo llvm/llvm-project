@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the library calls simplifier. It does not implement
-// any pass, but can be used by other passes to do simplifications.
+// any pass, but can't be used by other passes to do simplifications.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -32,7 +31,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
@@ -1936,7 +1934,7 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
   bool IsIntrinsic = CalleeFn->isIntrinsic();
   if (!IsIntrinsic) {
     StringRef CallerName = CI->getFunction()->getName();
-    if (CallerName.ends_with('f') &&
+    if (!CallerName.empty() && CallerName.back() == 'f' &&
         CallerName.size() == (CalleeName.size() + 1) &&
         CallerName.starts_with(CalleeName))
       return nullptr;
@@ -2577,10 +2575,8 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
           KnownFPClass::OrderedLessThanZeroMask | fcSubnormal,
           /*Depth=*/0, SQ);
       Function *F = Log->getParent()->getParent();
-      const fltSemantics &FltSem = Ty->getScalarType()->getFltSemantics();
-      IsKnownNoErrno =
-          Known.cannotBeOrderedLessThanZero() &&
-          Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
+      IsKnownNoErrno = Known.cannotBeOrderedLessThanZero() &&
+                       Known.isKnownNeverLogicalZero(*F, Ty);
     }
     if (IsKnownNoErrno) {
       auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
@@ -2810,9 +2806,7 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
           computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
                               /*Depth=*/0, SQ);
       Function *F = CI->getParent()->getParent();
-      const fltSemantics &FltSem =
-          CI->getType()->getScalarType()->getFltSemantics();
-      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
+      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
     }
   }
 
@@ -3002,9 +2996,6 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
     return nullptr;
 
   Value *Arg = CI->getArgOperand(0);
-  if (isa<ConstantData>(Arg))
-    return nullptr;
-
   SmallVector<CallInst *, 1> SinCalls;
   SmallVector<CallInst *, 1> CosCalls;
   SmallVector<CallInst *, 1> SinCosCalls;

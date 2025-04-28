@@ -9,10 +9,10 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEOPCODES_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEOPCODES_H
 
-#include "Delta.h"
+#include "TestRunner.h"
 
 namespace llvm {
-void reduceOpcodesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceOpcodesDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

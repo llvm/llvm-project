@@ -597,11 +597,7 @@ static AffineExpr simplifySemiAffine(AffineExpr expr, unsigned numDims,
       return getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
     if (expr.getKind() == AffineExprKind::Mod)
       return getAffineConstantExpr(0, expr.getContext());
-    AffineExpr simplifiedQuotient =
-        symbolicDivide(sLHS, symbolPos, expr.getKind());
-    return simplifiedQuotient
-               ? simplifiedQuotient
-               : getAffineBinaryOpExpr(expr.getKind(), sLHS, sRHS);
+    return symbolicDivide(sLHS, symbolPos, expr.getKind());
   }
   }
   llvm_unreachable("Unknown AffineExpr");

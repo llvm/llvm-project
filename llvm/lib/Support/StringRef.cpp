@@ -613,7 +613,9 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
 }
 
 // Implementation of StringRef hashing.
-hash_code llvm::hash_value(StringRef S) { return hash_combine_range(S); }
+hash_code llvm::hash_value(StringRef S) {
+  return hash_combine_range(S.begin(), S.end());
+}
 
 unsigned DenseMapInfo<StringRef, void>::getHashValue(StringRef Val) {
   assert(Val.data() != getEmptyKey().data() &&

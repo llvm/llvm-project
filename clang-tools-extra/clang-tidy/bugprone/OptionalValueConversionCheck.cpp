@@ -12,7 +12,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include <array>
 
 using namespace clang::ast_matchers;
@@ -28,11 +27,27 @@ AST_MATCHER_P(QualType, hasCleanType, Matcher<QualType>, InnerMatcher) {
       Finder, Builder);
 }
 
-constexpr std::array<StringRef, 2> MakeSmartPtrList{
+constexpr std::array<StringRef, 2> NameList{
     "::std::make_unique",
     "::std::make_shared",
 };
-constexpr StringRef MakeOptional = "::std::make_optional";
+
+Matcher<Expr> constructFrom(Matcher<QualType> TypeMatcher,
+                            Matcher<Expr> ArgumentMatcher) {
+  return expr(
+      anyOf(
+          // construct optional
+          cxxConstructExpr(argumentCountIs(1U), hasType(TypeMatcher),
+                           hasArgument(0U, ArgumentMatcher)),
+          // known template methods in std
+          callExpr(argumentCountIs(1),
+                   callee(functionDecl(
+                       matchers::matchesAnyListedName(NameList),
+                       hasTemplateArgument(0, refersToType(TypeMatcher)))),
+                   hasArgument(0, ArgumentMatcher))),
+      unless(anyOf(hasAncestor(typeLoc()),
+                   hasAncestor(expr(matchers::hasUnevaluatedContext())))));
+}
 
 } // namespace
 
@@ -59,7 +74,7 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto EqualsBoundOptionalType =
       qualType(hasCleanType(equalsBoundNode("optional-type")));
 
-  auto OptionalDerefMatcherImpl = callExpr(
+  auto OptionalDereferenceMatcher = callExpr(
       anyOf(
           cxxOperatorCallExpr(hasOverloadedOperatorName("*"),
                               hasUnaryOperand(hasType(EqualsBoundOptionalType)))
@@ -73,41 +88,11 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
 
   auto StdMoveCallMatcher =
       callExpr(argumentCountIs(1), callee(functionDecl(hasName("::std::move"))),
-               hasArgument(0, ignoringImpCasts(OptionalDerefMatcherImpl)));
-  auto OptionalDerefMatcher =
-      ignoringImpCasts(anyOf(OptionalDerefMatcherImpl, StdMoveCallMatcher));
-
+               hasArgument(0, ignoringImpCasts(OptionalDereferenceMatcher)));
   Finder->addMatcher(
-      expr(anyOf(
-               // construct optional
-               cxxConstructExpr(argumentCountIs(1), hasType(BindOptionalType),
-                                hasArgument(0, OptionalDerefMatcher)),
-               // known template methods in std
-               callExpr(
-                   argumentCountIs(1),
-                   anyOf(
-                       // match std::make_unique std::make_shared
-                       callee(functionDecl(
-                           matchers::matchesAnyListedName(MakeSmartPtrList),
-                           hasTemplateArgument(
-                               0, refersToType(BindOptionalType)))),
-                       // match first std::make_optional by limit argument count
-                       // (1) and template count (1).
-                       // 1. template< class T > constexpr
-                       //    std::optional<decay_t<T>> make_optional(T&& value);
-                       // 2. template< class T, class... Args > constexpr
-                       //    std::optional<T> make_optional(Args&&... args);
-                       callee(functionDecl(templateArgumentCountIs(1),
-                                           hasName(MakeOptional),
-                                           returns(BindOptionalType)))),
-                   hasArgument(0, OptionalDerefMatcher)),
-               callExpr(
-
-                   argumentCountIs(1),
-
-                   hasArgument(0, OptionalDerefMatcher))),
-           unless(anyOf(hasAncestor(typeLoc()),
-                        hasAncestor(expr(matchers::hasUnevaluatedContext())))))
+      expr(constructFrom(BindOptionalType,
+                         ignoringImpCasts(anyOf(OptionalDereferenceMatcher,
+                                                StdMoveCallMatcher))))
           .bind("expr"),
       this);
 }

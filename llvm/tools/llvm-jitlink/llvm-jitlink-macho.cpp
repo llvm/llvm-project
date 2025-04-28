@@ -72,15 +72,14 @@ Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
   std::lock_guard<std::mutex> Lock(S.M);
 
   auto FileName = sys::path::filename(G.getName());
-  auto [It, Inserted] = S.FileInfos.try_emplace(FileName);
-  if (!Inserted) {
+  if (S.FileInfos.count(FileName)) {
     return make_error<StringError>("When -check is passed, file names must be "
                                    "distinct (duplicate: \"" +
                                        FileName + "\")",
                                    inconvertibleErrorCode());
   }
 
-  auto &FileInfo = It->second;
+  auto &FileInfo = S.FileInfos[FileName];
   LLVM_DEBUG({
     dbgs() << "Registering MachO file info for \"" << FileName << "\"\n";
   });

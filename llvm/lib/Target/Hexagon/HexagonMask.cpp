@@ -8,7 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
+#define DEBUG_TYPE "mask"
+
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -19,15 +20,19 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 
-#define DEBUG_TYPE "mask"
-
 using namespace llvm;
 
-namespace {
+namespace llvm {
+FunctionPass *createHexagonMask();
+void initializeHexagonMaskPass(PassRegistry &);
+
 class HexagonMask : public MachineFunctionPass {
 public:
   static char ID;
-  HexagonMask() : MachineFunctionPass(ID) {}
+  HexagonMask() : MachineFunctionPass(ID) {
+    PassRegistry &Registry = *PassRegistry::getPassRegistry();
+    initializeHexagonMaskPass(Registry);
+  }
 
   StringRef getPassName() const override {
     return "Hexagon replace const ext tfri with mask";
@@ -38,7 +43,6 @@ private:
   const HexagonInstrInfo *HII;
   void replaceConstExtTransferImmWithMask(MachineFunction &MF);
 };
-} // end anonymous namespace
 
 char HexagonMask::ID = 0;
 
@@ -89,6 +93,8 @@ bool HexagonMask::runOnMachineFunction(MachineFunction &MF) {
 
   return true;
 }
+
+} // namespace llvm
 
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions

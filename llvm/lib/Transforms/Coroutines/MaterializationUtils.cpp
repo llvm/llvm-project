@@ -293,8 +293,7 @@ void coro::doRematerializations(
     for (Instruction *U : E.second) {
       // Don't process a user twice (this can happen if the instruction uses
       // more than one rematerializable def)
-      auto [It, Inserted] = AllRemats.try_emplace(U);
-      if (!Inserted)
+      if (AllRemats.count(U))
         continue;
 
       // Constructor creates the whole RematGraph for the given Use
@@ -307,7 +306,7 @@ void coro::doRematerializations(
                       ++I) { (*I)->Node->dump(); } dbgs()
                  << "\n";);
 
-      It->second = std::move(RematUPtr);
+      AllRemats[U] = std::move(RematUPtr);
     }
   }
 

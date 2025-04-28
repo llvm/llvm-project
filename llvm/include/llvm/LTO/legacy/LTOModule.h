@@ -118,10 +118,14 @@ public:
   std::unique_ptr<Module> takeModule() { return std::move(Mod); }
 
   /// Return the Module's target triple.
-  const Triple &getTargetTriple() { return getModule().getTargetTriple(); }
+  const std::string &getTargetTriple() {
+    return getModule().getTargetTriple();
+  }
 
   /// Set the Module's target triple.
-  void setTargetTriple(Triple T) { getModule().setTargetTriple(T); }
+  void setTargetTriple(StringRef Triple) {
+    getModule().setTargetTriple(Triple);
+  }
 
   /// Get the number of symbols
   uint32_t getSymbolCount() {

@@ -24,7 +24,7 @@ using namespace llvm;
 
 namespace {
 
-class SIPreEmitPeephole {
+class SIPreEmitPeephole : public MachineFunctionPass {
 private:
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
@@ -41,30 +41,23 @@ private:
   bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
 
 public:
-  bool run(MachineFunction &MF);
-};
-
-class SIPreEmitPeepholeLegacy : public MachineFunctionPass {
-public:
   static char ID;
 
-  SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {
-    initializeSIPreEmitPeepholeLegacyPass(*PassRegistry::getPassRegistry());
+  SIPreEmitPeephole() : MachineFunctionPass(ID) {
+    initializeSIPreEmitPeepholePass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    return SIPreEmitPeephole().run(MF);
-  }
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIPreEmitPeepholeLegacy, DEBUG_TYPE,
+INITIALIZE_PASS(SIPreEmitPeephole, DEBUG_TYPE,
                 "SI peephole optimizations", false, false)
 
-char SIPreEmitPeepholeLegacy::ID = 0;
+char SIPreEmitPeephole::ID = 0;
 
-char &llvm::SIPreEmitPeepholeID = SIPreEmitPeepholeLegacy::ID;
+char &llvm::SIPreEmitPeepholeID = SIPreEmitPeephole::ID;
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // Match:
@@ -428,16 +421,7 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
   return true;
 }
 
-PreservedAnalyses
-llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM) {
-  if (!SIPreEmitPeephole().run(MF))
-    return PreservedAnalyses::all();
-
-  return getMachineFunctionPassPreservedAnalyses();
-}
-
-bool SIPreEmitPeephole::run(MachineFunction &MF) {
+bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();

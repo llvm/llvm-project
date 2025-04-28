@@ -935,11 +935,10 @@ TEST_F(DefineInlineTest, AddInline) {
   // Check we put inline before cv-qualifiers.
   ExtraFiles["a.h"] = "const int foo();";
   apply(R"cpp(#include "a.h"
-              const int fo^o() { return 0; })cpp",
+              const int fo^o() {})cpp",
         &EditedFiles);
-  EXPECT_THAT(EditedFiles,
-              testing::ElementsAre(FileWithContents(
-                  testPath("a.h"), "inline const int foo(){ return 0; }")));
+  EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                               testPath("a.h"), "inline const int foo(){}")));
 
   // No double inline.
   ExtraFiles["a.h"] = "inline void foo();";

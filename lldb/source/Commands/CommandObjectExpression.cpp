@@ -12,7 +12,6 @@
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
-#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -23,7 +22,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb;
@@ -436,8 +434,6 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   }
 
   if (result_valobj_sp) {
-    result.GetValueObjectList().Append(result_valobj_sp);
-
     Format format = m_format_options.GetFormat();
 
     if (result_valobj_sp->GetError().Success()) {
@@ -504,17 +500,19 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
                                                      std::string &line) {
   io_handler.SetIsDone(true);
-  StreamSP output_stream =
-      GetCommandInterpreter().GetDebugger().GetAsyncOutputStream();
-  StreamSP error_stream =
-      GetCommandInterpreter().GetDebugger().GetAsyncErrorStream();
+  StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
+  StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 
   CommandReturnObject return_obj(
       GetCommandInterpreter().GetDebugger().GetUseColor());
-  EvaluateExpression(line.c_str(), *output_stream, *error_stream, return_obj);
+  EvaluateExpression(line.c_str(), *output_sp, *error_sp, return_obj);
 
-  output_stream->Flush();
-  *error_stream << return_obj.GetErrorString();
+  if (output_sp)
+    output_sp->Flush();
+  if (error_sp) {
+    *error_sp << return_obj.GetErrorString();
+    error_sp->Flush();
+  }
 }
 
 bool CommandObjectExpression::IOHandlerIsInputComplete(IOHandler &io_handler,
@@ -546,10 +544,11 @@ void CommandObjectExpression::GetMultilineExpression() {
                             1, // Show line numbers starting at 1
                             *this));
 
-  if (LockableStreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP()) {
-    LockedStreamFile locked_stream = output_sp->Lock();
-    locked_stream.PutCString(
+  StreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP();
+  if (output_sp) {
+    output_sp->PutCString(
         "Enter expressions, then terminate with an empty line to evaluate:\n");
+    output_sp->Flush();
   }
   debugger.RunIOHandlerAsync(io_handler_sp);
 }

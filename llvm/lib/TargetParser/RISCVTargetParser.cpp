@@ -138,6 +138,21 @@ void getFeaturesForCPU(StringRef CPU,
       EnabledFeatures.push_back(F.substr(1));
 }
 
+namespace RISCVExtensionBitmaskTable {
+#define GET_RISCVExtensionBitmaskTable_IMPL
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
+
+} // namespace RISCVExtensionBitmaskTable
+
+namespace {
+struct LessExtName {
+  bool operator()(const RISCVExtensionBitmaskTable::RISCVExtensionBitmask &LHS,
+                  StringRef RHS) {
+    return StringRef(LHS.Name) < RHS;
+  }
+};
+} // namespace
+
 } // namespace RISCV
 
 namespace RISCVVType {
@@ -150,12 +165,12 @@ namespace RISCVVType {
 // 6    | vta        | Vector tail agnostic
 // 5:3  | vsew[2:0]  | Standard element width (SEW) setting
 // 2:0  | vlmul[2:0] | Vector register group multiplier (LMUL) setting
-unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
+unsigned encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
                      bool MaskAgnostic) {
   assert(isValidSEW(SEW) && "Invalid SEW");
-  unsigned VLMulBits = static_cast<unsigned>(VLMul);
+  unsigned VLMULBits = static_cast<unsigned>(VLMUL);
   unsigned VSEWBits = encodeSEW(SEW);
-  unsigned VTypeI = (VSEWBits << 3) | (VLMulBits & 0x7);
+  unsigned VTypeI = (VSEWBits << 3) | (VLMULBits & 0x7);
   if (TailAgnostic)
     VTypeI |= 0x40;
   if (MaskAgnostic)
@@ -164,19 +179,19 @@ unsigned encodeVTYPE(VLMUL VLMul, unsigned SEW, bool TailAgnostic,
   return VTypeI;
 }
 
-std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul) {
-  switch (VLMul) {
+std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL) {
+  switch (VLMUL) {
   default:
     llvm_unreachable("Unexpected LMUL value!");
-  case LMUL_1:
-  case LMUL_2:
-  case LMUL_4:
-  case LMUL_8:
-    return std::make_pair(1 << static_cast<unsigned>(VLMul), false);
-  case LMUL_F2:
-  case LMUL_F4:
-  case LMUL_F8:
-    return std::make_pair(1 << (8 - static_cast<unsigned>(VLMul)), true);
+  case RISCVII::VLMUL::LMUL_1:
+  case RISCVII::VLMUL::LMUL_2:
+  case RISCVII::VLMUL::LMUL_4:
+  case RISCVII::VLMUL::LMUL_8:
+    return std::make_pair(1 << static_cast<unsigned>(VLMUL), false);
+  case RISCVII::VLMUL::LMUL_F2:
+  case RISCVII::VLMUL::LMUL_F4:
+  case RISCVII::VLMUL::LMUL_F8:
+    return std::make_pair(1 << (8 - static_cast<unsigned>(VLMUL)), true);
   }
 }
 
@@ -205,7 +220,7 @@ void printVType(unsigned VType, raw_ostream &OS) {
     OS << ", mu";
 }
 
-unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul) {
+unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
   unsigned LMul;
   bool Fractional;
   std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
@@ -217,8 +232,9 @@ unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul) {
   return (SEW * 8) / LMul;
 }
 
-std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMul, unsigned EEW) {
-  unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMul);
+std::optional<RISCVII::VLMUL>
+getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW) {
+  unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
   unsigned EMULFixedPoint = (EEW * 8) / Ratio;
   bool Fractional = EMULFixedPoint < 8;
   unsigned EMUL = Fractional ? 8 / EMULFixedPoint : EMULFixedPoint / 8;

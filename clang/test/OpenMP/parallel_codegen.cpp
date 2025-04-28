@@ -736,7 +736,9 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    store ptr [[VLA]], ptr [[GEP_VLA]], align 8
 // CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @main..omp_par, ptr [[STRUCTARG]])
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK3:       omp.par.exit:
+// CHECK3:       omp.par.outlined.exit:
+// CHECK3-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
+// CHECK3:       omp.par.exit.split:
 // CHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8
 // CHECK3-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIPPcEiT_(ptr noundef [[TMP3]])
 // CHECK3-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
@@ -768,7 +770,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-// CHECK3:       omp.par.exit.exitStub:
+// CHECK3:       omp.par.outlined.exit.exitStub:
 // CHECK3-NEXT:    ret void
 //
 //
@@ -803,7 +805,9 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    store ptr [[ARGC_ADDR]], ptr [[GEP_ARGC_ADDR]], align 8
 // CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z5tmainIPPcEiT_..omp_par, ptr [[STRUCTARG]])
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK3:       omp.par.exit:
+// CHECK3:       omp.par.outlined.exit:
+// CHECK3-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
+// CHECK3:       omp.par.exit.split:
 // CHECK3-NEXT:    ret i32 0
 //
 //
@@ -833,7 +837,7 @@ int main (int argc, char **argv) {
 // CHECK3-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK3:       omp.par.pre_finalize:
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]]
-// CHECK3:       omp.par.exit.exitStub:
+// CHECK3:       omp.par.outlined.exit.exitStub:
 // CHECK3-NEXT:    ret void
 //
 //
@@ -874,7 +878,9 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    store ptr [[VLA]], ptr [[GEP_VLA]], align 8
 // CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @main..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG30:![0-9]+]]
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK4:       omp.par.exit:
+// CHECK4:       omp.par.outlined.exit:
+// CHECK4-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
+// CHECK4:       omp.par.exit.split:
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[ARGV_ADDR]], align 8, !dbg [[DBG31:![0-9]+]]
 // CHECK4-NEXT:    [[CALL:%.*]] = call noundef i32 @_Z5tmainIPPcEiT_(ptr noundef [[TMP3]]), !dbg [[DBG31]]
 // CHECK4-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4, !dbg [[DBG31]]
@@ -906,7 +912,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG35]]
-// CHECK4:       omp.par.exit.exitStub:
+// CHECK4:       omp.par.outlined.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //
 //
@@ -943,7 +949,9 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    store ptr [[ARGC_ADDR]], ptr [[GEP_ARGC_ADDR]], align 8
 // CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB3]], i32 1, ptr @_Z5tmainIPPcEiT_..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG52:![0-9]+]]
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK4:       omp.par.exit:
+// CHECK4:       omp.par.outlined.exit:
+// CHECK4-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
+// CHECK4:       omp.par.exit.split:
 // CHECK4-NEXT:    ret i32 0, !dbg [[DBG54:![0-9]+]]
 //
 //
@@ -974,7 +982,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG66]]
-// CHECK4:       omp.par.exit.exitStub:
+// CHECK4:       omp.par.outlined.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //
 //

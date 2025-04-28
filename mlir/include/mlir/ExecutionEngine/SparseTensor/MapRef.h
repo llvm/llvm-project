@@ -16,6 +16,7 @@
 #include <cinttypes>
 
 #include <cassert>
+#include <vector>
 
 namespace mlir {
 namespace sparse_tensor {

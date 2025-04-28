@@ -18,12 +18,12 @@
 #include <cstdint>
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfImpl(const char *ArgData, size_t ArgSize);
+llvm_orc_registerJITLoaderPerfImpl(const char *Data, uint64_t Size);
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfStart(const char *ArgData, size_t ArgSize);
+llvm_orc_registerJITLoaderPerfStart(const char *Data, uint64_t Size);
 
 extern "C" LLVM_ABI llvm::orc::shared::CWrapperFunctionResult
-llvm_orc_registerJITLoaderPerfEnd(const char *ArgData, size_t ArgSize);
+llvm_orc_registerJITLoaderPerfEnd(const char *Data, uint64_t Size);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_JITLOADERPERF_H

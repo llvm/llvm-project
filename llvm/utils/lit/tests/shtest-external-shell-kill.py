@@ -31,6 +31,6 @@
 #  CHECK-NEXT: --
 #  CHECK-NEXT: Command Output (stderr):
 #  CHECK-NEXT: --
-#  CHECK-NEXT: echo start # RUN: at line 1 
+#  CHECK-NEXT: RUN: at line 1: echo start
 #  CHECK-NEXT: echo start
-#  CHECK-NEXT: sleep [[#]] & PID=$! # RUN: at line 2
+#  CHECK-NEXT: RUN: at line 2: sleep [[#]] & PID=$!

@@ -16,59 +16,60 @@ namespace llvm {
 
 class CSKYMCExpr : public MCTargetExpr {
 public:
-  enum Specifier : uint8_t {
-    VK_None,
-    VK_ADDR = MCSymbolRefExpr::FirstTargetSpecifier,
-    VK_ADDR_HI16,
-    VK_ADDR_LO16,
-    VK_PCREL,
-    VK_GOT,
-    VK_GOT_IMM18_BY4,
-    VK_GOTPC,
-    VK_GOTOFF,
-    VK_PLT,
-    VK_PLT_IMM18_BY4,
-    VK_TLSIE,
-    VK_TLSLE,
-    VK_TLSGD,
-    VK_TLSLDO,
-    VK_TLSLDM,
-    VK_TPOFF,
-    VK_Invalid
+  enum VariantKind {
+    VK_CSKY_None,
+    VK_CSKY_ADDR,
+    VK_CSKY_ADDR_HI16,
+    VK_CSKY_ADDR_LO16,
+    VK_CSKY_PCREL,
+    VK_CSKY_GOT,
+    VK_CSKY_GOT_IMM18_BY4,
+    VK_CSKY_GOTPC,
+    VK_CSKY_GOTOFF,
+    VK_CSKY_PLT,
+    VK_CSKY_PLT_IMM18_BY4,
+    VK_CSKY_TLSIE,
+    VK_CSKY_TLSLE,
+    VK_CSKY_TLSGD,
+    VK_CSKY_TLSLDO,
+    VK_CSKY_TLSLDM,
+    VK_CSKY_Invalid
   };
 
 private:
+  const VariantKind Kind;
   const MCExpr *Expr;
-  const Specifier specifier;
 
-  explicit CSKYMCExpr(const MCExpr *Expr, Specifier S)
-      : Expr(Expr), specifier(S) {}
+  explicit CSKYMCExpr(VariantKind Kind, const MCExpr *Expr)
+      : Kind(Kind), Expr(Expr) {}
 
 public:
-  static const CSKYMCExpr *create(const MCExpr *Expr, Specifier Kind,
+  static const CSKYMCExpr *create(const MCExpr *Expr, VariantKind Kind,
                                   MCContext &Ctx);
 
   // Returns the kind of this expression.
-  Specifier getSpecifier() const { return specifier; }
+  VariantKind getKind() const { return Kind; }
 
   // Returns the child of this expression.
   const MCExpr *getSubExpr() const { return Expr; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
+                                 const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
 
   MCFragment *findAssociatedFragment() const override {
     return getSubExpr()->findAssociatedFragment();
   }
 
+  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
+
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
 
-  static StringRef getVariantKindName(Specifier Kind);
+  static StringRef getVariantKindName(VariantKind Kind);
 };
 } // end namespace llvm
 

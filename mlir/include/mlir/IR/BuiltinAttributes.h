@@ -717,7 +717,6 @@ using DenseResourceElementsHandle = DialectResourceBlobHandle<BuiltinDialect>;
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // DenseArrayAttr
-//===----------------------------------------------------------------------===//
 
 namespace detail {
 /// Base class for DenseArrayAttr that is instantiated and specialized for each
@@ -773,7 +772,6 @@ using DenseF64ArrayAttr = detail::DenseArrayAttrImpl<double>;
 
 //===----------------------------------------------------------------------===//
 // DenseResourceElementsAttr
-//===----------------------------------------------------------------------===//
 
 namespace detail {
 /// Base class for DenseResourceElementsAttr that is instantiated and
@@ -994,7 +992,7 @@ auto SparseElementsAttr::try_value_begin_impl(OverloadToken<T>) const
   auto valueIt = getValues().try_value_begin<T>();
   if (failed(valueIt))
     return failure();
-  const SmallVector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
+  const std::vector<ptrdiff_t> flatSparseIndices(getFlattenedSparseIndices());
   std::function<T(ptrdiff_t)> mapFn =
       [flatSparseIndices{flatSparseIndices}, valueIt{std::move(*valueIt)},
        zeroValue{std::move(zeroValue)}](ptrdiff_t index) {

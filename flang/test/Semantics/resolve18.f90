@@ -22,17 +22,13 @@ contains
 end module
 
 subroutine foo
-  !PORTABILITY: 'foo' is use-associated into a subprogram of the same name
+  !ERROR: Cannot use-associate 'foo'; it is already declared in this scope
   use m1
-  !ERROR: Reference to 'foo' is ambiguous
-  call foo
 end
 
 subroutine bar
-  !PORTABILITY: 'foo' is use-associated into a subprogram of the same name
+  !ERROR: Cannot use-associate 'bar'; it is already declared in this scope
   use m1, bar => foo
-  !ERROR: Reference to 'bar' is ambiguous
-  call bar
 end
 
 !OK to use-associate a type with the same name as a generic

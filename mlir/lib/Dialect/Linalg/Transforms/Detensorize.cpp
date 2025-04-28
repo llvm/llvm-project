@@ -458,7 +458,8 @@ struct LinalgDetensorize
       });
 
       for (Block &block : llvm::drop_begin(func.getFunctionBody(), 1))
-        blockArgsToDetensor.insert_range(block.getArguments());
+        for (BlockArgument blockArgument : block.getArguments())
+          blockArgsToDetensor.insert(blockArgument);
     }
   };
 

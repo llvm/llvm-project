@@ -104,16 +104,13 @@ so both arguments will have the same type.
     return false;
   }
 
-Options
--------
-
 .. option:: CharTypdefsToIgnore
 
   A semicolon-separated list of typedef names. In this list, we can list
   typedefs for ``char`` or ``signed char``, which will be ignored by the
   check. This is useful when a typedef introduces an integer alias like
   ``sal_Int8`` or ``int8_t``. In this case, human misinterpretation is not
-  an issue. Default is an empty string.
+  an issue.
 
 .. option:: DiagnoseSignedUnsignedCharComparisons
 

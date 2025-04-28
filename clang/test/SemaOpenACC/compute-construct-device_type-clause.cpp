@@ -2,17 +2,17 @@
 
 template<typename T>
 void TemplUses() {
-#pragma acc parallel device_type(default)
+#pragma acc parallel device_type(I)
   while(true);
 #pragma acc parallel dtype(*)
   while(true);
-#pragma acc parallel device_type(nvidia)
+#pragma acc parallel device_type(class)
   while(true);
-#pragma acc parallel device_type(radeon)
+#pragma acc parallel device_type(private)
   while(true);
-#pragma acc parallel device_type(host)
+#pragma acc parallel device_type(bool)
   while(true);
-#pragma acc kernels dtype(multicore) device_type(host)
+#pragma acc kernels dtype(true) device_type(false)
   while(true);
   // expected-error@+2{{expected ','}}
   // expected-error@+1{{expected identifier}}

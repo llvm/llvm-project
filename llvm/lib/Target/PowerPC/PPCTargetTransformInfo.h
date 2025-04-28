@@ -48,46 +48,47 @@ public:
 
   using BaseT::getIntImmCost;
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind) const;
+                                TTI::TargetCostKind CostKind);
 
   InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
                                     const APInt &Imm, Type *Ty,
                                     TTI::TargetCostKind CostKind,
-                                    Instruction *Inst = nullptr) const;
+                                    Instruction *Inst = nullptr);
   InstructionCost getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
                                       const APInt &Imm, Type *Ty,
-                                      TTI::TargetCostKind CostKind) const;
+                                      TTI::TargetCostKind CostKind);
 
   InstructionCost getInstructionCost(const User *U,
                                      ArrayRef<const Value *> Operands,
-                                     TTI::TargetCostKind CostKind) const;
+                                     TTI::TargetCostKind CostKind);
 
-  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
   bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
-                                AssumptionCache &AC, TargetLibraryInfo *LibInfo,
-                                HardwareLoopInfo &HWLoopInfo) const;
+                                AssumptionCache &AC,
+                                TargetLibraryInfo *LibInfo,
+                                HardwareLoopInfo &HWLoopInfo);
   bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
                   DominatorTree *DT, AssumptionCache *AC,
-                  TargetLibraryInfo *LibInfo) const;
-  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
+                  TargetLibraryInfo *LibInfo);
+  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
-                               OptimizationRemarkEmitter *ORE) const;
+                               OptimizationRemarkEmitter *ORE);
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
-                             TTI::PeelingPreferences &PP) const;
+                             TTI::PeelingPreferences &PP);
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                     const TargetTransformInfo::LSRCost &C2) const;
-  bool isNumRegsMajorCostOfLSR() const;
+                     const TargetTransformInfo::LSRCost &C2);
+  bool isNumRegsMajorCostOfLSR();
   bool shouldBuildRelLookupTables() const;
   /// @}
 
   /// \name Vector TTI Implementations
   /// @{
-  bool useColdCCForColdCall(Function &F) const;
-  bool enableAggressiveInterleaving(bool LoopHasReductions) const;
+  bool useColdCCForColdCall(Function &F);
+  bool enableAggressiveInterleaving(bool LoopHasReductions);
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
-  bool enableInterleavedAccessVectorization() const;
+  bool enableInterleavedAccessVectorization();
 
   enum PPCRegisterClass {
     GPRRC, FPRRC, VRRC, VSXRC
@@ -98,51 +99,46 @@ public:
   TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const;
+  unsigned getMaxInterleaveFactor(ElementCount VF);
   InstructionCost vectorCostAdjustmentFactor(unsigned Opcode, Type *Ty1,
-                                             Type *Ty2) const;
+                                             Type *Ty2);
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const;
-  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr);
+  InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
-                                 VectorType *SubTp,
-                                 ArrayRef<const Value *> Args = {},
-                                 const Instruction *CxtI = nullptr) const;
+                                 Type *SubTp, ArrayRef<const Value *> Args = {},
+                                 const Instruction *CxtI = nullptr);
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    TTI::CastContextHint CCH,
                                    TTI::TargetCostKind CostKind,
-                                   const Instruction *I = nullptr) const;
+                                   const Instruction *I = nullptr);
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
-                                 const Instruction *I = nullptr) const;
+                                 const Instruction *I = nullptr);
   InstructionCost getCmpSelInstrCost(
       unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
       TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr) const;
+      const Instruction *I = nullptr);
   using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      TTI::TargetCostKind CostKind,
-                                     unsigned Index, Value *Op0,
-                                     Value *Op1) const;
-  InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind,
-      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr) const;
+                                     unsigned Index, Value *Op0, Value *Op1);
+  InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+                  const Instruction *I = nullptr);
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
-      bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
+      bool UseMaskForCond = false, bool UseMaskForGaps = false);
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                        TTI::TargetCostKind CostKind) const;
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const;
+                                        TTI::TargetCostKind CostKind);
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              const ArrayRef<Type *> &Types) const;
   bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
@@ -150,7 +146,7 @@ public:
   InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,
                                     TTI::TargetCostKind CostKind,
-                                    const Instruction *I = nullptr) const;
+                                    const Instruction *I = nullptr);
   bool supportsTailCallFor(const CallBase *CB) const;
 
 private:

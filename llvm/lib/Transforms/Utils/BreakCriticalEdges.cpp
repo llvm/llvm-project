@@ -175,8 +175,6 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
   // Create our unconditional branch.
   BranchInst *NewBI = BranchInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
-  if (auto *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
-    NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
@@ -207,8 +205,6 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
     }
   }
 
-  unsigned NumSplitIdenticalEdges = 1;
-
   // If there are any other edges from TIBB to DestBB, update those to go
   // through the split block, making those edges non-critical as well (and
   // reducing the number of phi entries in the DestBB if relevant).
@@ -221,9 +217,6 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 
       // We found another edge to DestBB, go to NewBB instead.
       TI->setSuccessor(i, NewBB);
-
-      // Record the number of split identical edges to DestBB.
-      NumSplitIdenticalEdges++;
     }
   }
 
@@ -295,11 +288,7 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
 
         // Update LCSSA form in the newly created exit block.
         if (Options.PreserveLCSSA) {
-          // If > 1 identical edges to be split, we need to introduce the same
-          // number of the incoming blocks for the new PHINode.
-          createPHIsForSplitLoopExit(
-              SmallVector<BasicBlock *, 4>(NumSplitIdenticalEdges, TIBB), NewBB,
-              DestBB);
+          createPHIsForSplitLoopExit(TIBB, NewBB, DestBB);
         }
 
         if (!LoopPreds.empty()) {
@@ -356,7 +345,8 @@ bool llvm::SplitIndirectBrCriticalEdges(Function &F,
   SmallSetVector<BasicBlock *, 16> Targets;
   for (auto &BB : F) {
     if (isa<IndirectBrInst>(BB.getTerminator()))
-      Targets.insert_range(successors(&BB));
+      for (BasicBlock *Succ : successors(&BB))
+        Targets.insert(Succ);
   }
 
   if (Targets.empty())

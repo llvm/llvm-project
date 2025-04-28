@@ -8,7 +8,6 @@
 #ifndef MLIR_CONVERSION_OPENACCTOSCF_CONVERTOPENACCTOSCF_H
 #define MLIR_CONVERSION_OPENACCTOSCF_CONVERTOPENACCTOSCF_H
 
-#include "mlir/Pass/Pass.h"
 #include <memory>
 
 namespace mlir {
@@ -17,12 +16,15 @@ template <typename T>
 class OperationPass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTOPENACCTOSCFPASS
+#define GEN_PASS_DECL_CONVERTOPENACCTOSCF
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Collect the patterns to convert from the OpenACC dialect to OpenACC with
 /// SCF dialect.
 void populateOpenACCToSCFConversionPatterns(RewritePatternSet &patterns);
+
+/// Create a pass to convert the OpenACC dialect into the LLVMIR dialect.
+std::unique_ptr<OperationPass<ModuleOp>> createConvertOpenACCToSCFPass();
 
 } // namespace mlir
 

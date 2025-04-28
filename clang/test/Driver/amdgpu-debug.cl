@@ -33,6 +33,11 @@
 // CHECK-DISABLED: "-cc1"
 // CHECK-DISABLED: "-gheterogeneous-dwarf=disabled"
 
+// Check that -gheterogeneous-dwarf= works for diexpr
+// RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpr %s 2>&1 | FileCheck -check-prefix=CHECK-DIEXPR %s
+// CHECK-DIEXPR: "-cc1"
+// CHECK-DIEXPR: "-gheterogeneous-dwarf=diexpr"
+
 // Check that -gheterogeneous-dwarf= works for diexpression
 // RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpression %s 2>&1 | FileCheck -check-prefix=CHECK-DIEXPRESSION %s
 // CHECK-DIEXPRESSION: "-cc1"
@@ -41,18 +46,3 @@
 // Check that -gheterogeneous-dwarf= fails for unknown option
 // RUN: not %clang -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=unknown %s 2>&1 | FileCheck -check-prefix=CHECK-UNKNOWN %s
 // CHECK-UNKNOWN: error: invalid value
-
-// Specifically, check for failure with previously-valid value diexpr
-// RUN: not %clang -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpr %s 2>&1 | FileCheck -check-prefix=CHECK-DIEXPR %s
-// CHECK-DIEXPR: error: unsupported option '-gheterogeneous-dwarf=diexpr'; did you mean '-gheterogeneous-dwarf=diexpression'?
-
-// Check that =diexpression is implied by -g + spirv
-// RUN: %clang -### -target spirv64-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g %s 2>&1 | FileCheck -check-prefix=CHECK-SPIRV %s
-// CHECK-SPIRV: "-cc1"
-// CHECK-SPIRV-DAG: "-mllvm" "-amdgpu-spill-cfi-saved-regs"
-// CHECK-SPIRV-DAG: "-gheterogeneous-dwarf=diexpression"
-// CHECK-SPIRV-DAG: "-debugger-tuning=gdb"
-
-// Check that =diexpr produces an error on spirv.
-// RUN: not %clang -### -target spirv64-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpr %s 2>&1 | FileCheck -check-prefix=CHECK-SPIRV-ERR %s
-// CHECK-SPIRV-ERR: error: unsupported option '-gheterogeneous-dwarf=diexpr'; did you mean '-gheterogeneous-dwarf=diexpression'?

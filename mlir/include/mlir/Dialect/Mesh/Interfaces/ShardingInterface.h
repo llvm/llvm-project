@@ -36,9 +36,7 @@ struct ShardingOption {
   bool empty = false;
   ShardingOption() = default;
   ShardingOption(ShardingArray shardingArray, FlatSymbolRefAttr mesh)
-      : shardingArray(std::move(shardingArray)), mesh(mesh) {
-    assert(this->mesh);
-  }
+      : shardingArray(std::move(shardingArray)), mesh(mesh) {}
   static ShardingOption makeEmpty() {
     auto res = ShardingOption();
     res.empty = true;

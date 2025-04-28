@@ -117,6 +117,13 @@ public:
   llvm::Expected<StructuredData::DictionarySP>
   FetchExtendedCrashInformation(Process &process) override;
 
+  /// Return the toolchain directory the current LLDB instance is located in.
+  static FileSpec GetCurrentToolchainDirectory();
+
+  /// Return the command line tools directory the current LLDB instance is
+  /// located in.
+  static FileSpec GetCurrentCommandLineToolsDirectory();
+
   llvm::Expected<std::pair<XcodeSDK, bool>>
   GetSDKPathFromDebugInfo(Module &module) override;
 
@@ -191,6 +198,9 @@ protected:
       const ModuleSpec &module_spec, Process *process,
       lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+
+  static std::string FindComponentInPath(llvm::StringRef path,
+                                         llvm::StringRef component);
 
   // The OSType where lldb is running.
   static llvm::Triple::OSType GetHostOSType();

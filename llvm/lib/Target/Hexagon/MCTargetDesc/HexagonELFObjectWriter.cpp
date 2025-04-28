@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/HexagonFixupKinds.h"
-#include "MCTargetDesc/HexagonMCExpr.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -42,46 +41,32 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
                                               MCValue const &Target,
                                               MCFixup const &Fixup,
                                               bool IsPCRel) const {
-  auto Variant = HexagonMCExpr::VariantKind(Target.getSpecifier());
-  switch (Variant) {
-  case HexagonMCExpr::VK_GD_GOT:
-  case HexagonMCExpr::VK_LD_GOT:
-  case HexagonMCExpr::VK_GD_PLT:
-  case HexagonMCExpr::VK_LD_PLT:
-  case HexagonMCExpr::VK_IE:
-  case HexagonMCExpr::VK_IE_GOT:
-  case HexagonMCExpr::VK_TPREL:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
-    break;
-  default:
-    break;
-  }
+  MCSymbolRefExpr::VariantKind Variant = Target.getAccessVariant();
   switch (Fixup.getTargetKind()) {
   default:
     report_fatal_error("Unrecognized relocation type");
     break;
   case FK_Data_4:
-    switch (Variant) {
-    case HexagonMCExpr::VK_DTPREL:
+    switch(Variant) {
+    case MCSymbolRefExpr::VariantKind::VK_DTPREL:
       return ELF::R_HEX_DTPREL_32;
-    case HexagonMCExpr::VK_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_GOT:
       return ELF::R_HEX_GOT_32;
-    case HexagonMCExpr::VK_GOTREL:
+    case MCSymbolRefExpr::VariantKind::VK_GOTREL:
       return ELF::R_HEX_GOTREL_32;
-    case HexagonMCExpr::VK_GD_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_GD_GOT:
       return ELF::R_HEX_GD_GOT_32;
-    case HexagonMCExpr::VK_IE:
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_IE:
       return ELF::R_HEX_IE_32;
-    case HexagonMCExpr::VK_IE_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_IE_GOT:
       return ELF::R_HEX_IE_GOT_32;
-    case HexagonMCExpr::VK_LD_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_LD_GOT:
       return ELF::R_HEX_LD_GOT_32;
-    case HexagonMCExpr::VK_PCREL:
+    case MCSymbolRefExpr::VariantKind::VK_PCREL:
       return ELF::R_HEX_32_PCREL;
-    case HexagonMCExpr::VK_TPREL:
+    case MCSymbolRefExpr::VariantKind::VK_TPREL:
       return ELF::R_HEX_TPREL_32;
-    case HexagonMCExpr::VK_None:
+    case MCSymbolRefExpr::VariantKind::VK_None:
       return IsPCRel ? ELF::R_HEX_32_PCREL : ELF::R_HEX_32;
     default:
       report_fatal_error("Unrecognized variant type");
@@ -90,19 +75,19 @@ unsigned HexagonELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_HEX_32_PCREL;
   case FK_Data_2:
     switch(Variant) {
-    case HexagonMCExpr::VK_DTPREL:
+    case MCSymbolRefExpr::VariantKind::VK_DTPREL:
       return ELF::R_HEX_DTPREL_16;
-    case HexagonMCExpr::VK_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_GOT:
       return ELF::R_HEX_GOT_16;
-    case HexagonMCExpr::VK_GD_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_GD_GOT:
       return ELF::R_HEX_GD_GOT_16;
-    case HexagonMCExpr::VK_IE_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_IE_GOT:
       return ELF::R_HEX_IE_GOT_16;
-    case HexagonMCExpr::VK_LD_GOT:
+    case MCSymbolRefExpr::VariantKind::VK_Hexagon_LD_GOT:
       return ELF::R_HEX_LD_GOT_16;
-    case HexagonMCExpr::VK_TPREL:
+    case MCSymbolRefExpr::VariantKind::VK_TPREL:
       return ELF::R_HEX_TPREL_16;
-    case HexagonMCExpr::VK_None:
+    case MCSymbolRefExpr::VariantKind::VK_None:
       return ELF::R_HEX_16;
     default:
       report_fatal_error("Unrecognized variant type");

@@ -173,7 +173,6 @@ void CallGraph::eraseNode(CallGraphNode *node) {
 
 //===----------------------------------------------------------------------===//
 // Printing
-//===----------------------------------------------------------------------===//
 
 /// Dump the graph in a human readable format.
 void CallGraph::dump() const { print(llvm::errs()); }

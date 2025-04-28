@@ -22,15 +22,14 @@ protected:
   Align AtomicAlign;
   Align ValueAlign;
   bool UseLibcall;
-  IRBuilderBase::InsertPoint AllocaIP;
 
 public:
   AtomicInfo(IRBuilderBase *Builder, Type *Ty, uint64_t AtomicSizeInBits,
              uint64_t ValueSizeInBits, Align AtomicAlign, Align ValueAlign,
-             bool UseLibcall, IRBuilderBase::InsertPoint AllocaIP)
+             bool UseLibcall)
       : Builder(Builder), Ty(Ty), AtomicSizeInBits(AtomicSizeInBits),
         ValueSizeInBits(ValueSizeInBits), AtomicAlign(AtomicAlign),
-        ValueAlign(ValueAlign), UseLibcall(UseLibcall), AllocaIP(AllocaIP) {}
+        ValueAlign(ValueAlign), UseLibcall(UseLibcall) {}
 
   virtual ~AtomicInfo() = default;
 

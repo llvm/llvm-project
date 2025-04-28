@@ -68,6 +68,11 @@ static cl::opt<bool>
                       cl::init(true),
                       cl::desc("Disable Optimization of extensions to i64."));
 
+namespace llvm {
+  FunctionPass *createHexagonPeephole();
+  void initializeHexagonPeepholePass(PassRegistry&);
+}
+
 namespace {
   struct HexagonPeephole : public MachineFunctionPass {
     const HexagonInstrInfo    *QII;
@@ -76,7 +81,9 @@ namespace {
 
   public:
     static char ID;
-    HexagonPeephole() : MachineFunctionPass(ID) {}
+    HexagonPeephole() : MachineFunctionPass(ID) {
+      initializeHexagonPeepholePass(*PassRegistry::getPassRegistry());
+    }
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 

@@ -891,9 +891,10 @@ void DWARFLinkerImpl::printStatistic() {
               CU->tryGetSectionDescriptor(DebugSectionKind::DebugInfo))
         AllDebugInfoSectionsSize += (*DebugInfo)->getContents().size();
 
-    auto &Size = SizeByObject[Context->InputDWARFFile.FileName];
-    Size.Input = Context->OriginalDebugInfoSize;
-    Size.Output = AllDebugInfoSectionsSize;
+    SizeByObject[Context->InputDWARFFile.FileName].Input =
+        Context->OriginalDebugInfoSize;
+    SizeByObject[Context->InputDWARFFile.FileName].Output =
+        AllDebugInfoSectionsSize;
   }
 
   // Create a vector sorted in descending order by output size.

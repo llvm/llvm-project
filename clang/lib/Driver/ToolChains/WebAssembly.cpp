@@ -69,18 +69,6 @@ static bool TargetBuildsComponents(const llvm::Triple &TargetTriple) {
          TargetTriple.getOSName() != "wasi";
 }
 
-static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
-  bool WantsPthread =
-      Args.hasFlag(options::OPT_pthread, options::OPT_no_pthread, false);
-
-  // If the WASI environment is "threads" then enable pthreads support
-  // without requiring -pthread, in order to prevent user error
-  if (Triple.isOSWASI() && Triple.getEnvironmentName() == "threads")
-    WantsPthread = true;
-
-  return WantsPthread;
-}
-
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -162,15 +150,14 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (WantsPthread(ToolChain.getTriple(), Args))
-    CmdArgs.push_back("--shared-memory");
-
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (ToolChain.ShouldLinkCXXStdlib(Args))
       ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
 
-    if (WantsPthread(ToolChain.getTriple(), Args))
+    if (Args.hasArg(options::OPT_pthread)) {
       CmdArgs.push_back("-lpthread");
+      CmdArgs.push_back("--shared-memory");
+    }
 
     CmdArgs.push_back("-lc");
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
@@ -304,7 +291,8 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-fno-use-init-array");
 
   // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
-  if (WantsPthread(getTriple(), DriverArgs)) {
+  if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
+                         false)) {
     if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
                            false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)

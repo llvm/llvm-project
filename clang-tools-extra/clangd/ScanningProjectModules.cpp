@@ -134,9 +134,6 @@ ModuleDependencyScanner::scan(PathRef FilePath,
 
 void ModuleDependencyScanner::globalScan(
     const ProjectModules::CommandMangler &Mangler) {
-  if (GlobalScanned)
-    return;
-
   for (auto &File : CDB->getAllFiles())
     scan(File, Mangler);
 
@@ -192,18 +189,11 @@ public:
 
   /// RequiredSourceFile is not used intentionally. See the comments of
   /// ModuleDependencyScanner for detail.
-  std::string getSourceForModuleName(llvm::StringRef ModuleName,
-                                     PathRef RequiredSourceFile) override {
+  PathRef
+  getSourceForModuleName(llvm::StringRef ModuleName,
+                         PathRef RequiredSourceFile = PathRef()) override {
     Scanner.globalScan(Mangler);
-    return Scanner.getSourceForModuleName(ModuleName).str();
-  }
-
-  std::string getModuleNameForSource(PathRef File) override {
-    auto ScanningResult = Scanner.scan(File, Mangler);
-    if (!ScanningResult || !ScanningResult->ModuleName)
-      return {};
-
-    return *ScanningResult->ModuleName;
+    return Scanner.getSourceForModuleName(ModuleName);
   }
 
 private:

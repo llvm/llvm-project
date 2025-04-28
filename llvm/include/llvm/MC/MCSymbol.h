@@ -252,12 +252,13 @@ public:
   /// isInSection - Check if this symbol is defined in some section (i.e., it
   /// is defined but not absolute).
   bool isInSection() const {
-    auto *F = getFragment(0);
-    return F && F != AbsolutePseudoFragment;
+    return isDefined() && !isAbsolute();
   }
 
   /// isUndefined - Check if this symbol undefined (i.e., implicitly defined).
-  bool isUndefined() const { return getFragment() == nullptr; }
+  bool isUndefined(bool SetUsed = true) const {
+    return getFragment(SetUsed) == nullptr;
+  }
 
   /// isAbsolute - Check if this is an absolute symbol.
   bool isAbsolute() const {
@@ -393,7 +394,7 @@ public:
     return SymbolContents == SymContentsTargetCommon;
   }
 
-  MCFragment *getFragment(bool SetUsed = false) const {
+  MCFragment *getFragment(bool SetUsed = true) const {
     if (Fragment || !isVariable() || isWeakExternal())
       return Fragment;
     // If the symbol is a non-weak alias, get information about

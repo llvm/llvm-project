@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StripDebugInfo.h"
+#include "Delta.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Metadata.h"
 
@@ -14,11 +15,15 @@ using namespace llvm;
 
 /// Removes all aliases aren't inside any of the
 /// desired Chunks.
-void llvm::stripDebugInfoDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+static void stripDebugInfoImpl(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   bool HasDebugInfo = any_of(Program.named_metadata(), [](NamedMDNode &NMD) {
     return NMD.getName().starts_with("llvm.dbg.");
   });
   if (HasDebugInfo && !O.shouldKeep())
     StripDebugInfo(Program);
+}
+
+void llvm::stripDebugInfoDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, stripDebugInfoImpl, "Stripping Debug Info");
 }

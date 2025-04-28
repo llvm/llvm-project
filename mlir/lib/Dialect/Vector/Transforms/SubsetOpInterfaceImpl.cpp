@@ -45,7 +45,7 @@ struct TransferWriteOpSubsetInsertionOpInterface
     : public SubsetInsertionOpInterface::ExternalModel<
           TransferWriteOpSubsetInsertionOpInterface, vector::TransferWriteOp> {
   OpOperand &getSourceOperand(Operation *op) const {
-    return cast<vector::TransferWriteOp>(op).getValueToStoreMutable();
+    return cast<vector::TransferWriteOp>(op).getVectorMutable();
   }
 
   OpOperand &getDestinationOperand(Operation *op) const {

@@ -52,7 +52,7 @@ public:
                     raw_ostream &O);
   void printPredicateOperand(const MCInst *MI, unsigned OpNo,
                              const MCSubtargetInfo &STI, raw_ostream &O,
-                             StringRef Modifier = {});
+                             const char *Modifier = nullptr);
   void printATBitsAsHint(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 

@@ -76,15 +76,13 @@ int main(int argc, char **argv) {
     opts::OutputFilename = "-";
 
   // Initialize targets and assembly printers/parsers.
-#define BOLT_TARGET(target)                                                    \
-  LLVMInitialize##target##TargetInfo();                                        \
-  LLVMInitialize##target##TargetMC();                                          \
-  LLVMInitialize##target##AsmParser();                                         \
-  LLVMInitialize##target##Disassembler();                                      \
-  LLVMInitialize##target##Target();                                            \
-  LLVMInitialize##target##AsmPrinter();
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllDisassemblers();
 
-#include "bolt/Core/TargetConfig.def"
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllAsmPrinters();
 
   ToolName = argv[0];
   std::string ToolPath = GetExecutablePath(argv[0]);

@@ -13,55 +13,50 @@ licenses(["notice"])
 libc_test(
     name = "socket_test",
     srcs = ["linux/socket_test.cpp"],
-    deps = [
-        "//libc:close",
+    libc_function_deps = [
         "//libc:socket",
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:close",
     ],
 )
 
 libc_test(
     name = "socketpair_test",
     srcs = ["linux/socketpair_test.cpp"],
-    deps = [
-        "//libc:close",
+    libc_function_deps = [
         "//libc:socketpair",
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:close",
     ],
 )
 
 libc_test(
     name = "send_recv_test",
     srcs = ["linux/send_recv_test.cpp"],
-    deps = [
-        "//libc:close",
-        "//libc:recv",
-        "//libc:send",
+    libc_function_deps = [
         "//libc:socketpair",
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:send",
+        "//libc:recv",
+        "//libc:close",
     ],
 )
 
 libc_test(
     name = "sendto_recvfrom_test",
     srcs = ["linux/sendto_recvfrom_test.cpp"],
-    deps = [
-        "//libc:close",
-        "//libc:recvfrom",
-        "//libc:sendto",
+    libc_function_deps = [
         "//libc:socketpair",
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:sendto",
+        "//libc:recvfrom",
+        "//libc:close",
     ],
 )
 
 libc_test(
     name = "sendmsg_recvmsg_test",
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
-    deps = [
-        "//libc:close",
-        "//libc:recvmsg",
-        "//libc:sendmsg",
+    libc_function_deps = [
         "//libc:socketpair",
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:sendmsg",
+        "//libc:recvmsg",
+        "//libc:close",
     ],
 )

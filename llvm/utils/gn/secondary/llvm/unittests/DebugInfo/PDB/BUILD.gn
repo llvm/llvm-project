@@ -12,7 +12,6 @@ unittest("DebugInfoPDBTests") {
     "NativeSessionTest.cpp",
     "NativeSymbolReuseTest.cpp",
     "PDBApiTest.cpp",
-    "PDBVariantTest.cpp",
     "StringTableBuilderTest.cpp",
   ]
 

@@ -6,11 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ProcessInfo.h"
-#include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/UserIDResolver.h"
-#include "llvm/ADT/Twine.h"
+#include "lldb/Target/Process.h"
 #include "gtest/gtest.h"
 #include <optional>
 

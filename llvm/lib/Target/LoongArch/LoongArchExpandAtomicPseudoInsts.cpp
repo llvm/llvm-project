@@ -33,7 +33,9 @@ public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchExpandAtomicPseudo() : MachineFunctionPass(ID) {}
+  LoongArchExpandAtomicPseudo() : MachineFunctionPass(ID) {
+    initializeLoongArchExpandAtomicPseudoPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

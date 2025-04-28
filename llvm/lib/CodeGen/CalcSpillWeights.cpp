@@ -44,7 +44,7 @@ void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
 }
 
 // Return the preferred allocation register for reg, given a COPY instruction.
-Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
+Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, unsigned Reg,
                                   const TargetRegisterInfo &TRI,
                                   const MachineRegisterInfo &MRI) {
   unsigned Sub, HSub;
@@ -74,7 +74,7 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
   if (Sub)
     return TRI.getMatchingSuperReg(CopiedPReg, Sub, RC);
 
-  return Register();
+  return 0;
 }
 
 // Check if all values in LI are rematerializable
@@ -210,18 +210,13 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   struct CopyHint {
     Register Reg;
     float Weight;
-    bool IsCSR;
-    CopyHint(Register R, float W, bool IsCSR)
-        : Reg(R), Weight(W), IsCSR(IsCSR) {}
+    CopyHint(Register R, float W) : Reg(R), Weight(W) {}
     bool operator<(const CopyHint &Rhs) const {
       // Always prefer any physreg hint.
       if (Reg.isPhysical() != Rhs.Reg.isPhysical())
         return Reg.isPhysical();
       if (Weight != Rhs.Weight)
         return (Weight > Rhs.Weight);
-      // Prefer non-CSR to CSR.
-      if (Reg.isPhysical() && IsCSR != Rhs.IsCSR)
-        return !IsCSR;
       return Reg.id() < Rhs.Reg.id(); // Tie-breaker.
     }
   };
@@ -304,12 +299,10 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     SmallVector<CopyHint, 8> RegHints;
     for (const auto &[Reg, Weight] : Hint) {
       if (Reg != SkipReg)
-        RegHints.emplace_back(
-            Reg, Weight,
-            Reg.isPhysical() ? TRI.isCalleeSavedPhysReg(Reg, MF) : false);
+        RegHints.emplace_back(Reg, Weight);
     }
     sort(RegHints);
-    for (const auto &[Reg, _, __] : RegHints)
+    for (const auto &[Reg, Weight] : RegHints)
       MRI.addRegAllocationHint(LI.reg(), Reg);
 
     // Weakly boost the spill weight of hinted registers.
@@ -341,10 +334,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   // re-materialization.
   if (isRematerializable(LI, LIS, VRM, *MF.getSubtarget().getInstrInfo()))
     TotalWeight *= 0.5F;
-
-  // Finally, we scale the weight by the scale factor of register class.
-  const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
-  TotalWeight *= TRI.getSpillWeightScaleFactor(RC);
 
   if (IsLocalSplitArtifact)
     return normalize(TotalWeight, Start->distance(*End), NumInstr);

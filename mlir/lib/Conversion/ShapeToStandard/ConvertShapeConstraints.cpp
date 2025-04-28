@@ -18,7 +18,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTSHAPECONSTRAINTSPASS
+#define GEN_PASS_DEF_CONVERTSHAPECONSTRAINTS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -54,7 +54,7 @@ namespace {
 // is emitted, witnesses are satisfied, so they are replace with
 // `shape.const_witness true`.
 class ConvertShapeConstraints
-    : public impl::ConvertShapeConstraintsPassBase<ConvertShapeConstraints> {
+    : public impl::ConvertShapeConstraintsBase<ConvertShapeConstraints> {
   void runOnOperation() override {
     auto *func = getOperation();
     auto *context = &getContext();
@@ -67,3 +67,7 @@ class ConvertShapeConstraints
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::createConvertShapeConstraintsPass() {
+  return std::make_unique<ConvertShapeConstraints>();
+}

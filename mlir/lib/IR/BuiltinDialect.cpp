@@ -48,6 +48,14 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
       : OpAsmDialectInterface(dialect), blobManager(mgr) {}
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
+    if (llvm::isa<AffineMapAttr>(attr)) {
+      os << "map";
+      return AliasResult::OverridableAlias;
+    }
+    if (llvm::isa<IntegerSetAttr>(attr)) {
+      os << "set";
+      return AliasResult::OverridableAlias;
+    }
     if (llvm::isa<LocationAttr>(attr)) {
       os << "loc";
       return AliasResult::OverridableAlias;

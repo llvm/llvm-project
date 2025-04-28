@@ -51,7 +51,9 @@ struct BPFMIPeephole : public MachineFunctionPass {
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
 
-  BPFMIPeephole() : MachineFunctionPass(ID) {}
+  BPFMIPeephole() : MachineFunctionPass(ID) {
+    initializeBPFMIPeepholePass(*PassRegistry::getPassRegistry());
+  }
 
 private:
   // Initialize class variables.
@@ -309,7 +311,9 @@ struct BPFMIPreEmitPeephole : public MachineFunctionPass {
   const BPFInstrInfo *TII;
   bool SupportGotol;
 
-  BPFMIPreEmitPeephole() : MachineFunctionPass(ID) {}
+  BPFMIPreEmitPeephole() : MachineFunctionPass(ID) {
+    initializeBPFMIPreEmitPeepholePass(*PassRegistry::getPassRegistry());
+  }
 
 private:
   // Initialize class variables.

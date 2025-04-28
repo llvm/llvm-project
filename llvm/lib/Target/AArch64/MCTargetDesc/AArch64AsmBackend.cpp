@@ -41,10 +41,13 @@ public:
                                     : llvm::endianness::big),
         TheTriple(TT) {}
 
+  unsigned getNumFixupKinds() const override {
+    return AArch64::NumTargetFixupKinds;
+  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[AArch64::NumTargetFixupKinds] = {
         // This table *must* be in the order that the fixup_* kinds are defined
         // in AArch64FixupKinds.h.
@@ -67,16 +70,15 @@ public:
         {"fixup_aarch64_pcrel_branch26", 0, 26, PCRelFlagVal},
         {"fixup_aarch64_pcrel_call26", 0, 26, PCRelFlagVal}};
 
-    // Fixup kinds from raw relocation types and .reloc directives force
-    // relocations and do not need these fields.
-    if (mc::isRelocation(Kind))
+    // Fixup kinds from .reloc directive are like R_AARCH64_NONE. They do not
+    // require any extra processing.
+    if (Kind >= FirstLiteralRelocationKind)
       return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) <
-               AArch64::NumTargetFixupKinds &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
@@ -96,7 +98,7 @@ public:
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t Value,
                              const MCSubtargetInfo *STI) override;
 };
 
@@ -221,8 +223,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       Ctx.reportError(Fixup.getLoc(), "fixup must be 16-byte aligned");
     return Value >> 4;
   case AArch64::fixup_aarch64_movw: {
-    AArch64MCExpr::Specifier RefKind =
-        static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
+    AArch64MCExpr::VariantKind RefKind =
+        static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
     if (AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_ABS &&
         AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_SABS) {
       if (!RefKind) {
@@ -421,22 +423,13 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                    MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsResolved,
                                    const MCSubtargetInfo *STI) const {
-  MCFixupKind Kind = Fixup.getKind();
-  if (mc::isRelocation(Kind))
-    return;
-
   if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
-    auto RefKind = static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-    AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+    auto RefKind = static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+    AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
     if (SymLoc == AArch64AuthMCExpr::VK_AUTH ||
         SymLoc == AArch64AuthMCExpr::VK_AUTHADDR) {
-      const auto *Expr = dyn_cast<AArch64AuthMCExpr>(Fixup.getValue());
-      if (!Expr) {
-        Asm.getContext().reportError(Fixup.getValue()->getLoc(),
-                                     "expected relocatable expression");
-        return;
-      }
       assert(Value == 0);
+      const auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
       Value = (uint64_t(Expr->getDiscriminator()) << 32) |
               (uint64_t(Expr->getKey()) << 60) |
               (uint64_t(Expr->hasAddressDiversity()) << 63);
@@ -445,6 +438,9 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   if (!Value)
     return; // Doesn't change encoding.
+  unsigned Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return;
   unsigned NumBytes = getFixupKindNumBytes(Kind);
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   MCContext &Ctx = Asm.getContext();
@@ -480,8 +476,8 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   // FIXME: getFixupKindInfo() and getFixupKindNumBytes() could be fixed to
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
-  AArch64MCExpr::Specifier RefKind =
-      static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
+  AArch64MCExpr::VariantKind RefKind =
+      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
   if (AArch64MCExpr::getSymbolLoc(RefKind) == AArch64MCExpr::VK_SABS ||
       (!RefKind && Fixup.getTargetKind() == AArch64::fixup_aarch64_movw)) {
     // If the immediate is negative, generate MOVN else MOVZ.
@@ -524,7 +520,12 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
+                                              const uint64_t,
                                               const MCSubtargetInfo *STI) {
+  unsigned Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return true;
+
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &
   // ~0xfff. This means that the required offset to reach a symbol can vary by
   // up to one step depending on where the ADRP is in memory. For example:
@@ -537,7 +538,10 @@ bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   // same page as the ADRP and the instruction should encode 0x0. Assuming the
   // section isn't 0x1000-aligned, we therefore need to delegate this decision
   // to the linker -- a relocation!
-  return Fixup.getTargetKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21;
+  if (Kind == AArch64::fixup_aarch64_pcrel_adrp_imm21)
+    return true;
+
+  return false;
 }
 
 namespace {

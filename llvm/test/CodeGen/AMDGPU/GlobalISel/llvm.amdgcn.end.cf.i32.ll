@@ -46,12 +46,12 @@ entry:
   br i1 %cond, label %mid, label %bb
 
 mid:
-  store volatile i32 0, ptr addrspace(1) poison
+  store volatile i32 0, ptr addrspace(1) undef
   br label %bb
 
 bb:
   call void @llvm.amdgcn.end.cf.i32(i32 %saved)
-  store volatile i32 0, ptr addrspace(1) poison
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
 

@@ -24,7 +24,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -890,8 +889,8 @@ void llvm::addPredicatedMveVpredROp(MachineInstrBuilder &MIB,
 
 void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, Register DestReg,
-                                   Register SrcReg, bool KillSrc,
+                                   const DebugLoc &DL, MCRegister DestReg,
+                                   MCRegister SrcReg, bool KillSrc,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   bool GPRDest = ARM::GPRRegClass.contains(DestReg);
@@ -6486,18 +6485,49 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
   if (!CFI)
     return;
 
+  MachineFunction &MF = *MBB.getParent();
+
   // Add a CFI, saying CFA is offset by Align bytes from SP.
-  CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameSetup);
-  CFIBuilder.buildDefCFAOffset(Align);
+  int64_t StackPosEntry =
+      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Align));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(StackPosEntry)
+      .setMIFlags(MachineInstr::FrameSetup);
 
   // Add a CFI saying that the LR that we want to find is now higher than
   // before.
   int LROffset = Auth ? Align - 4 : Align;
-  CFIBuilder.buildOffset(ARM::LR, -LROffset);
+  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+  int64_t LRPosEntry = MF.addFrameInst(
+      MCCFIInstruction::createOffset(nullptr, DwarfLR, -LROffset));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(LRPosEntry)
+      .setMIFlags(MachineInstr::FrameSetup);
   if (Auth) {
     // Add a CFI for the location of the return adddress PAC.
-    CFIBuilder.buildOffset(ARM::RA_AUTH_CODE, -Align);
+    unsigned DwarfRAC = MRI->getDwarfRegNum(ARM::RA_AUTH_CODE, true);
+    int64_t RACPosEntry = MF.addFrameInst(
+        MCCFIInstruction::createOffset(nullptr, DwarfRAC, -Align));
+    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+        .addCFIIndex(RACPosEntry)
+        .setMIFlags(MachineInstr::FrameSetup);
   }
+}
+
+void ARMBaseInstrInfo::emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator It,
+                                             Register Reg) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+  unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
+
+  int64_t LRPosEntry = MF.addFrameInst(
+      MCCFIInstruction::createRegister(nullptr, DwarfLR, DwarfReg));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(LRPosEntry)
+      .setMIFlags(MachineInstr::FrameSetup);
 }
 
 void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
@@ -6530,16 +6560,48 @@ void ARMBaseInstrInfo::restoreLRFromStack(MachineBasicBlock &MBB,
   }
 
   if (CFI) {
-    // Now stack has moved back up and we have restored LR.
-    CFIInstBuilder CFIBuilder(MBB, It, MachineInstr::FrameDestroy);
-    CFIBuilder.buildDefCFAOffset(0);
-    CFIBuilder.buildRestore(ARM::LR);
-    if (Auth)
-      CFIBuilder.buildUndefined(ARM::RA_AUTH_CODE);
+    // Now stack has moved back up...
+    MachineFunction &MF = *MBB.getParent();
+    const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+    unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+    int64_t StackPosEntry =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
+    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+        .addCFIIndex(StackPosEntry)
+        .setMIFlags(MachineInstr::FrameDestroy);
+
+    // ... and we have restored LR.
+    int64_t LRPosEntry =
+        MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, DwarfLR));
+    BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+        .addCFIIndex(LRPosEntry)
+        .setMIFlags(MachineInstr::FrameDestroy);
+
+    if (Auth) {
+      unsigned DwarfRAC = MRI->getDwarfRegNum(ARM::RA_AUTH_CODE, true);
+      int64_t Entry =
+          MF.addFrameInst(MCCFIInstruction::createUndefined(nullptr, DwarfRAC));
+      BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+          .addCFIIndex(Entry)
+          .setMIFlags(MachineInstr::FrameDestroy);
+    }
   }
 
   if (Auth)
     BuildMI(MBB, It, DebugLoc(), get(ARM::t2AUT));
+}
+
+void ARMBaseInstrInfo::emitCFIForLRRestoreFromReg(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator It) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo *MRI = Subtarget.getRegisterInfo();
+  unsigned DwarfLR = MRI->getDwarfRegNum(ARM::LR, true);
+
+  int64_t LRPosEntry =
+      MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, DwarfLR));
+  BuildMI(MBB, It, DebugLoc(), get(ARM::CFI_INSTRUCTION))
+      .addCFIIndex(LRPosEntry)
+      .setMIFlags(MachineInstr::FrameDestroy);
 }
 
 void ARMBaseInstrInfo::buildOutlinedFrame(
@@ -6660,12 +6722,11 @@ MachineBasicBlock::iterator ARMBaseInstrInfo::insertOutlinedCall(
     // Save and restore LR from that register.
     copyPhysReg(MBB, It, DebugLoc(), Reg, ARM::LR, true);
     if (!AFI.isLRSpilled())
-      CFIInstBuilder(MBB, It, MachineInstr::FrameSetup)
-          .buildRegister(ARM::LR, Reg);
+      emitCFIForLRSaveToReg(MBB, It, Reg);
     CallPt = MBB.insert(It, CallMIB);
     copyPhysReg(MBB, It, DebugLoc(), ARM::LR, Reg, true);
     if (!AFI.isLRSpilled())
-      CFIInstBuilder(MBB, It, MachineInstr::FrameDestroy).buildRestore(ARM::LR);
+      emitCFIForLRRestoreFromReg(MBB, It);
     It--;
     return CallPt;
   }
@@ -6846,7 +6907,8 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
           SMS.getInstructions(Cycle + Stage * SMS.getInitiationInterval());
       std::sort(Instrs.begin(), Instrs.end(),
                 [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
-      llvm::append_range(ProposedSchedule, Instrs);
+      for (SUnit *SU : Instrs)
+        ProposedSchedule.push_back(SU);
     }
 
   // Learn whether the last use/def of each cross-iteration register is a use or

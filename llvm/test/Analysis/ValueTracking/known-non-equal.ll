@@ -206,13 +206,11 @@ define i1 @mul5(i8 %B, i8 %C) {
 define i1 @mul_constantexpr(i16 %a) {
 ; CHECK-LABEL: @mul_constantexpr(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[A:%.*]], 3
-; CHECK-NEXT:    [[MUL2:%.*]] = mul nsw i16 ptrtoint (ptr @g to i16), -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[MUL2]], [[MUL]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 mul nsw (i16 ptrtoint (ptr @g to i16), i16 -1), [[MUL]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = mul nsw i16 %a, 3
-  %mul2 = mul nsw i16 ptrtoint (ptr @g to i16), -1
-  %cmp = icmp eq i16 %mul2, %mul
+  %cmp = icmp eq i16 mul nsw (i16 ptrtoint (ptr @g to i16), i16 -1), %mul
   ret i1 %cmp
 }
 

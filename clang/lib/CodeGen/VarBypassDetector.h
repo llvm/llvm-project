@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_VARBYPASSDETECTOR_H
 #define LLVM_CLANG_LIB_CODEGEN_VARBYPASSDETECTOR_H
 
-#include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -51,7 +50,7 @@ class VarBypassDetector {
   bool AlwaysBypassed = false;
 
 public:
-  void Init(CodeGenModule &CGM, const Stmt *Body);
+  void Init(const Stmt *Body);
 
   /// Returns true if the variable declaration was by bypassed by any goto or
   /// switch statement.
@@ -60,10 +59,8 @@ public:
   }
 
 private:
-  bool BuildScopeInformation(CodeGenModule &CGM, const Decl *D,
-                             unsigned &ParentScope);
-  bool BuildScopeInformation(CodeGenModule &CGM, const Stmt *S,
-                             unsigned &origParentScope);
+  bool BuildScopeInformation(const Decl *D, unsigned &ParentScope);
+  bool BuildScopeInformation(const Stmt *S, unsigned &origParentScope);
   void Detect();
   void Detect(unsigned From, unsigned To);
 };

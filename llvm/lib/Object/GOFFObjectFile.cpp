@@ -503,9 +503,8 @@ GOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
     std::copy(CompleteData.data(), CompleteData.data() + TxtDataSize,
               Data.begin() + TxtDataOffset);
   }
-  auto &Cache = SectionDataCache[Sec.d.a];
-  Cache = Data;
-  return ArrayRef<uint8_t>(Cache);
+  SectionDataCache[Sec.d.a] = Data;
+  return ArrayRef<uint8_t>(SectionDataCache[Sec.d.a]);
 }
 
 uint64_t GOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
@@ -565,7 +564,8 @@ section_iterator GOFFObjectFile::section_end() const {
 
 void GOFFObjectFile::moveSymbolNext(DataRefImpl &Symb) const {
   for (uint32_t I = Symb.d.a + 1, E = EsdPtrs.size(); I < E; ++I) {
-    if (const uint8_t *EsdRecord = EsdPtrs[I]) {
+    if (EsdPtrs[I]) {
+      const uint8_t *EsdRecord = EsdPtrs[I];
       GOFF::ESDSymbolType SymbolType;
       ESDRecord::getSymbolType(EsdRecord, SymbolType);
       // Skip EDs - i.e. section symbols.

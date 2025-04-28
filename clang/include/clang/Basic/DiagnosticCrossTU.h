@@ -10,6 +10,32 @@
 #define LLVM_CLANG_BASIC_DIAGNOSTICCROSSTU_H
 
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticCrossTUInterface.inc"
+
+namespace clang {
+namespace diag {
+enum {
+#define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+  ENUM,
+#define CROSSTUSTART
+#include "clang/Basic/DiagnosticCrossTUKinds.inc"
+#undef DIAG
+  NUM_BUILTIN_CROSSTU_DIAGNOSTICS
+};
+
+#define DIAG_ENUM(ENUM_NAME)                                                   \
+  namespace ENUM_NAME {                                                        \
+  enum {
+#define DIAG_ENUM_ITEM(IDX, NAME) NAME = IDX,
+#define DIAG_ENUM_END()                                                        \
+  }                                                                            \
+  ;                                                                            \
+  }
+#include "clang/Basic/DiagnosticCrossTUEnums.inc"
+#undef DIAG_ENUM_END
+#undef DIAG_ENUM_ITEM
+#undef DIAG_ENUM
+} // end namespace diag
+} // end namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTICCROSSTU_H

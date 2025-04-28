@@ -24,6 +24,7 @@ namespace llvm {
 class MachineInstrBuilder;
 class MCInstrDesc;
 class SDDbgLabel;
+class SDDbgDefKill;
 class SDDbgValue;
 class SDDbgOperand;
 class TargetLowering;
@@ -136,6 +137,10 @@ public:
 
   /// Generate machine instruction for a dbg_label node.
   MachineInstr *EmitDbgLabel(SDDbgLabel *SD);
+
+  /// Generate machine instruction for a dbg_def/kill node.
+  MachineInstr *EmitDbgDefKill(SDDbgDefKill *SD,
+                               SmallDenseMap<SDValue, Register, 16> &VRBaseMap);
 
   /// EmitNode - Generate machine code for a node and needed dependencies.
   ///

@@ -3366,7 +3366,7 @@ public:
 
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
-  bool defaultDestUnreachable() const {
+  bool defaultDestUndefined() const {
     return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
   }
 
@@ -4496,9 +4496,6 @@ public:
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
   }
-
-  // Whether to do target lowering in SelectionDAG.
-  bool shouldLowerToTrap(bool TrapUnreachable, bool NoTrapAfterNoreturn) const;
 
 private:
   BasicBlock *getSuccessor(unsigned idx) const {

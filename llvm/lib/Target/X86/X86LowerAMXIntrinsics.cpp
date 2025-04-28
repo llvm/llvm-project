@@ -631,7 +631,10 @@ class X86LowerAMXIntrinsicsLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  X86LowerAMXIntrinsicsLegacyPass() : FunctionPass(ID) {}
+  X86LowerAMXIntrinsicsLegacyPass() : FunctionPass(ID) {
+    initializeX86LowerAMXIntrinsicsLegacyPassPass(
+        *PassRegistry::getPassRegistry());
+  }
 
   bool runOnFunction(Function &F) override {
     if (!X86ScalarizeAMX)

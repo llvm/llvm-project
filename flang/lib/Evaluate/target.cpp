@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/target.h"
 #include "flang/Common/template.h"
-#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/type.h"
 
@@ -20,11 +19,21 @@ TargetCharacteristics::TargetCharacteristics() {
   auto enableCategoryKinds{[this](TypeCategory category) {
     for (int kind{1}; kind <= maxKind; ++kind) {
       if (CanSupportType(category, kind)) {
-        auto byteSize{
-            static_cast<std::size_t>(common::TypeSizeInBytes(category, kind))};
+        auto byteSize{static_cast<std::size_t>(kind)};
+        if (category == TypeCategory::Real ||
+            category == TypeCategory::Complex) {
+          if (kind == 3) {
+            // non-IEEE 16-bit format (truncated 32-bit)
+            byteSize = 2;
+          } else if (kind == 10) {
+            // x87 floating-point
+            // Follow gcc precedent for "long double"
+            byteSize = 16;
+          }
+        }
         std::size_t align{byteSize};
         if (category == TypeCategory::Complex) {
-          align /= 2;
+          byteSize = 2 * byteSize;
         }
         EnableType(category, kind, byteSize, align);
       }
@@ -44,7 +53,7 @@ TargetCharacteristics::TargetCharacteristics() {
 
 bool TargetCharacteristics::CanSupportType(
     TypeCategory category, std::int64_t kind) {
-  return common::IsValidKindOfIntrinsicType(category, kind);
+  return IsValidKindOfIntrinsicType(category, kind);
 }
 
 bool TargetCharacteristics::EnableType(common::TypeCategory category,
@@ -123,30 +132,6 @@ void TargetCharacteristics::set_hasSubnormalFlushingControl(
     int kind, bool yes) {
   CHECK(kind > 0 && kind <= maxKind);
   hasSubnormalFlushingControl_[kind] = yes;
-}
-
-// Check if a given real kind has (nonstandard) ieee_denorm exception control.
-bool TargetCharacteristics::hasSubnormalExceptionSupport(int kind) const {
-  CHECK(kind > 0 && kind <= maxKind);
-  CHECK(CanSupportType(TypeCategory::Real, kind));
-  return hasSubnormalExceptionSupport_[kind];
-}
-
-// Check if all real kinds have support for the ieee_denorm exception.
-bool TargetCharacteristics::hasSubnormalExceptionSupport() const {
-  for (int kind{1}; kind <= maxKind; ++kind) {
-    if (CanSupportType(TypeCategory::Real, kind) &&
-        !hasSubnormalExceptionSupport_[kind]) {
-      return false;
-    }
-  }
-  return true;
-}
-
-void TargetCharacteristics::set_hasSubnormalExceptionSupport(
-    int kind, bool yes) {
-  CHECK(kind > 0 && kind <= maxKind);
-  hasSubnormalExceptionSupport_[kind] = yes;
 }
 
 void TargetCharacteristics::set_roundingMode(Rounding rounding) {

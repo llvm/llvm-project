@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
+
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
     %0 = llvm.mlir.constant(39 : index) : i64
@@ -133,8 +133,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: store i8 1, ptr %[[PTR2]], align 1
 
 // CHECK: %[[TASKDATA:.+]] = call ptr @__kmpc_omp_task_alloc({{.+}}, ptr @.omp_target_task_proxy_func)
-// CHECK: %[[SHARED_PTR:.+]] = getelementptr inbounds nuw %struct.kmp_task_ompbuilder_t, ptr %[[TASKDATA]], i32 0, i32 0
-// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[SHARED_PTR]], align 8
+// CHECK: %[[SHARED_DATA:.+]] = load ptr, ptr %[[TASKDATA]], align 8
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[SHARED_DATA]], ptr align 1 %[[STRUCTARG]], i64 24, i1 false)
 // CHECK: call void @__kmpc_omp_wait_deps({{.+}}, i32 1, ptr %[[DEP_ARRAY]], i32 0, ptr null)
 // CHECK: call void @__kmpc_omp_task_begin_if0({{.+}}, ptr  %[[TASKDATA]])

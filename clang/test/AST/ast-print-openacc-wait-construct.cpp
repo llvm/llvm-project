@@ -1,3 +1,5 @@
+// -fopenacc unsupported on AMD downstream
+// UNSUPPORTED: true
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
 
 void uses() {
@@ -5,8 +7,8 @@ void uses() {
   int I;
   float array[5];
 
-// CHECK: #pragma acc wait if(I == array[I])
-#pragma acc wait if(I == array[I])
+// CHECK: #pragma acc wait() if(I == array[I])
+#pragma acc wait() if(I == array[I])
 
 // CHECK: #pragma acc wait(*iPtr, I) async
 #pragma acc wait(*iPtr, I) async

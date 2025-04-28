@@ -52,9 +52,6 @@ In the case of multiple redeclarations or function template specializations,
 a warning is issued for every redeclaration or specialization inconsistent with
 the definition or the first declaration seen in a translation unit.
 
-Options
--------
-
 .. option:: IgnoreMacros
 
    If this option is set to `true` (default is `true`), the check will not warn

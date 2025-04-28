@@ -53,16 +53,6 @@ typedef enum ffi_abi {
 #else
 #error "Unknown ABI"
 #endif
-} ffi_abi;
-
-typedef struct {
-  ffi_abi abi;
-  unsigned nargs;
-  ffi_type **arg_types;
-  ffi_type *rtype;
-  unsigned bytes;
-  unsigned flags;
-  long long extra_fields; // Longest extra field defined in the FFI sources
 } ffi_cif;
 
 #ifdef __cplusplus

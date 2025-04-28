@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-apple-darwin %s -o - -filetype=obj | llvm-dwarfdump - | FileCheck %s
 
 ; Test debug info for multidimensional arrays.
 ;

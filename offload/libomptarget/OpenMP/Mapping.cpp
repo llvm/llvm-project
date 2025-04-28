@@ -143,45 +143,48 @@ LookupResult MappingInfoTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
   if (HDTTMap->empty())
     return LR;
 
-  // HDTTMap is std::set, ordered by HstPtrBegin.
-  // Upper is the first element whose HstPtrBegin > HP.
   auto Upper = HDTTMap->upper_bound(HP);
 
   if (Size == 0) {
-    // HP satisfies
-    //   std::prev(Upper)->HDTT.HstPtrBegin <= HP < Upper->HDTT.HstPtrBegin
+    // specification v5.1 Pointer Initialization for Device Data Environments
+    // upper_bound satisfies
+    //   std::prev(upper)->HDTT.HstPtrBegin <= hp < upper->HDTT.HstPtrBegin
     if (Upper != HDTTMap->begin()) {
       LR.TPR.setEntry(std::prev(Upper)->HDTT, OwnedTPR);
-      // We know that HP >= LR.TPR.getEntry()->HstPtrBegin
-      LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd;
+      // the left side of extended address range is satisfied.
+      // hp >= LR.TPR.getEntry()->HstPtrBegin || hp >=
+      // LR.TPR.getEntry()->HstPtrBase
+      LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd ||
+                             HP < LR.TPR.getEntry()->HstPtrBase;
     }
 
     if (!LR.Flags.IsContained && Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // This is a special case: HP is not really contained in the mapped
-      // address range, but it's contained in the extended address range,
-      // which suffices to get the mapping of the base pointer.
-      // We know that HP < LR.TPR.getEntry()->HstPtrBegin
+      // the right side of extended address range is satisfied.
+      // hp < LR.TPR.getEntry()->HstPtrEnd || hp < LR.TPR.getEntry()->HstPtrBase
       LR.Flags.IsContained = HP >= LR.TPR.getEntry()->HstPtrBase;
     }
   } else {
+    // check the left bin
     if (Upper != HDTTMap->begin()) {
       LR.TPR.setEntry(std::prev(Upper)->HDTT, OwnedTPR);
-      // We know that HP >= LR.TPR.getEntry()->HstPtrBegin
-      LR.Flags.IsContained = HP < LR.TPR.getEntry()->HstPtrEnd &&
+      // Is it contained?
+      LR.Flags.IsContained = HP >= LR.TPR.getEntry()->HstPtrBegin &&
+                             HP < LR.TPR.getEntry()->HstPtrEnd &&
                              (HP + Size) <= LR.TPR.getEntry()->HstPtrEnd;
-      // Does it extend beyond the mapped address range?
+      // Does it extend beyond the mapped region?
       LR.Flags.ExtendsAfter = HP < LR.TPR.getEntry()->HstPtrEnd &&
                               (HP + Size) > LR.TPR.getEntry()->HstPtrEnd;
     }
 
+    // check the right bin
     if (!(LR.Flags.IsContained || LR.Flags.ExtendsAfter) &&
         Upper != HDTTMap->end()) {
       LR.TPR.setEntry(Upper->HDTT, OwnedTPR);
-      // Does it extend into an already mapped address range?
-      // We know that HP < LR.TPR.getEntry()->HstPtrBegin
-      LR.Flags.ExtendsBefore = (HP + Size) > LR.TPR.getEntry()->HstPtrBegin;
-      // Does it extend beyond the mapped address range?
+      // Does it extend into an already mapped region?
+      LR.Flags.ExtendsBefore = HP < LR.TPR.getEntry()->HstPtrBegin &&
+                               (HP + Size) > LR.TPR.getEntry()->HstPtrBegin;
+      // Does it extend beyond the mapped region?
       LR.Flags.ExtendsAfter = HP < LR.TPR.getEntry()->HstPtrEnd &&
                               (HP + Size) > LR.TPR.getEntry()->HstPtrEnd;
     }
@@ -367,30 +370,6 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
 
       DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
          Size, DPxPTR(HstPtrBegin), DPxPTR(LR.TPR.TargetPointer));
-
-      // If we are mapping a descriptor/dope vector, we map it with always as
-      // this information should always be up-to-date. Another issue is that
-      // due to an edge-case with declare target preventing this information
-      // being initialized on device we have force initialize it with always.
-      // However, in these cases to prevent overwriting of the data pointer
-      // breaking any pointer <-> data attachment that previous mappings may
-      // have established, we skip over the data pointer stored in the dope
-      // vector/descriptor, a subsequent seperate mapping of the pointer and
-      // data by the compiler should correctly establish any required data
-      // mappings, the descriptor mapping primarily just populates the relevant
-      // descriptor data fields that the fortran runtime depends on for bounds
-      // calculation and other relating things. The pointer is always in the
-      // same place, the first field of the descriptor structure, so we skip
-      // it by offsetting by 8-bytes. On architectures with more varied pointer
-      // sizes this may need further thought, but so would a lot of the data
-      // mapping I imagine if host/device pointers are mismatched sizes.
-      if ((TypeFlags & OMP_TGT_MAPTYPE_DESCRIPTOR) && HasFlagAlways) {
-        uintptr_t DescDataPtrOffset = 8;
-        HstPtrBegin = (void *)((uintptr_t)HstPtrBegin + DescDataPtrOffset);
-        LR.TPR.TargetPointer =
-            (void *)((uintptr_t)LR.TPR.TargetPointer + DescDataPtrOffset);
-        Size = Size - DescDataPtrOffset;
-      }
 
       int Ret = Device.submitData(LR.TPR.TargetPointer, HstPtrBegin, Size,
                                   AsyncInfo, LR.TPR.getEntry());

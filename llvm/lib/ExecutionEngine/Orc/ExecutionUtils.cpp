@@ -398,10 +398,9 @@ Error StaticLibraryDefinitionGenerator::tryToGenerate(
 
   for (const auto &KV : Symbols) {
     const auto &Name = KV.first;
-    auto It = ObjectFilesMap.find(Name);
-    if (It == ObjectFilesMap.end())
+    if (!ObjectFilesMap.count(Name))
       continue;
-    auto ChildBuffer = It->second;
+    auto ChildBuffer = ObjectFilesMap[Name];
     ChildBufferInfos.insert(
         {ChildBuffer.getBuffer(), ChildBuffer.getBufferIdentifier()});
   }
@@ -506,9 +505,10 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
     if (Deinterned.starts_with(getImpPrefix()))
       Deinterned = Deinterned.drop_front(StringRef(getImpPrefix()).size());
     // Don't degrade the required state
-    auto [It, Inserted] = ToLookUpSymbols.try_emplace(Deinterned);
-    if (Inserted || It->second != SymbolLookupFlags::RequiredSymbol)
-      It->second = KV.second;
+    if (ToLookUpSymbols.count(Deinterned) &&
+        ToLookUpSymbols[Deinterned] == SymbolLookupFlags::RequiredSymbol)
+      continue;
+    ToLookUpSymbols[Deinterned] = KV.second;
   }
 
   for (auto &KV : ToLookUpSymbols)

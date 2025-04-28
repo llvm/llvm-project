@@ -77,7 +77,6 @@ public:
   uint32_t getInputSectionOffset() const { return inputSectionOffset; }
 
   size_t getNumRelocations() const { return relocations.size(); }
-  size_t getNumLiveRelocations() const;
   void writeRelocations(llvm::raw_ostream &os) const;
   bool generateRelocationCode(raw_ostream &os) const;
 

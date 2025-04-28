@@ -12,35 +12,28 @@ set( LLVM_LINK_COMPONENTS
   TargetParser
 )
 
-add_flang_tool(flang
+add_flang_tool(flang-new
   driver.cpp
   fc1_main.cpp
 )
 
-target_link_libraries(flang
+target_link_libraries(flang-new
   PRIVATE
   flangFrontend
   flangFrontendTool
 )
 
-clang_target_link_libraries(flang
+clang_target_link_libraries(flang-new
   PRIVATE
   clangDriver
   clangBasic
 )
 
-# This creates the executable with a version appended
-# and creates a symlink to it without the version
-if(CYGWIN OR NOT WIN32) # but it doesn't work on Windows
-  set_target_properties(flang PROPERTIES VERSION ${FLANG_EXECUTABLE_VERSION})
-endif()
-
 option(FLANG_PLUGIN_SUPPORT "Build Flang with plugin support." ON)
 
-# Enable support for plugins, which need access to symbols from flang
+# Enable support for plugins, which need access to symbols from flang-new
 if(FLANG_PLUGIN_SUPPORT)
-  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
-  export_executable_symbols_for_plugins(flang)
+  export_executable_symbols_for_plugins(flang-new)
 endif()
 
-install(TARGETS flang DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(TARGETS flang-new DESTINATION "${CMAKE_INSTALL_BINDIR}")

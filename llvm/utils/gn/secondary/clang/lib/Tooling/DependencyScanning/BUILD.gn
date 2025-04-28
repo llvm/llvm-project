@@ -22,7 +22,6 @@ static_library("DependencyScanning") {
     "DependencyScanningService.cpp",
     "DependencyScanningTool.cpp",
     "DependencyScanningWorker.cpp",
-    "InProcessModuleCache.cpp",
     "ModuleDepCollector.cpp",
   ]
 }

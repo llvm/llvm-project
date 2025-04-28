@@ -545,6 +545,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx90a";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
     return "gfx90c";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX940:
+    return "gfx940";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX941:
+    return "gfx941";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX942:
     return "gfx942";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX950:
@@ -778,11 +782,10 @@ void ELFObjectFileBase::setARMSubArch(Triple &TheTriple) const {
   TheTriple.setArchName(Triple);
 }
 
-std::vector<ELFPltEntry>
-ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
+std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
   std::string Err;
   const auto Triple = makeTriple();
-  const auto *T = TargetRegistry::lookupTarget(Triple, Err);
+  const auto *T = TargetRegistry::lookupTarget(Triple.str(), Err);
   if (!T)
     return {};
   uint32_t JumpSlotReloc = 0, GlobDatReloc = 0;
@@ -798,12 +801,6 @@ ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
     case Triple::aarch64:
     case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
-      break;
-    case Triple::arm:
-    case Triple::armeb:
-    case Triple::thumb:
-    case Triple::thumbeb:
-      JumpSlotReloc = ELF::R_ARM_JUMP_SLOT;
       break;
     case Triple::hexagon:
       JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
@@ -843,7 +840,7 @@ ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
       llvm::append_range(
           PltEntries,
           MIA->findPltEntries(Section.getAddress(),
-                              arrayRefFromStringRef(*PltContents), STI));
+                              arrayRefFromStringRef(*PltContents), Triple));
     }
   }
 

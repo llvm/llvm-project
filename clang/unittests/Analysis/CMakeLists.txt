@@ -1,3 +1,8 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  )
+
 add_clang_unittest(ClangAnalysisTests
   CFGDominatorTree.cpp
   CFGTest.cpp
@@ -6,7 +11,10 @@ add_clang_unittest(ClangAnalysisTests
   IntervalPartitionTest.cpp
   MacroExpansionContextTest.cpp
   UnsafeBufferUsageTest.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(ClangAnalysisTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangAnalysis
@@ -15,12 +23,12 @@ add_clang_unittest(ClangAnalysisTests
   clangLex
   clangSerialization
   clangTooling
-  LINK_LIBS
+  )
+
+target_link_libraries(ClangAnalysisTests
+  PRIVATE
   clangTesting
   LLVMTestingSupport
-  LLVM_COMPONENTS
-  FrontendOpenMP
-  Support
   )
 
 add_subdirectory(FlowSensitive)

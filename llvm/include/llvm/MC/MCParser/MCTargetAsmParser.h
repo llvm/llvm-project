@@ -122,13 +122,15 @@ struct ParseInstructionInfo {
     : AsmRewrites(rewrites) {}
 };
 
+enum OperandMatchResultTy {
+  MatchOperand_Success,  // operand matched successfully
+  MatchOperand_NoMatch,  // operand did not match
+  MatchOperand_ParseFail // operand matched but had errors
+};
+
 /// Ternary parse status returned by various parse* methods.
 class ParseStatus {
-  enum class StatusTy {
-    Success, // Parsing Succeeded
-    Failure, // Parsing Failed after consuming some tokens
-    NoMatch, // Parsing Failed without consuming any tokens
-  } Status;
+  enum class StatusTy { Success, Failure, NoMatch } Status;
 
 public:
 #if __cplusplus >= 202002L
@@ -150,6 +152,25 @@ public:
   constexpr bool isSuccess() const { return Status == StatusTy::Success; }
   constexpr bool isFailure() const { return Status == StatusTy::Failure; }
   constexpr bool isNoMatch() const { return Status == StatusTy::NoMatch; }
+
+  // Allow implicit conversions to / from OperandMatchResultTy.
+  LLVM_DEPRECATED("Migrate to ParseStatus", "")
+  constexpr ParseStatus(OperandMatchResultTy R)
+      : Status(R == MatchOperand_Success     ? Success
+               : R == MatchOperand_ParseFail ? Failure
+                                             : NoMatch) {}
+  LLVM_DEPRECATED("Migrate to ParseStatus", "")
+  constexpr operator OperandMatchResultTy() const {
+    return isSuccess()   ? MatchOperand_Success
+           : isFailure() ? MatchOperand_ParseFail
+                         : MatchOperand_NoMatch;
+  }
+};
+
+enum class DiagnosticPredicateTy {
+  Match,
+  NearMatch,
+  NoMatch,
 };
 
 // When an operand is parsed, the assembler will try to iterate through a set of
@@ -177,24 +198,21 @@ public:
 // This is a light-weight alternative to the 'NearMissInfo' approach
 // below which collects *all* possible diagnostics. This alternative
 // is optional and fully backward compatible with existing
-// PredicateMethods that return a 'bool' (match or near match).
+// PredicateMethods that return a 'bool' (match or no match).
 struct DiagnosticPredicate {
-  enum PredicateTy {
-    Match,     // Matches
-    NearMatch, // Close Match: use Specific Diagnostic
-    NoMatch,   // No Match: use `InvalidOperand`
-  } Predicate;
+  DiagnosticPredicateTy Type;
 
-  constexpr DiagnosticPredicate(PredicateTy T) : Predicate(T) {}
+  explicit DiagnosticPredicate(bool Match)
+      : Type(Match ? DiagnosticPredicateTy::Match
+                   : DiagnosticPredicateTy::NearMatch) {}
+  DiagnosticPredicate(DiagnosticPredicateTy T) : Type(T) {}
+  DiagnosticPredicate(const DiagnosticPredicate &) = default;
+  DiagnosticPredicate& operator=(const DiagnosticPredicate &) = default;
 
-  explicit constexpr DiagnosticPredicate(bool Matches)
-      : Predicate(Matches ? Match : NearMatch) {}
-
-  explicit operator bool() const { return Predicate == Match; }
-
-  constexpr bool isMatch() const { return Predicate == Match; }
-  constexpr bool isNearMatch() const { return Predicate == NearMatch; }
-  constexpr bool isNoMatch() const { return Predicate == NoMatch; }
+  operator bool() const { return Type == DiagnosticPredicateTy::Match; }
+  bool isMatch() const { return Type == DiagnosticPredicateTy::Match; }
+  bool isNearMatch() const { return Type == DiagnosticPredicateTy::NearMatch; }
+  bool isNoMatch() const { return Type == DiagnosticPredicateTy::NoMatch; }
 };
 
 // When matching of an assembly instruction fails, there may be multiple
@@ -396,12 +414,6 @@ public:
   virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
   }
-  // Parse an expression in a data directive, possibly with a relocation
-  // specifier.
-  virtual bool parseDataExpr(const MCExpr *&Res) {
-    SMLoc EndLoc;
-    return getParser().parseExpression(Res, EndLoc);
-  }
 
   virtual bool parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                              SMLoc &EndLoc) = 0;
@@ -511,8 +523,13 @@ public:
   // Return whether this parser accept star as start of statement
   virtual bool starIsStartOfStatement() { return false; };
 
-  virtual const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
-                                       MCContext &Ctx) {
+  virtual MCSymbolRefExpr::VariantKind
+  getVariantKindForName(StringRef Name) const {
+    return MCSymbolRefExpr::getVariantKindForName(Name);
+  }
+  virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
+                                            MCSymbolRefExpr::VariantKind,
+                                            MCContext &Ctx) {
     return nullptr;
   }
 
@@ -524,6 +541,12 @@ public:
   /// Ensure that all previously parsed instructions have been emitted to the
   /// output streamer, if the target does not emit them immediately.
   virtual void flushPendingInstructions(MCStreamer &Out) {}
+
+  virtual const MCExpr *createTargetUnaryExpr(const MCExpr *E,
+                                              AsmToken::TokenKind OperatorToken,
+                                              MCContext &Ctx) {
+    return nullptr;
+  }
 
   // For any initialization at the beginning of parsing.
   virtual void onBeginOfFile() {}

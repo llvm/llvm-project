@@ -31,8 +31,6 @@ extern int global_extern;
 
 static int global_static;
 
-thread_local int global_thread_local;
-
 namespace {
 static int global_anonymous_ns;
 namespace NS {
@@ -43,7 +41,6 @@ static int global_anonymous_ns;
 static void f(int para) {
   int local;
   static int local_static;
-  thread_local int local_thread_local;
 }
 
 struct S {

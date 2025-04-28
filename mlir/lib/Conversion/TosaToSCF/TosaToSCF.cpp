@@ -68,13 +68,13 @@ public:
   LogicalResult matchAndRewrite(tosa::IfOp op,
                                 PatternRewriter &rewriter) const final {
     auto condition =
-        rewriter.create<tensor::ExtractOp>(op.getLoc(), op.getCondition());
+        rewriter.create<tensor::ExtractOp>(op.getLoc(), op.getCond());
     auto newIf = rewriter.create<scf::IfOp>(op.getLoc(), op.getResultTypes(),
                                             condition, true);
 
-    inlineIfCase(op.getThenGraph(), newIf.getThenRegion(), op.getInputList(),
+    inlineIfCase(op.getThenBranch(), newIf.getThenRegion(), op.getInputs(),
                  rewriter);
-    inlineIfCase(op.getElseGraph(), newIf.getElseRegion(), op.getInputList(),
+    inlineIfCase(op.getElseBranch(), newIf.getElseRegion(), op.getInputs(),
                  rewriter);
 
     rewriter.replaceOp(op, newIf.getResults());
@@ -158,12 +158,12 @@ public:
   LogicalResult matchAndRewrite(tosa::WhileOp op,
                                 PatternRewriter &rewriter) const final {
     auto newWhile = rewriter.create<scf::WhileOp>(
-        op.getLoc(), op.getResultTypes(), op.getInputList());
+        op.getLoc(), op.getResultTypes(), op.getInputs());
     rewriter.createBlock(&newWhile.getBefore());
     rewriter.createBlock(&newWhile.getAfter());
 
-    inlineWhileCase(op.getCondGraph(), newWhile.getBefore(), rewriter, true);
-    inlineWhileCase(op.getBodyGraph(), newWhile.getAfter(), rewriter, false);
+    inlineWhileCase(op.getCond(), newWhile.getBefore(), rewriter, true);
+    inlineWhileCase(op.getBody(), newWhile.getAfter(), rewriter, false);
 
     rewriter.replaceOp(op, newWhile.getResults());
 

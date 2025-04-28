@@ -156,7 +156,7 @@ private:
   /// Translate TRI register number to a list of indices into our smaller tables
   /// of interesting registers.
   iterator_range<SmallVectorImpl<int>::const_iterator>
-  regIndices(MCRegister Reg) const;
+  regIndices(unsigned Reg) const;
 
   /// DomainValue allocation.
   DomainValue *alloc(int domain = -1);

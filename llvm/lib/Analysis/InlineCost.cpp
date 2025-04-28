@@ -20,7 +20,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -270,9 +269,6 @@ protected:
   /// easily cacheable. Instead, use the cover function paramHasAttr.
   CallBase &CandidateCall;
 
-  /// Getter for the cache of ephemeral values.
-  function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache = nullptr;
-
   /// Extension points for handling callsite features.
   // Called before a basic block was analyzed.
   virtual void onBlockStart(const BasicBlock *BB) {}
@@ -344,7 +340,7 @@ protected:
   /// Called at the end of processing a switch instruction, with the given
   /// number of case clusters.
   virtual void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                                bool DefaultDestUnreachable) {}
+                                bool DefaultDestUndefined) {}
 
   /// Called to account for any other instruction not specifically accounted
   /// for.
@@ -466,7 +462,7 @@ protected:
 
   // Custom analysis routines.
   InlineResult analyzeBlock(BasicBlock *BB,
-                            const SmallPtrSetImpl<const Value *> &EphValues);
+                            SmallPtrSetImpl<const Value *> &EphValues);
 
   // Disable several entry points to the visitor so we don't accidentally use
   // them by declaring but not defining them here.
@@ -514,12 +510,10 @@ public:
       function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
       function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
-      OptimizationRemarkEmitter *ORE = nullptr,
-      function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-          nullptr)
+      OptimizationRemarkEmitter *ORE = nullptr)
       : TTI(TTI), GetAssumptionCache(GetAssumptionCache), GetBFI(GetBFI),
         GetTLI(GetTLI), PSI(PSI), F(Callee), DL(F.getDataLayout()), ORE(ORE),
-        CandidateCall(Call), GetEphValuesCache(GetEphValuesCache) {}
+        CandidateCall(Call) {}
 
   InlineResult analyze();
 
@@ -722,14 +716,14 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   }
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                        bool DefaultDestUnreachable) override {
+                        bool DefaultDestUndefined) override {
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
       // Suppose a default branch includes one compare and one conditional
       // branch if it's reachable.
-      if (!DefaultDestUnreachable)
+      if (!DefaultDestUndefined)
         addCost(2 * InstrCost);
       // Suppose a jump table requires one load and one jump instruction.
       int64_t JTCost =
@@ -742,7 +736,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       // Suppose a comparison includes one compare and one conditional branch.
       // We can reduce a set of instructions if the default branch is
       // undefined.
-      addCost((NumCaseCluster - DefaultDestUnreachable) * 2 * InstrCost);
+      addCost((NumCaseCluster - DefaultDestUndefined) * 2 * InstrCost);
       return;
     }
 
@@ -801,9 +795,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // the given instruction was assessed.
     if (!PrintInstructionComments)
       return;
-    auto &CostDetail = InstructionCostDetailMap[I];
-    CostDetail.CostBefore = Cost;
-    CostDetail.ThresholdBefore = Threshold;
+    InstructionCostDetailMap[I].CostBefore = Cost;
+    InstructionCostDetailMap[I].ThresholdBefore = Threshold;
   }
 
   void onInstructionAnalysisFinish(const Instruction *I) override {
@@ -811,9 +804,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // the instruction has been assessed.
     if (!PrintInstructionComments)
       return;
-    auto &CostDetail = InstructionCostDetailMap[I];
-    CostDetail.CostAfter = Cost;
-    CostDetail.ThresholdAfter = Threshold;
+    InstructionCostDetailMap[I].CostAfter = Cost;
+    InstructionCostDetailMap[I].ThresholdAfter = Threshold;
   }
 
   bool isCostBenefitAnalysisEnabled() {
@@ -1132,11 +1124,9 @@ public:
       function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       OptimizationRemarkEmitter *ORE = nullptr, bool BoostIndirect = true,
-      bool IgnoreThreshold = false,
-      function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-          nullptr)
+      bool IgnoreThreshold = false)
       : CallAnalyzer(Callee, Call, TTI, GetAssumptionCache, GetBFI, GetTLI, PSI,
-                     ORE, GetEphValuesCache),
+                     ORE),
         ComputeFullInlineCost(OptComputeFullInlineCost ||
                               Params.ComputeFullInlineCost || ORE ||
                               isCostBenefitAnalysisEnabled()),
@@ -1268,9 +1258,9 @@ private:
   }
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                        bool DefaultDestUnreachable) override {
+                        bool DefaultDestUndefined) override {
     if (JumpTableSize) {
-      if (!DefaultDestUnreachable)
+      if (!DefaultDestUndefined)
         increment(InlineCostFeatureIndex::switch_default_dest_penalty,
                   SwitchDefaultDestCostMultiplier * InstrCost);
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
@@ -1281,7 +1271,7 @@ private:
 
     if (NumCaseCluster <= 3) {
       increment(InlineCostFeatureIndex::case_cluster_penalty,
-                (NumCaseCluster - DefaultDestUnreachable) *
+                (NumCaseCluster - DefaultDestUndefined) *
                     CaseClusterCostMultiplier * InstrCost);
       return;
     }
@@ -2508,7 +2498,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   unsigned NumCaseCluster =
       TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize, PSI, BFI);
 
-  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUnreachable());
+  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUndefined());
   return false;
 }
 
@@ -2574,7 +2564,7 @@ bool CallAnalyzer::visitInstruction(Instruction &I) {
 /// viable, and true if inlining remains viable.
 InlineResult
 CallAnalyzer::analyzeBlock(BasicBlock *BB,
-                           const SmallPtrSetImpl<const Value *> &EphValues) {
+                           SmallPtrSetImpl<const Value *> &EphValues) {
   for (Instruction &I : *BB) {
     // FIXME: Currently, the number of instructions in a function regardless of
     // our ability to simplify them during inline to constants or dead code,
@@ -2789,15 +2779,11 @@ InlineResult CallAnalyzer::analyze() {
   NumConstantOffsetPtrArgs = ConstantOffsetPtrs.size();
   NumAllocaArgs = SROAArgValues.size();
 
-  // Collecting the ephemeral values of `F` can be expensive, so use the
-  // ephemeral values cache if available.
-  SmallPtrSet<const Value *, 32> EphValuesStorage;
-  const SmallPtrSetImpl<const Value *> *EphValues = &EphValuesStorage;
-  if (GetEphValuesCache)
-    EphValues = &GetEphValuesCache(F).ephValues();
-  else
-    CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F),
-                                        EphValuesStorage);
+  // FIXME: If a caller has multiple calls to a callee, we end up recomputing
+  // the ephemeral values multiple times (and they're completely determined by
+  // the callee, so this is purely duplicate work).
+  SmallPtrSet<const Value *, 32> EphValues;
+  CodeMetrics::collectEphemeralValues(&F, &GetAssumptionCache(F), EphValues);
 
   // The worklist of live basic blocks in the callee *after* inlining. We avoid
   // adding basic blocks of the callee which can be proven to be dead for this
@@ -2836,7 +2822,7 @@ InlineResult CallAnalyzer::analyze() {
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
-    InlineResult IR = analyzeBlock(BB, *EphValues);
+    InlineResult IR = analyzeBlock(BB, EphValues);
     if (!IR.isSuccess())
       return IR;
 
@@ -2870,7 +2856,8 @@ InlineResult CallAnalyzer::analyze() {
 
     // If we're unable to select a particular successor, just count all of
     // them.
-    BBWorklist.insert_range(successors(BB));
+    for (BasicBlock *Succ : successors(BB))
+      BBWorklist.insert(Succ);
 
     onBlockAnalyzed(BB);
   }
@@ -2978,11 +2965,9 @@ InlineCost llvm::getInlineCost(
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
   return getInlineCost(Call, Call.getCalledFunction(), Params, CalleeTTI,
-                       GetAssumptionCache, GetTLI, GetBFI, PSI, ORE,
-                       GetEphValuesCache);
+                       GetAssumptionCache, GetTLI, GetBFI, PSI, ORE);
 }
 
 std::optional<int> llvm::getInliningCostEstimate(
@@ -3102,8 +3087,7 @@ InlineCost llvm::getInlineCost(
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache) {
+    ProfileSummaryInfo *PSI, OptimizationRemarkEmitter *ORE) {
 
   auto UserDecision =
       llvm::getAttributeBasedInliningDecision(Call, Callee, CalleeTTI, GetTLI);
@@ -3119,9 +3103,7 @@ InlineCost llvm::getInlineCost(
                           << ")\n");
 
   InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
-                            /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
-                            GetEphValuesCache);
+                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
@@ -3295,12 +3277,9 @@ InlineCostAnnotationPrinterPass::run(Function &F,
       [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-
-  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  ProfileSummaryInfo *PSI =
-      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
-
+  Module *M = F.getParent();
+  ProfileSummaryInfo PSI(*M);
+  TargetTransformInfo TTI(M->getDataLayout());
   // FIXME: Redesign the usage of InlineParams to expand the scope of this pass.
   // In the current implementation, the type of InlineParams doesn't matter as
   // the pass serves only for verification of inliner's decisions.
@@ -3315,7 +3294,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
           continue;
         OptimizationRemarkEmitter ORE(CalledFunction);
         InlineCostCallAnalyzer ICCA(*CalledFunction, *CB, Params, TTI,
-                                    GetAssumptionCache, nullptr, nullptr, PSI,
+                                    GetAssumptionCache, nullptr, nullptr, &PSI,
                                     &ORE);
         ICCA.analyze();
         OS << "      Analyzing call of " << CalledFunction->getName()

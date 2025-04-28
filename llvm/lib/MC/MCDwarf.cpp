@@ -916,7 +916,8 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
     assert(StartSymbol && "StartSymbol must not be NULL");
     assert(EndSymbol && "EndSymbol must not be NULL");
 
-    const MCExpr *Addr = MCSymbolRefExpr::create(StartSymbol, context);
+    const MCExpr *Addr = MCSymbolRefExpr::create(
+      StartSymbol, MCSymbolRefExpr::VK_None, context);
     const MCExpr *Size =
         makeEndMinusStartExpr(context, *StartSymbol, *EndSymbol, 0);
     MCOS->emitValue(Addr, AddrSize);
@@ -1017,11 +1018,13 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     assert(EndSymbol && "EndSymbol must not be NULL");
 
     // AT_low_pc, the first address of the default .text section.
-    const MCExpr *Start = MCSymbolRefExpr::create(StartSymbol, context);
+    const MCExpr *Start = MCSymbolRefExpr::create(
+        StartSymbol, MCSymbolRefExpr::VK_None, context);
     MCOS->emitValue(Start, AddrSize);
 
     // AT_high_pc, the last address of the default .text section.
-    const MCExpr *End = MCSymbolRefExpr::create(EndSymbol, context);
+    const MCExpr *End = MCSymbolRefExpr::create(
+      EndSymbol, MCSymbolRefExpr::VK_None, context);
     MCOS->emitValue(End, AddrSize);
   }
 
@@ -1088,7 +1091,8 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitInt32(Entry.getLineNumber());
 
     // AT_low_pc, start address of the label.
-    const auto *AT_low_pc = MCSymbolRefExpr::create(Entry.getLabel(), context);
+    const MCExpr *AT_low_pc = MCSymbolRefExpr::create(Entry.getLabel(),
+                                             MCSymbolRefExpr::VK_None, context);
     MCOS->emitValue(AT_low_pc, AddrSize);
   }
 
@@ -1120,8 +1124,8 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
     for (MCSection *Sec : Sections) {
       const MCSymbol *StartSymbol = Sec->getBeginSymbol();
       const MCSymbol *EndSymbol = Sec->getEndSymbol(context);
-      const MCExpr *SectionStartAddr =
-          MCSymbolRefExpr::create(StartSymbol, context);
+      const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
+          StartSymbol, MCSymbolRefExpr::VK_None, context);
       const MCExpr *SectionSize =
           makeEndMinusStartExpr(context, *StartSymbol, *EndSymbol, 0);
       MCOS->emitInt8(dwarf::DW_RLE_start_length);
@@ -1139,8 +1143,8 @@ static MCSymbol *emitGenDwarfRanges(MCStreamer *MCOS) {
       const MCSymbol *EndSymbol = Sec->getEndSymbol(context);
 
       // Emit a base address selection entry for the section start.
-      const MCExpr *SectionStartAddr =
-          MCSymbolRefExpr::create(StartSymbol, context);
+      const MCExpr *SectionStartAddr = MCSymbolRefExpr::create(
+          StartSymbol, MCSymbolRefExpr::VK_None, context);
       MCOS->emitFill(AddrSize, 0xFF);
       MCOS->emitValue(SectionStartAddr, AddrSize);
 

@@ -42,12 +42,8 @@ export namespace std {
   using std::iota;
 
   namespace ranges {
-
-#if _LIBCPP_STD_VER >= 23
-    using std::ranges::iota;
-    using std::ranges::iota_result;
-#endif // _LIBCPP_STD_VER >= 23
-
+    // using std::ranges::iota_result;
+    // using std::ranges::iota;
   } // namespace ranges
 
   // [numeric.ops.gcd], greatest common divisor

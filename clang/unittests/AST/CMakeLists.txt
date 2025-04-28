@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  FrontendOpenMP
+  Support
+  TargetParser
+  )
+
+
 add_subdirectory(ByteCode)
 
 add_clang_unittest(ASTTests
@@ -36,7 +43,10 @@ add_clang_unittest(ASTTests
   TemplateNameTest.cpp
   TypePrinterTest.cpp
   UnresolvedSetTest.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(ASTTests
+  PRIVATE
   clangAST
   clangASTMatchers
   clangBasic
@@ -44,12 +54,11 @@ add_clang_unittest(ASTTests
   clangLex
   clangSerialization
   clangTooling
-  LINK_LIBS
+  )
+
+target_link_libraries(ASTTests
+  PRIVATE
   clangTesting
   LLVMTestingAnnotations
   LLVMTestingSupport
-  LLVM_COMPONENTS
-  FrontendOpenMP
-  Support
-  TargetParser
-  )
+)

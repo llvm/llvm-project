@@ -363,12 +363,13 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");
 
+  MCInstPrinter *IP = nullptr;
   if (FileType == "s") {
     const bool OutputATTAsm = InputArgs.hasArg(OPT_output_att_asm);
     const unsigned OutputAsmVariant = OutputATTAsm ? 0U   // ATT dialect
                                                    : 1U;  // Intel dialect
-    std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-        TheTriple, OutputAsmVariant, *MAI, *MCII, *MRI));
+    IP = TheTarget->createMCInstPrinter(TheTriple, OutputAsmVariant, *MAI,
+                                        *MCII, *MRI);
 
     if (!IP) {
       WithColor::error()
@@ -389,7 +390,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
+    Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), IP,
                                            std::move(CE), std::move(MAB)));
 
   } else if (FileType == "null") {

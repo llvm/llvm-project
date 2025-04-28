@@ -32,7 +32,9 @@ public:
   const PPCRegisterInfo *TRI;
   static char ID;
 
-  PPCExpandAtomicPseudo() : MachineFunctionPass(ID) {}
+  PPCExpandAtomicPseudo() : MachineFunctionPass(ID) {
+    initializePPCExpandAtomicPseudoPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

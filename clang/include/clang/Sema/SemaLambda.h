@@ -31,7 +31,7 @@ class Sema;
 /// of the capture-capable lambda's LambdaScopeInfo.
 /// See Implementation for more detailed comments.
 
-UnsignedOrNone getStackIndexOfNearestEnclosingCaptureCapableLambda(
+std::optional<unsigned> getStackIndexOfNearestEnclosingCaptureCapableLambda(
     ArrayRef<const sema::FunctionScopeInfo *> FunctionScopes,
     ValueDecl *VarToCapture, Sema &S);
 

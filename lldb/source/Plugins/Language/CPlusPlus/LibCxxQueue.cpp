@@ -25,6 +25,7 @@ public:
                           : UINT32_MAX;
   }
 
+  bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {

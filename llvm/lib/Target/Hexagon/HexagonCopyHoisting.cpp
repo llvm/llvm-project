@@ -28,13 +28,20 @@ using namespace llvm;
 static cl::opt<std::string> CPHoistFn("cphoistfn", cl::Hidden, cl::desc(""),
                                       cl::init(""));
 
+namespace llvm {
+void initializeHexagonCopyHoistingPass(PassRegistry &Registry);
+FunctionPass *createHexagonCopyHoisting();
+} // namespace llvm
+
 namespace {
 
 class HexagonCopyHoisting : public MachineFunctionPass {
 
 public:
   static char ID;
-  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(nullptr), MRI(nullptr) {}
+  HexagonCopyHoisting() : MachineFunctionPass(ID), MFN(nullptr), MRI(nullptr) {
+    initializeHexagonCopyHoistingPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "Hexagon Copy Hoisting"; }
 
@@ -173,15 +180,14 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
     bool IsSafetoMove = true;
     for (MachineBasicBlock *SuccBB : BB->successors()) {
       auto &SuccBBCopyInst = CopyMIList[SuccBB->getNumber()];
-      auto It = SuccBBCopyInst.find(Key);
-      if (It == SuccBBCopyInst.end()) {
+      if (!SuccBBCopyInst.count(Key)) {
         // Same copy not present in this successor
         IsSafetoMove = false;
         break;
       }
       // If present, make sure that it's safe to pull this copy instruction
       // into the predecessor.
-      MachineInstr *SuccMI = It->second;
+      MachineInstr *SuccMI = SuccBBCopyInst[Key];
       if (!isSafetoMove(SuccMI)) {
         IsSafetoMove = false;
         break;

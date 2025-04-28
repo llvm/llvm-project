@@ -60,13 +60,14 @@ static void replaceUsesAndPropagateType(RewriterBase &rewriter,
     // `subview(old_op)` is replaced by a new `subview(val)`.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(subviewUse);
-    MemRefType newType = memref::SubViewOp::inferRankReducedResultType(
+    Type newType = memref::SubViewOp::inferRankReducedResultType(
         subviewUse.getType().getShape(), cast<MemRefType>(val.getType()),
         subviewUse.getStaticOffsets(), subviewUse.getStaticSizes(),
         subviewUse.getStaticStrides());
     Value newSubview = rewriter.create<memref::SubViewOp>(
-        subviewUse->getLoc(), newType, val, subviewUse.getMixedOffsets(),
-        subviewUse.getMixedSizes(), subviewUse.getMixedStrides());
+        subviewUse->getLoc(), cast<MemRefType>(newType), val,
+        subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
+        subviewUse.getMixedStrides());
 
     // Ouch recursion ... is this really necessary?
     replaceUsesAndPropagateType(rewriter, subviewUse, newSubview);
@@ -210,8 +211,9 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   for (int64_t i = 0, e = originalShape.size(); i != e; ++i)
     sizes[1 + i] = rewriter.getIndexAttr(originalShape[i]);
   // Strides is [1, 1 ... 1 ].
-  MemRefType dstMemref = memref::SubViewOp::inferRankReducedResultType(
-      originalShape, mbMemRefType, offsets, sizes, strides);
+  auto dstMemref =
+      cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
+          originalShape, mbMemRefType, offsets, sizes, strides));
   Value subview = rewriter.create<memref::SubViewOp>(loc, dstMemref, mbAlloc,
                                                      offsets, sizes, strides);
   LLVM_DEBUG(DBGS() << "--multi-buffered slice: " << subview << "\n");

@@ -93,14 +93,15 @@ Status SharedSocket::CompleteSending(lldb::pid_t child_pid) {
         "WSADuplicateSocket() failed, error: %d", last_error);
   }
 
-  llvm::Expected<size_t> num_bytes = m_socket_pipe.Write(
-      &protocol_info, sizeof(protocol_info), std::chrono::seconds(10));
-  if (!num_bytes)
-    return Status::FromError(num_bytes.takeError());
-  if (*num_bytes != sizeof(protocol_info))
+  size_t num_bytes;
+  Status error =
+      m_socket_pipe.WriteWithTimeout(&protocol_info, sizeof(protocol_info),
+                                     std::chrono::seconds(10), num_bytes);
+  if (error.Fail())
+    return error;
+  if (num_bytes != sizeof(protocol_info))
     return Status::FromErrorStringWithFormatv(
-        "Write(WSAPROTOCOL_INFO) failed: wrote {0}/{1} bytes", *num_bytes,
-        sizeof(protocol_info));
+        "WriteWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes", num_bytes);
 #endif
   return Status();
 }
@@ -112,14 +113,16 @@ Status SharedSocket::GetNativeSocket(shared_fd_t fd, NativeSocket &socket) {
   WSAPROTOCOL_INFO protocol_info;
   {
     Pipe socket_pipe(fd, LLDB_INVALID_PIPE);
-    llvm::Expected<size_t> num_bytes = socket_pipe.Read(
-        &protocol_info, sizeof(protocol_info), std::chrono::seconds(10));
-    if (!num_bytes)
-      return Status::FromError(num_bytes.takeError());
-    if (*num_bytes != sizeof(protocol_info)) {
+    size_t num_bytes;
+    Status error =
+        socket_pipe.ReadWithTimeout(&protocol_info, sizeof(protocol_info),
+                                    std::chrono::seconds(10), num_bytes);
+    if (error.Fail())
+      return error;
+    if (num_bytes != sizeof(protocol_info)) {
       return Status::FromErrorStringWithFormatv(
-          "Read(WSAPROTOCOL_INFO) failed: read {0}/{1} bytes", *num_bytes,
-          sizeof(protocol_info));
+          "socket_pipe.ReadWithTimeout(WSAPROTOCOL_INFO) failed: {0} bytes",
+          num_bytes);
     }
   }
   socket = ::WSASocket(FROM_PROTOCOL_INFO, FROM_PROTOCOL_INFO,

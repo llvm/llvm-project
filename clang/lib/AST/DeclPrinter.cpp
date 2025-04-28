@@ -49,7 +49,6 @@ namespace {
                              QualType T);
 
     void PrintObjCTypeParams(ObjCTypeParamList *Params);
-    void PrintOpenACCRoutineOnLambda(Decl *D);
 
   public:
     DeclPrinter(raw_ostream &Out, const PrintingPolicy &Policy,
@@ -112,9 +111,6 @@ namespace {
     void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *TTP);
     void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *NTTP);
     void VisitHLSLBufferDecl(HLSLBufferDecl *D);
-
-    void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
-    void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
 
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
@@ -293,33 +289,9 @@ bool DeclPrinter::prettyPrintAttributes(const Decl *D,
   return hasPrinted;
 }
 
-void DeclPrinter::PrintOpenACCRoutineOnLambda(Decl *D) {
-  CXXRecordDecl *CXXRD = nullptr;
-  if (const auto *VD = dyn_cast<VarDecl>(D)) {
-    if (const auto *Init = VD->getInit())
-      CXXRD = Init->getType().isNull() ? nullptr
-                                       : Init->getType()->getAsCXXRecordDecl();
-  } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
-    CXXRD =
-        FD->getType().isNull() ? nullptr : FD->getType()->getAsCXXRecordDecl();
-  }
-
-  if (!CXXRD || !CXXRD->isLambda())
-    return;
-
-  if (const auto *Call = CXXRD->getLambdaCallOperator()) {
-    for (auto *A : Call->specific_attrs<OpenACCRoutineDeclAttr>()) {
-      A->printPretty(Out, Policy);
-      Indent();
-    }
-  }
-}
-
 void DeclPrinter::prettyPrintPragmas(Decl *D) {
   if (Policy.PolishForDeclaration)
     return;
-
-  PrintOpenACCRoutineOnLambda(D);
 
   if (D->hasAttrs()) {
     AttrVec &Attrs = D->getAttrs();
@@ -522,8 +494,6 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     if (isa<OMPThreadPrivateDecl>(*D) || isa<OMPDeclareReductionDecl>(*D) ||
         isa<OMPDeclareMapperDecl>(*D) || isa<OMPRequiresDecl>(*D) ||
         isa<OMPAllocateDecl>(*D))
-      Terminator = nullptr;
-    else if (isa<OpenACCDeclareDecl, OpenACCRoutineDecl>(*D))
       Terminator = nullptr;
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
@@ -735,7 +705,7 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     llvm::raw_string_ostream POut(Proto);
     DeclPrinter TArgPrinter(POut, SubPolicy, Context, Indentation);
     const auto *TArgAsWritten = D->getTemplateSpecializationArgsAsWritten();
-    if (TArgAsWritten && !Policy.PrintAsCanonical)
+    if (TArgAsWritten && !Policy.PrintCanonicalTypes)
       TArgPrinter.printTemplateArguments(TArgAsWritten->arguments(), nullptr);
     else if (const TemplateArgumentList *TArgs =
                  D->getTemplateSpecializationArgs())
@@ -842,14 +812,10 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     }
     Out << Proto;
 
-    if (const AssociatedConstraint &TrailingRequiresClause =
-            D->getTrailingRequiresClause()) {
+    if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
       Out << " requires ";
-      // FIXME: The printer could support printing expressions and types as if
-      // expanded by an index. Pass in the ArgumentPackSubstitutionIndex when
-      // that's supported.
-      TrailingRequiresClause.ConstraintExpr->printPretty(
-          Out, nullptr, SubPolicy, Indentation, "\n", &Context);
+      TrailingRequiresClause->printPretty(Out, nullptr, SubPolicy, Indentation,
+                                          "\n", &Context);
     }
   } else {
     Ty.print(Out, Policy, Proto);
@@ -923,7 +889,6 @@ void DeclPrinter::VisitFriendDecl(FriendDecl *D) {
 }
 
 void DeclPrinter::VisitFieldDecl(FieldDecl *D) {
-  prettyPrintPragmas(D);
   // FIXME: add printing of pragma attributes if required.
   if (!Policy.SuppressSpecifiers && D->isMutable())
     Out << "mutable ";
@@ -1124,7 +1089,7 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
           S->getSpecializedTemplate()->getTemplateParameters();
       const ASTTemplateArgumentListInfo *TArgAsWritten =
           S->getTemplateArgsAsWritten();
-      if (TArgAsWritten && !Policy.PrintAsCanonical)
+      if (TArgAsWritten && !Policy.PrintCanonicalTypes)
         printTemplateArguments(TArgAsWritten->arguments(), TParams);
       else
         printTemplateArguments(S->getTemplateArgs().asArray(), TParams);
@@ -1943,39 +1908,5 @@ void DeclPrinter::VisitNonTypeTemplateParmDecl(
     Out << " = ";
     NTTP->getDefaultArgument().getArgument().print(Policy, Out,
                                                    /*IncludeType=*/false);
-  }
-}
-
-void DeclPrinter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
-  if (!D->isInvalidDecl()) {
-    Out << "#pragma acc declare";
-    if (!D->clauses().empty()) {
-      Out << ' ';
-      OpenACCClausePrinter Printer(Out, Policy);
-      Printer.VisitClauseList(D->clauses());
-    }
-  }
-}
-void DeclPrinter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
-  if (!D->isInvalidDecl()) {
-    Out << "#pragma acc routine";
-
-    Out << "(";
-
-    // The referenced function was named here, but this makes us tolerant of
-    // errors.
-    if (D->getFunctionReference())
-      D->getFunctionReference()->printPretty(Out, nullptr, Policy, Indentation,
-                                             "\n", &Context);
-    else
-      Out << "<error>";
-
-    Out << ")";
-
-    if (!D->clauses().empty()) {
-      Out << ' ';
-      OpenACCClausePrinter Printer(Out, Policy);
-      Printer.VisitClauseList(D->clauses());
-    }
   }
 }

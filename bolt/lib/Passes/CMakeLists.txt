@@ -24,10 +24,9 @@ add_llvm_library(LLVMBOLTPasses
   LivenessAnalysis.cpp
   MCF.cpp
   PatchEntries.cpp
-  PAuthGadgetScanner.cpp
   PettisAndHansen.cpp
   PLTCall.cpp
-  ProfileQualityStats.cpp
+  ContinuityStats.cpp
   RegAnalysis.cpp
   RegReAssign.cpp
   ReorderAlgorithm.cpp

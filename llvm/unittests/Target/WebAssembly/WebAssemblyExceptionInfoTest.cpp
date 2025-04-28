@@ -23,7 +23,7 @@ using namespace llvm;
 namespace {
 
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  Triple TT("wasm32-unknown-unknown");
+  auto TT(Triple::normalize("wasm32-unknown-unknown"));
   std::string CPU;
   std::string FS;
 

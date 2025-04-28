@@ -22,8 +22,6 @@ add_lldb_tool(lldb
 
   LINK_LIBS
     liblldb
-    lldbHost
-    lldbUtility
 
   LINK_COMPONENTS
     Option

@@ -11,7 +11,7 @@
 // template<BidirectionalIterator Iter, Predicate<auto, Iter::value_type> Pred>
 //   requires ShuffleIterator<Iter>
 //         && CopyConstructible<Pred>
-//   constexpr Iter                                                               // constexpr since C++26
+//   Iter
 //   stable_partition(Iter first, Iter last, Pred pred);
 
 #include <algorithm>
@@ -23,16 +23,21 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-struct is_odd {
-  TEST_CONSTEXPR_CXX26 bool operator()(const int& i) const { return i & 1; }
+struct is_odd
+{
+    bool operator()(const int& i) const {return i & 1;}
 };
 
-struct odd_first {
-  TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& p) const { return p.first & 1; }
+struct odd_first
+{
+    bool operator()(const std::pair<int,int>& p) const
+        {return p.first & 1;}
 };
 
 template <class Iter>
-TEST_CONSTEXPR_CXX26 void test() {
+void
+test()
+{
   { // check mixed
     typedef std::pair<int,int> P;
     P array[] =
@@ -277,10 +282,10 @@ TEST_CONSTEXPR_CXX26 void test() {
     assert(array[9] == P(0, 2));
   }
 #if TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
-  // TODO: Re-enable this test for GCC once we get recursive inlining fixed.
+  // TODO: Re-enable this test once we get recursive inlining fixed.
   // For now it trips up GCC due to the use of always_inline.
-#  if !defined(TEST_COMPILER_GCC)
-  if (!TEST_IS_CONSTANT_EVALUATED) { // check that the algorithm still works when no memory is available
+#  if 0
+  { // check that the algorithm still works when no memory is available
     std::vector<int> vec(150, 3);
     vec[5]                             = 6;
     getGlobalMemCounter()->throw_after = 0;
@@ -289,51 +294,44 @@ TEST_CONSTEXPR_CXX26 void test() {
     vec[5]                             = 6;
     getGlobalMemCounter()->throw_after = 0;
     std::stable_partition(
-        bidirectional_iterator<int*>(vec.data()), bidirectional_iterator<int*>(vec.data() + vec.size()), [](int i) {
+        forward_iterator<int*>(vec.data()), forward_iterator<int*>(vec.data() + vec.size()), [](int i) {
           return i < 5;
         });
     assert(std::is_partitioned(vec.begin(), vec.end(), [](int i) { return i < 5; }));
     getGlobalMemCounter()->reset();
   }
-#  endif // !defined(TEST_COMPILER_GCC)
-#endif   // TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
+#  endif
+#endif // TEST_STD_VER >= 11 && !defined(TEST_HAS_NO_EXCEPTIONS)
 }
 
 #if TEST_STD_VER >= 11
 
-struct is_null {
-  template <class P>
-  TEST_CONSTEXPR_CXX26 bool operator()(const P& p) {
-    return p == 0;
-  }
+struct is_null
+{
+    template <class P>
+        bool operator()(const P& p) {return p == 0;}
 };
 
 template <class Iter>
-TEST_CONSTEXPR_CXX26 void test1() {
-  const unsigned size = 5;
-  std::unique_ptr<int> array[size];
-  Iter r = std::stable_partition(Iter(array), Iter(array + size), is_null());
-  assert(r == Iter(array + size));
+void
+test1()
+{
+    const unsigned size = 5;
+    std::unique_ptr<int> array[size];
+    Iter r = std::stable_partition(Iter(array), Iter(array+size), is_null());
+    assert(r == Iter(array+size));
 }
 
 #endif // TEST_STD_VER >= 11
 
-TEST_CONSTEXPR_CXX26 bool test() {
-  test<bidirectional_iterator<std::pair<int, int>*> >();
-  test<random_access_iterator<std::pair<int, int>*> >();
-  test<std::pair<int, int>*>();
+int main(int, char**)
+{
+    test<bidirectional_iterator<std::pair<int,int>*> >();
+    test<random_access_iterator<std::pair<int,int>*> >();
+    test<std::pair<int,int>*>();
 
 #if TEST_STD_VER >= 11
-  test1<bidirectional_iterator<std::unique_ptr<int>*> >();
-#endif
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER >= 26
-  static_assert(test());
+    test1<bidirectional_iterator<std::unique_ptr<int>*> >();
 #endif
 
   return 0;

@@ -52,7 +52,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   std::string TargetID;
 
   bool hasFP64() const {
-    return getTriple().isAMDGCN() ||
+    return getTriple().getArch() == llvm::Triple::amdgcn ||
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_FP64);
   }
 
@@ -62,10 +62,12 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   }
 
   /// Has fast fma f64
-  bool hasFastFMA() const { return getTriple().isAMDGCN(); }
+  bool hasFastFMA() const {
+    return getTriple().getArch() == llvm::Triple::amdgcn;
+  }
 
   bool hasFMAF() const {
-    return getTriple().isAMDGCN() ||
+    return getTriple().getArch() == llvm::Triple::amdgcn ||
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_FMA);
   }
 
@@ -74,11 +76,13 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   }
 
   bool hasLDEXPF() const {
-    return getTriple().isAMDGCN() ||
+    return getTriple().getArch() == llvm::Triple::amdgcn ||
            !!(GPUFeatures & llvm::AMDGPU::FEATURE_LDEXP);
   }
 
-  static bool isAMDGCN(const llvm::Triple &TT) { return TT.isAMDGCN(); }
+  static bool isAMDGCN(const llvm::Triple &TT) {
+    return TT.getArch() == llvm::Triple::amdgcn;
+  }
 
   static bool isR600(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::r600;
@@ -121,7 +125,7 @@ public:
   }
 
   uint64_t getMaxPointerWidth() const override {
-    return getTriple().isAMDGCN() ? 64 : 32;
+    return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }
 
   bool hasBFloat16Type() const override { return isAMDGCN(getTriple()); }
@@ -265,7 +269,7 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    if (getTriple().isAMDGCN())
+    if (getTriple().getArch() == llvm::Triple::amdgcn)
       return llvm::AMDGPU::parseArchAMDGCN(Name) != llvm::AMDGPU::GK_NONE;
     return llvm::AMDGPU::parseArchR600(Name) != llvm::AMDGPU::GK_NONE;
   }
@@ -273,7 +277,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   bool setCPU(const std::string &Name) override {
-    if (getTriple().isAMDGCN()) {
+    if (getTriple().getArch() == llvm::Triple::amdgcn) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
     } else {

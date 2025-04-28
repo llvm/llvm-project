@@ -13,7 +13,6 @@
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
-#include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
@@ -313,7 +312,7 @@ void LinkGraph::dump(raw_ostream &OS) {
     OS << "section " << Sec->getName() << ":\n\n";
 
     std::vector<Block *> SortedBlocks;
-    llvm::append_range(SortedBlocks, Sec->blocks());
+    llvm::copy(Sec->blocks(), std::back_inserter(SortedBlocks));
     llvm::sort(SortedBlocks, [](const Block *LHS, const Block *RHS) {
       return LHS->getAddress() < RHS->getAddress();
     });
@@ -339,7 +338,7 @@ void LinkGraph::dump(raw_ostream &OS) {
       if (!B->edges_empty()) {
         OS << "    edges:\n";
         std::vector<Edge> SortedEdges;
-        llvm::append_range(SortedEdges, B->edges());
+        llvm::copy(B->edges(), std::back_inserter(SortedEdges));
         llvm::sort(SortedEdges, [](const Edge &LHS, const Edge &RHS) {
           return LHS.getOffset() < RHS.getOffset();
         });
@@ -502,8 +501,6 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
     return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
   case file_magic::coff_object:
     return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
-  case file_magic::xcoff_object_64:
-    return createLinkGraphFromXCOFFObject(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
@@ -535,8 +532,6 @@ void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
     return link_ELF(std::move(G), std::move(Ctx));
   case Triple::COFF:
     return link_COFF(std::move(G), std::move(Ctx));
-  case Triple::XCOFF:
-    return link_XCOFF(std::move(G), std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported object format"));
   };

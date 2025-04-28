@@ -30,11 +30,11 @@ public:
     // BTF is no DWARF, so ignore this operation for now.
   }
 
-  std::optional<DILineInfo> getLineInfoForAddress(
+  DILineInfo getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
 
-  std::optional<DILineInfo>
+  DILineInfo
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
 
   DILineInfoTable getLineInfoForAddressRange(

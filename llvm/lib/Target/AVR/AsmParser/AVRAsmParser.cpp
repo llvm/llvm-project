@@ -447,7 +447,7 @@ bool AVRAsmParser::tryParseExpression(OperandVector &Operands, int64_t offset) {
 
 bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
   bool isNegated = false;
-  AVRMCExpr::Specifier ModifierKind = AVRMCExpr::VK_AVR_NONE;
+  AVRMCExpr::VariantKind ModifierKind = AVRMCExpr::VK_AVR_None;
 
   SMLoc S = Parser.getTok().getLoc();
 
@@ -471,16 +471,16 @@ bool AVRAsmParser::tryParseRelocExpression(OperandVector &Operands) {
     return true;
   }
   StringRef ModifierName = Parser.getTok().getString();
-  ModifierKind = AVRMCExpr::parseSpecifier(ModifierName);
+  ModifierKind = AVRMCExpr::getKindByName(ModifierName);
 
-  if (ModifierKind != AVRMCExpr::VK_AVR_NONE) {
+  if (ModifierKind != AVRMCExpr::VK_AVR_None) {
     Parser.Lex();
     Parser.Lex(); // Eat modifier name and parenthesis
     if (Parser.getTok().getString() == GENERATE_STUBS &&
         Parser.getTok().getKind() == AsmToken::Identifier) {
       std::string GSModName = ModifierName.str() + "_" + GENERATE_STUBS;
-      ModifierKind = AVRMCExpr::parseSpecifier(GSModName);
-      if (ModifierKind != AVRMCExpr::VK_AVR_NONE)
+      ModifierKind = AVRMCExpr::getKindByName(GSModName);
+      if (ModifierKind != AVRMCExpr::VK_AVR_None)
         Parser.Lex(); // Eat gs modifier name
     }
   } else {
@@ -698,15 +698,16 @@ ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
       Tokens[1].getKind() == AsmToken::Identifier) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
-                                        AVRMCExpr::VK_AVR_NONE);
+                                        AVRMCExpr::VK_AVR_None);
     return ParseStatus::NoMatch;
   }
 
   if (Parser.getTok().getKind() == AsmToken::Identifier &&
       Parser.getLexer().peekTok().getKind() == AsmToken::LParen) {
     StringRef ModifierName = Parser.getTok().getString();
-    AVRMCExpr::Specifier Spec = AVRMCExpr::parseSpecifier(ModifierName);
-    if (Spec != AVRMCExpr::VK_AVR_NONE) {
+    AVRMCExpr::VariantKind ModifierKind =
+        AVRMCExpr::getKindByName(ModifierName);
+    if (ModifierKind != AVRMCExpr::VK_AVR_None) {
       Parser.Lex();
       Parser.Lex(); // Eat the modifier and parenthesis
     } else {
@@ -714,7 +715,7 @@ ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     }
     MCSymbol *Symbol =
         getContext().getOrCreateSymbol(Parser.getTok().getString());
-    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, Spec);
+    AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
     Lex(); // Eat the symbol name.
     if (parseToken(AsmToken::RParen))
       return ParseStatus::Failure;

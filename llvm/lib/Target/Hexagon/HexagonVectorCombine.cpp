@@ -43,7 +43,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
-#include "Hexagon.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 
@@ -1175,8 +1174,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   for (const ByteSpan::Block &B : VSpan) {
     ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
     for (const ByteSpan::Block &S : ASection) {
-      auto &EU = EarliestUser[S.Seg.Val];
-      EU = std::min(EU, earliestUser(B.Seg.Val->uses()), isEarlier);
+      EarliestUser[S.Seg.Val] = std::min(
+          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
     }
   }
 
@@ -2318,9 +2317,9 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   assert(0 <= Where && Where + Length <= DstLen);
 
   int P2Len = PowerOf2Ceil(SrcLen | DstLen);
-  auto *Poison = PoisonValue::get(getByteTy());
-  Value *P2Src = vresize(Builder, Src, P2Len, Poison);
-  Value *P2Dst = vresize(Builder, Dst, P2Len, Poison);
+  auto *Undef = UndefValue::get(getByteTy());
+  Value *P2Src = vresize(Builder, Src, P2Len, Undef);
+  Value *P2Dst = vresize(Builder, Dst, P2Len, Undef);
 
   SmallVector<int, 256> SMask(P2Len);
   for (int i = 0; i != P2Len; ++i) {
@@ -2331,7 +2330,7 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   }
 
   Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask, "shf");
-  return vresize(Builder, P2Insert, DstLen, Poison);
+  return vresize(Builder, P2Insert, DstLen, Undef);
 }
 
 auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
@@ -2393,7 +2392,7 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb,
+    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb, {},
                                           {Hi64, Lo64, Amt},
                                           /*FMFSource=*/nullptr, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");
@@ -2931,6 +2930,11 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
 }
 
 // Pass management.
+
+namespace llvm {
+void initializeHexagonVectorCombineLegacyPass(PassRegistry &);
+FunctionPass *createHexagonVectorCombineLegacyPass();
+} // namespace llvm
 
 namespace {
 class HexagonVectorCombineLegacy : public FunctionPass {

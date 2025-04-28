@@ -8,20 +8,6 @@ if(scanf_config_copts)
   list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
 endif()
 
-
-list(APPEND file_deps libc.hdr.types.FILE)
-if(LIBC_TARGET_OS_IS_GPU)
-  list(APPEND file_deps
-    libc.src.stdio.getc
-    libc.src.stdio.ungetc
-    libc.src.stdio.ferror
-  )
-elseif(LLVM_LIBC_FULL_BUILD)
-  list(APPEND file_deps
-    libc.src.__support.File.file
-  )
-endif()
-
 add_header_library(
   scanf_config
   HDRS
@@ -54,8 +40,10 @@ add_header_library(
     libc.src.__support.CPP.string_view
 )
 
-add_header_library(
+add_object_library(
   scanf_main
+  SRCS
+    scanf_main.cpp
   HDRS
     scanf_main.h
   DEPENDS
@@ -64,28 +52,26 @@ add_header_library(
     .converter
     .core_structs
     libc.src.__support.arg_list
-  ${use_system_file}
 )
 
-add_header_library(
+add_object_library(
   reader
+  SRCS
+    reader.cpp
   HDRS
     reader.h
   DEPENDS
     libc.src.__support.macros.attributes
 )
 
-add_header_library(
-  string_reader
-  HDRS
-    string_reader.h
-  DEPENDS
-    .reader
-    libc.src.__support.macros.attributes
-)
-
-add_header_library(
+add_object_library(
   converter
+  SRCS
+    converter.cpp
+    string_converter.cpp
+    int_converter.cpp
+    float_converter.cpp
+    ptr_converter.cpp
   HDRS
     converter.h
     converter_utils.h
@@ -104,18 +90,33 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.char_vector
     libc.src.__support.str_to_float
-  ${use_system_file}
 )
 
-#TODO: condense the file-related code as possible.
-add_header_library(
+if(LIBC_TARGET_OS_IS_GPU)
+  add_header_library(
     vfscanf_internal
     HDRS
       vfscanf_internal.h
     DEPENDS
       .reader
       .scanf_main
+      libc.include.stdio
       libc.src.__support.arg_list
-      ${file_deps}
+      libc.src.stdio.getc
+      libc.src.stdio.ungetc
+      libc.src.stdio.ferror
+  )
+elseif(TARGET libc.src.__support.File.file OR (NOT LLVM_LIBC_FULL_BUILD))
+  add_header_library(
+    vfscanf_internal
+    HDRS
+      vfscanf_internal.h
+    DEPENDS
+      .reader
+      .scanf_main
+      libc.include.stdio
+      libc.src.__support.File.file
+      libc.src.__support.arg_list
     ${use_system_file}
-)
+  )
+endif()

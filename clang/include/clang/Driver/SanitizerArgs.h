@@ -105,8 +105,8 @@ public:
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }
-  bool needsCfiCrossDsoRt() const;
-  bool needsCfiCrossDsoDiagRt() const;
+  bool needsCfiRt() const;
+  bool needsCfiDiagRt() const;
   bool needsStatsRt() const { return Stats; }
   bool needsScudoRt() const { return Sanitizers.has(SanitizerKind::Scudo); }
   bool needsNsanRt() const {

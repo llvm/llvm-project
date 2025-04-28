@@ -79,7 +79,6 @@ public:
   void handleNewAttr(Decl *D, const ParsedAttr &AL);
   void handleCmseNSEntryAttr(Decl *D, const ParsedAttr &AL);
   void handleInterruptAttr(Decl *D, const ParsedAttr &AL);
-  void handleInterruptSaveFPAttr(Decl *D, const ParsedAttr &AL);
 
   void CheckSMEFunctionDefAttributes(const FunctionDecl *FD);
 };

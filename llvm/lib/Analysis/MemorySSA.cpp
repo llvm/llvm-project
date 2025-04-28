@@ -1573,7 +1573,7 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
     // the loop, to limit the scope of the renaming.
     SmallVector<BasicBlock *> ExitBlocks;
     L->getExitBlocks(ExitBlocks);
-    Visited.insert_range(ExitBlocks);
+    Visited.insert(ExitBlocks.begin(), ExitBlocks.end());
     renamePass(DT->getNode(L->getLoopPreheader()), LiveOnEntryDef.get(),
                Visited);
   } else {
@@ -2414,7 +2414,9 @@ PreservedAnalyses MemorySSAVerifierPass::run(Function &F,
 
 char MemorySSAWrapperPass::ID = 0;
 
-MemorySSAWrapperPass::MemorySSAWrapperPass() : FunctionPass(ID) {}
+MemorySSAWrapperPass::MemorySSAWrapperPass() : FunctionPass(ID) {
+  initializeMemorySSAWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 void MemorySSAWrapperPass::releaseMemory() { MSSA.reset(); }
 

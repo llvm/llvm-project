@@ -13,7 +13,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "GCNNSAReassign.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
@@ -35,12 +34,26 @@ STATISTIC(NumNSAConverted,
           "Number of NSA instructions changed to sequential");
 
 namespace {
-class GCNNSAReassignImpl {
-public:
-  GCNNSAReassignImpl(VirtRegMap *VM, LiveRegMatrix *LM, LiveIntervals *LS)
-      : VRM(VM), LRM(LM), LIS(LS) {}
 
-  bool run(MachineFunction &MF);
+class GCNNSAReassign : public MachineFunctionPass {
+public:
+  static char ID;
+
+  GCNNSAReassign() : MachineFunctionPass(ID) {
+    initializeGCNNSAReassignPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override { return "GCN NSA Reassign"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addRequired<VirtRegMapWrapperLegacy>();
+    AU.addRequired<LiveRegMatrixWrapperLegacy>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
 private:
   using NSA_Status = enum {
@@ -77,43 +90,24 @@ private:
   bool scavengeRegs(SmallVectorImpl<LiveInterval *> &Intervals) const;
 };
 
-class GCNNSAReassignLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-
-  GCNNSAReassignLegacy() : MachineFunctionPass(ID) {
-    initializeGCNNSAReassignLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override { return "GCN NSA Reassign"; };
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addRequired<VirtRegMapWrapperLegacy>();
-    AU.addRequired<LiveRegMatrixWrapperLegacy>();
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(GCNNSAReassignLegacy, DEBUG_TYPE, "GCN NSA Reassign",
+INITIALIZE_PASS_BEGIN(GCNNSAReassign, DEBUG_TYPE, "GCN NSA Reassign",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
-INITIALIZE_PASS_END(GCNNSAReassignLegacy, DEBUG_TYPE, "GCN NSA Reassign", false,
-                    false)
+INITIALIZE_PASS_END(GCNNSAReassign, DEBUG_TYPE, "GCN NSA Reassign",
+                    false, false)
 
-char GCNNSAReassignLegacy::ID = 0;
 
-char &llvm::GCNNSAReassignID = GCNNSAReassignLegacy::ID;
+char GCNNSAReassign::ID = 0;
 
-bool GCNNSAReassignImpl::tryAssignRegisters(
-    SmallVectorImpl<LiveInterval *> &Intervals, unsigned StartReg) const {
+char &llvm::GCNNSAReassignID = GCNNSAReassign::ID;
+
+bool
+GCNNSAReassign::tryAssignRegisters(SmallVectorImpl<LiveInterval *> &Intervals,
+                                   unsigned StartReg) const {
   unsigned NumRegs = Intervals.size();
 
   for (unsigned N = 0; N < NumRegs; ++N)
@@ -130,7 +124,7 @@ bool GCNNSAReassignImpl::tryAssignRegisters(
   return true;
 }
 
-bool GCNNSAReassignImpl::canAssign(unsigned StartReg, unsigned NumRegs) const {
+bool GCNNSAReassign::canAssign(unsigned StartReg, unsigned NumRegs) const {
   for (unsigned N = 0; N < NumRegs; ++N) {
     unsigned Reg = StartReg + N;
     if (!MRI->isAllocatable(Reg))
@@ -145,8 +139,8 @@ bool GCNNSAReassignImpl::canAssign(unsigned StartReg, unsigned NumRegs) const {
   return true;
 }
 
-bool GCNNSAReassignImpl::scavengeRegs(
-    SmallVectorImpl<LiveInterval *> &Intervals) const {
+bool
+GCNNSAReassign::scavengeRegs(SmallVectorImpl<LiveInterval *> &Intervals) const {
   unsigned NumRegs = Intervals.size();
 
   if (NumRegs > MaxNumVGPRs)
@@ -164,8 +158,8 @@ bool GCNNSAReassignImpl::scavengeRegs(
   return false;
 }
 
-GCNNSAReassignImpl::NSA_Status
-GCNNSAReassignImpl::CheckNSA(const MachineInstr &MI, bool Fast) const {
+GCNNSAReassign::NSA_Status
+GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
   if (!Info)
     return NSA_Status::NOT_NSA;
@@ -241,13 +235,16 @@ GCNNSAReassignImpl::CheckNSA(const MachineInstr &MI, bool Fast) const {
   return NSA ? NSA_Status::NON_CONTIGUOUS : NSA_Status::CONTIGUOUS;
 }
 
-bool GCNNSAReassignImpl::run(MachineFunction &MF) {
+bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   if (!ST->hasNSAEncoding() || !ST->hasNonNSAEncoding())
     return false;
 
   MRI = &MF.getRegInfo();
   TRI = ST->getRegisterInfo();
+  VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
+  LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MaxNumVGPRs = ST->getMaxNumVGPRs(MF);
@@ -369,25 +366,4 @@ bool GCNNSAReassignImpl::run(MachineFunction &MF) {
   }
 
   return Changed;
-}
-
-bool GCNNSAReassignLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *VRM = &getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
-  auto *LRM = &getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
-  auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-
-  GCNNSAReassignImpl Impl(VRM, LRM, LIS);
-  return Impl.run(MF);
-}
-
-PreservedAnalyses
-GCNNSAReassignPass::run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM) {
-  auto &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
-  auto &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);
-  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-
-  GCNNSAReassignImpl Impl(&VRM, &LRM, &LIS);
-  Impl.run(MF);
-  return PreservedAnalyses::all();
 }

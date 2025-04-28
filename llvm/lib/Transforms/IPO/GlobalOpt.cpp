@@ -719,14 +719,10 @@ static bool allUsesOfLoadedValueWillTrapIfNull(const GlobalVariable *GV) {
     const Value *P = Worklist.pop_back_val();
     for (const auto *U : P->users()) {
       if (auto *LI = dyn_cast<LoadInst>(U)) {
-        if (!LI->isSimple())
-          return false;
         SmallPtrSet<const PHINode *, 8> PHIs;
         if (!AllUsesOfValueWillTrapIfNull(LI, PHIs))
           return false;
       } else if (auto *SI = dyn_cast<StoreInst>(U)) {
-        if (!SI->isSimple())
-          return false;
         // Ignore stores to the global.
         if (SI->getPointerOperand() != P)
           return false;
@@ -969,12 +965,11 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
     if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
       // The global is initialized when the store to it occurs. If the stored
       // value is null value, the global bool is set to false, otherwise true.
-      auto *NewSI = new StoreInst(
-          ConstantInt::getBool(GV->getContext(), !isa<ConstantPointerNull>(
-                                                     SI->getValueOperand())),
-          InitBool, false, Align(1), SI->getOrdering(), SI->getSyncScopeID(),
-          SI->getIterator());
-      NewSI->setDebugLoc(SI->getDebugLoc());
+      new StoreInst(ConstantInt::getBool(
+                        GV->getContext(),
+                        !isa<ConstantPointerNull>(SI->getValueOperand())),
+                    InitBool, false, Align(1), SI->getOrdering(),
+                    SI->getSyncScopeID(), SI->getIterator());
       SI->eraseFromParent();
       continue;
     }
@@ -993,11 +988,6 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
                                InitBool->getName() + ".val", false, Align(1),
                                LI->getOrdering(), LI->getSyncScopeID(),
                                LI->getIterator());
-      // FIXME: Should we use the DebugLoc of the load used by the predicate, or
-      // the predicate? The load seems most appropriate, but there's an argument
-      // that the new load does not represent the old load, but is simply a
-      // component of recomputing the predicate.
-      cast<LoadInst>(LV)->setDebugLoc(LI->getDebugLoc());
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -1010,7 +1000,6 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       case ICmpInst::ICMP_ULE:
       case ICmpInst::ICMP_EQ:
         LV = BinaryOperator::CreateNot(LV, "notinit", ICI->getIterator());
-        cast<BinaryOperator>(LV)->setDebugLoc(ICI->getDebugLoc());
         break;
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_UGT:
@@ -1287,7 +1276,6 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
               new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
                            false, Align(1), LI->getOrdering(),
                            LI->getSyncScopeID(), LI->getIterator());
-          cast<LoadInst>(StoreVal)->setDebugLoc(LI->getDebugLoc());
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
                  "This is not a form that we understand!");
@@ -2076,7 +2064,7 @@ static bool destArrayCanBeWidened(CallInst *CI) {
   return true;
 }
 
-static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar,
+static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar, Function *F,
                                            unsigned NumBytesToPad,
                                            unsigned NumBytesToCopy) {
   if (!OldVar->hasInitializer())
@@ -2095,10 +2083,10 @@ static GlobalVariable *widenGlobalVariable(GlobalVariable *OldVar,
     StrData.push_back('\0');
   auto Arr = ArrayRef(StrData.data(), NumBytesToCopy + NumBytesToPad);
   // Create new padded version of global variable.
-  Constant *SourceReplace = ConstantDataArray::get(OldVar->getContext(), Arr);
+  Constant *SourceReplace = ConstantDataArray::get(F->getContext(), Arr);
   GlobalVariable *NewGV = new GlobalVariable(
-      *(OldVar->getParent()), SourceReplace->getType(), true,
-      OldVar->getLinkage(), SourceReplace, SourceReplace->getName());
+      *(F->getParent()), SourceReplace->getType(), true, OldVar->getLinkage(),
+      SourceReplace, SourceReplace->getName());
   // Copy any other attributes from original global variable
   // e.g. unamed_addr
   NewGV->copyAttributesFrom(OldVar);
@@ -2126,13 +2114,13 @@ static void widenDestArray(CallInst *CI, const unsigned NumBytesToPad,
   }
 }
 
-static bool tryWidenGlobalArrayAndDests(GlobalVariable *SourceVar,
+static bool tryWidenGlobalArrayAndDests(Function *F, GlobalVariable *SourceVar,
                                         const unsigned NumBytesToPad,
                                         const unsigned NumBytesToCopy,
                                         ConstantInt *BytesToCopyOp,
                                         ConstantDataArray *SourceDataArray) {
   auto *NewSourceGV =
-      widenGlobalVariable(SourceVar, NumBytesToPad, NumBytesToCopy);
+      widenGlobalVariable(SourceVar, F, NumBytesToPad, NumBytesToCopy);
   if (!NewSourceGV)
     return false;
 
@@ -2170,6 +2158,8 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (!callInstIsMemcpy(CI) || !destArrayCanBeWidened(CI))
       continue;
 
+    Function *F = CI->getCalledFunction();
+
     auto *BytesToCopyOp = dyn_cast<ConstantInt>(CI->getArgOperand(2));
     if (!BytesToCopyOp)
       continue;
@@ -2196,12 +2186,10 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
     if (NumElementsToCopy != DZSize || DZSize != SZSize)
       continue;
 
-    unsigned NumBytesToPad =
-        GetTTI(*CI->getFunction())
-            .getNumBytesToPadGlobalArray(NumBytesToCopy,
-                                         SourceDataArray->getType());
+    unsigned NumBytesToPad = GetTTI(*F).getNumBytesToPadGlobalArray(
+        NumBytesToCopy, SourceDataArray->getType());
     if (NumBytesToPad) {
-      return tryWidenGlobalArrayAndDests(GV, NumBytesToPad, NumBytesToCopy,
+      return tryWidenGlobalArrayAndDests(F, GV, NumBytesToPad, NumBytesToCopy,
                                          BytesToCopyOp, SourceDataArray);
     }
   }
@@ -2331,10 +2319,10 @@ public:
   LLVMUsed(Module &M) {
     SmallVector<GlobalValue *, 4> Vec;
     UsedV = collectUsedGlobalVariables(M, Vec, false);
-    Used = {llvm::from_range, Vec};
+    Used = {Vec.begin(), Vec.end()};
     Vec.clear();
     CompilerUsedV = collectUsedGlobalVariables(M, Vec, true);
-    CompilerUsed = {llvm::from_range, Vec};
+    CompilerUsed = {Vec.begin(), Vec.end()};
   }
 
   using iterator = SmallPtrSet<GlobalValue *, 4>::iterator;

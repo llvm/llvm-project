@@ -219,7 +219,8 @@ Location FusedLoc::get(ArrayRef<Location> locs, Attribute metadata,
       if (fusedLoc.getMetadata() == metadata) {
         // UnknownLoc's have already been removed from FusedLocs so we can
         // simply add all of the internal locations.
-        decomposedLocs.insert_range(fusedLoc.getLocations());
+        decomposedLocs.insert(fusedLoc.getLocations().begin(),
+                              fusedLoc.getLocations().end());
         continue;
       }
     }

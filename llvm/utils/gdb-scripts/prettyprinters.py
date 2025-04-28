@@ -142,6 +142,27 @@ class ExpectedPrinter(Iterator):
         return "llvm::Expected{}".format(" is error" if self.val["HasError"] else "")
 
 
+class OptionalPrinter(Iterator):
+    """Print an llvm::Optional object."""
+
+    def __init__(self, val):
+        self.val = val
+
+    def __next__(self):
+        val = self.val
+        if val is None:
+            raise StopIteration
+        self.val = None
+        if not val["Storage"]["hasVal"]:
+            raise StopIteration
+        return ("value", val["Storage"]["val"])
+
+    def to_string(self):
+        return "llvm::Optional{}".format(
+            "" if self.val["Storage"]["hasVal"] else " is not initialized"
+        )
+
+
 class DenseMapPrinter:
     "Print a DenseMap"
 
@@ -522,6 +543,7 @@ pp.add_printer(
 )
 pp.add_printer("llvm::ArrayRef", "^llvm::(Mutable)?ArrayRef<.*>$", ArrayRefPrinter)
 pp.add_printer("llvm::Expected", "^llvm::Expected<.*>$", ExpectedPrinter)
+pp.add_printer("llvm::Optional", "^llvm::Optional<.*>$", OptionalPrinter)
 pp.add_printer("llvm::DenseMap", "^llvm::DenseMap<.*>$", DenseMapPrinter)
 pp.add_printer("llvm::StringMap", "^llvm::StringMap<.*>$", StringMapPrinter)
 pp.add_printer("llvm::Twine", "^llvm::Twine$", TwinePrinter)

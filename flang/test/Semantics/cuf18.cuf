@@ -1,4 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
+! XFAIL: *
 subroutine sub1()
   real, allocatable, device :: a(:)
   integer :: i

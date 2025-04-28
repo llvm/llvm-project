@@ -29,20 +29,14 @@ class Function;
 ///
 /// This should only be used for debugging, because it plays games with
 /// PassManagers and stuff.
-void lintModule(const Module &M, bool AbortOnError = false);
+void lintModule(const Module &M);
 
 // Lint a function.
-void lintFunction(const Function &F, bool AbortOnError = false);
+void lintFunction(const Function &F);
 
 class LintPass : public PassInfoMixin<LintPass> {
-  const bool AbortOnError;
-
 public:
-  LintPass(bool AbortOnError) : AbortOnError(AbortOnError) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // namespace llvm

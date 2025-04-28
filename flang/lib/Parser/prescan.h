@@ -182,13 +182,10 @@ private:
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
-  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
   bool NextToken(TokenSequence &);
-  bool HandleExponent(TokenSequence &);
-  bool HandleKindSuffix(TokenSequence &);
-  bool HandleExponentAndOrKindSuffix(TokenSequence &);
+  bool ExponentAndKind(TokenSequence &);
   void QuotedCharacterLiteral(TokenSequence &, const char *start);
   void Hollerith(TokenSequence &, int count, const char *start);
   bool PadOutCharacterLiteral(TokenSequence &);

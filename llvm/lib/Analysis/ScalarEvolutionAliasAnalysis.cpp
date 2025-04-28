@@ -166,7 +166,9 @@ FunctionPass *llvm::createSCEVAAWrapperPass() {
   return new SCEVAAWrapperPass();
 }
 
-SCEVAAWrapperPass::SCEVAAWrapperPass() : FunctionPass(ID) {}
+SCEVAAWrapperPass::SCEVAAWrapperPass() : FunctionPass(ID) {
+  initializeSCEVAAWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 bool SCEVAAWrapperPass::runOnFunction(Function &F) {
   Result.reset(

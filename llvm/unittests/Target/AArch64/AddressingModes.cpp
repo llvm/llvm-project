@@ -202,7 +202,7 @@ TEST(AddressingModes, AddressingModes) {
   LLVMInitializeAArch64TargetMC();
 
   std::string Error;
-  Triple TT("aarch64");
+  auto TT = Triple::normalize("aarch64");
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
 
   std::unique_ptr<TargetMachine> TM(

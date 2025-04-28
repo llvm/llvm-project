@@ -12,7 +12,7 @@
 
 namespace llvm::driver {
 
-TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
+TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
                                   driver::VectorLibrary Veclib) {
   TargetLibraryInfoImpl *TLII = new TargetLibraryInfoImpl(TargetTriple);
 

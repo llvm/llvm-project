@@ -46,7 +46,7 @@ void MipsELFStreamer::emitInstruction(const MCInst &Inst,
     if (!Op.isReg())
       continue;
 
-    MCRegister Reg = Op.getReg();
+    unsigned Reg = Op.getReg();
     RegInfoRecord->SetPhysRegUsed(Reg, MCRegInfo);
   }
 

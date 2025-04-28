@@ -84,7 +84,7 @@ RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
 }
 
 bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
-    std::shared_ptr<const UnwindPlan> unwind_plan_sp) {
+    lldb::UnwindPlanSP unwind_plan_sp) {
   if (!unwind_plan_sp)
     return false;
 
@@ -94,9 +94,8 @@ bool RegisterContextUnwind::IsUnwindPlanValidForCurrentPC(
     return true;
   }
 
-  // If don't have an offset or we're at the start of the function, we've got
-  // nothing else to try.
-  if (!m_current_offset || m_current_offset == 0)
+  // if m_current_offset <= 0, we've got nothing else to try
+  if (m_current_offset <= 0)
     return false;
 
   // check pc - 1 to see if it's valid
@@ -141,9 +140,8 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   if (ABISP abi_sp = process->GetABI())
     current_pc = abi_sp->FixCodeAddress(current_pc);
 
-  std::shared_ptr<const UnwindPlan> lang_runtime_plan_sp =
-      LanguageRuntime::GetRuntimeUnwindPlan(m_thread, this,
-                                            m_behaves_like_zeroth_frame);
+  UnwindPlanSP lang_runtime_plan_sp = LanguageRuntime::GetRuntimeUnwindPlan(
+      m_thread, this, m_behaves_like_zeroth_frame);
   if (lang_runtime_plan_sp.get()) {
     UnwindLogMsg("This is an async frame");
   }
@@ -200,8 +198,8 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     m_current_offset_backed_up_one = m_current_offset;
   } else {
     m_start_pc = m_current_pc;
-    m_current_offset = std::nullopt;
-    m_current_offset_backed_up_one = std::nullopt;
+    m_current_offset = -1;
+    m_current_offset_backed_up_one = -1;
   }
 
   // We've set m_frame_type and m_sym_ctx before these calls.
@@ -209,7 +207,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
   m_fast_unwind_plan_sp = GetFastUnwindPlanForFrame();
   m_full_unwind_plan_sp = GetFullUnwindPlanForFrame();
 
-  const UnwindPlan::Row *active_row = nullptr;
+  UnwindPlan::RowSP active_row;
   lldb::RegisterKind row_register_kind = eRegisterKindGeneric;
 
   // If we have LanguageRuntime UnwindPlan for this unwind, use those
@@ -248,7 +246,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     active_row =
         m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
-    if (active_row && log) {
+    if (active_row.get() && log) {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
@@ -256,7 +254,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     }
   }
 
-  if (!active_row) {
+  if (!active_row.get()) {
     UnwindLogMsg("could not find an unwindplan row for this frame's pc");
     m_frame_type = eNotAValidFrame;
     return;
@@ -266,7 +264,7 @@ void RegisterContextUnwind::InitializeZerothFrame() {
     // Try the fall back unwind plan since the
     // full unwind plan failed.
     FuncUnwindersSP func_unwinders_sp;
-    std::shared_ptr<const UnwindPlan> call_site_unwind_plan;
+    UnwindPlanSP call_site_unwind_plan;
     bool cfa_status = false;
 
     if (m_sym_ctx_valid) {
@@ -341,9 +339,8 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
   // A LanguageRuntime may provide an UnwindPlan that is used in this
   // stack trace base on the RegisterContext contents, intsead
   // of the normal UnwindPlans we would use for the return-pc.
-  std::shared_ptr<const UnwindPlan> lang_runtime_plan_sp =
-      LanguageRuntime::GetRuntimeUnwindPlan(m_thread, this,
-                                            m_behaves_like_zeroth_frame);
+  UnwindPlanSP lang_runtime_plan_sp = LanguageRuntime::GetRuntimeUnwindPlan(
+      m_thread, this, m_behaves_like_zeroth_frame);
   if (lang_runtime_plan_sp.get()) {
     UnwindLogMsg("This is an async frame");
   }
@@ -434,17 +431,19 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
 
     if (abi_sp) {
       m_fast_unwind_plan_sp.reset();
-      m_full_unwind_plan_sp = abi_sp->CreateDefaultUnwindPlan();
+      m_full_unwind_plan_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      abi_sp->CreateDefaultUnwindPlan(*m_full_unwind_plan_sp);
       if (m_frame_type != eSkipFrame) // don't override eSkipFrame
       {
         m_frame_type = eNormalFrame;
       }
       m_all_registers_available = false;
-      m_current_offset = std::nullopt;
-      m_current_offset_backed_up_one = std::nullopt;
+      m_current_offset = -1;
+      m_current_offset_backed_up_one = -1;
       RegisterKind row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
-      if (const UnwindPlan::Row *row =
-              m_full_unwind_plan_sp->GetRowForFunctionOffset(0)) {
+      UnwindPlan::RowSP row = m_full_unwind_plan_sp->GetRowForFunctionOffset(0);
+      if (row.get()) {
         if (!ReadFrameAddress(row_register_kind, row->GetCFAValue(), m_cfa)) {
           UnwindLogMsg("failed to get cfa value");
           if (m_frame_type != eSkipFrame) // don't override eSkipFrame
@@ -572,16 +571,16 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     m_current_offset = pc - m_start_pc.GetLoadAddress(&process->GetTarget());
     m_current_offset_backed_up_one = m_current_offset;
     if (decr_pc_and_recompute_addr_range &&
-        m_current_offset_backed_up_one != 0) {
-      --*m_current_offset_backed_up_one;
+        m_current_offset_backed_up_one > 0) {
+      m_current_offset_backed_up_one--;
       if (m_sym_ctx_valid) {
         m_current_pc.SetLoadAddress(pc - 1, &process->GetTarget());
       }
     }
   } else {
     m_start_pc = m_current_pc;
-    m_current_offset = std::nullopt;
-    m_current_offset_backed_up_one = std::nullopt;
+    m_current_offset = -1;
+    m_current_offset_backed_up_one = -1;
   }
 
   if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
@@ -594,7 +593,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     }
   }
 
-  const UnwindPlan::Row *active_row;
+  UnwindPlan::RowSP active_row;
   RegisterKind row_register_kind = eRegisterKindGeneric;
 
   // If we have LanguageRuntime UnwindPlan for this unwind, use those
@@ -641,7 +640,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
         m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     row_register_kind = m_fast_unwind_plan_sp->GetRegisterKind();
     PropagateTrapHandlerFlagFromUnwindPlan(m_fast_unwind_plan_sp);
-    if (active_row && log) {
+    if (active_row.get() && log) {
       StreamString active_row_strm;
       active_row->Dump(active_row_strm, m_fast_unwind_plan_sp.get(), &m_thread,
                        m_start_pc.GetLoadAddress(exe_ctx.GetTargetPtr()));
@@ -656,7 +655,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
           m_current_offset_backed_up_one);
       row_register_kind = m_full_unwind_plan_sp->GetRegisterKind();
       PropagateTrapHandlerFlagFromUnwindPlan(m_full_unwind_plan_sp);
-      if (active_row && log) {
+      if (active_row.get() && log) {
         StreamString active_row_strm;
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
                          &m_thread,
@@ -668,7 +667,7 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     }
   }
 
-  if (!active_row) {
+  if (!active_row.get()) {
     m_frame_type = eNotAValidFrame;
     UnwindLogMsg("could not find unwind row for this pc");
     return;
@@ -749,39 +748,41 @@ bool RegisterContextUnwind::BehavesLikeZerothFrame() const {
 //   2. m_sym_ctx should already be filled in, and
 //   3. m_current_pc should have the current pc value for this frame
 //   4. m_current_offset_backed_up_one should have the current byte offset into
-//   the function, maybe backed up by 1, std::nullopt if unknown
+//   the function, maybe backed up by 1, -1 if unknown
 
-std::shared_ptr<const UnwindPlan>
-RegisterContextUnwind::GetFastUnwindPlanForFrame() {
+UnwindPlanSP RegisterContextUnwind::GetFastUnwindPlanForFrame() {
+  UnwindPlanSP unwind_plan_sp;
   ModuleSP pc_module_sp(m_current_pc.GetModule());
 
   if (!m_current_pc.IsValid() || !pc_module_sp ||
       pc_module_sp->GetObjectFile() == nullptr)
-    return nullptr;
+    return unwind_plan_sp;
 
   if (IsFrameZero())
-    return nullptr;
+    return unwind_plan_sp;
 
   FuncUnwindersSP func_unwinders_sp(
       pc_module_sp->GetUnwindTable().GetFuncUnwindersContainingAddress(
           m_current_pc, m_sym_ctx));
   if (!func_unwinders_sp)
-    return nullptr;
+    return unwind_plan_sp;
 
   // If we're in _sigtramp(), unwinding past this frame requires special
   // knowledge.
   if (m_frame_type == eTrapHandlerFrame || m_frame_type == eDebuggerFrame)
-    return nullptr;
+    return unwind_plan_sp;
 
-  if (std::shared_ptr<const UnwindPlan> unwind_plan_sp =
-          func_unwinders_sp->GetUnwindPlanFastUnwind(
-              *m_thread.CalculateTarget(), m_thread)) {
+  unwind_plan_sp = func_unwinders_sp->GetUnwindPlanFastUnwind(
+      *m_thread.CalculateTarget(), m_thread);
+  if (unwind_plan_sp) {
     if (unwind_plan_sp->PlanValidAtAddress(m_current_pc)) {
       m_frame_type = eNormalFrame;
       return unwind_plan_sp;
+    } else {
+      unwind_plan_sp.reset();
     }
   }
-  return nullptr;
+  return unwind_plan_sp;
 }
 
 // On entry to this method,
@@ -791,16 +792,18 @@ RegisterContextUnwind::GetFastUnwindPlanForFrame() {
 //   2. m_sym_ctx should already be filled in, and
 //   3. m_current_pc should have the current pc value for this frame
 //   4. m_current_offset_backed_up_one should have the current byte offset into
-//   the function, maybe backed up by 1, std::nullopt if unknown
+//   the function, maybe backed up by 1, -1 if unknown
 
-std::shared_ptr<const UnwindPlan>
-RegisterContextUnwind::GetFullUnwindPlanForFrame() {
-  std::shared_ptr<const UnwindPlan> arch_default_unwind_plan_sp;
+UnwindPlanSP RegisterContextUnwind::GetFullUnwindPlanForFrame() {
+  UnwindPlanSP unwind_plan_sp;
+  UnwindPlanSP arch_default_unwind_plan_sp;
   ExecutionContext exe_ctx(m_thread.shared_from_this());
   Process *process = exe_ctx.GetProcessPtr();
   ABI *abi = process ? process->GetABI().get() : nullptr;
   if (abi) {
-    arch_default_unwind_plan_sp = abi->CreateDefaultUnwindPlan();
+    arch_default_unwind_plan_sp =
+        std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+    abi->CreateDefaultUnwindPlan(*arch_default_unwind_plan_sp);
   } else {
     UnwindLogMsg(
         "unable to get architectural default UnwindPlan from ABI plugin");
@@ -833,8 +836,11 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
          process->GetLoadAddressPermissions(current_pc_addr, permissions) &&
          (permissions & ePermissionsExecutable) == 0)) {
       if (abi) {
+        unwind_plan_sp =
+            std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+        abi->CreateFunctionEntryUnwindPlan(*unwind_plan_sp);
         m_frame_type = eNormalFrame;
-        return abi->CreateFunctionEntryUnwindPlan();
+        return unwind_plan_sp;
       }
     }
   }
@@ -871,29 +877,32 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     DWARFCallFrameInfo *eh_frame =
         pc_module_sp->GetUnwindTable().GetEHFrameInfo();
     if (eh_frame) {
-      auto unwind_plan_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (eh_frame->GetUnwindPlan(m_current_pc, *unwind_plan_sp))
         return unwind_plan_sp;
+      else
+        unwind_plan_sp.reset();
     }
 
     ArmUnwindInfo *arm_exidx =
         pc_module_sp->GetUnwindTable().GetArmUnwindInfo();
     if (arm_exidx) {
-      auto unwind_plan_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (arm_exidx->GetUnwindPlan(exe_ctx.GetTargetRef(), m_current_pc,
                                    *unwind_plan_sp))
         return unwind_plan_sp;
+      else
+        unwind_plan_sp.reset();
     }
 
     CallFrameInfo *object_file_unwind =
         pc_module_sp->GetUnwindTable().GetObjectFileUnwindInfo();
     if (object_file_unwind) {
-      auto unwind_plan_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (object_file_unwind->GetUnwindPlan(m_current_pc, *unwind_plan_sp))
         return unwind_plan_sp;
+      else
+        unwind_plan_sp.reset();
     }
 
     return arch_default_unwind_plan_sp;
@@ -907,13 +916,15 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     // substitute plan. Otherwise, use eh_frame.
     if (m_sym_ctx_valid) {
       lldb::PlatformSP platform = process->GetTarget().GetPlatform();
-      if (auto unwind_plan_sp = platform->GetTrapHandlerUnwindPlan(
-              process->GetTarget().GetArchitecture().GetTriple(),
-              GetSymbolOrFunctionName(m_sym_ctx)))
+      unwind_plan_sp = platform->GetTrapHandlerUnwindPlan(
+          process->GetTarget().GetArchitecture().GetTriple(),
+          GetSymbolOrFunctionName(m_sym_ctx));
+
+      if (unwind_plan_sp)
         return unwind_plan_sp;
     }
 
-    auto unwind_plan_sp =
+    unwind_plan_sp =
         func_unwinders_sp->GetEHFrameUnwindPlan(process->GetTarget());
     if (!unwind_plan_sp)
       unwind_plan_sp =
@@ -938,7 +949,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     // normally we would call GetUnwindPlanAtCallSite() -- because CallSite may
     // return an unwind plan sourced from either eh_frame (that's what we
     // intend) or compact unwind (this won't work)
-    auto unwind_plan_sp =
+    unwind_plan_sp =
         func_unwinders_sp->GetEHFrameUnwindPlan(process->GetTarget());
     if (!unwind_plan_sp)
       unwind_plan_sp =
@@ -954,7 +965,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   // Typically the NonCallSite UnwindPlan is the unwind created by inspecting
   // the assembly language instructions
   if (m_behaves_like_zeroth_frame && process) {
-    auto unwind_plan_sp = func_unwinders_sp->GetUnwindPlanAtNonCallSite(
+    unwind_plan_sp = func_unwinders_sp->GetUnwindPlanAtNonCallSite(
         process->GetTarget(), m_thread);
     if (unwind_plan_sp && unwind_plan_sp->PlanValidAtAddress(m_current_pc)) {
       if (unwind_plan_sp->GetSourcedFromCompiler() == eLazyBoolNo) {
@@ -969,7 +980,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
         // assembly code it is often written in a way that it valid at all
         // location what helps in the most common cases when the instruction
         // emulation fails.
-        std::shared_ptr<const UnwindPlan> call_site_unwind_plan =
+        UnwindPlanSP call_site_unwind_plan =
             func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget(),
                                                        m_thread);
         if (call_site_unwind_plan &&
@@ -1004,7 +1015,6 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     }
   }
 
-  std::shared_ptr<const UnwindPlan> unwind_plan_sp;
   // Typically this is unwind info from an eh_frame section intended for
   // exception handling; only valid at call sites
   if (process) {
@@ -1037,7 +1047,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     // sites then the architecture default plan and for hand written assembly
     // code it is often written in a way that it valid at all location what
     // helps in the most common cases when the instruction emulation fails.
-    std::shared_ptr<const UnwindPlan> call_site_unwind_plan =
+    UnwindPlanSP call_site_unwind_plan =
         func_unwinders_sp->GetUnwindPlanAtCallSite(process->GetTarget(),
                                                    m_thread);
     if (call_site_unwind_plan &&
@@ -1275,7 +1285,7 @@ RegisterContextUnwind::SavedLocationForRegister(
   RegisterKind unwindplan_registerkind = kNumRegisterKinds;
 
   if (m_fast_unwind_plan_sp) {
-    const UnwindPlan::Row *active_row =
+    UnwindPlan::RowSP active_row =
         m_fast_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
     unwindplan_registerkind = m_fast_unwind_plan_sp->GetRegisterKind();
     if (regnum.GetAsKind(unwindplan_registerkind) == LLDB_INVALID_REGNUM) {
@@ -1316,12 +1326,12 @@ RegisterContextUnwind::SavedLocationForRegister(
       RegisterNumber pc_regnum(m_thread, eRegisterKindGeneric,
                                LLDB_REGNUM_GENERIC_PC);
 
-      const UnwindPlan::Row *active_row =
+      UnwindPlan::RowSP active_row =
           m_full_unwind_plan_sp->GetRowForFunctionOffset(
               m_current_offset_backed_up_one);
       unwindplan_registerkind = m_full_unwind_plan_sp->GetRegisterKind();
 
-      if (got_new_full_unwindplan && active_row && log) {
+      if (got_new_full_unwindplan && active_row.get() && log) {
         StreamString active_row_strm;
         ExecutionContext exe_ctx(m_thread.shared_from_this());
         active_row->Dump(active_row_strm, m_full_unwind_plan_sp.get(),
@@ -1445,7 +1455,7 @@ RegisterContextUnwind::SavedLocationForRegister(
         if (ForceSwitchToFallbackUnwindPlan()) {
           // Update for the possibly new unwind plan
           unwindplan_registerkind = m_full_unwind_plan_sp->GetRegisterKind();
-          const UnwindPlan::Row *active_row =
+          UnwindPlan::RowSP active_row =
               m_full_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
 
           // Sanity check: Verify that we can fetch a pc value and CFA value
@@ -1781,8 +1791,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
   // Switch the full UnwindPlan to be the fallback UnwindPlan.  If we decide
   // this isn't working, we need to restore. We'll also need to save & restore
   // the value of the m_cfa ivar.  Save is down below a bit in 'old_cfa'.
-  std::shared_ptr<const UnwindPlan> original_full_unwind_plan_sp =
-      m_full_unwind_plan_sp;
+  UnwindPlanSP original_full_unwind_plan_sp = m_full_unwind_plan_sp;
   addr_t old_cfa = m_cfa;
   addr_t old_afa = m_afa;
 
@@ -1790,7 +1799,7 @@ bool RegisterContextUnwind::TryFallbackUnwindPlan() {
 
   m_full_unwind_plan_sp = m_fallback_unwind_plan_sp;
 
-  const UnwindPlan::Row *active_row =
+  UnwindPlan::RowSP active_row =
       m_fallback_unwind_plan_sp->GetRowForFunctionOffset(
           m_current_offset_backed_up_one);
 
@@ -1876,7 +1885,7 @@ bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
     return false;
   }
 
-  const UnwindPlan::Row *active_row =
+  UnwindPlan::RowSP active_row =
       m_fallback_unwind_plan_sp->GetRowForFunctionOffset(m_current_offset);
 
   if (active_row &&
@@ -1911,7 +1920,7 @@ bool RegisterContextUnwind::ForceSwitchToFallbackUnwindPlan() {
 }
 
 void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
-    std::shared_ptr<const UnwindPlan> unwind_plan) {
+    lldb::UnwindPlanSP unwind_plan) {
   if (unwind_plan->GetUnwindPlanForSignalTrap() != eLazyBoolYes) {
     // Unwind plan does not indicate trap handler.  Do nothing.  We may
     // already be flagged as trap handler flag due to the symbol being
@@ -1958,7 +1967,7 @@ void RegisterContextUnwind::PropagateTrapHandlerFlagFromUnwindPlan(
 }
 
 bool RegisterContextUnwind::ReadFrameAddress(
-    lldb::RegisterKind row_register_kind, const UnwindPlan::Row::FAValue &fa,
+    lldb::RegisterKind row_register_kind, UnwindPlan::Row::FAValue &fa,
     addr_t &address) {
   RegisterValue reg_value;
 

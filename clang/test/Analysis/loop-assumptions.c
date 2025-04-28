@@ -1,48 +1,25 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
-// RUN:     -verify=expected,noassumeone,eagerlyassume,combo %s
+// RUN:     -verify=expected,eagerlyassume %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
 // RUN:     -analyzer-config eagerly-assume=false \
-// RUN:     -verify=expected,noassumeone,noeagerlyassume,combo %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
-// RUN:     -analyzer-config assume-at-least-one-iteration=true \
-// RUN:     -verify=expected,eagerlyassume,combo %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection \
-// RUN:     -analyzer-config assume-at-least-one-iteration=true,eagerly-assume=false \
 // RUN:     -verify=expected,noeagerlyassume %s
-
-// The verify tag "combo" is used for one unique warning which is produced in three
-// of the four RUN combinations.
 
 // These tests validate the logic within `ExprEngine::processBranch` which
 // ensures that in loops with opaque conditions we don't assume execution paths
 // if the code does not imply that they are possible.
-// In particular, if two (or more) iterations are already completed in a loop,
-// we don't assume that there can be another iteration. Moreover, if the
-// analyzer option `assume-at-least-one-iteration` is enabled, then we don't
-// assume that a loop can be skipped completely.
 
 void clang_analyzer_numTimesReached(void);
+void clang_analyzer_warnIfReached(void);
 void clang_analyzer_dump(int);
 
-void clearTrueCondition(void) {
-  // If the analyzer can definitely determine that the loop condition is true,
+void clearCondition(void) {
+  // If the analyzer can definitely determine the value of the loop condition,
   // then this corrective logic doesn't activate and the engine executes
   // `-analyzer-max-loop` iterations (by default, 4).
-  int i;
-  for (i = 0; i < 10; i++)
+  for (int i = 0; i < 10; i++)
     clang_analyzer_numTimesReached(); // expected-warning {{4}}
 
-  clang_analyzer_dump(i); // Unreachable, no reports.
-}
-
-void clearFalseCondition(void) {
-  // If the analyzer can definitely determine that the loop condition is false,
-  // then the loop is skipped, even in `assume-at-least-one-iteration` mode.
-  int i;
-  for (i = 0; i > 10; i++)
-    clang_analyzer_numTimesReached(); // Unreachable, no report.
-
-  clang_analyzer_dump(i); // expected-warning {{0}}
+  clang_analyzer_warnIfReached(); // unreachable
 }
 
 void opaqueCondition(int arg) {
@@ -51,13 +28,10 @@ void opaqueCondition(int arg) {
   // that more than two iterations are possible. (It _does_ imply that two
   // iterations may be possible at least in some cases, because otherwise an
   // `if` would've been enough.)
-  // Moreover, if `assume-at-least-one-iteration` is enabled, then assume at
-  // least one iteration.
-  int i;
-  for (i = 0; i < arg; i++)
+  for (int i = 0; i < arg; i++)
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
 
-  clang_analyzer_dump(i); // noassumeone-warning {{0}} expected-warning {{1}} expected-warning {{2}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 int check(void);
@@ -68,26 +42,22 @@ void opaqueConditionCall(int arg) {
   // insert an assertion to guide the analyzer and rule out more than two
   // iterations (so the analyzer needs to proactively avoid those unjustified
   // branches).
-  int i = 0; // Helper to distinguish the the branches after the loop.
-  while (check()) {
+  while (check())
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
-    i++;
-  }
 
-  clang_analyzer_dump(i); // noassumeone-warning {{0}} expected-warning {{1}} expected-warning {{2}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void opaqueConditionDoWhile(int arg) {
   // Same situation as `opaqueCondition()` but with a `do {} while ()` loop.
   // This is tested separately because this loop type is a special case in the
   // iteration count calculation.
-  // Obviously, this loop guarantees that at least one iteration will happen.
   int i = 0;
   do {
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
   } while (i++ < arg);
 
-  clang_analyzer_dump(i); // expected-warning {{1}} expected-warning {{2}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void dontRememberOldBifurcation(int arg) {
@@ -99,7 +69,7 @@ void dontRememberOldBifurcation(int arg) {
   // by default), because the code remembered that there was a bifurcation on
   // the first iteration of the loop and didn't realize that this is obsolete.
 
-  // NOTE: The variable `i` is significant to ensure that the iterations of the
+  // NOTE: The variable `i` is introduced to ensure that the iterations of the
   // loop change the state -- otherwise the analyzer stops iterating because it
   // returns to the same `ExplodedNode`.
   int i = 0;
@@ -108,12 +78,10 @@ void dontRememberOldBifurcation(int arg) {
     i++;
   }
 
-  clang_analyzer_dump(i); // noassumeone-warning {{0}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void dontAssumeFourthIterartion(int arg) {
-  int i;
-
   if (arg == 2)
     return;
 
@@ -121,10 +89,10 @@ void dontAssumeFourthIterartion(int arg) {
   // iterations (because it knows that `arg != 2` at that point), so it
   // performs a third iteration, but it does not assume that a fourth iteration
   // is also possible.
-  for (i = 0; i < arg; i++)
+  for (int i = 0; i < arg; i++)
     clang_analyzer_numTimesReached(); // expected-warning {{3}}
 
-  clang_analyzer_dump(i); // noassumeone-warning {{0}} expected-warning {{1}} expected-warning {{3}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 #define TRUE 1
@@ -140,53 +108,42 @@ void shortCircuitInLoopCondition(int arg) {
   // false positive on the ffmpeg codebase. Eventually we should properly
   // recognize the full syntactical loop condition expression as "the loop
   // condition", but this will be complicated to implement.
-  int i;
-  for (i = 0; i < arg && TRUE; i++) {
+  for (int i = 0; i < arg && TRUE; i++) {
     clang_analyzer_numTimesReached(); // expected-warning {{4}}
   }
-
-  clang_analyzer_dump(i); // expected-warning {{0}} expected-warning {{1}} expected-warning {{2}} expected-warning {{3}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void shortCircuitInLoopConditionRHS(int arg) {
   // Unlike `shortCircuitInLoopCondition()`, this case is handled properly
   // because the analyzer thinks that the right hand side of the `&&` is the
   // loop condition.
-  int i;
-  for (i = 0; TRUE && i < arg; i++) {
+  for (int i = 0; TRUE && i < arg; i++) {
     clang_analyzer_numTimesReached(); // expected-warning {{2}}
   }
-
-  clang_analyzer_dump(i); // noassumeone-warning {{0}} expected-warning {{1}} expected-warning {{2}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void eagerlyAssumeInSubexpression(int arg) {
   // The `EagerlyAssume` logic is another complication that can "split the
   // state" within the loop condition, but before the `processBranch()` call
-  // which would be "naturally" responsible for evaluating the loop condition.
-  // The current implementation tries to handle this by noticing the
+  // which is (in theory) responsible for evaluating the loop condition.
+  // The current implementation partially compensates this by noticing the
   // cases where the loop condition is targeted by `EagerlyAssume`, but does
   // not handle the (fortunately rare) case when `EagerlyAssume` hits a
   // sub-expression of the loop condition (as in this contrived test case).
-  // FIXME: It would be good to eventually eliminate this inconsistency, but
-  // I don't know a realistic example that could appear in real-world code, so
-  // this seems to be a low-priority goal.
-  int i;
-  for (i = 0; (i >= arg) - 1; i++) {
+  // FIXME: I don't know a real-world example for this inconsistency, but it
+  // would be good to eliminate it eventually.
+  for (int i = 0; (i >= arg) - 1; i++) {
     clang_analyzer_numTimesReached(); // eagerlyassume-warning {{4}} noeagerlyassume-warning {{2}}
   }
-
-  // The 'combo' note intentionally appears if `assume-at-least-one-iteration`
-  // is disabled, but also appears as a bug when `eagerly-assume` and
-  // `assume-at-least-one-iteration` are both enabled.
-  clang_analyzer_dump(i); // combo-warning {{0}} expected-warning {{1}} expected-warning {{2}} eagerlyassume-warning {{3}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
 void calledTwice(int arg, int isFirstCall) {
   // This function is called twice (with two different unknown 'arg' values) to
   // check the iteration count handling in this situation.
-  int i;
-  for (i = 0; i < arg; i++) {
+  for (int i = 0; i < arg; i++) {
     if (isFirstCall) {
       clang_analyzer_numTimesReached(); // expected-warning {{2}}
     } else {
@@ -258,5 +215,5 @@ void onlyLoopConditions(int arg) {
       break;
   }
 
-  clang_analyzer_dump(i); // expected-warning {{1}} expected-warning {{2}} expected-warning {{3}} expected-warning {{4}}
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }

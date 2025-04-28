@@ -199,7 +199,7 @@ class Typedef : APIObject { string value; }
 
 class FptrTypedef : APIObject {
   list<Param> params;
-  string return;
+  list<Return> returns;
 }
 
 class Macro : APIObject {

@@ -27,6 +27,7 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
+#include "flang/Lower/DumpEvaluateExpr.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
@@ -46,7 +47,6 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Runtime/support.h"
-#include "flang/Semantics/dump-expr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -3925,7 +3925,7 @@ private:
   /// determine the actual number of iterations when slicing triples are
   /// present. Lower these expressions here.
   bool determineShapeWithSlice(const Fortran::lower::SomeExpr &lhs) {
-    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::Dump(
+    LLVM_DEBUG(Fortran::lower::DumpEvaluateExpr::dump(
         llvm::dbgs() << "determine shape of:\n", lhs));
     // FIXME: We may not want to use ExtractDataRef here since it doesn't deal
     // with substrings, etc.
@@ -5073,7 +5073,7 @@ private:
 
   template <typename A>
   CC genarr(const Fortran::evaluate::Expr<A> &x) {
-    LLVM_DEBUG(Fortran::semantics::DumpEvaluateExpr::Dump(llvm::dbgs(), x));
+    LLVM_DEBUG(Fortran::lower::DumpEvaluateExpr::dump(llvm::dbgs(), x));
     if (isArray(x) || (explicitSpaceIsActive() && isLeftHandSide()) ||
         isElementalProcWithArrayArgs(x))
       return Fortran::common::visit([&](const auto &e) { return genarr(e); },
@@ -6184,16 +6184,17 @@ private:
 
   /// Get the function signature of the LLVM memcpy intrinsic.
   mlir::FunctionType memcpyType() {
-    auto ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
-    llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type()};
-    return mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
+    return fir::factory::getLlvmMemcpy(builder).getFunctionType();
   }
 
   /// Create a call to the LLVM memcpy intrinsic.
-  void createCallMemcpy(llvm::ArrayRef<mlir::Value> args, bool isVolatile) {
+  void createCallMemcpy(llvm::ArrayRef<mlir::Value> args) {
     mlir::Location loc = getLoc();
-    builder.create<mlir::LLVM::MemcpyOp>(loc, args[0], args[1], args[2],
-                                         isVolatile);
+    mlir::func::FuncOp memcpyFunc = fir::factory::getLlvmMemcpy(builder);
+    mlir::SymbolRefAttr funcSymAttr =
+        builder.getSymbolRefAttr(memcpyFunc.getName());
+    mlir::FunctionType funcTy = memcpyFunc.getFunctionType();
+    builder.create<fir::CallOp>(loc, funcSymAttr, funcTy.getResults(), args);
   }
 
   // Construct code to check for a buffer overrun and realloc the buffer when
@@ -6305,8 +6306,9 @@ private:
       auto buff = builder.createConvert(loc, fir::HeapType::get(resTy), mem);
       mlir::Value buffi = computeCoordinate(buff, off);
       llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-          builder, loc, memcpyType(), buffi, v.getAddr(), byteSz);
-      createCallMemcpy(args, /*isVolatile=*/false);
+          builder, loc, memcpyType(), buffi, v.getAddr(), byteSz,
+          /*volatile=*/builder.createBool(loc, false));
+      createCallMemcpy(args);
 
       // Save the incremented buffer position.
       builder.create<fir::StoreOp>(loc, endOff, buffPos);
@@ -6355,8 +6357,9 @@ private:
                 builder.createConvert(loc, fir::HeapType::get(resTy), mem);
             mlir::Value buffi = computeCoordinate(buff, off);
             llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-                builder, loc, memcpyType(), buffi, v.getAddr(), eleSz);
-            createCallMemcpy(args, /*isVolatile=*/false);
+                builder, loc, memcpyType(), buffi, v.getAddr(), eleSz,
+                /*volatile=*/builder.createBool(loc, false));
+            createCallMemcpy(args);
 
             builder.create<fir::StoreOp>(loc, plusOne, buffPos);
           }

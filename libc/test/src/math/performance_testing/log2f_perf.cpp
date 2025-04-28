@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PerfTest.h"
+#include "SingleInputSingleOutputPerf.h"
+
 #include "src/math/log2f.h"
 
 #include <math.h>
 
-int main() {
-  SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::log2f, ::log2f,
-                                  "log2f_perf.log")
-  return 0;
-}
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::log2f, ::log2f,
+                                "log2f_perf.log")

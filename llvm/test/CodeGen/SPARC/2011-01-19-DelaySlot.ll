@@ -60,7 +60,7 @@ entry:
 ;CHECK:      sethi
 ;CHECK:      !NO_APP
 ;CHECK-NEXT: ble
-;CHECK-NEXT: nop
+;CHECK-NEXT: mov
   tail call void asm sideeffect "sethi 0, %g0", ""() nounwind
   %0 = icmp slt i32 %a, 0
   br i1 %0, label %bb, label %bb1

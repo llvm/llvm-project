@@ -38,7 +38,7 @@ class MachineInstrBuilder;
 class MachineRegisterInfo;
 class MachineInstr;
 class MachineOperand;
-class GISelValueTracking;
+class GISelKnownBits;
 class MachineDominatorTree;
 class LegalizerInfo;
 struct LegalityQuery;
@@ -106,7 +106,7 @@ protected:
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   GISelChangeObserver &Observer;
-  GISelValueTracking *VT;
+  GISelKnownBits *KB;
   MachineDominatorTree *MDT;
   bool IsPreLegalize;
   const LegalizerInfo *LI;
@@ -115,11 +115,14 @@ protected:
 
 public:
   CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B,
-                 bool IsPreLegalize, GISelValueTracking *VT = nullptr,
+                 bool IsPreLegalize,
+                 GISelKnownBits *KB = nullptr,
                  MachineDominatorTree *MDT = nullptr,
                  const LegalizerInfo *LI = nullptr);
 
-  GISelValueTracking *getValueTracking() const { return VT; }
+  GISelKnownBits *getKnownBits() const {
+    return KB;
+  }
 
   MachineIRBuilder &getBuilder() const {
     return Builder;
@@ -260,10 +263,6 @@ public:
   /// or an implicit_def if \p Ops is empty.
   void applyCombineShuffleConcat(MachineInstr &MI,
                                  SmallVector<Register> &Ops) const;
-
-  /// Replace \p MI with a build_vector.
-  bool matchCombineShuffleToBuildVector(MachineInstr &MI) const;
-  void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
 
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
@@ -994,10 +993,6 @@ public:
 
   // overflow sub
   bool matchSuboCarryOut(const MachineInstr &MI, BuildFnTy &MatchInfo) const;
-
-  // (sext_inreg (sext_inreg x, K0), K1)
-  bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
-                               BuildFnTy &MatchInfo) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

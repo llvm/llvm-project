@@ -110,10 +110,13 @@ static void removeDefsFromFunction(Oracle &O, MachineFunction &MF) {
   }
 }
 
-void llvm::reduceRegisterDefsMIRDeltaPass(Oracle &O,
-                                          ReducerWorkItem &WorkItem) {
+static void removeDefsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F))
       removeDefsFromFunction(O, *MF);
   }
+}
+
+void llvm::reduceRegisterDefsMIRDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, removeDefsFromModule, "Reducing register defs");
 }

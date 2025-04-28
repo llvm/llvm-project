@@ -81,14 +81,9 @@ public:
   enum BinaryType {
     eBinaryTypeInvalid = 0,
     eBinaryTypeUnknown,
-    /// kernel binary
-    eBinaryTypeKernel,
-    /// user process binary, dyld addr
-    eBinaryTypeUser,
-    /// user process binary, dyld_all_image_infos addr
-    eBinaryTypeUserAllImageInfos,
-    /// standalone binary / firmware
-    eBinaryTypeStandalone
+    eBinaryTypeKernel,    /// kernel binary
+    eBinaryTypeUser,      /// user process binary
+    eBinaryTypeStandalone /// standalone binary / firmware
   };
 
   struct LoadableData {
@@ -319,7 +314,7 @@ public:
   ///
   /// \return
   ///     The symbol table for this object file.
-  Symtab *GetSymtab(bool can_create = true);
+  Symtab *GetSymtab();
 
   /// Parse the symbol table into the provides symbol table object.
   ///
@@ -748,7 +743,6 @@ public:
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
-  std::string GetObjectName() const;
 
 protected:
   // Member variables.

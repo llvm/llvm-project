@@ -104,7 +104,6 @@ static void addIncomingValuesToPHIs(MachineBasicBlock *Successor,
   }
 }
 
-namespace {
 struct BlockSplitInfo {
   MachineInstr *OrigBranch;
   MachineInstr *SplitBefore;
@@ -128,7 +127,6 @@ struct BlockSplitInfo {
     return true;
   }
 };
-} // end anonymous namespace
 
 /// Splits a MachineBasicBlock to branch before \p SplitBefore. The original
 /// branch is \p OrigBranch. The target of the new branch can either be the same
@@ -352,6 +350,7 @@ computeBranchTargetAndInversion(unsigned CROp, unsigned BROp, bool UsingDef1,
 namespace {
 
 class PPCReduceCRLogicals : public MachineFunctionPass {
+
 public:
   static char ID;
   struct CRLogicalOpInfo {
@@ -406,7 +405,9 @@ private:
   }
 
 public:
-  PPCReduceCRLogicals() : MachineFunctionPass(ID) {}
+  PPCReduceCRLogicals() : MachineFunctionPass(ID) {
+    initializePPCReduceCRLogicalsPass(*PassRegistry::getPassRegistry());
+  }
 
   MachineInstr *lookThroughCRCopy(unsigned Reg, unsigned &Subreg,
                                   MachineInstr *&CpDef);
@@ -430,7 +431,6 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-} // end anonymous namespace
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void PPCReduceCRLogicals::CRLogicalOpInfo::dump() {
@@ -725,6 +725,8 @@ void PPCReduceCRLogicals::collectCRLogicals() {
     }
   }
 }
+
+} // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(PPCReduceCRLogicals, DEBUG_TYPE,
                       "PowerPC Reduce CR logical Operation", false, false)

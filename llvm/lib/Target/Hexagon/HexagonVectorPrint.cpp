@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/StringRef.h"
@@ -41,6 +40,13 @@ static cl::opt<bool>
     TraceHexVectorStoresOnly("trace-hex-vector-stores-only", cl::Hidden,
                              cl::desc("Enables tracing of vector stores"));
 
+namespace llvm {
+
+FunctionPass *createHexagonVectorPrint();
+void initializeHexagonVectorPrintPass(PassRegistry&);
+
+} // end namespace llvm
+
 namespace {
 
 class HexagonVectorPrint : public MachineFunctionPass {
@@ -51,7 +57,9 @@ class HexagonVectorPrint : public MachineFunctionPass {
 public:
   static char ID;
 
-  HexagonVectorPrint() : MachineFunctionPass(ID) {}
+  HexagonVectorPrint() : MachineFunctionPass(ID) {
+    initializeHexagonVectorPrintPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "Hexagon VectorPrint pass"; }
 

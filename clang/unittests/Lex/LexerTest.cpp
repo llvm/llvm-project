@@ -57,11 +57,11 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(Source);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-    HeaderSearchOptions HSOpts;
-    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
-    PreprocessorOptions PPOpts;
+    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                            Diags, LangOpts, Target.get());
     std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
-        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
+        HeaderInfo, ModLoader,
         /*IILookup =*/nullptr,
         /*OwnsHeaderSearch =*/false);
     PP->Initialize(*Target);

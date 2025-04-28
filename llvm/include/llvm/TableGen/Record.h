@@ -316,7 +316,6 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
-    IK_InstancesOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -911,7 +910,6 @@ public:
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
-    MATCH,
     EQ,
     NE,
     LE,
@@ -1182,41 +1180,6 @@ public:
 
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
-  const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
-
-  bool isComplete() const override { return false; }
-
-  const Init *resolveReferences(Resolver &R) const override;
-
-  const Init *getBit(unsigned Bit) const override;
-
-  std::string getAsString() const override;
-};
-
-/// !instances<type>([regex]) - Produces a list of records whose type is `type`.
-/// If `regex` is provided, only records whose name matches the regular
-/// expression `regex` will be included.
-class InstancesOpInit final : public TypedInit, public FoldingSetNode {
-private:
-  const RecTy *Type;
-  const Init *Regex;
-
-  InstancesOpInit(const RecTy *Type, const Init *Regex)
-      : TypedInit(IK_InstancesOpInit, ListRecTy::get(Type)), Type(Type),
-        Regex(Regex) {}
-
-public:
-  InstancesOpInit(const InstancesOpInit &) = delete;
-  InstancesOpInit &operator=(const InstancesOpInit &) = delete;
-
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_InstancesOpInit;
-  }
-
-  static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
-
-  void Profile(FoldingSetNodeID &ID) const;
-
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
   bool isComplete() const override { return false; }
@@ -1667,9 +1630,9 @@ private:
   SmallVector<AssertionInfo, 0> Assertions;
   SmallVector<DumpInfo, 0> Dumps;
 
-  // Direct superclasses, which are roots of the inheritance forest (yes, it
+  // All superclasses in the inheritance forest in post-order (yes, it
   // must be a forest; diamond-shaped inheritance is not allowed).
-  SmallVector<std::pair<const Record *, SMRange>, 0> DirectSuperClasses;
+  SmallVector<std::pair<const Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;
@@ -1703,9 +1666,8 @@ public:
   Record(const Record &O)
       : Name(O.Name), Locs(O.Locs), TemplateArgs(O.TemplateArgs),
         Values(O.Values), Assertions(O.Assertions),
-        DirectSuperClasses(O.DirectSuperClasses),
-        TrackedRecords(O.TrackedRecords), ID(getNewUID(O.getRecords())),
-        Kind(O.Kind) {}
+        SuperClasses(O.SuperClasses), TrackedRecords(O.TrackedRecords),
+        ID(getNewUID(O.getRecords())), Kind(O.Kind) {}
 
   static unsigned getNewUID(RecordKeeper &RK);
 
@@ -1756,30 +1718,15 @@ public:
   ArrayRef<AssertionInfo> getAssertions() const { return Assertions; }
   ArrayRef<DumpInfo> getDumps() const { return Dumps; }
 
-  /// Append all superclasses in post-order to \p Classes.
-  void getSuperClasses(std::vector<const Record *> &Classes) const {
-    for (const Record *SC : make_first_range(DirectSuperClasses)) {
-      SC->getSuperClasses(Classes);
-      Classes.push_back(SC);
-    }
-  }
-
-  /// Return all superclasses in post-order.
-  std::vector<const Record *> getSuperClasses() const {
-    std::vector<const Record *> Classes;
-    getSuperClasses(Classes);
-    return Classes;
+  ArrayRef<std::pair<const Record *, SMRange>> getSuperClasses() const {
+    return SuperClasses;
   }
 
   /// Determine whether this record has the specified direct superclass.
-  bool hasDirectSuperClass(const Record *SuperClass) const {
-    return is_contained(make_first_range(DirectSuperClasses), SuperClass);
-  }
+  bool hasDirectSuperClass(const Record *SuperClass) const;
 
-  /// Return the direct superclasses of this record.
-  ArrayRef<std::pair<const Record *, SMRange>> getDirectSuperClasses() const {
-    return DirectSuperClasses;
-  }
+  /// Append the direct superclasses of this record to Classes.
+  void getDirectSuperClasses(SmallVectorImpl<const Record *> &Classes) const;
 
   bool isTemplateArg(const Init *Name) const {
     return llvm::is_contained(TemplateArgs, Name);
@@ -1847,32 +1794,29 @@ public:
   void checkUnusedTemplateArgs();
 
   bool isSubClassOf(const Record *R) const {
-    for (const Record *SC : make_first_range(DirectSuperClasses)) {
-      if (SC == R || SC->isSubClassOf(R))
+    for (const auto &[SC, _] : SuperClasses)
+      if (SC == R)
         return true;
-    }
     return false;
   }
 
   bool isSubClassOf(StringRef Name) const {
-    for (const Record *SC : make_first_range(DirectSuperClasses)) {
+    for (const auto &[SC, _] : SuperClasses) {
       if (const auto *SI = dyn_cast<StringInit>(SC->getNameInit())) {
         if (SI->getValue() == Name)
           return true;
       } else if (SC->getNameInitAsString() == Name) {
         return true;
       }
-      if (SC->isSubClassOf(Name))
-        return true;
     }
     return false;
   }
 
-  void addDirectSuperClass(const Record *R, SMRange Range) {
+  void addSuperClass(const Record *R, SMRange Range) {
     assert(!CorrespondingDefInit &&
            "changing type of record after it has been referenced");
     assert(!isSubClassOf(R) && "Already subclassing record!");
-    DirectSuperClasses.emplace_back(R, Range);
+    SuperClasses.emplace_back(R, Range);
   }
 
   /// If there are any field references that refer to fields that have been
@@ -2023,7 +1967,7 @@ public:
   }
 
   void saveInputFilename(std::string Filename) {
-    InputFilename = std::move(Filename);
+    InputFilename = Filename;
   }
 
   void addClass(std::unique_ptr<Record> R) {
@@ -2037,9 +1981,6 @@ public:
     bool Ins = Defs.try_emplace(std::string(R->getName()), std::move(R)).second;
     (void)Ins;
     assert(Ins && "Record already exists");
-    // Clear cache
-    if (!Cache.empty())
-      Cache.clear();
   }
 
   void addExtraGlobal(StringRef Name, const Init *I) {

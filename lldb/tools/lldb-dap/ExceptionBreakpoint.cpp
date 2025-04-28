@@ -9,30 +9,27 @@
 #include "ExceptionBreakpoint.h"
 #include "BreakpointBase.h"
 #include "DAP.h"
-#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
-#include <mutex>
 
 namespace lldb_dap {
 
 void ExceptionBreakpoint::SetBreakpoint() {
-  lldb::SBMutex lock = m_dap.GetAPIMutex();
-  std::lock_guard<lldb::SBMutex> guard(lock);
-
-  if (m_bp.IsValid())
+  if (bp.IsValid())
     return;
-  bool catch_value = m_filter.find("_catch") != std::string::npos;
-  bool throw_value = m_filter.find("_throw") != std::string::npos;
-  m_bp = m_dap.target.BreakpointCreateForException(m_language, catch_value,
-                                                   throw_value);
-  m_bp.AddName(BreakpointBase::kDAPBreakpointLabel);
+  bool catch_value = filter.find("_catch") != std::string::npos;
+  bool throw_value = filter.find("_throw") != std::string::npos;
+  bp = dap.target.BreakpointCreateForException(language, catch_value,
+                                               throw_value);
+  // See comments in BreakpointBase::GetBreakpointLabel() for details of why
+  // we add a label to our breakpoints.
+  bp.AddName(BreakpointBase::GetBreakpointLabel());
 }
 
 void ExceptionBreakpoint::ClearBreakpoint() {
-  if (!m_bp.IsValid())
+  if (!bp.IsValid())
     return;
-  m_dap.target.BreakpointDelete(m_bp.GetID());
-  m_bp = lldb::SBBreakpoint();
+  dap.target.BreakpointDelete(bp.GetID());
+  bp = lldb::SBBreakpoint();
 }
 
 } // namespace lldb_dap

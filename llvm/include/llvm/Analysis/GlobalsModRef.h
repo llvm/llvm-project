@@ -118,8 +118,7 @@ private:
   bool AnalyzeIndirectGlobalMemory(GlobalVariable *GV);
   void CollectSCCMembership(CallGraph &CG);
 
-  bool isNonEscapingGlobalNoAlias(const GlobalValue *GV, const Value *V,
-                                  const Instruction *CtxI);
+  bool isNonEscapingGlobalNoAlias(const GlobalValue *GV, const Value *V);
   ModRefInfo getModRefInfoForArgument(const CallBase *Call,
                                       const GlobalValue *GV, AAQueryInfo &AAQI);
 };

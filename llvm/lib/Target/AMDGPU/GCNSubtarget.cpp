@@ -142,7 +142,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   if (LDSBankCount == 0)
     LDSBankCount = 32;
 
-  if (TT.isAMDGCN() && AddressableLocalMemorySize == 0)
+  if (TT.getArch() == Triple::amdgcn && AddressableLocalMemorySize == 0)
     AddressableLocalMemorySize = 32768;
 
   LocalMemorySize = AddressableLocalMemorySize;
@@ -429,10 +429,10 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
+  if (F.hasFnAttribute("amdgpu-num-sgpr")) {
+    unsigned Requested =
+        F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
 
-  if (Requested != MaxNumSGPRs) {
     // Make sure requested value does not violate subtarget's specifications.
     if (Requested && (Requested <= ReservedNumSGPRs))
       Requested = 0;
@@ -511,9 +511,10 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  unsigned Requested =
-      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
-  if (Requested != MaxNumVGPRs) {
+  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
+    unsigned Requested =
+        F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
+
     if (hasGFX90AInsts())
       Requested *= 2;
 
@@ -608,6 +609,12 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   const CallingConv::ID CC = F.getCallingConv();
   const bool IsKernel =
       CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL;
+  // FIXME: Should have analysis or something rather than attribute to detect
+  // calls.
+  const bool HasCalls = F.hasFnAttribute("amdgpu-calls");
+  // FIXME: This attribute is a hack, we just need an analysis on the function
+  // to look for allocas.
+  const bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
 
   if (IsKernel && (!F.arg_empty() || ST.getImplicitArgNumBytes(F) != 0))
     KernargSegmentPtr = true;
@@ -630,13 +637,12 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
       DispatchID = true;
   }
 
+  // TODO: This could be refined a lot. The attribute is a poor way of
+  // detecting calls or stack objects that may require it before argument
+  // lowering.
   if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
       (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      // FlatScratchInit cannot be true for graphics CC if enableFlatScratch()
-      // is false.
-      (ST.enableFlatScratch() ||
-       (!AMDGPU::isGraphics(CC) &&
-        !F.hasFnAttribute("amdgpu-no-flat-scratch-init"))) &&
+      (HasCalls || HasStackObjects || ST.enableFlatScratch()) &&
       !ST.flatScratchIsArchitected()) {
     FlatScratchInit = true;
   }

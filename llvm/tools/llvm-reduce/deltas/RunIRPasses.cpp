@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RunIRPasses.h"
+#include "Delta.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -23,7 +24,7 @@ static cl::opt<std::string>
                           "simplifycfg,infer-address-spaces)"),
                  cl::cat(LLVMReduceOptions));
 
-void llvm::runIRPassesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+static void runPasses(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -42,7 +43,13 @@ void llvm::runIRPassesDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
   ModulePassManager MPM;
-  if (auto Err = PB.parsePassPipeline(MPM, PassPipeline))
-    report_fatal_error(std::move(Err), false);
+  if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
+    errs() << toString(std::move(Err)) << "\n";
+    report_fatal_error("Error constructing pass pipeline");
+  }
   MPM.run(Program, MAM);
+}
+
+void llvm::runIRPassesDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, runPasses, "Running passes");
 }

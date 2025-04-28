@@ -124,15 +124,14 @@ private:
 
   /// Translates the given fixed-vector type.
   Type translate(llvm::FixedVectorType *type) {
-    return VectorType::get(type->getNumElements(),
-                           translateType(type->getElementType()));
+    return LLVM::getFixedVectorType(translateType(type->getElementType()),
+                                    type->getNumElements());
   }
 
   /// Translates the given scalable-vector type.
   Type translate(llvm::ScalableVectorType *type) {
-    return VectorType::get(type->getMinNumElements(),
-                           translateType(type->getElementType()),
-                           /*scalable=*/true);
+    return LLVM::LLVMScalableVectorType::get(
+        translateType(type->getElementType()), type->getMinNumElements());
   }
 
   /// Translates the given target extension type.

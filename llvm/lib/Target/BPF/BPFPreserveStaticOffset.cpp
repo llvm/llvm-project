@@ -345,7 +345,8 @@ static bool foldGEPChainAsStructAccess(SmallVector<GetElementPtrInst *> &GEPs,
   Info.Indices.append(First->idx_begin(), First->idx_end());
   Info.Members.push_back(First);
 
-  for (GetElementPtrInst *GEP : drop_begin(GEPs)) {
+  for (auto *Iter = GEPs.begin() + 1; Iter != GEPs.end(); ++Iter) {
+    GetElementPtrInst *GEP = *Iter;
     if (!isZero(*GEP->idx_begin())) {
       Info.reset();
       return false;

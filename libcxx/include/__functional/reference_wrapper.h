@@ -15,7 +15,6 @@
 #include <__config>
 #include <__functional/weak_result_type.h>
 #include <__memory/addressof.h>
-#include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
@@ -31,7 +30,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-class reference_wrapper : public __weak_result_type<_Tp> {
+class _LIBCPP_TEMPLATE_VIS reference_wrapper : public __weak_result_type<_Tp> {
 public:
   // types
   typedef _Tp type;
@@ -149,11 +148,6 @@ template <class _Tp>
 void ref(const _Tp&&) = delete;
 template <class _Tp>
 void cref(const _Tp&&) = delete;
-
-// Let desugars-to pass through std::reference_wrapper
-template <class _CanonicalTag, class _Operation, class... _Args>
-inline const bool __desugars_to_v<_CanonicalTag, reference_wrapper<_Operation>, _Args...> =
-    __desugars_to_v<_CanonicalTag, _Operation, _Args...>;
 
 _LIBCPP_END_NAMESPACE_STD
 

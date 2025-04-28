@@ -44,11 +44,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-peephole"
 
+namespace llvm {
+void initializeNVPTXPeepholePass(PassRegistry &);
+}
+
 namespace {
 struct NVPTXPeephole : public MachineFunctionPass {
  public:
   static char ID;
-  NVPTXPeephole() : MachineFunctionPass(ID) {}
+  NVPTXPeephole() : MachineFunctionPass(ID) {
+    initializeNVPTXPeepholePass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

@@ -1149,13 +1149,19 @@ bool DynamicLoaderMacOSXDYLD::IsFullyInitialized() {
 
 void DynamicLoaderMacOSXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                GetPluginDescriptionStatic(), CreateInstance);
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
   DynamicLoaderMacOS::Initialize();
 }
 
 void DynamicLoaderMacOSXDYLD::Terminate() {
   DynamicLoaderMacOS::Terminate();
   PluginManager::UnregisterPlugin(CreateInstance);
+}
+
+void DynamicLoaderMacOSXDYLD::DebuggerInitialize(
+    lldb_private::Debugger &debugger) {
+  CreateSettings(debugger);
 }
 
 llvm::StringRef DynamicLoaderMacOSXDYLD::GetPluginDescriptionStatic() {

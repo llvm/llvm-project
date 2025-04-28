@@ -64,7 +64,9 @@ namespace {
 class SystemZTDCPass : public FunctionPass {
 public:
   static char ID;
-  SystemZTDCPass() : FunctionPass(ID) {}
+  SystemZTDCPass() : FunctionPass(ID) {
+    initializeSystemZTDCPassPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnFunction(Function &F) override;
 

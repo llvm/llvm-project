@@ -1239,12 +1239,11 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     }
     // Check the return type, e.g.
     //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
-    //   GSLOwner* func(cosnt Foo& foo [[clang::lifetimebound]])
     //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
     if (FD &&
-        ((FD->getReturnType()->isPointerOrReferenceType() &&
+        ((FD->getReturnType()->isReferenceType() &&
           isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
-         isGLSPointerType(FD->getReturnType())))
+         isPointerLikeType(FD->getReturnType())))
       return Report;
 
     return Abandon;

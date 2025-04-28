@@ -42,10 +42,10 @@ namespace pdb {
 
     void dump(raw_ostream &OS, DIDumpOptions DIDumpOpts) override;
 
-    std::optional<DILineInfo> getLineInfoForAddress(
+    DILineInfo getLineInfoForAddress(
         object::SectionedAddress Address,
         DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-    std::optional<DILineInfo>
+    DILineInfo
     getLineInfoForDataAddress(object::SectionedAddress Address) override;
     DILineInfoTable getLineInfoForAddressRange(
         object::SectionedAddress Address, uint64_t Size,

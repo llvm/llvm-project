@@ -157,11 +157,8 @@ void ContainerModeling::checkPostCall(const CallEvent &Call,
   if (Func->isOverloadedOperator()) {
     const auto Op = Func->getOverloadedOperator();
     if (Op == OO_Equal) {
-      // Only handle the assignment operator with implicit this
-      const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call);
-      if (!InstCall)
-        return;
-
+      // Overloaded 'operator=' must be a non-static member function.
+      const auto *InstCall = cast<CXXInstanceCall>(&Call);
       if (cast<CXXMethodDecl>(Func)->isMoveAssignmentOperator()) {
         handleAssignment(C, InstCall->getCXXThisVal(), Call.getOriginExpr(),
                      Call.getArgSVal(0));

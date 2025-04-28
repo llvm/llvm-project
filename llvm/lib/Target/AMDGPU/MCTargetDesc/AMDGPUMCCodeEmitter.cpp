@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
-#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -341,13 +340,14 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
 uint64_t AMDGPUMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
   using namespace AMDGPU::VOP3PEncoding;
+  using namespace AMDGPU::OpName;
 
-  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel_hi)) {
-    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2))
+  if (AMDGPU::hasNamedOperand(Opcode, op_sel_hi)) {
+    if (AMDGPU::hasNamedOperand(Opcode, src2))
       return 0;
-    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1))
+    if (AMDGPU::hasNamedOperand(Opcode, src1))
       return OP_SEL_HI_2;
-    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0))
+    if (AMDGPU::hasNamedOperand(Opcode, src0))
       return OP_SEL_HI_1 | OP_SEL_HI_2;
   }
   return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;
@@ -547,8 +547,9 @@ static bool needsPCRel(const MCExpr *Expr) {
   switch (Expr->getKind()) {
   case MCExpr::SymbolRef: {
     auto *SE = cast<MCSymbolRefExpr>(Expr);
-    auto Spec = AMDGPU::getSpecifier(SE);
-    return Spec != AMDGPUMCExpr::S_ABS32_LO && Spec != AMDGPUMCExpr::S_ABS32_HI;
+    MCSymbolRefExpr::VariantKind Kind = SE->getKind();
+    return Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_LO &&
+           Kind != MCSymbolRefExpr::VK_AMDGPU_ABS32_HI;
   }
   case MCExpr::Binary: {
     auto *BE = cast<MCBinaryExpr>(Expr);
@@ -647,15 +648,13 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInst &MI, const MCOperand &MO, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
-  bool isLikeImm = false;
   int64_t Val;
+  if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
+    Op = Val;
+    return;
+  }
 
-  if (MO.isImm()) {
-    Val = MO.getImm();
-    isLikeImm = true;
-  } else if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
-    isLikeImm = true;
-  } else if (MO.isExpr()) {
+  if (MO.isExpr() && MO.getExpr()->getKind() != MCExpr::Constant) {
     // FIXME: If this is expression is PCRel or not should not depend on what
     // the expression looks like. Given that this is just a general expression,
     // it should probably be FK_Data_4 and whatever is producing
@@ -685,12 +684,8 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
       Op = *Enc;
       return;
     }
-
-    llvm_unreachable("Operand not supported for SISrc");
-  }
-
-  if (isLikeImm) {
-    Op = Val;
+  } else if (MO.isImm()) {
+    Op = MO.getImm();
     return;
   }
 

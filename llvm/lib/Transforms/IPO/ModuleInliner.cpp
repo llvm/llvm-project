@@ -49,7 +49,7 @@ using namespace llvm;
 STATISTIC(NumInlined, "Number of functions inlined");
 STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
 
-static cl::opt<bool> CtxProfPromoteAlwaysInline(
+cl::opt<bool> CtxProfPromoteAlwaysInline(
     "ctx-prof-promote-alwaysinline", cl::init(false), cl::Hidden,
     cl::desc("If using a contextual profile in this module, and an indirect "
              "call target is marked as alwaysinline, perform indirect call "
@@ -171,8 +171,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
                      << setIsVerbose();
             });
           }
-        } else if (CtxProfPromoteAlwaysInline &&
-                   CtxProf.isInSpecializedModule() && CB->isIndirectCall()) {
+        } else if (CtxProfPromoteAlwaysInline && CtxProf &&
+                   CB->isIndirectCall()) {
           CtxProfAnalysis::collectIndirectCallPromotionList(*CB, CtxProf,
                                                             ICPCandidates);
         }
@@ -260,7 +260,7 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
           // iteration because the next iteration may not happen and we may
           // miss inlining it.
           // FIXME: enable for ctxprof.
-          if (CtxProf.isInSpecializedModule())
+          if (!CtxProf)
             if (tryPromoteCall(*ICB))
               NewCallee = ICB->getCalledFunction();
         }

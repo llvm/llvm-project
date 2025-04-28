@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
@@ -109,8 +110,12 @@ add_or_sub(InType x, InType y) {
       return cast<OutType>(tmp);
     }
 
-    if (y_bits.is_zero())
-      return cast<OutType>(x);
+    if (y_bits.is_zero()) {
+      volatile InType tmp = y;
+      if constexpr (IsSub)
+        tmp = -tmp;
+      return cast<OutType>(tmp);
+    }
   }
 
   InType x_abs = x_bits.abs().get_val();
@@ -155,22 +160,20 @@ add_or_sub(InType x, InType y) {
   } else {
     InStorageType max_mant = max_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
     InStorageType min_mant = min_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
-
-    int alignment = (max_bits.get_biased_exponent() - max_bits.is_normal()) -
-                    (min_bits.get_biased_exponent() - min_bits.is_normal());
+    int alignment =
+        max_bits.get_biased_exponent() - min_bits.get_biased_exponent();
 
     InStorageType aligned_min_mant =
         min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN);
     bool aligned_min_mant_sticky;
 
-    if (alignment <= GUARD_BITS_LEN)
+    if (alignment <= 3)
       aligned_min_mant_sticky = false;
-    else if (alignment > InFPBits::FRACTION_LEN + GUARD_BITS_LEN)
-      aligned_min_mant_sticky = true;
-    else
+    else if (alignment <= InFPBits::FRACTION_LEN + 3)
       aligned_min_mant_sticky =
-          (static_cast<InStorageType>(
-              min_mant << (InFPBits::STORAGE_LEN - alignment))) != 0;
+          (min_mant << (InFPBits::STORAGE_LEN - alignment)) != 0;
+    else
+      aligned_min_mant_sticky = true;
 
     InStorageType min_mant_sticky(static_cast<int>(aligned_min_mant_sticky));
 
@@ -180,7 +183,7 @@ add_or_sub(InType x, InType y) {
       result_mant = max_mant - (aligned_min_mant | min_mant_sticky);
   }
 
-  int result_exp = max_bits.get_explicit_exponent() - RESULT_FRACTION_LEN;
+  int result_exp = max_bits.get_exponent() - RESULT_FRACTION_LEN;
   DyadicFloat result(result_sign, result_exp, result_mant);
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }

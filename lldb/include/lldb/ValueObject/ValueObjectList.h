@@ -22,6 +22,8 @@ class ValueObject;
 /// A collection of ValueObject values that.
 class ValueObjectList {
 public:
+  const ValueObjectList &operator=(const ValueObjectList &rhs);
+
   void Append(const lldb::ValueObjectSP &val_obj_sp);
 
   void Append(const ValueObjectList &valobj_list);

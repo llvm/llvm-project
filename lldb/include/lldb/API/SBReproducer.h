@@ -11,6 +11,12 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+namespace repro {
+struct ReplayOptions;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 #ifndef SWIG

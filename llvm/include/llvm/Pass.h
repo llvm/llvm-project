@@ -83,9 +83,7 @@ enum class ThinOrFullLTOPhase {
   /// Full LTO prelink phase.
   FullLTOPreLink,
   /// Full LTO postlink (backend compile) phase.
-  FullLTOPostLink,
-  /// Custom LTO postlink (e.g. --lto-newpm-passes=...)
-  CustomLTOPostLink
+  FullLTOPostLink
 };
 
 //===----------------------------------------------------------------------===//

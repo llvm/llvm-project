@@ -10,7 +10,6 @@ unittest("FrontendTests") {
     "//clang/lib/FrontendTool",
     "//clang/lib/Lex",
     "//clang/lib/Sema",
-    "//clang/lib/Tooling",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
@@ -21,7 +20,6 @@ unittest("FrontendTests") {
     "CompilerInvocationTest.cpp",
     "FixedPointString.cpp",
     "FrontendActionTest.cpp",
-    "NoAlterCodeGenActionTest.cpp",
     "OutputStreamTest.cpp",
     "PCHPreambleTest.cpp",
     "ParsedSourceLocationTest.cpp",

@@ -26,7 +26,7 @@ namespace opts {
 extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> NoThreads;
 
-static cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
+cl::opt<bolt::TailDuplication::DuplicationMode> TailDuplicationMode(
     "tail-duplication",
     cl::desc("duplicate unconditional branches that cross a cache line"),
     cl::init(bolt::TailDuplication::TD_NONE),

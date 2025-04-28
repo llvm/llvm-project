@@ -9,6 +9,7 @@
 
 ; CHECK-DAG:        OpEntryPoint GLCompute {{.*}} %[[#WorkgroupId]]
 ; CHECK-DAG:        OpName %[[#WorkgroupId]] "__spirv_BuiltInWorkgroupId"
+; CHECK-DAG:        OpDecorate %[[#WorkgroupId]] LinkageAttributes "__spirv_BuiltInWorkgroupId" Import
 ; CHECK-DAG:        OpDecorate %[[#WorkgroupId]] BuiltIn WorkgroupId
 
 target triple = "spirv-unknown-vulkan-library"

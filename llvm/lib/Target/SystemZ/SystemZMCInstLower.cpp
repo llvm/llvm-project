@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCInstLower.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "SystemZAsmPrinter.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCExpr.h"
@@ -17,14 +16,14 @@
 using namespace llvm;
 
 // Return the VK_* enumeration for MachineOperand target flags Flags.
-static SystemZMCExpr::Specifier getSpecifierForTFlags(unsigned Flags) {
+static MCSymbolRefExpr::VariantKind getVariantKind(unsigned Flags) {
   switch (Flags & SystemZII::MO_SYMBOL_MODIFIER) {
     case 0:
-      return SystemZMCExpr::VK_None;
+      return MCSymbolRefExpr::VK_None;
     case SystemZII::MO_GOT:
-      return SystemZMCExpr::VK_GOT;
+      return MCSymbolRefExpr::VK_GOT;
     case SystemZII::MO_INDNTPOFF:
-      return SystemZMCExpr::VK_INDNTPOFF;
+      return MCSymbolRefExpr::VK_INDNTPOFF;
   }
   llvm_unreachable("Unrecognised MO_ACCESS_MODEL");
 }
@@ -33,8 +32,9 @@ SystemZMCInstLower::SystemZMCInstLower(MCContext &ctx,
                                        SystemZAsmPrinter &asmprinter)
   : Ctx(ctx), AsmPrinter(asmprinter) {}
 
-const MCExpr *SystemZMCInstLower::getExpr(const MachineOperand &MO,
-                                          SystemZMCExpr::Specifier Spec) const {
+const MCExpr *
+SystemZMCInstLower::getExpr(const MachineOperand &MO,
+                            MCSymbolRefExpr::VariantKind Kind) const {
   const MCSymbol *Symbol;
   bool HasOffset = true;
   switch (MO.getType()) {
@@ -67,7 +67,7 @@ const MCExpr *SystemZMCInstLower::getExpr(const MachineOperand &MO,
   default:
     llvm_unreachable("unknown operand type");
   }
-  const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Spec, Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Kind, Ctx);
   if (HasOffset)
     if (int64_t Offset = MO.getOffset()) {
       const MCExpr *OffsetExpr = MCConstantExpr::create(Offset, Ctx);
@@ -85,7 +85,7 @@ MCOperand SystemZMCInstLower::lowerOperand(const MachineOperand &MO) const {
     return MCOperand::createImm(MO.getImm());
 
   default: {
-    SystemZMCExpr::Specifier Kind = getSpecifierForTFlags(MO.getTargetFlags());
+    MCSymbolRefExpr::VariantKind Kind = getVariantKind(MO.getTargetFlags());
     return MCOperand::createExpr(getExpr(MO, Kind));
   }
   }

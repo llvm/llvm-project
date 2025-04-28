@@ -17,9 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-template <WriteMode write_mode>
-LIBC_INLINE int convert_char(Writer<write_mode> *writer,
-                             const FormatSection &to_conv) {
+LIBC_INLINE int convert_char(Writer *writer, const FormatSection &to_conv) {
   char c = static_cast<char>(to_conv.conv_val_raw);
 
   constexpr int STRING_LEN = 1;

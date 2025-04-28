@@ -203,7 +203,7 @@ within the Dialect. A simple example is shown below:
 // using StructType in a similar way to Tensor or MemRef. We use `DialectType`
 // to demarcate the StructType as belonging to the Toy dialect.
 def Toy_StructType :
-    DialectType<Toy_Dialect, CPred<"isa<StructType>($_self)">,
+    DialectType<Toy_Dialect, CPred<"$_self.isa<StructType>()">,
                 "Toy struct type">;
 
 // Provide a definition of the types that are used within the Toy dialect.
@@ -274,7 +274,7 @@ mlir::Type ToyDialect::parseType(mlir::DialectAsmParser &parser) const {
       return nullptr;
 
     // Check that the type is either a TensorType or another StructType.
-    if (!isa<mlir::TensorType, StructType>(elementType)) {
+    if (!elementType.isa<mlir::TensorType, StructType>()) {
       parser.emitError(typeLoc, "element type for a struct must either "
                                 "be a TensorType or a StructType, got: ")
           << elementType;
@@ -467,7 +467,7 @@ OpFoldResult StructConstantOp::fold(FoldAdaptor adaptor) {
 
 /// Fold simple struct access operations that access into a constant.
 OpFoldResult StructAccessOp::fold(FoldAdaptor adaptor) {
-  auto structAttr = dyn_cast_or_null<mlir::ArrayAttr>(adaptor.getInput());
+  auto structAttr = adaptor.getInput().dyn_cast_or_null<mlir::ArrayAttr>();
   if (!structAttr)
     return nullptr;
 
@@ -487,11 +487,11 @@ mlir::Operation *ToyDialect::materializeConstant(mlir::OpBuilder &builder,
                                                  mlir::Attribute value,
                                                  mlir::Type type,
                                                  mlir::Location loc) {
-  if (isa<StructType>(type))
+  if (type.isa<StructType>())
     return builder.create<StructConstantOp>(loc, type,
-                                            cast<mlir::ArrayAttr>(value));
+                                            value.cast<mlir::ArrayAttr>());
   return builder.create<ConstantOp>(loc, type,
-                                    cast<mlir::DenseElementsAttr>(value));
+                                    value.cast<mlir::DenseElementsAttr>());
 }
 ```
 

@@ -63,12 +63,7 @@ target_include_directories(omptest
 
 if(LIBOMPTEST_BUILD_UNITTESTS)
   include(GoogleTest)
-  add_executable(omptest-unittests
-
-                 test/main-test.cpp
-                 test/internal-event-test.cpp
-                 test/internal-util-test.cpp
-  )
+  add_executable(omptest-unittests test/main-test.cpp)
   target_link_libraries(omptest-unittests omptest)
   target_link_libraries(omptest-unittests gtest gtest_main)
 endif()

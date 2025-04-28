@@ -53,8 +53,7 @@
 # FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT:  hasInitWholeWave: false
-# FULL-NEXT:  wholeWaveCF:     true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT:  wholeWaveCF: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -160,8 +159,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
-# FULL-NEXT:  wholeWaveCF:     true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: wholeWaveCF: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -238,8 +236,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
-# FULL-NEXT:  wholeWaveCF:     true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: wholeWaveCF: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -317,8 +314,7 @@ body:             |
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: hasInitWholeWave: false
-# FULL-NEXT:  wholeWaveCF:     true
-# FULL-NEXT: scratchReservedForDynamicVGPRs: 0
+# FULL-NEXT: wholeWaveCF: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -615,4 +611,25 @@ body:             |
   bb.0:
     SI_RETURN
 
+...
+---
+# ALL-LABEL: name: whole_wave_cf_true
+# FULL: wholeWaveCF: true
+# SIMPLE-NOT: wholeWaveCF
+name: whole_wave_cf_true
+machineFunctionInfo:
+  wholeWaveCF: true
+body:             |
+  bb.0:
+    SI_RETURN
+...
+---
+# ALL-LABEL: name: whole_wave_cf_false
+# ALL: wholeWaveCF: false
+name: whole_wave_cf_false
+machineFunctionInfo:
+  wholeWaveCF: false
+body:             |
+  bb.0:
+    SI_RETURN
 ...

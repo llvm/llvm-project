@@ -112,9 +112,7 @@ std::string summarizeExpr(const Expr *E) {
       return getSimpleName(*E->getFoundDecl()).str();
     }
     std::string VisitCallExpr(const CallExpr *E) {
-      std::string Result = Visit(E->getCallee());
-      Result += E->getNumArgs() == 0 ? "()" : "(...)";
-      return Result;
+      return Visit(E->getCallee());
     }
     std::string
     VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
@@ -149,9 +147,6 @@ std::string summarizeExpr(const Expr *E) {
     }
 
     // Literals are just printed
-    std::string VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E) {
-      return "nullptr";
-    }
     std::string VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
       return E->getValue() ? "true" : "false";
     }
@@ -170,14 +165,12 @@ std::string summarizeExpr(const Expr *E) {
       std::string Result = "\"";
       if (E->containsNonAscii()) {
         Result += "...";
+      } else if (E->getLength() > 10) {
+        Result += E->getString().take_front(7);
+        Result += "...";
       } else {
         llvm::raw_string_ostream OS(Result);
-        if (E->getLength() > 10) {
-          llvm::printEscapedString(E->getString().take_front(7), OS);
-          Result += "...";
-        } else {
-          llvm::printEscapedString(E->getString(), OS);
-        }
+        llvm::printEscapedString(E->getString(), OS);
       }
       Result.push_back('"');
       return Result;
@@ -415,14 +408,12 @@ struct Callee {
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
-                   const Config &Cfg, std::optional<Range> RestrictRange,
-                   InlayHintOptions HintOptions)
+                   const Config &Cfg, std::optional<Range> RestrictRange)
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
-        TypeHintPolicy(this->AST.getPrintingPolicy()),
-        HintOptions(HintOptions) {
+        TypeHintPolicy(this->AST.getPrintingPolicy()) {
     bool Invalid = false;
     llvm::StringRef Buf =
         AST.getSourceManager().getBufferData(MainFileID, &Invalid);
@@ -1129,6 +1120,7 @@ private:
   // Otherwise, the hint shouldn't be shown.
   std::optional<Range> computeBlockEndHintRange(SourceRange BraceRange,
                                                 StringRef OptionalPunctuation) {
+    constexpr unsigned HintMinLineLimit = 2;
 
     auto &SM = AST.getSourceManager();
     auto [BlockBeginFileId, BlockBeginOffset] =
@@ -1156,7 +1148,7 @@ private:
     auto RBraceLine = SM.getLineNumber(RBraceFileId, RBraceOffset);
 
     // Don't show hint on trivial blocks like `class X {};`
-    if (BlockBeginLine + HintOptions.HintMinLineLimit - 1 > RBraceLine)
+    if (BlockBeginLine + HintMinLineLimit - 1 > RBraceLine)
       return std::nullopt;
 
     // This is what we attach the hint to, usually "}" or "};".
@@ -1186,26 +1178,23 @@ private:
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
-  InlayHintOptions HintOptions;
 };
 
 } // namespace
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  std::optional<Range> RestrictRange,
-                                  InlayHintOptions HintOptions) {
+                                  std::optional<Range> RestrictRange) {
   std::vector<InlayHint> Results;
   const auto &Cfg = Config::current();
   if (!Cfg.InlayHints.Enabled)
     return Results;
-  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange),
-                           HintOptions);
+  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange));
   Visitor.TraverseAST(AST.getASTContext());
 
   // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit
   // template instantiations.
   llvm::sort(Results);
-  Results.erase(llvm::unique(Results), Results.end());
+  Results.erase(std::unique(Results.begin(), Results.end()), Results.end());
 
   return Results;
 }

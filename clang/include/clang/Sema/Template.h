@@ -365,7 +365,7 @@ enum class TemplateSubstitutionKind : char {
   class LocalInstantiationScope {
   public:
     /// A set of declarations.
-    using DeclArgumentPack = SmallVector<ValueDecl *, 4>;
+    using DeclArgumentPack = SmallVector<VarDecl *, 4>;
 
   private:
     /// Reference to the semantic analysis that is performing
@@ -569,7 +569,7 @@ enum class TemplateSubstitutionKind : char {
     : public DeclVisitor<TemplateDeclInstantiator, Decl *>
   {
     Sema &SemaRef;
-    Sema::ArgPackSubstIndexRAII SubstIndex;
+    Sema::ArgumentPackSubstitutionIndexRAII SubstIndex;
     DeclContext *Owner;
     const MultiLevelTemplateArgumentList &TemplateArgs;
     Sema::LateInstantiatedAttrVec* LateAttrs = nullptr;
@@ -595,7 +595,8 @@ enum class TemplateSubstitutionKind : char {
   public:
     TemplateDeclInstantiator(Sema &SemaRef, DeclContext *Owner,
                              const MultiLevelTemplateArgumentList &TemplateArgs)
-        : SemaRef(SemaRef), SubstIndex(SemaRef, SemaRef.ArgPackSubstIndex),
+        : SemaRef(SemaRef),
+          SubstIndex(SemaRef, SemaRef.ArgumentPackSubstitutionIndex),
           Owner(Owner), TemplateArgs(TemplateArgs) {}
 
     void setEvaluateConstraints(bool B) {

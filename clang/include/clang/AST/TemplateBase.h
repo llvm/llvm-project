@@ -159,7 +159,7 @@ private:
     unsigned Kind : 31;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
-    UnsignedOrNone NumExpansions;
+    unsigned NumExpansions;
     void *Name;
   };
   struct TV {
@@ -167,8 +167,6 @@ private:
     unsigned Kind : 31;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsCanonicalExpr : 1;
     uintptr_t V;
   };
   union {
@@ -189,8 +187,7 @@ private:
 
 public:
   /// Construct an empty, invalid template argument.
-  constexpr TemplateArgument()
-      : TypeOrValue{Null, /*IsDefaulted=*/0, /*IsCanonicalExpr=*/0, /*V=*/0} {}
+  constexpr TemplateArgument() : TypeOrValue({Null, 0, /* IsDefaulted */ 0}) {}
 
   /// Construct a template type argument.
   TemplateArgument(QualType T, bool isNullPtr = false,
@@ -235,7 +232,7 @@ public:
     TemplateArg.Kind = Template;
     TemplateArg.IsDefaulted = IsDefaulted;
     TemplateArg.Name = Name.getAsVoidPointer();
-    TemplateArg.NumExpansions = std::nullopt;
+    TemplateArg.NumExpansions = 0;
   }
 
   /// Construct a template argument that is a template pack expansion.
@@ -252,12 +249,15 @@ public:
   ///
   /// \param IsDefaulted If 'true', implies that this TemplateArgument
   /// corresponds to a default template parameter
-  TemplateArgument(TemplateName Name, UnsignedOrNone NumExpansions,
+  TemplateArgument(TemplateName Name, std::optional<unsigned> NumExpansions,
                    bool IsDefaulted = false) {
     TemplateArg.Kind = TemplateExpansion;
     TemplateArg.IsDefaulted = IsDefaulted;
     TemplateArg.Name = Name.getAsVoidPointer();
-    TemplateArg.NumExpansions = NumExpansions;
+    if (NumExpansions)
+      TemplateArg.NumExpansions = *NumExpansions + 1;
+    else
+      TemplateArg.NumExpansions = 0;
   }
 
   /// Construct a template argument that is an expression.
@@ -265,10 +265,9 @@ public:
   /// This form of template argument only occurs in template argument
   /// lists used for dependent types and for expression; it will not
   /// occur in a non-dependent, canonical template argument list.
-  TemplateArgument(Expr *E, bool IsCanonical, bool IsDefaulted = false) {
+  TemplateArgument(Expr *E, bool IsDefaulted = false) {
     TypeOrValue.Kind = Expression;
     TypeOrValue.IsDefaulted = IsDefaulted;
-    TypeOrValue.IsCanonicalExpr = IsCanonical;
     TypeOrValue.V = reinterpret_cast<uintptr_t>(E);
   }
 
@@ -357,7 +356,7 @@ public:
 
   /// Retrieve the number of expansions that a template template argument
   /// expansion will produce, if known.
-  UnsignedOrNone getNumTemplateExpansions() const;
+  std::optional<unsigned> getNumTemplateExpansions() const;
 
   /// Retrieve the template argument as an integral value.
   // FIXME: Provide a way to read the integral data without copying the value.
@@ -409,11 +408,6 @@ public:
   Expr *getAsExpr() const {
     assert(getKind() == Expression && "Unexpected kind");
     return reinterpret_cast<Expr *>(TypeOrValue.V);
-  }
-
-  bool isCanonicalExpr() const {
-    assert(getKind() == Expression && "Unexpected kind");
-    return TypeOrValue.IsCanonicalExpr;
   }
 
   /// Iterator that traverses the elements of a template argument pack.

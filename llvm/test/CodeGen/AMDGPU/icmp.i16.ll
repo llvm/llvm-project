@@ -1,6 +1,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s| FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs < %s| FileCheck -check-prefixes=GCN,GFX11-FAKE16 %s
+; FIXME-TRUE16. In true16 flow, the codegen introduces addtional s2v copy and mov, and revert the operand order thus picking different cmp instructions
+; This should be corrected after addtional mov/copy is removed
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs < %s| FileCheck -check-prefixes=GCN,GFX11-TRUE16 %s
 
 ;;;==========================================================================;;;
@@ -11,7 +13,7 @@
 ; VI: v_cmp_eq_u16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_eq_u32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_eq_u16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_eq_u16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_eq_u16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_eq(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -31,7 +33,7 @@ entry:
 ; VI: v_cmp_ne_u16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_ne_u32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_ne_u16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_ne_u16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_ne_u16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_ne(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -51,7 +53,7 @@ entry:
 ; VI: v_cmp_gt_u16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_gt_u32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_gt_u16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_gt_u16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_gt_u16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_ugt(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -71,7 +73,7 @@ entry:
 ; VI: v_cmp_ge_u16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_ge_u32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_ge_u16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_ge_u16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_ge_u16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_uge(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -91,7 +93,7 @@ entry:
 ; VI: v_cmp_lt_u16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_lt_u32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_lt_u16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_lt_u16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_lt_u16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_ult(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -111,7 +113,7 @@ entry:
 ; VI: v_cmp_le_u16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_le_u32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_le_u16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_le_u16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_le_u16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_ule(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -132,7 +134,7 @@ entry:
 ; VI: v_cmp_gt_i16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_gt_i32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_gt_i16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_gt_i16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_gt_i16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_sgt(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -152,7 +154,7 @@ entry:
 ; VI: v_cmp_ge_i16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_ge_i32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_ge_i16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_ge_i16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_ge_i16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_sge(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -172,7 +174,7 @@ entry:
 ; VI: v_cmp_lt_i16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_lt_i32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_lt_i16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_lt_i16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_lt_i16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_slt(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -192,7 +194,7 @@ entry:
 ; VI: v_cmp_le_i16_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_le_i32_e32 vcc, v{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_le_i16_e32 vcc_lo, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_le_i16_e32 vcc_lo, v{{[0-9]+}}.{{(l|h)}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_le_i16_e32 vcc_lo, v{{[0-9]+}}.l, v{{[0-9]+}}.h
 define amdgpu_kernel void @i16_sle(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -213,7 +215,7 @@ entry:
 ; VI: v_cmp_eq_u16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_eq_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_eq_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_eq_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_eq_u16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_eq_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -231,7 +233,7 @@ entry:
 ; VI: v_cmp_ne_u16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_ne_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_ne_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_ne_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_ne_u16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_ne_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -249,7 +251,7 @@ entry:
 ; VI: v_cmp_lt_u16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_lt_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_lt_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_lt_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_gt_u16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_ugt_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -267,7 +269,7 @@ entry:
 ; VI: v_cmp_le_u16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_le_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_le_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_le_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_ge_u16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_uge_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -285,7 +287,7 @@ entry:
 ; VI: v_cmp_gt_u16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_gt_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_gt_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_gt_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_lt_u16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_ult_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -303,7 +305,7 @@ entry:
 ; VI: v_cmp_ge_u16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_ge_u32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_ge_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_ge_u16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_le_u16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_ule_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -321,7 +323,7 @@ entry:
 ; VI: v_cmp_lt_i16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_lt_i32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_lt_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_lt_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_gt_i16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_sgt_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -339,7 +341,7 @@ entry:
 ; VI: v_cmp_le_i16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_le_i32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_le_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_le_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_ge_i16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_sge_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -357,7 +359,7 @@ entry:
 ; VI: v_cmp_gt_i16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_gt_i32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_gt_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_gt_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_lt_i16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_slt_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -375,7 +377,7 @@ entry:
 ; VI: v_cmp_ge_i16_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; SI: v_cmp_ge_i32_e32 vcc, s{{[0-9]+}}, v{{[0-9]+}}
 ; GFX11-FAKE16: v_cmp_ge_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}
-; GFX11-TRUE16: v_cmp_ge_i16_e32 vcc_lo, s{{[0-9]+}}, v{{[0-9]+}}.{{(l|h)}}
+; GFX11-TRUE16: v_cmp_le_i16_e32 vcc_lo, v{{[0-9]+}}.h, v{{[0-9]+}}.l
 define amdgpu_kernel void @i16_sle_v_s(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, i16 %b) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

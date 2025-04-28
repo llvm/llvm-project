@@ -75,9 +75,8 @@ private:
   // performance or backwards compatibility preserving (e.g. AIX-ABI).
   CharUnits PreferredAlignment;
 
-  // UnadjustedAlignment - Alignment of record in characters before alignment
-  // adjustments. Maximum of the alignments of the record members and base
-  // classes in characters.
+  // UnadjustedAlignment - Maximum of the alignments of the record members in
+  // characters.
   CharUnits UnadjustedAlignment;
 
   /// RequiredAlignment - The required alignment of the object.  In the MS-ABI
@@ -187,7 +186,7 @@ public:
   CharUnits getPreferredAlignment() const { return PreferredAlignment; }
 
   /// getUnadjustedAlignment - Get the record alignment in characters, before
-  /// alignment adjustment.
+  /// alignment adjustement.
   CharUnits getUnadjustedAlignment() const { return UnadjustedAlignment; }
 
   /// getSize - Get the record size in characters.

@@ -22,13 +22,11 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
@@ -43,13 +41,12 @@ using namespace llvm;
 STATISTIC(NumLoadsDeleted, "Number of dead load instructions deleted");
 STATISTIC(NumFakeUsesDeleted, "Number of FAKE_USE instructions deleted");
 
-class RemoveLoadsIntoFakeUsesLegacy : public MachineFunctionPass {
+class RemoveLoadsIntoFakeUses : public MachineFunctionPass {
 public:
   static char ID;
 
-  RemoveLoadsIntoFakeUsesLegacy() : MachineFunctionPass(ID) {
-    initializeRemoveLoadsIntoFakeUsesLegacyPass(
-        *PassRegistry::getPassRegistry());
+  RemoveLoadsIntoFakeUses() : MachineFunctionPass(ID) {
+    initializeRemoveLoadsIntoFakeUsesPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -69,45 +66,21 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-struct RemoveLoadsIntoFakeUses {
-  bool run(MachineFunction &MF);
-};
+char RemoveLoadsIntoFakeUses::ID = 0;
+char &llvm::RemoveLoadsIntoFakeUsesID = RemoveLoadsIntoFakeUses::ID;
 
-char RemoveLoadsIntoFakeUsesLegacy::ID = 0;
-char &llvm::RemoveLoadsIntoFakeUsesID = RemoveLoadsIntoFakeUsesLegacy::ID;
-
-INITIALIZE_PASS_BEGIN(RemoveLoadsIntoFakeUsesLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(RemoveLoadsIntoFakeUses, DEBUG_TYPE,
                       "Remove Loads Into Fake Uses", false, false)
-INITIALIZE_PASS_END(RemoveLoadsIntoFakeUsesLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_END(RemoveLoadsIntoFakeUses, DEBUG_TYPE,
                     "Remove Loads Into Fake Uses", false, false)
 
-bool RemoveLoadsIntoFakeUsesLegacy::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
-  return RemoveLoadsIntoFakeUses().run(MF);
-}
-
-PreservedAnalyses
-RemoveLoadsIntoFakeUsesPass::run(MachineFunction &MF,
-                                 MachineFunctionAnalysisManager &MFAM) {
-  MFPropsModifier _(*this, MF);
-
-  if (!RemoveLoadsIntoFakeUses().run(MF))
-    return PreservedAnalyses::all();
-
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
-
-bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
+bool RemoveLoadsIntoFakeUses::runOnMachineFunction(MachineFunction &MF) {
   // Skip this pass if we would use VarLoc-based LDV, as there may be DBG_VALUE
   // instructions of the restored values that would become invalid.
   if (!MF.useDebugInstrRef())
     return false;
   // Only run this for functions that have fake uses.
-  if (!MF.hasFakeUses())
+  if (!MF.hasFakeUses() || skipFunction(MF.getFunction()))
     return false;
 
   bool AnyChanges = false;

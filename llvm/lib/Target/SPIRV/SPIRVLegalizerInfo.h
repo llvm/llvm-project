@@ -16,6 +16,8 @@
 #include "SPIRVGlobalRegistry.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 
+bool isTypeFoldingSupported(unsigned Opcode);
+
 namespace llvm {
 
 class LLVMContext;

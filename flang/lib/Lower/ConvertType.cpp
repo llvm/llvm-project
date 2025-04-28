@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertType.h"
-#include "flang/Common/type-kinds.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertVariable.h"
@@ -33,7 +32,7 @@ using Fortran::common::VectorElementCategory;
 //===--------------------------------------------------------------------===//
 
 static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
-  if (Fortran::common::IsValidKindOfIntrinsicType(
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Real, kind)) {
     switch (kind) {
     case 2:
@@ -60,7 +59,7 @@ int getIntegerBits() {
 }
 static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
                                  bool isUnsigned = false) {
-  if (Fortran::common::IsValidKindOfIntrinsicType(
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Integer, kind)) {
     mlir::IntegerType::SignednessSemantics signedness =
         (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
@@ -83,7 +82,7 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
 }
 
 static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
-  if (Fortran::common::IsValidKindOfIntrinsicType(
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Logical, KIND))
     return fir::LogicalType::get(context, KIND);
   return {};
@@ -92,7 +91,7 @@ static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
 static mlir::Type genCharacterType(
     mlir::MLIRContext *context, int KIND,
     Fortran::lower::LenParameterTy len = fir::CharacterType::unknownLen()) {
-  if (Fortran::common::IsValidKindOfIntrinsicType(
+  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
     return fir::CharacterType::get(context, KIND, len);
   return {};

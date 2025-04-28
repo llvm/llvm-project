@@ -18,17 +18,9 @@
 namespace lldb_private {
 class Debugger;
 
-/// A stream meant for asynchronously printing output. Output is buffered until
-/// the stream is flushed or destroyed. Printing is handled by the currently
-/// active IOHandler, or the debugger's output or error stream if there is none.
 class StreamAsynchronousIO : public Stream {
 public:
-  enum ForSTDOUT : bool {
-    STDOUT = true,
-    STDERR = false,
-  };
-
-  StreamAsynchronousIO(Debugger &debugger, ForSTDOUT for_stdout);
+  StreamAsynchronousIO(Debugger &debugger, bool for_stdout, bool colors);
 
   ~StreamAsynchronousIO() override;
 
@@ -40,7 +32,7 @@ protected:
 private:
   Debugger &m_debugger;
   std::string m_data;
-  ForSTDOUT m_for_stdout;
+  bool m_for_stdout;
 };
 
 } // namespace lldb_private

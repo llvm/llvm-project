@@ -11,9 +11,6 @@
 // Shadow memory poisoning by ASan RTL and by user application.
 //===----------------------------------------------------------------------===//
 
-#ifndef ASAN_POISONING_H
-#define ASAN_POISONING_H
-
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
@@ -21,19 +18,6 @@
 #include "sanitizer_common/sanitizer_platform.h"
 
 namespace __asan {
-
-struct PoisonRecord {
-  u32 stack_id;
-  u32 thread_id;
-  uptr begin;
-  uptr end;
-};
-
-void AddPoisonRecord(const PoisonRecord& new_record);
-bool FindPoisonRecord(uptr addr, PoisonRecord& match);
-
-void AcquirePoisonRecords();
-void ReleasePoisonRecords();
 
 // Enable/disable memory poisoning.
 void SetCanPoisonMemory(bool value);
@@ -112,5 +96,3 @@ ALWAYS_INLINE void FastPoisonShadowPartialRightRedzone(
 void FlushUnneededASanShadowMemory(uptr p, uptr size);
 
 }  // namespace __asan
-
-#endif  // ASAN_POISONING_H

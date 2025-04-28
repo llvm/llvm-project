@@ -1043,10 +1043,7 @@ std::string Intrinsic::replaceTemplatedArgs(std::string Name, TypeSpec TS,
     case '1':
     case '2':
     case '3':
-      // Extract the modifier before passing to SVEType to handle numeric
-      // modifiers
-      auto [Mod, NumVectors] = getProtoModifier(Proto, (C - '0'));
-      T = SVEType(TS, Mod);
+      T = SVEType(TS, Proto[C - '0']);
       break;
     }
 
@@ -1231,7 +1228,8 @@ void SVEEmitter::createIntrinsic(
 
   // Remove duplicate type specs.
   sort(TypeSpecs);
-  TypeSpecs.erase(llvm::unique(TypeSpecs), TypeSpecs.end());
+  TypeSpecs.erase(std::unique(TypeSpecs.begin(), TypeSpecs.end()),
+                  TypeSpecs.end());
 
   // Create an Intrinsic for each type spec.
   for (auto TS : TypeSpecs) {

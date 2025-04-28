@@ -185,20 +185,3 @@ namespace InitLinkToRVO {
   constexpr A make() { return A {}; }
   static_assert(make().z == 4, "");
 }
-
-namespace DynamicCast {
-  struct S { int x, y; } s;
-  constexpr S* sptr = &s;
-  struct Str {
-    int b : reinterpret_cast<S*>(sptr) == reinterpret_cast<S*>(sptr);
-    int g : (S*)(void*)(sptr) == sptr;
-  };
-}
-
-namespace GlobalInitializer {
-  extern int &g; // both-note {{here}}
-  struct S {
-    int G : g; // both-error {{constant expression}} \
-               // both-note {{initializer of 'g' is unknown}}
-  };
-}

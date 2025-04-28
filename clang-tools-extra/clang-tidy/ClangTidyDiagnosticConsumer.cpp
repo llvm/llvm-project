@@ -22,7 +22,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Expr.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -167,8 +166,8 @@ ClangTidyContext::ClangTidyContext(
       AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers),
       EnableModuleHeadersParsing(EnableModuleHeadersParsing) {
   // Before the first translation unit we can get errors related to command-line
-  // parsing, use dummy string for the file name in this case.
-  setCurrentFile("dummy");
+  // parsing, use empty string for the file name in this case.
+  setCurrentFile("");
 }
 
 ClangTidyContext::~ClangTidyContext() = default;
@@ -312,7 +311,18 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     : Context(Ctx), ExternalDiagEngine(ExternalDiagEngine),
       RemoveIncompatibleErrors(RemoveIncompatibleErrors),
       GetFixesFromNotes(GetFixesFromNotes),
-      EnableNolintBlocks(EnableNolintBlocks) {}
+      EnableNolintBlocks(EnableNolintBlocks) {
+
+  if (Context.getOptions().HeaderFilterRegex &&
+      !Context.getOptions().HeaderFilterRegex->empty())
+    HeaderFilter =
+        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
+
+  if (Context.getOptions().ExcludeHeaderFilterRegex &&
+      !Context.getOptions().ExcludeHeaderFilterRegex->empty())
+    ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
+        *Context.getOptions().ExcludeHeaderFilterRegex);
+}
 
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
@@ -529,8 +539,6 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
     case clang::DiagnosticsEngine::ak_addrspace:
       Builder << static_cast<LangAS>(Info.getRawArg(Index));
       break;
-    case clang::DiagnosticsEngine::ak_expr:
-      Builder << reinterpret_cast<const Expr *>(Info.getRawArg(Index));
     }
   }
 }
@@ -563,28 +571,15 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
   }
 
   StringRef FileName(File->getName());
-  LastErrorRelatesToUserCode = LastErrorRelatesToUserCode ||
-                               Sources.isInMainFile(Location) ||
-                               (getHeaderFilter()->match(FileName) &&
-                                !getExcludeHeaderFilter()->match(FileName));
+  LastErrorRelatesToUserCode =
+      LastErrorRelatesToUserCode || Sources.isInMainFile(Location) ||
+      (HeaderFilter &&
+       (HeaderFilter->match(FileName) &&
+        !(ExcludeHeaderFilter && ExcludeHeaderFilter->match(FileName))));
 
   unsigned LineNumber = Sources.getExpansionLineNumber(Location);
   LastErrorPassesLineFilter =
       LastErrorPassesLineFilter || passesLineFilter(FileName, LineNumber);
-}
-
-llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
-  if (!HeaderFilter)
-    HeaderFilter =
-        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
-  return HeaderFilter.get();
-}
-
-llvm::Regex *ClangTidyDiagnosticConsumer::getExcludeHeaderFilter() {
-  if (!ExcludeHeaderFilter)
-    ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
-        *Context.getOptions().ExcludeHeaderFilterRegex);
-  return ExcludeHeaderFilter.get();
 }
 
 void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
@@ -754,7 +749,8 @@ std::vector<ClangTidyError> ClangTidyDiagnosticConsumer::take() {
   finalizeLastError();
 
   llvm::stable_sort(Errors, LessClangTidyError());
-  Errors.erase(llvm::unique(Errors, EqualClangTidyError()), Errors.end());
+  Errors.erase(std::unique(Errors.begin(), Errors.end(), EqualClangTidyError()),
+               Errors.end());
   if (RemoveIncompatibleErrors)
     removeIncompatibleErrors();
   return std::move(Errors);

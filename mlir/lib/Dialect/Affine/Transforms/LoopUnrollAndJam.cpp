@@ -75,7 +75,7 @@ struct LoopUnrollAndJam
 };
 } // namespace
 
-std::unique_ptr<InterfacePass<FunctionOpInterface>>
+std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::affine::createLoopUnrollAndJamPass(int unrollJamFactor) {
   return std::make_unique<LoopUnrollAndJam>(
       unrollJamFactor == -1 ? std::nullopt

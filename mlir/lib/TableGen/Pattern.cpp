@@ -57,7 +57,9 @@ bool DagLeaf::isNativeCodeCall() const {
 
 bool DagLeaf::isConstantAttr() const { return isSubClassOf("ConstantAttr"); }
 
-bool DagLeaf::isEnumCase() const { return isSubClassOf("EnumCase"); }
+bool DagLeaf::isEnumAttrCase() const {
+  return isSubClassOf("EnumAttrCaseInfo");
+}
 
 bool DagLeaf::isStringAttr() const { return isa<llvm::StringInit>(def); }
 
@@ -72,9 +74,9 @@ ConstantAttr DagLeaf::getAsConstantAttr() const {
   return ConstantAttr(cast<DefInit>(def));
 }
 
-EnumCase DagLeaf::getAsEnumCase() const {
-  assert(isEnumCase() && "the DAG leaf must be an enum attribute case");
-  return EnumCase(cast<DefInit>(def));
+EnumAttrCase DagLeaf::getAsEnumAttrCase() const {
+  assert(isEnumAttrCase() && "the DAG leaf must be an enum attribute case");
+  return EnumAttrCase(cast<DefInit>(def));
 }
 
 std::string DagLeaf::getConditionTemplate() const {
@@ -774,7 +776,7 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
           verifyBind(infoMap.bindValue(treeArgName), treeArgName);
         } else {
           auto constraint = leaf.getAsConstraint();
-          bool isAttr = leaf.isAttrMatcher() || leaf.isEnumCase() ||
+          bool isAttr = leaf.isAttrMatcher() || leaf.isEnumAttrCase() ||
                         leaf.isConstantAttr() ||
                         constraint.getKind() == Constraint::Kind::CK_Attr;
 

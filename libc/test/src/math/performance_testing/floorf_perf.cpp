@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PerfTest.h"
+#include "SingleInputSingleOutputPerf.h"
+
 #include "src/math/floorf.h"
 
 #include <math.h>
 
-int main() {
-  SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::floorf, ::floorf,
-                                  "floorf_perf.log")
-  return 0;
-}
+SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::floorf, ::floorf,
+                                "floorf_perf.log")

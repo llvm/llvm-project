@@ -65,12 +65,11 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       assert(MM.Address % getpagesize() == 0 &&
              "Memory mappings need to be aligned to page boundaries.");
 #endif
-      const MemoryValue &MemVal = Key.MemoryValues.at(MM.MemoryValueName);
       BBF.addInstructions(ET.generateMmap(
-          MM.Address, MemVal.SizeBytes,
+          MM.Address, Key.MemoryValues.at(MM.MemoryValueName).SizeBytes,
           ET.getAuxiliaryMemoryStartAddress() +
-              sizeof(int) *
-                  (MemVal.Index + SubprocessMemory::AuxiliaryMemoryOffset)));
+              sizeof(int) * (Key.MemoryValues.at(MM.MemoryValueName).Index +
+                             SubprocessMemory::AuxiliaryMemoryOffset)));
     }
     BBF.addInstructions(ET.setStackRegisterToAuxMem());
   }
@@ -311,7 +310,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   MCContext &MCContext = MMIWP->getMMI().getContext();
   legacy::PassManager PM;
 
-  TargetLibraryInfoImpl TLII(Module->getTargetTriple());
+  TargetLibraryInfoImpl TLII(Triple(Module->getTargetTriple()));
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   TargetPassConfig *TPC = TM->createPassConfig(PM);

@@ -185,7 +185,6 @@ enum Kind {
   kw_m68k_rtdcc,
   kw_graalcc,
   kw_riscv_vector_cc,
-  kw_riscv_vls_cc,
 
   // Attributes:
   kw_attributes,
@@ -202,7 +201,6 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
-  kw_errnomem,
 
   // Legacy attributes:
   kw_argmemonly,
@@ -495,7 +493,6 @@ enum Kind {
   DwarfMSpaceLLVM,  // DW_MSPACE_LLVM_foo
   EmissionKind,     // lineTablesOnly
   NameTableKind,    // GNU
-  FixedPointKind,   // Fixed point
   DwarfOp,          // DW_OP_foo
   DIFlag,           // DIFlagFoo
   DISPFlag,         // DISPFlagFoo

@@ -31,16 +31,13 @@ private:
   BugType Bug;
   mutable BugReporter *BR;
 
-protected:
-  mutable std::optional<RetainTypeChecker> RTC;
-
 public:
   RawPtrRefMemberChecker(const char *description)
       : Bug(this, description, "WebKit coding guidelines") {}
 
   virtual std::optional<bool>
-  isPtrCompatible(const clang::QualType,
-                  const clang::CXXRecordDecl *R) const = 0;
+  isPtrCompatible(const clang::CXXRecordDecl *) const = 0;
+  virtual bool isPtrCls(const clang::CXXRecordDecl *) const = 0;
   virtual const char *typeName() const = 0;
   virtual const char *invariant() const = 0;
 
@@ -60,26 +57,13 @@ public:
         ShouldVisitImplicitCode = false;
       }
 
-      bool VisitTypedefDecl(const TypedefDecl *TD) override {
-        if (Checker->RTC)
-          Checker->RTC->visitTypedef(TD);
-        return true;
-      }
-
       bool VisitRecordDecl(const RecordDecl *RD) override {
         Checker->visitRecordDecl(RD);
-        return true;
-      }
-
-      bool VisitObjCContainerDecl(const ObjCContainerDecl *CD) override {
-        Checker->visitObjCDecl(CD);
         return true;
       }
     };
 
     LocalVisitor visitor(this);
-    if (RTC)
-      RTC->visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(TUD);
   }
 
@@ -88,90 +72,17 @@ public:
       return;
 
     for (auto *Member : RD->fields()) {
-      auto QT = Member->getType();
-      const Type *MemberType = QT.getTypePtrOrNull();
+      const Type *MemberType = Member->getType().getTypePtrOrNull();
       if (!MemberType)
         continue;
 
       if (auto *MemberCXXRD = MemberType->getPointeeCXXRecordDecl()) {
-        std::optional<bool> IsCompatible = isPtrCompatible(QT, MemberCXXRD);
-        if (IsCompatible && *IsCompatible)
-          reportBug(Member, MemberType, MemberCXXRD, RD);
-      } else {
-        std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
-        auto *PointeeType = MemberType->getPointeeType().getTypePtrOrNull();
-        if (IsCompatible && *IsCompatible) {
-          auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-          if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
-            reportBug(Member, MemberType, ObjCType->getDecl(), RD);
+        // If we don't see the definition we just don't know.
+        if (MemberCXXRD->hasDefinition()) {
+          std::optional<bool> isRCAble = isPtrCompatible(MemberCXXRD);
+          if (isRCAble && *isRCAble)
+            reportBug(Member, MemberType, MemberCXXRD, RD);
         }
-      }
-    }
-  }
-
-  void visitObjCDecl(const ObjCContainerDecl *CD) const {
-    if (BR->getSourceManager().isInSystemHeader(CD->getLocation()))
-      return;
-
-    ObjCContainerDecl::PropertyMap map;
-    CD->collectPropertiesToImplement(map);
-    for (auto it : map)
-      visitObjCPropertyDecl(CD, it.second);
-
-    if (auto *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
-      for (auto *Ivar : ID->ivars())
-        visitIvarDecl(CD, Ivar);
-      return;
-    }
-    if (auto *ID = dyn_cast<ObjCImplementationDecl>(CD)) {
-      for (auto *Ivar : ID->ivars())
-        visitIvarDecl(CD, Ivar);
-      return;
-    }
-  }
-
-  void visitIvarDecl(const ObjCContainerDecl *CD,
-                     const ObjCIvarDecl *Ivar) const {
-    if (BR->getSourceManager().isInSystemHeader(Ivar->getLocation()))
-      return;
-    auto QT = Ivar->getType();
-    const Type *IvarType = QT.getTypePtrOrNull();
-    if (!IvarType)
-      return;
-    if (auto *IvarCXXRD = IvarType->getPointeeCXXRecordDecl()) {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, IvarCXXRD);
-      if (IsCompatible && *IsCompatible)
-        reportBug(Ivar, IvarType, IvarCXXRD, CD);
-    } else {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
-      auto *PointeeType = IvarType->getPointeeType().getTypePtrOrNull();
-      if (IsCompatible && *IsCompatible) {
-        auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-        if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
-          reportBug(Ivar, IvarType, ObjCType->getDecl(), CD);
-      }
-    }
-  }
-
-  void visitObjCPropertyDecl(const ObjCContainerDecl *CD,
-                             const ObjCPropertyDecl *PD) const {
-    if (BR->getSourceManager().isInSystemHeader(PD->getLocation()))
-      return;
-    auto QT = PD->getType();
-    const Type *PropType = QT.getTypePtrOrNull();
-    if (!PropType)
-      return;
-    if (auto *PropCXXRD = PropType->getPointeeCXXRecordDecl()) {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, PropCXXRD);
-      if (IsCompatible && *IsCompatible)
-        reportBug(PD, PropType, PropCXXRD, CD);
-    } else {
-      std::optional<bool> IsCompatible = isPtrCompatible(QT, nullptr);
-      auto *PointeeType = PropType->getPointeeType().getTypePtrOrNull();
-      if (IsCompatible && *IsCompatible) {
-        auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
-        if (auto *ObjCType = dyn_cast_or_null<ObjCInterfaceType>(Desugared))
-          reportBug(PD, PropType, ObjCType->getDecl(), CD);
       }
     }
   }
@@ -204,40 +115,30 @@ public:
     // Ref-counted smartpointers actually have raw-pointer to uncounted type as
     // a member but we trust them to handle it correctly.
     auto CXXRD = llvm::dyn_cast_or_null<CXXRecordDecl>(RD);
-    if (CXXRD && isSmartPtr(CXXRD))
-      return true;
+    if (CXXRD)
+      return isPtrCls(CXXRD);
 
     return false;
   }
 
-  template <typename DeclType, typename PointeeType, typename ParentDeclType>
-  void reportBug(const DeclType *Member, const Type *MemberType,
-                 const PointeeType *Pointee,
-                 const ParentDeclType *ClassCXXRD) const {
+  void reportBug(const FieldDecl *Member, const Type *MemberType,
+                 const CXXRecordDecl *MemberCXXRD,
+                 const RecordDecl *ClassCXXRD) const {
     assert(Member);
     assert(MemberType);
-    assert(Pointee);
+    assert(MemberCXXRD);
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    if (isa<ObjCContainerDecl>(ClassCXXRD)) {
-      if (isa<ObjCPropertyDecl>(Member))
-        Os << "Property ";
-      else
-        Os << "Instance variable ";
-    } else
-      Os << "Member variable ";
+    Os << "Member variable ";
     printQuotedName(Os, Member);
     Os << " in ";
     printQuotedQualifiedName(Os, ClassCXXRD);
-    Os << " is a ";
-    if (printPointer(Os, MemberType) == PrintDeclKind::Pointer) {
-      auto Typedef = MemberType->getAs<TypedefType>();
-      assert(Typedef);
-      printQuotedQualifiedName(Os, Typedef->getDecl());
-    } else
-      printQuotedQualifiedName(Os, Pointee);
+    Os << " is a "
+       << (isa<PointerType>(MemberType) ? "raw pointer" : "reference") << " to "
+       << typeName() << " ";
+    printQuotedQualifiedName(Os, MemberCXXRD);
     Os << "; " << invariant() << ".";
 
     PathDiagnosticLocation BSLoc(Member->getSourceRange().getBegin(),
@@ -245,15 +146,6 @@ public:
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(Member->getSourceRange());
     BR->emitReport(std::move(Report));
-  }
-
-  enum class PrintDeclKind { Pointee, Pointer };
-  virtual PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
-                                     const Type *T) const {
-    T = T->getUnqualifiedDesugaredType();
-    bool IsPtr = isa<PointerType>(T) || isa<ObjCObjectPointerType>(T);
-    Os << (IsPtr ? "raw pointer" : "reference") << " to " << typeName() << " ";
-    return PrintDeclKind::Pointee;
   }
 };
 
@@ -264,9 +156,12 @@ public:
                                "reference-countable type") {}
 
   std::optional<bool>
-  isPtrCompatible(const clang::QualType,
-                  const clang::CXXRecordDecl *R) const final {
-    return R ? isRefCountable(R) : std::nullopt;
+  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
+    return isRefCountable(R);
+  }
+
+  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
+    return isRefCounted(R);
   }
 
   const char *typeName() const final { return "ref-countable type"; }
@@ -283,9 +178,12 @@ public:
                                "checked-pointer capable type") {}
 
   std::optional<bool>
-  isPtrCompatible(const clang::QualType,
-                  const clang::CXXRecordDecl *R) const final {
-    return R ? isCheckedPtrCapable(R) : std::nullopt;
+  isPtrCompatible(const clang::CXXRecordDecl *R) const final {
+    return isCheckedPtrCapable(R);
+  }
+
+  bool isPtrCls(const clang::CXXRecordDecl *R) const final {
+    return isCheckedPtr(R);
   }
 
   const char *typeName() const final { return "CheckedPtr capable type"; }
@@ -293,36 +191,6 @@ public:
   const char *invariant() const final {
     return "member variables must be a CheckedPtr, CheckedRef, WeakRef, or "
            "WeakPtr";
-  }
-};
-
-class NoUnretainedMemberChecker final : public RawPtrRefMemberChecker {
-public:
-  NoUnretainedMemberChecker()
-      : RawPtrRefMemberChecker("Member variable is a raw-pointer/reference to "
-                               "retainable type") {
-    RTC = RetainTypeChecker();
-  }
-
-  std::optional<bool>
-  isPtrCompatible(const clang::QualType QT,
-                  const clang::CXXRecordDecl *) const final {
-    return RTC->isUnretained(QT);
-  }
-
-  const char *typeName() const final { return "retainable type"; }
-
-  const char *invariant() const final {
-    return "member variables must be a RetainPtr";
-  }
-
-  PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,
-                             const Type *T) const final {
-    if (!isa<ObjCObjectPointerType>(T) && T->getAs<TypedefType>()) {
-      Os << typeName() << " ";
-      return PrintDeclKind::Pointer;
-    }
-    return RawPtrRefMemberChecker::printPointer(Os, T);
   }
 };
 
@@ -342,13 +210,5 @@ void ento::registerNoUncheckedPtrMemberChecker(CheckerManager &Mgr) {
 
 bool ento::shouldRegisterNoUncheckedPtrMemberChecker(
     const CheckerManager &Mgr) {
-  return true;
-}
-
-void ento::registerNoUnretainedMemberChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<NoUnretainedMemberChecker>();
-}
-
-bool ento::shouldRegisterNoUnretainedMemberChecker(const CheckerManager &Mgr) {
   return true;
 }

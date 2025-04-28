@@ -165,6 +165,8 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
+  bool MightHaveChildren() override { return true; }
+
   size_t GetIndexOfChildWithName(ConstString name) override {
     static ConstString g_userInfo("_userInfo");
     if (name == g_userInfo)

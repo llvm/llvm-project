@@ -1,5 +1,5 @@
 # Mocks a vtable object weak def in the C++ stdlib.
-  .section .data.rel.ro,"aw"
+  .data.rel.ro
   .weak bar
   .type bar, %object
 bar:

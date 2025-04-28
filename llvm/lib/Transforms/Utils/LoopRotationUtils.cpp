@@ -553,7 +553,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
     auto makeHash = [](auto *D) -> DbgIntrinsicHash {
       auto VarLocOps = D->location_ops();
-      return {{hash_combine_range(VarLocOps), D->getVariable()},
+      return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
+               D->getVariable()},
               D->getExpression()};
     };
 

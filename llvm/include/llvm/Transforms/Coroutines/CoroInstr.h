@@ -217,8 +217,8 @@ public:
     return cast<Function>(getArgOperand(CoroutineArg)->stripPointerCasts());
   }
   void setCoroutineSelf() {
-    if (!isa<ConstantPointerNull>(getArgOperand(CoroutineArg)))
-      assert(getCoroutine() == getFunction() && "Don't change coroutine.");
+    assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
+           "Coroutine argument is already assigned");
     setArgOperand(CoroutineArg, getFunction());
   }
 

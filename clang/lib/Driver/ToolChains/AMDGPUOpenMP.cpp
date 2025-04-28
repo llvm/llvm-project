@@ -10,9 +10,8 @@
 #include "AMDGPU.h"
 #include "CommonArgs.h"
 #include "HIPUtility.h"
-#include "ROCm.h"
+#include "ToolChains/ROCm.h"
 #include "clang/Basic/DiagnosticDriver.h"
-#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -21,13 +20,14 @@
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringExtras.h"    
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include "clang/Config/config.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -232,7 +232,20 @@ const char *amdgpu::dlr::getLinkCommandArgs(
       LibSuffix.append("/asan");
   }
 
-  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
+  llvm::SmallVector<std::string, 12> BCLibs;
+
+  std::string AsanRTL;
+  if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                   true) &&
+      TC.getSanitizerArgs(Args).needsAsanRt()) {
+    if (!Args.hasArg(options::OPT_nogpulib)){
+      AsanRTL = RocmInstallation.getAsanRTLPath();
+      if(AsanRTL.empty())
+        TC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
+      else
+        BCLibs.push_back(AsanRTL);
+    }
+  }
   StringRef GPUArch = getProcessorFromTargetID(Triple, TargetID);
 
   // When the base lib directory is called `lib` we enable
@@ -241,14 +254,14 @@ const char *amdgpu::dlr::getLinkCommandArgs(
   // not the installed compiler.
   std::string LibDeviceName = "/libomptarget-amdgpu.bc";
 
-  if (!Args.hasArg(options::OPT_offloadlib)) {
+  if (!Args.hasArg(options::OPT_nogpulib)) {
     // Check if libomptarget device bitcode can be found in a LIBRARY_PATH dir
     bool EnvOmpLibDeviceFound = false;
     for (auto &EnvLibraryPath : EnvironmentLibraryPaths) {
       std::string EnvOmpLibDevice = EnvLibraryPath + LibDeviceName;
       if (llvm::sys::fs::exists(EnvOmpLibDevice)) {
         EnvOmpLibDeviceFound = true;
-        BCLibs.emplace_back(EnvOmpLibDevice);
+        BCLibs.push_back(EnvOmpLibDevice);
         break;
       }
     }
@@ -260,24 +273,33 @@ const char *amdgpu::dlr::getLinkCommandArgs(
       StringRef bc_file_lib =
           Args.MakeArgString(C.getDriver().Dir + "/../lib" + LibDeviceName);
       if (llvm::sys::fs::exists(bc_file_suf))
-        BCLibs.emplace_back(Args.MakeArgString(bc_file_suf));
+        BCLibs.push_back(Args.MakeArgString(bc_file_suf));
       else if (llvm::sys::fs::exists(bc_file_lib))
         // In case a LibSuffix version not found, use suffix "lib"
-        BCLibs.emplace_back(Args.MakeArgString(bc_file_lib));
+        BCLibs.push_back(Args.MakeArgString(bc_file_lib));
       else
         TC.getDriver().Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
           << "libomptarget-amdgpu.bc";
     }
 
-    if (!Args.hasArg(options::OPT_no_offloadlib))
-      // Add the generic set of libraries, OpenMP subset only
-      BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
-          C.getArgs(), TC.getSanitizerArgs(C.getArgs()), C.getDriver(),
-          GPUArch.str(), /* isOpenMP=*/true, RocmInstallation));
+    if (!AsanRTL.empty()) {
+      // asanrtl is dependent on ockl so for every asanrtl bitcode linking
+      // requires ockl but viceversa is not true.
+      std::string OcklRTL(RocmInstallation.getOCKLPath());
+      if (OcklRTL.empty())
+        TC.getDriver().Diag(diag::err_drv_no_rocm_device_lib);
+      else
+        BCLibs.push_back(OcklRTL);
+    }
+
+    // Add the generic set of libraries, OpenMP subset only
+    BCLibs.append(amdgpu::dlr::getCommonDeviceLibNames(
+        C.getArgs(), C.getDriver(), GPUArch.str(), /* isOpenMP=*/true,
+        RocmInstallation));
   }
 
-  llvm::for_each(BCLibs, [&](auto BCLib) {
-    LastLinkArgs.push_back(Args.MakeArgString(BCLib.Path));
+  llvm::for_each(BCLibs, [&](StringRef BCFile) {
+    LastLinkArgs.push_back(Args.MakeArgString(BCFile));
   });
 
   LastLinkArgs.push_back("-o");
@@ -420,8 +442,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
-                          true))
+  if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 
   for (auto BCFile : getDeviceLibs(DriverArgs)) {
@@ -460,17 +481,10 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
 
   DerivedArgList *DAL =
       HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
-
   if (!DAL)
     DAL = new DerivedArgList(Args.getBaseArgs());
 
   const OptTable &Opts = getDriver().getOpts();
-
-  // Skip sanitize options passed from the HostTC. Claim them early.
-  // The decision to sanitize device code is computed only by
-  // 'shouldSkipSanitizeOption'.
-  if (DAL->hasArg(options::OPT_fsanitize_EQ))
-    DAL->claimAllArgs(options::OPT_fsanitize_EQ);
 
   for (Arg *A : Args)
     if (!shouldSkipSanitizeOption(*this, Args, BoundArch, A) &&
@@ -585,8 +599,13 @@ AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
-  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
+  if (Args.hasArg(options::OPT_nogpulib))
     return {};
+
+  if (!RocmInstallation->hasDeviceLibrary()) {
+    getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
+    return {};
+  }
 
   StringRef GpuArch = getProcessorFromTargetID(
       getTriple(), Args.getLastArgValue(options::OPT_march_EQ));

@@ -302,8 +302,11 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
       if (I.mayWriteToMemory())
         return 0;
 
-      if (LoadUsers.contains(&I))
-        LoadUsers.insert_range(I.users());
+      auto Iter = LoadUsers.find(&I);
+      if (Iter != LoadUsers.end()) {
+        for (Value *U : I.users())
+          LoadUsers.insert(U);
+      }
       // Do not look for reads in the header; they can already be hoisted
       // without peeling.
       if (BB == Header)
@@ -312,7 +315,8 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
             !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
-          LoadUsers.insert_range(I.users());
+          for (Value *U : I.users())
+            LoadUsers.insert(U);
       }
     }
   }
@@ -636,18 +640,20 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
     LLVM_DEBUG(dbgs() << "Profile-based estimated trip count is "
                       << *EstimatedTripCount << "\n");
 
-    if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
-      unsigned PeelCount = *EstimatedTripCount;
-      LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
-      PP.PeelCount = PeelCount;
-      return;
+    if (*EstimatedTripCount) {
+      if (*EstimatedTripCount + AlreadyPeeled <= MaxPeelCount) {
+        unsigned PeelCount = *EstimatedTripCount;
+        LLVM_DEBUG(dbgs() << "Peeling first " << PeelCount << " iterations.\n");
+        PP.PeelCount = PeelCount;
+        return;
+      }
+      LLVM_DEBUG(dbgs() << "Already peel count: " << AlreadyPeeled << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
+      LLVM_DEBUG(dbgs() << "Loop cost: " << LoopSize << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
+      LLVM_DEBUG(dbgs() << "Max peel count by cost: "
+                        << (Threshold / LoopSize - 1) << "\n");
     }
-    LLVM_DEBUG(dbgs() << "Already peel count: " << AlreadyPeeled << "\n");
-    LLVM_DEBUG(dbgs() << "Max peel count: " << UnrollPeelMaxCount << "\n");
-    LLVM_DEBUG(dbgs() << "Loop cost: " << LoopSize << "\n");
-    LLVM_DEBUG(dbgs() << "Max peel cost: " << Threshold << "\n");
-    LLVM_DEBUG(dbgs() << "Max peel count by cost: "
-                      << (Threshold / LoopSize - 1) << "\n");
   }
 }
 

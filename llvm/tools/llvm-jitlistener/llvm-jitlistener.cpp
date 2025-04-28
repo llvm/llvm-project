@@ -168,7 +168,7 @@ protected:
 
     if (Tuple.isOSWindows() && !Tuple.isOSBinFormatELF()) {
       Tuple.setObjectFormat(Triple::ELF);
-      TheModule->setTargetTriple(Tuple);
+      TheModule->setTargetTriple(Tuple.getTriple());
     }
 
     // Compile the IR

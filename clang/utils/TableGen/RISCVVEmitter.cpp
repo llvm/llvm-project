@@ -45,7 +45,7 @@ struct SemaRecord {
   unsigned Log2LMULMask;
 
   // Required extensions for this intrinsic.
-  RequiredExtensionBits RequiredExtensions;
+  uint32_t RequiredExtensions;
 
   // Prototype for this intrinsic.
   SmallVector<PrototypeDescriptor> Prototype;
@@ -769,8 +769,9 @@ void RVVEmitter::createRVVIntrinsics(
 
     SR.Log2LMULMask = Log2LMULMask;
 
+    SR.RequiredExtensions = 0;
     for (auto RequiredFeature : RequiredFeatures) {
-      unsigned RequireExt =
+      RVVRequire RequireExt =
           StringSwitch<RVVRequire>(RequiredFeature)
               .Case("RV64", RVV_REQ_RV64)
               .Case("Zvfhmin", RVV_REQ_Zvfhmin)
@@ -791,8 +792,10 @@ void RVVEmitter::createRVVIntrinsics(
               .Case("Zvfbfwma", RVV_REQ_Zvfbfwma)
               .Case("Zvfbfmin", RVV_REQ_Zvfbfmin)
               .Case("Zvfh", RVV_REQ_Zvfh)
-              .Case("Experimental", RVV_REQ_Experimental);
-      SR.RequiredExtensions.set(RequireExt);
+              .Case("Experimental", RVV_REQ_Experimental)
+              .Default(RVV_REQ_None);
+      assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
+      SR.RequiredExtensions |= RequireExt;
     }
 
     SR.NF = NF;

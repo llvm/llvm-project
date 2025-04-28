@@ -78,7 +78,10 @@ class AArch64RedundantCopyElimination : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {}
+  AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {
+    initializeAArch64RedundantCopyEliminationPass(
+        *PassRegistry::getPassRegistry());
+  }
 
   struct RegImm {
     MCPhysReg Reg;

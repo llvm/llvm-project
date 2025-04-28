@@ -9,7 +9,6 @@
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -28,12 +27,12 @@ TEST(LockFileManagerTest, Basic) {
   {
     // The lock file should not exist, so we should successfully acquire it.
     LockFileManager Locked1(LockedFile);
-    EXPECT_THAT_EXPECTED(Locked1.tryLock(), HasValue(true));
+    EXPECT_EQ(LockFileManager::LFS_Owned, Locked1.getState());
 
     // Attempting to reacquire the lock should fail.  Waiting on it would cause
     // deadlock, so don't try that.
     LockFileManager Locked2(LockedFile);
-    EXPECT_THAT_EXPECTED(Locked2.tryLock(), HasValue(false));
+    EXPECT_NE(LockFileManager::LFS_Owned, Locked2.getState());
   }
 
   // Now that the lock is out of scope, the file should be gone.
@@ -69,7 +68,7 @@ TEST(LockFileManagerTest, LinkLockExists) {
     // The lock file doesn't point to a real file, so we should successfully
     // acquire it.
     LockFileManager Locked(LockedFile);
-    EXPECT_THAT_EXPECTED(Locked.tryLock(), HasValue(true));
+    EXPECT_EQ(LockFileManager::LFS_Owned, Locked.getState());
   }
 
   // Now that the lock is out of scope, the file should be gone.
@@ -94,7 +93,7 @@ TEST(LockFileManagerTest, RelativePath) {
   {
     // The lock file should not exist, so we should successfully acquire it.
     LockFileManager Locked(LockedFile);
-    EXPECT_THAT_EXPECTED(Locked.tryLock(), HasValue(true));
+    EXPECT_EQ(LockFileManager::LFS_Owned, Locked.getState());
     EXPECT_TRUE(sys::fs::exists(FileLock.str()));
   }
 

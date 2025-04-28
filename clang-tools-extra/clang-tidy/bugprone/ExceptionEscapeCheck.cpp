@@ -43,11 +43,13 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       IgnoredExceptionsVec;
   StringRef(RawFunctionsThatShouldNotThrow)
       .split(FunctionsThatShouldNotThrowVec, ",", -1, false);
-  FunctionsThatShouldNotThrow.insert_range(FunctionsThatShouldNotThrowVec);
+  FunctionsThatShouldNotThrow.insert(FunctionsThatShouldNotThrowVec.begin(),
+                                     FunctionsThatShouldNotThrowVec.end());
 
   llvm::StringSet<> IgnoredExceptions;
   StringRef(RawIgnoredExceptions).split(IgnoredExceptionsVec, ",", -1, false);
-  IgnoredExceptions.insert_range(IgnoredExceptionsVec);
+  IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
+                           IgnoredExceptionsVec.end());
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
 }

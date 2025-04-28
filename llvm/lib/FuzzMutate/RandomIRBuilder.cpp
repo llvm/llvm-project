@@ -84,8 +84,10 @@ RandomIRBuilder::findOrCreateGlobalVariable(Module *M, ArrayRef<Value *> Srcs,
     return Pred.matches(Srcs, PoisonValue::get(GV->getValueType()));
   };
   bool DidCreate = false;
-  SmallVector<GlobalVariable *, 4> GlobalVars(
-      llvm::make_pointer_range(M->globals()));
+  SmallVector<GlobalVariable *, 4> GlobalVars;
+  for (GlobalVariable &GV : M->globals()) {
+    GlobalVars.push_back(&GV);
+  }
   auto RS = makeSampler(Rand, make_filter_range(GlobalVars, MatchesPred));
   RS.sample(nullptr, 1);
   GlobalVariable *GV = RS.getSelection();
@@ -144,8 +146,10 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
       auto Dominators = getDominators(&BB);
       std::shuffle(Dominators.begin(), Dominators.end(), Rand);
       for (BasicBlock *Dom : Dominators) {
-        SmallVector<Instruction *, 16> Instructions(
-            llvm::make_pointer_range(*Dom));
+        SmallVector<Instruction *, 16> Instructions;
+        for (Instruction &I : *Dom) {
+          Instructions.push_back(&I);
+        }
         auto RS =
             makeSampler(Rand, make_filter_range(Instructions, MatchesPred));
         // Also consider choosing no source, meaning we want a new one.

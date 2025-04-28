@@ -478,7 +478,6 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
   }
 
   const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-  const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
 
   if (Dst.isPhysical()) {
     // Eliminate DstSub on a physreg.
@@ -491,14 +490,15 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
 
     // Eliminate SrcSub by picking a corresponding Dst superregister.
     if (SrcSub) {
-      Dst = TRI.getMatchingSuperReg(Dst, SrcSub, SrcRC);
+      Dst = TRI.getMatchingSuperReg(Dst, SrcSub, MRI.getRegClass(Src));
       if (!Dst)
         return false;
-    } else if (!SrcRC->contains(Dst)) {
+    } else if (!MRI.getRegClass(Src)->contains(Dst)) {
       return false;
     }
   } else {
     // Both registers are virtual.
+    const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
     const TargetRegisterClass *DstRC = MRI.getRegClass(Dst);
 
     // Both registers have subreg indices.
@@ -1398,7 +1398,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
   LiveRangeEdit::Remat RM(ValNo);
   RM.OrigMI = DefMI;
-  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx))
+  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx, true))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();
@@ -2311,7 +2311,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     // We must also check for overlaps with regmask clobbers.
     BitVector RegMaskUsable;
     if (LIS->checkRegMaskInterference(RHS, RegMaskUsable) &&
-        !RegMaskUsable.test(DstReg.id())) {
+        !RegMaskUsable.test(DstReg)) {
       LLVM_DEBUG(dbgs() << "\t\tRegMask interference\n");
       return false;
     }
@@ -3814,7 +3814,8 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
     // into an existing tracking collection, or insert a new one.
     RegIt = RegToPHIIdx.find(CP.getDstReg());
     if (RegIt != RegToPHIIdx.end())
-      llvm::append_range(RegIt->second, InstrNums);
+      RegIt->second.insert(RegIt->second.end(), InstrNums.begin(),
+                           InstrNums.end());
     else
       RegToPHIIdx.insert({CP.getDstReg(), InstrNums});
   }

@@ -119,12 +119,13 @@ void NonConstParameterCheck::addParm(const ParmVarDecl *Parm) {
         T->getPointeeType()->isFloatingType()))
     return;
 
-  auto [It, Inserted] = Parameters.try_emplace(Parm);
-  if (!Inserted)
+  if (Parameters.find(Parm) != Parameters.end())
     return;
 
-  It->second.IsReferenced = false;
-  It->second.CanBeConst = true;
+  ParmInfo PI;
+  PI.IsReferenced = false;
+  PI.CanBeConst = true;
+  Parameters[Parm] = PI;
 }
 
 void NonConstParameterCheck::setReferenced(const DeclRefExpr *Ref) {

@@ -701,7 +701,8 @@ void SearchableTableEmitter::collectTableEntries(
   }
 
   SearchIndex Idx;
-  llvm::append_range(Idx.Fields, Table.Fields);
+  std::copy(Table.Fields.begin(), Table.Fields.end(),
+            std::back_inserter(Idx.Fields));
   llvm::sort(Table.Entries, [&](const Record *LHS, const Record *RHS) {
     return compareBy(LHS, RHS, Idx);
   });
@@ -834,7 +835,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
   const Record *SearchableTable = Records.getClass("SearchableTable");
   for (auto &NameRec : Records.getClasses()) {
     const Record *Class = NameRec.second.get();
-    if (Class->getDirectSuperClasses().size() != 1 ||
+    if (Class->getSuperClasses().size() != 1 ||
         !Class->isSubClassOf(SearchableTable))
       continue;
 

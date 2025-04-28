@@ -56,9 +56,6 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
   // Find all expandable direct users of Consts.
   SmallVector<Constant *> Stack;
   for (Constant *C : Consts) {
-    assert(!isa<ConstantData>(C) &&
-           "should not be expanding trivial constant users");
-
     if (IncludeSelf) {
       assert(isExpandableUser(C) && "One of the constants is not expandable");
       Stack.push_back(C);
@@ -108,7 +105,7 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
           auto NewInsts = expandUser(BI, C);
           for (auto *NI : NewInsts)
             NI->setDebugLoc(Loc);
-          InstructionWorklist.insert_range(NewInsts);
+          InstructionWorklist.insert(NewInsts.begin(), NewInsts.end());
           U.set(NewInsts.back());
         }
       }

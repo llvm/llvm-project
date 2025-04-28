@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "PerfHelper.h"
-#include "Error.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -118,8 +117,6 @@ void ConfiguredEvent::initRealEvent(const pid_t ProcessID, const int GroupFD) {
   const int CPU = -1;
   const uint32_t Flags = 0;
   perf_event_attr AttrCopy = *Event.attribute();
-  AttrCopy.read_format =
-      PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
   FileDescriptor = perf_event_open(&AttrCopy, ProcessID, CPU, GroupFD, Flags);
   if (FileDescriptor == -1) {
     errs() << "Unable to open event. ERRNO: " << strerror(errno)
@@ -135,20 +132,15 @@ void ConfiguredEvent::initRealEvent(const pid_t ProcessID, const int GroupFD) {
 
 Expected<SmallVector<int64_t>>
 ConfiguredEvent::readOrError(StringRef /*unused*/) const {
-  int64_t EventInfo[3] = {0, 0, 0};
-  ssize_t ReadSize = ::read(FileDescriptor, &EventInfo, sizeof(EventInfo));
+  int64_t Count = 0;
+  ssize_t ReadSize = ::read(FileDescriptor, &Count, sizeof(Count));
 
-  if (ReadSize != sizeof(EventInfo))
+  if (ReadSize != sizeof(Count))
     return make_error<StringError>("Failed to read event counter",
                                    errc::io_error);
 
-  int64_t EventTimeEnabled = EventInfo[1];
-  int64_t EventTimeRunning = EventInfo[2];
-  if (EventTimeEnabled != EventTimeRunning)
-    return make_error<PerfCounterNotFullyEnabled>();
-
   SmallVector<int64_t, 1> Result;
-  Result.push_back(EventInfo[0]);
+  Result.push_back(Count);
   return Result;
 }
 

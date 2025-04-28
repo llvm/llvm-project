@@ -88,18 +88,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    PrintInstAddrs("print-inst-addrs", cl::Hidden,
-                   cl::desc("Print addresses of instructions when dumping"));
-
-static cl::opt<bool> PrintInstDebugLocs(
-    "print-inst-debug-locs", cl::Hidden,
-    cl::desc("Pretty print debug locations of instructions when dumping"));
-
-static cl::opt<bool> PrintProfData(
-    "print-prof-data", cl::Hidden,
-    cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
-
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -140,20 +128,6 @@ static void orderValue(const Value *V, OrderMap &OM) {
 static OrderMap orderModule(const Module *M) {
   OrderMap OM;
 
-  auto orderConstantValue = [&OM](const Value *V) {
-    if (isa<Constant>(V) || isa<InlineAsm>(V))
-      orderValue(V, OM);
-  };
-
-  auto OrderConstantFromMetadata = [&](Metadata *MD) {
-    if (const auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
-      orderConstantValue(VAM->getValue());
-    } else if (const auto *AL = dyn_cast<DIArgList>(MD)) {
-      for (const auto *VAM : AL->getArgs())
-        orderConstantValue(VAM->getValue());
-    }
-  };
-
   for (const GlobalVariable &G : M->globals()) {
     if (G.hasInitializer())
       if (!isa<GlobalValue>(G.getInitializer()))
@@ -185,16 +159,6 @@ static OrderMap orderModule(const Module *M) {
     for (const BasicBlock &BB : F) {
       orderValue(&BB, OM);
       for (const Instruction &I : BB) {
-        // Debug records can contain Value references, that can then contain
-        // Values disconnected from the rest of the Value hierachy, if wrapped
-        // in some kind of constant-expression. Find and order any Values that
-        // are wrapped in debug-info.
-        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-          OrderConstantFromMetadata(DVR.getRawLocation());
-          if (DVR.isDbgAssign())
-            OrderConstantFromMetadata(DVR.getRawAddress());
-        }
-
         for (const Value *Op : I.operands()) {
           Op = skipMetadataWrapper(Op);
           if ((isa<Constant>(*Op) && !isa<GlobalValue>(*Op)) ||
@@ -404,23 +368,6 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::RISCV_VectorCall:
     Out << "riscv_vector_cc";
     break;
-#define CC_VLS_CASE(ABI_VLEN)                                                  \
-  case CallingConv::RISCV_VLSCall_##ABI_VLEN:                                  \
-    Out << "riscv_vls_cc(" #ABI_VLEN ")";                                      \
-    break;
-    CC_VLS_CASE(32)
-    CC_VLS_CASE(64)
-    CC_VLS_CASE(128)
-    CC_VLS_CASE(256)
-    CC_VLS_CASE(512)
-    CC_VLS_CASE(1024)
-    CC_VLS_CASE(2048)
-    CC_VLS_CASE(4096)
-    CC_VLS_CASE(8192)
-    CC_VLS_CASE(16384)
-    CC_VLS_CASE(32768)
-    CC_VLS_CASE(65536)
-#undef CC_VLS_CASE
   }
 }
 
@@ -1375,7 +1322,7 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   assert(N && "Can't insert a null Value into SlotTracker!");
 
   // Don't make slots for DIExpressions. We just print them inline everywhere.
-  if (isa<DIExpression>(N))
+  if (isa<DIExpression>(N) || isa<DIExpr>(N))
     return;
 
   unsigned DestSlot = mdnNext;
@@ -1703,7 +1650,7 @@ static void WriteConstantInternal(raw_ostream &Out, const Constant *CV,
     WriterCtx.TypePrinter->print(ETy, Out);
     Out << ' ';
     WriteAsOperandInternal(Out, CA->getElementAsConstant(0), WriterCtx);
-    for (uint64_t i = 1, e = CA->getNumElements(); i != e; ++i) {
+    for (unsigned i = 1, e = CA->getNumElements(); i != e; ++i) {
       Out << ", ";
       WriterCtx.TypePrinter->print(ETy, Out);
       Out << ' ';
@@ -1920,7 +1867,6 @@ struct MDFieldPrinter {
                           DICompileUnit::DebugNameTableKind NTK);
   void printMemorySpace(StringRef Name, dwarf::MemorySpace MS);
   template <class RangeT> void printMetadataList(StringRef Name, RangeT Range);
-  void printFixedPointKind(StringRef Name, DIFixedPointType::FixedPointKind V);
 };
 
 } // end anonymous namespace
@@ -2084,11 +2030,6 @@ void MDFieldPrinter::printMetadataList(StringRef Name, RangeT Range) {
   Out << "}";
 }
 
-void MDFieldPrinter::printFixedPointKind(StringRef Name,
-                                         DIFixedPointType::FixedPointKind V) {
-  Out << FS << Name << ": " << DIFixedPointType::fixedPointKindString(V);
-}
-
 template <class IntTy, class Stringifier>
 void MDFieldPrinter::printDwarfEnum(StringRef Name, IntTy Value,
                                     Stringifier toString, bool ShouldSkipZero) {
@@ -2179,42 +2120,45 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
   Out << "!DIGenericSubrange(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  auto GetConstant = [&](Metadata *Bound) -> std::optional<int64_t> {
-    auto *BE = dyn_cast_or_null<DIExpression>(Bound);
-    if (!BE)
-      return std::nullopt;
-    if (BE->isConstant() &&
-        DIExpression::SignedOrUnsignedConstant::SignedConstant ==
-            *BE->isConstant()) {
-      return static_cast<int64_t>(BE->getElement(1));
+  auto IsConstant = [&](Metadata *Bound) -> bool {
+    if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
+      return BE->isConstant() &&
+             DIExpression::SignedOrUnsignedConstant::SignedConstant ==
+                 *BE->isConstant();
     }
-    return std::nullopt;
+    return false;
+  };
+
+  auto GetConstant = [&](Metadata *Bound) -> int64_t {
+    assert(IsConstant(Bound) && "Expected constant");
+    auto *BE = dyn_cast_or_null<DIExpression>(Bound);
+    return static_cast<int64_t>(BE->getElement(1));
   };
 
   auto *Count = N->getRawCountNode();
-  if (auto ConstantCount = GetConstant(Count))
-    Printer.printInt("count", *ConstantCount,
+  if (IsConstant(Count))
+    Printer.printInt("count", GetConstant(Count),
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
 
   auto *LBound = N->getRawLowerBound();
-  if (auto ConstantLBound = GetConstant(LBound))
-    Printer.printInt("lowerBound", *ConstantLBound,
+  if (IsConstant(LBound))
+    Printer.printInt("lowerBound", GetConstant(LBound),
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("lowerBound", LBound, /*ShouldSkipNull */ true);
 
   auto *UBound = N->getRawUpperBound();
-  if (auto ConstantUBound = GetConstant(UBound))
-    Printer.printInt("upperBound", *ConstantUBound,
+  if (IsConstant(UBound))
+    Printer.printInt("upperBound", GetConstant(UBound),
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("upperBound", UBound, /*ShouldSkipNull */ true);
 
   auto *Stride = N->getRawStride();
-  if (auto ConstantStride = GetConstant(Stride))
-    Printer.printInt("stride", *ConstantStride,
+  if (IsConstant(Stride))
+    Printer.printInt("stride", GetConstant(Stride),
                      /* ShouldSkipZero */ false);
   else
     Printer.printMetadata("stride", Stride, /*ShouldSkipNull */ true);
@@ -2247,29 +2191,6 @@ static void writeDIBasicType(raw_ostream &Out, const DIBasicType *N,
                          dwarf::AttributeEncodingString);
   Printer.printInt("num_extra_inhabitants", N->getNumExtraInhabitants());
   Printer.printDIFlags("flags", N->getFlags());
-  Out << ")";
-}
-
-static void writeDIFixedPointType(raw_ostream &Out, const DIFixedPointType *N,
-                                  AsmWriterContext &) {
-  Out << "!DIFixedPointType(";
-  MDFieldPrinter Printer(Out);
-  if (N->getTag() != dwarf::DW_TAG_base_type)
-    Printer.printTag(N);
-  Printer.printString("name", N->getName());
-  Printer.printInt("size", N->getSizeInBits());
-  Printer.printInt("align", N->getAlignInBits());
-  Printer.printDwarfEnum("encoding", N->getEncoding(),
-                         dwarf::AttributeEncodingString);
-  Printer.printDIFlags("flags", N->getFlags());
-  Printer.printFixedPointKind("kind", N->getKind());
-  if (N->isRational()) {
-    bool IsUnsigned = !N->isSigned();
-    Printer.printAPInt("numerator", N->getNumerator(), IsUnsigned, false);
-    Printer.printAPInt("denominator", N->getDenominator(), IsUnsigned, false);
-  } else {
-    Printer.printInt("factor", N->getFactor());
-  }
   Out << ")";
 }
 
@@ -2325,26 +2246,6 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
   Out << ")";
 }
 
-static void writeDISubrangeType(raw_ostream &Out, const DISubrangeType *N,
-                                AsmWriterContext &WriterCtx) {
-  Out << "!DISubrangeType(";
-  MDFieldPrinter Printer(Out, WriterCtx);
-  Printer.printString("name", N->getName());
-  Printer.printMetadata("scope", N->getRawScope());
-  Printer.printMetadata("file", N->getRawFile());
-  Printer.printInt("line", N->getLine());
-  Printer.printInt("size", N->getSizeInBits());
-  Printer.printInt("align", N->getAlignInBits());
-  Printer.printDIFlags("flags", N->getFlags());
-  Printer.printMetadata("baseType", N->getRawBaseType(),
-                        /* ShouldSkipNull */ false);
-  Printer.printMetadata("lowerBound", N->getRawLowerBound());
-  Printer.printMetadata("upperBound", N->getRawUpperBound());
-  Printer.printMetadata("stride", N->getRawStride());
-  Printer.printMetadata("bias", N->getRawBias());
-  Out << ")";
-}
-
 static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
                                  AsmWriterContext &WriterCtx) {
   Out << "!DICompositeType(";
@@ -2383,7 +2284,6 @@ static void writeDICompositeType(raw_ostream &Out, const DICompositeType *N,
     Printer.printDwarfEnum("enumKind", *EnumKind, dwarf::EnumKindString,
                            /*ShouldSkipZero=*/false);
 
-  Printer.printMetadata("bitStride", N->getRawBitStride());
   Out << ")";
 }
 
@@ -2616,7 +2516,7 @@ static void writeDILocalVariable(raw_ostream &Out, const DILocalVariable *N,
 
 static void writeDIFragment(raw_ostream &Out, const DIFragment *N,
                             AsmWriterContext &WriterCtx) {
-  report_fatal_error("unsupported DIExpr-based metadata");
+  Out << "!DIFragment()";
 }
 
 static void writeDILabel(raw_ostream &Out, const DILabel *N,
@@ -2746,7 +2646,69 @@ static void writeDIArgList(raw_ostream &Out, const DIArgList *N,
 
 static void writeDIExpr(raw_ostream &Out, const DIExpr *N,
                         AsmWriterContext &WriterCtx) {
-  report_fatal_error("unsupported DIExpr-based metadata");
+  assert(WriterCtx.TypePrinter && "DIExpr require TypePrinting!");
+  FieldSeparator FS;
+  Out << "!DIExpr(";
+  for (auto &&Op : N->builder()) {
+    Out << FS << DIOp::getAsmName(Op) << '(';
+    std::visit(
+        makeVisitor(
+#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
+#include "llvm/IR/DIExprOps.def"
+#undef HANDLE_OP0
+            [&](DIOp::Referrer Referrer) {
+              WriterCtx.TypePrinter->print(Referrer.getResultType(), Out);
+            },
+            [&](DIOp::Arg Arg) {
+              Out << Arg.getIndex() << ", ";
+              WriterCtx.TypePrinter->print(Arg.getResultType(), Out);
+            },
+            [&](DIOp::TypeObject TypeObject) {
+              WriterCtx.TypePrinter->print(TypeObject.getResultType(), Out);
+            },
+            [&](DIOp::Constant Constant) {
+              WriterCtx.TypePrinter->print(
+                  Constant.getLiteralValue()->getType(), Out);
+              Out << ' ';
+              WriteConstantInternal(Out, Constant.getLiteralValue(), WriterCtx);
+            },
+            [&](DIOp::Convert Convert) {
+              WriterCtx.TypePrinter->print(Convert.getResultType(), Out);
+            },
+            [&](DIOp::ZExt ZExt) {
+              WriterCtx.TypePrinter->print(ZExt.getResultType(), Out);
+            },
+            [&](DIOp::SExt SExt) {
+              WriterCtx.TypePrinter->print(SExt.getResultType(), Out);
+            },
+            [&](DIOp::Reinterpret Reinterpret) {
+              WriterCtx.TypePrinter->print(Reinterpret.getResultType(), Out);
+            },
+            [&](DIOp::BitOffset BitOffset) {
+              WriterCtx.TypePrinter->print(BitOffset.getResultType(), Out);
+            },
+            [&](DIOp::ByteOffset ByteOffset) {
+              WriterCtx.TypePrinter->print(ByteOffset.getResultType(), Out);
+            },
+            [&](DIOp::Composite Composite) {
+              Out << Composite.getCount() << ", ";
+              WriterCtx.TypePrinter->print(Composite.getResultType(), Out);
+            },
+            [&](DIOp::Extend Extend) { Out << Extend.getCount(); },
+            [&](DIOp::AddrOf AddrOf) { Out << AddrOf.getAddressSpace(); },
+            [&](DIOp::Deref Deref) {
+              WriterCtx.TypePrinter->print(Deref.getResultType(), Out);
+            },
+            [&](DIOp::PushLane PushLane) {
+              WriterCtx.TypePrinter->print(PushLane.getResultType(), Out);
+            },
+            [&](DIOp::Fragment Fragment) {
+              Out << Fragment.getBitOffset() << ", " << Fragment.getBitSize();
+            }),
+        Op);
+    Out << ')';
+  }
+  Out << ')';
 }
 
 static void writeDIGlobalVariableExpression(raw_ostream &Out,
@@ -2789,7 +2751,12 @@ static void writeDIImportedEntity(raw_ostream &Out, const DIImportedEntity *N,
 
 static void writeDILifetime(raw_ostream &Out, const DILifetime *N,
                             AsmWriterContext &WriterCtx) {
-  report_fatal_error("unsupported DIExpr-based metadata");
+  Out << "!DILifetime(";
+  MDFieldPrinter Printer(Out, WriterCtx);
+  Printer.printMetadata("object", N->getRawObject());
+  Printer.printMetadata("location", N->getRawLocation());
+  Printer.printMetadataList("argObjects", N->rawArgObjects());
+  Out << ")";
 }
 
 static void WriteMDNodeBodyInternal(raw_ostream &Out, const MDNode *Node,
@@ -2898,6 +2865,10 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
   // readability of debug info intrinsics.
   if (const DIExpression *Expr = dyn_cast<DIExpression>(MD)) {
     writeDIExpression(Out, Expr, WriterCtx);
+    return;
+  }
+  if (const DIExpr *Expr = dyn_cast<DIExpr>(MD)) {
+    writeDIExpr(Out, Expr, WriterCtx);
     return;
   }
   if (const DIArgList *ArgList = dyn_cast<DIArgList>(MD)) {
@@ -3210,7 +3181,7 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!DL.empty())
     Out << "target datalayout = \"" << DL << "\"\n";
   if (!M->getTargetTriple().empty())
-    Out << "target triple = \"" << M->getTargetTriple().str() << "\"\n";
+    Out << "target triple = \"" << M->getTargetTriple() << "\"\n";
 
   if (!M->getModuleInlineAsm().empty()) {
     Out << '\n';
@@ -3926,6 +3897,10 @@ void AssemblyWriter::printNamedMDNode(const NamedMDNode *NMD) {
       writeDIExpression(Out, Expr, WriterCtx);
       continue;
     }
+    if (auto *Expr = dyn_cast<DIExpr>(Op)) {
+      writeDIExpr(Out, Expr, WriterCtx);
+      continue;
+    }
 
     int Slot = Machine.getMetadataSlot(Op);
     if (Slot == -1)
@@ -4333,13 +4308,6 @@ void AssemblyWriter::printFunction(const Function *F) {
     writeOperand(F->getPersonalityFn(), /*PrintType=*/true);
   }
 
-  if (PrintProfData) {
-    if (auto *MDProf = F->getMetadata(LLVMContext::MD_prof)) {
-      Out << " ";
-      MDProf->print(Out, TheModule, /*IsForDebug=*/true);
-    }
-  }
-
   if (F->isDeclaration()) {
     Out << '\n';
   } else {
@@ -4457,26 +4425,6 @@ void AssemblyWriter::printInfoComment(const Value &V) {
   if (AnnotationWriter) {
     AnnotationWriter->printInfoComment(V, Out);
   }
-
-  if (PrintInstDebugLocs) {
-    if (auto *I = dyn_cast<Instruction>(&V)) {
-      if (I->getDebugLoc()) {
-        Out << " ; ";
-        I->getDebugLoc().print(Out);
-      }
-    }
-  }
-  if (PrintProfData) {
-    if (auto *I = dyn_cast<Instruction>(&V)) {
-      if (auto *MD = I->getMetadata(LLVMContext::MD_prof)) {
-        Out << " ; ";
-        MD->print(Out, TheModule, /*IsForDebug=*/true);
-      }
-    }
-  }
-
-  if (PrintInstAddrs)
-    Out << " ; " << &V;
 }
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
@@ -5418,7 +5366,7 @@ static void printMetadataImplRec(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (!N || isa<DIExpression>(MD))
+  if (!N || isa<DIExpression>(MD) || isa<DIExpr>(N))
     return;
 
   OS << " = ";
@@ -5486,7 +5434,7 @@ static void printMetadataImpl(raw_ostream &ROS, const Metadata &MD,
   WriteAsOperandInternal(OS, &MD, *WriterCtx, /* FromValue */ true);
 
   auto *N = dyn_cast<MDNode>(&MD);
-  if (OnlyAsOperand || !N || isa<DIExpression>(MD))
+  if (OnlyAsOperand || !N || isa<DIExpression>(MD) || isa<DIExpr>(N))
     return;
 
   OS << " = ";

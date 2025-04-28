@@ -184,16 +184,8 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
   // Check user-defined literals
-  if (const auto *UDL = Result.Nodes.getNodeAs<UserDefinedLiteral>("used")) {
-    const Decl *CalleeDecl = UDL->getCalleeDecl();
-    if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
-      if (const FunctionTemplateDecl *FPT = FD->getPrimaryTemplate()) {
-        removeFromFoundDecls(FPT);
-        return;
-      }
-    }
-    removeFromFoundDecls(CalleeDecl);
-  }
+  if (const auto *UDL = Result.Nodes.getNodeAs<UserDefinedLiteral>("used"))
+    removeFromFoundDecls(UDL->getCalleeDecl());
 }
 
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {

@@ -40,6 +40,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override { return true; }
+
   size_t GetIndexOfChildWithName(ConstString name) override {
     // We only have a single child
     return 0;

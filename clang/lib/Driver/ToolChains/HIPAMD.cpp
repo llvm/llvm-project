@@ -105,10 +105,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // ToDo: Remove this option after AMDGPU backend supports ISA-level linking.
   // Since AMDGPU backend currently does not support ISA-level linking, all
   // called functions need to be imported.
-  if (IsThinLTO) {
+  if (IsThinLTO)
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
-    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
-  }
 
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_g_Group))
     if (!A->getOption().matches(options::OPT_g0) &&
@@ -247,11 +245,10 @@ void HIPAMDToolChain::addClangTargetOptions(
   CC1Args.append({"-fcuda-is-device", "-fno-threadsafe-statics"});
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                          false)) {
+                          false))
     CC1Args.append({"-mllvm", "-amdgpu-internalize-symbols"});
-    if (DriverArgs.hasArgNoClaim(options::OPT_hipstdpar))
-      CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
-  }
+  if (DriverArgs.hasArgNoClaim(options::OPT_hipstdpar))
+    CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
 
   StringRef MaxThreadsPerBlock =
       DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
@@ -309,15 +306,11 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     checkTargetID(*DAL);
   }
 
-  if (!Args.hasArg(options::OPT_flto_partitions_EQ))
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
-                      "8");
-
   return DAL;
 }
 
 Tool *HIPAMDToolChain::buildLinker() const {
-  assert(getTriple().isAMDGCN() ||
+  assert(getTriple().getArch() == llvm::Triple::amdgcn ||
          getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
 }
@@ -373,8 +366,7 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
-  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
-                          true) ||
+  if (DriverArgs.hasArg(options::OPT_nogpulib) ||
       getGPUArch(DriverArgs) == "amdgcnspirv")
     return {};
   ArgStringList LibraryPaths;
@@ -395,7 +387,7 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
         llvm::sys::path::append(Path, BCName);
         FullName = Path;
         if (llvm::sys::fs::exists(FullName)) {
-          BCLibs.emplace_back(FullName);
+          BCLibs.push_back(FullName);
           return;
         }
       }
@@ -409,8 +401,23 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
+    // If --hip-device-lib is not set, add the default bitcode libraries.
+    if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                           options::OPT_fno_gpu_sanitize, true) &&
+        getSanitizerArgs(DriverArgs).needsAsanRt()) {
+      auto AsanRTL = RocmInstallation->getAsanRTLPath();
+      if (AsanRTL.empty()) {
+        getDriver().Diag(diag::err_drv_no_asan_rt_lib);
+        return {};
+      } else
+        BCLibs.emplace_back(AsanRTL, /*ShouldInternalize=*/false);
+    }
+
+    // Add the HIP specific bitcode library.
+    BCLibs.push_back(RocmInstallation->getHIPPath());
+
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
+    for (StringRef N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.

@@ -80,9 +80,11 @@ namespace {
   // branch-to-blr sequences.
   struct PPCTOCRegDeps : public MachineFunctionPass {
     static char ID;
-    PPCTOCRegDeps() : MachineFunctionPass(ID) {}
+    PPCTOCRegDeps() : MachineFunctionPass(ID) {
+      initializePPCTOCRegDepsPass(*PassRegistry::getPassRegistry());
+    }
 
-  protected:
+protected:
     bool hasTOCLoReloc(const MachineInstr &MI) {
       if (MI.getOpcode() == PPC::LDtocL || MI.getOpcode() == PPC::ADDItocL8 ||
           MI.getOpcode() == PPC::LWZtocL)

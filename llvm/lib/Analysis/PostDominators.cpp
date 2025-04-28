@@ -35,7 +35,9 @@ static constexpr bool ExpensiveChecksEnabled = false;
 char PostDominatorTreeWrapperPass::ID = 0;
 
 PostDominatorTreeWrapperPass::PostDominatorTreeWrapperPass()
-    : FunctionPass(ID) {}
+    : FunctionPass(ID) {
+  initializePostDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 INITIALIZE_PASS(PostDominatorTreeWrapperPass, "postdomtree",
                 "Post-Dominator Tree Construction", true, true)

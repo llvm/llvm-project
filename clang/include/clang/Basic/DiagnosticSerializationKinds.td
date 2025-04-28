@@ -75,7 +75,8 @@ def err_module_file_not_module : Error<
 def err_module_file_missing_top_level_submodule : Error<
   "module file '%0' is missing its top-level submodule">, DefaultFatal;
 def note_module_file_conflict : Note<
-  "compiled from '%0' and '%1'">;
+  "this is generally caused by modules with the same name found in multiple "
+  "paths">;
 
 def remark_module_import : Remark<
   "importing module '%0'%select{| into '%3'}2 from '%1'">,

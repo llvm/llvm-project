@@ -32,9 +32,6 @@ It's recommended to enable the compiler warning
 `-Wtautological-constant-out-of-range-compare` as well, since check does not
 inspect compile-time constant loop boundaries to avoid overlaps with the warning.
 
-Options
--------
-
 .. option:: MagnitudeBitsUpperLimit
 
   Upper limit for the magnitude bits of the loop variable. If it's set the check

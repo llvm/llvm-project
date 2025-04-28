@@ -281,7 +281,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   DenseSet<StringRef> PrefixesUnionSet;
   for (const auto &[Prefix, _] : Prefixes)
-    PrefixesUnionSet.insert_range(Prefix);
+    PrefixesUnionSet.insert(Prefix.begin(), Prefix.end());
   SmallVector<StringRef> PrefixesUnion(PrefixesUnionSet.begin(),
                                        PrefixesUnionSet.end());
   array_pod_sort(PrefixesUnion.begin(), PrefixesUnion.end());

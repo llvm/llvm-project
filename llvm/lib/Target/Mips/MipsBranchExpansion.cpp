@@ -135,8 +135,9 @@ class MipsBranchExpansion : public MachineFunctionPass {
 public:
   static char ID;
 
-  MipsBranchExpansion()
-      : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
+  MipsBranchExpansion() : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {
+    initializeMipsBranchExpansionPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override {
     return "Mips Branch Expansion Pass";

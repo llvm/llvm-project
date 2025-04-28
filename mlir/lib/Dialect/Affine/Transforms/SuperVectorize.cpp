@@ -1106,10 +1106,6 @@ static bool isUniformDefinition(Value value,
     if (!loop.isDefinedOutsideOfLoop(value))
       return false;
   }
-
-  if (!value.getType().isIntOrIndexOrFloat())
-    return false;
-
   return true;
 }
 

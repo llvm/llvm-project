@@ -148,7 +148,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
   std::map<unsigned, MachineInstr *> MultiUserLookup;
   unsigned UseToBringDefCloserToCount = 0;
   std::vector<MachineInstr *> PseudoIdempotentInstructions;
-  std::vector<MCRegister> PhysRegDefs;
+  std::vector<unsigned> PhysRegDefs;
   for (auto *II : Instructions) {
     for (unsigned i = 1; i < II->getNumOperands(); i++) {
       MachineOperand &MO = II->getOperand(i);
@@ -186,8 +186,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
 
       if (II->getOperand(i).isReg()) {
         if (!II->getOperand(i).getReg().isVirtual())
-          if (!llvm::is_contained(PhysRegDefs,
-                                  II->getOperand(i).getReg().asMCReg())) {
+          if (!llvm::is_contained(PhysRegDefs, II->getOperand(i).getReg())) {
             continue;
           }
       }

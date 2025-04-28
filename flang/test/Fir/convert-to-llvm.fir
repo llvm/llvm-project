@@ -701,10 +701,6 @@ func.func @convert_from_float(%arg0 : f32) {
   %7 = fir.convert %arg0 : (f32) -> i16
   %8 = fir.convert %arg0 : (f32) -> i32
   %9 = fir.convert %arg0 : (f32) -> i64
-  %10 = fir.convert %arg0 : (f32) -> ui8
-  %11 = fir.convert %arg0 : (f32) -> ui16
-  %12 = fir.convert %arg0 : (f32) -> ui32
-  %13 = fir.convert %arg0 : (f32) -> ui64
   return
 }
 
@@ -715,15 +711,11 @@ func.func @convert_from_float(%arg0 : f32) {
 // CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f64
 // CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f80
 // CHECK:         %{{.*}} = llvm.fpext %[[ARG0]] : f32 to f128
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i1
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i8
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i16
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i32
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i64
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i8
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i16
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i32
-// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i64
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i1
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i8
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i16
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i32
+// CHECK:         %{{.*}} = llvm.fptosi %[[ARG0]] : f32 to i64
 
 // -----
 
@@ -870,8 +862,8 @@ func.func @test_store_box(%array : !fir.ref<!fir.box<!fir.array<?x?xf32>>>, %box
 // CHECK-LABEL:  llvm.func @test_store_box
 // CHECK-SAME:  (%[[arg0:.*]]: !llvm.ptr,
 // CHECK-SAME:  %[[arg1:.*]]: !llvm.ptr) {
-// CHECK-NEXT:  %[[size:.*]] = llvm.mlir.constant(72 : i32) : i32
-// CHECK-NEXT:  "llvm.intr.memcpy"(%[[arg0]], %[[arg1]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK-NEXT:  %[[box_to_store:.*]] = llvm.load %arg1 : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>
+// CHECK-NEXT:  llvm.store %[[box_to_store]], %[[arg0]] : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<2 x array<3 x i{{.*}}>>)>, !llvm.ptr
 // CHECK-NEXT:  llvm.return
 // CHECK-NEXT:  }
 
@@ -883,17 +875,15 @@ func.func @store_unlimited_polymorphic_box(%arg0 : !fir.class<none>, %arg1 : !fi
   fir.store %arg3 to %arg3r : !fir.ref<!fir.box<!fir.array<?xnone>>>
   return
 }
-// CHECK:   llvm.func @store_unlimited_polymorphic_box(%[[VAL_0:.*]]: !llvm.ptr, %[[VAL_1:.*]]: !llvm.ptr, %[[VAL_2:.*]]: !llvm.ptr, %[[VAL_3:.*]]: !llvm.ptr, %[[VAL_4:.*]]: !llvm.ptr, %[[VAL_5:.*]]: !llvm.ptr, %[[VAL_6:.*]]: !llvm.ptr, %[[VAL_7:.*]]: !llvm.ptr) {
-// CHECK:     %[[VAL_8:.*]] = llvm.mlir.constant(40 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_4]], %[[VAL_0]], %[[VAL_8]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-// CHECK:     %[[VAL_9:.*]] = llvm.mlir.constant(64 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_5]], %[[VAL_1]], %[[VAL_9]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-// CHECK:     %[[VAL_10:.*]] = llvm.mlir.constant(40 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_6]], %[[VAL_2]], %[[VAL_10]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-// CHECK:     %[[VAL_11:.*]] = llvm.mlir.constant(64 : i32) : i32
-// CHECK:     "llvm.intr.memcpy"(%[[VAL_7]], %[[VAL_3]], %[[VAL_11]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-// CHECK:     llvm.return
-// CHECK:   }
+// CHECK-LABEL:   llvm.func @store_unlimited_polymorphic_box(
+// CHECK:  %[[VAL_8:.*]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
+// CHECK:  llvm.store %[[VAL_8]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
+// CHECK:  %[[VAL_9:.*]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>, ptr, array<1 x i{{.*}}>)>
+// CHECK:  llvm.store %[[VAL_9]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
+// CHECK:  %[[VAL_10:.*]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>
+// CHECK:  llvm.store %[[VAL_10]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
+// CHECK:  %[[VAL_11:.*]] = llvm.load %{{.*}}: !llvm.ptr
+// CHECK:  llvm.store %[[VAL_11]], %{{.*}} : !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i{{.*}}>>, ptr, array<1 x i{{.*}}>)>, !llvm.ptr
 
 
 // -----
@@ -945,8 +935,8 @@ func.func @test_load_box(%addr : !fir.ref<!fir.box<!fir.array<10xf32>>>) {
 // GENERIC-NEXT:  %[[box_copy:.*]] = llvm.alloca %[[c1]] x !llvm.struct<([[DESC_TYPE:.*]])>
 // AMDGPU-NEXT:   %[[alloca_box_copy:.*]] = llvm.alloca %[[c1]] x !llvm.struct<([[DESC_TYPE:.*]])>{{.*}} : (i32) -> !llvm.ptr<5>
 // AMDGPU-NEXT:   %[[box_copy:.*]] = llvm.addrspacecast %[[alloca_box_copy]] : !llvm.ptr<5> to !llvm.ptr
-// CHECK-NEXT:    %[[size:.*]] = llvm.mlir.constant(48 : i32) : i32
-// CHECK-NEXT:    "llvm.intr.memcpy"(%[[box_copy]], %[[arg0]], %[[size]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK-NEXT:    %[[box_val:.*]] = llvm.load %[[arg0]] : !llvm.ptr -> !llvm.struct<([[DESC_TYPE]])>
+// CHECK-NEXT:    llvm.store %[[box_val]], %[[box_copy]] : !llvm.struct<([[DESC_TYPE]])>, !llvm.ptr
 // CHECK-NEXT:    llvm.call @takes_box(%[[box_copy]]) : (!llvm.ptr) -> ()
 // CHECK-NEXT:    llvm.return
 // CHECK-NEXT:  }
@@ -2583,11 +2573,13 @@ func.func @coordinate_box_complex(%arg0: !fir.box<complex<f128>>) {
 // 2. BOX TYPE (objects wrapped in `fir.box`)
 // Derived type - basic case (1 index)
 func.func @coordinate_box_derived_1(%arg0: !fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>) {
-  %q = fir.coordinate_of %arg0, field_2 : (!fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>) -> !fir.ref<i32>
+  %idx = fir.field_index field_2, !fir.type<derived_1{field_1:i32, field_2:i32}>
+  %q = fir.coordinate_of %arg0, %idx : (!fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>, !fir.field) -> !fir.ref<i32>
   return
 }
 // CHECK-LABEL: llvm.func @coordinate_box_derived_1
 // CHECK-SAME: %[[BOX:.*]]: !llvm.ptr)
+// CHECK:    %[[COORDINATE:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:    %[[DERIVED_ADDR:.*]] = llvm.getelementptr %[[BOX]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i64>)>
 // CHECK:    %[[DERIVED_VAL:.*]] = llvm.load %[[DERIVED_ADDR]] : !llvm.ptr -> !llvm.ptr
 // CHECK:    %[[SUBOBJECT_ADDR:.*]] = llvm.getelementptr %[[DERIVED_VAL]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"derived_1", (i32, i32)>
@@ -2595,12 +2587,16 @@ func.func @coordinate_box_derived_1(%arg0: !fir.box<!fir.type<derived_1{field_1:
 
 // Derived type - basic case (2 indices)
 func.func @coordinate_box_derived_2(%arg0: !fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
-  %q = fir.coordinate_of %arg0, field_1, inner2 : (!fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) -> !fir.ref<i32>
+  %idx0 = fir.field_index field_1, !fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>
+  %idx1 = fir.field_index inner2, !fir.type<another_derived{inner1:i32, inner2:f32}>
+  %q = fir.coordinate_of %arg0, %idx0, %idx1 : (!fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
   return
 }
 
 // CHECK-LABEL: llvm.func @coordinate_box_derived_2
 // CHECK-SAME: (%[[BOX:.*]]: !llvm.ptr)
+// CHECK-NEXT:    %[[C0_0:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT:    %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[DERIVED_ADDR:.*]] = llvm.getelementptr %[[BOX]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}32, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i64>)>
 // CHECK-NEXT:    %[[DERIVED_VAL:.*]] = llvm.load %[[DERIVED_ADDR]] : !llvm.ptr -> !llvm.ptr
 // CHECK-NEXT:    %[[ANOTHER_DERIVED_ADDR:.*]] = llvm.getelementptr %[[DERIVED_VAL]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"derived_2", (struct<"another_derived", (i32, f32)>, i32)>
@@ -2685,7 +2681,8 @@ func.func @coordinate_box_array_2d(%arg0: !fir.box<!fir.array<10 x 10 x f32>>, %
 
 // 4. BOX TYPE - `fir.derived` inside `fir.array`
 func.func @coordinate_box_derived_inside_array(%arg0: !fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, %arg1 : index) {
-   %q = fir.coordinate_of %arg0, %arg1, field_2 : (!fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, index) -> !fir.ref<f32>
+   %idx0 = fir.field_index field_2, !fir.type<derived_3{field_1:f32, field_2:f32}>
+   %q = fir.coordinate_of %arg0, %arg1, %idx0 : (!fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, index, !fir.field) -> !fir.ref<f32>
    return
 }
 // CHECK-LABEL:   llvm.func @coordinate_box_derived_inside_array(
@@ -2762,7 +2759,8 @@ func.func @coordinate_array_known_size_2d_get_array(%arg0: !fir.ref<!fir.array<1
 
 // 5.2. `fir.derived`
 func.func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>) {
-  %q = fir.coordinate_of %arg0, field_2 : (!fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>) -> !fir.ref<i32>
+  %idx = fir.field_index field_2, !fir.type<dervied_4{field_1:i32, field_2:i32}>
+  %q = fir.coordinate_of %arg0, %idx : (!fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>, !fir.field) -> !fir.ref<i32>
   return
 }
 // CHECK-LABEL:   llvm.func @coordinate_ref_derived(
@@ -2774,7 +2772,9 @@ func.func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i3
 // -----
 
 func.func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
-  %q = fir.coordinate_of %arg0, field_1, inner2 : (!fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) -> !fir.ref<i32>
+  %idx0 = fir.field_index field_1, !fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>
+  %idx1 = fir.field_index inner2, !fir.type<nested_derived{inner1:i32, inner2:f32}>
+  %q = fir.coordinate_of %arg0, %idx0, %idx1 : (!fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
   return
 }
 // CHECK-LABEL:   llvm.func @coordinate_ref_derived_nested(
@@ -2786,15 +2786,15 @@ func.func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{fie
 // -----
 
 // 5.3 `fir.char`
-func.func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<2, 10>>) {
+func.func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<10, 2>>) {
   %1 = arith.constant 10 : i32
-  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<2, 10>>, i32) -> !fir.ref<!fir.char<2>>
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 2>>, i32) -> !fir.ref<!fir.char<10>>
   return
 }
 // CHECK-LABEL:   llvm.func @test_coordinate_of_char(
 // CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr) {
 // CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
-// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}0, %[[VAL_1]]] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.array<10 x i16>
+// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.array<2 x i80>
 // CHECK:           llvm.return
 // CHECK:         }
 
@@ -2851,35 +2851,3 @@ gpu.module @cuda_device_mod {
 // CHECK: llvm.func @malloc(i64) -> !llvm.ptr
 // CHECK: llvm.call @malloc
 // CHECK: lvm.call @free
-
-// -----
-
-func.func private @somefunc(i32, !fir.ref<i64>)
-
-// CHECK-LABEL: @test_call_arg_attrs_direct
-func.func @test_call_arg_attrs_direct(%arg0: i32, %arg1: !fir.ref<i64>) {
-  // CHECK: llvm.call @somefunc(%{{.*}}, %{{.*}}) : (i32, !llvm.ptr {llvm.byval = i64}) -> ()
-  fir.call @somefunc(%arg0, %arg1) : (i32, !fir.ref<i64> {llvm.byval = i64}) -> ()
-  return
-}
-
-// CHECK-LABEL: @test_call_arg_attrs_indirect
-func.func @test_call_arg_attrs_indirect(%arg0: i16, %arg1: (i16)-> i16) -> i16 {
-  // CHECK: llvm.call %arg1(%{{.*}}) : !llvm.ptr, (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
-  %0 = fir.call %arg1(%arg0) : (i16 {llvm.noundef, llvm.signext}) -> (i16 {llvm.signext})
-  return %0 : i16
-}
-
-// CHECK-LABEL: @test_byval
-func.func @test_byval(%arg0: (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, f64) -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, %arg2: f64) {
-  //  llvm.call %{{.*}}(%{{.*}}, %{{.*}}) : !llvm.ptr, (!llvm.ptr {llvm.byval = !llvm.struct<"t", (array<5 x f64>)>}, f64) -> ()
-  fir.call %arg0(%arg1, %arg2) : (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>> {llvm.byval = !fir.type<t{a:!fir.array<5xf64>}>}, f64) -> ()
-  return
-}
-
-// CHECK-LABEL: @test_sret
-func.func @test_sret(%arg0: (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, f64) -> (), %arg1: !fir.ref<!fir.type<t{a:!fir.array<5xf64>}>>, %arg2: f64) {
-  //  llvm.call %{{.*}}(%{{.*}}, %{{.*}}) : !llvm.ptr, (!llvm.ptr {llvm.sret = !llvm.struct<"t", (array<5 x f64>)>}, f64) -> ()
-  fir.call %arg0(%arg1, %arg2) : (!fir.ref<!fir.type<t{a:!fir.array<5xf64>}>> {llvm.sret = !fir.type<t{a:!fir.array<5xf64>}>}, f64) -> ()
-  return
-}

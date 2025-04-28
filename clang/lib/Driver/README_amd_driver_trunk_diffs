@@ -17,7 +17,7 @@ subsystems.
 These are the areas where amd-staging differs from the trunk:
 
 - Support for legacy/classic flang driver.  This will eventually go away
-  when llvm flang (flang) is in production. 
+  when llvm flang (flang-new) is in production. 
 
 - Support for the generation of parallel jobs. Unless someone upstreams 
   this support, this difference will remain.

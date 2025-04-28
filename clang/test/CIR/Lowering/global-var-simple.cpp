@@ -1,19 +1,21 @@
 // Global variables of intergal types
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o -  | FileCheck %s
 
-// Note: Currently unsupported features include alignment..
+// Note: Currently unsupported features include default zero-initialization
+//       and alignment. The fact that "external" is only printed for globals
+//       without an initializer is a quirk of the LLVM AsmWriter.
 
 char c;
-// CHECK: @c = dso_local global i8 0
+// CHECK: @c = external dso_local global i8
 
 signed char sc;
-// CHECK: @sc = dso_local global i8 0
+// CHECK: @sc = external dso_local global i8
 
 unsigned char uc;
-// CHECK: @uc = dso_local global i8 0
+// CHECK: @uc = external dso_local global i8
 
 short ss;
-// CHECK: @ss = dso_local global i16 0
+// CHECK: @ss = external dso_local global i16
 
 unsigned short us = 100;
 // CHECK: @us = dso_local global i16 100
@@ -22,82 +24,79 @@ int si = 42;
 // CHECK: @si = dso_local global i32 42
 
 unsigned ui;
-// CHECK: @ui = dso_local global i32 0
+// CHECK: @ui = external dso_local global i32
 
 long sl;
-// CHECK: @sl = dso_local global i64 0
+// CHECK: @sl = external dso_local global i64
 
 unsigned long ul;
-// CHECK: @ul = dso_local global i64 0
+// CHECK: @ul = external dso_local global i64
 
 long long sll;
-// CHECK: @sll = dso_local global i64 0
+// CHECK: @sll = external dso_local global i64
 
 unsigned long long ull = 123456;
 // CHECK: @ull = dso_local global i64 123456
 
 __int128 s128;
-// CHECK: @s128 = dso_local global i128 0
+// CHECK: @s128 = external dso_local global i128
 
 unsigned __int128 u128;
-// CHECK: @u128 = dso_local global i128 0
+// CHECK: @u128 = external dso_local global i128
 
 wchar_t wc;
-// CHECK: @wc = dso_local global i32 0
+// CHECK: @wc = external dso_local global i32
 
 char8_t c8;
-// CHECK: @c8 = dso_local global i8 0
+// CHECK: @c8 = external dso_local global i8
 
 char16_t c16;
-// CHECK: @c16 = dso_local global i16 0
+// CHECK: @c16 = external dso_local global i16
 
 char32_t c32;
-// CHECK: @c32 = dso_local global i32 0
+// CHECK: @c32 = external dso_local global i32
 
 _BitInt(20) sb20;
-// CHECK: @sb20 = dso_local global i20 0
+// CHECK: @sb20 = external dso_local global i20
 
 unsigned _BitInt(48) ub48;
-// CHECK: @ub48 = dso_local global i48 0
-
-bool boolfalse = false;
-// CHECK: @boolfalse = dso_local global i8 0
+// CHECK: @ub48 = external dso_local global i48
 
 _Float16 f16;
-// CHECK: @f16 = dso_local global half
+// CHECK: @f16 = external dso_local global half
 
 __bf16 bf16;
-// CHECK: @bf16 = dso_local global bfloat
+// CHECK: @bf16 = external dso_local global bfloat
 
 float f;
-// CHECK: @f = dso_local global float 0.000000e+00
+// CHECK: @f = external dso_local global float
 
 double d = 1.25;
 // CHECK: @d = dso_local global double 1.250000e+00
 
 long double ld;
-// CHECK: @ld = dso_local global x86_fp80 0xK00
+// CHECK: @ld = external dso_local global x86_fp80
 
 __float128 f128;
-// CHECK: @f128 = dso_local global fp128 0xL00
+// CHECK: @f128 = external dso_local global fp128
 
 void *vp;
-// CHECK: @vp = dso_local global ptr null
+// CHECK: @vp = external dso_local global ptr{{$}}
 
 int *ip = 0;
 // CHECK: @ip = dso_local global ptr null
 
 double *dp;
-// CHECK: @dp = dso_local global ptr null
+// CHECK: @dp = external dso_local global ptr{{$}}
 
 char **cpp;
-// CHECK: @cpp = dso_local global ptr null
+// CHECK: @cpp = external dso_local global ptr{{$}}
 
 void (*fp)();
-// CHECK: @fp = dso_local global ptr null
+// CHECK: @fp = external dso_local global ptr{{$}}
 
 int (*fpii)(int) = 0;
 // CHECK: @fpii = dso_local global ptr null
 
 void (*fpvar)(int, ...);
-// CHECK: @fpvar = dso_local global ptr null
+// CHECK: @fpvar = external dso_local global ptr{{$}}

@@ -180,7 +180,7 @@ typedef struct heap_s {
 #define AFO(P, V, O) __opencl_atomic_fetch_or (P, V, O, memory_scope_device)
 #define ACE(P, E, V, O) __opencl_atomic_compare_exchange_strong(P, E, V, O, O, memory_scope_device)
 
-#define NEED_RELEASE __oclc_ISA_version >= 9402 && __oclc_ISA_version < 10000
+#define NEED_RELEASE __oclc_ISA_version >= 9400 && __oclc_ISA_version < 10000
 
 // get the heap pointer
 static __global heap_t *
@@ -941,9 +941,6 @@ __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
             p += 256;
         }
     }
-
-    __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent", "global");
-    __builtin_amdgcn_s_barrier();
 
     if (lid == 0) {
         __global heap_t *thp = (__global heap_t *)hp;

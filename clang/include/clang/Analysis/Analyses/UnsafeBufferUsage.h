@@ -19,7 +19,6 @@
 #include "clang/AST/Stmt.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/Support/Debug.h"
-#include <set>
 
 namespace clang {
 
@@ -187,8 +186,6 @@ namespace internal {
 bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
                  const SourceManager &SM);
 } // namespace internal
-
-std::set<const Expr *> findUnsafePointers(const FunctionDecl *FD);
 } // end namespace clang
 
 #endif /* LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H */

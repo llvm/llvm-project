@@ -385,7 +385,8 @@ define i8 @exact_lshr_lowbit_set_assume_trunc(i8 %x) {
 ; CHECK-LABEL: @exact_lshr_lowbit_set_assume_trunc(
 ; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    ret i8 [[X]]
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i8 [[X]], 1
+; CHECK-NEXT:    ret i8 [[SHR]]
 ;
   %cond = trunc i8 %x to i1
   call void @llvm.assume(i1 %cond)

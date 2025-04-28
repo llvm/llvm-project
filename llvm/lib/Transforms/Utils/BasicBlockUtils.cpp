@@ -102,7 +102,7 @@ void llvm::DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs, DomTreeUpdater *DTU,
                             bool KeepOneInputPHIs) {
 #ifndef NDEBUG
   // Make sure that all predecessors of each dead block is also dead.
-  SmallPtrSet<BasicBlock *, 4> Dead(llvm::from_range, BBs);
+  SmallPtrSet<BasicBlock *, 4> Dead(BBs.begin(), BBs.end());
   assert(Dead.size() == BBs.size() && "Duplicating blocks?");
   for (auto *BB : Dead)
     for (BasicBlock *Pred : predecessors(BB))
@@ -165,7 +165,9 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
                           MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
-  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
+  SmallVector<WeakTrackingVH, 8> PHIs;
+  for (PHINode &PN : BB->phis())
+    PHIs.push_back(&PN);
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
@@ -509,7 +511,7 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
         continue;
       DebugVariable Key(DVR.getVariable(), std::nullopt,
                         DVR.getDebugLoc()->getInlinedAt());
-      auto [VMI, Inserted] = VariableMap.try_emplace(Key);
+      auto VMI = VariableMap.find(Key);
       // A dbg.assign with no linked instructions can be treated like a
       // dbg.value (i.e. can be deleted).
       bool IsDbgValueKind =
@@ -518,12 +520,12 @@ DbgVariableRecordsRemoveRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
       SmallVector<Value *, 4> Values(DVR.location_ops());
-      if (Inserted || VMI->second.first != Values ||
+      if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DVR.getExpression()) {
         if (IsDbgValueKind)
-          VMI->second = {Values, DVR.getExpression()};
+          VariableMap[Key] = {Values, DVR.getExpression()};
         else
-          VMI->second = {Values, nullptr};
+          VariableMap[Key] = {Values, nullptr};
         continue;
       }
       // Don't delete dbg.assign intrinsics that are linked to instructions.
@@ -589,7 +591,7 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
       DebugVariable Key(DVI->getVariable(), std::nullopt,
                         DVI->getDebugLoc()->getInlinedAt());
-      auto [VMI, Inserted] = VariableMap.try_emplace(Key);
+      auto VMI = VariableMap.find(Key);
       auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
       // A dbg.assign with no linked instructions can be treated like a
       // dbg.value (i.e. can be deleted).
@@ -598,15 +600,15 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
       SmallVector<Value *, 4> Values(DVI->getValues());
-      if (Inserted || VMI->second.first != Values ||
+      if (VMI == VariableMap.end() || VMI->second.first != Values ||
           VMI->second.second != DVI->getExpression()) {
         // Use a sentinel value (nullptr) for the DIExpression when we see a
         // linked dbg.assign so that the next debug intrinsic will never match
         // it (i.e. always treat linked dbg.assigns as if they're unique).
         if (IsDbgValueKind)
-          VMI->second = {Values, DVI->getExpression()};
+          VariableMap[Key] = {Values, DVI->getExpression()};
         else
-          VMI->second = {Values, nullptr};
+          VariableMap[Key] = {Values, nullptr};
         continue;
       }
 
@@ -1259,7 +1261,7 @@ static void UpdatePHINodes(BasicBlock *OrigBB, BasicBlock *NewBB,
                            ArrayRef<BasicBlock *> Preds, BranchInst *BI,
                            bool HasLoopExit) {
   // Otherwise, create a new PHI node in NewBB for each PHI node in OrigBB.
-  SmallPtrSet<BasicBlock *, 16> PredSet(llvm::from_range, Preds);
+  SmallPtrSet<BasicBlock *, 16> PredSet(Preds.begin(), Preds.end());
   for (BasicBlock::iterator I = OrigBB->begin(); isa<PHINode>(I); ) {
     PHINode *PN = cast<PHINode>(I++);
 
@@ -1658,7 +1660,7 @@ void llvm::SplitBlockAndInsertIfThenElse(
   SmallPtrSet<BasicBlock *, 8> UniqueOrigSuccessors;
   BasicBlock *Head = SplitBefore->getParent();
   if (DTU) {
-    UniqueOrigSuccessors.insert_range(successors(Head));
+    UniqueOrigSuccessors.insert(succ_begin(Head), succ_end(Head));
     Updates.reserve(4 + 2 * UniqueOrigSuccessors.size());
   }
 
@@ -1913,4 +1915,16 @@ bool llvm::hasOnlySimpleTerminator(const Function &F) {
       return false;
   }
   return true;
+}
+
+bool llvm::isPresplitCoroSuspendExitEdge(const BasicBlock &Src,
+                                         const BasicBlock &Dest) {
+  assert(Src.getParent() == Dest.getParent());
+  if (!Src.getParent()->isPresplitCoroutine())
+    return false;
+  if (auto *SW = dyn_cast<SwitchInst>(Src.getTerminator()))
+    if (auto *Intr = dyn_cast<IntrinsicInst>(SW->getCondition()))
+      return Intr->getIntrinsicID() == Intrinsic::coro_suspend &&
+             SW->getDefaultDest() == &Dest;
+  return false;
 }

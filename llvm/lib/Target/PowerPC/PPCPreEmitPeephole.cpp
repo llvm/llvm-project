@@ -95,7 +95,9 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
   class PPCPreEmitPeephole : public MachineFunctionPass {
   public:
     static char ID;
-    PPCPreEmitPeephole() : MachineFunctionPass(ID) {}
+    PPCPreEmitPeephole() : MachineFunctionPass(ID) {
+      initializePPCPreEmitPeepholePass(*PassRegistry::getPassRegistry());
+    }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       MachineFunctionPass::getAnalysisUsage(AU);

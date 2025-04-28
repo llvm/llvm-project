@@ -72,9 +72,11 @@ PhysicalRegisterUsageInfo::getRegUsageInfo(const Function &FP) {
 void PhysicalRegisterUsageInfo::print(raw_ostream &OS, const Module *M) const {
   using FuncPtrRegMaskPair = std::pair<const Function *, std::vector<uint32_t>>;
 
+  SmallVector<const FuncPtrRegMaskPair *, 64> FPRMPairVector;
+
   // Create a vector of pointer to RegMasks entries
-  SmallVector<const FuncPtrRegMaskPair *, 64> FPRMPairVector(
-      llvm::make_pointer_range(RegMasks));
+  for (const auto &RegMask : RegMasks)
+    FPRMPairVector.push_back(&RegMask);
 
   // sort the vector to print analysis in alphabatic order of function name.
   llvm::sort(

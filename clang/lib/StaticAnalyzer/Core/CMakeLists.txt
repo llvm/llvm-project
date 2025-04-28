@@ -24,7 +24,6 @@ add_clang_library(clangStaticAnalyzerCore
   CoreEngine.cpp
   DynamicExtent.cpp
   DynamicType.cpp
-  EntryPointStats.cpp
   Environment.cpp
   ExplodedGraph.cpp
   ExprEngine.cpp

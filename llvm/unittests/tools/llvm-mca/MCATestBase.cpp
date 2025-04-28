@@ -14,7 +14,7 @@ using namespace mca;
 
 const Target *MCATestBase::getLLVMTarget() const {
   std::string Error;
-  return TargetRegistry::lookupTarget(TheTriple, Error);
+  return TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
 }
 
 mca::PipelineOptions MCATestBase::getDefaultPipelineOptions() {

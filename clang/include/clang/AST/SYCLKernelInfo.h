@@ -22,10 +22,9 @@ namespace clang {
 class SYCLKernelInfo {
 public:
   SYCLKernelInfo(CanQualType KernelNameType,
-                 const FunctionDecl *KernelEntryPointDecl,
-                 const std::string &KernelName)
+                 const FunctionDecl *KernelEntryPointDecl)
       : KernelNameType(KernelNameType),
-        KernelEntryPointDecl(KernelEntryPointDecl), KernelName(KernelName) {}
+        KernelEntryPointDecl(KernelEntryPointDecl) {}
 
   CanQualType getKernelNameType() const { return KernelNameType; }
 
@@ -33,12 +32,9 @@ public:
     return KernelEntryPointDecl;
   }
 
-  const std::string &GetKernelName() const { return KernelName; }
-
 private:
   CanQualType KernelNameType;
   const FunctionDecl *KernelEntryPointDecl;
-  std::string KernelName;
 };
 
 } // namespace clang

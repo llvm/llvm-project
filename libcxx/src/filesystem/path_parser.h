@@ -90,7 +90,7 @@ public:
       if (TkEnd)
         return makeState(PS_InRootName, Start, TkEnd);
     }
-      [[__fallthrough__]];
+      _LIBCPP_FALLTHROUGH();
     case PS_InRootName: {
       PosPtr TkEnd = consumeAllSeparators(Start, End);
       if (TkEnd)

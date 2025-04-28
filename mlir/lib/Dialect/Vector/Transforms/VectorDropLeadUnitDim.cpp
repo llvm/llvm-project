@@ -8,6 +8,7 @@
 
 #include <numeric>
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
@@ -121,7 +122,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     Location loc = insertOp.getLoc();
 
     Value newSrcVector = rewriter.create<vector::ExtractOp>(
-        loc, insertOp.getValueToStore(), splatZero(srcDropCount));
+        loc, insertOp.getSource(), splatZero(srcDropCount));
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
 
@@ -147,7 +148,7 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 
   LogicalResult matchAndRewrite(vector::InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
-    Type oldSrcType = insertOp.getValueToStoreType();
+    Type oldSrcType = insertOp.getSourceType();
     Type newSrcType = oldSrcType;
     int64_t oldSrcRank = 0, newSrcRank = 0;
     if (auto type = dyn_cast<VectorType>(oldSrcType)) {
@@ -167,10 +168,10 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector = insertOp.getValueToStore();
+    Value newSrcVector = insertOp.getSource();
     if (oldSrcRank != 0) {
       newSrcVector = rewriter.create<vector::ExtractOp>(
-          loc, insertOp.getValueToStore(), splatZero(srcDropCount));
+          loc, insertOp.getSource(), splatZero(srcDropCount));
     }
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
@@ -576,4 +577,5 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
            CastAwayConstantMaskLeadingOneDim, CastAwayTransferReadLeadingOneDim,
            CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
            CastAwayContractionLeadingOneDim>(patterns.getContext(), benefit);
+  populateShapeCastFoldingPatterns(patterns, benefit);
 }

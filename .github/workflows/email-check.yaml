@@ -10,11 +10,11 @@ permissions:
 
 jobs:
   validate_email:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 

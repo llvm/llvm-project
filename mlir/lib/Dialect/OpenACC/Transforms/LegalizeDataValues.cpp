@@ -81,8 +81,7 @@ static void collectAndReplaceInRegion(Op &op, bool hostToDevice) {
     collectVars(op.getDataClauseOperands(), values, hostToDevice);
     if constexpr (!std::is_same_v<Op, acc::KernelsOp> &&
                   !std::is_same_v<Op, acc::DataOp> &&
-                  !std::is_same_v<Op, acc::DeclareOp> &&
-                  !std::is_same_v<Op, acc::HostDataOp>) {
+                  !std::is_same_v<Op, acc::DeclareOp>) {
       collectVars(op.getReductionOperands(), values, hostToDevice);
       collectVars(op.getPrivateOperands(), values, hostToDevice);
       collectVars(op.getFirstprivateOperands(), values, hostToDevice);
@@ -123,8 +122,6 @@ public:
         collectAndReplaceInRegion(dataOp, replaceHostVsDevice);
       } else if (auto declareOp = dyn_cast<acc::DeclareOp>(*op)) {
         collectAndReplaceInRegion(declareOp, replaceHostVsDevice);
-      } else if (auto hostDataOp = dyn_cast<acc::HostDataOp>(*op)) {
-        collectAndReplaceInRegion(hostDataOp, replaceHostVsDevice);
       } else {
         llvm_unreachable("unsupported acc region op");
       }

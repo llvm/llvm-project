@@ -26,4 +26,8 @@ bb:
   ret void
 }
 
-attributes #0 = { norecurse nounwind "polly.skip.fn" "nvvm.maxntid"="1,1,1" }
+attributes #0 = { norecurse nounwind "polly.skip.fn" }
+
+!nvvm.annotations = !{!0}
+
+!0 = !{ptr @spam, !"maxntidx", i64 1, !"maxntidy", i64 1, !"maxntidz", i64 1}

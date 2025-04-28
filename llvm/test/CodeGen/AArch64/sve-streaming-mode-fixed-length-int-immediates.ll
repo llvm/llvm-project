@@ -130,7 +130,9 @@ define void @add_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = add <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i32 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = add <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -202,7 +204,9 @@ define void @add_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = add <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = add <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -246,7 +250,9 @@ define void @add_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = add <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = add <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -280,7 +286,9 @@ define void @add_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = add <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = add <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -404,7 +412,9 @@ define void @and_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = and <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i32 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = and <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -476,7 +486,9 @@ define void @and_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = and <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = and <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -520,7 +532,9 @@ define void @and_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = and <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = and <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -554,7 +568,9 @@ define void @and_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = and <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = and <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -678,7 +694,9 @@ define void @ashr_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = ashr <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i32 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = ashr <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -750,7 +768,9 @@ define void @ashr_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = ashr <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = ashr <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -794,7 +814,9 @@ define void @ashr_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = ashr <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = ashr <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -828,7 +850,9 @@ define void @ashr_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = ashr <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = ashr <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -987,7 +1011,9 @@ define void @icmp_eq_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %cmp = icmp eq <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %cmp = icmp eq <32 x i8> %op1, %op2
   %res = sext <32 x i1> %cmp to <32 x i8>
   store <32 x i8> %res, ptr %a
   ret void
@@ -1079,7 +1105,9 @@ define void @icmp_sge_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %cmp = icmp sge <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %cmp = icmp sge <16 x i16> %op1, %op2
   %res = sext <16 x i1> %cmp to <16 x i16>
   store <16 x i16> %res, ptr %a
   ret void
@@ -1135,7 +1163,9 @@ define void @icmp_sgt_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %cmp = icmp sgt <8 x i32> %op1, splat(i32 -8)
+  %ins = insertelement <8 x i32> undef, i32 -8, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %cmp = icmp sgt <8 x i32> %op1, %op2
   %res = sext <8 x i1> %cmp to <8 x i32>
   store <8 x i32> %res, ptr %a
   ret void
@@ -1177,7 +1207,9 @@ define void @icmp_ult_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %cmp = icmp ult <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %cmp = icmp ult <4 x i64> %op1, %op2
   %res = sext <4 x i1> %cmp to <4 x i64>
   store <4 x i64> %res, ptr %a
   ret void
@@ -1302,7 +1334,9 @@ define void @lshr_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = lshr <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = lshr <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -1374,7 +1408,9 @@ define void @lshr_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = lshr <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = lshr <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -1418,7 +1454,9 @@ define void @lshr_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = lshr <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = lshr <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -1452,7 +1490,9 @@ define void @lshr_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = lshr <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = lshr <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -1608,7 +1648,9 @@ define void @mul_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = mul <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = mul <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -1696,7 +1738,9 @@ define void @mul_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = mul <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = mul <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -1752,7 +1796,9 @@ define void @mul_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = mul <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = mul <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -1792,7 +1838,9 @@ define void @mul_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = mul <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = mul <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -1916,7 +1964,9 @@ define void @or_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = or <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = or <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -1988,7 +2038,9 @@ define void @or_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = or <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = or <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -2032,7 +2084,9 @@ define void @or_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = or <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = or <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -2066,7 +2120,9 @@ define void @or_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = or <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = or <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -2190,7 +2246,9 @@ define void @shl_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = shl <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = shl <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -2262,7 +2320,9 @@ define void @shl_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = shl <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = shl <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -2306,7 +2366,9 @@ define void @shl_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = shl <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = shl <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -2340,7 +2402,9 @@ define void @shl_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = shl <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = shl <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -2497,7 +2561,9 @@ define void @smax_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = call <32 x i8> @llvm.smax.v32i8(<32 x i8> %op1, <32 x i8> splat(i8 7))
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = call <32 x i8> @llvm.smax.v32i8(<32 x i8> %op1, <32 x i8> %op2)
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -2586,7 +2652,9 @@ define void @smax_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %op1, <16 x i16> splat(i16 15))
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i16> @llvm.smax.v16i16(<16 x i16> %op1, <16 x i16> %op2)
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -2639,7 +2707,9 @@ define void @smax_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %op1, <8 x i32> splat(i32 31))
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %op1, <8 x i32> %op2)
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -2678,7 +2748,9 @@ define void @smax_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %op1, <4 x i64> splat(i64 63))
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %op1, <4 x i64> %op2)
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -2835,7 +2907,9 @@ define void @smin_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = call <32 x i8> @llvm.smin.v32i8(<32 x i8> %op1, <32 x i8> splat(i8 7))
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = call <32 x i8> @llvm.smin.v32i8(<32 x i8> %op1, <32 x i8> %op2)
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -2924,7 +2998,9 @@ define void @smin_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %op1, <16 x i16> splat(i16 15))
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %op1, <16 x i16> %op2)
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -2977,7 +3053,9 @@ define void @smin_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %op1, <8 x i32> splat(i32 31))
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %op1, <8 x i32> %op2)
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -3016,7 +3094,9 @@ define void @smin_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %op1, <4 x i64> splat(i64 63))
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %op1, <4 x i64> %op2)
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -3140,7 +3220,9 @@ define void @sub_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = sub <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = sub <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -3212,7 +3294,9 @@ define void @sub_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = sub <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = sub <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -3256,7 +3340,9 @@ define void @sub_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = sub <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = sub <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -3290,7 +3376,9 @@ define void @sub_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = sub <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = sub <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -3447,7 +3535,9 @@ define void @umax_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = call <32 x i8> @llvm.umax.v32i8(<32 x i8> %op1, <32 x i8> splat(i8 7))
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = call <32 x i8> @llvm.umax.v32i8(<32 x i8> %op1, <32 x i8> %op2)
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -3536,7 +3626,9 @@ define void @umax_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = call <16 x i16> @llvm.umax.v16i16(<16 x i16> %op1, <16 x i16> splat(i16 15))
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i16> @llvm.umax.v16i16(<16 x i16> %op1, <16 x i16> %op2)
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -3589,7 +3681,9 @@ define void @umax_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = call <8 x i32> @llvm.umax.v8i32(<8 x i32> %op1, <8 x i32> splat(i32 31))
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = call <8 x i32> @llvm.umax.v8i32(<8 x i32> %op1, <8 x i32> %op2)
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -3628,7 +3722,9 @@ define void @umax_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %op1, <4 x i64> splat(i64 63))
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = call <4 x i64> @llvm.umax.v4i64(<4 x i64> %op1, <4 x i64> %op2)
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -3785,7 +3881,9 @@ define void @umin_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = call <32 x i8> @llvm.umin.v32i8(<32 x i8> %op1, <32 x i8> splat(i8 7))
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = call <32 x i8> @llvm.umin.v32i8(<32 x i8> %op1, <32 x i8> %op2)
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -3874,7 +3972,9 @@ define void @umin_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %op1, <16 x i16> splat(i16 15))
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = call <16 x i16> @llvm.umin.v16i16(<16 x i16> %op1, <16 x i16> %op2)
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -3927,7 +4027,9 @@ define void @umin_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %op1, <8 x i32> splat(i32 31))
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %op1, <8 x i32> %op2)
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -3966,7 +4068,9 @@ define void @umin_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %op1, <4 x i64> splat(i64 63))
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %op1, <4 x i64> %op2)
   store <4 x i64> %res, ptr %a
   ret void
 }
@@ -4090,7 +4194,9 @@ define void @xor_v32i8(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <32 x i8>, ptr %a
-  %res = xor <32 x i8> %op1, splat(i8 7)
+  %ins = insertelement <32 x i8> undef, i8 7, i64 0
+  %op2 = shufflevector <32 x i8> %ins, <32 x i8> undef, <32 x i32> zeroinitializer
+  %res = xor <32 x i8> %op1, %op2
   store <32 x i8> %res, ptr %a
   ret void
 }
@@ -4162,7 +4268,9 @@ define void @xor_v16i16(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <16 x i16>, ptr %a
-  %res = xor <16 x i16> %op1, splat(i16 15)
+  %ins = insertelement <16 x i16> undef, i16 15, i64 0
+  %op2 = shufflevector <16 x i16> %ins, <16 x i16> undef, <16 x i32> zeroinitializer
+  %res = xor <16 x i16> %op1, %op2
   store <16 x i16> %res, ptr %a
   ret void
 }
@@ -4206,7 +4314,9 @@ define void @xor_v8i32(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <8 x i32>, ptr %a
-  %res = xor <8 x i32> %op1, splat(i32 31)
+  %ins = insertelement <8 x i32> undef, i32 31, i64 0
+  %op2 = shufflevector <8 x i32> %ins, <8 x i32> undef, <8 x i32> zeroinitializer
+  %res = xor <8 x i32> %op1, %op2
   store <8 x i32> %res, ptr %a
   ret void
 }
@@ -4240,7 +4350,9 @@ define void @xor_v4i64(ptr %a) {
 ; NONEON-NOSVE-NEXT:    add sp, sp, #64
 ; NONEON-NOSVE-NEXT:    ret
   %op1 = load <4 x i64>, ptr %a
-  %res = xor <4 x i64> %op1, splat(i64 63)
+  %ins = insertelement <4 x i64> undef, i64 63, i64 0
+  %op2 = shufflevector <4 x i64> %ins, <4 x i64> undef, <4 x i32> zeroinitializer
+  %res = xor <4 x i64> %op1, %op2
   store <4 x i64> %res, ptr %a
   ret void
 }

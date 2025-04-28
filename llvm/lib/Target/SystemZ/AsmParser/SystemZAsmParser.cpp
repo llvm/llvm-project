@@ -8,9 +8,8 @@
 
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
-#include "MCTargetDesc/SystemZTargetStreamer.h"
+#include "SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -61,11 +60,9 @@ enum RegisterKind {
   GRH32Reg,
   GR64Reg,
   GR128Reg,
-  FP16Reg,
   FP32Reg,
   FP64Reg,
   FP128Reg,
-  VR16Reg,
   VR32Reg,
   VR64Reg,
   VR128Reg,
@@ -367,11 +364,9 @@ public:
   bool isADDR32() const { return isReg(GR32Reg); }
   bool isADDR64() const { return isReg(GR64Reg); }
   bool isADDR128() const { return false; }
-  bool isFP16() const { return isReg(FP16Reg); }
   bool isFP32() const { return isReg(FP32Reg); }
   bool isFP64() const { return isReg(FP64Reg); }
   bool isFP128() const { return isReg(FP128Reg); }
-  bool isVR16() const { return isReg(VR16Reg); }
   bool isVR32() const { return isReg(VR32Reg); }
   bool isVR64() const { return isReg(VR64Reg); }
   bool isVF128() const { return false; }
@@ -444,9 +439,9 @@ private:
                     bool HasLength = false, bool HasVectorIndex = false);
   bool parseAddressRegister(Register &Reg);
 
-  bool parseDirectiveInsn(SMLoc L);
-  bool parseDirectiveMachine(SMLoc L);
-  bool parseGNUAttribute(SMLoc L);
+  bool ParseDirectiveInsn(SMLoc L);
+  bool ParseDirectiveMachine(SMLoc L);
+  bool ParseGNUAttribute(SMLoc L);
 
   ParseStatus parseAddress(OperandVector &Operands, MemoryKind MemKind,
                            RegisterKind RegKind);
@@ -548,9 +543,6 @@ public:
   ParseStatus parseADDR128(OperandVector &Operands) {
     llvm_unreachable("Shouldn't be used as an operand");
   }
-  ParseStatus parseFP16(OperandVector &Operands) {
-    return parseRegister(Operands, FP16Reg);
-  }
   ParseStatus parseFP32(OperandVector &Operands) {
     return parseRegister(Operands, FP32Reg);
   }
@@ -559,9 +551,6 @@ public:
   }
   ParseStatus parseFP128(OperandVector &Operands) {
     return parseRegister(Operands, FP128Reg);
-  }
-  ParseStatus parseVR16(OperandVector &Operands) {
-    return parseRegister(Operands, VR16Reg);
   }
   ParseStatus parseVR32(OperandVector &Operands) {
     return parseRegister(Operands, VR32Reg);
@@ -852,13 +841,11 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
   case GR128Reg:
     Group = RegGR;
     break;
-  case FP16Reg:
   case FP32Reg:
   case FP64Reg:
   case FP128Reg:
     Group = RegFP;
     break;
-  case VR16Reg:
   case VR32Reg:
   case VR64Reg:
   case VR128Reg:
@@ -901,25 +888,21 @@ ParseStatus SystemZAsmParser::parseRegister(OperandVector &Operands,
     return ParseStatus::NoMatch;
 
   // Determine the LLVM register number according to Kind.
-  // clang-format off
   const unsigned *Regs;
   switch (Kind) {
   case GR32Reg:  Regs = SystemZMC::GR32Regs;  break;
   case GRH32Reg: Regs = SystemZMC::GRH32Regs; break;
   case GR64Reg:  Regs = SystemZMC::GR64Regs;  break;
   case GR128Reg: Regs = SystemZMC::GR128Regs; break;
-  case FP16Reg:  Regs = SystemZMC::FP16Regs;  break;
   case FP32Reg:  Regs = SystemZMC::FP32Regs;  break;
   case FP64Reg:  Regs = SystemZMC::FP64Regs;  break;
   case FP128Reg: Regs = SystemZMC::FP128Regs; break;
-  case VR16Reg:  Regs = SystemZMC::VR16Regs;  break;
   case VR32Reg:  Regs = SystemZMC::VR32Regs;  break;
   case VR64Reg:  Regs = SystemZMC::VR64Regs;  break;
   case VR128Reg: Regs = SystemZMC::VR128Regs; break;
   case AR32Reg:  Regs = SystemZMC::AR32Regs;  break;
   case CR64Reg:  Regs = SystemZMC::CR64Regs;  break;
   }
-  // clang-format on
   if (Regs[Reg.Num] == 0)
     return Error(Reg.StartLoc, "invalid register pair");
 
@@ -1253,18 +1236,18 @@ ParseStatus SystemZAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
 
   if (IDVal == ".insn")
-    return parseDirectiveInsn(DirectiveID.getLoc());
+    return ParseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
-    return parseDirectiveMachine(DirectiveID.getLoc());
+    return ParseDirectiveMachine(DirectiveID.getLoc());
   if (IDVal.starts_with(".gnu_attribute"))
-    return parseGNUAttribute(DirectiveID.getLoc());
+    return ParseGNUAttribute(DirectiveID.getLoc());
 
   return ParseStatus::NoMatch;
 }
 
 /// ParseDirectiveInsn
 /// ::= .insn [ format, encoding, (operands (, operands)*) ]
-bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
+bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
   // Expect instruction format as identifier.
@@ -1376,7 +1359,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
 
 /// ParseDirectiveMachine
 /// ::= .machine [ mcpu ]
-bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
+bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Identifier) &&
       Parser.getTok().isNot(AsmToken::String))
@@ -1396,7 +1379,7 @@ bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
   return false;
 }
 
-bool SystemZAsmParser::parseGNUAttribute(SMLoc L) {
+bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
   int64_t Tag;
   int64_t IntegerValue;
   if (!Parser.parseGNUAttribute(L, Tag, IntegerValue))
@@ -1665,7 +1648,8 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     int64_t Value = CE->getValue();
     MCSymbol *Sym = Ctx.createTempSymbol();
     Out.emitLabel(Sym);
-    const MCExpr *Base = MCSymbolRefExpr::create(Sym, Ctx);
+    const MCExpr *Base = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
+                                                 Ctx);
     Expr = Value == 0 ? Base : MCBinaryExpr::createAdd(Base, Expr, Ctx);
   }
 
@@ -1685,12 +1669,12 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     if (Parser.getTok().isNot(AsmToken::Identifier))
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
-    SystemZMCExpr::Specifier Kind = SystemZMCExpr::VK_None;
+    MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
     StringRef Name = Parser.getTok().getString();
     if (Name == "tls_gdcall")
-      Kind = SystemZMCExpr::VK_TLSGD;
+      Kind = MCSymbolRefExpr::VK_TLSGD;
     else if (Name == "tls_ldcall")
-      Kind = SystemZMCExpr::VK_TLSLDM;
+      Kind = MCSymbolRefExpr::VK_TLSLDM;
     else
       return Error(Parser.getTok().getLoc(), "unknown TLS tag");
     Parser.Lex();

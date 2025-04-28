@@ -112,7 +112,7 @@ private:
   InstClassification classifyInstruction(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          const X86RegisterInfo &RegInfo,
-                                         const DenseSet<MCRegister> &UsedRegs);
+                                         DenseSet<unsigned int> &UsedRegs);
 
   StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
 
@@ -278,7 +278,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
 X86CallFrameOptimization::InstClassification
 X86CallFrameOptimization::classifyInstruction(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    const X86RegisterInfo &RegInfo, const DenseSet<MCRegister> &UsedRegs) {
+    const X86RegisterInfo &RegInfo, DenseSet<unsigned int> &UsedRegs) {
   if (MI == MBB.end())
     return Exit;
 
@@ -341,7 +341,7 @@ X86CallFrameOptimization::classifyInstruction(
     if (RegInfo.regsOverlap(Reg, RegInfo.getStackRegister()))
       return Exit;
     if (MO.isDef()) {
-      for (MCRegister U : UsedRegs)
+      for (unsigned int U : UsedRegs)
         if (RegInfo.regsOverlap(Reg, U))
           return Exit;
     }
@@ -406,7 +406,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   if (MaxAdjust > 4)
     Context.ArgStoreVector.resize(MaxAdjust, nullptr);
 
-  DenseSet<MCRegister> UsedRegs;
+  DenseSet<unsigned int> UsedRegs;
 
   for (InstClassification Classification = Skip; Classification != Exit; ++I) {
     // If this is the COPY of the stack pointer, it's ok to ignore.
@@ -455,7 +455,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
         continue;
       Register Reg = MO.getReg();
       if (Reg.isPhysical())
-        UsedRegs.insert(Reg.asMCReg());
+        UsedRegs.insert(Reg);
     }
   }
 

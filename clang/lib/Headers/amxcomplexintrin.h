@@ -135,8 +135,9 @@ _tile_cmmrlfp16ps_internal(unsigned short m, unsigned short n, unsigned short k,
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
 ///    The 2nd source tile. Max size is 1024 Bytes.
-static __inline__ void __DEFAULT_FN_ATTRS_COMPLEX
-__tile_cmmimfp16ps(__tile1024i *dst, __tile1024i src0, __tile1024i src1) {
+__DEFAULT_FN_ATTRS_COMPLEX
+static void __tile_cmmimfp16ps(__tile1024i *dst, __tile1024i src0,
+                               __tile1024i src1) {
   dst->tile = _tile_cmmimfp16ps_internal(src0.row, src1.col, src0.col,
                                          dst->tile, src0.tile, src1.tile);
 }
@@ -157,8 +158,9 @@ __tile_cmmimfp16ps(__tile1024i *dst, __tile1024i src0, __tile1024i src1) {
 ///    The 1st source tile. Max size is 1024 Bytes.
 /// \param src1
 ///    The 2nd source tile. Max size is 1024 Bytes.
-static __inline__ void __DEFAULT_FN_ATTRS_COMPLEX
-__tile_cmmrlfp16ps(__tile1024i *dst, __tile1024i src0, __tile1024i src1) {
+__DEFAULT_FN_ATTRS_COMPLEX
+static void __tile_cmmrlfp16ps(__tile1024i *dst, __tile1024i src0,
+                               __tile1024i src1) {
   dst->tile = _tile_cmmrlfp16ps_internal(src0.row, src1.col, src0.col,
                                          dst->tile, src0.tile, src1.tile);
 }

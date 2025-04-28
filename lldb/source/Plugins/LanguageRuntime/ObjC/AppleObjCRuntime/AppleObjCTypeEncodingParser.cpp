@@ -19,7 +19,6 @@
 
 #include "clang/Basic/TargetInfo.h"
 
-#include <optional>
 #include <vector>
 
 using namespace lldb_private;
@@ -42,17 +41,13 @@ std::string AppleObjCTypeEncodingParser::ReadStructName(StringLexer &type) {
   return std::string(buffer.GetString());
 }
 
-std::optional<std::string>
-AppleObjCTypeEncodingParser::ReadQuotedString(StringLexer &type) {
-  if (!type.HasAtLeast(1))
-    return std::nullopt;
-
+std::string AppleObjCTypeEncodingParser::ReadQuotedString(StringLexer &type) {
   StreamString buffer;
-  while (type.Peek() != '"') {
+  while (type.HasAtLeast(1) && type.Peek() != '"')
     buffer.Printf("%c", type.Next());
-    if (!type.HasAtLeast(1))
-      return std::nullopt;
-  }
+  StringLexer::Character next = type.Next();
+  UNUSED_IF_ASSERT_DISABLED(next);
+  assert(next == '"');
   return std::string(buffer.GetString());
 }
 
@@ -75,12 +70,10 @@ AppleObjCTypeEncodingParser::ReadStructElement(TypeSystemClang &ast_ctx,
                                                StringLexer &type,
                                                bool for_expression) {
   StructElement retval;
-  if (type.NextIf('"')) {
-    if (auto maybe_name = ReadQuotedString(type))
-      retval.name = *maybe_name;
-    else
-      return retval;
-  }
+  if (type.NextIf('"'))
+    retval.name = ReadQuotedString(type);
+  if (!type.NextIf('"'))
+    return retval;
   uint32_t bitfield_size = 0;
   retval.type = BuildType(ast_ctx, type, for_expression, &bitfield_size);
   retval.bitfield = bitfield_size;
@@ -205,10 +198,7 @@ clang::QualType AppleObjCTypeEncodingParser::BuildObjCObjectPointerType(
     // quoted string is a class name. - If we see anything else, the quoted
     // string is a field name and we push it back onto type.
 
-    if (auto maybe_name = ReadQuotedString(type))
-      name = *maybe_name;
-    else
-      return clang::QualType();
+    name = ReadQuotedString(type);
 
     if (type.HasAtLeast(1)) {
       switch (type.Peek()) {

@@ -73,4 +73,3 @@
 !
 ! CHECK-LD-ANYMD: "{{.*}}ld{{(.exe)?}}"
 ! CHECK-LD-ANYMD: "-l{{(omp|gomp|iomp5md)}}"
-!

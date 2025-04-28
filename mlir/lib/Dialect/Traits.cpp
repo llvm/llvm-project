@@ -70,9 +70,9 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
 
   resultShape.clear();
   if (shape1.size() > shape2.size()) {
-    llvm::append_range(resultShape, shape1);
+    std::copy(shape1.begin(), shape1.end(), std::back_inserter(resultShape));
   } else {
-    llvm::append_range(resultShape, shape2);
+    std::copy(shape2.begin(), shape2.end(), std::back_inserter(resultShape));
   }
 
   auto i1 = shape1.rbegin(), e1 = shape1.rend();
@@ -84,7 +84,7 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
     if (ShapedType::isDynamic(*i1) || ShapedType::isDynamic(*i2)) {
       // One or both dimensions is unknown. Follow TensorFlow behavior:
       // - If either dimension is greater than 1, we assume that the program is
-      //   correct, and the other dimension will be broadcasted to match it.
+      //   correct, and the other dimension will be broadcast to match it.
       // - If either dimension is 1, the other dimension is the output.
       if (*i1 > 1) {
         *iR = *i1;

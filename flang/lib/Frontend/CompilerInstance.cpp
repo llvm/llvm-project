@@ -373,7 +373,7 @@ bool CompilerInstance::setUpTargetMachine() {
   tOpts.EnableAIXExtendedAltivecABI = targetOpts.EnableAIXExtendedAltivecABI;
 
   targetMachine.reset(theTarget->createTargetMachine(
-      llvm::Triple(theTriple), /*CPU=*/targetOpts.cpu,
+      theTriple, /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, /*Options=*/tOpts,
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/cm, OptLevel));

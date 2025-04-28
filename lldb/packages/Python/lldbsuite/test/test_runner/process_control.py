@@ -91,7 +91,7 @@ def timeout_to_seconds(timeout):
 
 
 class ProcessHelper(object):
-    r"""Provides an interface for accessing process-related functionality.
+    """Provides an interface for accessing process-related functionality.
 
     This class provides a factory method that gives the caller a
     platform-specific implementation instance of the class.

@@ -141,17 +141,6 @@ namespace clang {
   };
   }
 
-  /// DirectX builtins
-  namespace DirectX {
-  enum {
-    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
-#define GET_BUILTIN_ENUMERATORS
-#include "clang/Basic/BuiltinsDirectX.inc"
-#undef GET_BUILTIN_ENUMERATORS
-    LastTSBuiltin
-  };
-  } // namespace DirectX
-
   /// SPIRV builtins
   namespace SPIRV {
   enum {
@@ -273,10 +262,6 @@ namespace clang {
     bool isPoly() const {
       EltType ET = getEltType();
       return ET == Poly8 || ET == Poly16 || ET == Poly64;
-    }
-    bool isFloatingPoint() const {
-      EltType ET = getEltType();
-      return ET == Float16 || ET == Float32 || ET == Float64 || ET == BFloat16;
     }
     bool isUnsigned() const { return (Flags & UnsignedFlag) != 0; }
     bool isQuad() const { return (Flags & QuadFlag) != 0; }

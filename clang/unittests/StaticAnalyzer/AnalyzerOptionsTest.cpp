@@ -37,17 +37,26 @@ TEST(StaticAnalyzerOptions, SearchInParentPackageTests) {
   Opts.Config["Outer.Inner:Option2"] = "true";
   Opts.Config["Outer:Option2"] = "false";
 
-  StringRef CheckerOneName = "Outer.Inner.CheckerOne";
-  StringRef CheckerTwoName = "Outer.Inner.CheckerTwo";
+  struct CheckerOneMock : CheckerBase {
+    StringRef getTagDescription() const override {
+      return "Outer.Inner.CheckerOne";
+    }
+  };
+  struct CheckerTwoMock : CheckerBase {
+    StringRef getTagDescription() const override {
+      return "Outer.Inner.CheckerTwo";
+    }
+  };
 
   // CheckerTwo one has Option specified as true. It should read true regardless
   // of search mode.
-  EXPECT_TRUE(Opts.getCheckerBooleanOption(CheckerOneName, "Option"));
+  CheckerOneMock CheckerOne;
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerOne, "Option"));
   // The package option is overridden with a checker option.
-  EXPECT_TRUE(Opts.getCheckerBooleanOption(CheckerOneName, "Option", true));
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerOne, "Option", true));
   // The Outer package option is overridden by the Inner package option. No
   // package option is specified.
-  EXPECT_TRUE(Opts.getCheckerBooleanOption(CheckerOneName, "Option2", true));
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerOne, "Option2", true));
   // No package option is specified and search in packages is turned off. We
   // should assert here, but we can't test that.
   //Opts.getCheckerBooleanOption(&CheckerOne, "Option2");
@@ -55,13 +64,29 @@ TEST(StaticAnalyzerOptions, SearchInParentPackageTests) {
 
   // Checker true has no option specified. It should get false when search in
   // parents turned on.
-  EXPECT_FALSE(Opts.getCheckerBooleanOption(CheckerTwoName, "Option", true));
+  CheckerTwoMock CheckerTwo;
+  EXPECT_FALSE(Opts.getCheckerBooleanOption(&CheckerTwo, "Option", true));
   // In any other case, we should assert, that we cannot test unfortunately.
   //Opts.getCheckerBooleanOption(&CheckerTwo, "Option");
   //Opts.getCheckerBooleanOption(&CheckerTwo, "Option");
 }
 
 TEST(StaticAnalyzerOptions, StringOptions) {
+  AnalyzerOptions Opts;
+  Opts.Config["Outer.Inner.CheckerOne:Option"] = "StringValue";
+
+  struct CheckerOneMock : CheckerBase {
+    StringRef getTagDescription() const override {
+      return "Outer.Inner.CheckerOne";
+    }
+  };
+
+  CheckerOneMock CheckerOne;
+  EXPECT_TRUE("StringValue" ==
+            Opts.getCheckerStringOption(&CheckerOne, "Option"));
+}
+
+TEST(StaticAnalyzerOptions, SubCheckerOptions) {
   AnalyzerOptions Opts;
   Opts.Config["Outer.Inner.CheckerOne:Option"] = "StringValue";
   EXPECT_TRUE("StringValue" == Opts.getCheckerStringOption(

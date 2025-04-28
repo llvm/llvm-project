@@ -14,5 +14,4 @@ add_llvm_component_library(LLVMAsmParser
   BinaryFormat
   Core
   Support
-  TargetParser
   )

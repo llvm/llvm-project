@@ -214,7 +214,6 @@ LetStmt *LetStmt::create(Context &ctx, SMRange loc, VariableDecl *varDecl) {
 
 //===----------------------------------------------------------------------===//
 // EraseStmt
-//===----------------------------------------------------------------------===//
 
 EraseStmt *EraseStmt::create(Context &ctx, SMRange loc, Expr *rootOp) {
   return new (ctx.getAllocator().Allocate<EraseStmt>()) EraseStmt(loc, rootOp);
@@ -222,7 +221,6 @@ EraseStmt *EraseStmt::create(Context &ctx, SMRange loc, Expr *rootOp) {
 
 //===----------------------------------------------------------------------===//
 // ReplaceStmt
-//===----------------------------------------------------------------------===//
 
 ReplaceStmt *ReplaceStmt::create(Context &ctx, SMRange loc, Expr *rootOp,
                                  ArrayRef<Expr *> replExprs) {
@@ -237,7 +235,6 @@ ReplaceStmt *ReplaceStmt::create(Context &ctx, SMRange loc, Expr *rootOp,
 
 //===----------------------------------------------------------------------===//
 // RewriteStmt
-//===----------------------------------------------------------------------===//
 
 RewriteStmt *RewriteStmt::create(Context &ctx, SMRange loc, Expr *rootOp,
                                  CompoundStmt *rewriteBody) {

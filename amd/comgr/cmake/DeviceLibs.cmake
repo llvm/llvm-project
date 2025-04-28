@@ -59,23 +59,25 @@ foreach(AMDGCN_LIB_TARGET ${AMD_DEVICE_LIBS_TARGETS})
   add_dependencies(amd_comgr ${AMDGCN_LIB_TARGET}_header)
 
   list(APPEND TARGETS_INCLUDES "#include \"${header}\"")
-  list(APPEND TARGETS_HEADERS "${INC_DIR}/${header}")
 endforeach()
 
 list(JOIN TARGETS_INCLUDES "\n" TARGETS_INCLUDES)
 file(GENERATE OUTPUT ${GEN_LIBRARY_INC_FILE} CONTENT "${TARGETS_INCLUDES}")
 
-add_custom_command(OUTPUT ${INC_DIR}/opencl-c-base.inc
-  COMMAND bc2h ${OPENCL_C_H}
-                ${INC_DIR}/opencl-c-base.inc
-                opencl_c_base
-  DEPENDS bc2h clang ${OPENCL_C_H}
-  COMMENT "Generating opencl-c-base.inc"
-)
-set_property(DIRECTORY APPEND PROPERTY
-  ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/opencl-c-base.inc)
-add_custom_target(opencl-c-base.inc_target DEPENDS ${INC_DIR}/opencl-c-base.inc)
-add_dependencies(amd_comgr opencl-c-base.inc_target)
+foreach(OPENCL_VERSION 1.2 2.0)
+  string(REPLACE . _ OPENCL_UNDERSCORE_VERSION ${OPENCL_VERSION})
+  add_custom_command(OUTPUT ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc
+    COMMAND bc2h ${CMAKE_CURRENT_BINARY_DIR}/opencl${OPENCL_VERSION}-c.pch
+                 ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc
+                 opencl${OPENCL_UNDERSCORE_VERSION}_c
+    DEPENDS bc2h ${CMAKE_CURRENT_BINARY_DIR}/opencl${OPENCL_VERSION}-c.pch
+    COMMENT "Generating opencl${OPENCL_VERSION}-c.inc"
+  )
+  set_property(DIRECTORY APPEND PROPERTY
+    ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc)
+  add_custom_target(opencl${OPENCL_VERSION}-c.inc_target DEPENDS ${INC_DIR}/opencl${OPENCL_VERSION}-c.inc)
+  add_dependencies(amd_comgr opencl${OPENCL_VERSION}-c.inc_target)
+endforeach()
 
 set(TARGETS_DEFS "")
 list(APPEND TARGETS_DEFS "#ifndef AMD_DEVICE_LIBS_TARGET\n#define AMD_DEVICE_LIBS_TARGET(t)\n#endif")
@@ -107,18 +109,5 @@ list(APPEND TARGETS_DEFS "#undef AMD_DEVICE_LIBS_FUNCTION")
 
 list(JOIN TARGETS_DEFS "\n" TARGETS_DEFS)
 file(GENERATE OUTPUT ${GEN_LIBRARY_DEFS_INC_FILE} CONTENT "${TARGETS_DEFS}")
-
-# compute the sha256 of the device libraries to detect changes and pass them to comgr (used by the cache)
-find_package(Python3 REQUIRED Interpreter)
-set(DEVICE_LIBS_ID_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/cmake/device-libs-id.py")
-set(DEVICE_LIBS_ID_HEADER ${INC_DIR}/libraries_sha.inc)
-add_custom_command(OUTPUT ${DEVICE_LIBS_ID_HEADER}
-  COMMAND ${Python3_EXECUTABLE} ${DEVICE_LIBS_ID_SCRIPT} --varname DEVICE_LIBS_ID --output ${DEVICE_LIBS_ID_HEADER} ${TARGETS_HEADERS}
-  DEPENDS ${DEVICE_LIBS_ID_SCRIPT} ${TARGETS_HEADERS}
-    COMMENT "Generating ${INC_DIR}/libraries_sha.inc"
-)
-set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${INC_DIR}/libraries_sha.inc)
-add_custom_target(libraries_sha_header DEPENDS ${INC_DIR}/libraries_sha.inc)
-add_dependencies(amd_comgr libraries_sha_header)
 
 include_directories(${INC_DIR})

@@ -210,9 +210,6 @@ if (CLANGD_ENABLE_REMOTE)
   include(AddGRPC)
 endif()
 
-option(CLANGD_BUILD_DEXP "Build the dexp tool as part of Clangd" ON)
-llvm_canonicalize_cmake_booleans(CLANGD_BUILD_DEXP)
-
 if(CLANG_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
@@ -223,7 +220,4 @@ option(CLANGD_ENABLE_REMOTE "Use gRPC library to enable remote index support for
 set(GRPC_INSTALL_PATH "" CACHE PATH "Path to gRPC library manual installation.")
 
 add_subdirectory(index/remote)
-
-if(CLANGD_BUILD_DEXP)
-  add_subdirectory(index/dex/dexp)
-endif()
+add_subdirectory(index/dex/dexp)

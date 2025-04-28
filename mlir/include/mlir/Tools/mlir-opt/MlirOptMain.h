@@ -185,20 +185,11 @@ public:
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
-  MlirOptMainConfig &
-  verifyDiagnostics(SourceMgrDiagnosticVerifierHandler::Level verify) {
+  MlirOptMainConfig &verifyDiagnostics(bool verify) {
     verifyDiagnosticsFlag = verify;
     return *this;
   }
-
-  bool shouldVerifyDiagnostics() const {
-    return verifyDiagnosticsFlag !=
-           SourceMgrDiagnosticVerifierHandler::Level::None;
-  }
-
-  SourceMgrDiagnosticVerifierHandler::Level verifyDiagnosticsLevel() const {
-    return verifyDiagnosticsFlag;
-  }
+  bool shouldVerifyDiagnostics() const { return verifyDiagnosticsFlag; }
 
   /// Set whether to run the verifier after each transformation pass.
   MlirOptMainConfig &verifyPasses(bool verify) {
@@ -247,6 +238,9 @@ protected:
   /// Elide resources when generating bytecode.
   bool elideResourceDataFromBytecodeFlag = false;
 
+  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
+  bool enableDebuggerActionHookFlag = false;
+
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
 
@@ -285,8 +279,7 @@ protected:
 
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
-  SourceMgrDiagnosticVerifierHandler::Level verifyDiagnosticsFlag =
-      SourceMgrDiagnosticVerifierHandler::Level::None;
+  bool verifyDiagnosticsFlag = false;
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;

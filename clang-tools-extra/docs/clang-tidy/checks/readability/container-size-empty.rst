@@ -25,9 +25,6 @@ The check issues warning if a container has ``empty()`` and ``size()`` or
 
 `size_type` can be any kind of integer type.
 
-Options
--------
-
 .. option:: ExcludedComparisonTypes
 
     A semicolon-separated list of class names for which the check will ignore

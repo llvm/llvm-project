@@ -127,8 +127,7 @@ private:
 
   /// Check if the given unwind plan indicates a signal trap handler, and
   /// update frame type and symbol context if so.
-  void PropagateTrapHandlerFlagFromUnwindPlan(
-      std::shared_ptr<const UnwindPlan> unwind_plan);
+  void PropagateTrapHandlerFlagFromUnwindPlan(lldb::UnwindPlanSP unwind_plan);
 
   // Provide a location for where THIS function saved the CALLER's register
   // value
@@ -192,20 +191,18 @@ private:
 
   // Get the Frame Address register for a given frame.
   bool ReadFrameAddress(lldb::RegisterKind register_kind,
-                        const UnwindPlan::Row::FAValue &fa,
-                        lldb::addr_t &address);
+                          UnwindPlan::Row::FAValue &fa, lldb::addr_t &address);
 
-  std::shared_ptr<const UnwindPlan> GetFastUnwindPlanForFrame();
+  lldb::UnwindPlanSP GetFastUnwindPlanForFrame();
 
-  std::shared_ptr<const UnwindPlan> GetFullUnwindPlanForFrame();
+  lldb::UnwindPlanSP GetFullUnwindPlanForFrame();
 
   void UnwindLogMsg(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
   void UnwindLogMsgVerbose(const char *fmt, ...)
       __attribute__((format(printf, 2, 3)));
 
-  bool IsUnwindPlanValidForCurrentPC(
-      std::shared_ptr<const UnwindPlan> unwind_plan_sp);
+  bool IsUnwindPlanValidForCurrentPC(lldb::UnwindPlanSP unwind_plan_sp);
 
   lldb::addr_t GetReturnAddressHint(int32_t plan_offset);
 
@@ -217,9 +214,9 @@ private:
   // i.e. where THIS frame saved them
   ///
 
-  std::shared_ptr<const UnwindPlan> m_fast_unwind_plan_sp; // may be NULL
-  std::shared_ptr<const UnwindPlan> m_full_unwind_plan_sp;
-  std::shared_ptr<const UnwindPlan> m_fallback_unwind_plan_sp; // may be NULL
+  lldb::UnwindPlanSP m_fast_unwind_plan_sp; // may be NULL
+  lldb::UnwindPlanSP m_full_unwind_plan_sp;
+  lldb::UnwindPlanSP m_fallback_unwind_plan_sp; // may be NULL
 
   bool m_all_registers_available; // Can we retrieve all regs or just
                                   // nonvolatile regs?
@@ -230,17 +227,18 @@ private:
   lldb_private::Address m_start_pc;
   lldb_private::Address m_current_pc;
 
-  /// How far into the function we've executed. 0 if no instructions have been
-  /// executed yet, std::nullopt if unknown.
-  std::optional<int> m_current_offset;
+  int m_current_offset; // how far into the function we've executed; -1 if
+                        // unknown
+                        // 0 if no instructions have been executed yet.
 
-  // How far into the function we've executed. 0 if no instructions have been
-  // executed yet, std::nullopt if unknown. On architectures where the return
-  // address on the stack points to the instruction after the CALL, this value
-  // will have 1 subtracted from it. Otherwise, a function that ends in a CALL
-  // will have an offset pointing into the next function's address range.
+  // 0 if no instructions have been executed yet.
+  // On architectures where the return address on the stack points
+  // to the instruction after the CALL, this value will have 1
+  // subtracted from it.  Else a function that ends in a CALL will
+  // have an offset pointing into the next function's address range.
   // m_current_pc has the actual address of the "current" pc.
-  std::optional<int> m_current_offset_backed_up_one;
+  int m_current_offset_backed_up_one; // how far into the function we've
+                                      // executed; -1 if unknown
 
   bool m_behaves_like_zeroth_frame; // this frame behaves like frame zero
 

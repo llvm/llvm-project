@@ -9,10 +9,7 @@
 # command-lines, but the only way to do this as part of the dependency graph is
 # configure_file and we are included from multiple places. To get around this
 # we `file(WRITE)` a file with an @variable reference and `configure_file` it.
-# FIXME: CMP0053 is removed in CMake 4; refine code relying on this policy.
-if(${CMAKE_VERSION} VERSION_LESS "4.0.0")
-  cmake_policy(SET CMP0053 OLD)
-endif()
+cmake_policy(SET CMP0053 OLD)
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20.0")
   # The policy change was for handling of relative paths for

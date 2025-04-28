@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -55,7 +54,7 @@ void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
 
 void WebAssemblyAsmTypeCheck::localDecl(
     const SmallVectorImpl<wasm::ValType> &Locals) {
-  llvm::append_range(LocalTypes, Locals);
+  LocalTypes.insert(LocalTypes.end(), Locals.begin(), Locals.end());
 }
 
 void WebAssemblyAsmTypeCheck::dumpTypeStack(Twine Msg) {
@@ -265,9 +264,9 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
     break;
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    switch (SymRef->getSpecifier()) {
-    case WebAssembly::S_GOT:
-    case WebAssembly::S_GOT_TLS:
+    switch (SymRef->getKind()) {
+    case MCSymbolRefExpr::VK_GOT:
+    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
       Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       return false;
     default:
@@ -357,7 +356,8 @@ bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
         Opcode == wasm::WASM_OPCODE_CATCH_REF) {
       if (!getSignature(ErrorLoc, Inst.getOperand(OpIdx++),
                         wasm::WASM_SYMBOL_TYPE_TAG, Sig))
-        llvm::append_range(SentTypes, Sig->Params);
+        SentTypes.insert(SentTypes.end(), Sig->Params.begin(),
+                         Sig->Params.end());
       else
         Error = true;
     }

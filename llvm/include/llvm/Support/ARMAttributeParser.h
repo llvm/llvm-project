@@ -10,15 +10,15 @@
 #define LLVM_SUPPORT_ARMATTRIBUTEPARSER_H
 
 #include "ARMBuildAttributes.h"
+#include "ELFAttributeParser.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 
 class ScopedPrinter;
 
-class ARMAttributeParser : public ELFCompactAttrParser {
+class ARMAttributeParser : public ELFAttributeParser {
   struct DisplayHandler {
     ARMBuildAttrs::AttrType attribute;
     Error (ARMAttributeParser::*routine)(ARMBuildAttrs::AttrType);
@@ -74,10 +74,9 @@ class ARMAttributeParser : public ELFCompactAttrParser {
 
 public:
   ARMAttributeParser(ScopedPrinter *sw)
-      : ELFCompactAttrParser(sw, ARMBuildAttrs::getARMAttributeTags(),
-                             "aeabi") {}
+      : ELFAttributeParser(sw, ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
   ARMAttributeParser()
-      : ELFCompactAttrParser(ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
+      : ELFAttributeParser(ARMBuildAttrs::getARMAttributeTags(), "aeabi") {}
 };
 }
 

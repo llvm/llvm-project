@@ -7,7 +7,7 @@ add_libc_test(
   SRCS
     locale_test.cpp
   DEPENDS
-    libc.hdr.locale_macros
+    libc.include.locale
     libc.src.locale.newlocale
     libc.src.locale.uselocale
     libc.src.locale.freelocale
@@ -20,6 +20,6 @@ add_libc_test(
   SRCS
     localeconv_test.cpp
   DEPENDS
-    libc.hdr.locale_macros
+    libc.include.locale
     libc.src.locale.localeconv
 )

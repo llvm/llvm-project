@@ -25,8 +25,8 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMSPASS
-#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMSPASS
+#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMS
+#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -164,13 +164,13 @@ struct IterArgsToInitArgs : public OpRewritePattern<tensor::DimOp> {
 
 namespace {
 struct ResolveRankedShapeTypeResultDimsPass final
-    : public memref::impl::ResolveRankedShapeTypeResultDimsPassBase<
+    : public memref::impl::ResolveRankedShapeTypeResultDimsBase<
           ResolveRankedShapeTypeResultDimsPass> {
   void runOnOperation() override;
 };
 
 struct ResolveShapedTypeResultDimsPass final
-    : public memref::impl::ResolveShapedTypeResultDimsPassBase<
+    : public memref::impl::ResolveShapedTypeResultDimsBase<
           ResolveShapedTypeResultDimsPass> {
   void runOnOperation() override;
 };
@@ -205,4 +205,12 @@ void ResolveShapedTypeResultDimsPass::runOnOperation() {
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     return signalPassFailure();
+}
+
+std::unique_ptr<Pass> memref::createResolveShapedTypeResultDimsPass() {
+  return std::make_unique<ResolveShapedTypeResultDimsPass>();
+}
+
+std::unique_ptr<Pass> memref::createResolveRankedShapeTypeResultDimsPass() {
+  return std::make_unique<ResolveRankedShapeTypeResultDimsPass>();
 }

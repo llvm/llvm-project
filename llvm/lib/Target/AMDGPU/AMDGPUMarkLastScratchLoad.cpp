@@ -25,7 +25,7 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUMarkLastScratchLoad {
+class AMDGPUMarkLastScratchLoad : public MachineFunctionPass {
 private:
   LiveStacks *LS = nullptr;
   LiveIntervals *LIS = nullptr;
@@ -33,16 +33,11 @@ private:
   const SIInstrInfo *SII = nullptr;
 
 public:
-  AMDGPUMarkLastScratchLoad(LiveStacks *LS, LiveIntervals *LIS, SlotIndexes *SI)
-      : LS(LS), LIS(LIS), SI(SI) {}
-  bool run(MachineFunction &MF);
-};
-
-class AMDGPUMarkLastScratchLoadLegacy : public MachineFunctionPass {
-public:
   static char ID;
 
-  AMDGPUMarkLastScratchLoadLegacy() : MachineFunctionPass(ID) {}
+  AMDGPUMarkLastScratchLoad() : MachineFunctionPass(ID) {
+    initializeAMDGPUMarkLastScratchLoadPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -61,34 +56,17 @@ public:
 
 } // end anonymous namespace
 
-bool AMDGPUMarkLastScratchLoadLegacy::runOnMachineFunction(
-    MachineFunction &MF) {
+bool AMDGPUMarkLastScratchLoad::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  auto &LS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
-  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto &SI = getAnalysis<SlotIndexesWrapperPass>().getSI();
-
-  return AMDGPUMarkLastScratchLoad(&LS, &LIS, &SI).run(MF);
-}
-
-PreservedAnalyses
-AMDGPUMarkLastScratchLoadPass::run(MachineFunction &MF,
-                                   MachineFunctionAnalysisManager &MFAM) {
-  auto &LS = MFAM.getResult<LiveStacksAnalysis>(MF);
-  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  auto &SI = MFAM.getResult<SlotIndexesAnalysis>(MF);
-
-  AMDGPUMarkLastScratchLoad(&LS, &LIS, &SI).run(MF);
-  return PreservedAnalyses::all();
-}
-
-bool AMDGPUMarkLastScratchLoad::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (ST.getGeneration() < AMDGPUSubtarget::GFX12)
     return false;
 
+  LS = &getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  SI = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   SII = ST.getInstrInfo();
   SlotIndexes &Slots = *LIS->getSlotIndexes();
 
@@ -152,13 +130,13 @@ bool AMDGPUMarkLastScratchLoad::run(MachineFunction &MF) {
   return Changed;
 }
 
-char AMDGPUMarkLastScratchLoadLegacy::ID = 0;
+char AMDGPUMarkLastScratchLoad::ID = 0;
 
-char &llvm::AMDGPUMarkLastScratchLoadID = AMDGPUMarkLastScratchLoadLegacy::ID;
+char &llvm::AMDGPUMarkLastScratchLoadID = AMDGPUMarkLastScratchLoad::ID;
 
-INITIALIZE_PASS_BEGIN(AMDGPUMarkLastScratchLoadLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPUMarkLastScratchLoad, DEBUG_TYPE,
                       "AMDGPU Mark last scratch load", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
-INITIALIZE_PASS_END(AMDGPUMarkLastScratchLoadLegacy, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPUMarkLastScratchLoad, DEBUG_TYPE,
                     "AMDGPU Mark last scratch load", false, false)

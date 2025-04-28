@@ -25,7 +25,7 @@ using __add_rvalue_reference_t _LIBCPP_NODEBUG = __add_rvalue_reference(_Tp);
 
 #else
 
-template <class _Tp, bool = __is_referenceable_v<_Tp> >
+template <class _Tp, bool = __libcpp_is_referenceable<_Tp>::value>
 struct __add_rvalue_reference_impl {
   using type _LIBCPP_NODEBUG = _Tp;
 };
@@ -41,7 +41,7 @@ using __add_rvalue_reference_t = typename __add_rvalue_reference_impl<_Tp>::type
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS add_rvalue_reference {
-  using type _LIBCPP_NODEBUG = __add_rvalue_reference_t<_Tp>;
+  using type = __add_rvalue_reference_t<_Tp>;
 };
 
 #if _LIBCPP_STD_VER >= 14

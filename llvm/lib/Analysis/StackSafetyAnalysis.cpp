@@ -672,7 +672,8 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::updateOneNode(
                       << (UpdateToFullSet ? ", full-set" : "") << "] " << &FS
                       << "\n");
     // Callers of this function may need updating.
-    WorkList.insert_range(Callers[Callee]);
+    for (auto &CallerID : Callers[Callee])
+      WorkList.insert(CallerID);
 
     ++FS.UpdateCount;
   }
@@ -1048,7 +1049,9 @@ PreservedAnalyses StackSafetyPrinterPass::run(Function &F,
 
 char StackSafetyInfoWrapperPass::ID = 0;
 
-StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {}
+StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {
+  initializeStackSafetyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 void StackSafetyInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<ScalarEvolutionWrapperPass>();
@@ -1089,7 +1092,10 @@ PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
 char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
 StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass()
-    : ModulePass(ID) {}
+    : ModulePass(ID) {
+  initializeStackSafetyGlobalInfoWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
 
 StackSafetyGlobalInfoWrapperPass::~StackSafetyGlobalInfoWrapperPass() = default;
 

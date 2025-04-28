@@ -386,7 +386,9 @@ struct AddrBasedCtxKey : public ContextKey {
     return Context == Other->Context;
   }
 
-  void genHashCode() override { HashCode = hash_combine_range(Context); }
+  void genHashCode() override {
+    HashCode = hash_combine_range(Context.begin(), Context.end());
+  }
 };
 
 // The counter of branch samples for one function indexed by the branch,

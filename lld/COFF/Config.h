@@ -214,8 +214,14 @@ struct Configuration {
   // used for /dwodir
   StringRef dwoDir;
 
+  // Used for /aligncomm.
+  std::map<std::string, int> alignComm;
+
   // Used for /failifmismatch.
   std::map<StringRef, std::pair<StringRef, InputFile *>> mustMatch;
+
+  // Used for /alternatename.
+  std::map<StringRef, StringRef> alternateNames;
 
   // Used for /order.
   llvm::StringMap<int> order;

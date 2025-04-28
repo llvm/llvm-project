@@ -27,8 +27,8 @@ public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
   using AddAbsoluteSymbolsFn = unique_function<Error(JITDylib &, SymbolMap)>;
 
-  /// Create an EPCDynamicLibrarySearchGenerator that searches for symbols in
-  /// the library with the given handle.
+  /// Create a DynamicLibrarySearchGenerator that searches for symbols in the
+  /// library with the given handle.
   ///
   /// If the Allow predicate is given then only symbols matching the predicate
   /// will be searched for. If the predicate is not given then all symbols will
@@ -43,23 +43,9 @@ public:
       : EPC(ES.getExecutorProcessControl()), H(H), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
-  /// Create an EPCDynamicLibrarySearchGenerator that resolves all symbols
-  /// matching the Allow predicate to null. This can be used to emulate linker
-  /// options like -weak-l / -weak_library where the library is missing at
-  /// runtime. (Note: here we're explicitly returning null for these symbols,
-  /// rather than returning no value at all for them, which is the usual
-  /// "missing symbol" behavior in ORC. This distinction shouldn't matter for
-  /// most use-cases).
-  EPCDynamicLibrarySearchGenerator(
-      ExecutionSession &ES, SymbolPredicate Allow,
-      AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
-      : EPC(ES.getExecutorProcessControl()), Allow(std::move(Allow)),
-        AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
-
   /// Permanently loads the library at the given path and, on success, returns
-  /// an EPCDynamicLibrarySearchGenerator that will search it for symbol
-  /// definitions in the library. On failure returns the reason the library
-  /// failed to load.
+  /// a DynamicLibrarySearchGenerator that will search it for symbol definitions
+  /// in the library. On failure returns the reason the library failed to load.
   static Expected<std::unique_ptr<EPCDynamicLibrarySearchGenerator>>
   Load(ExecutionSession &ES, const char *LibraryPath,
        SymbolPredicate Allow = SymbolPredicate(),
@@ -79,10 +65,8 @@ public:
                       const SymbolLookupSet &Symbols) override;
 
 private:
-  Error addAbsolutes(JITDylib &JD, SymbolMap Symbols);
-
   ExecutorProcessControl &EPC;
-  std::optional<tpctypes::DylibHandle> H;
+  tpctypes::DylibHandle H;
   SymbolPredicate Allow;
   AddAbsoluteSymbolsFn AddAbsoluteSymbols;
 };

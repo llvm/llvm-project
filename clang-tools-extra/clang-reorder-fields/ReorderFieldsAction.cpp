@@ -70,12 +70,11 @@ getNewFieldsOrder(const RecordDecl *Definition,
   }
   SmallVector<unsigned, 4> NewFieldsOrder;
   for (const auto &Name : DesiredFieldsOrder) {
-    auto It = NameToIndex.find(Name);
-    if (It == NameToIndex.end()) {
+    if (!NameToIndex.count(Name)) {
       llvm::errs() << "Field " << Name << " not found in definition.\n";
       return {};
     }
-    NewFieldsOrder.push_back(It->second);
+    NewFieldsOrder.push_back(NameToIndex[Name]);
   }
   assert(NewFieldsOrder.size() == NameToIndex.size());
   return NewFieldsOrder;

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/ModRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -20,8 +21,7 @@ TEST(ModRefTest, PrintMemoryEffects) {
   std::string S;
   raw_string_ostream OS(S);
   OS << MemoryEffects::none();
-  EXPECT_EQ(S, "ArgMem: NoModRef, InaccessibleMem: NoModRef, ErrnoMem: "
-               "NoModRef, Other: NoModRef");
+  EXPECT_EQ(S, "ArgMem: NoModRef, InaccessibleMem: NoModRef, Other: NoModRef");
 }
 
 } // namespace

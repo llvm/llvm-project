@@ -14,7 +14,6 @@ add_llvm_component_library(LLVMipo
   EmbedBitcodePass.cpp
   ExpandVariadics.cpp
   ExtractGV.cpp
-  FatLTOCleanup.cpp
   ForceFunctionAttrs.cpp
   FunctionAttrs.cpp
   FunctionImport.cpp
@@ -65,7 +64,6 @@ add_llvm_component_library(LLVMipo
   FrontendOpenMP
   InstCombine
   IRReader
-  Demangle
   Linker
   Object
   ProfileData

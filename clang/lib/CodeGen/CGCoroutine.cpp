@@ -11,11 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCleanup.h"
-#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
-#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -856,20 +855,6 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // Create parameter copies. We do it before creating a promise, since an
     // evolution of coroutine TS may allow promise constructor to observe
     // parameter copies.
-    for (const ParmVarDecl *Parm : FnArgs) {
-      // If the original param is in an alloca, exclude it from the coroutine
-      // frame. The parameter copy will be part of the frame, but the original
-      // parameter memory should remain on the stack. This is necessary to
-      // ensure that parameters destroyed in callees, as with `trivial_abi` or
-      // in the MSVC C++ ABI, are appropriately destroyed after setting up the
-      // coroutine.
-      Address ParmAddr = GetAddrOfLocalVar(Parm);
-      if (auto *ParmAlloca =
-              dyn_cast<llvm::AllocaInst>(ParmAddr.getBasePointer())) {
-        ParmAlloca->setMetadata(llvm::LLVMContext::MD_coro_outside_frame,
-                                llvm::MDNode::get(CGM.getLLVMContext(), {}));
-      }
-    }
     for (auto *PM : S.getParamMoves()) {
       EmitStmt(PM);
       ParamReplacer.addCopy(cast<DeclStmt>(PM));
@@ -957,16 +942,9 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   if (Stmt *Ret = S.getReturnStmt()) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
-    Expr *PreviousRetValue = nullptr;
-    if (GroManager.DirectEmit) {
-      PreviousRetValue = cast<ReturnStmt>(Ret)->getRetValue();
+    if (GroManager.DirectEmit)
       cast<ReturnStmt>(Ret)->setRetValue(nullptr);
-    }
     EmitStmt(Ret);
-    // Set the return value back. The code generator, as the AST **Consumer**,
-    // shouldn't change the AST.
-    if (PreviousRetValue)
-      cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
   }
 
   // LLVM require the frontend to mark the coroutine.

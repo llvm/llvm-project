@@ -12,7 +12,6 @@
 
 #include "CIRGenModule.h"
 
-#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include "clang/AST/DeclGroup.h"
@@ -37,18 +36,13 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
   mlirContext->loadDialect<cir::CIRDialect>();
-  mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
   cgm = std::make_unique<clang::CIRGen::CIRGenModule>(
       *mlirContext.get(), astContext, codeGenOpts, diags);
 }
 
-bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
-
 mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
-  if (diags.hasUnrecoverableErrorOccurred())
-    return true;
 
   for (Decl *decl : group)
     cgm->emitTopLevelDecl(decl);

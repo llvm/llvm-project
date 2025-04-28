@@ -91,7 +91,7 @@ libunwind specific options
 
 .. option:: LIBUNWIND_ENABLE_WERROR:BOOL
 
-  **Default**: ``OFF``
+  **Default**: ``ON``
 
   Compile with -Werror
 

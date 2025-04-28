@@ -45,8 +45,8 @@ from __future__ import annotations
 import abc
 import collections
 from collections.abc import Callable, Sequence
-from pathlib import Path
-from typing import Any, BinaryIO, ClassVar, Literal, TypeVar, overload
+import io
+from typing import Any, ClassVar, TypeVar, overload
 
 __all__ = [
     "AffineAddExpr",
@@ -195,19 +195,6 @@ class _OperationBase:
         Detaches the operation from its parent block.
         """
     def erase(self) -> None: ...
-
-    @overload
-    def get_asm(
-        binary: Literal[True],
-        large_elements_limit: int | None = None,
-        enable_debug_info: bool = False,
-        pretty_debug_info: bool = False,
-        print_generic_op_form: bool = False,
-        use_local_scope: bool = False,
-        assume_verified: bool = False,
-        skip_regions: bool = False,
-    ) -> bytes: ...
-    @overload
     def get_asm(
         self,
         binary: bool = False,
@@ -218,14 +205,19 @@ class _OperationBase:
         use_local_scope: bool = False,
         assume_verified: bool = False,
         skip_regions: bool = False,
-    ) -> str:
+    ) -> io.BytesIO | io.StringIO:
         """
-        Returns the assembly form of the operation.
+        Gets the assembly form of the operation with all options available.
 
-        See the print() method for common keyword arguments for configuring
-        the output.
+        Args:
+          binary: Whether to return a bytes (True) or str (False) object. Defaults to
+            False.
+          ... others ...: See the print() method for common keyword arguments for
+            configuring the printout.
+        Returns:
+          Either a bytes or str object, depending on the setting of the 'binary'
+          argument.
         """
-
     def move_after(self, other: _OperationBase) -> None:
         """
         Puts self immediately after the other operation in its parent block.
@@ -292,12 +284,12 @@ class _OperationBase:
         """
         Verify the operation. Raises MLIRError if verification fails, and returns true otherwise.
         """
-    def write_bytecode(self, file: BinaryIO | str, desired_version: int | None = None) -> None:
+    def write_bytecode(self, file: Any, desired_version: int | None = None) -> None:
         """
         Write the bytecode form of the operation to a file like object.
 
         Args:
-          file: The file like object or path to write to.
+          file: The file like object to write to.
           desired_version: The version of bytecode to emit.
         Returns:
           The bytecode writer status.
@@ -584,7 +576,7 @@ class Value:
         Dumps a debug representation of the object to stderr.
         """
     @overload
-    def get_name(self, use_local_scope: bool = False, use_name_loc_as_prefix: bool = True) -> str: ...
+    def get_name(self, use_local_scope: bool = False) -> str: ...
     @overload
     def get_name(self, state: AsmState) -> str:
         """
@@ -2139,15 +2131,6 @@ class Module:
 
         See also: https://mlir.llvm.org/docs/LangRef/
         """
-    @staticmethod
-    def parseFile(path: str, context: Context | None = None) -> Module:
-        """
-        Parses a module's assembly format from file.
-
-        Returns a new MlirModule or raises an MLIRError if the parsing fails.
-
-        See also: https://mlir.llvm.org/docs/LangRef/
-        """
     def _CAPICreate(self) -> Any: ...
     def __str__(self) -> str:
         """
@@ -2389,7 +2372,7 @@ class Operation(_OperationBase):
           attributes: Dict of str:Attribute.
           successors: List of Block for the operation's successors.
           regions: Number of regions to create.
-          loc: A Location object (defaults to resolve from context manager).
+          location: A Location object (defaults to resolve from context manager).
           ip: An InsertionPoint (defaults to resolve from context manager or set to
             False to disable insertion, even with an insertion point set in the
             context manager).
@@ -2473,10 +2456,7 @@ class RegionIterator:
     def __next__(self) -> Region: ...
 
 class RegionSequence:
-    @overload
     def __getitem__(self, arg0: int) -> Region: ...
-    @overload
-    def __getitem__(self, arg0: slice) -> Sequence[Region]: ...
     def __iter__(self) -> RegionIterator: ...
     def __len__(self) -> int: ...
 

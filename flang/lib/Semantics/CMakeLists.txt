@@ -29,7 +29,6 @@ add_flang_library(FortranSemantics
   compute-offsets.cpp
   data-to-inits.cpp
   definable.cpp
-  dump-expr.cpp
   expression.cpp
   mod-file.cpp
   openmp-modifiers.cpp

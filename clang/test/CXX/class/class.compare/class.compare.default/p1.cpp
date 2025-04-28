@@ -285,15 +285,3 @@ struct j {
 };
 bool j::operator==(const j &) const = default;
 }
-
-namespace evil2 {
-  struct k {
-  };
-  
-  struct l {
-      friend bool operator==(const l& a, const l& b);
-      friend class k;
-  };
-  
-  bool operator==(const l& a, const l& b) = default;
-}

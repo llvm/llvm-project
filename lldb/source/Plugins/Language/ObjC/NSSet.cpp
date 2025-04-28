@@ -52,6 +52,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -88,6 +90,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -118,6 +122,8 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
+
+  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -219,7 +225,24 @@ namespace Foundation1437 {
       return __NSSetMSize_Impl<DataDescriptor_64>(process, valobj_addr, error);
     }
   }
-  } // namespace Foundation1437
+}
+  
+class NSSetCodeRunningSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
+public:
+  NSSetCodeRunningSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
+
+  ~NSSetCodeRunningSyntheticFrontEnd() override;
+
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
+
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+
+  lldb::ChildCacheState Update() override;
+
+  bool MightHaveChildren() override;
+
+  size_t GetIndexOfChildWithName(ConstString name) override;
+};
 } // namespace formatters
 } // namespace lldb_private
 
@@ -438,6 +461,10 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eReuse;
 }
 
+bool lldb_private::formatters::NSSetISyntheticFrontEnd::MightHaveChildren() {
+  return true;
+}
+
 lldb::ValueObjectSP
 lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
@@ -553,6 +580,10 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::Update() {
   return m_hashtable.Update(valobj_sp->GetValueAsUnsigned(0), m_exe_ctx_ref)
              ? lldb::ChildCacheState::eReuse
              : lldb::ChildCacheState::eRefetch;
+}
+
+bool lldb_private::formatters::NSCFSetSyntheticFrontEnd::MightHaveChildren() {
+  return true;
 }
 
 lldb::ValueObjectSP
@@ -706,6 +737,13 @@ lldb_private::formatters::GenericNSSetMSyntheticFrontEnd<D32, D64>::Update() {
   }
   return error.Success() ? lldb::ChildCacheState::eReuse
                          : lldb::ChildCacheState::eRefetch;
+}
+
+template <typename D32, typename D64>
+bool
+lldb_private::formatters::
+  GenericNSSetMSyntheticFrontEnd<D32, D64>::MightHaveChildren() {
+  return true;
 }
 
 template <typename D32, typename D64>

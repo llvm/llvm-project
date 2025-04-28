@@ -6,7 +6,6 @@ add_llvm_component_library(LLVMDlltoolDriver
   DlltoolDriver.cpp
 
   LINK_COMPONENTS
-  BinaryFormat
   Object
   Option
   Support

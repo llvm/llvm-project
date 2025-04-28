@@ -1,9 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-runtime-has-weak -fblocks -fobjc-arc -o - %s | FileCheck %s
 
-@interface SuperClass
-@end
-
-@interface WeakPropertyTest : SuperClass {
+@interface WeakPropertyTest {
     __weak id PROP;
 }
 @property () __weak id PROP;

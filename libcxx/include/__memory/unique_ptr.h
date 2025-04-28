@@ -62,11 +62,13 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct default_delete {
+struct _LIBCPP_TEMPLATE_VIS default_delete {
   static_assert(!is_function<_Tp>::value, "default_delete cannot be instantiated for function types");
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
-
+#ifndef _LIBCPP_CXX03_LANG
+  _LIBCPP_HIDE_FROM_ABI constexpr default_delete() _NOEXCEPT = default;
+#else
+  _LIBCPP_HIDE_FROM_ABI default_delete() {}
+#endif
   template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 default_delete(const default_delete<_Up>&) _NOEXCEPT {}
 
@@ -78,24 +80,35 @@ struct default_delete {
 };
 
 template <class _Tp>
-struct default_delete<_Tp[]> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
+struct _LIBCPP_TEMPLATE_VIS default_delete<_Tp[]> {
+private:
+  template <class _Up>
+  struct _EnableIfConvertible : enable_if<is_convertible<_Up (*)[], _Tp (*)[]>::value> {};
 
-  template <class _Up, __enable_if_t<is_convertible<_Up (*)[], _Tp (*)[]>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 default_delete(const default_delete<_Up[]>&) _NOEXCEPT {}
+public:
+#ifndef _LIBCPP_CXX03_LANG
+  _LIBCPP_HIDE_FROM_ABI constexpr default_delete() _NOEXCEPT = default;
+#else
+  _LIBCPP_HIDE_FROM_ABI default_delete() {}
+#endif
 
-  template <class _Up, __enable_if_t<is_convertible<_Up (*)[], _Tp (*)[]>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator()(_Up* __ptr) const _NOEXCEPT {
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
+  default_delete(const default_delete<_Up[]>&, typename _EnableIfConvertible<_Up>::type* = 0) _NOEXCEPT {}
+
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename _EnableIfConvertible<_Up>::type
+  operator()(_Up* __ptr) const _NOEXCEPT {
     static_assert(sizeof(_Up) >= 0, "cannot delete an incomplete type");
     delete[] __ptr;
   }
 };
 
 template <class _Deleter>
-inline const bool __is_default_deleter_v = false;
+struct __is_default_deleter : false_type {};
 
 template <class _Tp>
-inline const bool __is_default_deleter_v<default_delete<_Tp> > = true;
+struct __is_default_deleter<default_delete<_Tp> > : true_type {};
 
 template <class _Deleter>
 struct __unique_ptr_deleter_sfinae {
@@ -126,7 +139,7 @@ struct __unique_ptr_deleter_sfinae<_Deleter&> {
 #endif
 
 template <class _Tp, class _Dp = default_delete<_Tp> >
-class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI unique_ptr {
+class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
@@ -300,7 +313,7 @@ public:
 // We provide some helper classes that allow bounds checking when accessing a unique_ptr<T[]>.
 // There are a few cases where bounds checking can be implemented:
 //
-// 1. When an array cookie exists at the beginning of the array allocation, we are
+// 1. When an array cookie (see [1]) exists at the beginning of the array allocation, we are
 //    able to reuse that cookie to extract the size of the array and perform bounds checking.
 //    An array cookie is a size inserted at the beginning of the allocation by the compiler.
 //    That size is inserted implicitly when doing `new T[n]` in some cases (as of writing this
@@ -342,7 +355,7 @@ struct __unique_ptr_array_bounds_stateless {
 
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<__is_default_deleter_v<_Deleter> && __has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<__is_default_deleter<_Deleter>::value && __has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp* __ptr, size_t __index) const {
     // In constant expressions, we can't check the array cookie so we just pretend that the index
     // is in-bounds. The compiler catches invalid accesses anyway.
@@ -354,7 +367,7 @@ struct __unique_ptr_array_bounds_stateless {
 
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<!__is_default_deleter_v<_Deleter> || !__has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<!__is_default_deleter<_Deleter>::value || !__has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp*, size_t) const {
     return true; // If we don't have an array cookie, we assume the access is in-bounds
   }
@@ -372,7 +385,7 @@ struct __unique_ptr_array_bounds_stored {
   // Use the array cookie if there's one
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<__is_default_deleter_v<_Deleter> && __has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<__is_default_deleter<_Deleter>::value && __has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp* __ptr, size_t __index) const {
     if (__libcpp_is_constant_evaluated())
       return true;
@@ -383,7 +396,7 @@ struct __unique_ptr_array_bounds_stored {
   // Otherwise, fall back on the stored size (if any)
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<!__is_default_deleter_v<_Deleter> || !__has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<!__is_default_deleter<_Deleter>::value || !__has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp*, size_t __index) const {
     return __index < __size_;
   }
@@ -393,7 +406,7 @@ private:
 };
 
 template <class _Tp, class _Dp>
-class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI unique_ptr<_Tp[], _Dp> {
+class _LIBCPP_UNIQUE_PTR_TRIVIAL_ABI _LIBCPP_TEMPLATE_VIS unique_ptr<_Tp[], _Dp> {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
@@ -783,13 +796,13 @@ void make_unique_for_overwrite(_Args&&...) = delete;
 #endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-struct hash;
+struct _LIBCPP_TEMPLATE_VIS hash;
 
 template <class _Tp, class _Dp>
 #ifdef _LIBCPP_CXX03_LANG
-struct hash<unique_ptr<_Tp, _Dp> >
+struct _LIBCPP_TEMPLATE_VIS hash<unique_ptr<_Tp, _Dp> >
 #else
-struct hash<__enable_hash_helper< unique_ptr<_Tp, _Dp>, typename unique_ptr<_Tp, _Dp>::pointer> >
+struct _LIBCPP_TEMPLATE_VIS hash<__enable_hash_helper< unique_ptr<_Tp, _Dp>, typename unique_ptr<_Tp, _Dp>::pointer> >
 #endif
 {
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)

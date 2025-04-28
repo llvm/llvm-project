@@ -307,36 +307,3 @@ void test() {
 }
 
 }
-
-namespace GH128175 {
-
-template <class> void f() {
-  [i{0}] {
-    [&] {
-      [&] {
-        []()
-          requires true
-        {}();
-      }();
-    }();
-  }();
-}
-
-template void f<int>();
-
-}
-
-namespace GH133719 {
-
-template <class T>
-constexpr auto f{[] (auto arg) {
-  return [a{arg}] {
-      [] () requires true {}();
-  };
-}};
-
-void foo() {
-  f<int>(0);
-}
-
-}

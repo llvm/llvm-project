@@ -12,10 +12,9 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceOperandsOneDeltaPass(Oracle &, ReducerWorkItem &);
-void reduceOperandsZeroDeltaPass(Oracle &, ReducerWorkItem &);
-void reduceOperandsNaNDeltaPass(Oracle &, ReducerWorkItem &);
-void reduceOperandsPoisonDeltaPass(Oracle &, ReducerWorkItem &);
+void reduceOperandsOneDeltaPass(TestRunner &Test);
+void reduceOperandsZeroDeltaPass(TestRunner &Test);
+void reduceOperandsNaNDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

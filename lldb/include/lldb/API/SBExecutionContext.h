@@ -55,7 +55,6 @@ public:
   SBFrame GetFrame() const;
 
 protected:
-  friend class SBInstructionList;
   friend class lldb_private::python::SWIGBridge;
   friend class lldb_private::ScriptInterpreter;
 

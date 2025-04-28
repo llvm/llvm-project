@@ -15,9 +15,197 @@
 #include "DeviceUtils.h"
 #include "Interface.h"
 #include "State.h"
-#include "gpuintrin.h"
+
+#include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 using namespace ompx;
+
+namespace ompx {
+namespace impl {
+
+/// AMDGCN Implementation
+///
+///{
+#ifdef __AMDGPU__
+
+uint32_t getWarpSize() { return __builtin_amdgcn_wavefrontsize(); }
+
+uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __builtin_amdgcn_workgroup_size_x();
+  case 1:
+    return __builtin_amdgcn_workgroup_size_y();
+  case 2:
+    return __builtin_amdgcn_workgroup_size_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+LaneMaskTy activemask() { return __builtin_amdgcn_read_exec(); }
+
+LaneMaskTy lanemaskLT() {
+  uint32_t Lane = mapping::getThreadIdInWarp();
+  int64_t Ballot = mapping::activemask();
+  uint64_t Mask = ((uint64_t)1 << Lane) - (uint64_t)1;
+  return Mask & Ballot;
+}
+
+LaneMaskTy lanemaskGT() {
+  uint32_t Lane = mapping::getThreadIdInWarp();
+  if (Lane == (mapping::getWarpSize() - 1))
+    return 0;
+  int64_t Ballot = mapping::activemask();
+  uint64_t Mask = (~((uint64_t)0)) << (Lane + 1);
+  return Mask & Ballot;
+}
+
+uint32_t getThreadIdInWarp() {
+  return __builtin_amdgcn_mbcnt_hi(~0u, __builtin_amdgcn_mbcnt_lo(~0u, 0u));
+}
+
+uint32_t getThreadIdInBlock(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __builtin_amdgcn_workitem_id_x();
+  case 1:
+    return __builtin_amdgcn_workitem_id_y();
+  case 2:
+    return __builtin_amdgcn_workitem_id_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+uint32_t getNumberOfThreadsInKernel() {
+  return __builtin_amdgcn_grid_size_x() * __builtin_amdgcn_grid_size_y() *
+         __builtin_amdgcn_grid_size_z();
+}
+
+uint32_t getBlockIdInKernel(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __builtin_amdgcn_workgroup_id_x();
+  case 1:
+    return __builtin_amdgcn_workgroup_id_y();
+  case 2:
+    return __builtin_amdgcn_workgroup_id_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+uint32_t getNumberOfBlocksInKernel(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
+  case 1:
+    return __builtin_amdgcn_grid_size_y() / __builtin_amdgcn_workgroup_size_y();
+  case 2:
+    return __builtin_amdgcn_grid_size_z() / __builtin_amdgcn_workgroup_size_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+uint32_t getWarpIdInBlock() {
+  return impl::getThreadIdInBlock(mapping::DIM_X) / mapping::getWarpSize();
+}
+
+uint32_t getNumberOfWarpsInBlock() {
+  return mapping::getNumberOfThreadsInBlock() / mapping::getWarpSize();
+}
+
+#endif
+///}
+
+/// NVPTX Implementation
+///
+///{
+#ifdef __NVPTX__
+
+uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __nvvm_read_ptx_sreg_ntid_x();
+  case 1:
+    return __nvvm_read_ptx_sreg_ntid_y();
+  case 2:
+    return __nvvm_read_ptx_sreg_ntid_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+uint32_t getWarpSize() { return __nvvm_read_ptx_sreg_warpsize(); }
+
+LaneMaskTy activemask() { return __nvvm_activemask(); }
+
+LaneMaskTy lanemaskLT() { return __nvvm_read_ptx_sreg_lanemask_lt(); }
+
+LaneMaskTy lanemaskGT() { return __nvvm_read_ptx_sreg_lanemask_gt(); }
+
+uint32_t getThreadIdInBlock(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __nvvm_read_ptx_sreg_tid_x();
+  case 1:
+    return __nvvm_read_ptx_sreg_tid_y();
+  case 2:
+    return __nvvm_read_ptx_sreg_tid_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+uint32_t getThreadIdInWarp() { return __nvvm_read_ptx_sreg_laneid(); }
+
+uint32_t getBlockIdInKernel(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __nvvm_read_ptx_sreg_ctaid_x();
+  case 1:
+    return __nvvm_read_ptx_sreg_ctaid_y();
+  case 2:
+    return __nvvm_read_ptx_sreg_ctaid_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+uint32_t getNumberOfBlocksInKernel(int32_t Dim) {
+  switch (Dim) {
+  case 0:
+    return __nvvm_read_ptx_sreg_nctaid_x();
+  case 1:
+    return __nvvm_read_ptx_sreg_nctaid_y();
+  case 2:
+    return __nvvm_read_ptx_sreg_nctaid_z();
+  };
+  UNREACHABLE("Dim outside range!");
+}
+
+uint32_t getNumberOfThreadsInKernel() {
+  return impl::getNumberOfThreadsInBlock(0) *
+         impl::getNumberOfBlocksInKernel(0) *
+         impl::getNumberOfThreadsInBlock(1) *
+         impl::getNumberOfBlocksInKernel(1) *
+         impl::getNumberOfThreadsInBlock(2) *
+         impl::getNumberOfBlocksInKernel(2);
+}
+
+uint32_t getWarpIdInBlock() {
+  return impl::getThreadIdInBlock(mapping::DIM_X) / mapping::getWarpSize();
+}
+
+uint32_t getNumberOfWarpsInBlock() {
+  return (mapping::getNumberOfThreadsInBlock() + mapping::getWarpSize() - 1) /
+         mapping::getWarpSize();
+}
+
+#endif
+///}
+
+} // namespace impl
+} // namespace ompx
+
+/// We have to be deliberate about the distinction of `mapping::` and `impl::`
+/// below to avoid repeating assumptions or including irrelevant ones.
+///{
 
 static bool isInLastWarp() {
   uint32_t MainTId = (mapping::getNumberOfThreadsInBlock() - 1) &
@@ -49,44 +237,24 @@ bool mapping::isLeaderInWarp() {
   return utils::popc(Active & LaneMaskLT) == 0;
 }
 
-LaneMaskTy mapping::activemask() { return __gpu_lane_mask(); }
+LaneMaskTy mapping::activemask() { return impl::activemask(); }
 
-LaneMaskTy mapping::lanemaskLT() {
-#ifdef __NVPTX__
-  return __nvvm_read_ptx_sreg_lanemask_lt();
-#else
-  uint32_t Lane = mapping::getThreadIdInWarp();
-  int64_t Ballot = mapping::activemask();
-  uint64_t Mask = ((uint64_t)1 << Lane) - (uint64_t)1;
-  return Mask & Ballot;
-#endif
-}
+LaneMaskTy mapping::lanemaskLT() { return impl::lanemaskLT(); }
 
-LaneMaskTy mapping::lanemaskGT() {
-#ifdef __NVPTX__
-  return __nvvm_read_ptx_sreg_lanemask_gt();
-#else
-  uint32_t Lane = mapping::getThreadIdInWarp();
-  if (Lane == (mapping::getWarpSize() - 1))
-    return 0;
-  int64_t Ballot = mapping::activemask();
-  uint64_t Mask = (~((uint64_t)0)) << (Lane + 1);
-  return Mask & Ballot;
-#endif
-}
+LaneMaskTy mapping::lanemaskGT() { return impl::lanemaskGT(); }
 
 uint32_t mapping::getThreadIdInWarp() {
-  uint32_t ThreadIdInWarp = __gpu_lane_id();
-  ASSERT(ThreadIdInWarp < mapping::getWarpSize(), nullptr);
+  uint32_t ThreadIdInWarp = impl::getThreadIdInWarp();
+  ASSERT(ThreadIdInWarp < impl::getWarpSize(), nullptr);
   return ThreadIdInWarp;
 }
 
 uint32_t mapping::getThreadIdInBlock(int32_t Dim) {
-  uint32_t ThreadIdInBlock = __gpu_thread_id(Dim);
+  uint32_t ThreadIdInBlock = impl::getThreadIdInBlock(Dim);
   return ThreadIdInBlock;
 }
 
-uint32_t mapping::getWarpSize() { return __gpu_num_lanes(); }
+uint32_t mapping::getWarpSize() { return impl::getWarpSize(); }
 
 uint32_t mapping::getMaxTeamThreads(bool IsSPMD) {
   uint32_t BlockSize = mapping::getNumberOfThreadsInBlock();
@@ -96,45 +264,42 @@ uint32_t mapping::getMaxTeamThreads(bool IsSPMD) {
   if (BlockSize % mapping::getWarpSize())
     return BlockSize - (BlockSize % mapping::getWarpSize());
   // If we are in SPMD mode, remove one warp.
-  return BlockSize - (!IsSPMD * mapping::getWarpSize());
+  return BlockSize - impl::getWarpSize();
 }
 uint32_t mapping::getMaxTeamThreads() {
   return mapping::getMaxTeamThreads(mapping::isSPMDMode());
 }
 
 uint32_t mapping::getNumberOfThreadsInBlock(int32_t Dim) {
-  return __gpu_num_threads(Dim);
+  return impl::getNumberOfThreadsInBlock(Dim);
 }
 
 uint32_t mapping::getNumberOfThreadsInKernel() {
-  return mapping::getNumberOfThreadsInBlock(0) *
-         mapping::getNumberOfBlocksInKernel(0) *
-         mapping::getNumberOfThreadsInBlock(1) *
-         mapping::getNumberOfBlocksInKernel(1) *
-         mapping::getNumberOfThreadsInBlock(2) *
-         mapping::getNumberOfBlocksInKernel(2);
+  return impl::getNumberOfThreadsInKernel();
 }
 
 uint32_t mapping::getWarpIdInBlock() {
-  uint32_t WarpID =
-      mapping::getThreadIdInBlock(mapping::DIM_X) / mapping::getWarpSize();
-  ASSERT(WarpID < mapping::getNumberOfWarpsInBlock(), nullptr);
+  uint32_t WarpID = impl::getWarpIdInBlock();
+  ASSERT(WarpID < impl::getNumberOfWarpsInBlock(), nullptr);
   return WarpID;
 }
 
 uint32_t mapping::getBlockIdInKernel(int32_t Dim) {
-  uint32_t BlockId = __gpu_block_id(Dim);
-  ASSERT(BlockId < mapping::getNumberOfBlocksInKernel(Dim), nullptr);
+  uint32_t BlockId = impl::getBlockIdInKernel(Dim);
+  ASSERT(BlockId < impl::getNumberOfBlocksInKernel(Dim), nullptr);
   return BlockId;
 }
 
 uint32_t mapping::getNumberOfWarpsInBlock() {
-  return (mapping::getNumberOfThreadsInBlock() + mapping::getWarpSize() - 1) /
-         mapping::getWarpSize();
+  uint32_t NumberOfWarpsInBlocks = impl::getNumberOfWarpsInBlock();
+  ASSERT(impl::getWarpIdInBlock() < NumberOfWarpsInBlocks, nullptr);
+  return NumberOfWarpsInBlocks;
 }
 
 uint32_t mapping::getNumberOfBlocksInKernel(int32_t Dim) {
-  return __gpu_num_blocks(Dim);
+  uint32_t NumberOfBlocks = impl::getNumberOfBlocksInKernel(Dim);
+  ASSERT(impl::getBlockIdInKernel(Dim) < NumberOfBlocks, nullptr);
+  return NumberOfBlocks;
 }
 
 uint32_t mapping::getNumberOfProcessorElements() {
@@ -167,15 +332,15 @@ extern "C" {
 }
 
 [[gnu::noinline]] uint32_t __kmpc_get_hardware_num_threads_in_block() {
-  return mapping::getNumberOfThreadsInBlock(mapping::DIM_X);
+  return impl::getNumberOfThreadsInBlock(mapping::DIM_X);
 }
 
 [[gnu::noinline]] uint32_t __kmpc_get_warp_size() {
-  return mapping::getWarpSize();
+  return impl::getWarpSize();
 }
 
 __attribute__((noinline)) uint32_t __kmpc_get_hardware_num_blocks() {
-  return mapping::getNumberOfBlocksInKernel(0);
+  return impl::getNumberOfBlocksInKernel(0);
 }
 }
 

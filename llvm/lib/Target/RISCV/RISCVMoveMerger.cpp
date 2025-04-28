@@ -9,12 +9,10 @@
 // This file contains a pass that performs move related peephole optimizations
 // as Zcmp has specified. This pass should be run after register allocation.
 //
-// This pass also supports Xqccmp, which has identical instructions.
-//
 //===----------------------------------------------------------------------===//
 
 #include "RISCVInstrInfo.h"
-#include "RISCVSubtarget.h"
+#include "RISCVMachineFunctionInfo.h"
 
 using namespace llvm;
 
@@ -45,7 +43,7 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   MachineBasicBlock::iterator
   findMatchingInst(MachineBasicBlock::iterator &MBBI, unsigned InstOpcode,
                    const DestSourcePair &RegPair);
-  bool mergeMoveSARegPair(const RISCVSubtarget &STI, MachineBasicBlock &MBB);
+  bool mergeMoveSARegPair(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   StringRef getPassName() const override { return RISCV_MOVE_MERGE_NAME; }
@@ -57,46 +55,6 @@ char RISCVMoveMerge::ID = 0;
 
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
-
-static bool isMoveFromAToS(unsigned Opcode) {
-  switch (Opcode) {
-  case RISCV::CM_MVA01S:
-  case RISCV::QC_CM_MVA01S:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static unsigned getMoveFromAToSOpcode(const RISCVSubtarget &STI) {
-  if (STI.hasStdExtZcmp())
-    return RISCV::CM_MVA01S;
-
-  if (STI.hasVendorXqccmp())
-    return RISCV::QC_CM_MVA01S;
-
-  llvm_unreachable("Unhandled subtarget with paired A to S move.");
-}
-
-static bool isMoveFromSToA(unsigned Opcode) {
-  switch (Opcode) {
-  case RISCV::CM_MVSA01:
-  case RISCV::QC_CM_MVSA01:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static unsigned getMoveFromSToAOpcode(const RISCVSubtarget &STI) {
-  if (STI.hasStdExtZcmp())
-    return RISCV::CM_MVSA01;
-
-  if (STI.hasVendorXqccmp())
-    return RISCV::QC_CM_MVSA01;
-
-  llvm_unreachable("Unhandled subtarget with paired S to A move");
-}
 
 // Check if registers meet CM.MVA01S constraints.
 bool RISCVMoveMerge::isCandidateToMergeMVA01S(const DestSourcePair &RegPair) {
@@ -129,7 +87,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
   DestSourcePair FirstPair = TII->isCopyInstrImpl(*I).value();
   DestSourcePair PairedRegs = TII->isCopyInstrImpl(*Paired).value();
-  Register ARegInFirstPair = isMoveFromAToS(Opcode)
+  Register ARegInFirstPair = Opcode == RISCV::CM_MVA01S
                                  ? FirstPair.Destination->getReg()
                                  : FirstPair.Source->getReg();
 
@@ -146,7 +104,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //   mv a0, s2
   //   mv a1, s1    =>  cm.mva01s s2,s1
   bool StartWithX10 = ARegInFirstPair == RISCV::X10;
-  if (isMoveFromAToS(Opcode)) {
+  if (Opcode == RISCV::CM_MVA01S) {
     Sreg1 = StartWithX10 ? FirstPair.Source : PairedRegs.Source;
     Sreg2 = StartWithX10 ? PairedRegs.Source : FirstPair.Source;
   } else {
@@ -181,7 +139,8 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
       Register SourceReg = SecondPair->Source->getReg();
       Register DestReg = SecondPair->Destination->getReg();
 
-      if (isMoveFromAToS(InstOpcode) && isCandidateToMergeMVA01S(*SecondPair)) {
+      if (InstOpcode == RISCV::CM_MVA01S &&
+          isCandidateToMergeMVA01S(*SecondPair)) {
         // If register pair is valid and destination registers are different.
         if ((RegPair.Destination->getReg() == DestReg))
           return E;
@@ -195,7 +154,7 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
           return E;
 
         return I;
-      } else if (isMoveFromSToA(InstOpcode) &&
+      } else if (InstOpcode == RISCV::CM_MVSA01 &&
                  isCandidateToMergeMVSA01(*SecondPair)) {
         if ((RegPair.Source->getReg() == SourceReg) ||
             (RegPair.Destination->getReg() == DestReg))
@@ -217,8 +176,7 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
 
 // Finds instructions, which could be represented as C.MV instructions and
 // merged into CM.MVA01S or CM.MVSA01.
-bool RISCVMoveMerge::mergeMoveSARegPair(const RISCVSubtarget &STI,
-                                        MachineBasicBlock &MBB) {
+bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
   bool Modified = false;
 
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
@@ -230,9 +188,9 @@ bool RISCVMoveMerge::mergeMoveSARegPair(const RISCVSubtarget &STI,
       unsigned Opcode = 0;
 
       if (isCandidateToMergeMVA01S(*RegPair))
-        Opcode = getMoveFromAToSOpcode(STI);
+        Opcode = RISCV::CM_MVA01S;
       else if (isCandidateToMergeMVSA01(*RegPair))
-        Opcode = getMoveFromSToAOpcode(STI);
+        Opcode = RISCV::CM_MVSA01;
       else {
         ++MBBI;
         continue;
@@ -257,7 +215,7 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   const RISCVSubtarget *Subtarget = &Fn.getSubtarget<RISCVSubtarget>();
-  if (!(Subtarget->hasStdExtZcmp() || Subtarget->hasVendorXqccmp()))
+  if (!Subtarget->hasStdExtZcmp())
     return false;
 
   TII = Subtarget->getInstrInfo();
@@ -269,7 +227,7 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
   UsedRegUnits.init(*TRI);
   bool Modified = false;
   for (auto &MBB : Fn)
-    Modified |= mergeMoveSARegPair(*Subtarget, MBB);
+    Modified |= mergeMoveSARegPair(MBB);
   return Modified;
 }
 

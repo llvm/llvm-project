@@ -275,8 +275,7 @@ bool ABIWindows_x86_64::GetArgumentValues(Thread &thread,
       return false;
 
     CompilerType compiler_type = value->GetCompilerType();
-    std::optional<uint64_t> bit_size =
-        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
+    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
     bool is_signed;
@@ -348,7 +347,7 @@ Status ABIWindows_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning complex values at present");
     else {
       std::optional<uint64_t> bit_width =
-          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
+          compiler_type.GetBitSize(frame_sp.get());
       if (!bit_width) {
         error = Status::FromErrorString("can't get type size");
         return error;
@@ -419,7 +418,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers
       std::optional<uint64_t> byte_size =
-          llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
+          return_compiler_type.GetByteSize(&thread);
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -466,7 +465,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         std::optional<uint64_t> byte_size =
-            llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
+            return_compiler_type.GetByteSize(&thread);
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *xmm0_info =
               reg_ctx->GetRegisterInfoByName("xmm0", 0);
@@ -504,7 +503,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectSimple(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
     std::optional<uint64_t> byte_size =
-        llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
+        return_compiler_type.GetByteSize(&thread);
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *xmm_reg =
           reg_ctx->GetRegisterInfoByName("xmm0", 0);
@@ -565,7 +564,7 @@ static bool FlattenAggregateType(
     CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
         idx, name, &field_bit_offset, nullptr, nullptr);
     std::optional<uint64_t> field_bit_width =
-        llvm::expectedToOptional(field_compiler_type.GetBitSize(&thread));
+        field_compiler_type.GetBitSize(&thread);
 
     // if we don't know the size of the field (e.g. invalid type), exit
     if (!field_bit_width || *field_bit_width == 0) {
@@ -615,8 +614,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
     return return_valobj_sp;
   }
 
-  std::optional<uint64_t> bit_width =
-      llvm::expectedToOptional(return_compiler_type.GetBitSize(&thread));
+  std::optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
   if (!bit_width) {
     return return_valobj_sp;
   }
@@ -675,10 +673,7 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t count;
 
       CompilerType field_compiler_type = aggregate_compiler_types[idx];
-      uint32_t field_byte_width =
-          (uint32_t)(llvm::expectedToOptional(
-                         field_compiler_type.GetByteSize(&thread))
-                         .value_or(0));
+      uint32_t field_byte_width = (uint32_t) (*field_compiler_type.GetByteSize(&thread));
       uint32_t field_byte_offset = aggregate_field_offsets[idx];
 
       // this is unlikely w/o the overall size being greater than 8 bytes
@@ -743,47 +738,51 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
 // the saved pc is at CFA-8 (i.e. rsp+0)
 // The saved rsp is CFA+0
 
-UnwindPlanSP ABIWindows_x86_64::CreateFunctionEntryUnwindPlan() {
+bool ABIWindows_x86_64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
-  UnwindPlan::Row row;
-  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
-  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
-  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
-
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("x86_64 at-func-entry default");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  return plan_sp;
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 8);
+  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, -8, false);
+  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  unwind_plan.AppendRow(row);
+  unwind_plan.SetSourceName("x86_64 at-func-entry default");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  return true;
 }
 
 // Windows-x86_64 doesn't use %rbp
 // No available Unwind information for Windows-x86_64 (section .pdata)
 // Let's use SysV-x86_64 one for now
-UnwindPlanSP ABIWindows_x86_64::CreateDefaultUnwindPlan() {
+bool ABIWindows_x86_64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+
   uint32_t fp_reg_num = dwarf_rbp;
   uint32_t sp_reg_num = dwarf_rsp;
   uint32_t pc_reg_num = dwarf_rip;
 
-  UnwindPlan::Row row;
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   const int32_t ptr_size = 8;
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
-  row.SetOffset(0);
-  row.SetUnspecifiedRegistersAreUndefined(true);
+  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_rbp, 2 * ptr_size);
+  row->SetOffset(0);
+  row->SetUnspecifiedRegistersAreUndefined(true);
 
-  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
-  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
-  row.SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
+  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
+  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
+  row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("x86_64 default unwind plan");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  return plan_sp;
+  unwind_plan.AppendRow(row);
+  unwind_plan.SetSourceName("x86_64 default unwind plan");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+
+  return true;
 }
 
 bool ABIWindows_x86_64::RegisterIsVolatile(const RegisterInfo *reg_info) {

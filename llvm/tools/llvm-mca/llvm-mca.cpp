@@ -225,29 +225,10 @@ static cl::opt<unsigned> StoreQueueSize("squeue",
                                         cl::desc("Size of the store queue"),
                                         cl::cat(ToolOptions), cl::init(0));
 
-enum class InstructionTablesType { NONE, NORMAL, FULL };
-
-static cl::opt<enum InstructionTablesType> InstructionTablesOption(
-    "instruction-tables", cl::desc("Print instruction tables"),
-    cl::values(clEnumValN(InstructionTablesType::NONE, "none",
-                          "Do not print instruction tables"),
-               clEnumValN(InstructionTablesType::NORMAL, "normal",
-                          "Print instruction tables"),
-               clEnumValN(InstructionTablesType::NORMAL, "", ""),
-               clEnumValN(InstructionTablesType::FULL, "full",
-                          "Print instruction tables with additional"
-                          " information: bypass latency, LLVM opcode,"
-                          " used resources")),
-    cl::cat(ToolOptions), cl::init(InstructionTablesType::NONE),
-    cl::ValueOptional);
-
-static bool shouldPrintInstructionTables(enum InstructionTablesType ITType) {
-  return InstructionTablesOption == ITType;
-}
-
-static bool shouldPrintInstructionTables() {
-  return !shouldPrintInstructionTables(InstructionTablesType::NONE);
-}
+static cl::opt<bool>
+    PrintInstructionTables("instruction-tables",
+                           cl::desc("Print instruction tables"),
+                           cl::cat(ToolOptions), cl::init(false));
 
 static cl::opt<bool> PrintInstructionInfoView(
     "instruction-info",
@@ -681,9 +662,9 @@ int main(int argc, char **argv) {
     NonEmptyRegions++;
 
     mca::CircularSourceMgr S(LoweredSequence,
-                             shouldPrintInstructionTables() ? 1 : Iterations);
+                             PrintInstructionTables ? 1 : Iterations);
 
-    if (shouldPrintInstructionTables()) {
+    if (PrintInstructionTables) {
       //  Create a pipeline, stages, and a printer.
       auto P = std::make_unique<mca::Pipeline>();
       P->appendStage(std::make_unique<mca::EntryStage>(S));
@@ -699,14 +680,10 @@ int main(int argc, char **argv) {
       if (PrintInstructionInfoView) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
             *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers,
-            shouldPrintInstructionTables(InstructionTablesType::FULL), *IM,
-            InstToInstruments));
+            ShowBarriers, *IM, InstToInstruments));
       }
-
-      if (PrintResourcePressureView)
-        Printer.addView(
-            std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
+      Printer.addView(
+          std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
       if (!runPipeline(*P))
         return 1;
@@ -780,7 +757,7 @@ int main(int argc, char **argv) {
     if (PrintInstructionInfoView)
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
           *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-          ShowBarriers, /*ShouldPrintFullInfo=*/false, *IM, InstToInstruments));
+          ShowBarriers, *IM, InstToInstruments));
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line

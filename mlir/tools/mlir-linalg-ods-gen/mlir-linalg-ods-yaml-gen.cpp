@@ -117,9 +117,9 @@ struct ScalarAssign {
 };
 
 struct LinalgStructuredOpConfig {
-  SmallVector<LinalgOperandDef, 4> args;
+  SmallVector<LinalgOperandDef> args;
   LinalgIndexingMapsConfig indexingMaps;
-  SmallVector<LinalgIteratorTypeDef, 4> iteratorTypes;
+  SmallVector<LinalgIteratorTypeDef> iteratorTypes;
   std::vector<ScalarAssign> assignments;
 };
 

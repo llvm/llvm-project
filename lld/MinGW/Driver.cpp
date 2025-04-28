@@ -171,14 +171,6 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
   return "";
 }
 
-static bool isI386Target(const opt::InputArgList &args,
-                         const Triple &defaultTarget) {
-  auto *a = args.getLastArg(OPT_m);
-  if (a)
-    return StringRef(a->getValue()) == "i386pe";
-  return defaultTarget.getArch() == Triple::x86;
-}
-
 namespace lld {
 namespace coff {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -224,8 +216,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
   }
 
-  Triple defaultTarget(Triple::normalize(sys::getDefaultTargetTriple()));
-
   std::vector<std::string> linkArgs;
   auto add = [&](const Twine &s) { linkArgs.push_back(s.str()); };
 
@@ -234,7 +224,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *a = args.getLastArg(OPT_entry)) {
     StringRef s = a->getValue();
-    if (isI386Target(args, defaultTarget) && s.starts_with("_"))
+    if (args.getLastArgValue(OPT_m) == "i386pe" && s.starts_with("_"))
       add("-entry:" + s.substr(1));
     else if (!s.empty())
       add("-entry:" + s);
@@ -531,7 +521,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (auto *a : args.filtered(OPT_Xlink))
     add(a->getValue());
 
-  if (isI386Target(args, defaultTarget))
+  if (args.getLastArgValue(OPT_m) == "i386pe")
     add("-alternatename:__image_base__=___ImageBase");
   else
     add("-alternatename:__image_base__=__ImageBase");

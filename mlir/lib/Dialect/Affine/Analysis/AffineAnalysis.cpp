@@ -489,11 +489,8 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
 
   // Append domain constraints to `rel`.
   IntegerRelation domainRel = domain;
-  // For 0-d spaces, there will be no IDs. Enable if that's the case.
-  if (!domainRel.getSpace().isUsingIds())
+  if (rel.getSpace().isUsingIds() && !domainRel.getSpace().isUsingIds())
     domainRel.resetIds();
-  if (!rel.getSpace().isUsingIds())
-    rel.resetIds();
   domainRel.appendVar(VarKind::Range, accessValueMap.getNumResults());
   domainRel.mergeAndAlignSymbols(rel);
   domainRel.mergeLocalVars(rel);
@@ -629,8 +626,7 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
 
   // We can't analyze further if the ops lie in different affine scopes or have
   // no common block in an affine scope.
-  if (getAffineAnalysisScope(srcAccess.opInst) !=
-      getAffineAnalysisScope(dstAccess.opInst))
+  if (getAffineScope(srcAccess.opInst) != getAffineScope(dstAccess.opInst))
     return DependenceResult::Failure;
   if (!getCommonBlockInAffineScope(srcAccess.opInst, dstAccess.opInst))
     return DependenceResult::Failure;
@@ -663,11 +659,6 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   // `srcAccess` to the iteration domain of `dstAccess` which access the same
   // memory locations.
   dstRel.inverse();
-  // For 0-d spaces, there will be no IDs. Enable if that's the case.
-  if (!dstRel.getSpace().isUsingIds())
-    dstRel.resetIds();
-  if (!srcRel.getSpace().isUsingIds())
-    srcRel.resetIds();
   dstRel.mergeAndCompose(srcRel);
   dstRel.convertVarKind(VarKind::Domain, 0, dstRel.getNumDomainVars(),
                         VarKind::Range, 0);

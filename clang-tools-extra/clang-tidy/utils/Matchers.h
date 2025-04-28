@@ -172,8 +172,7 @@ AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
 class MatchesAnyListedTypeNameMatcher
     : public ast_matchers::internal::MatcherInterface<QualType> {
 public:
-  explicit MatchesAnyListedTypeNameMatcher(llvm::ArrayRef<StringRef> NameList,
-                                           bool CanonicalTypes);
+  explicit MatchesAnyListedTypeNameMatcher(llvm::ArrayRef<StringRef> NameList);
   ~MatchesAnyListedTypeNameMatcher() override;
   bool matches(
       const QualType &Node, ast_matchers::internal::ASTMatchFinder *Finder,
@@ -181,19 +180,13 @@ public:
 
 private:
   std::vector<llvm::Regex> NameMatchers;
-  bool CanonicalTypes;
 };
 
 // Returns a matcher that matches QualType against a list of provided regular.
 inline ::clang::ast_matchers::internal::Matcher<QualType>
-matchesAnyListedTypeName(llvm::ArrayRef<StringRef> NameList,
-                         bool CanonicalTypes) {
-  return ::clang::ast_matchers::internal::makeMatcher(
-      new MatchesAnyListedTypeNameMatcher(NameList, CanonicalTypes));
-}
-inline ::clang::ast_matchers::internal::Matcher<QualType>
 matchesAnyListedTypeName(llvm::ArrayRef<StringRef> NameList) {
-  return matchesAnyListedTypeName(NameList, true);
+  return ::clang::ast_matchers::internal::makeMatcher(
+      new MatchesAnyListedTypeNameMatcher(NameList));
 }
 
 } // namespace clang::tidy::matchers

@@ -123,13 +123,3 @@ _add_capi_test_executable(mlir-capi-translation-test
     MLIRCAPIRegisterEverything
     MLIRCAPITarget
 )
-
-_add_capi_test_executable(mlir-capi-smt-test
-  smt.c
-
-  LINK_LIBS PRIVATE
-    MLIRCAPIIR
-    MLIRCAPIFunc
-    MLIRCAPISMT
-    MLIRCAPIExportSMTLIB
-)

@@ -63,7 +63,7 @@ public:
 
   /// getRegister - Return the specified register in the class.
   ///
-  MCRegister getRegister(unsigned i) const {
+  unsigned getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
     return RegsBegin[i];
   }

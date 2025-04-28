@@ -21,7 +21,6 @@
 #include "asan_scariness_score.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
-#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
@@ -128,33 +127,6 @@ class ScopedInErrorReport {
   explicit ScopedInErrorReport(bool fatal = false, bool nonself = false)
       : halt_on_error_(fatal || flags()->halt_on_error),
         nonself_report_(nonself) {
-    // Deadlock Prevention Between ASan and LSan
-    //
-    // Background:
-    // - The `dl_iterate_phdr` function requires holding libdl's internal lock
-    //   (Lock A).
-    // - LSan acquires the ASan thread registry lock (Lock B) *after* calling
-    //   `dl_iterate_phdr`.
-    //
-    // Problem Scenario:
-    // When ASan attempts to call `dl_iterate_phdr` while holding Lock B (e.g.,
-    // during error reporting via `ErrorDescription::Print`), a circular lock
-    // dependency may occur:
-    //   1. Thread 1: Holds Lock B → Requests Lock A (via dl_iterate_phdr)
-    //   2. Thread 2: Holds Lock A → Requests Lock B (via LSan operations)
-    //
-    // Solution:
-    // Proactively load all required modules before acquiring Lock B.
-    // This ensures:
-    // 1. Any `dl_iterate_phdr` calls during module loading complete before
-    //    locking.
-    // 2. Subsequent error reporting avoids nested lock acquisition patterns.
-    // 3. Eliminates the lock order inversion risk between libdl and ASan's
-    //    thread registry.
-#if CAN_SANITIZE_LEAKS && (SANITIZER_LINUX || SANITIZER_NETBSD)
-    Symbolizer::GetOrInit()->GetRefreshedListOfModules();
-#endif
-
     // Make sure the registry and sanitizer report mutexes are locked while
     // we're printing an error report.
     // We can lock them only here to avoid self-deadlock in case of
@@ -654,5 +626,5 @@ void __sanitizer_ptr_cmp(void *a, void *b) {
 } // extern "C"
 
 // Provide default implementation of __asan_on_error that does nothing
-// and may be overridden by user.
+// and may be overriden by user.
 SANITIZER_INTERFACE_WEAK_DEF(void, __asan_on_error, void) {}

@@ -27,7 +27,7 @@
 #include <memory>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARITHTOSPIRVPASS
+#define GEN_PASS_DEF_CONVERTARITHTOSPIRV
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -834,7 +834,8 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type srcType = llvm::getSingleElement(adaptor.getOperands()).getType();
+    assert(adaptor.getOperands().size() == 1);
+    Type srcType = adaptor.getOperands().front().getType();
     Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
@@ -847,27 +848,23 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
       // Then we can just erase this operation by forwarding its operand.
       rewriter.replaceOp(op, adaptor.getOperands().front());
     } else {
-      // Compute new rounding mode (if any).
-      std::optional<spirv::FPRoundingMode> rm = std::nullopt;
+      auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
+          op, dstType, adaptor.getOperands());
       if (auto roundingModeOp =
               dyn_cast<arith::ArithRoundingModeInterface>(*op)) {
         if (arith::RoundingModeAttr roundingMode =
                 roundingModeOp.getRoundingModeAttr()) {
-          if (!(rm =
-                    convertArithRoundingModeToSPIRV(roundingMode.getValue()))) {
+          if (auto rm =
+                  convertArithRoundingModeToSPIRV(roundingMode.getValue())) {
+            newOp->setAttr(
+                getDecorationString(spirv::Decoration::FPRoundingMode),
+                spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
+          } else {
             return rewriter.notifyMatchFailure(
                 op->getLoc(),
                 llvm::formatv("unsupported rounding mode '{0}'", roundingMode));
           }
         }
-      }
-      // Create replacement op and attach rounding mode attribute (if any).
-      auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
-          op, dstType, adaptor.getOperands());
-      if (rm) {
-        newOp->setAttr(
-            getDecorationString(spirv::Decoration::FPRoundingMode),
-            spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
       }
     }
     return success();
@@ -1340,9 +1337,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
 
 namespace {
 struct ConvertArithToSPIRVPass
-    : public impl::ConvertArithToSPIRVPassBase<ConvertArithToSPIRVPass> {
-  using Base::Base;
-
+    : public impl::ConvertArithToSPIRVBase<ConvertArithToSPIRVPass> {
   void runOnOperation() override {
     Operation *op = getOperation();
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
@@ -1368,3 +1363,7 @@ struct ConvertArithToSPIRVPass
   }
 };
 } // namespace
+
+std::unique_ptr<OperationPass<>> mlir::arith::createConvertArithToSPIRVPass() {
+  return std::make_unique<ConvertArithToSPIRVPass>();
+}

@@ -1094,11 +1094,11 @@ class ConceptSpecializationExprConceptReferenceRangeVerifier
 protected:
   SourceRange getRange(const VarTemplateDecl &Node) override {
     assert(Node.hasAssociatedConstraints());
-    SmallVector<AssociatedConstraint, 3> ACs;
+    SmallVector<const Expr *, 3> ACs;
     Node.getAssociatedConstraints(ACs);
-    for (const AssociatedConstraint &AC : ACs) {
+    for (const Expr *Constraint : ACs) {
       if (const ConceptSpecializationExpr *CSConstraint =
-              dyn_cast<ConceptSpecializationExpr>(AC.ConstraintExpr)) {
+              dyn_cast<ConceptSpecializationExpr>(Constraint)) {
         return CSConstraint->getConceptReference()->getSourceRange();
       }
     }

@@ -60,7 +60,9 @@ FunctionPass *llvm::createSystemZShortenInstPass(SystemZTargetMachine &TM) {
 }
 
 SystemZShortenInst::SystemZShortenInst()
-    : MachineFunctionPass(ID), TII(nullptr) {}
+    : MachineFunctionPass(ID), TII(nullptr) {
+  initializeSystemZShortenInstPass(*PassRegistry::getPassRegistry());
+}
 
 // Tie operands if MI has become a two-address instruction.
 static void tieOpsIfNeeded(MachineInstr &MI) {

@@ -83,6 +83,9 @@ class ProfileSummaryInfo;
 class SDDbgValue;
 class SDDbgOperand;
 class SDDbgLabel;
+class SDDbgDefKill;
+class SDDbgDef;
+class SDDbgKill;
 class SelectionDAG;
 class SelectionDAGTargetInfo;
 class TargetLibraryInfo;
@@ -164,6 +167,7 @@ class SDDbgInfo {
   SmallVector<SDDbgValue*, 32> DbgValues;
   SmallVector<SDDbgValue*, 32> ByvalParmDbgValues;
   SmallVector<SDDbgLabel*, 4> DbgLabels;
+  SmallVector<SDDbgDefKill *, 32> DbgDefKills;
   using DbgValMapType = DenseMap<const SDNode *, SmallVector<SDDbgValue *, 2>>;
   DbgValMapType DbgValMap;
 
@@ -176,6 +180,8 @@ public:
 
   void add(SDDbgLabel *L) { DbgLabels.push_back(L); }
 
+  void add(SDDbgDefKill *DK) { DbgDefKills.push_back(DK); }
+
   /// Invalidate all DbgValues attached to the node and remove
   /// it from the Node-to-DbgValues map.
   void erase(const SDNode *Node);
@@ -185,13 +191,15 @@ public:
     DbgValues.clear();
     ByvalParmDbgValues.clear();
     DbgLabels.clear();
+    DbgDefKills.clear();
     Alloc.Reset();
   }
 
   BumpPtrAllocator &getAlloc() { return Alloc; }
 
   bool empty() const {
-    return DbgValues.empty() && ByvalParmDbgValues.empty() && DbgLabels.empty();
+    return DbgValues.empty() && ByvalParmDbgValues.empty() &&
+           DbgLabels.empty() && DbgDefKills.empty();
   }
 
   ArrayRef<SDDbgValue*> getSDDbgValues(const SDNode *Node) const {
@@ -203,6 +211,7 @@ public:
 
   using DbgIterator = SmallVectorImpl<SDDbgValue*>::iterator;
   using DbgLabelIterator = SmallVectorImpl<SDDbgLabel*>::iterator;
+  using DbgDefKillIterator = SmallVectorImpl<SDDbgDefKill *>::iterator;
 
   DbgIterator DbgBegin() { return DbgValues.begin(); }
   DbgIterator DbgEnd()   { return DbgValues.end(); }
@@ -210,6 +219,8 @@ public:
   DbgIterator ByvalParmDbgEnd()   { return ByvalParmDbgValues.end(); }
   DbgLabelIterator DbgLabelBegin() { return DbgLabels.begin(); }
   DbgLabelIterator DbgLabelEnd()   { return DbgLabels.end(); }
+  DbgDefKillIterator DbgDefKillBegin() { return DbgDefKills.begin(); }
+  DbgDefKillIterator DbgDefKillEnd() { return DbgDefKills.end(); }
 };
 
 void checkForCycles(const SelectionDAG *DAG, bool force = false);
@@ -873,7 +884,7 @@ public:
   /// for integers, a type wider than) VT's element type.
   SDValue getSplatBuildVector(EVT VT, const SDLoc &DL, SDValue Op) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
-    if (Op.isUndef()) {
+    if (Op.getOpcode() == ISD::UNDEF) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -889,7 +900,7 @@ public:
   // Return a splat ISD::SPLAT_VECTOR node, consisting of Op splatted to all
   // elements.
   SDValue getSplatVector(EVT VT, const SDLoc &DL, SDValue Op) {
-    if (Op.isUndef()) {
+    if (Op.getOpcode() == ISD::UNDEF) {
       assert((VT.getVectorElementType() == Op.getValueType() ||
               (VT.isInteger() &&
                VT.getVectorElementType().bitsLE(Op.getValueType()))) &&
@@ -1130,9 +1141,6 @@ public:
     return getNode(ISD::UNDEF, SDLoc(), VT);
   }
 
-  /// Return a POISON node. POISON does not have a useful SDLoc.
-  SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
-
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
                     bool ConstantFold = true);
@@ -1325,16 +1333,16 @@ public:
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, SDValue Chain,
                     SDValue Ptr, SDValue Val, MachineMemOperand *MMO);
 
+  /// Gets a node for an atomic op, produces result and chain and
+  /// takes 1 operand.
+  SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, EVT VT,
+                    SDValue Chain, SDValue Ptr, MachineMemOperand *MMO);
+
   /// Gets a node for an atomic op, produces result and chain and takes N
   /// operands.
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                     SDVTList VTList, ArrayRef<SDValue> Ops,
-                    MachineMemOperand *MMO,
-                    ISD::LoadExtType ExtType = ISD::NON_EXTLOAD);
-
-  SDValue getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT MemVT,
-                        EVT VT, SDValue Chain, SDValue Ptr,
-                        MachineMemOperand *MMO);
+                    MachineMemOperand *MMO);
 
   /// Creates a MemIntrinsicNode that may produce a
   /// result and takes a list of operands. Opcode may be INTRINSIC_VOID,
@@ -1345,8 +1353,7 @@ public:
       EVT MemVT, MachinePointerInfo PtrInfo, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = LocationSize::precise(0),
-      const AAMDNodes &AAInfo = AAMDNodes());
+      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes());
 
   inline SDValue getMemIntrinsicNode(
       unsigned Opcode, const SDLoc &dl, SDVTList VTList, ArrayRef<SDValue> Ops,
@@ -1354,8 +1361,7 @@ public:
       MaybeAlign Alignment = std::nullopt,
       MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad |
                                        MachineMemOperand::MOStore,
-      LocationSize Size = LocationSize::precise(0),
-      const AAMDNodes &AAInfo = AAMDNodes()) {
+      LocationSize Size = 0, const AAMDNodes &AAInfo = AAMDNodes()) {
     // Ensure that codegen never sees alignment 0
     return getMemIntrinsicNode(Opcode, dl, VTList, Ops, MemVT, PtrInfo,
                                Alignment.value_or(getEVTAlign(MemVT)), Flags,
@@ -1612,6 +1618,11 @@ public:
   /// the target's desired shift amount type.
   SDValue getShiftAmountOperand(EVT LHSTy, SDValue Op);
 
+  /// Create the DAG equivalent of vector_partial_reduce where Op1 and Op2 are
+  /// its operands and ReducedTY is the intrinsic's return type.
+  SDValue getPartialReduceAdd(SDLoc DL, EVT ReducedTy, SDValue Op1,
+                              SDValue Op2);
+
   /// Expands a node with multiple results to an FP or vector libcall. The
   /// libcall is expected to take all the operands of the \p Node followed by
   /// output pointers for each of the results. \p CallRetResNo can be optionally
@@ -1772,7 +1783,7 @@ public:
 
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                              Register VReg, bool IsIndirect,
+                              unsigned VReg, bool IsIndirect,
                               const DebugLoc &DL, unsigned O);
 
   /// Creates a SDDbgValue node from a list of locations.
@@ -1783,6 +1794,13 @@ public:
 
   /// Creates a SDDbgLabel node.
   SDDbgLabel *getDbgLabel(DILabel *Label, const DebugLoc &DL, unsigned O);
+
+  /// Creates a SDDbgDef node.
+  SDDbgDef *getDbgDef(DILifetime *LT, unsigned O, const Value *Ref,
+                      DebugLoc DLoc);
+
+  /// Creates a SDDbgKill node.
+  SDDbgKill *getDbgKill(DILifetime *LT, unsigned O, DebugLoc DLoc);
 
   /// Transfer debug values from one node to another, while optionally
   /// generating fragment expressions for split-up values. If \p InvalidateDbg
@@ -1861,6 +1879,9 @@ public:
   /// Add a dbg_label SDNode.
   void AddDbgLabel(SDDbgLabel *DB);
 
+  /// Add a dbg_def/kill.
+  void AddDbgDefKill(SDDbgDefKill *DB);
+
   /// Get the debug values which reference the given SDNode.
   ArrayRef<SDDbgValue*> GetDbgValues(const SDNode* SD) const {
     return DbgInfo->getSDDbgValues(SD);
@@ -1886,6 +1907,13 @@ public:
   }
   SDDbgInfo::DbgLabelIterator DbgLabelEnd() const {
     return DbgInfo->DbgLabelEnd();
+  }
+
+  SDDbgInfo::DbgDefKillIterator DbgDefKillBegin() const {
+    return DbgInfo->DbgDefKillBegin();
+  }
+  SDDbgInfo::DbgDefKillIterator DbgDefKillEnd() const {
+    return DbgInfo->DbgDefKillEnd();
   }
 
   /// To be invoked on an SDNode that is slated to be erased. This
@@ -2145,23 +2173,9 @@ public:
   bool isBaseWithConstantOffset(SDValue Op) const;
 
   /// Test whether the given SDValue (or all elements of it, if it is a
-  /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
-  /// returns if \p Op is known to never be a signaling NaN (it may still be a
-  /// qNaN).
-  bool isKnownNeverNaN(SDValue Op, const APInt &DemandedElts, bool SNaN = false,
-                       unsigned Depth = 0) const;
-
-  /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN. If \p SNaN is true, returns if \p Op is
   /// known to never be a signaling NaN (it may still be a qNaN).
   bool isKnownNeverNaN(SDValue Op, bool SNaN = false, unsigned Depth = 0) const;
-
-  /// \returns true if \p Op is known to never be a signaling NaN in \p
-  /// DemandedElts.
-  bool isKnownNeverSNaN(SDValue Op, const APInt &DemandedElts,
-                        unsigned Depth = 0) const {
-    return isKnownNeverNaN(Op, DemandedElts, true, Depth);
-  }
 
   /// \returns true if \p Op is known to never be a signaling NaN.
   bool isKnownNeverSNaN(SDValue Op, unsigned Depth = 0) const {
@@ -2464,9 +2478,6 @@ public:
                                 const SDLoc &DLoc);
 
 private:
-#ifndef NDEBUG
-  void verifyNode(SDNode *N) const;
-#endif
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);

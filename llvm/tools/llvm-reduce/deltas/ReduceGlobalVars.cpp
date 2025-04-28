@@ -14,8 +14,6 @@
 #include "ReduceGlobalVars.h"
 #include "Utils.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -25,7 +23,7 @@ static bool shouldAlwaysKeep(const GlobalVariable &GV) {
 }
 
 /// Removes all the GVs that aren't inside the desired Chunks.
-void llvm::reduceGlobalsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
+static void extractGVsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   // Get GVs inside desired chunks
@@ -54,4 +52,8 @@ void llvm::reduceGlobalsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
     GV->replaceAllUsesWith(getDefaultValue(GV->getType()));
     cast<GlobalVariable>(GV)->eraseFromParent();
   }
+}
+
+void llvm::reduceGlobalsDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractGVsFromModule, "Reducing GlobalVariables");
 }

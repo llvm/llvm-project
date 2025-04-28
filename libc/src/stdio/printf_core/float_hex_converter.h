@@ -25,8 +25,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-template <WriteMode write_mode>
-LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
+LIBC_INLINE int convert_float_hex_exp(Writer *writer,
                                       const FormatSection &to_conv) {
   using LDBits = fputil::FPBits<long double>;
   using StorageType = LDBits::StorageType;

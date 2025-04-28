@@ -132,25 +132,6 @@ Object makeObject(const parser::OmpObject &object,
   return makeObject(std::get<parser::Designator>(object.u), semaCtx);
 }
 
-ObjectList makeObjects(const parser::OmpArgumentList &objects,
-                       semantics::SemanticsContext &semaCtx) {
-  return makeList(objects.v, [&](const parser::OmpArgument &arg) {
-    return common::visit(
-        common::visitors{
-            [&](const parser::OmpLocator &locator) -> Object {
-              if (auto *object = std::get_if<parser::OmpObject>(&locator.u)) {
-                return makeObject(*object, semaCtx);
-              }
-              llvm_unreachable("Expecting object");
-            },
-            [](auto &&s) -> Object { //
-              llvm_unreachable("Expecting object");
-            },
-        },
-        arg.u);
-  });
-}
-
 std::optional<Object> getBaseObject(const Object &object,
                                     semantics::SemanticsContext &semaCtx) {
   // If it's just the symbol, then there is no base.
@@ -178,13 +159,7 @@ std::optional<Object> getBaseObject(const Object &object,
       return Object{SymbolAndDesignatorExtractor::symbol_addr(comp->symbol()),
                     ea.Designate(evaluate::DataRef{
                         SymbolAndDesignatorExtractor::AsRvalueRef(*comp)})};
-    } else if (auto *symRef = base.UnwrapSymbolRef()) {
-      // This is the base symbol of the array reference, which is the same
-      // as the symbol in the input object,
-      // e.g. A(i) is represented as {Symbol(A), Designator(ArrayRef(A, i))}.
-      // Here we have the Symbol(A), which is what we started with.
-      (void)symRef;
-      assert(&**symRef == object.sym());
+    } else if (base.UnwrapSymbolRef()) {
       return std::nullopt;
     }
   } else {
@@ -242,13 +217,13 @@ MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(UnifiedAddress, UnifiedAddress);
 MAKE_EMPTY_CLASS(UnifiedSharedMemory, UnifiedSharedMemory);
-MAKE_EMPTY_CLASS(SelfMaps, SelfMaps);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
 MAKE_EMPTY_CLASS(Weak, Weak);
 MAKE_EMPTY_CLASS(Write, Write);
 
 // Artificial clauses
+MAKE_EMPTY_CLASS(CancellationConstructType, CancellationConstructType);
 MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
@@ -494,13 +469,12 @@ AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
                            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAtomicDefaultMemOrderClause
   CLAUSET_ENUM_CONVERT( //
-      convert, common::OmpMemoryOrderType, AtomicDefaultMemOrder::MemoryOrder,
+      convert, common::OmpAtomicDefaultMemOrderType,
+      AtomicDefaultMemOrder::MemoryOrder,
       // clang-format off
-      MS(Acq_Rel,  AcqRel)
-      MS(Acquire,  Acquire)
+      MS(AcqRel,   AcqRel)
       MS(Relaxed,  Relaxed)
-      MS(Release,  Release)
-      MS(Seq_Cst,  SeqCst)
+      MS(SeqCst,   SeqCst)
       // clang-format on
   );
 
@@ -524,23 +498,7 @@ Bind make(const parser::OmpClause::Bind &inp,
   return Bind{/*Binding=*/convert(inp.v.v)};
 }
 
-CancellationConstructType
-make(const parser::OmpClause::CancellationConstructType &inp,
-     semantics::SemanticsContext &semaCtx) {
-  auto name = std::get<parser::OmpDirectiveName>(inp.v.t);
-  CLAUSET_ENUM_CONVERT(
-      convert, llvm::omp::Directive, llvm::omp::CancellationConstructType,
-      // clang-format off
-      MS(OMPD_parallel, OMP_CANCELLATION_CONSTRUCT_Parallel)
-      MS(OMPD_do, OMP_CANCELLATION_CONSTRUCT_Loop)
-      MS(OMPD_sections, OMP_CANCELLATION_CONSTRUCT_Sections)
-      MS(OMPD_taskgroup, OMP_CANCELLATION_CONSTRUCT_Taskgroup)
-      // clang-format on
-  );
-
-  return CancellationConstructType{convert(name.v)};
-}
-
+// CancellationConstructType: empty
 // Capture: empty
 
 Collapse make(const parser::OmpClause::Collapse &inp,
@@ -785,19 +743,8 @@ Exclusive make(const parser::OmpClause::Exclusive &inp,
 
 Fail make(const parser::OmpClause::Fail &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpFalClause
-  CLAUSET_ENUM_CONVERT( //
-      convert, common::OmpMemoryOrderType, Fail::MemoryOrder,
-      // clang-format off
-      MS(Acq_Rel,  AcqRel)
-      MS(Acquire,  Acquire)
-      MS(Relaxed,  Relaxed)
-      MS(Release,  Release)
-      MS(Seq_Cst,  SeqCst)
-      // clang-format on
-  );
-
-  return Fail{/*MemoryOrder=*/convert(inp.v.v)};
+  // inp -> empty
+  llvm_unreachable("Empty: fail");
 }
 
 Filter make(const parser::OmpClause::Filter &inp,
@@ -875,8 +822,8 @@ HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
 
 Hint make(const parser::OmpClause::Hint &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpHintClause
-  return Hint{/*HintExpr=*/makeExpr(inp.v.v, semaCtx)};
+  // inp.v -> parser::ConstantExpr
+  return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
 }
 
 Holds make(const parser::OmpClause::Holds &inp,
@@ -916,10 +863,7 @@ Init make(const parser::OmpClause::Init &inp,
   llvm_unreachable("Empty: init");
 }
 
-Initializer make(const parser::OmpClause::Initializer &inp,
-                 semantics::SemanticsContext &semaCtx) {
-  llvm_unreachable("Empty: initializer");
-}
+// Initializer: missing-in-parser
 
 InReduction make(const parser::OmpClause::InReduction &inp,
                  semantics::SemanticsContext &semaCtx) {

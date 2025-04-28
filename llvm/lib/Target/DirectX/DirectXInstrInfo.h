@@ -21,9 +21,8 @@
 
 namespace llvm {
 struct DirectXInstrInfo : public DirectXGenInstrInfo {
-  const DirectXRegisterInfo RI;
   explicit DirectXInstrInfo() : DirectXGenInstrInfo() {}
-  const DirectXRegisterInfo &getRegisterInfo() const { return RI; }
+
   ~DirectXInstrInfo() override;
 };
 } // namespace llvm

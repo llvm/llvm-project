@@ -68,6 +68,8 @@ static cl::opt<unsigned>
                 cl::desc("Number of times to shuffle and verify use-lists"),
                 cl::init(1), cl::cat(Cat));
 
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+
 namespace {
 
 struct TempFile {
@@ -537,6 +539,7 @@ static void reverseUseLists(Module &M) {
 }
 
 int main(int argc, char **argv) {
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   InitLLVM X(argc, argv);
 
   // Enable debug stream buffering.

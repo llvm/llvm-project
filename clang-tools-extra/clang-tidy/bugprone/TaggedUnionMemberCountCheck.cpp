@@ -52,8 +52,9 @@ AST_MATCHER_P2(RecordDecl, fieldCountOfKindIsOne,
     if (InnerMatcher.matches(*Field, Finder, &TempBuilder)) {
       if (FirstMatch) {
         return false;
+      } else {
+        FirstMatch = Field;
       }
-      FirstMatch = Field;
     }
   }
 
@@ -111,11 +112,11 @@ void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
   auto EnumField = fieldDecl(hasType(
       qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
 
-  auto HasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
-  auto HasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
+  auto hasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
+  auto hasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
 
-  Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), HasOneUnionField,
-                                HasOneEnumField, unless(isImplicit()))
+  Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), hasOneUnionField,
+                                hasOneEnumField, unless(isImplicit()))
                          .bind(RootMatchBindName),
                      this);
 }

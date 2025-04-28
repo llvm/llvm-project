@@ -67,7 +67,7 @@ unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
   return LoongArchRegisterClass::GPRRC;
 }
 
-unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   return ST->getMaxInterleaveFactor();
 }
 
@@ -84,7 +84,7 @@ const char *LoongArchTTIImpl::getRegisterClassName(unsigned ClassID) const {
 }
 
 TargetTransformInfo::PopcntSupportKind
-LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) const {
+LoongArchTTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
   return ST->hasExtLSX() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }

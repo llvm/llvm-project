@@ -48,7 +48,9 @@ public:
   lldb::QueueSP GetQueueAtIndex(uint32_t idx);
 
   typedef std::vector<lldb::QueueSP> collection;
-  typedef LockingAdaptedIterable<std::mutex, collection> QueueIterable;
+  typedef LockingAdaptedIterable<collection, lldb::QueueSP, vector_adapter,
+                                 std::mutex>
+      QueueIterable;
 
   /// Iterate over the list of queues
   ///

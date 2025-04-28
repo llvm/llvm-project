@@ -519,14 +519,14 @@ protected:
         --pointer_count;
       }
 
-      auto size_or_err = compiler_type.GetByteSize(nullptr);
-      if (!size_or_err) {
+      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
+      if (!size) {
         result.AppendErrorWithFormat(
-            "unable to get the byte size of the type '%s'\n%s",
-            view_as_type_cstr, llvm::toString(size_or_err.takeError()).c_str());
+            "unable to get the byte size of the type '%s'\n",
+            view_as_type_cstr);
         return;
       }
-      m_format_options.GetByteSizeValue() = *size_or_err;
+      m_format_options.GetByteSizeValue() = *size;
 
       if (!m_format_options.GetCountValue().OptionWasSet())
         m_format_options.GetCountValue() = 1;
@@ -639,16 +639,15 @@ protected:
       if (!m_format_options.GetFormatValue().OptionWasSet())
         m_format_options.GetFormatValue().SetCurrentValue(eFormatDefault);
 
-      auto size_or_err = compiler_type.GetByteSize(nullptr);
-      if (!size_or_err) {
-        result.AppendError(llvm::toString(size_or_err.takeError()));
+      std::optional<uint64_t> size = compiler_type.GetByteSize(nullptr);
+      if (!size) {
+        result.AppendError("can't get size of type");
         return;
       }
-      auto size = *size_or_err;
-      bytes_read = size * m_format_options.GetCountValue().GetCurrentValue();
+      bytes_read = *size * m_format_options.GetCountValue().GetCurrentValue();
 
       if (argc > 0)
-        addr = addr + (size * m_memory_options.m_offset.GetCurrentValue());
+        addr = addr + (*size * m_memory_options.m_offset.GetCurrentValue());
     } else if (m_format_options.GetFormatValue().GetCurrentValue() !=
                eFormatCString) {
       data_sp = std::make_shared<DataBufferHeap>(total_byte_size, '\0');
@@ -1035,8 +1034,8 @@ protected:
                frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
-        std::optional<uint64_t> size = llvm::expectedToOptional(
-            result_sp->GetCompilerType().GetByteSize(nullptr));
+        std::optional<uint64_t> size =
+            result_sp->GetCompilerType().GetByteSize(nullptr);
         if (!size)
           return;
         switch (*size) {

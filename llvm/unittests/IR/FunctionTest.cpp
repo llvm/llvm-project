@@ -83,7 +83,9 @@ TEST(FunctionTest, stealArgumentListFrom) {
 
   // Save arguments from F1 for later assertions.  F1 won't have lazy arguments
   // anymore.
-  SmallVector<Argument *, 4> Args(llvm::make_pointer_range(F1->args()));
+  SmallVector<Argument *, 4> Args;
+  for (Argument &A : F1->args())
+    Args.push_back(&A);
   EXPECT_EQ(2u, Args.size());
   EXPECT_FALSE(F1->hasLazyArguments());
 

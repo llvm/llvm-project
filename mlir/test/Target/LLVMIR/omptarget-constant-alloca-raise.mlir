@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// needs flang to be default
+// needs flang-new to be default
 // XFAIL: *
 // A small condensed version of a problem requiring constant alloca raising in
 // Target Region Entries for user injected code, found in an issue in the Flang

@@ -64,7 +64,7 @@ static constexpr auto programUnit{
     construct<ProgramUnit>(indirect(subroutineSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<Submodule>{})) ||
     construct<ProgramUnit>(indirect(Parser<BlockData>{})) ||
-    lookAhead(maybe(label) >> validFunctionStmt) >>
+    lookAhead(validFunctionStmt) >>
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
 static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /

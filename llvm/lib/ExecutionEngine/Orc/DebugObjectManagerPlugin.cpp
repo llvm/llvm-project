@@ -475,9 +475,8 @@ Error DebugObjectManagerPlugin::notifyEmitted(
         FinalizePromise.set_value(MR.withResourceKeyDo([&](ResourceKey K) {
           assert(PendingObjs.count(&MR) && "We still hold PendingObjsLock");
           std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-          auto It = PendingObjs.find(&MR);
-          RegisteredObjs[K].push_back(std::move(It->second));
-          PendingObjs.erase(It);
+          RegisteredObjs[K].push_back(std::move(PendingObjs[&MR]));
+          PendingObjs.erase(&MR);
         }));
       });
 

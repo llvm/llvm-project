@@ -71,8 +71,9 @@ public:
               return llvm::Type::getX86_AMXTy(context);
             })
             .Case<LLVM::LLVMArrayType, IntegerType, LLVM::LLVMFunctionType,
-                  LLVM::LLVMPointerType, LLVM::LLVMStructType, VectorType,
-                  LLVM::LLVMTargetExtType>(
+                  LLVM::LLVMPointerType, LLVM::LLVMStructType,
+                  LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType,
+                  VectorType, LLVM::LLVMTargetExtType>(
                 [this](auto type) { return this->translate(type); })
             .Default([](Type t) -> llvm::Type * {
               llvm_unreachable("unknown LLVM dialect type");
@@ -140,6 +141,18 @@ private:
                                            type.getNumElements());
     return llvm::FixedVectorType::get(translateType(type.getElementType()),
                                       type.getNumElements());
+  }
+
+  /// Translates the given fixed-vector type.
+  llvm::Type *translate(LLVM::LLVMFixedVectorType type) {
+    return llvm::FixedVectorType::get(translateType(type.getElementType()),
+                                      type.getNumElements());
+  }
+
+  /// Translates the given scalable-vector type.
+  llvm::Type *translate(LLVM::LLVMScalableVectorType type) {
+    return llvm::ScalableVectorType::get(translateType(type.getElementType()),
+                                         type.getMinNumElements());
   }
 
   /// Translates the given target extension type.

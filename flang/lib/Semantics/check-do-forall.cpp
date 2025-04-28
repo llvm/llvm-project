@@ -154,8 +154,7 @@ public:
   // of its components?
   static bool MightDeallocatePolymorphic(const Symbol &original,
       const std::function<bool(const Symbol &)> &WillDeallocate) {
-    const Symbol &symbol{
-        ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
+    const Symbol &symbol{ResolveAssociations(original)};
     // Check the entity itself, no coarray exception here
     if (IsPolymorphicAllocatable(symbol)) {
       return true;
@@ -183,10 +182,11 @@ public:
         impure.name(), reason);
   }
 
-  void SayDeallocateOfPolymorphic(
+  void SayDeallocateOfPolymorph(
       parser::CharBlock location, const Symbol &entity, const char *reason) {
     context_.SayWithDecl(entity, location,
-        "Deallocation of a polymorphic entity caused by %s not allowed in DO CONCURRENT"_err_en_US,
+        "Deallocation of a polymorphic entity caused by %s"
+        " not allowed in DO CONCURRENT"_err_en_US,
         reason);
   }
 
@@ -206,7 +206,7 @@ public:
         const Symbol &entity{*pair.second};
         if (IsAllocatable(entity) && !IsSaved(entity) &&
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
-          SayDeallocateOfPolymorphic(endBlockStmt.source, entity, reason);
+          SayDeallocateOfPolymorph(endBlockStmt.source, entity, reason);
         }
         if (const Symbol * impure{HasImpureFinal(entity)}) {
           SayDeallocateWithImpureFinal(entity, reason, *impure);
@@ -222,7 +222,7 @@ public:
     if (const Symbol * entity{GetLastName(variable).symbol}) {
       const char *reason{"assignment"};
       if (MightDeallocatePolymorphic(*entity, DeallocateNonCoarray)) {
-        SayDeallocateOfPolymorphic(variable.GetSource(), *entity, reason);
+        SayDeallocateOfPolymorph(variable.GetSource(), *entity, reason);
       }
       if (const auto *assignment{GetAssignment(stmt)}) {
         const auto &lhs{assignment->lhs};
@@ -257,7 +257,7 @@ public:
         const DeclTypeSpec *entityType{entity.GetType()};
         if ((entityType && entityType->IsPolymorphic()) || // POINTER case
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
-          SayDeallocateOfPolymorphic(
+          SayDeallocateOfPolymorph(
               currentStatementSourcePosition_, entity, reason);
         }
         if (const Symbol * impure{HasImpureFinal(entity)}) {

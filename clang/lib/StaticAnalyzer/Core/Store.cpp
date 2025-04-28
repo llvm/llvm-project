@@ -29,7 +29,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -44,21 +43,18 @@ StoreManager::StoreManager(ProgramStateManager &stateMgr)
     : svalBuilder(stateMgr.getSValBuilder()), StateMgr(stateMgr),
       MRMgr(svalBuilder.getRegionManager()), Ctx(stateMgr.getContext()) {}
 
-BindResult StoreManager::enterStackFrame(Store OldStore, const CallEvent &Call,
-                                         const StackFrameContext *LCtx) {
-  BindResult Result{StoreRef(OldStore, *this), {}};
+StoreRef StoreManager::enterStackFrame(Store OldStore,
+                                       const CallEvent &Call,
+                                       const StackFrameContext *LCtx) {
+  StoreRef Store = StoreRef(OldStore, *this);
 
   SmallVector<CallEvent::FrameBindingTy, 16> InitialBindings;
   Call.getInitialStackFrameContents(LCtx, InitialBindings);
 
-  for (const auto &[Location, Val] : InitialBindings) {
-    Store S = Result.ResultingStore.getStore();
-    BindResult Curr = Bind(S, Location.castAs<Loc>(), Val);
-    Result.ResultingStore = Curr.ResultingStore;
-    llvm::append_range(Result.FailedToBindValues, Curr.FailedToBindValues);
-  }
+  for (const auto &I : InitialBindings)
+    Store = Bind(Store.getStore(), I.first.castAs<Loc>(), I.second);
 
-  return Result;
+  return Store;
 }
 
 const ElementRegion *StoreManager::MakeElementRegion(const SubRegion *Base,
@@ -511,9 +507,13 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   // Only allow non-integer offsets if the base region has no offset itself.
   // FIXME: This is a somewhat arbitrary restriction. We should be using
   // SValBuilder here to add the two offsets without checking their types.
-  if (!isa<nonloc::ConcreteInt>(Offset))
+  if (!isa<nonloc::ConcreteInt>(Offset)) {
+    if (isa<ElementRegion>(BaseRegion->StripCasts()))
+      return UnknownVal();
+
     return loc::MemRegionVal(MRMgr.getElementRegion(
         elementType, Offset, cast<SubRegion>(ElemR->getSuperRegion()), Ctx));
+  }
 
   const llvm::APSInt& OffI = Offset.castAs<nonloc::ConcreteInt>().getValue();
   assert(BaseIdxI.isSigned());

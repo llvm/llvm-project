@@ -17,9 +17,6 @@ using LlvmLibcSinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 TEST_F(LlvmLibcSinpif16Test, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::sinpif16(sNaN), FE_INVALID);
-  EXPECT_MATH_ERRNO(0);
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif16(aNaN));
   EXPECT_MATH_ERRNO(0);
 

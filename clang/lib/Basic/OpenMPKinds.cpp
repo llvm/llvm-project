@@ -235,7 +235,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
-  case OMPC_self_maps:
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
@@ -570,7 +569,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
-  case OMPC_self_maps:
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
@@ -768,20 +766,9 @@ bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
 }
 
 bool clang::isOpenMPOrderConcurrentNestableDirective(
-    OpenMPDirectiveKind DKind, const LangOptions &LangOpts) {
-  // Directives strictly nestable in a construct with order(concurrent) are:
-  // OpenMP 5.x: loop, parallel, simd, combined directive starting with parallel
-  // OpenMP 6.0: above plus atomic and all loop-transformation directives
-
-  if (DKind == OMPD_loop || DKind == OMPD_parallel || DKind == OMPD_simd ||
-      isOpenMPCombinedParallelADirective(DKind))
-    return true;
-
-  if (LangOpts.OpenMP >= 60)
-    return DKind == OMPD_atomic ||
-           isOpenMPLoopTransformationDirective(DKind);
-
-  return false;
+    OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_atomic || DKind == OMPD_loop || DKind == OMPD_simd ||
+         DKind == OMPD_parallel || isOpenMPLoopTransformationDirective(DKind);
 }
 
 void clang::getOpenMPCaptureRegions(

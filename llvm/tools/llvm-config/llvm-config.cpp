@@ -390,7 +390,7 @@ int main(int argc, char **argv) {
     SharedExt = "dll";
     SharedVersionedExt = LLVM_DYLIB_VERSION ".dll";
     if (HostTriple.isOSCygMing()) {
-      SharedPrefix = LLVM_SHARED_LIBRARY_PREFIX;
+      SharedPrefix = "lib";
       StaticExt = "a";
       StaticPrefix = "lib";
     } else {
@@ -454,7 +454,7 @@ int main(int argc, char **argv) {
   /// extension. Returns true if Lib is in a recognized format.
   auto GetComponentLibraryNameSlice = [&](const StringRef &Lib,
                                           StringRef &Out) {
-    if (Lib.starts_with(StaticPrefix) || Lib.starts_with(SharedPrefix)) {
+    if (Lib.starts_with("lib")) {
       unsigned FromEnd;
       if (Lib.ends_with(StaticExt)) {
         FromEnd = StaticExt.size() + 1;
@@ -465,10 +465,7 @@ int main(int argc, char **argv) {
       }
 
       if (FromEnd != 0) {
-        unsigned FromStart = Lib.starts_with(SharedPrefix)
-                                 ? SharedPrefix.size()
-                                 : StaticPrefix.size();
-        Out = Lib.slice(FromStart, Lib.size() - FromEnd);
+        Out = Lib.slice(3, Lib.size() - FromEnd);
         return true;
       }
     }

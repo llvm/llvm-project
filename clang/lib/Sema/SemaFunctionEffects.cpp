@@ -990,7 +990,7 @@ private:
         followDestructor(dyn_cast<CXXRecordDecl>(Dtor->getParent()), Dtor);
 
       if (auto *FD = dyn_cast<FunctionDecl>(CurrentCaller.CDecl)) {
-        TrailingRequiresClause = FD->getTrailingRequiresClause().ConstraintExpr;
+        TrailingRequiresClause = FD->getTrailingRequiresClause();
 
         // Note that FD->getType->getAs<FunctionProtoType>() can yield a
         // noexcept Expr which has been boiled down to a constant expression.

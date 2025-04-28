@@ -1,3 +1,5 @@
+// -fopenacc unsupported on AMD downstream
+// UNSUPPORTED: true
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-deprecated-clause-alias -ast-print %s -o - | FileCheck %s
 
 struct SomeStruct{};
@@ -10,28 +12,28 @@ void foo() {
 #pragma acc loop
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop device_type(default)
+// CHECK: #pragma acc loop device_type(SomeStruct)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop device_type(default)
+#pragma acc loop device_type(SomeStruct)
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop device_type(nvidia)
+// CHECK: #pragma acc loop device_type(int)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop device_type(nvidia)
+#pragma acc loop device_type(int)
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop dtype(radeon)
+// CHECK: #pragma acc loop dtype(bool)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop dtype(radeon)
+#pragma acc loop dtype(bool)
   for(int i = 0;i<5;++i);
 
-// CHECK: #pragma acc loop dtype(host)
+// CHECK: #pragma acc loop dtype(AnotherIdent)
 // CHECK-NEXT: for (int i = 0; i < 5; ++i)
 // CHECK-NEXT: ;
-#pragma acc loop dtype(host)
+#pragma acc loop dtype(AnotherIdent)
   for(int i = 0;i<5;++i);
 
 // CHECK: #pragma acc loop independent

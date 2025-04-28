@@ -276,11 +276,8 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
-  DILineInfo LineInfo;
-  std::optional<DILineInfo> DBGLineInfo =
+  DILineInfo LineInfo =
       DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
-  if (DBGLineInfo)
-    LineInfo = *DBGLineInfo;
 
   // Override function name from symbol table if necessary.
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
@@ -290,9 +287,7 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                FileName)) {
       LineInfo.FunctionName = FunctionName;
       LineInfo.StartAddress = Start;
-      // Only use the filename from symbol table if the debug info for the
-      // address is missing.
-      if (!DBGLineInfo && !FileName.empty())
+      if (LineInfo.FileName == DILineInfo::BadString && !FileName.empty())
         LineInfo.FileName = FileName;
     }
   }
@@ -309,11 +304,8 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
       ModuleOffset, LineInfoSpecifier);
 
   // Make sure there is at least one frame in context.
-  bool EmptyFrameAdded = false;
-  if (InlinedContext.getNumberOfFrames() == 0) {
-    EmptyFrameAdded = true;
+  if (InlinedContext.getNumberOfFrames() == 0)
     InlinedContext.addFrame(DILineInfo());
-  }
 
   // Override the function name in lower frame with name from symbol table.
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
@@ -325,9 +317,7 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
           InlinedContext.getNumberOfFrames() - 1);
       LI->FunctionName = FunctionName;
       LI->StartAddress = Start;
-      // Only use the filename from symbol table if the debug info for the
-      // address is missing.
-      if (EmptyFrameAdded && !FileName.empty())
+      if (LI->FileName == DILineInfo::BadString && !FileName.empty())
         LI->FileName = FileName;
     }
   }
@@ -344,11 +334,10 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   Res.DeclFile = FileName;
 
   // Try and get a better filename:lineno pair from the debuginfo, if present.
-  std::optional<DILineInfo> DL =
-      DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
-  if (DL && DL->Line != 0) {
-    Res.DeclFile = DL->FileName;
-    Res.DeclLine = DL->Line;
+  DILineInfo DL = DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
+  if (DL.Line != 0) {
+    Res.DeclFile = DL.FileName;
+    Res.DeclLine = DL.Line;
   }
   return Res;
 }

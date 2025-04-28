@@ -143,7 +143,7 @@ static llvm::cl::opt<bool>
                        llvm::cl::init(false));
 
 static llvm::cl::opt<std::string> enableDoConcurrentToOpenMPConversion(
-    "fdo-concurrent-to-openmp",
+    "fdo-concurrent-parallel",
     llvm::cl::desc(
         "Try to map `do concurrent` loops to OpenMP [none|host|device]"),
     llvm::cl::init("none"));
@@ -251,26 +251,6 @@ static llvm::cl::opt<bool>
                                  "the LHS of the intrinsic assignment"),
                   llvm::cl::init(true));
 
-static llvm::cl::opt<bool> stackRepackArrays(
-    "fstack-repack-arrays",
-    llvm::cl::desc("Allocate temporary arrays for -frepack-arrays "
-                   "in stack memory"),
-    llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
-    repackArrays("frepack-arrays",
-                 llvm::cl::desc("Pack non-contiguous assummed shape arrays "
-                                "into contiguous memory"),
-                 llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
-    repackArraysWhole("frepack-arrays-continuity-whole",
-                      llvm::cl::desc("Repack arrays that are non-contiguous "
-                                     "in any dimension. If set to false, "
-                                     "only the arrays non-contiguous in the "
-                                     "leading dimension will be repacked"),
-                      llvm::cl::init(true));
-
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -306,7 +286,7 @@ createTargetMachine(llvm::StringRef targetTriple, std::string &error) {
   if (!theTarget)
     return nullptr;
   return std::unique_ptr<llvm::TargetMachine>{
-      theTarget->createTargetMachine(llvm::Triple(triple), /*CPU=*/"",
+      theTarget->createTargetMachine(triple, /*CPU=*/"",
                                      /*Features=*/"", llvm::TargetOptions(),
                                      /*Reloc::Model=*/std::nullopt)};
 }
@@ -426,9 +406,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setIntegerWrapAround(integerWrapAround);
   loweringOptions.setInitGlobalZero(initGlobalZero);
   loweringOptions.setReallocateLHS(reallocateLHS);
-  loweringOptions.setStackRepackArrays(stackRepackArrays);
-  loweringOptions.setRepackArrays(repackArrays);
-  loweringOptions.setRepackArraysWhole(repackArraysWhole);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
   Fortran::frontend::CodeGenOptions cgOpts;

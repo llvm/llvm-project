@@ -126,13 +126,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  getsid
-  ALIAS
-  DEPENDS
-    .${LIBC_TARGET_OS}.getsid
-)
-
-add_entrypoint_object(
   geteuid
   ALIAS
   DEPENDS

@@ -191,7 +191,7 @@ BaseRegToRegsMap makeBaseRegMap(bool is64bit) {
                                  // higher YMM registers (specific to amd64)
                                  YMM(8), YMM(9), YMM(10), YMM(11), YMM(12),
                                  YMM(13), YMM(14), YMM(15)}};
-    out.insert_range(amd64_regs);
+    out.insert(amd64_regs.begin(), amd64_regs.end());
   }
 
   return out;

@@ -458,8 +458,6 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
   case Decl::HLSLBuffer:
-  case Decl::OpenACCDeclare:
-  case Decl::OpenACCRoutine:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually

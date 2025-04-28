@@ -452,7 +452,6 @@ void g(F f) {
 void f() {
   g([] {}); // cxx03-warning {{template argument uses local type}}
   // expected-note-re@-1 {{in instantiation of function template specialization 'PR20731::g<(lambda at {{.*}}>' requested here}}
-  // cxx03-note@-2 {{while substituting deduced template arguments}}
 }
 
 template <class _Rp> struct function {
@@ -504,7 +503,6 @@ namespace PR21857 {
   };
   template<typename Fn> fun<Fn> wrap(Fn fn); // cxx03-warning {{template argument uses unnamed type}}
   auto x = wrap([](){}); // cxx03-warning {{template argument uses unnamed type}} cxx03-note 2 {{unnamed type used in template argument was declared here}}
-                         // cxx03-note@-1 {{while substituting deduced template arguments into function template}}
 }
 
 namespace PR13987 {

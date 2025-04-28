@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <optional>
+#include <vector>
 
 namespace mlir {
 class AnalysisManager;

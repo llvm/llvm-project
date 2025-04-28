@@ -122,13 +122,9 @@ void test_P1361() {
   static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::microseconds>);
 
   static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::sys_time<std::chrono::microseconds>>);
-#  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&                           \
-      !defined(TEST_HAS_NO_FILESYSTEM)
-  static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::utc_time<std::chrono::microseconds>>);
-  static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::tai_time<std::chrono::microseconds>>);
-  static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::gps_time<std::chrono::microseconds>>);
-#  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&
-         // !defined(TEST_HAS_NO_FILESYSTEM)
+  //static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::utc_time<std::chrono::microseconds>>);
+  //static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::tai_time<std::chrono::microseconds>>);
+  //static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::gps_time<std::chrono::microseconds>>);
   static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::file_time<std::chrono::microseconds>>);
   static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::local_time<std::chrono::microseconds>>);
 
@@ -153,14 +149,10 @@ void test_P1361() {
 
   static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::hh_mm_ss<std::chrono::microseconds>>);
 
-#  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
-  static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::sys_info>);
-  static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::local_info>);
+  //static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::sys_info>);
+  //static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::local_info>);
 
-#    if !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) && !defined(TEST_HAS_NO_FILESYSTEM)
-  static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::zoned_time<std::chrono::microseconds>>);
-#    endif // !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) && !defined(TEST_HAS_NO_FILESYSTEM)
-#  endif   // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
+  //static_assert(!std::enable_nonlocking_formatter_optimization<std::chrono::zoned_time>);
 
 #endif // TEST_HAS_NO_LOCALIZATION
 }

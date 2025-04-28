@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     return 1;
   std::unique_ptr<MemoryBuffer> Buffer = std::move(ErrorOrBuffer.get());
   StringRef Content = Buffer->getBuffer();
-  Content = Content.drop_until([](char C) { return C == '#'; });
+  Content = Content.drop_until([](char c) { return c == '#'; });
   SmallVector<StringRef> Lines;
   SplitString(Content, Lines, "\r\n");
 
@@ -44,9 +44,9 @@ int main(int argc, char *argv[]) {
     SmallVector<llvm::UTF32> To;
     SmallVector<StringRef> ToN;
     Values[1].split(ToN, ' ', -1, false);
-    for (StringRef ToI : ToN) {
+    for (StringRef To_ : ToN) {
       llvm::UTF32 ToCodePoint = 0;
-      ToI.trim().getAsInteger(16, ToCodePoint);
+      To_.trim().getAsInteger(16, ToCodePoint);
       To.push_back(ToCodePoint);
     }
     // Sentinel
@@ -63,23 +63,23 @@ int main(int argc, char *argv[]) {
                        })
           ->second.size();
 
-  std::error_code Ec;
-  llvm::raw_fd_ostream Os(argv[2], Ec);
+  std::error_code ec;
+  llvm::raw_fd_ostream os(argv[2], ec);
 
   // FIXME: If memory consumption and/or lookup time becomes a constraint, it
   // maybe worth using a more elaborate data structure.
-  Os << "struct {llvm::UTF32 codepoint; llvm::UTF32 values[" << LargestValue
+  os << "struct {llvm::UTF32 codepoint; llvm::UTF32 values[" << LargestValue
      << "];} "
         "ConfusableEntries[] = {\n";
   for (const auto &Values : Entries) {
-    Os << "  { ";
-    Os << Values.first;
-    Os << ", {";
+    os << "  { ";
+    os << Values.first;
+    os << ", {";
     for (auto CP : Values.second)
-      Os << CP << ", ";
+      os << CP << ", ";
 
-    Os << "}},\n";
+    os << "}},\n";
   }
-  Os << "};\n";
+  os << "};\n";
   return 0;
 }

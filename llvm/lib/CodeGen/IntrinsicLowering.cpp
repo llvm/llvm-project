@@ -328,10 +328,10 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
 
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_label:
-    break;    // Simply strip out debugging intrinsics
   case Intrinsic::dbg_def:
   case Intrinsic::dbg_kill:
-    report_fatal_error("unsupported DIExpr-based metadata");
+    break;    // Simply strip out debugging intrinsics
+
   case Intrinsic::eh_typeid_for:
     // Return something different to eh_selector.
     CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 1));

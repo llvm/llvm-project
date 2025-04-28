@@ -36,9 +36,6 @@ extern const inline bool __oclc_finite_only_opt = 0;
 // Spoof this to wave64 since we only compile for a single architecture.
 extern const inline bool __oclc_wavefrontsize64 = 1;
 
-// This is only relevant for statically resolving `malloc`, set to COV6.
-extern const inline bool __oclc_ABI_version = 600;
-
 #if defined(__gfx700__)
 extern const inline unsigned __oclc_ISA_version = 7000;
 #elif defined(__gfx701__)
@@ -77,6 +74,10 @@ extern const inline unsigned __oclc_ISA_version = 9009;
 extern const inline unsigned __oclc_ISA_version = 9010;
 #elif defined(__gfx90c__)
 extern const inline unsigned __oclc_ISA_version = 9012;
+#elif defined(__gfx940__)
+extern const inline unsigned __oclc_ISA_version = 9400;
+#elif defined(__gfx941__)
+extern const inline unsigned __oclc_ISA_version = 9401;
 #elif defined(__gfx942__)
 extern const inline unsigned __oclc_ISA_version = 9402;
 #elif defined(__gfx950__)
@@ -152,7 +153,6 @@ extern const inline unsigned __oclc_ISA_version = 7001;
 [[gnu::alias("__oclc_finite_only_opt")]] const bool __oclc_finite_only_opt__;
 [[gnu::alias("__oclc_wavefrontsize64")]] const bool __oclc_wavefrontsize64__;
 [[gnu::alias("__oclc_ISA_version")]] const bool __oclc_ISA_version__;
-[[gnu::alias("__oclc_ABI_version")]] const bool __oclc_ABI_version__;
 
 #endif
 

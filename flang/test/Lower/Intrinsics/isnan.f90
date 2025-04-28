@@ -1,5 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: flang -fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
 
 ! CHECK-LABEL: isnan_f32
 subroutine isnan_f32(r)

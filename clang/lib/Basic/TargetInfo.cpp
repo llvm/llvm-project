@@ -47,8 +47,6 @@ static const LangASMap FakeAddrSpaceMap = {
     11, // ptr32_uptr
     12, // ptr64
     13, // hlsl_groupshared
-    14, // hlsl_constant
-    15, // hlsl_private
     20, // wasm_funcref
 };
 
@@ -143,7 +141,6 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   UseLeadingZeroLengthBitfield = true;
   UseExplicitBitFieldAlignment = true;
   ZeroLengthBitfieldBoundary = 0;
-  LargestOverSizedBitfieldContainer = 64;
   MaxAlignedAttribute = 0;
   HalfFormat = &llvm::APFloat::IEEEhalf();
   FloatFormat = &llvm::APFloat::IEEEsingle();

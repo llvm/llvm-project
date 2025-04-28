@@ -86,8 +86,8 @@ const llvm::StringRef MainMod =
   declare i32 @bar()
 )";
 
-static cl::list<std::string> InputArgv(cl::Positional,
-                                       cl::desc("<program arguments>..."));
+cl::list<std::string> InputArgv(cl::Positional,
+                                cl::desc("<program arguments>..."));
 
 int main(int argc, char *argv[]) {
   // Initialize LLVM.
@@ -130,12 +130,13 @@ int main(int argc, char *argv[]) {
   ExitOnErr(J->addIRModule(ExitOnErr(parseExampleModule(MainMod, "main-mod"))));
 
   // (5) Add lazy reexports.
+  MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
   SymbolAliasMap ReExports(
-      {{J->mangleAndIntern("foo"),
-        {J->mangleAndIntern("foo_body"),
+      {{Mangle("foo"),
+        {Mangle("foo_body"),
          JITSymbolFlags::Exported | JITSymbolFlags::Callable}},
-       {J->mangleAndIntern("bar"),
-        {J->mangleAndIntern("bar_body"),
+       {Mangle("bar"),
+        {Mangle("bar_body"),
          JITSymbolFlags::Exported | JITSymbolFlags::Callable}}});
   ExitOnErr(J->getMainJITDylib().define(
       lazyReexports(*LCTM, *ISM, J->getMainJITDylib(), std::move(ReExports))));

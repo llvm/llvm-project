@@ -80,8 +80,7 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type = ToolChain::FT_Static,
-                            bool IsFortran = false) const override;
+                            FileType Type = ToolChain::FT_Static) const override;
 
   UnwindTableLevel
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;

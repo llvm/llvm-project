@@ -1,4 +1,5 @@
 import ompdModule
+import imp
 
 
 class ompd_parallel(object):

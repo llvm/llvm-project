@@ -17,7 +17,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOSPIRVPASS
+#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOSPIRV
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -26,9 +26,8 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR ControlFlow operations into the SPIR-V dialect.
 class ConvertControlFlowToSPIRVPass final
-    : public impl::ConvertControlFlowToSPIRVPassBase<
+    : public impl::ConvertControlFlowToSPIRVBase<
           ConvertControlFlowToSPIRVPass> {
-  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -52,4 +51,8 @@ void ConvertControlFlowToSPIRVPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
+}
+
+std::unique_ptr<OperationPass<>> mlir::createConvertControlFlowToSPIRVPass() {
+  return std::make_unique<ConvertControlFlowToSPIRVPass>();
 }

@@ -21,7 +21,3 @@ int check_result(int *host_ptr, int *dev_ptr) {
     return 0;
   }
 }
-
-int check_equality(void *host_ptr, void *dev_ptr) {
-  return dev_ptr == host_ptr;
-}

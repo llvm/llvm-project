@@ -35,13 +35,3 @@ add_libc_unittest(
   DEPENDS
     libc.src.search.lfind
 )
-
-add_libc_unittest(
-  lsearch_test
-  SUITE
-    libc_search_unittests
-  SRCS
-    lsearch_test.cpp
-  DEPENDS
-    libc.src.search.lsearch
-)

@@ -700,7 +700,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Finally, the blocks from loopinfo.  This has to happen late because
     // otherwise our loop iterators won't work.
 
-    SmallPtrSet<BasicBlock *, 8> blocks(llvm::from_range, L->blocks());
+    SmallPtrSet<BasicBlock *, 8> blocks;
+    blocks.insert(L->block_begin(), L->block_end());
     for (BasicBlock *BB : blocks)
       LI->removeBlock(BB);
 
@@ -819,7 +820,7 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
 
 /// Return the estimated trip count for any exiting branch which dominates
 /// the loop latch.
-static std::optional<unsigned> getEstimatedTripCount(BranchInst *ExitingBranch,
+static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
                                                      Loop *L,
                                                      uint64_t &OrigExitWeight) {
   // To estimate the number of times the loop body was executed, we want to
@@ -841,11 +842,6 @@ static std::optional<unsigned> getEstimatedTripCount(BranchInst *ExitingBranch,
   // Estimated exit count is a ratio of the loop weight by the weight of the
   // edge exiting the loop, rounded to nearest.
   uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
-
-  // When ExitCount + 1 would wrap in unsigned, saturate at UINT_MAX.
-  if (ExitCount >= std::numeric_limits<unsigned>::max())
-    return std::numeric_limits<unsigned>::max();
-
   // Estimated trip count is one plus estimated exit count.
   return ExitCount + 1;
 }
@@ -961,7 +957,6 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   }
 }
 
-// This is the inverse to getReductionForBinop
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
   case Intrinsic::vector_reduce_fadd:
@@ -989,25 +984,6 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   default:
     llvm_unreachable("Unexpected ID");
   }
-}
-
-// This is the inverse to getArithmeticReductionInstruction
-Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
-  switch (Opc) {
-  default:
-    break;
-  case Instruction::Add:
-    return Intrinsic::vector_reduce_add;
-  case Instruction::Mul:
-    return Intrinsic::vector_reduce_mul;
-  case Instruction::And:
-    return Intrinsic::vector_reduce_and;
-  case Instruction::Or:
-    return Intrinsic::vector_reduce_or;
-  case Instruction::Xor:
-    return Intrinsic::vector_reduce_xor;
-  }
-  return Intrinsic::not_intrinsic;
 }
 
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
@@ -1233,11 +1209,11 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       Value *Start,
                                        const RecurrenceDescriptor &Desc) {
   assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
              Desc.getRecurrenceKind()) &&
          "Unexpected reduction kind");
+  Value *StartVal = Desc.getRecurrenceStartValue();
   Value *Sentinel = Desc.getSentinelValue();
   Value *MaxRdx = Src->getType()->isVectorTy()
                       ? Builder.CreateIntMaxReduce(Src, true)
@@ -1246,7 +1222,7 @@ Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
   // reduction is sentinel value.
   Value *Cmp =
       Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
+  return Builder.CreateSelect(Cmp, MaxRdx, StartVal, "rdx.select");
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
@@ -1332,22 +1308,41 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
-                                   RecurKind Kind) {
+                                   const RecurrenceDescriptor &Desc) {
+  RecurKind Kind = Desc.getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
-         "AnyOf or FindLastIV reductions are not supported.");
+         "AnyOf reduction is not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
-  Value *Iden =
-      getRecurrenceIdentity(Kind, SrcEltTy, VBuilder.getFastMathFlags());
+  Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
   return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
-Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,
+Value *llvm::createReduction(IRBuilderBase &B,
+                             const RecurrenceDescriptor &Desc, Value *Src,
+                             PHINode *OrigPhi) {
+  // TODO: Support in-order reductions based on the recurrence descriptor.
+  // All ops in the reduction inherit fast-math-flags from the recurrence
+  // descriptor.
+  IRBuilderBase::FastMathFlagGuard FMFGuard(B);
+  B.setFastMathFlags(Desc.getFastMathFlags());
+
+  RecurKind RK = Desc.getRecurrenceKind();
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+    return createAnyOfReduction(B, Src, Desc, OrigPhi);
+  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+    return createFindLastIVReduction(B, Src, Desc);
+
+  return createSimpleReduction(B, Src, RK);
+}
+
+Value *llvm::createOrderedReduction(IRBuilderBase &B,
+                                    const RecurrenceDescriptor &Desc,
                                     Value *Src, Value *Start) {
-  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
+  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
+          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
@@ -1355,9 +1350,11 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,
   return B.CreateFAddReduce(Start, Src);
 }
 
-Value *llvm::createOrderedReduction(VectorBuilder &VBuilder, RecurKind Kind,
+Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
+                                    const RecurrenceDescriptor &Desc,
                                     Value *Src, Value *Start) {
-  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
+  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
+          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
@@ -2029,7 +2026,7 @@ Value *llvm::addDiffRuntimeChecks(
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
     // Compute VF * IC * AccessSize.
-    auto *VFTimesICTimesSize =
+    auto *VFTimesUFTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
     Value *Diff =
@@ -2037,13 +2034,13 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesUFTimesSize});
     if (IsConflict)
       continue;
 
     IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

@@ -38,7 +38,6 @@ class ASTContext;
 class AttributeCommonInfo;
 class FunctionDecl;
 class OMPTraitInfo;
-class OpenACCClause;
 
 /// Attr - This represents one attribute.
 class Attr : public AttributeCommonInfo {

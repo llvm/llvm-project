@@ -40,16 +40,16 @@ protected:
   }
 
   PALMetadata() {
-    Triple TT("amdgcn--amdpal");
+    StringRef Triple = "amdgcn--amdpal";
     StringRef CPU = "gfx1010";
     StringRef FS = "";
 
     std::string Error;
-    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
     TargetOptions Options;
 
     TM.reset(static_cast<GCNTargetMachine *>(TheTarget->createTargetMachine(
-        TT, CPU, FS, Options, std::nullopt, std::nullopt)));
+        Triple, CPU, FS, Options, std::nullopt, std::nullopt)));
 
     Ctx = std::make_unique<LLVMContext>();
     M = std::make_unique<Module>("Module", *Ctx);

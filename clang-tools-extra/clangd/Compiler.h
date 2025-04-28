@@ -40,7 +40,7 @@ public:
 
 // Options to run clang e.g. when parsing AST.
 struct ParseOptions {
-  bool PreambleParseForwardingFunctions = true;
+  bool PreambleParseForwardingFunctions = false;
 
   bool ImportInsertions = false;
 };

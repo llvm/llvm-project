@@ -672,7 +672,7 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
     auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-    WidenPhi->addOperand(Val);
+    WidenPhi->addIncoming(Val, VPBB1);
     VPBB2->appendRecipe(WidenPhi);
 
     VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
@@ -693,8 +693,7 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
     auto *WidenPhi = new VPWidenPHIRecipe(nullptr);
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-    WidenPhi->addOperand(Val);
-    WidenPhi->addOperand(Val);
+    WidenPhi->addIncoming(Val, VPBB1);
     VPBB2->appendRecipe(WidenPhi);
 
     VPBasicBlock *VPBBNew = Plan.createVPBasicBlock("VPBBNew");
@@ -1040,7 +1039,7 @@ TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   InterleaveGroup<Instruction> IG(4, false, Align(4));
-  VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false, DebugLoc());
+  VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1069,7 +1068,7 @@ TEST_F(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPBranchOnMaskRecipe Recipe(Mask, {});
+  VPBranchOnMaskRecipe Recipe(Mask);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1157,7 +1156,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
 
-    VPBranchOnMaskRecipe Recipe(Mask, {});
+    VPBranchOnMaskRecipe Recipe(Mask);
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1165,35 +1164,29 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                          PoisonValue::get(Int32));
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                             CondOp, VecOp, false);
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
+                             VecOp, false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
-    delete Add;
   }
 
   {
-    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                          PoisonValue::get(Int32));
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                             CondOp, VecOp, false);
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
+                             VecOp, false);
     VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 4));
     VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
     EXPECT_FALSE(EVLRecipe.mayReadOrWriteMemory());
-    delete Add;
   }
 
   {
@@ -1269,7 +1262,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     InductionDescriptor IndDesc;
-    VPScalarIVStepsRecipe Recipe(IndDesc, Op1, Op2, Op2);
+    VPScalarIVStepsRecipe Recipe(IndDesc, Op1, Op2);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1535,34 +1528,28 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
 
 TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                        PoisonValue::get(Int32));
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                           CondOp, VecOp, false);
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
+                           VecOp, false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
-  delete Add;
 }
 
 TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                        PoisonValue::get(Int32));
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                           CondOp, VecOp, false);
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
+                           VecOp, false);
   VPValue *EVL = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
   VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
   EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
   VPRecipeBase *BaseR = &EVLRecipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
-  delete Add;
 }
 } // namespace
 

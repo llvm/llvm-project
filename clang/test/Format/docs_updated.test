@@ -1,3 +1,5 @@
+// Needs write access to llvm-project/clang/test/Format/../../docs/tools/plurals.txt
+// UNSUPPORTED: true
 // RUN: %python %S/../../docs/tools/dump_format_style.py -o %t.style
 // RUN: diff --strip-trailing-cr %t.style \
 // RUN:   %S/../../docs/ClangFormatStyleOptions.rst

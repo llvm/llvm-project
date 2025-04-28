@@ -67,12 +67,6 @@ static llvm::cl::opt<std::string>
                  llvm::cl::desc("Directory for outputting generated files."),
                  llvm::cl::init("docs"), llvm::cl::cat(ClangDocCategory));
 
-static llvm::cl::opt<std::string>
-    BaseDirectory("base",
-                  llvm::cl::desc(R"(Base Directory for generated documentation.
-URLs will be rooted at this directory for HTML links.)"),
-                  llvm::cl::init(""), llvm::cl::cat(ClangDocCategory));
-
 static llvm::cl::opt<bool>
     PublicOnly("public", llvm::cl::desc("Document only public declarations."),
                llvm::cl::init(false), llvm::cl::cat(ClangDocCategory));
@@ -105,11 +99,6 @@ URL of repository that hosts code.
 Used for links to definition locations.)"),
                   llvm::cl::cat(ClangDocCategory));
 
-static llvm::cl::opt<std::string> RepositoryCodeLinePrefix(
-    "repository-line-prefix",
-    llvm::cl::desc("Prefix of line code for repository."),
-    llvm::cl::cat(ClangDocCategory));
-
 enum OutputFormatTy {
   md,
   yaml,
@@ -127,7 +116,7 @@ static llvm::cl::opt<OutputFormatTy>
                llvm::cl::init(OutputFormatTy::yaml),
                llvm::cl::cat(ClangDocCategory));
 
-static std::string getFormatString() {
+std::string getFormatString() {
   switch (FormatEnum) {
   case OutputFormatTy::yaml:
     return "yaml";
@@ -144,15 +133,16 @@ static std::string getFormatString() {
 // GetMainExecutable (since some platforms don't support taking the
 // address of main, and some platforms can't implement GetMainExecutable
 // without being given the address of a function in the main executable).
-static std::string getExecutablePath(const char *Argv0, void *MainAddr) {
+std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
+llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
   llvm::SmallString<128> FilePath(UserAssetPath);
-  for (DirIt DirStart = DirIt(UserAssetPath, FileErr), DirEnd;
+  for (DirIt DirStart = DirIt(UserAssetPath, FileErr),
+                   DirEnd;
        !FileErr && DirStart != DirEnd; DirStart.increment(FileErr)) {
     FilePath = DirStart->path();
     if (llvm::sys::fs::is_regular_file(FilePath)) {
@@ -168,8 +158,8 @@ static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
-static llvm::Error getDefaultAssetFiles(const char *Argv0,
-                                        clang::doc::ClangDocContext &CDCtx) {
+llvm::Error getDefaultAssetFiles(const char *Argv0,
+                                 clang::doc::ClangDocContext &CDCtx) {
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
   llvm::SmallString<128> NativeClangDocPath;
@@ -204,8 +194,8 @@ static llvm::Error getDefaultAssetFiles(const char *Argv0,
   return llvm::Error::success();
 }
 
-static llvm::Error getHtmlAssetFiles(const char *Argv0,
-                                     clang::doc::ClangDocContext &CDCtx) {
+llvm::Error getHtmlAssetFiles(const char *Argv0,
+                              clang::doc::ClangDocContext &CDCtx) {
   if (!UserAssetPath.empty() &&
       !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
@@ -217,8 +207,7 @@ static llvm::Error getHtmlAssetFiles(const char *Argv0,
 
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
-static void
-sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+void sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
     if (Info->IT == doc::InfoType::IT_namespace) {
@@ -279,9 +268,8 @@ Example usage for a project using a compile commands database:
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
-      RepositoryCodeLinePrefix,
-      BaseDirectory,
-      {UserStylesheets.begin(), UserStylesheets.end()}};
+      {UserStylesheets.begin(), UserStylesheets.end()}
+  };
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {

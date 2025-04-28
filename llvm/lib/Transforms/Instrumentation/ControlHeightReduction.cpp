@@ -562,7 +562,7 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
       if (AllOpsHoisted) {
         CHR_DEBUG(dbgs() << "checkHoistValue " << *I << "\n");
         if (HoistStops)
-          HoistStops->insert_range(OpsHoistStops);
+          HoistStops->insert(OpsHoistStops.begin(), OpsHoistStops.end());
         Visited[I] = true;
         return true;
       }
@@ -881,8 +881,11 @@ void CHR::checkScopeHoistable(CHRScope *Scope) {
     // Avoid a data dependence from a select or a branch to a(nother)
     // select. Note no instruction can't data-depend on a branch (a branch
     // instruction doesn't produce a value).
+    DenseSet<Instruction *> Unhoistables;
     // Initialize Unhoistables with the selects.
-    DenseSet<Instruction *> Unhoistables(llvm::from_range, Selects);
+    for (SelectInst *SI : Selects) {
+      Unhoistables.insert(SI);
+    }
     // Remove Selects that can't be hoisted.
     for (auto it = Selects.begin(); it != Selects.end(); ) {
       SelectInst *SI = *it;
@@ -1101,7 +1104,8 @@ static bool shouldSplit(Instruction *InsertPoint,
 static void getSelectsInScope(CHRScope *Scope,
                               DenseSet<Instruction *> &Output) {
   for (RegInfo &RI : Scope->RegInfos)
-    Output.insert_range(RI.Selects);
+    for (SelectInst *SI : RI.Selects)
+      Output.insert(SI);
   for (CHRScope *Sub : Scope->Subs)
     getSelectsInScope(Sub, Output);
 }
@@ -1172,7 +1176,8 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
           // point. Union the bases.
           PrevSplitFromOuter = false;
           PrevConditionValues = *OuterConditionValues;
-          PrevConditionValues.insert_range(ConditionValues);
+          PrevConditionValues.insert(ConditionValues.begin(),
+                                     ConditionValues.end());
           PrevInsertPoint = OuterInsertPoint;
         }
       } else {
@@ -1204,7 +1209,7 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
         });
       } else {
         // Not splitting. Union the bases. Keep the hoist point.
-        PrevConditionValues.insert_range(ConditionValues);
+        PrevConditionValues.insert(ConditionValues.begin(), ConditionValues.end());
       }
     }
   }
@@ -1366,8 +1371,11 @@ void CHR::setCHRRegions(CHRScope *Scope, CHRScope *OutermostScope) {
   // Put the biased selects in Unhoistables because they should stay where they
   // are and constant-folded after CHR (in case one biased select or a branch
   // can depend on another biased select.)
-  for (RegInfo &RI : Scope->RegInfos)
-    Unhoistables.insert_range(RI.Selects);
+  for (RegInfo &RI : Scope->RegInfos) {
+    for (SelectInst *SI : RI.Selects) {
+      Unhoistables.insert(SI);
+    }
+  }
   Instruction *InsertPoint = OutermostScope->BranchInsertPoint;
   for (RegInfo &RI : Scope->RegInfos) {
     Region *R = RI.R;

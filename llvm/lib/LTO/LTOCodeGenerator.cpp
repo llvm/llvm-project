@@ -109,20 +109,21 @@ cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
-static cl::opt<std::string>
-    LTOStatsFile("lto-stats-file",
-                 cl::desc("Save statistics to the specified file"), cl::Hidden);
+cl::opt<std::string> LTOStatsFile(
+    "lto-stats-file",
+    cl::desc("Save statistics to the specified file"),
+    cl::Hidden);
 
-static cl::opt<std::string> AIXSystemAssemblerPath(
+cl::opt<std::string> AIXSystemAssemblerPath(
     "lto-aix-system-assembler",
     cl::desc("Path to a system assembler, picked up on AIX only"),
     cl::value_desc("path"));
 
-static cl::opt<bool>
+cl::opt<bool>
     LTORunCSIRInstr("cs-profile-generate",
                     cl::desc("Perform context sensitive PGO instrumentation"));
 
-static cl::opt<std::string>
+cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
 } // namespace llvm
@@ -142,7 +143,8 @@ LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
 LTOCodeGenerator::~LTOCodeGenerator() = default;
 
 void LTOCodeGenerator::setAsmUndefinedRefs(LTOModule *Mod) {
-  AsmUndefinedRefs.insert_range(Mod->getAsmUndefinedRefs());
+  for (const StringRef &Undef : Mod->getAsmUndefinedRefs())
+    AsmUndefinedRefs.insert(Undef);
 }
 
 bool LTOCodeGenerator::addModule(LTOModule *Mod) {
@@ -382,12 +384,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  TripleStr = MergedModule->getTargetTriple().str();
-  llvm::Triple Triple(TripleStr);
+  TripleStr = MergedModule->getTargetTriple();
   if (TripleStr.empty()) {
     TripleStr = sys::getDefaultTargetTriple();
-    MergedModule->setTargetTriple(Triple);
+    MergedModule->setTargetTriple(TripleStr);
   }
+  llvm::Triple Triple(TripleStr);
 
   // create target machine from info for merged modules
   std::string ErrMsg;
@@ -419,8 +421,8 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      Triple(TripleStr), Config.CPU, FeatureStr, Config.Options,
-      Config.RelocModel, std::nullopt, Config.CGOptLevel));
+      TripleStr, Config.CPU, FeatureStr, Config.Options, Config.RelocModel,
+      std::nullopt, Config.CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make

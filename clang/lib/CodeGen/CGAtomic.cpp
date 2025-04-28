@@ -590,7 +590,6 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::LoadInst *Load = CGF.Builder.CreateLoad(Ptr);
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
-    CGF.maybeAttachRangeForLoad(Load, E->getValueType(), E->getExprLoc());
     CGF.Builder.CreateStore(Load, Dest);
     return;
   }
@@ -782,8 +781,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
                          llvm::Value *Scope) {
   auto ScopeModel = Expr->getScopeModel();
 
-  // LLVM atomic instructions always have sync scope. If clang atomic
-  // expression has no scope operand, use default LLVM sync scope.
+  // LLVM atomic instructions always have synch scope. If clang atomic
+  // expression has no scope operand, use default LLVM synch scope.
   if (!ScopeModel) {
     llvm::SyncScope::ID SS;
     if (CGF.getLangOpts().OpenCL)
@@ -822,8 +821,8 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *Expr, Address Dest,
       CGF.createBasicBlock("atomic.scope.continue", CGF.CurFn);
 
   auto *SC = Builder.CreateIntCast(Scope, Builder.getInt32Ty(), false);
-  // If unsupported sync scope is encountered at run time, assume a fallback
-  // sync scope value.
+  // If unsupported synch scope is encountered at run time, assume a fallback
+  // synch scope value.
   auto FallBack = ScopeModel->getFallBackValue();
   llvm::SwitchInst *SI = Builder.CreateSwitch(SC, BB[FallBack]);
   for (auto S : Scopes) {

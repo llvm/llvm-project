@@ -76,12 +76,6 @@ class StackCoreScriptedProcesTestCase(TestBase):
             )
         self.assertTrue(corefile_process, PROCESS_IS_VALID)
 
-        # Create a random lib which does not exist in the corefile.
-        random_dylib = self.get_module_with_name(corefile_target, "random.dylib")
-        self.assertFalse(
-            random_dylib, "Dynamic library random.dylib should not be found."
-        )
-
         structured_data = lldb.SBStructuredData()
         structured_data.SetFromJSON(
             json.dumps(
@@ -89,15 +83,7 @@ class StackCoreScriptedProcesTestCase(TestBase):
                     "backing_target_idx": self.dbg.GetIndexOfTarget(
                         corefile_process.GetTarget()
                     ),
-                    "custom_modules": [
-                        {
-                            "path": self.getBuildArtifact("libbaz.dylib"),
-                        },
-                        {
-                            "path": "/random/path/random.dylib",
-                            "load_addr": 12345678,
-                        },
-                    ],
+                    "libbaz_path": self.getBuildArtifact("libbaz.dylib"),
                 }
             )
         )

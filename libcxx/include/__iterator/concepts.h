@@ -38,7 +38,6 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_referenceable.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
@@ -81,13 +80,12 @@ concept __specialization_of_projected = requires {
 
 template <class _Tp>
 struct __indirect_value_t_impl {
-  using type _LIBCPP_NODEBUG = iter_value_t<_Tp>&;
+  using type = iter_value_t<_Tp>&;
 };
 template <__specialization_of_projected _Tp>
 struct __indirect_value_t_impl<_Tp> {
-  using type _LIBCPP_NODEBUG =
-      invoke_result_t<__projected_projection_t<_Tp>&,
-                      typename __indirect_value_t_impl<__projected_iterator_t<_Tp>>::type>;
+  using type = invoke_result_t<__projected_projection_t<_Tp>&,
+                               typename __indirect_value_t_impl<__projected_iterator_t<_Tp>>::type>;
 };
 
 template <indirectly_readable _Tp>
@@ -133,7 +131,7 @@ concept incrementable = regular<_Ip> && weakly_incrementable<_Ip> && requires(_I
 // [iterator.concept.iterator]
 template <class _Ip>
 concept input_or_output_iterator = requires(_Ip __i) {
-  { *__i } -> __referenceable;
+  { *__i } -> __can_reference;
 } && weakly_incrementable<_Ip>;
 
 // [iterator.concept.sentinel]

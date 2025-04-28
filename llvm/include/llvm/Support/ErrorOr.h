@@ -15,8 +15,8 @@
 #ifndef LLVM_SUPPORT_ERROROR_H
 #define LLVM_SUPPORT_ERROROR_H
 
+#include "llvm/Support/AlignOf.h"
 #include <cassert>
-#include <functional> // for std::reference_wrapper
 #include <system_error>
 #include <type_traits>
 #include <utility>
@@ -185,7 +185,7 @@ private:
   }
 
   template <class T1, class T2>
-  static bool compareThisIfSameType(const T1 &, const T2 &) {
+  static bool compareThisIfSameType(const T1 &a, const T2 &b) {
     return false;
   }
 
@@ -234,27 +234,26 @@ private:
 
   storage_type *getStorage() {
     assert(!HasError && "Cannot get value when an error exists!");
-    return &TStorage;
+    return reinterpret_cast<storage_type *>(&TStorage);
   }
 
   const storage_type *getStorage() const {
     assert(!HasError && "Cannot get value when an error exists!");
-    return &TStorage;
+    return reinterpret_cast<const storage_type *>(&TStorage);
   }
 
   std::error_code *getErrorStorage() {
     assert(HasError && "Cannot get error when a value exists!");
-    return &ErrorStorage;
+    return reinterpret_cast<std::error_code *>(&ErrorStorage);
   }
 
   const std::error_code *getErrorStorage() const {
-    assert(HasError && "Cannot get error when a value exists!");
-    return &ErrorStorage;
+    return const_cast<ErrorOr<T> *>(this)->getErrorStorage();
   }
 
   union {
-    storage_type TStorage;
-    std::error_code ErrorStorage;
+    AlignedCharArrayUnion<storage_type> TStorage;
+    AlignedCharArrayUnion<std::error_code> ErrorStorage;
   };
   bool HasError : 1;
 };

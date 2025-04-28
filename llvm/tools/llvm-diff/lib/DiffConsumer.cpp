@@ -14,8 +14,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/WithColor.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -201,23 +199,20 @@ void DiffConsumer::logd(const DiffLogBuilder &Log) {
     switch (Log.getLineKind(I)) {
     case DC_match:
       out << "  ";
-      Log.getLeft(I)->print(dbgs());
-      dbgs() << '\n';
+      Log.getLeft(I)->print(dbgs()); dbgs() << '\n';
+      //printValue(Log.getLeft(I), true);
       break;
-    case DC_left: {
-      auto LeftColor = llvm::WithColor(out, raw_ostream::RED);
-      LeftColor << "< ";
-      Log.getLeft(I)->print(LeftColor);
-      LeftColor << '\n';
+    case DC_left:
+      out << "< ";
+      Log.getLeft(I)->print(dbgs()); dbgs() << '\n';
+      //printValue(Log.getLeft(I), true);
       break;
-    }
-    case DC_right: {
-      auto RightColor = llvm::WithColor(out, raw_ostream::GREEN);
-      RightColor << "> ";
-      Log.getRight(I)->print(RightColor);
-      RightColor << '\n';
+    case DC_right:
+      out << "> ";
+      Log.getRight(I)->print(dbgs()); dbgs() << '\n';
+      //printValue(Log.getRight(I), false);
       break;
     }
-    }
+    //out << "\n";
   }
 }

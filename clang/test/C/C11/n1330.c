@@ -43,12 +43,14 @@ void test(void) {
   _Static_assert(1, "this works");
   _Static_assert(0, "this fails"); // expected-error {{static assertion failed: this fails}}
 
-  // While the use of a _Static_assert in a for loop declaration is prohibited per
-  // 6.8.5p3 (requiring the declaration to only declare identifiers for objects
+  // The use of a _Static_assert in a for loop declaration is prohibited per
+  // 6.8.5p3 requiring the declaration to only declare identifiers for objects
   // having auto or register storage class; a static assertion does not declare
-  // an identifier nor an object), we permit it as an extension.
+  // an identifier nor an object.
+  // FIXME: this diagnostic is pretty terrible.
   int i = 0;
-  for (_Static_assert(1, "this should compile"); i < 10; ++i)
+  for (_Static_assert(1, "this should not compile"); i < 10; ++i) // expected-error {{expected identifier or '('}} \
+                                                                     expected-error {{expected ';' in 'for' statement specifier}}
     ;
 
   // Ensure that only an integer constant expression can be used as the

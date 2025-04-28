@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyAsmPrinter.h"
-#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
@@ -591,7 +590,8 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
 
     for (auto &Sym : Symbols) {
       OutStreamer->emitValue(
-          MCSymbolRefExpr::create(Sym, WebAssembly::S_FUNCINDEX, OutContext),
+          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_WASM_FUNCINDEX,
+                                  OutContext),
           4);
     }
     OutStreamer->popSection();

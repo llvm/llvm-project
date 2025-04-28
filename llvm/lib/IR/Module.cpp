@@ -915,11 +915,3 @@ VersionTuple Module::getDarwinTargetVariantSDKVersion() const {
 void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
   addSDKVersionMD(Version, *this, "darwin.target_variant.SDK Version");
 }
-
-StringRef Module::getTargetABIFromMD() {
-  StringRef TargetABI;
-  if (auto *TargetABIMD =
-          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
-    TargetABI = TargetABIMD->getString();
-  return TargetABI;
-}

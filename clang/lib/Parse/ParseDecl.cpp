@@ -432,8 +432,9 @@ static bool attributeParsedArgsUnevaluated(const IdentifierInfo &II,
 
 IdentifierLoc *Parser::ParseIdentifierLoc() {
   assert(Tok.is(tok::identifier) && "expected an identifier");
-  IdentifierLoc *IL = new (Actions.Context)
-      IdentifierLoc(Tok.getLocation(), Tok.getIdentifierInfo());
+  IdentifierLoc *IL = IdentifierLoc::create(Actions.Context,
+                                            Tok.getLocation(),
+                                            Tok.getIdentifierInfo());
   ConsumeToken();
   return IL;
 }
@@ -673,7 +674,7 @@ unsigned Parser::ParseAttributeArgsCommon(
         }
       }
 
-      llvm::append_range(ArgExprs, ParsedExprs);
+      ArgExprs.insert(ArgExprs.end(), ParsedExprs.begin(), ParsedExprs.end());
     }
   }
 
@@ -1352,21 +1353,20 @@ void Parser::ParseAvailabilityAttribute(
     return;
   }
   IdentifierLoc *Platform = ParseIdentifierLoc();
-  if (const IdentifierInfo *const Ident = Platform->getIdentifierInfo()) {
+  if (const IdentifierInfo *const Ident = Platform->Ident) {
     // Disallow xrOS for availability attributes.
     if (Ident->getName().contains("xrOS") || Ident->getName().contains("xros"))
-      Diag(Platform->getLoc(), diag::warn_availability_unknown_platform)
-          << Ident;
+      Diag(Platform->Loc, diag::warn_availability_unknown_platform) << Ident;
     // Canonicalize platform name from "macosx" to "macos".
     else if (Ident->getName() == "macosx")
-      Platform->setIdentifierInfo(PP.getIdentifierInfo("macos"));
+      Platform->Ident = PP.getIdentifierInfo("macos");
     // Canonicalize platform name from "macosx_app_extension" to
     // "macos_app_extension".
     else if (Ident->getName() == "macosx_app_extension")
-      Platform->setIdentifierInfo(PP.getIdentifierInfo("macos_app_extension"));
+      Platform->Ident = PP.getIdentifierInfo("macos_app_extension");
     else
-      Platform->setIdentifierInfo(PP.getIdentifierInfo(
-          AvailabilityAttr::canonicalizePlatformName(Ident->getName())));
+      Platform->Ident = PP.getIdentifierInfo(
+          AvailabilityAttr::canonicalizePlatformName(Ident->getName()));
   }
 
   // Parse the ',' following the platform name.
@@ -1418,8 +1418,8 @@ void Parser::ParseAvailabilityAttribute(
       continue;
     }
 
-    if (Keyword == Ident_deprecated && Platform->getIdentifierInfo() &&
-        Platform->getIdentifierInfo()->isStr("swift")) {
+    if (Keyword == Ident_deprecated && Platform->Ident &&
+        Platform->Ident->isStr("swift")) {
       // For swift, we deprecate for all versions.
       if (Changes[Deprecated].KeywordLoc.isValid()) {
         Diag(KeywordLoc, diag::err_availability_redundant)
@@ -1436,7 +1436,7 @@ void Parser::ParseAvailabilityAttribute(
     if (Keyword == Ident_environment) {
       if (EnvironmentLoc != nullptr) {
         Diag(KeywordLoc, diag::err_availability_redundant)
-            << Keyword << SourceRange(EnvironmentLoc->getLoc());
+            << Keyword << SourceRange(EnvironmentLoc->Loc);
       }
     }
 
@@ -1792,8 +1792,8 @@ void Parser::ParseSwiftNewTypeAttribute(
     return;
   }
 
-  auto *SwiftType = new (Actions.Context)
-      IdentifierLoc(Tok.getLocation(), Tok.getIdentifierInfo());
+  auto *SwiftType = IdentifierLoc::create(Actions.Context, Tok.getLocation(),
+                                          Tok.getIdentifierInfo());
   ConsumeToken();
 
   // Closing ')'
@@ -2076,9 +2076,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
     ProhibitAttributes(DeclSpecAttrs);
     return ParseNamespace(Context, DeclEnd);
   case tok::kw_using: {
-    takeAndConcatenateAttrs(DeclAttrs, std::move(DeclSpecAttrs));
+    ParsedAttributes Attrs(AttrFactory);
+    takeAndConcatenateAttrs(DeclAttrs, DeclSpecAttrs, Attrs);
     return ParseUsingDirectiveOrDeclaration(Context, ParsedTemplateInfo(),
-                                            DeclEnd, DeclAttrs);
+                                            DeclEnd, Attrs);
   }
   case tok::kw_static_assert:
   case tok::kw__Static_assert:
@@ -3400,45 +3401,6 @@ void Parser::DistributeCLateParsedAttrs(Decl *Dcl,
   }
 }
 
-/// type-qualifier:
-///    ('__ptrauth') '(' constant-expression
-///                   (',' constant-expression)[opt]
-///                   (',' constant-expression)[opt] ')'
-void Parser::ParsePtrauthQualifier(ParsedAttributes &Attrs) {
-  assert(Tok.is(tok::kw___ptrauth));
-
-  IdentifierInfo *KwName = Tok.getIdentifierInfo();
-  SourceLocation KwLoc = ConsumeToken();
-
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (T.expectAndConsume())
-    return;
-
-  ArgsVector ArgExprs;
-  do {
-    ExprResult ER = ParseAssignmentExpression();
-    if (ER.isInvalid()) {
-      T.skipToEnd();
-      return;
-    }
-    ArgExprs.push_back(ER.get());
-  } while (TryConsumeToken(tok::comma));
-
-  T.consumeClose();
-  SourceLocation EndLoc = T.getCloseLocation();
-
-  if (ArgExprs.empty() || ArgExprs.size() > 3) {
-    Diag(KwLoc, diag::err_ptrauth_qualifier_bad_arg_count);
-    return;
-  }
-
-  Attrs.addNew(KwName, SourceRange(KwLoc, EndLoc),
-               /*scope*/ nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(),
-               ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,
-                                         /*IsRegularKeywordAttribute=*/false));
-}
-
 /// Bounds attributes (e.g., counted_by):
 ///   AttrName '(' expression ')'
 void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
@@ -4306,11 +4268,6 @@ void Parser::ParseDeclarationSpecifiers(
                                  getLangOpts());
       break;
 
-    // __ptrauth qualifier.
-    case tok::kw___ptrauth:
-      ParsePtrauthQualifier(DS.getAttributes());
-      continue;
-
     case tok::kw___sptr:
     case tok::kw___uptr:
     case tok::kw___ptr64:
@@ -4452,10 +4409,6 @@ void Parser::ParseDeclarationSpecifiers(
           !getActions().getOpenCLOptions().isAvailableOption(
               "__cl_clang_function_pointers", getLangOpts())) {
         DiagID = diag::err_openclcxx_virtual_function;
-        PrevSpec = Tok.getIdentifierInfo()->getNameStart();
-        isInvalid = true;
-      } else if (getLangOpts().HLSL) {
-        DiagID = diag::err_hlsl_virtual_function;
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
         isInvalid = true;
       } else {
@@ -5217,9 +5170,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
     }
 
     if (Tok.is(tok::annot_pragma_openacc)) {
-      AccessSpecifier AS = AS_none;
-      ParsedAttributes Attrs(AttrFactory);
-      ParseOpenACCDirectiveDecl(AS, Attrs, TagType, TagDecl);
+      ParseOpenACCDirectiveDecl();
       continue;
     }
 
@@ -5496,8 +5447,11 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
       BaseRange = SourceRange(ColonLoc, DeclaratorInfo.getSourceRange().getEnd());
 
       if (!getLangOpts().ObjC) {
-        if (getLangOpts().CPlusPlus)
-          DiagCompat(ColonLoc, diag_compat::enum_fixed_underlying_type)
+        if (getLangOpts().CPlusPlus11)
+          Diag(ColonLoc, diag::warn_cxx98_compat_enum_fixed_underlying_type)
+              << BaseRange;
+        else if (getLangOpts().CPlusPlus)
+          Diag(ColonLoc, diag::ext_cxx11_enum_fixed_underlying_type)
               << BaseRange;
         else if (getLangOpts().MicrosoftExt && !getLangOpts().C23)
           Diag(ColonLoc, diag::ext_ms_c_enum_fixed_underlying_type)
@@ -5698,7 +5652,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
     ParseEnumBody(StartLoc, D);
     if (SkipBody.CheckSameAsPrevious &&
-        !Actions.ActOnDuplicateDefinition(getCurScope(), TagDecl, SkipBody)) {
+        !Actions.ActOnDuplicateDefinition(TagDecl, SkipBody)) {
       DS.SetTypeSpecError();
       return;
     }
@@ -6024,7 +5978,6 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___ptr32:
   case tok::kw___pascal:
   case tok::kw___unaligned:
-  case tok::kw___ptrauth:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -6071,7 +6024,7 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
   TopLevelStmtDecl *TLSD = Actions.ActOnStartTopLevelStmtDecl(getCurScope());
   StmtResult R = ParseStatementOrDeclaration(Stmts, SubStmtCtx);
   if (!R.isUsable())
-    R = Actions.ActOnNullStmt(Tok.getLocation());
+    return nullptr;
 
   Actions.ActOnFinishTopLevelStmtDecl(TLSD, R.get());
 
@@ -6314,7 +6267,6 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___forceinline:
   case tok::kw___pascal:
   case tok::kw___unaligned:
-  case tok::kw___ptrauth:
 
   case tok::kw__Nonnull:
   case tok::kw__Nullable:
@@ -6577,12 +6529,6 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw_out:
       // NOTE: ParseHLSLQualifiers will consume the qualifier token.
       ParseHLSLQualifiers(DS.getAttributes());
-      continue;
-
-    // __ptrauth qualifier.
-    case tok::kw___ptrauth:
-      ParsePtrauthQualifier(DS.getAttributes());
-      EndLoc = PrevTokLocation;
       continue;
 
     case tok::kw___unaligned:

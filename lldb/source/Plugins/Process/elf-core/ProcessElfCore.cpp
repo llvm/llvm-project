@@ -289,7 +289,7 @@ void ProcessElfCore::UpdateBuildIdForNTFileEntries() {
 UUID ProcessElfCore::FindModuleUUID(const llvm::StringRef path) {
   // Returns the gnu uuid from matched NT_FILE entry
   for (NT_FILE_Entry &entry : m_nt_file_entries)
-    if (path == entry.path && entry.uuid.IsValid())
+    if (path == entry.path)
       return entry.uuid;
   return UUID();
 }

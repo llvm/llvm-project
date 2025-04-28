@@ -38,7 +38,7 @@ class DominatorTree;
 /// is used).
 class SSAUpdaterBulk {
   struct RewriteInfo {
-    SmallVector<std::pair<BasicBlock *, Value *>, 4> Defines;
+    DenseMap<BasicBlock *, Value *> Defines;
     SmallVector<Use *, 4> Uses;
     StringRef Name;
     Type *Ty;
@@ -48,6 +48,8 @@ class SSAUpdaterBulk {
   SmallVector<RewriteInfo, 4> Rewrites;
 
   PredIteratorCache PredCache;
+
+  Value *computeValueAt(BasicBlock *BB, RewriteInfo &R, DominatorTree *DT);
 
 public:
   explicit SSAUpdaterBulk() = default;

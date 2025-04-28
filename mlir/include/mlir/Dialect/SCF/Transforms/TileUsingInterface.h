@@ -328,8 +328,7 @@ struct SCFFuseConsumerOfSliceResult {
   SmallVector<Operation *> tiledOps;
 };
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
-tileAndFuseConsumerOfSlice(RewriterBase &rewriter, Operation *candidateSliceOp,
-                           MutableArrayRef<LoopLikeOpInterface> loops);
+tileAndFuseConsumerOfSlice(RewriterBase &rewriter, Operation *candidateSliceOp);
 
 /// Method to lower an `op` that implements the `TilingInterface` to
 /// loops/scalars.

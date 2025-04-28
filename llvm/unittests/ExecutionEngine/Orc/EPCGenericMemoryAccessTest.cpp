@@ -18,7 +18,8 @@ using namespace llvm::orc::shared;
 namespace {
 
 template <typename WriteT, typename SPSWriteT>
-CWrapperFunctionResult testWriteUInts(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testWriteUInts(const char *ArgData,
+                                                         size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSWriteT>)>::handle(
              ArgData, ArgSize,
              [](std::vector<WriteT> Ws) {
@@ -28,7 +29,8 @@ CWrapperFunctionResult testWriteUInts(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-CWrapperFunctionResult testWriteBuffers(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testWriteBuffers(const char *ArgData,
+                                                           size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessBufferWrite>)>::handle(
              ArgData, ArgSize,
              [](std::vector<tpctypes::BufferWrite> Ws) {
@@ -39,7 +41,8 @@ CWrapperFunctionResult testWriteBuffers(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-CWrapperFunctionResult testWritePointers(const char *ArgData, size_t ArgSize) {
+llvm::orc::shared::CWrapperFunctionResult testWritePointers(const char *ArgData,
+                                                            size_t ArgSize) {
   return WrapperFunction<void(SPSSequence<SPSMemoryAccessPointerWrite>)>::
       handle(ArgData, ArgSize,
              [](std::vector<tpctypes::PointerWrite> Ws) {

@@ -52,7 +52,6 @@ struct ShadowPtrInfoTy {
   void *HstPtrVal = nullptr;
   void **TgtPtrAddr = nullptr;
   void *TgtPtrVal = nullptr;
-  bool IsDescriptorBaseAddr = false;
 
   bool operator==(const ShadowPtrInfoTy &Other) const {
     return HstPtrAddr == Other.HstPtrAddr;

@@ -72,11 +72,11 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 #
-# DEBUG-NEXT: G_ABDS (opcode 65): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_ABDS (opcode 67): 1 type index, 0 imm indices
 # DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
 #
-# DEBUG-NEXT:G_ABDU (opcode 66): 1 type index, 0 imm indices
+# DEBUG-NEXT:G_ABDU (opcode 68): 1 type index, 0 imm indices
 # DEBUG-NEXT:.. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT:.. imm index coverage check SKIPPED: no rules defined
 #
@@ -579,7 +579,7 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FMINIMUM (opcode {{[0-9]+}}): 1 type index
-# DEBUG-NEXT: .. opcode 212 is aliased to 213
+# DEBUG-NEXT: .. opcode 214 is aliased to 215
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: G_FMAXIMUM (opcode {{[0-9]+}}): 1 type index

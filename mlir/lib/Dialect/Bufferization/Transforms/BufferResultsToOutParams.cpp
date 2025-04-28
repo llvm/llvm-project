@@ -16,7 +16,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMSPASS
+#define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -233,9 +233,11 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
 
 namespace {
 struct BufferResultsToOutParamsPass
-    : bufferization::impl::BufferResultsToOutParamsPassBase<
+    : bufferization::impl::BufferResultsToOutParamsBase<
           BufferResultsToOutParamsPass> {
-  using Base::Base;
+  explicit BufferResultsToOutParamsPass(
+      const bufferization::BufferResultsToOutParamsOpts &options)
+      : options(options) {}
 
   void runOnOperation() override {
     // Convert from pass options in tablegen to BufferResultsToOutParamsOpts.
@@ -253,3 +255,8 @@ private:
   bufferization::BufferResultsToOutParamsOpts options;
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::bufferization::createBufferResultsToOutParamsPass(
+    const bufferization::BufferResultsToOutParamsOpts &options) {
+  return std::make_unique<BufferResultsToOutParamsPass>(options);
+}

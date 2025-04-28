@@ -9,5 +9,4 @@
 # CHECK-NEXT: *** TEST 'test-data :: metrics.ini' RESULTS ***
 # CHECK-NEXT: value0: 1
 # CHECK-NEXT: value1: 2.3456
-# CHECK-NEXT: value2: "stringy"
 # CHECK-NEXT: ***

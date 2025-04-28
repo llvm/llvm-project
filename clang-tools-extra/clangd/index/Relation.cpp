@@ -43,7 +43,8 @@ RelationSlab RelationSlab::Builder::build() && {
   llvm::sort(Relations);
 
   // Remove duplicates.
-  Relations.erase(llvm::unique(Relations), Relations.end());
+  Relations.erase(std::unique(Relations.begin(), Relations.end()),
+                  Relations.end());
 
   return RelationSlab{std::move(Relations)};
 }

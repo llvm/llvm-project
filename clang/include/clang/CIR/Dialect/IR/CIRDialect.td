@@ -28,8 +28,6 @@ def CIR_Dialect : Dialect {
   let useDefaultTypePrinterParser = 0;
 
   let extraClassDeclaration = [{
-    static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
-
     void registerAttributes();
     void registerTypes();
 

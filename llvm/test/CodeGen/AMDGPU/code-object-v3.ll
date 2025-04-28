@@ -68,7 +68,7 @@
 define amdgpu_kernel void @fadd(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) {
 entry:
   %a.val = load float, ptr addrspace(1) %a
   %b.val = load float, ptr addrspace(1) %b
@@ -80,7 +80,7 @@ entry:
 define amdgpu_kernel void @fsub(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) {
 entry:
   %a.val = load float, ptr addrspace(1) %a
   %b.val = load float, ptr addrspace(1) %b
@@ -99,9 +99,7 @@ define amdgpu_kernel void @empty(
     i32 %i,
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
-    ptr addrspace(1) %b) #0 {
+    ptr addrspace(1) %b) {
 entry:
   ret void
 }
-
-attributes #0 = { "amdgpu-no-flat-scratch-init" }

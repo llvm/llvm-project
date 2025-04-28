@@ -42,17 +42,8 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
   // Update Triple with the updated triple from the target lookup.
   TripleName = TheTriple.str();
 
-  if (CpuName == "native") {
-    // case for cross generating, when native arch and target mismatch
-    if ((Triple(sys::getProcessTriple()).getArch() !=
-         Triple(TripleName).getArch()))
-      return make_error<StringError>(
-          "A CPU must be explicitly specified when cross compiling. To see all "
-          "possible options for " +
-              TripleName + " triple use -mcpu=help",
-          inconvertibleErrorCode());
+  if (CpuName == "native")
     CpuName = std::string(sys::getHostCPUName());
-  }
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, CpuName, ""));
@@ -66,7 +57,7 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
   }
   const TargetOptions Options;
   std::unique_ptr<const TargetMachine> TM(TheTarget->createTargetMachine(
-      TheTriple, CpuName, Features, Options, Reloc::Model::Static));
+      TripleName, CpuName, Features, Options, Reloc::Model::Static));
   if (!TM) {
     return make_error<StringError>("unable to create target machine",
                                    inconvertibleErrorCode());
@@ -102,7 +93,7 @@ LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
 std::unique_ptr<TargetMachine> LLVMState::createTargetMachine() const {
   return std::unique_ptr<TargetMachine>(
       TheTargetMachine->getTarget().createTargetMachine(
-          Triple(TheTargetMachine->getTargetTriple().normalize()),
+          TheTargetMachine->getTargetTriple().normalize(),
           TheTargetMachine->getTargetCPU(),
           TheTargetMachine->getTargetFeatureString(), TheTargetMachine->Options,
           Reloc::Model::Static));

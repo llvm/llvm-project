@@ -190,12 +190,6 @@ public:
 
     Fn->addFnAttr("interrupt", Kind);
 
-    // Note: the ARMSaveFPAttr can only exist if we also have an interrupt
-    // attribute
-    const ARMSaveFPAttr *SaveFPAttr = FD->getAttr<ARMSaveFPAttr>();
-    if (SaveFPAttr)
-      Fn->addFnAttr("save-fp");
-
     ARMABIKind ABI = getABIInfo<ARMABIInfo>().getABIKind();
     if (ABI == ARMABIKind::APCS)
       return;
@@ -305,9 +299,7 @@ ABIArgInfo ARMABIInfo::coerceIllegalVector(QualType Ty) const {
         llvm::Type::getInt32Ty(getVMContext()), Size / 32);
     return ABIArgInfo::getDirect(ResType);
   }
-  return getNaturalAlignIndirect(
-      Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-      /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
 }
 
 ABIArgInfo ARMABIInfo::classifyHomogeneousAggregate(QualType Ty,
@@ -389,9 +381,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
-        return getNaturalAlignIndirect(
-            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-            /*ByVal=*/true);
+        return getNaturalAlignIndirect(Ty, /*ByVal=*/true);
 
     return (isPromotableIntegerTypeForABI(Ty)
                 ? ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty))
@@ -399,8 +389,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   }
 
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                   RAA == CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(Ty, RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Empty records are either ignored completely or passed as if they were a
@@ -440,8 +429,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
     // bigger than 128-bits, they get placed in space allocated by the caller,
     // and a pointer is passed.
     return ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8),
-        getDataLayout().getAllocaAddrSpace(), false);
+        CharUnits::fromQuantity(getContext().getTypeAlign(Ty) / 8), false);
   }
 
   // Support byval for ARM.
@@ -459,10 +447,9 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   }
   if (getContext().getTypeSizeInChars(Ty) > CharUnits::fromQuantity(64)) {
     assert(getABIKind() != ARMABIKind::AAPCS16_VFP && "unexpected byval");
-    return ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(ABIAlign),
-        /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-        /*ByVal=*/true, /*Realign=*/TyAlign > ABIAlign);
+    return ABIArgInfo::getIndirect(CharUnits::fromQuantity(ABIAlign),
+                                   /*ByVal=*/true,
+                                   /*Realign=*/TyAlign > ABIAlign);
   }
 
   // Otherwise, pass by coercing to a structure of the appropriate size.
@@ -579,8 +566,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   if (const VectorType *VT = RetTy->getAs<VectorType>()) {
     // Large vector types should be returned via memory.
     if (getContext().getTypeSize(RetTy) > 128)
-      return getNaturalAlignIndirect(RetTy,
-                                     getDataLayout().getAllocaAddrSpace());
+      return getNaturalAlignIndirect(RetTy);
     // TODO: FP16/BF16 vectors should be converted to integer vectors
     // This check is similar  to isIllegalVectorType - refactor?
     if ((!getTarget().hasLegalHalfType() &&
@@ -598,9 +584,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
-        return getNaturalAlignIndirect(
-            RetTy, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-            /*ByVal=*/false);
+        return getNaturalAlignIndirect(RetTy, /*ByVal=*/false);
 
     return isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                 : ABIArgInfo::getDirect();
@@ -631,7 +615,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
     }
 
     // Otherwise return in memory.
-    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+    return getNaturalAlignIndirect(RetTy);
   }
 
   // Otherwise this is an AAPCS variant.
@@ -669,7 +653,7 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
     return ABIArgInfo::getDirect(CoerceTy);
   }
 
-  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
+  return getNaturalAlignIndirect(RetTy);
 }
 
 /// isIllegalVector - check whether Ty is an illegal vector type.

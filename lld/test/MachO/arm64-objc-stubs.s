@@ -1,23 +1,22 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
-# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -U _external_func
+# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out | FileCheck %s
-# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -dead_strip -U _external_func
+# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -dead_strip
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out | FileCheck %s
-# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -objc_stubs_fast -U _external_func
+# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -objc_stubs_fast
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out | FileCheck %s
 # RUN: llvm-otool -l %t.out | FileCheck %s --check-prefix=FASTALIGN
-# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -objc_stubs_small -U _external_func
+# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -objc_stubs_small
 # RUN: llvm-otool -vs __TEXT __objc_stubs  %t.out | FileCheck %s --check-prefix=SMALL
 # RUN: llvm-otool -l %t.out | FileCheck %s --check-prefix=SMALLALIGN
-# RUN: llvm-objdump --section-headers %t.out | FileCheck %s --check-prefix=SECTIONS
 
 # CHECK: Contents of (__TEXT,__objc_stubs) section
 
 # CHECK-NEXT: _objc_msgSend$foo:
 # CHECK-NEXT: adrp    x1, 8 ; 0x100008000
-# CHECK-NEXT: ldr     x1, [x1, #0x18]
+# CHECK-NEXT: ldr     x1, [x1, #0x10]
 # CHECK-NEXT: adrp    x16, 4 ; 0x100004000
 # CHECK-NEXT: ldr     x16, [x16]
 # CHECK-NEXT: br      x16
@@ -27,7 +26,7 @@
 
 # CHECK-NEXT: _objc_msgSend$length:
 # CHECK-NEXT: adrp    x1, 8 ; 0x100008000
-# CHECK-NEXT: ldr     x1, [x1, #0x20]
+# CHECK-NEXT: ldr     x1, [x1, #0x18]
 # CHECK-NEXT: adrp    x16, 4 ; 0x100004000
 # CHECK-NEXT: ldr     x16, [x16]
 # CHECK-NEXT: br      x16
@@ -45,13 +44,13 @@
 # FASTALIGN-NEXT:     align 2^5 (32)
 
 # SMALL: _objc_msgSend$foo:
-# SMALL-NEXT: adrp    x1, 8 ; 0x100008000
-# SMALL-NEXT: ldr     x1, [x1, #0x18]
+# SMALL-NEXT: adrp    x1, 4 ; 0x100004000
+# SMALL-NEXT: ldr     x1, [x1, #0x10]
 # SMALL-NEXT: b
 
 # SMALL-NEXT: _objc_msgSend$length:
-# SMALL-NEXT: adrp    x1, 8 ; 0x100008000
-# SMALL-NEXT: ldr     x1, [x1, #0x20]
+# SMALL-NEXT: adrp    x1, 4 ; 0x100004000
+# SMALL-NEXT: ldr     x1, [x1, #0x18]
 # SMALL-NEXT: b
 
 # SMALLALIGN:       sectname __objc_stubs
@@ -60,12 +59,6 @@
 # SMALLALIGN-NEXT:      size
 # SMALLALIGN-NEXT:    offset
 # SMALLALIGN-NEXT:     align 2^2 (4)
-
-## Check correct section ordering
-# SECTIONS: Sections:
-# SECTIONS: __text
-# SECTIONS: __stubs
-# SECTIONS: __objc_stubs
 
 .section  __TEXT,__objc_methname,cstring_literals
 lselref1:
@@ -88,5 +81,4 @@ _main:
   bl  _objc_msgSend$length
   bl  _objc_msgSend$foo
   bl  _objc_msgSend$foo
-  bl  _external_func
   ret

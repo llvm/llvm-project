@@ -81,7 +81,6 @@ class AsmStateImpl;
 
 //===----------------------------------------------------------------------===//
 // Resource Entry
-//===----------------------------------------------------------------------===//
 
 class HeapAsmResourceBlob;
 
@@ -331,7 +330,6 @@ public:
 
 //===----------------------------------------------------------------------===//
 // Resource Parser/Printer
-//===----------------------------------------------------------------------===//
 
 /// This class represents an instance of a resource parser. This class should be
 /// implemented by non-dialect clients that want to inject additional resources

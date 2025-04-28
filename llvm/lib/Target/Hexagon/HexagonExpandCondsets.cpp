@@ -85,7 +85,6 @@
 // however, is that finding the locations where the implicit uses need
 // to be added, and updating the live ranges will be more involved.
 
-#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
@@ -129,6 +128,13 @@ static cl::opt<unsigned> OptTfrLimit("expand-condsets-tfr-limit",
 static cl::opt<unsigned> OptCoaLimit("expand-condsets-coa-limit",
   cl::init(~0U), cl::Hidden, cl::desc("Max number of segment coalescings"));
 
+namespace llvm {
+
+  void initializeHexagonExpandCondsetsPass(PassRegistry&);
+  FunctionPass *createHexagonExpandCondsets();
+
+} // end namespace llvm
+
 namespace {
 
   class HexagonExpandCondsets : public MachineFunctionPass {
@@ -140,6 +146,7 @@ namespace {
         CoaLimitActive = true, CoaLimit = OptCoaLimit;
       if (OptTfrLimit.getPosition())
         TfrLimitActive = true, TfrLimit = OptTfrLimit;
+      initializeHexagonExpandCondsetsPass(*PassRegistry::getPassRegistry());
     }
 
     StringRef getPassName() const override { return "Hexagon Expand Condsets"; }
@@ -238,7 +245,12 @@ namespace {
 } // end anonymous namespace
 
 char HexagonExpandCondsets::ID = 0;
-char &llvm::HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
+
+namespace llvm {
+
+  char &HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
+
+} // end namespace llvm
 
 INITIALIZE_PASS_BEGIN(HexagonExpandCondsets, "expand-condsets",
   "Hexagon Expand Condsets", false, false)
@@ -389,7 +401,8 @@ void HexagonExpandCondsets::updateDeadsInRange(Register Reg, LaneBitmask LM,
         continue;
       if (B == Entry)
         return false;
-      Work.insert_range(B->predecessors());
+      for (auto *P : B->predecessors())
+        Work.insert(P);
     }
     return true;
   };

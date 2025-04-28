@@ -34,7 +34,6 @@ namespace llvm {
 class BasicBlock;
 class MachineDomTreeUpdater;
 class MachineFunction;
-class MachineLoopInfo;
 class MCSymbol;
 class ModuleSlotTracker;
 class Pass;
@@ -43,7 +42,6 @@ class SlotIndexes;
 class StringRef;
 class raw_ostream;
 class LiveIntervals;
-class LiveVariables;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -205,8 +203,8 @@ private:
   /// LLVM IR.
   bool IsEHScopeEntry = false;
 
-  /// Indicates if this is a target of Windows EH Continuation Guard.
-  bool IsEHContTarget = false;
+  /// Indicates if this is a target block of a catchret.
+  bool IsEHCatchretTarget = false;
 
   /// Indicate that this basic block is the entry block of an EH funclet.
   bool IsEHFuncletEntry = false;
@@ -234,8 +232,8 @@ private:
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
 
-  /// Cached MCSymbol for this block (used if IsEHContTarget).
-  mutable MCSymbol *CachedEHContMCSymbol = nullptr;
+  /// Cached MCSymbol for this block (used if IsEHCatchRetTarget).
+  mutable MCSymbol *CachedEHCatchretMCSymbol = nullptr;
 
   /// Marks the end of the basic block. Used during basic block sections to
   /// calculate the size of the basic block, or the BB section ending with it.
@@ -312,15 +310,6 @@ public:
   /// Return the MachineFunction containing this basic block.
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
-
-  /// Returns true if the original IR terminator is an `indirectbr`. This
-  /// typically corresponds to a `goto` in C, rather than jump tables.
-  bool terminatorIsComputedGoto() const {
-    return back().isIndirectBranch() &&
-           llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
-             return Succ->isIRBlockAddressTaken();
-           });
-  }
 
   using instr_iterator = Instructions::iterator;
   using const_instr_iterator = Instructions::const_iterator;
@@ -661,11 +650,11 @@ public:
   /// that used to have a catchpad or cleanuppad instruction in the LLVM IR.
   void setIsEHScopeEntry(bool V = true) { IsEHScopeEntry = V; }
 
-  /// Returns true if this is a target of Windows EH Continuation Guard.
-  bool isEHContTarget() const { return IsEHContTarget; }
+  /// Returns true if this is a target block of a catchret.
+  bool isEHCatchretTarget() const { return IsEHCatchretTarget; }
 
-  /// Indicates if this is a target of Windows EH Continuation Guard.
-  void setIsEHContTarget(bool V = true) { IsEHContTarget = V; }
+  /// Indicates if this is a target block of a catchret.
+  void setIsEHCatchretTarget(bool V = true) { IsEHCatchretTarget = V; }
 
   /// Returns true if this is the entry block of an EH funclet.
   bool isEHFuncletEntry() const { return IsEHFuncletEntry; }
@@ -982,13 +971,6 @@ public:
   ///
   /// This function updates LiveVariables, MachineDominatorTree, and
   /// MachineLoopInfo, as applicable.
-  struct SplitCriticalEdgeAnalyses {
-    LiveIntervals *LIS;
-    SlotIndexes *SI;
-    LiveVariables *LV;
-    MachineLoopInfo *MLI;
-  };
-
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
                     std::vector<SparseBitVector<>> *LiveInSets = nullptr,
@@ -1005,10 +987,6 @@ public:
   }
 
   // Helper method for new pass manager migration.
-  MachineBasicBlock *SplitCriticalEdge(
-      MachineBasicBlock *Succ, const SplitCriticalEdgeAnalyses &Analyses,
-      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
-
   MachineBasicBlock *SplitCriticalEdge(
       MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
       std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
@@ -1247,8 +1225,8 @@ public:
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;
 
-  /// Return the Windows EH Continuation Symbol for this basic block.
-  MCSymbol *getEHContSymbol() const;
+  /// Return the EHCatchret Symbol for this basic block.
+  MCSymbol *getEHCatchretSymbol() const;
 
   std::optional<uint64_t> getIrrLoopHeaderWeight() const {
     return IrrLoopHeaderWeight;

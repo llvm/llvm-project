@@ -92,7 +92,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                   m_VPValue())))
       return false;
-    return all_of(R->operands(), isUniformAcrossVFsAndUFs);
+    return all_of(R->operands(),
+                  [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
   }
 
   auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
@@ -109,13 +110,10 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
         // TODO: Further relax the restrictions.
         return R->isUniform() &&
                (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
-               all_of(R->operands(), isUniformAcrossVFsAndUFs);
+               all_of(R->operands(),
+                      [](VPValue *Op) { return isUniformAcrossVFsAndUFs(Op); });
       })
-      .Case<VPInstruction>([](const auto *VPI) {
-        return VPI->isScalarCast() &&
-               isUniformAcrossVFsAndUFs(VPI->getOperand(0));
-      })
-      .Case<VPWidenCastRecipe>([](const auto *R) {
+      .Case<VPScalarCastRecipe, VPWidenCastRecipe>([](const auto *R) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })

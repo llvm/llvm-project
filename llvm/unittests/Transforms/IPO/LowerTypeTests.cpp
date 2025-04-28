@@ -100,7 +100,7 @@ TEST(LowerTypeTests, GlobalLayoutBuilder) {
 
     std::vector<uint64_t> ComputedLayout;
     for (auto &&F : GLB.Fragments)
-      llvm::append_range(ComputedLayout, F);
+      ComputedLayout.insert(ComputedLayout.end(), F.begin(), F.end());
 
     EXPECT_EQ(T.WantLayout, ComputedLayout);
   }

@@ -357,8 +357,9 @@ static void copyPhysSubRegs(MachineBasicBlock &MBB,
 
 void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I, const DebugLoc &DL,
-                              Register DestReg, Register SrcReg, bool KillSrc,
-                              bool RenamableDest, bool RenamableSrc) const {
+                              MCRegister DestReg, MCRegister SrcReg,
+                              bool KillSrc, bool RenamableDest,
+                              bool RenamableSrc) const {
 
   if (IsAliasOfSX(SrcReg) && IsAliasOfSX(DestReg)) {
     BuildMI(MBB, I, DL, get(VE::ORri), DestReg)

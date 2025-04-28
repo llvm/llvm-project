@@ -52,22 +52,22 @@ def ZfhDExt    : ExtInfo<"", "", [HasStdExtZfh, HasStdExtD],
 def ZfhminDExt : ExtInfo<"", "", [HasStdExtZfhmin, HasStdExtD],
                          ?, ?, FPR32, FPR64, FPR16>;
 
-def ZhinxExt            : ExtInfo<"_INX", "Zfinx",
+def ZhinxExt            : ExtInfo<"_INX", "RVZfinx",
                                   [HasStdExtZhinx],
                                   f16, FPR16INX, FPR32INX, ?, FPR16INX>;
-def ZhinxminExt         : ExtInfo<"_INX", "Zfinx",
+def ZhinxminExt         : ExtInfo<"_INX", "RVZfinx",
                                   [HasStdExtZhinxmin],
                                   f16, FPR16INX, FPR32INX, ?, FPR16INX>;
-def ZhinxZdinxExt       : ExtInfo<"_INX", "Zfinx",
+def ZhinxZdinxExt       : ExtInfo<"_INX", "RVZfinx",
                                   [HasStdExtZhinx, HasStdExtZdinx, IsRV64],
                                   ?, ?, FPR32INX, FPR64INX, FPR16INX>;
-def ZhinxminZdinxExt    : ExtInfo<"_INX", "Zfinx",
+def ZhinxminZdinxExt    : ExtInfo<"_INX", "RVZfinx",
                                   [HasStdExtZhinxmin, HasStdExtZdinx, IsRV64],
                                   ?, ?, FPR32INX, FPR64INX, FPR16INX>;
-def ZhinxZdinx32Ext     : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
+def ZhinxZdinx32Ext     : ExtInfo<"_IN32X", "RV32Zdinx",
                                   [HasStdExtZhinx, HasStdExtZdinx, IsRV32],
                                   ?, ?, FPR32INX, FPR64IN32X, FPR16INX >;
-def ZhinxminZdinx32Ext  : ExtInfo<"_IN32X", "ZdinxGPRPairRV32",
+def ZhinxminZdinx32Ext  : ExtInfo<"_IN32X", "RV32Zdinx",
                                   [HasStdExtZhinxmin, HasStdExtZdinx, IsRV32],
                                   ?, ?, FPR32INX, FPR64IN32X, FPR16INX>;
 
@@ -218,7 +218,7 @@ foreach Ext = ZfhminDExts in {
 // Assembler Pseudo Instructions (User-Level ISA, Version 2.2, Chapter 20)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasHalfFPLoadStoreMove] in {
+let Predicates = [HasStdExtZfhmin] in {
 def : InstAlias<"flh $rd, (${rs1})",  (FLH FPR16:$rd,  GPR:$rs1, 0), 0>;
 def : InstAlias<"fsh $rs2, (${rs1})", (FSH FPR16:$rs2, GPR:$rs1, 0), 0>;
 } // Predicates = [HasStdExtZfhmin]
@@ -241,7 +241,7 @@ def PseudoQuietFLT_H : PseudoQuietFCMP<FPR16>;
 }
 } // Predicates = [HasStdExtZfh]
 
-let Predicates = [HasHalfFPLoadStoreMove] in {
+let Predicates = [HasStdExtZfhmin] in {
 def PseudoFLH  : PseudoFloatLoad<"flh", FPR16>;
 def PseudoFSH  : PseudoStore<"fsh", FPR16>;
 } // Predicates = [HasStdExtZfhmin]

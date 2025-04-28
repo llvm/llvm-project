@@ -21,6 +21,12 @@
 
 using namespace llvm;
 
+namespace llvm {
+
+  void initializeR600EmitClauseMarkersPass(PassRegistry&);
+
+} // end namespace llvm
+
 namespace {
 
 class R600EmitClauseMarkers : public MachineFunctionPass {
@@ -283,7 +289,9 @@ private:
 public:
   static char ID;
 
-  R600EmitClauseMarkers() : MachineFunctionPass(ID) {}
+  R600EmitClauseMarkers() : MachineFunctionPass(ID) {
+    initializeR600EmitClauseMarkersPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();

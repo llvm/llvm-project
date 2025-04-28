@@ -114,8 +114,7 @@ namespace maybe_unused_binding {
 
 void test() {
   struct X { int a, b; } x;
-  auto [a [[maybe_unused]], b] = x; // expected-warning {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}} \
-                                    // expected-warning {{unused variable '[a, b]'}}
+  auto [a [[maybe_unused]], b] = x; // expected-warning {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
 }
 
 }

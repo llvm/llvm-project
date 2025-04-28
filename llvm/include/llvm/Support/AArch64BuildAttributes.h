@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-namespace AArch64BuildAttributes {
+namespace AArch64BuildAttrs {
 
 /// AArch64 build attributes vendors IDs (a.k.a subsection name)
 enum VendorID : unsigned {
@@ -69,7 +69,7 @@ enum FeatureAndBitsFlag : unsigned {
   Feature_PAC_Flag = 1 << 1,
   Feature_GCS_Flag = 1 << 2
 };
-} // namespace AArch64BuildAttributes
+} // namespace AArch64BuildAttrs
 } // namespace llvm
 
 #endif // LLVM_SUPPORT_AARCH64BUILDATTRIBUTES_H

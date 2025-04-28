@@ -1,3 +1,7 @@
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 add_clang_unittest(SyntaxTests
   TreeTestBase.cpp
   BuildTreeTest.cpp
@@ -5,8 +9,10 @@ add_clang_unittest(SyntaxTests
   SynthesisTest.cpp
   TreeTest.cpp
   TokensTest.cpp
+)
 
-  CLANG_LIBS
+clang_target_link_libraries(SyntaxTests
+  PRIVATE
   clangAST
   clangBasic
   clangFrontend
@@ -15,12 +21,11 @@ add_clang_unittest(SyntaxTests
   clangTooling
   clangToolingCore
   clangToolingSyntax
+  )
 
-  LINK_LIBS
+target_link_libraries(SyntaxTests
+  PRIVATE
   clangTesting
   LLVMTestingAnnotations
   LLVMTestingSupport
-
-  LLVM_COMPONENTS
-  Support
 )

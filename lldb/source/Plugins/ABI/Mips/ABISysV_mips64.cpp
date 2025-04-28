@@ -750,8 +750,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   Target *target = exe_ctx.GetTargetPtr();
   const ArchSpec target_arch = target->GetArchitecture();
   ByteOrder target_byte_order = target_arch.GetByteOrder();
-  std::optional<uint64_t> byte_size =
-      llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
+  std::optional<uint64_t> byte_size = return_compiler_type.GetByteSize(&thread);
   if (!byte_size)
     return return_valobj_sp;
   const uint32_t type_flags = return_compiler_type.GetTypeInfo(nullptr);
@@ -960,8 +959,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
             CompilerType field_compiler_type =
                 return_compiler_type.GetFieldAtIndex(
                     idx, name, &field_bit_offset, nullptr, nullptr);
-            std::optional<uint64_t> field_byte_width = llvm::expectedToOptional(
-                field_compiler_type.GetByteSize(&thread));
+            std::optional<uint64_t> field_byte_width =
+                field_compiler_type.GetByteSize(&thread);
             if (!field_byte_width)
               return return_valobj_sp;
 
@@ -1033,7 +1032,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
         std::optional<uint64_t> field_byte_width =
-            llvm::expectedToOptional(field_compiler_type.GetByteSize(&thread));
+            field_compiler_type.GetByteSize(&thread);
 
         // if we don't know the size of the field (e.g. invalid type), just
         // bail out
@@ -1128,38 +1127,44 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-UnwindPlanSP ABISysV_mips64::CreateFunctionEntryUnwindPlan() {
-  UnwindPlan::Row row;
+bool ABISysV_mips64::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  // The previous PC is in the RA, all other registers are the same.
-  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+  // The previous PC is in the RA
+  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+  unwind_plan.AppendRow(row);
 
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("mips64 at-func-entry default");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  plan_sp->SetReturnAddressRegister(dwarf_r31);
-  return plan_sp;
+  // All other registers are the same.
+
+  unwind_plan.SetSourceName("mips64 at-func-entry default");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  unwind_plan.SetReturnAddressRegister(dwarf_r31);
+  return true;
 }
 
-UnwindPlanSP ABISysV_mips64::CreateDefaultUnwindPlan() {
-  UnwindPlan::Row row;
+bool ABISysV_mips64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
+  unwind_plan.Clear();
+  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
 
-  row.SetUnspecifiedRegistersAreUndefined(true);
-  row.GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
+  UnwindPlan::RowSP row(new UnwindPlan::Row);
 
-  row.SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+  row->SetUnspecifiedRegistersAreUndefined(true);
+  row->GetCFAValue().SetIsRegisterPlusOffset(dwarf_r29, 0);
 
-  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(std::move(row));
-  plan_sp->SetSourceName("mips64 default unwind plan");
-  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
-  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  return plan_sp;
+  row->SetRegisterLocationToRegister(dwarf_pc, dwarf_r31, true);
+
+  unwind_plan.AppendRow(row);
+  unwind_plan.SetSourceName("mips64 default unwind plan");
+  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  return true;
 }
 
 bool ABISysV_mips64::RegisterIsVolatile(const RegisterInfo *reg_info) {

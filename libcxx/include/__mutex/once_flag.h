@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__functional/invoke.h>
-#include <__memory/addressof.h>
 #include <__memory/shared_count.h> // __libcpp_acquire_load
 #include <__tuple/tuple_indices.h>
 #include <__tuple/tuple_size.h>
@@ -31,7 +30,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct once_flag;
+struct _LIBCPP_TEMPLATE_VIS once_flag;
 
 #ifndef _LIBCPP_CXX03_LANG
 
@@ -48,7 +47,7 @@ _LIBCPP_HIDE_FROM_ABI void call_once(once_flag&, const _Callable&);
 
 #endif // _LIBCPP_CXX03_LANG
 
-struct once_flag {
+struct _LIBCPP_TEMPLATE_VIS once_flag {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR once_flag() _NOEXCEPT : __state_(_Unset) {}
   once_flag(const once_flag&)            = delete;
   once_flag& operator=(const once_flag&) = delete;
@@ -129,7 +128,7 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __fun
     typedef tuple<_Callable&&, _Args&&...> _Gp;
     _Gp __f(std::forward<_Callable>(__func), std::forward<_Args>(__args)...);
     __call_once_param<_Gp> __p(__f);
-    std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Gp>));
+    std::__call_once(__flag.__state_, &__p, &__call_once_proxy<_Gp>);
   }
 }
 
@@ -139,7 +138,7 @@ template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     __call_once_param<_Callable> __p(__func);
-    std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Callable>));
+    std::__call_once(__flag.__state_, &__p, &__call_once_proxy<_Callable>);
   }
 }
 
@@ -147,7 +146,7 @@ template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, const _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     __call_once_param<const _Callable> __p(__func);
-    std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<const _Callable>));
+    std::__call_once(__flag.__state_, &__p, &__call_once_proxy<const _Callable>);
   }
 }
 

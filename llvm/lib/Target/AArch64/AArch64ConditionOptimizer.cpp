@@ -103,7 +103,9 @@ public:
 
   static char ID;
 
-  AArch64ConditionOptimizer() : MachineFunctionPass(ID) {}
+  AArch64ConditionOptimizer() : MachineFunctionPass(ID) {
+    initializeAArch64ConditionOptimizerPass(*PassRegistry::getPassRegistry());
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   MachineInstr *findSuitableCompare(MachineBasicBlock *MBB);

@@ -8,10 +8,6 @@ void test1(void) {
 __v4hi x = {1,2,3};
 __v4hi y = {1,2,3,4};
 
-
-// CHECK: @z = local_unnamed_addr global <8 x float> zeroinitializer
-float z __attribute__((ext_vector_type(8)));
-
 typedef int vty __attribute((vector_size(16)));
 int test2(void) { vty b; return b[2LL]; }
 
@@ -21,6 +17,9 @@ typedef float vec4 __attribute__((vector_size(16)));
 void test3 ( vec4* a, char b, float c ) {
   (*a)[b] = c;
 }
+
+
+
 
 #include <mmintrin.h>
 

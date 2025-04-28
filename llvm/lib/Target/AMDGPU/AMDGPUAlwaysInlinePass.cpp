@@ -96,7 +96,8 @@ static bool alwaysInlineImpl(Module &M, bool GlobalOpt) {
 
   for (GlobalAlias &A : M.aliases()) {
     if (Function* F = dyn_cast<Function>(A.getAliasee())) {
-      if (TT.isAMDGCN() && A.getLinkage() != GlobalValue::InternalLinkage)
+      if (TT.getArch() == Triple::amdgcn &&
+          A.getLinkage() != GlobalValue::InternalLinkage)
         continue;
       Changed = true;
       A.replaceAllUsesWith(F);

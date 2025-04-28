@@ -50,14 +50,13 @@ add_llvm_component_library(LLVMCodeGen
   DeadMachineInstructionElim.cpp
   DetectDeadLanes.cpp
   DFAPacketizer.cpp
-  DroppedVariableStatsMIR.cpp
   DwarfEHPrepare.cpp
   EarlyIfConversion.cpp
   EdgeBundles.cpp
-  EHContGuardTargets.cpp
+  EHContGuardCatchret.cpp
   ExecutionDomainFix.cpp
   ExpandLargeDivRem.cpp
-  ExpandFp.cpp
+  ExpandLargeFpConvert.cpp
   ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
@@ -228,7 +227,6 @@ add_llvm_component_library(LLVMCodeGen
   StackProtector.cpp
   StackSlotColoring.cpp
   StaticDataSplitter.cpp
-  StaticDataAnnotator.cpp
   SwiftErrorValueTracking.cpp
   SwitchLoweringUtils.cpp
   TailDuplication.cpp
@@ -257,6 +255,7 @@ add_llvm_component_library(LLVMCodeGen
   LiveDebugValues/LiveDebugValues.cpp
   LiveDebugValues/VarLocBasedImpl.cpp
   LiveDebugValues/InstrRefBasedImpl.cpp
+  LiveDebugValues/HeterogeneousImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen

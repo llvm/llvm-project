@@ -144,7 +144,9 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     return false;
 
   IRBuilder<> Builder(&GEPI);
-  SmallVector<Value *, MaxVecSize> Indices(GEPI.indices());
+  SmallVector<Value *, MaxVecSize> Indices;
+  for (auto &Index : GEPI.indices())
+    Indices.push_back(Index);
 
   Value *NewGEP =
       Builder.CreateGEP(NewGlobal->getValueType(), NewGlobal, Indices,

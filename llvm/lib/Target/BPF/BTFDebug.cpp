@@ -1026,9 +1026,8 @@ void BTFDebug::constructLineInfo(MCSymbol *Label, const DIFile *File,
   LineInfo.Label = Label;
   LineInfo.FileNameOff = addString(FileName);
   // If file content is not available, let LineOff = 0.
-  const auto &Content = FileContent[FileName];
-  if (Line < Content.size())
-    LineInfo.LineOff = addString(Content[Line]);
+  if (Line < FileContent[FileName].size())
+    LineInfo.LineOff = addString(FileContent[FileName][Line]);
   else
     LineInfo.LineOff = 0;
   LineInfo.LineNum = Line;
@@ -1543,12 +1542,17 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
       const GlobalValue *GVal = MO.getGlobal();
       auto *GVar = dyn_cast<GlobalVariable>(GVal);
       if (GVar) {
-        if (!GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) &&
-            !GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr))
-          return false;
-
         // Emit "mov ri, <imm>"
-        auto [Imm, Reloc] = PatchImms[GVar];
+        int64_t Imm;
+        uint32_t Reloc;
+        if (GVar->hasAttribute(BPFCoreSharedInfo::AmaAttr) ||
+            GVar->hasAttribute(BPFCoreSharedInfo::TypeIdAttr)) {
+          Imm = PatchImms[GVar].first;
+          Reloc = PatchImms[GVar].second;
+        } else {
+          return false;
+        }
+
         if (Reloc == BTF::ENUM_VALUE_EXISTENCE || Reloc == BTF::ENUM_VALUE ||
             Reloc == BTF::BTF_TYPE_ID_LOCAL || Reloc == BTF::BTF_TYPE_ID_REMOTE)
           OutMI.setOpcode(BPF::LD_imm64);

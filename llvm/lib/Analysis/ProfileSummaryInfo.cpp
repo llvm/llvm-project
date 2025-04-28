@@ -47,11 +47,7 @@ static cl::opt<double> PartialSampleProfileWorkingSetSizeScaleFactor(
 // any backend passes (IR level instrumentation, for example). This method
 // checks if the Summary is null and if so checks if the summary metadata is now
 // available in the module and parses it to get the Summary object.
-void ProfileSummaryInfo::refresh(std::unique_ptr<ProfileSummary> &&Other) {
-  if (Other) {
-    Summary.swap(Other);
-    return;
-  }
+void ProfileSummaryInfo::refresh() {
   if (hasProfileSummary())
     return;
   // First try to get context sensitive ProfileSummary.
@@ -145,14 +141,15 @@ std::optional<uint64_t>
 ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
   if (!hasProfileSummary())
     return std::nullopt;
-  auto [Iter, Inserted] = ThresholdCache.try_emplace(PercentileCutoff);
-  if (!Inserted)
-    return Iter->second;
+  auto iter = ThresholdCache.find(PercentileCutoff);
+  if (iter != ThresholdCache.end()) {
+    return iter->second;
+  }
   auto &DetailedSummary = Summary->getDetailedSummary();
   auto &Entry = ProfileSummaryBuilder::getEntryForPercentile(DetailedSummary,
                                                              PercentileCutoff);
   uint64_t CountThreshold = Entry.MinCount;
-  Iter->second = CountThreshold;
+  ThresholdCache[PercentileCutoff] = CountThreshold;
   return CountThreshold;
 }
 
@@ -227,7 +224,9 @@ INITIALIZE_PASS(ProfileSummaryInfoWrapperPass, "profile-summary-info",
                 "Profile summary info", false, true)
 
 ProfileSummaryInfoWrapperPass::ProfileSummaryInfoWrapperPass()
-    : ImmutablePass(ID) {}
+    : ImmutablePass(ID) {
+  initializeProfileSummaryInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 bool ProfileSummaryInfoWrapperPass::doInitialization(Module &M) {
   PSI.reset(new ProfileSummaryInfo(M));

@@ -11,12 +11,13 @@
 
 include "mlir/Pass/PassBase.td"
 
-def FormExpressionsPass : Pass<"form-expressions"> {
+def FormExpressions : Pass<"form-expressions"> {
   let summary = "Form C-style expressions from C-operator ops";
   let description = [{
     The pass wraps emitc ops modelling C operators in emitc.expression ops and
     then folds single-use expressions into their users where possible.
   }];
+  let constructor = "mlir::emitc::createFormExpressionsPass()";
   let dependentDialects = ["emitc::EmitCDialect"];
 }
 

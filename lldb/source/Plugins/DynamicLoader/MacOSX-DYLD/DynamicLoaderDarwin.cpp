@@ -8,6 +8,7 @@
 
 #include "DynamicLoaderDarwin.h"
 
+#include "DynamicLoaderDarwinProperties.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -76,6 +77,17 @@ void DynamicLoaderDarwin::DidLaunch() {
   PrivateInitialize(m_process);
   DoInitialImageFetch();
   SetNotificationBreakpoint();
+}
+
+void DynamicLoaderDarwin::CreateSettings(lldb_private::Debugger &debugger) {
+  if (!PluginManager::GetSettingForDynamicLoaderPlugin(
+          debugger, DynamicLoaderDarwinProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForDynamicLoaderPlugin(
+        debugger,
+        DynamicLoaderDarwinProperties::GetGlobal().GetValueProperties(),
+        "Properties for the DynamicLoaderDarwin plug-in.", is_global_setting);
+  }
 }
 
 // Clear out the state of this class.
@@ -658,7 +670,8 @@ DynamicLoaderDarwin::PreloadModulesFromImageInfos(
         image_info, FindTargetModuleForImageInfo(image_info, true, nullptr));
   };
   auto it = image_infos.begin();
-  bool is_parallel_load = m_process->GetTarget().GetParallelModuleLoad();
+  bool is_parallel_load =
+      DynamicLoaderDarwinProperties::GetGlobal().GetEnableParallelImageLoad();
   if (is_parallel_load) {
     llvm::ThreadPoolTaskGroup taskGroup(Debugger::GetThreadPool());
     for (size_t i = 0; i < size; ++i, ++it) {

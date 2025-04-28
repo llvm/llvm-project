@@ -143,7 +143,9 @@ void Command::buildArgvForResponseFile(
     return;
   }
 
-  llvm::StringSet<> Inputs(llvm::from_range, InputFileList);
+  llvm::StringSet<> Inputs;
+  for (const auto *InputName : InputFileList)
+    Inputs.insert(InputName);
   Out.push_back(Executable);
 
   if (PrependArg)

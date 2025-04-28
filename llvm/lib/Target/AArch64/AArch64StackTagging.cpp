@@ -309,7 +309,9 @@ public:
       : FunctionPass(ID),
         MergeInit(ClMergeInit.getNumOccurrences() ? ClMergeInit : !IsOptNone),
         UseStackSafety(ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
-                                                            : !IsOptNone) {}
+                                                            : !IsOptNone) {
+    initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
+  }
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -428,7 +430,8 @@ void AArch64StackTagging::tagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                                                     Intrinsic::aarch64_stgp);
 
   InitializerBuilder IB(Size, DL, Ptr, SetTagFunc, SetTagZeroFunc, StgpFunc);
-  bool LittleEndian = AI->getModule()->getTargetTriple().isLittleEndian();
+  bool LittleEndian =
+      Triple(AI->getModule()->getTargetTriple()).isLittleEndian();
   // Current implementation of initializer merging assumes little endianness.
   if (MergeInit && !F->hasOptNone() && LittleEndian &&
       Size < ClMergeInitSizeLimit) {
@@ -470,7 +473,7 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
       IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
                           {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
-  const Triple &TargetTriple = M.getTargetTriple();
+  auto TargetTriple = Triple(M.getTargetTriple());
   // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).

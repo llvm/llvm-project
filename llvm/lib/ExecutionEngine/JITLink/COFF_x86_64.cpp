@@ -235,12 +235,12 @@ public:
 
 private:
   orc::ExecutorAddr getSectionStart(Section &Sec) {
-    auto [It, Inserted] = SectionStartCache.try_emplace(&Sec);
-    if (Inserted) {
+    if (!SectionStartCache.count(&Sec)) {
       SectionRange Range(Sec);
-      It->second = Range.getStart();
+      SectionStartCache[&Sec] = Range.getStart();
+      return Range.getStart();
     }
-    return It->second;
+    return SectionStartCache[&Sec];
   }
 
   GetImageBaseSymbol GetImageBase;

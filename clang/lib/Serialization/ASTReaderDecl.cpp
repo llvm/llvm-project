@@ -414,9 +414,6 @@ public:
   void VisitEmptyDecl(EmptyDecl *D);
   void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
 
-  void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
-  void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
-
   void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
                         uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset,
                         uint64_t &TULocalOffset);
@@ -523,9 +520,6 @@ void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
   }
   // Store the offset of the body so we can lazily load it later.
   Reader.PendingBodies[FD] = GetCurrentCursorOffset();
-  // For now remember ThisDeclarationWasADefinition only for friend functions.
-  if (FD->getFriendObjectKind())
-    Reader.ThisDeclarationWasADefinitionSet.insert(FD);
 }
 
 void ASTDeclReader::Visit(Decl *D) {
@@ -904,9 +898,7 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
   if (Record.readInt()) { // hasExtInfo
     auto *Info = new (Reader.getContext()) DeclaratorDecl::ExtInfo();
     Record.readQualifierInfo(*Info);
-    Info->TrailingRequiresClause = AssociatedConstraint(
-        Record.readExpr(),
-        UnsignedOrNone::fromInternalRepresentation(Record.readUInt32()));
+    Info->TrailingRequiresClause = Record.readExpr();
     DD->DeclInfo = Info;
   }
   QualType TSIType = Record.readType();
@@ -1076,8 +1068,6 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setFriendConstraintRefersToEnclosingTemplate(
       FunctionDeclBits.getNextBit());
   FD->setUsesSEHTry(FunctionDeclBits.getNextBit());
-  FD->setIsDestroyingOperatorDelete(FunctionDeclBits.getNextBit());
-  FD->setIsTypeAwareOperatorNewOrDelete(FunctionDeclBits.getNextBit());
 
   FD->EndRangeLoc = readSourceLocation();
   if (FD->isExplicitlyDefaulted())
@@ -2713,10 +2703,10 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     if (Record.readBool())
       CR = Record.readConceptReference();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
-    UnsignedOrNone ArgPackSubstIndex = Record.readUnsignedOrNone();
 
-    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
-    D->NumExpanded = Record.readUnsignedOrNone();
+    D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint);
+    if ((D->ExpandedParameterPack = Record.readInt()))
+      D->NumExpanded = Record.readInt();
   }
 
   if (Record.readInt())
@@ -3107,23 +3097,6 @@ void ASTDeclReader::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
 
 void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   VisitVarDecl(D);
-}
-
-void ASTDeclReader::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
-  VisitDecl(D);
-  D->DirKind = Record.readEnum<OpenACCDirectiveKind>();
-  D->DirectiveLoc = Record.readSourceLocation();
-  D->EndLoc = Record.readSourceLocation();
-  Record.readOpenACCClauseList(D->Clauses);
-}
-void ASTDeclReader::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
-  VisitDecl(D);
-  D->DirKind = Record.readEnum<OpenACCDirectiveKind>();
-  D->DirectiveLoc = Record.readSourceLocation();
-  D->EndLoc = Record.readSourceLocation();
-  D->ParensLoc = Record.readSourceRange();
-  D->FuncRef = Record.readExpr();
-  Record.readOpenACCClauseList(D->Clauses);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4231,12 +4204,6 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     D = ImplicitConceptSpecializationDecl::CreateDeserialized(Context, ID,
                                                               Record.readInt());
     break;
-  case DECL_OPENACC_DECLARE:
-    D = OpenACCDeclareDecl::CreateDeserialized(Context, ID, Record.readInt());
-    break;
-  case DECL_OPENACC_ROUTINE:
-    D = OpenACCRoutineDecl::CreateDeserialized(Context, ID, Record.readInt());
-    break;
   }
 
   assert(D && "Unknown declaration reading AST file");
@@ -4316,13 +4283,12 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
 void ASTReader::PassInterestingDeclsToConsumer() {
   assert(Consumer);
 
-  if (!CanPassDeclsToConsumer)
+  if (PassingDeclsToConsumer)
     return;
 
   // Guard variable to avoid recursively redoing the process of passing
   // decls to consumer.
-  SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer,
-                                             /*NewValue=*/false);
+  SaveAndRestore GuardPassingDeclsToConsumer(PassingDeclsToConsumer, true);
 
   // Ensure that we've loaded all potentially-interesting declarations
   // that need to be eagerly loaded.

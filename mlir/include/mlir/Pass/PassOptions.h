@@ -406,7 +406,6 @@ namespace llvm {
 namespace cl {
 //===----------------------------------------------------------------------===//
 // std::vector+SmallVector
-//===----------------------------------------------------------------------===//
 
 namespace detail {
 template <typename VectorT, typename ElementT>
@@ -471,7 +470,6 @@ public:
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: OptionValue
-//===----------------------------------------------------------------------===//
 
 template <>
 struct OptionValue<mlir::OpPassManager> final : GenericOptionValue {
@@ -516,7 +514,6 @@ private:
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: Parser
-//===----------------------------------------------------------------------===//
 
 extern template class basic_parser<mlir::OpPassManager>;
 

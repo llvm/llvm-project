@@ -74,7 +74,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_assign<std::u16string>();
   test_assign<std::u32string>();
 #endif
-#if TEST_STD_VER >= 20
+#ifndef TEST_HAS_NO_NASTY_STRING
   test_assign<nasty_string>();
 #endif
 

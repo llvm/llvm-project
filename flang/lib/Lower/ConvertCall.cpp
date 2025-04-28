@@ -327,6 +327,7 @@ Fortran::lower::genCallOpAndResult(
         charFuncPointerLength = charBox->getLen();
     }
   }
+
   const bool isExprCall =
       converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       callSiteType.getNumResults() == 1 &&
@@ -518,9 +519,7 @@ Fortran::lower::genCallOpAndResult(
         // Do not attempt any reboxing here that could break this.
         bool legacyLowering =
             !converter.getLoweringOptions().getLowerToHighLevelFIR();
-        bool isVolatile = fir::isa_volatile_type(snd);
-        cast = builder.createVolatileCast(loc, isVolatile, fst);
-        cast = builder.convertWithSemantics(loc, snd, cast,
+        cast = builder.convertWithSemantics(loc, snd, fst,
                                             callingImplicitInterface,
                                             /*allowRebox=*/legacyLowering);
       }
@@ -589,8 +588,10 @@ Fortran::lower::genCallOpAndResult(
 
     mlir::Value stream; // stream is optional.
     if (caller.getCallDescription().chevrons().size() > 3)
-      stream = fir::getBase(converter.genExprAddr(
-          caller.getCallDescription().chevrons()[3], stmtCtx));
+      stream = builder.createConvert(
+          loc, i32Ty,
+          fir::getBase(converter.genExprValue(
+              caller.getCallDescription().chevrons()[3], stmtCtx)));
 
     builder.create<cuf::KernelLaunchOp>(
         loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, grid_z,
@@ -1415,11 +1416,6 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   } else {
     addr = hlfir::genVariableRawAddress(loc, builder, entity);
   }
-
-  // If the volatility of the input type does not match the dummy type,
-  // we need to cast the argument.
-  const bool isToTypeVolatile = fir::isa_volatile_type(dummyTypeWithActualRank);
-  addr = builder.createVolatileCast(loc, isToTypeVolatile, addr);
 
   // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
   // box is inserted when building the fir.call op. Inserting it here would

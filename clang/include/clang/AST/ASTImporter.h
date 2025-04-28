@@ -446,14 +446,6 @@ class TypeSourceInfo;
     /// returns nullptr only if the FromId was nullptr.
     IdentifierInfo *Import(const IdentifierInfo *FromId);
 
-    /// Import the given identifier or overloaded operator from the "from"
-    /// context into the "to" context.
-    ///
-    /// \returns The equivalent identifier or overloaded operator in the "to"
-    /// context.
-    IdentifierOrOverloadedOperator
-    Import(IdentifierOrOverloadedOperator FromIO);
-
     /// Import the given Objective-C selector from the "from"
     /// context into the "to" context.
     ///
@@ -592,7 +584,7 @@ class TypeSourceInfo;
     /// F should be a field (or indirect field) declaration.
     /// \returns The index of the field in its parent context (starting from 0).
     /// On error `std::nullopt` is returned (parent context is non-record).
-    static UnsignedOrNone getFieldIndex(Decl *F);
+    static std::optional<unsigned> getFieldIndex(Decl *F);
   };
 
 } // namespace clang

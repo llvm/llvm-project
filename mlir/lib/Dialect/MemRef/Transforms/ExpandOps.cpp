@@ -24,7 +24,7 @@
 
 namespace mlir {
 namespace memref {
-#define GEN_PASS_DEF_EXPANDOPSPASS
+#define GEN_PASS_DEF_EXPANDOPS
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
 } // namespace memref
 } // namespace mlir
@@ -130,7 +130,7 @@ public:
   }
 };
 
-struct ExpandOpsPass : public memref::impl::ExpandOpsPassBase<ExpandOpsPass> {
+struct ExpandOpsPass : public memref::impl::ExpandOpsBase<ExpandOpsPass> {
   void runOnOperation() override {
     MLIRContext &ctx = getContext();
 
@@ -160,4 +160,8 @@ struct ExpandOpsPass : public memref::impl::ExpandOpsPassBase<ExpandOpsPass> {
 void mlir::memref::populateExpandOpsPatterns(RewritePatternSet &patterns) {
   patterns.add<AtomicRMWOpConverter, MemRefReshapeOpConverter>(
       patterns.getContext());
+}
+
+std::unique_ptr<Pass> mlir::memref::createExpandOpsPass() {
+  return std::make_unique<ExpandOpsPass>();
 }

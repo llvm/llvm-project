@@ -1,3 +1,0 @@
-# RUN: lldb-dap --version | FileCheck %s
-# CHECK: lldb-dap:
-# CHECK: liblldb:

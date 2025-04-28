@@ -20,7 +20,8 @@ namespace lldb_private {
 class ThreadCollection {
 public:
   typedef std::vector<lldb::ThreadSP> collection;
-  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
+  typedef LockingAdaptedIterable<collection, lldb::ThreadSP, vector_adapter,
+                                 std::recursive_mutex>
       ThreadIterable;
 
   ThreadCollection();

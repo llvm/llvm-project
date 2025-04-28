@@ -317,20 +317,8 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
   const object::SectionedAddress SecAddress{
       StartAddress, object::SectionedAddress::UndefSection};
 
-  // Attempt to retrieve DW_AT_LLVM_stmt_sequence if present.
-  std::optional<uint64_t> StmtSeqOffset;
-  if (auto StmtSeqAttr = Die.find(llvm::dwarf::DW_AT_LLVM_stmt_sequence)) {
-    // The `DW_AT_LLVM_stmt_sequence` attribute might be set to `UINT64_MAX`
-    // when it refers to an empty line sequence. In such cases, the DWARF linker
-    // will exclude the empty sequence from the final output and assign
-    // `UINT64_MAX` to the `DW_AT_LLVM_stmt_sequence` attribute.
-    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
-    if (StmtSeqVal != UINT64_MAX)
-      StmtSeqOffset = StmtSeqVal;
-  }
 
-  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector,
-                                         StmtSeqOffset)) {
+  if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
     // If we have a DW_TAG_subprogram but no line entries, fall back to using
     // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
     std::string FilePath = Die.getDeclFile(
@@ -621,7 +609,9 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
     if (!FI.CallSites)
       FI.CallSites = CallSiteInfoCollection();
     // Append parsed DWARF callsites:
-    llvm::append_range(FI.CallSites->CallSites, CSIC.CallSites);
+    FI.CallSites->CallSites.insert(FI.CallSites->CallSites.end(),
+                                   CSIC.CallSites.begin(),
+                                   CSIC.CallSites.end());
   }
 }
 
@@ -739,7 +729,7 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
       uint32_t NumDwarfInlineInfos = DwarfInlineInfos.getNumberOfFrames();
       if (NumDwarfInlineInfos == 0) {
         DwarfInlineInfos.addFrame(
-            DICtx.getLineInfoForAddress(SectAddr, DLIS).value_or(DILineInfo()));
+            DICtx.getLineInfoForAddress(SectAddr, DLIS));
       }
 
       // Check for 1 entry that has no file and line info

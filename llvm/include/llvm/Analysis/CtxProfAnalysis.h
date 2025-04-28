@@ -21,9 +21,11 @@ namespace llvm {
 
 class CtxProfAnalysis;
 
-using FlatIndirectTargets = DenseMap<GlobalValue::GUID, uint64_t>;
-using CtxProfFlatIndirectCallProfile =
-    DenseMap<GlobalValue::GUID, DenseMap<uint32_t, FlatIndirectTargets>>;
+// Setting initial capacity to 1 because all contexts must have at least 1
+// counter, and then, because all contexts belonging to a function have the same
+// size, there'll be at most one other heap allocation.
+using CtxProfFlatProfile =
+    std::map<GlobalValue::GUID, SmallVector<uint64_t, 1>>;
 
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
@@ -36,12 +38,7 @@ class PGOContextualProfile {
     PGOCtxProfContext Index;
     FunctionInfo(StringRef Name) : Name(Name) {}
   };
-  PGOCtxProfile Profiles;
-
-  // True if this module is a post-thinlto module containing just functions
-  // participating in one or more contextual profiles.
-  bool IsInSpecializedModule = false;
-
+  std::optional<PGOCtxProfContext::CallTargetMapTy> Profiles;
   // For the GUIDs in this module, associate metadata about each function which
   // we'll need when we maintain the profiles during IPO transformations.
   std::map<GlobalValue::GUID, FunctionInfo> FuncInfo;
@@ -59,13 +56,11 @@ public:
   PGOContextualProfile(const PGOContextualProfile &) = delete;
   PGOContextualProfile(PGOContextualProfile &&) = default;
 
-  const CtxProfContextualProfiles &contexts() const {
-    return Profiles.Contexts;
+  operator bool() const { return Profiles.has_value(); }
+
+  const PGOCtxProfContext::CallTargetMapTy &profiles() const {
+    return *Profiles;
   }
-
-  const PGOCtxProfile &profiles() const { return Profiles; }
-
-  bool isInSpecializedModule() const;
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
@@ -105,7 +100,6 @@ public:
   void visit(ConstVisitor, const Function *F = nullptr) const;
 
   const CtxProfFlatProfile flatten() const;
-  const CtxProfFlatIndirectCallProfile flattenVirtCalls() const;
 
   bool invalidate(Module &, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &) {
@@ -155,34 +149,6 @@ public:
 private:
   raw_ostream &OS;
   const PrintMode Mode;
-};
-
-/// Utility that propagates counter values to each basic block and to each edge
-/// when a basic block has more than one outgoing edge, using an adaptation of
-/// PGOUseFunc::populateCounters.
-// FIXME(mtrofin): look into factoring the code to share one implementation.
-class ProfileAnnotatorImpl;
-class ProfileAnnotator {
-  std::unique_ptr<ProfileAnnotatorImpl> PImpl;
-
-public:
-  ProfileAnnotator(const Function &F, ArrayRef<uint64_t> RawCounters);
-  uint64_t getBBCount(const BasicBlock &BB) const;
-
-  // Finds the true and false counts for the given select instruction. Returns
-  // false if the select doesn't have instrumentation or if the count of the
-  // parent BB is 0.
-  bool getSelectInstrProfile(SelectInst &SI, uint64_t &TrueCount,
-                             uint64_t &FalseCount) const;
-  // Clears Profile and populates it with the edge weights, in the same order as
-  // they need to appear in the MD_prof metadata. Also computes the max of those
-  // weights an returns it in MaxCount. Returs false if:
-  //   - the BB has less than 2 successors
-  //   - the counts are 0
-  bool getOutgoingBranchWeights(BasicBlock &BB,
-                                SmallVectorImpl<uint64_t> &Profile,
-                                uint64_t &MaxCount) const;
-  ~ProfileAnnotator();
 };
 
 /// Assign a GUID to functions as metadata. GUID calculation takes linkage into

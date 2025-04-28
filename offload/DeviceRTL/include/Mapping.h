@@ -19,9 +19,9 @@ namespace ompx {
 namespace mapping {
 
 enum {
-  DIM_X = __GPU_X_DIM,
-  DIM_Y = __GPU_Y_DIM,
-  DIM_Z = __GPU_Z_DIM,
+  DIM_X = 0,
+  DIM_Y = 1,
+  DIM_Z = 2,
 };
 
 inline constexpr uint32_t MaxThreadsPerTeam = 1024;

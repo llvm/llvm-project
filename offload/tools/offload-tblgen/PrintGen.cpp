@@ -20,24 +20,24 @@
 using namespace llvm;
 using namespace offload::tblgen;
 
-constexpr auto PrintTypeHeader =
+constexpr auto PrintEnumHeader =
     R"(///////////////////////////////////////////////////////////////////////////////
 /// @brief Print operator for the {0} type
-/// @returns llvm::raw_ostream &
+/// @returns std::ostream &
 )";
 
 constexpr auto PrintTaggedEnumHeader =
     R"(///////////////////////////////////////////////////////////////////////////////
 /// @brief Print type-tagged {0} enum value
-/// @returns llvm::raw_ostream &
+/// @returns std::ostream &
 )";
 
 static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
-  OS << formatv(PrintTypeHeader, Enum.getName());
-  OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
-                "enum {0} value) "
-                "{{\n" TAB_1 "switch (value) {{\n",
-                Enum.getName());
+  OS << formatv(PrintEnumHeader, Enum.getName());
+  OS << formatv(
+      "inline std::ostream &operator<<(std::ostream &os, enum {0} value) "
+      "{{\n" TAB_1 "switch (value) {{\n",
+      Enum.getName());
 
   for (const auto &Val : Enum.getValues()) {
     auto Name = Enum.getEnumValNamePrefix() + "_" + Val.getName();
@@ -56,7 +56,7 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << formatv(PrintTaggedEnumHeader, Enum.getName());
 
   OS << formatv(R"""(template <>
-inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_t size) {{
+inline void printTagged(std::ostream &os, const void *ptr, {0} value, size_t size) {{
   if (ptr == NULL) {{
     printPtr(os, ptr);
     return;
@@ -96,7 +96,7 @@ inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_
 
 static void EmitResultPrint(raw_ostream &OS) {
   OS << R""(
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
+inline std::ostream &operator<<(std::ostream &os,
                                 const ol_error_struct_t *Err) {
   if (Err == nullptr) {
     os << "OL_SUCCESS";
@@ -115,7 +115,7 @@ static void EmitFunctionParamStructPrint(const FunctionRec &Func,
   }
 
   OS << formatv(R"(
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} *params) {{
+inline std::ostream &operator<<(std::ostream &os, const struct {0} *params) {{
 )",
                 Func.getParamStructName());
 
@@ -139,9 +139,6 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} *pa
           Param.getName(), TypeInfo->first, TypeInfo->second);
     } else if (Param.isPointerType() || Param.isHandleType()) {
       OS << formatv(TAB_1 "printPtr(os, *params->p{0});\n", Param.getName());
-    } else if (Param.isFptrType()) {
-      OS << formatv(TAB_1 "os << reinterpret_cast<void*>(*params->p{0});\n",
-                    Param.getName());
     } else {
       OS << formatv(TAB_1 "os << *params->p{0};\n", Param.getName());
     }
@@ -153,32 +150,6 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} *pa
   OS << TAB_1 "return os;\n}\n";
 }
 
-void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
-  if (Struct.getName() == "ol_error_struct_t") {
-    return;
-  }
-  OS << formatv(PrintTypeHeader, Struct.getName());
-  OS << formatv(R"(
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} params) {{
-)",
-                Struct.getName());
-  OS << formatv(TAB_1 "os << \"(struct {0}){{\";\n", Struct.getName());
-  for (const auto &Member : Struct.getMembers()) {
-    OS << formatv(TAB_1 "os << \".{0} = \";\n", Member.getName());
-    if (Member.isPointerType() || Member.isHandleType()) {
-      OS << formatv(TAB_1 "printPtr(os, params.{0});\n", Member.getName());
-    } else {
-      OS << formatv(TAB_1 "os << params.{0};\n", Member.getName());
-    }
-    if (Member.getName() != Struct.getMembers().back().getName()) {
-      OS << TAB_1 "os << \", \";\n";
-    }
-  }
-  OS << TAB_1 "os << \"}\";\n";
-  OS << TAB_1 "return os;\n";
-  OS << "}\n";
-}
-
 void EmitOffloadPrintHeader(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
   OS << R"""(
@@ -187,11 +158,11 @@ void EmitOffloadPrintHeader(const RecordKeeper &Records, raw_ostream &OS) {
 #pragma once
 
 #include <OffloadAPI.h>
-#include <llvm/Support/raw_ostream.h>
+#include <ostream>
 
 
-template <typename T> inline ol_result_t printPtr(llvm::raw_ostream &os, const T *ptr);
-template <typename T> inline void printTagged(llvm::raw_ostream &os, const void *ptr, T value, size_t size);
+template <typename T> inline ol_result_t printPtr(std::ostream &os, const T *ptr);
+template <typename T> inline void printTagged(std::ostream &os, const void *ptr, T value, size_t size);
 )""";
 
   // ==========
@@ -209,9 +180,9 @@ template <typename T> inline void printTagged(llvm::raw_ostream &os, const void 
   // use each other.
   OS << "\n";
   for (auto *R : Records.getAllDerivedDefinitions("Enum")) {
-    OS << formatv("inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, "
-                  "enum {0} value);\n",
-                  EnumRec{R}.getName());
+    OS << formatv(
+        "inline std::ostream &operator<<(std::ostream &os, enum {0} value);\n",
+        EnumRec{R}.getName());
   }
   OS << "\n";
 
@@ -222,11 +193,6 @@ template <typename T> inline void printTagged(llvm::raw_ostream &os, const void 
   }
   EmitResultPrint(OS);
 
-  for (auto *R : Records.getAllDerivedDefinitions("Struct")) {
-    StructRec S{R};
-    ProcessStruct(S, OS);
-  }
-
   // Emit print functions for the function param structs
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     EmitFunctionParamStructPrint(FunctionRec{R}, OS);
@@ -235,7 +201,7 @@ template <typename T> inline void printTagged(llvm::raw_ostream &os, const void 
   OS << R"""(
 ///////////////////////////////////////////////////////////////////////////////
 // @brief Print pointer value
-template <typename T> inline ol_result_t printPtr(llvm::raw_ostream &os, const T *ptr) {
+template <typename T> inline ol_result_t printPtr(std::ostream &os, const T *ptr) {
     if (ptr == nullptr) {
         os << "nullptr";
     } else if constexpr (std::is_pointer_v<T>) {

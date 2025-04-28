@@ -48,22 +48,18 @@ protected:
   static void verifyFormat(
       StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
-    auto Result = format(test::messUp(Code), Style);
-    EXPECT_EQ(Code, Result) << "Formatted:\n" << Result;
-    if (Code != Result)
-      return;
-    EXPECT_EQ(Code, format(Code, Style)) << "Expected code is not stable";
+    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
+    std::string Result = format(test::messUp(Code), Style);
+    EXPECT_EQ(Code.str(), Result) << "Formatted:\n" << Result;
   }
 
   static void verifyFormat(
       StringRef Expected, StringRef Code,
       const FormatStyle &Style = getGoogleStyle(FormatStyle::LK_JavaScript)) {
-    auto Result = format(Code, Style);
-    EXPECT_EQ(Expected, Result) << "Formatted:\n" << Result;
-    if (Expected != Result)
-      return;
-    EXPECT_EQ(Expected, format(Expected, Style))
+    EXPECT_EQ(Expected.str(), format(Expected, Style))
         << "Expected code is not stable";
+    std::string Result = format(Code, Style);
+    EXPECT_EQ(Expected.str(), Result) << "Formatted:\n" << Result;
   }
 };
 
@@ -832,17 +828,12 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "}  ");
   // clang-format must not insert breaks between async and function, otherwise
   // automatic semicolon insertion may trigger (in particular in a class body).
-  auto Style = getGoogleJSStyleWithColumns(10);
   verifyFormat("async function\n"
                "hello(\n"
                "    myparamnameiswaytooloooong) {\n"
                "}",
-               "async function hello(myparamnameiswaytooloooong) {}", Style);
-  verifyFormat("async function\n"
-               "union(\n"
-               "    myparamnameiswaytooloooong) {\n"
-               "}",
-               Style);
+               "async function hello(myparamnameiswaytooloooong) {}",
+               getGoogleJSStyleWithColumns(10));
   verifyFormat("class C {\n"
                "  async hello(\n"
                "      myparamnameiswaytooloooong) {\n"
@@ -850,7 +841,7 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "}",
                "class C {\n"
                "  async hello(myparamnameiswaytooloooong) {} }",
-               Style);
+               getGoogleJSStyleWithColumns(10));
   verifyFormat("async function* f() {\n"
                "  yield fetch(x);\n"
                "}");
@@ -1347,16 +1338,15 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
   // The following statements must not wrap, as otherwise the program meaning
   // would change due to automatic semicolon insertion.
   // See http://www.ecma-international.org/ecma-262/5.1/#sec-7.9.1.
-  auto Style = getGoogleJSStyleWithColumns(10);
-  verifyFormat("return aaaaa;", Style);
-  verifyFormat("yield aaaaa;", Style);
-  verifyFormat("return /* hello! */ aaaaa;", Style);
-  verifyFormat("continue aaaaa;", Style);
-  verifyFormat("continue /* hello! */ aaaaa;", Style);
-  verifyFormat("break aaaaa;", Style);
-  verifyFormat("throw aaaaa;", Style);
-  verifyFormat("aaaaaaaaa++;", Style);
-  verifyFormat("aaaaaaaaa--;", Style);
+  verifyFormat("return aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("yield aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("return /* hello! */ aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("continue aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("continue /* hello! */ aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("break aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("throw aaaaa;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("aaaaaaaaa++;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("aaaaaaaaa--;", getGoogleJSStyleWithColumns(10));
   verifyFormat("return [\n"
                "  aaa\n"
                "];",
@@ -1376,13 +1366,12 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
   // Ideally the foo() bit should be indented relative to the async function().
   verifyFormat("async function\n"
                "foo() {}",
-               Style);
-  verifyFormat("await theReckoning;", Style);
-  verifyFormat("some['a']['b']", Style);
-  verifyFormat("union['a']['b']", Style);
+               getGoogleJSStyleWithColumns(10));
+  verifyFormat("await theReckoning;", getGoogleJSStyleWithColumns(10));
+  verifyFormat("some['a']['b']", getGoogleJSStyleWithColumns(10));
   verifyFormat("x = (a['a']\n"
                "      ['b']);",
-               Style);
+               getGoogleJSStyleWithColumns(10));
   verifyFormat("function f() {\n"
                "  return foo.bar(\n"
                "      (param): param is {\n"
@@ -2511,10 +2500,6 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
 TEST_F(FormatTestJS, CppKeywords) {
   // Make sure we don't mess stuff up because of C++ keywords.
   verifyFormat("return operator && (aa);");
-  verifyFormat("enum operator {\n"
-               "  A = 1,\n"
-               "  B\n"
-               "}");
   // .. or QT ones.
   verifyFormat("const slots: Slot[];");
   // use the "!" assertion operator to validate that clang-format understands

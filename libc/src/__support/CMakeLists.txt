@@ -165,7 +165,7 @@ add_header_library(
   DEPENDS
     .ctype_utils
     .str_to_num_result
-    libc.hdr.errno_macros
+    libc.src.errno.errno
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -217,7 +217,6 @@ add_header_library(
     .str_to_integer
     .str_to_num_result
     .uint128
-    libc.hdr.errno_macros
     libc.src.__support.common
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
@@ -227,6 +226,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.macros.optimization
+    libc.src.errno.errno
 )
 
 add_header_library(

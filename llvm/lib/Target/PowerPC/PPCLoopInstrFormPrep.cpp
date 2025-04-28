@@ -221,7 +221,13 @@ namespace {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {}
+    PPCLoopInstrFormPrep() : FunctionPass(ID) {
+      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
+    }
+
+    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {
+      initializePPCLoopInstrFormPrepPass(*PassRegistry::getPassRegistry());
+    }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addPreserved<DominatorTreeWrapperPass>();
@@ -930,9 +936,9 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
   // 1 X form.
   unsigned MaxCountRemainder = 0;
   for (unsigned j = 0; j < (unsigned)Form; j++)
-    if (auto It = RemainderOffsetInfo.find(j);
-        It != RemainderOffsetInfo.end() &&
-        It->second.second > RemainderOffsetInfo[MaxCountRemainder].second)
+    if ((RemainderOffsetInfo.contains(j)) &&
+        RemainderOffsetInfo[j].second >
+            RemainderOffsetInfo[MaxCountRemainder].second)
       MaxCountRemainder = j;
 
   // Abort when there are too few insts with common base.

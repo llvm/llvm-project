@@ -36,7 +36,8 @@ Reproducer::~Reproducer() = default;
 ReproducerGenerate::ReproducerGenerate(std::error_code &EC, int Argc,
                                        char **Argv, bool GenerateOnExit)
     : Root(createReproducerDir(EC)), GenerateOnExit(GenerateOnExit) {
-  llvm::append_range(Args, ArrayRef(Argv, Argc));
+  for (int I = 0; I < Argc; ++I)
+    Args.push_back(Argv[I]);
   if (!Root.empty())
     FC = std::make_shared<FileCollector>(Root, Root);
   VFS = FileCollector::createCollectorVFS(vfs::getRealFileSystem(), FC);

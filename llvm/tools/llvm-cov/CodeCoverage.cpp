@@ -547,7 +547,7 @@ void CodeCoverageTool::removeUnmappedInputs(const CoverageMapping &Coverage) {
   // The user may have specified source files which aren't in the coverage
   // mapping. Filter these files away.
   llvm::erase_if(SourceFiles, [&](const std::string &SF) {
-    return !llvm::binary_search(CoveredFiles, SF);
+    return !std::binary_search(CoveredFiles.begin(), CoveredFiles.end(), SF);
   });
 }
 
@@ -588,7 +588,8 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   // Invoke the demangler.
   std::vector<StringRef> ArgsV;
   ArgsV.reserve(ViewOpts.DemanglerOpts.size());
-  llvm::append_range(ArgsV, ViewOpts.DemanglerOpts);
+  for (StringRef Arg : ViewOpts.DemanglerOpts)
+    ArgsV.push_back(Arg);
   std::optional<StringRef> Redirects[] = {
       InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
@@ -1283,10 +1284,6 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
                               cl::desc("Don't export branch data (LCOV)"),
                               cl::cat(ExportCategory));
 
-  cl::opt<bool> UnifyInstantiations("unify-instantiations", cl::Optional,
-                                    cl::desc("Unify function instantiations"),
-                                    cl::init(true), cl::cat(ExportCategory));
-
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
@@ -1294,7 +1291,6 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
   ViewOpts.SkipExpansions = SkipExpansions;
   ViewOpts.SkipFunctions = SkipFunctions;
   ViewOpts.SkipBranches = SkipBranches;
-  ViewOpts.UnifyFunctionInstantiations = UnifyInstantiations;
 
   if (ViewOpts.Format != CoverageViewOptions::OutputFormat::Text &&
       ViewOpts.Format != CoverageViewOptions::OutputFormat::Lcov) {

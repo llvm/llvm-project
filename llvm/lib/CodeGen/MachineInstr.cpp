@@ -63,10 +63,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    PrintMIAddrs("print-mi-addrs", cl::Hidden,
-                 cl::desc("Print addresses of MachineInstrs when dumping"));
-
 static const MachineFunction *getMFIfAvailable(const MachineInstr &MI) {
   if (const MachineBasicBlock *MBB = MI.getParent())
     if (const MachineFunction *MF = MBB->getParent())
@@ -798,28 +794,6 @@ bool MachineInstr::shouldUpdateAdditionalCallInfo() const {
   return isCandidateForAdditionalCallInfo();
 }
 
-template <typename Operand, typename Instruction>
-static iterator_range<
-    filter_iterator<Operand *, std::function<bool(Operand &Op)>>>
-getDebugOperandsForRegHelper(Instruction *MI, Register Reg) {
-  std::function<bool(Operand & Op)> OpUsesReg(
-      [Reg](Operand &Op) { return Op.isReg() && Op.getReg() == Reg; });
-  return make_filter_range(MI->debug_operands(), OpUsesReg);
-}
-
-iterator_range<filter_iterator<const MachineOperand *,
-                               std::function<bool(const MachineOperand &Op)>>>
-MachineInstr::getDebugOperandsForReg(Register Reg) const {
-  return getDebugOperandsForRegHelper<const MachineOperand, const MachineInstr>(
-      this, Reg);
-}
-
-iterator_range<
-    filter_iterator<MachineOperand *, std::function<bool(MachineOperand &Op)>>>
-MachineInstr::getDebugOperandsForReg(Register Reg) {
-  return getDebugOperandsForRegHelper<MachineOperand, MachineInstr>(this, Reg);
-}
-
 unsigned MachineInstr::getNumExplicitOperands() const {
   unsigned NumOperands = MCID->getNumOperands();
   if (!MCID->isVariadic())
@@ -936,6 +910,26 @@ int MachineInstr::findInlineAsmFlagIdx(unsigned OpIdx,
 const DILabel *MachineInstr::getDebugLabel() const {
   assert(isDebugLabel() && "not a DBG_LABEL");
   return cast<DILabel>(getOperand(0).getMetadata());
+}
+
+DILifetime *MachineInstr::getDebugLifetime() {
+  assert(isDebugDefKill() && "not a DBG_DEF or DBG_KILL");
+  return cast<DILifetime>(const_cast<MDNode *>(getOperand(0).getMetadata()));
+}
+
+const DILifetime *MachineInstr::getDebugLifetime() const {
+  assert(isDebugDefKill() && "not a DBG_DEF or DBG_KILL");
+  return cast<DILifetime>(getOperand(0).getMetadata());
+}
+
+const MachineOperand &MachineInstr::getDebugReferrer() const {
+  assert(isDebugDef() && "not a DBG_DEF");
+  return getOperand(1);
+}
+
+MachineOperand &MachineInstr::getDebugReferrer() {
+  assert(isDebugDef() && "not a DBG_DEF");
+  return getOperand(1);
 }
 
 const MachineOperand &MachineInstr::getDebugVariableOp() const {
@@ -1338,26 +1332,9 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
     return false;
   }
 
-  // Don't touch instructions that have non-trivial invariants.  For example,
-  // terminators have to be at the end of a basic block.
   if (isPosition() || isDebugInstr() || isTerminator() ||
+      mayRaiseFPException() || hasUnmodeledSideEffects() ||
       isJumpTableDebugInfo())
-    return false;
-
-  // Don't touch instructions which can have non-load/store effects.
-  //
-  // Inline asm has a "sideeffect" marker to indicate whether the asm has
-  // intentional side-effects. Even if an inline asm is not "sideeffect",
-  // though, it still can't be speculatively executed: the operation might
-  // not be valid on the current target, or for some combinations of operands.
-  // (Some transforms that move an instruction don't speculatively execute it;
-  // we currently don't try to handle that distinction here.)
-  //
-  // Other instructions handled here include those that can raise FP
-  // exceptions, x86 "DIV" instructions which trap on divide by zero, and
-  // stack adjustments.
-  if (mayRaiseFPException() || hasProperty(MCID::UnmodeledSideEffects) ||
-      isInlineAsm())
     return false;
 
   // See if this instruction does a load.  If so, we have to guarantee that the
@@ -2106,9 +2083,6 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   // TODO: DBG_LABEL
 
-  if (PrintMIAddrs)
-    OS << " ; " << this;
-
   if (AddNewLine)
     OS << '\n';
 }
@@ -2310,7 +2284,7 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
 
     HashComponents.push_back(hash_value(MO));
   }
-  return hash_combine_range(HashComponents);
+  return hash_combine_range(HashComponents.begin(), HashComponents.end());
 }
 
 const MDNode *MachineInstr::getLocCookieMD() const {
@@ -2446,8 +2420,9 @@ static const DIExpression *computeExprForSpill(
 static const DIExpression *computeExprForSpill(const MachineInstr &MI,
                                                Register SpillReg) {
   assert(MI.hasDebugOperandForReg(SpillReg) && "Spill Reg is not used in MI.");
-  SmallVector<const MachineOperand *> SpillOperands(
-      llvm::make_pointer_range(MI.getDebugOperandsForReg(SpillReg)));
+  SmallVector<const MachineOperand *> SpillOperands;
+  for (const MachineOperand &Op : MI.getDebugOperandsForReg(SpillReg))
+    SpillOperands.push_back(&Op);
   return computeExprForSpill(MI, SpillOperands);
 }
 
@@ -2550,7 +2525,7 @@ using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
 static LocationSize getSpillSlotSize(const MMOList &Accesses,
                                      const MachineFrameInfo &MFI) {
-  std::optional<TypeSize> Size;
+  uint64_t Size = 0;
   for (const auto *A : Accesses) {
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
@@ -2558,15 +2533,10 @@ static LocationSize getSpillSlotSize(const MMOList &Accesses,
       LocationSize S = A->getSize();
       if (!S.hasValue())
         return LocationSize::beforeOrAfterPointer();
-      if (!Size)
-        Size = S.getValue();
-      else
-        Size = *Size + S.getValue();
+      Size += S.getValue();
     }
   }
-  if (!Size)
-    return LocationSize::precise(0);
-  return LocationSize::precise(*Size);
+  return Size;
 }
 
 std::optional<LocationSize>

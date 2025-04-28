@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 // Don't crash if the argument to __builtin_constant_p isn't scalar.
 template <typename T>

@@ -73,14 +73,6 @@ public:
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
 
-  /// Initialize lattice anchor equivalence class from the provided top-level
-  /// operation.
-  ///
-  /// This function will union lattice anchor to same equivalent class if the
-  /// analysis can determine the lattice content of lattice anchor is
-  /// necessarily identical under the corrensponding lattice type.
-  virtual void initializeEquivalentLatticeAnchor(Operation *top) override;
-
   /// Visit a program point that modifies the state of the program. If the
   /// program point is at the beginning of a block, then the state is propagated
   /// from control-flow predecessors or callsites.  If the operation before
@@ -104,8 +96,8 @@ protected:
   /// dependency. That is, every time the lattice after anchor is updated, the
   /// dependent program point must be visited, and the newly triggered visit
   /// might update the lattice on dependent.
-  virtual const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
-                                                    LatticeAnchor anchor) = 0;
+  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                            LatticeAnchor anchor);
 
   /// Set the dense lattice at control flow entry point and propagate an update
   /// if it changed.
@@ -121,11 +113,6 @@ protected:
   /// control-flow or the callgraph. Otherwise, this function invokes the
   /// operation transfer function.
   virtual LogicalResult processOperation(Operation *op);
-
-  /// Visit an operation. If this analysis can confirm that lattice content
-  /// of lattice anchors around operation are necessarily identical, join
-  /// them into the same equivalent class.
-  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
 
   /// Propagate the dense lattice forward along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -265,15 +252,6 @@ protected:
     return getOrCreate<LatticeT>(anchor);
   }
 
-  /// Get the dense lattice on the given lattice anchor and add dependent as its
-  /// dependency. That is, every time the lattice after anchor is updated, the
-  /// dependent program point must be visited, and the newly triggered visit
-  /// might update the lattice on dependent.
-  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
-                                            LatticeAnchor anchor) override {
-    return getOrCreateFor<LatticeT>(dependent, anchor);
-  }
-
   /// Set the dense lattice at control flow entry point and propagate an update
   /// if it changed.
   virtual void setToEntryState(LatticeT *lattice) = 0;
@@ -332,14 +310,6 @@ public:
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
 
-  /// Initialize lattice anchor equivalence class from the provided top-level
-  /// operation.
-  ///
-  /// This function will union lattice anchor to same equivalent class if the
-  /// analysis can determine the lattice content of lattice anchor is
-  /// necessarily identical under the corrensponding lattice type.
-  virtual void initializeEquivalentLatticeAnchor(Operation *top) override;
-
   /// Visit a program point that modifies the state of the program. The state is
   /// propagated along control flow directions for branch-, region- and
   /// call-based control flow using the respective interfaces. For other
@@ -366,8 +336,8 @@ protected:
   /// dependency. That is, every time the lattice after anchor is updated, the
   /// dependent program point must be visited, and the newly triggered visit
   /// might update the lattice before dependent.
-  virtual const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
-                                                    LatticeAnchor anchor) = 0;
+  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                            LatticeAnchor anchor);
 
   /// Set the dense lattice before at the control flow exit point and propagate
   /// the update if it changed.
@@ -382,11 +352,6 @@ protected:
   /// control-flow operations. Otherwise, this function invokes the operation
   /// transfer function.
   virtual LogicalResult processOperation(Operation *op);
-
-  /// Visit an operation. If this analysis can confirm that lattice content
-  /// of lattice anchors around operation are necessarily identical, join
-  /// them into the same equivalent class.
-  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
 
   /// Propagate the dense lattice backwards along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -535,15 +500,6 @@ protected:
   /// Get the dense lattice at the given lattice anchor.
   LatticeT *getLattice(LatticeAnchor anchor) override {
     return getOrCreate<LatticeT>(anchor);
-  }
-
-  /// Get the dense lattice on the given lattice anchor and add dependent as its
-  /// dependency. That is, every time the lattice after anchor is updated, the
-  /// dependent program point must be visited, and the newly triggered visit
-  /// might update the lattice before dependent.
-  virtual const AbstractDenseLattice *
-  getLatticeFor(ProgramPoint *dependent, LatticeAnchor anchor) override {
-    return getOrCreateFor<LatticeT>(dependent, anchor);
   }
 
   /// Set the dense lattice at control flow exit point (after the terminator)

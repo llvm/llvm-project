@@ -17,7 +17,6 @@
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Attribute.h"
-#include "mlir/TableGen/EnumInfo.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/DenseMap.h"
@@ -45,22 +44,22 @@ using mlir::tblgen::Operator;
 //===----------------------------------------------------------------------===//
 static cl::OptionCategory
     docCat("Options for -gen-(attrdef|typedef|enum|op|dialect)-doc");
-static cl::opt<std::string>
+cl::opt<std::string>
     stripPrefix("strip-prefix",
                 cl::desc("Strip prefix of the fully qualified names"),
                 cl::init("::mlir::"), cl::cat(docCat));
-static cl::opt<bool> allowHugoSpecificFeatures(
+cl::opt<bool> allowHugoSpecificFeatures(
     "allow-hugo-specific-features",
     cl::desc("Allows using features specific to Hugo"), cl::init(false),
     cl::cat(docCat));
 
 void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
-  if (summary.empty())
-    return;
-  StringRef trimmed = summary.trim();
-  char first = std::toupper(trimmed.front());
-  StringRef rest = trimmed.drop_front();
-  os << "\n_" << first << rest << "_\n";
+  if (!summary.empty()) {
+    StringRef trimmed = summary.trim();
+    char first = std::toupper(trimmed.front());
+    StringRef rest = trimmed.drop_front();
+    os << "\n_" << first << rest << "_\n\n";
+  }
 }
 
 // Emit the description by aligning the text to the left per line (e.g.,
@@ -70,9 +69,6 @@ void mlir::tblgen::emitSummary(StringRef summary, raw_ostream &os) {
 // in a way the user wanted but has some additional indenting due to being
 // nested in the op definition.
 void mlir::tblgen::emitDescription(StringRef description, raw_ostream &os) {
-  if (description.empty())
-    return;
-  os << "\n";
   raw_indented_ostream ros(os);
   StringRef trimmed = description.rtrim(" \t");
   ros.printReindented(trimmed);
@@ -84,12 +80,19 @@ void mlir::tblgen::emitDescriptionComment(StringRef description,
                                           raw_ostream &os, StringRef prefix) {
   if (description.empty())
     return;
-  os << "\n";
   raw_indented_ostream ros(os);
   StringRef trimmed = description.rtrim(" \t");
   ros.printReindented(trimmed, (Twine(prefix) + "/// ").str());
   if (!trimmed.ends_with("\n"))
     ros << "\n";
+}
+
+// Emits `str` with trailing newline if not empty.
+static void emitIfNotEmpty(StringRef str, raw_ostream &os) {
+  if (!str.empty()) {
+    emitDescription(str, os);
+    os << "\n";
+  }
 }
 
 /// Emit the given named constraint.
@@ -98,8 +101,8 @@ static void emitNamedConstraint(const T &it, raw_ostream &os) {
   if (!it.name.empty())
     os << "| `" << it.name << "`";
   else
-    os << "| &laquo;unnamed&raquo;";
-  os << " | " << it.constraint.getSummary() << " |\n";
+    os << "&laquo;unnamed&raquo;";
+  os << " | " << it.constraint.getSummary() << "\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -109,8 +112,6 @@ static void emitNamedConstraint(const T &it, raw_ostream &os) {
 /// Emit the assembly format of an operation.
 static void emitAssemblyFormat(StringRef opName, StringRef format,
                                raw_ostream &os) {
-  if (format.empty())
-    return;
   os << "\nSyntax:\n\n```\noperation ::= `" << opName << "` ";
 
   // Print the assembly format aligned.
@@ -123,7 +124,7 @@ static void emitAssemblyFormat(StringRef opName, StringRef format,
     if (!formatChunk.empty())
       os.indent(indent) << formatChunk << "\n";
   } while (!split.second.empty());
-  os << "```\n";
+  os << "```\n\n";
 }
 
 /// Place `text` between backticks so that the Markdown processor renders it as
@@ -198,7 +199,7 @@ static void emitOpDoc(const Operator &op, raw_ostream &os) {
   std::string classNameStr = op.getQualCppClassName();
   StringRef className = classNameStr;
   (void)className.consume_front(stripPrefix);
-  os << formatv("\n### `{0}` ({1})\n", op.getOperationName(), className);
+  os << formatv("### `{0}` ({1})\n", op.getOperationName(), className);
 
   // Emit the summary, syntax, and description if present.
   if (op.hasSummary())
@@ -280,8 +281,8 @@ static void emitSourceLink(StringRef inputFilename, raw_ostream &os) {
 
   StringRef inputFromMlirInclude = inputFilename.substr(pathBegin);
 
-  os << "\n[source](https://github.com/llvm/llvm-project/blob/main/"
-     << inputFromMlirInclude << ")\n";
+  os << "[source](https://github.com/llvm/llvm-project/blob/main/"
+     << inputFromMlirInclude << ")\n\n";
 }
 
 static void emitOpDoc(const RecordKeeper &records, raw_ostream &os) {
@@ -298,9 +299,9 @@ static void emitOpDoc(const RecordKeeper &records, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static void emitAttrDoc(const Attribute &attr, raw_ostream &os) {
-  os << "\n### " << attr.getSummary() << "\n";
+  os << "### " << attr.getSummary() << "\n\n";
   emitDescription(attr.getDescription(), os);
-  os << "\n";
+  os << "\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -308,9 +309,9 @@ static void emitAttrDoc(const Attribute &attr, raw_ostream &os) {
 //===----------------------------------------------------------------------===//
 
 static void emitTypeDoc(const Type &type, raw_ostream &os) {
-  os << "\n### " << type.getSummary() << "\n";
+  os << "### " << type.getSummary() << "\n\n";
   emitDescription(type.getDescription(), os);
-  os << "\n";
+  os << "\n\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -341,11 +342,11 @@ static void emitAttrOrTypeDefAssemblyFormat(const AttrOrTypeDef &def,
 }
 
 static void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, raw_ostream &os) {
-  os << formatv("\n### {0}\n", def.getCppClassName());
+  os << formatv("### {0}\n", def.getCppClassName());
 
   // Emit the summary if present.
   if (def.hasSummary())
-    emitSummary(def.getSummary(), os);
+    os << "\n" << def.getSummary() << "\n";
 
   // Emit the syntax if present.
   if (def.getMnemonic() && !def.hasCustomAssemblyFormat())
@@ -353,6 +354,7 @@ static void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, raw_ostream &os) {
 
   // Emit the description if present.
   if (def.hasDescription()) {
+    os << "\n";
     mlir::tblgen::emitDescription(def.getDescription(), os);
   }
 
@@ -361,11 +363,11 @@ static void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, raw_ostream &os) {
   if (!parameters.empty()) {
     os << "\n#### Parameters:\n\n";
     os << "| Parameter | C++ type | Description |\n"
-       << "| :-------: | :-------: | ----------- |";
+       << "| :-------: | :-------: | ----------- |\n";
     for (const auto &it : parameters) {
       auto desc = it.getSummary();
-      os << "\n| " << it.getName() << " | `" << it.getCppType() << "` | "
-         << (desc ? *desc : "") << " |";
+      os << "| " << it.getName() << " | `" << it.getCppType() << "` | "
+         << (desc ? *desc : "") << " |\n";
     }
   }
 
@@ -385,20 +387,21 @@ static void emitAttrOrTypeDefDoc(const RecordKeeper &records, raw_ostream &os,
 // Enum Documentation
 //===----------------------------------------------------------------------===//
 
-static void emitEnumDoc(const EnumInfo &def, raw_ostream &os) {
-  os << formatv("\n### {0}\n", def.getEnumClassName());
+static void emitEnumDoc(const EnumAttr &def, raw_ostream &os) {
+  os << formatv("### {0}\n", def.getEnumClassName());
 
   // Emit the summary if present.
-  emitSummary(def.getSummary(), os);
+  if (!def.getSummary().empty())
+    os << "\n" << def.getSummary() << "\n";
 
   // Emit case documentation.
-  std::vector<EnumCase> cases = def.getAllCases();
+  std::vector<EnumAttrCase> cases = def.getAllCases();
   os << "\n#### Cases:\n\n";
   os << "| Symbol | Value | String |\n"
-     << "| :----: | :---: | ------ |";
+     << "| :----: | :---: | ------ |\n";
   for (const auto &it : cases) {
-    os << "\n| " << it.getSymbol() << " | `" << it.getValue() << "` | "
-       << it.getStr() << " |";
+    os << "| " << it.getSymbol() << " | `" << it.getValue() << "` | "
+       << it.getStr() << " |\n";
   }
 
   os << "\n";
@@ -406,8 +409,8 @@ static void emitEnumDoc(const EnumInfo &def, raw_ostream &os) {
 
 static void emitEnumDoc(const RecordKeeper &records, raw_ostream &os) {
   os << "<!-- Autogenerated by mlir-tblgen; don't manually edit -->\n";
-  for (const Record *def : records.getAllDerivedDefinitions("EnumInfo"))
-    emitEnumDoc(EnumInfo(def), os);
+  for (const Record *def : records.getAllDerivedDefinitions("EnumAttrInfo"))
+    emitEnumDoc(EnumAttr(def), os);
 }
 
 //===----------------------------------------------------------------------===//
@@ -442,9 +445,9 @@ static void maybeNest(bool nest, llvm::function_ref<void(raw_ostream &os)> fn,
 static void emitBlock(ArrayRef<Attribute> attributes, StringRef inputFilename,
                       ArrayRef<AttrDef> attrDefs, ArrayRef<OpDocGroup> ops,
                       ArrayRef<Type> types, ArrayRef<TypeDef> typeDefs,
-                      ArrayRef<EnumInfo> enums, raw_ostream &os) {
+                      ArrayRef<EnumAttr> enums, raw_ostream &os) {
   if (!ops.empty()) {
-    os << "\n## Operations\n";
+    os << "## Operations\n\n";
     emitSourceLink(inputFilename, os);
     for (const OpDocGroup &grouping : ops) {
       bool nested = !grouping.summary.empty();
@@ -452,9 +455,9 @@ static void emitBlock(ArrayRef<Attribute> attributes, StringRef inputFilename,
           nested,
           [&](raw_ostream &os) {
             if (nested) {
-              os << "\n## " << StringRef(grouping.summary).trim() << "\n";
+              os << "## " << StringRef(grouping.summary).trim() << "\n\n";
               emitDescription(grouping.description, os);
-              os << "\n";
+              os << "\n\n";
             }
             for (const Operator &op : grouping.ops) {
               emitOpDoc(op, os);
@@ -465,33 +468,33 @@ static void emitBlock(ArrayRef<Attribute> attributes, StringRef inputFilename,
   }
 
   if (!attributes.empty()) {
-    os << "\n## Attribute constraints\n";
+    os << "## Attribute constraints\n\n";
     for (const Attribute &attr : attributes)
       emitAttrDoc(attr, os);
   }
 
   if (!attrDefs.empty()) {
-    os << "\n## Attributes\n";
+    os << "## Attributes\n\n";
     for (const AttrDef &def : attrDefs)
       emitAttrOrTypeDefDoc(def, os);
   }
 
   // TODO: Add link between use and def for types
   if (!types.empty()) {
-    os << "\n## Type constraints\n";
+    os << "## Type constraints\n\n";
     for (const Type &type : types)
       emitTypeDoc(type, os);
   }
 
   if (!typeDefs.empty()) {
-    os << "\n## Types\n";
+    os << "## Types\n\n";
     for (const TypeDef &def : typeDefs)
       emitAttrOrTypeDefDoc(def, os);
   }
 
   if (!enums.empty()) {
-    os << "\n## Enums\n";
-    for (const EnumInfo &def : enums)
+    os << "## Enums\n\n";
+    for (const EnumAttr &def : enums)
       emitEnumDoc(def, os);
   }
 }
@@ -500,15 +503,15 @@ static void emitDialectDoc(const Dialect &dialect, StringRef inputFilename,
                            ArrayRef<Attribute> attributes,
                            ArrayRef<AttrDef> attrDefs, ArrayRef<OpDocGroup> ops,
                            ArrayRef<Type> types, ArrayRef<TypeDef> typeDefs,
-                           ArrayRef<EnumInfo> enums, raw_ostream &os) {
-  os << "\n# '" << dialect.getName() << "' Dialect\n";
-  emitSummary(dialect.getSummary(), os);
-  emitDescription(dialect.getDescription(), os);
+                           ArrayRef<EnumAttr> enums, raw_ostream &os) {
+  os << "# '" << dialect.getName() << "' Dialect\n\n";
+  emitIfNotEmpty(dialect.getSummary(), os);
+  emitIfNotEmpty(dialect.getDescription(), os);
 
   // Generate a TOC marker except if description already contains one.
   Regex r("^[[:space:]]*\\[TOC\\]$", Regex::RegexFlags::Newline);
   if (!r.match(dialect.getDescription()))
-    os << "\n[TOC]\n";
+    os << "[TOC]\n\n";
 
   emitBlock(attributes, inputFilename, attrDefs, ops, types, typeDefs, enums,
             os);
@@ -526,14 +529,14 @@ static bool emitDialectDoc(const RecordKeeper &records, raw_ostream &os) {
   auto typeDefs = records.getAllDerivedDefinitionsIfDefined("DialectType");
   auto typeDefDefs = records.getAllDerivedDefinitionsIfDefined("TypeDef");
   auto attrDefDefs = records.getAllDerivedDefinitionsIfDefined("AttrDef");
-  auto enumDefs = records.getAllDerivedDefinitionsIfDefined("EnumInfo");
+  auto enumDefs = records.getAllDerivedDefinitionsIfDefined("EnumAttrInfo");
 
   std::vector<Attribute> dialectAttrs;
   std::vector<AttrDef> dialectAttrDefs;
   std::vector<OpDocGroup> dialectOps;
   std::vector<Type> dialectTypes;
   std::vector<TypeDef> dialectTypeDefs;
-  std::vector<EnumInfo> dialectEnums;
+  std::vector<EnumAttr> dialectEnums;
 
   SmallDenseSet<const Record *> seen;
   auto addIfNotSeen = [&](const Record *record, const auto &def, auto &vec) {
@@ -577,7 +580,7 @@ static bool emitDialectDoc(const RecordKeeper &records, raw_ostream &os) {
     addIfInDialect(def, Type(def), dialectTypes);
   dialectEnums.reserve(enumDefs.size());
   for (const Record *def : enumDefs)
-    addIfNotSeen(def, EnumInfo(def), dialectEnums);
+    addIfNotSeen(def, EnumAttr(def), dialectEnums);
 
   // Sort alphabetically ignorning dialect for ops and section name for
   // sections.

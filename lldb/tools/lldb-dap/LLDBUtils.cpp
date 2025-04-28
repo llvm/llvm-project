@@ -17,28 +17,11 @@ namespace lldb_dap {
 
 bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives,
-                     bool echo_commands) {
+                     llvm::raw_ostream &strm, bool parse_command_directives) {
   if (commands.empty())
     return true;
 
   bool did_print_prefix = false;
-
-  // We only need the prompt when echoing commands.
-  std::string prompt_string;
-  if (echo_commands) {
-    prompt_string = "(lldb) ";
-
-    // Get the current prompt from settings.
-    if (const lldb::SBStructuredData prompt = debugger.GetSetting("prompt")) {
-      const size_t prompt_length = prompt.GetStringValue(nullptr, 0);
-
-      if (prompt_length != 0) {
-        prompt_string.resize(prompt_length + 1);
-        prompt.GetStringValue(prompt_string.data(), prompt_string.length());
-      }
-    }
-  }
 
   lldb::SBCommandInterpreter interp = debugger.GetCommandInterpreter();
   for (llvm::StringRef command : commands) {
@@ -77,10 +60,7 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
         strm << prefix << "\n";
         did_print_prefix = true;
       }
-
-      if (echo_commands)
-        strm << prompt_string.c_str() << command << '\n';
-
+      strm << "(lldb) " << command << "\n";
       auto output_len = result.GetOutputSize();
       if (output_len) {
         const char *output = result.GetOutput();
@@ -101,14 +81,21 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
-                            bool parse_command_directives, bool echo_commands) {
+                            bool parse_command_directives) {
   required_command_failed = false;
   std::string s;
   llvm::raw_string_ostream strm(s);
-  required_command_failed =
-      !RunLLDBCommands(debugger, prefix, commands, strm,
-                       parse_command_directives, echo_commands);
+  required_command_failed = !RunLLDBCommands(debugger, prefix, commands, strm,
+                                             parse_command_directives);
   return s;
+}
+
+std::string
+RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger, llvm::StringRef prefix,
+                        const llvm::ArrayRef<std::string> &commands) {
+  bool required_command_failed = false;
+  return RunLLDBCommands(debugger, prefix, commands, required_command_failed,
+                         /*parse_command_directives=*/false);
 }
 
 bool ThreadHasStopReason(lldb::SBThread &thread) {
@@ -126,7 +113,6 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonVFork:
   case lldb::eStopReasonVForkDone:
   case lldb::eStopReasonInterrupt:
-  case lldb::eStopReasonHistoryBoundary:
     return true;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
@@ -174,15 +160,6 @@ GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
     envs.SetEntries(entries, true);
   }
   return envs;
-}
-
-llvm::Error ToError(const lldb::SBError &error) {
-  if (error.Success())
-    return llvm::Error::success();
-
-  return llvm::createStringError(
-      std::error_code(error.GetError(), std::generic_category()),
-      error.GetCString());
 }
 
 } // namespace lldb_dap

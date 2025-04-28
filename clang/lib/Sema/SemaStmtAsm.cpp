@@ -17,7 +17,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -204,15 +203,15 @@ static StringRef extractRegisterName(const Expr *Expression,
 // clobbers list. If there's a conflict, returns the location of the
 // conflicted clobber, else returns nullptr
 static SourceLocation
-getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
-                           Expr **Clobbers, int NumClobbers, unsigned NumLabels,
+getClobberConflictLocation(MultiExprArg Exprs, StringLiteral **Constraints,
+                           StringLiteral **Clobbers, int NumClobbers,
+                           unsigned NumLabels,
                            const TargetInfo &Target, ASTContext &Cont) {
   llvm::StringSet<> InOutVars;
   // Collect all the input and output registers from the extended asm
   // statement in order to check for conflicts with the clobber list
   for (unsigned int i = 0; i < Exprs.size() - NumLabels; ++i) {
-    std::string Constraint =
-        GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraints[i]);
+    StringRef Constraint = Constraints[i]->getString();
     StringRef InOutReg = Target.getConstraintRegister(
         Constraint, extractRegisterName(Exprs[i], Target));
     if (InOutReg != "")
@@ -221,8 +220,7 @@ getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
   // Check for each item in the clobber list if it conflicts with the input
   // or output
   for (int i = 0; i < NumClobbers; ++i) {
-    std::string Clobber =
-        GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Clobbers[i]);
+    StringRef Clobber = Clobbers[i]->getString();
     // We only check registers, therefore we don't check cc and memory
     // clobbers
     if (Clobber == "cc" || Clobber == "memory" || Clobber == "unwind")
@@ -235,37 +233,6 @@ getClobberConflictLocation(MultiExprArg Exprs, Expr **Constraints,
   return SourceLocation();
 }
 
-ExprResult Sema::ActOnGCCAsmStmtString(Expr *Expr, bool ForAsmLabel) {
-  if (!Expr)
-    return ExprError();
-
-  if (auto *SL = dyn_cast<StringLiteral>(Expr)) {
-    assert(SL->isOrdinary());
-    if (ForAsmLabel && SL->getString().empty()) {
-      Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string)
-          << SL->getSourceRange();
-    }
-    return SL;
-  }
-  if (DiagnoseUnexpandedParameterPack(Expr))
-    return ExprError();
-  if (Expr->getDependence() != ExprDependence::None)
-    return Expr;
-  APValue V;
-  if (!EvaluateAsString(Expr, V, getASTContext(), StringEvaluationContext::Asm,
-                        /*ErrorOnInvalid=*/true))
-    return ExprError();
-
-  if (ForAsmLabel && V.getArrayInitializedElts() == 0) {
-    Diag(Expr->getBeginLoc(), diag::err_asm_operand_empty_string);
-  }
-
-  ConstantExpr *Res = ConstantExpr::Create(getASTContext(), Expr,
-                                           ConstantResultStorageKind::APValue);
-  Res->SetResult(V, getASTContext());
-  return Res;
-}
-
 StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                                  bool IsVolatile, unsigned NumOutputs,
                                  unsigned NumInputs, IdentifierInfo **Names,
@@ -274,45 +241,38 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                                  unsigned NumLabels,
                                  SourceLocation RParenLoc) {
   unsigned NumClobbers = clobbers.size();
+  StringLiteral **Constraints =
+    reinterpret_cast<StringLiteral**>(constraints.data());
+  StringLiteral *AsmString = cast<StringLiteral>(asmString);
+  StringLiteral **Clobbers = reinterpret_cast<StringLiteral**>(clobbers.data());
 
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
+
+  // The parser verifies that there is a string literal here.
+  assert(AsmString->isOrdinary());
 
   FunctionDecl *FD = dyn_cast<FunctionDecl>(getCurLexicalContext());
   llvm::StringMap<bool> FeatureMap;
   Context.getFunctionFeatureMap(FeatureMap, FD);
 
-  auto CreateGCCAsmStmt = [&] {
-    return new (Context)
-        GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs,
-                   Names, constraints.data(), Exprs.data(), asmString,
-                   NumClobbers, clobbers.data(), NumLabels, RParenLoc);
-  };
-
-  if (asmString->getDependence() != ExprDependence::None ||
-      llvm::any_of(
-          constraints,
-          [](Expr *E) { return E->getDependence() != ExprDependence::None; }) ||
-      llvm::any_of(clobbers, [](Expr *E) {
-        return E->getDependence() != ExprDependence::None;
-      }))
-    return CreateGCCAsmStmt();
-
   for (unsigned i = 0; i != NumOutputs; i++) {
-    Expr *Constraint = constraints[i];
+    StringLiteral *Literal = Constraints[i];
+    assert(Literal->isOrdinary());
+
     StringRef OutputName;
     if (Names[i])
       OutputName = Names[i]->getName();
 
-    std::string ConstraintStr =
-        GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint);
-
-    TargetInfo::ConstraintInfo Info(ConstraintStr, OutputName);
+    TargetInfo::ConstraintInfo Info(Literal->getString(), OutputName);
     if (!Context.getTargetInfo().validateOutputConstraint(Info) &&
         !(LangOpts.HIPStdPar && LangOpts.CUDAIsDevice)) {
-      targetDiag(Constraint->getBeginLoc(),
+      targetDiag(Literal->getBeginLoc(),
                  diag::err_asm_invalid_output_constraint)
           << Info.getConstraintStr();
-      return CreateGCCAsmStmt();
+      return new (Context)
+          GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                     NumInputs, Names, Constraints, Exprs.data(), AsmString,
+                     NumClobbers, Clobbers, NumLabels, RParenLoc);
     }
 
     ExprResult ER = CheckPlaceholderExpr(Exprs[i]);
@@ -375,34 +335,35 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
     unsigned Size = Context.getTypeSize(OutputExpr->getType());
     if (!Context.getTargetInfo().validateOutputSize(
-            FeatureMap,
-            GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint),
-            Size)) {
+            FeatureMap, Literal->getString(), Size)) {
       targetDiag(OutputExpr->getBeginLoc(), diag::err_asm_invalid_output_size)
           << Info.getConstraintStr();
-      return CreateGCCAsmStmt();
+      return new (Context)
+          GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                     NumInputs, Names, Constraints, Exprs.data(), AsmString,
+                     NumClobbers, Clobbers, NumLabels, RParenLoc);
     }
   }
 
   SmallVector<TargetInfo::ConstraintInfo, 4> InputConstraintInfos;
 
   for (unsigned i = NumOutputs, e = NumOutputs + NumInputs; i != e; i++) {
-    Expr *Constraint = constraints[i];
+    StringLiteral *Literal = Constraints[i];
+    assert(Literal->isOrdinary());
 
     StringRef InputName;
     if (Names[i])
       InputName = Names[i]->getName();
 
-    std::string ConstraintStr =
-        GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint);
-
-    TargetInfo::ConstraintInfo Info(ConstraintStr, InputName);
+    TargetInfo::ConstraintInfo Info(Literal->getString(), InputName);
     if (!Context.getTargetInfo().validateInputConstraint(OutputConstraintInfos,
                                                          Info)) {
-      targetDiag(Constraint->getBeginLoc(),
-                 diag::err_asm_invalid_input_constraint)
+      targetDiag(Literal->getBeginLoc(), diag::err_asm_invalid_input_constraint)
           << Info.getConstraintStr();
-      return CreateGCCAsmStmt();
+      return new (Context)
+          GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                     NumInputs, Names, Constraints, Exprs.data(), AsmString,
+                     NumClobbers, Clobbers, NumLabels, RParenLoc);
     }
 
     ExprResult ER = CheckPlaceholderExpr(Exprs[i]);
@@ -487,8 +448,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         return StmtError();
 
     unsigned Size = Context.getTypeSize(Ty);
-    if (!Context.getTargetInfo().validateInputSize(FeatureMap, ConstraintStr,
-                                                   Size))
+    if (!Context.getTargetInfo().validateInputSize(FeatureMap,
+                                                   Literal->getString(), Size))
       return targetDiag(InputExpr->getBeginLoc(),
                         diag::err_asm_invalid_input_size)
              << Info.getConstraintStr();
@@ -498,47 +459,46 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   // Check that the clobbers are valid.
   for (unsigned i = 0; i != NumClobbers; i++) {
-    Expr *ClobberExpr = clobbers[i];
+    StringLiteral *Literal = Clobbers[i];
+    assert(Literal->isOrdinary());
 
-    std::string Clobber =
-        GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(ClobberExpr);
+    StringRef Clobber = Literal->getString();
 
     if (!Context.getTargetInfo().isValidClobber(Clobber)) {
-      targetDiag(ClobberExpr->getBeginLoc(),
-                 diag::err_asm_unknown_register_name)
+      targetDiag(Literal->getBeginLoc(), diag::err_asm_unknown_register_name)
           << Clobber;
-      return new (Context) GCCAsmStmt(
-          Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs, Names,
-          constraints.data(), Exprs.data(), asmString, NumClobbers,
-          clobbers.data(), NumLabels, RParenLoc);
+      return new (Context)
+          GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                     NumInputs, Names, Constraints, Exprs.data(), AsmString,
+                     NumClobbers, Clobbers, NumLabels, RParenLoc);
     }
 
     if (Clobber == "unwind") {
-      UnwindClobberLoc = ClobberExpr->getBeginLoc();
+      UnwindClobberLoc = Literal->getBeginLoc();
     }
   }
 
   // Using unwind clobber and asm-goto together is not supported right now.
   if (UnwindClobberLoc && NumLabels > 0) {
     targetDiag(*UnwindClobberLoc, diag::err_asm_unwind_and_goto);
-    return CreateGCCAsmStmt();
+    return new (Context)
+        GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs, NumInputs,
+                   Names, Constraints, Exprs.data(), AsmString, NumClobbers,
+                   Clobbers, NumLabels, RParenLoc);
   }
 
-  GCCAsmStmt *NS = CreateGCCAsmStmt();
+  GCCAsmStmt *NS =
+    new (Context) GCCAsmStmt(Context, AsmLoc, IsSimple, IsVolatile, NumOutputs,
+                             NumInputs, Names, Constraints, Exprs.data(),
+                             AsmString, NumClobbers, Clobbers, NumLabels,
+                             RParenLoc);
   // Validate the asm string, ensuring it makes sense given the operands we
   // have.
-
-  auto GetLocation = [this](const Expr *Str, unsigned Offset) {
-    if (auto *SL = dyn_cast<StringLiteral>(Str))
-      return getLocationOfStringLiteralByte(SL, Offset);
-    return Str->getBeginLoc();
-  };
-
   SmallVector<GCCAsmStmt::AsmStringPiece, 8> Pieces;
   unsigned DiagOffs;
   if (unsigned DiagID = NS->AnalyzeAsmString(Pieces, Context, DiagOffs)) {
-    targetDiag(GetLocation(asmString, DiagOffs), DiagID)
-        << asmString->getSourceRange();
+    targetDiag(getLocationOfStringLiteralByte(AsmString, DiagOffs), DiagID)
+        << AsmString->getSourceRange();
     return NS;
   }
 
@@ -569,7 +529,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     }
 
     // Now that we have the right indexes go ahead and check.
-    Expr *Constraint = constraints[ConstraintIdx];
+    StringLiteral *Literal = Constraints[ConstraintIdx];
     const Type *Ty = Exprs[ConstraintIdx]->getType().getTypePtr();
     if (Ty->isDependentType() || Ty->isIncompleteType())
       continue;
@@ -577,8 +537,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     unsigned Size = Context.getTypeSize(Ty);
     std::string SuggestedModifier;
     if (!Context.getTargetInfo().validateConstraintModifier(
-            GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(Constraint),
-            Piece.getModifier(), Size, SuggestedModifier)) {
+            Literal->getString(), Piece.getModifier(), Size,
+            SuggestedModifier)) {
       targetDiag(Exprs[ConstraintIdx]->getBeginLoc(),
                  diag::warn_asm_mismatched_size_modifier);
 
@@ -586,11 +546,8 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         auto B = targetDiag(Piece.getRange().getBegin(),
                             diag::note_asm_missing_constraint_modifier)
                  << SuggestedModifier;
-        if (isa<StringLiteral>(Constraint)) {
-          SuggestedModifier = "%" + SuggestedModifier + Piece.getString();
-          B << FixItHint::CreateReplacement(Piece.getRange(),
-                                            SuggestedModifier);
-        }
+        SuggestedModifier = "%" + SuggestedModifier + Piece.getString();
+        B << FixItHint::CreateReplacement(Piece.getRange(), SuggestedModifier);
       }
     }
   }
@@ -750,9 +707,10 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   }
 
   // Check for conflicts between clobber list and input or output lists
-  SourceLocation ConstraintLoc = getClobberConflictLocation(
-      Exprs, constraints.data(), clobbers.data(), NumClobbers, NumLabels,
-      Context.getTargetInfo(), Context);
+  SourceLocation ConstraintLoc =
+      getClobberConflictLocation(Exprs, Constraints, Clobbers, NumClobbers,
+                                 NumLabels,
+                                 Context.getTargetInfo(), Context);
   if (ConstraintLoc.isValid())
     targetDiag(ConstraintLoc, diag::error_inoutput_conflict_with_clobber);
 

@@ -439,11 +439,6 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Bytes = R->getValueAsInt("Bytes");
     addArgAttribute(ArgNo, Dereferenceable, Bytes);
-  } else if (R->isSubClassOf("Range")) {
-    unsigned ArgNo = R->getValueAsInt("ArgNo");
-    int64_t Lower = R->getValueAsInt("Lower");
-    int64_t Upper = R->getValueAsInt("Upper");
-    addArgAttribute(ArgNo, Range, Lower, Upper);
   } else
     llvm_unreachable("Unknown property!");
 }
@@ -460,14 +455,14 @@ bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
   ++ParamIdx;
   if (ParamIdx >= ArgumentAttributes.size())
     return false;
-  ArgAttribute Val{ImmArg, 0, 0};
+  ArgAttribute Val{ImmArg, 0};
   return std::binary_search(ArgumentAttributes[ParamIdx].begin(),
                             ArgumentAttributes[ParamIdx].end(), Val);
 }
 
-void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
-                                       uint64_t V2) {
+void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK,
+                                       uint64_t V) {
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
-  ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+  ArgumentAttributes[Idx].emplace_back(AK, V);
 }

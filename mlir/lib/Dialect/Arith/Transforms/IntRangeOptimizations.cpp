@@ -57,10 +57,10 @@ static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
       *oldState);
 }
 
-namespace mlir::dataflow {
 /// Patterned after SCCP
-LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
-                                       RewriterBase &rewriter, Value value) {
+static LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
+                                              PatternRewriter &rewriter,
+                                              Value value) {
   if (value.use_empty())
     return failure();
   std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, value);
@@ -91,14 +91,10 @@ LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
   if (!constOp)
     return failure();
 
-  OpResult res = constOp->getResult(0);
-  if (solver.lookupState<dataflow::IntegerValueRangeLattice>(res))
-    solver.eraseState(res);
-  copyIntegerRange(solver, value, res);
-  rewriter.replaceAllUsesWith(value, res);
+  copyIntegerRange(solver, value, constOp->getResult(0));
+  rewriter.replaceAllUsesWith(value, constOp->getResult(0));
   return success();
 }
-} // namespace mlir::dataflow
 
 namespace {
 class DataFlowListener : public RewriterBase::Listener {
@@ -121,12 +117,10 @@ protected:
 /// arguments with their constant values.
 struct MaterializeKnownConstantValues : public RewritePattern {
   MaterializeKnownConstantValues(MLIRContext *context, DataFlowSolver &s)
-      : RewritePattern::RewritePattern(Pattern::MatchAnyOpTypeTag(),
-                                       /*benefit=*/1, context),
+      : RewritePattern(Pattern::MatchAnyOpTypeTag(), /*benefit=*/1, context),
         solver(s) {}
 
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult match(Operation *op) const override {
     if (matchPattern(op, m_Constant()))
       return failure();
 
@@ -135,8 +129,7 @@ struct MaterializeKnownConstantValues : public RewritePattern {
     };
     bool hasConstantResults = llvm::any_of(op->getResults(), needsReplacing);
     if (op->getNumRegions() == 0)
-      if (!hasConstantResults)
-        return failure();
+      return success(hasConstantResults);
     bool hasConstantRegionArgs = false;
     for (Region &region : op->getRegions()) {
       for (Block &block : region.getBlocks()) {
@@ -144,9 +137,10 @@ struct MaterializeKnownConstantValues : public RewritePattern {
             llvm::any_of(block.getArguments(), needsReplacing);
       }
     }
-    if (!hasConstantResults && !hasConstantRegionArgs)
-      return failure();
+    return success(hasConstantResults || hasConstantRegionArgs);
+  }
 
+  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
     bool replacedAll = (op->getNumResults() != 0);
     for (Value v : op->getResults())
       replacedAll &=
@@ -154,7 +148,7 @@ struct MaterializeKnownConstantValues : public RewritePattern {
            v.use_empty());
     if (replacedAll && isOpTriviallyDead(op)) {
       rewriter.eraseOp(op);
-      return success();
+      return;
     }
 
     PatternRewriter::InsertionGuard guard(rewriter);
@@ -166,8 +160,6 @@ struct MaterializeKnownConstantValues : public RewritePattern {
         }
       }
     }
-
-    return success();
   }
 
 private:
@@ -494,9 +486,10 @@ struct IntRangeOptimizationsPass final
     RewritePatternSet patterns(ctx);
     populateIntRangeOptimizationsPatterns(patterns, solver);
 
-    if (failed(applyPatternsGreedily(
-            op, std::move(patterns),
-            GreedyRewriteConfig().setListener(&listener))))
+    GreedyRewriteConfig config;
+    config.listener = &listener;
+
+    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
       signalPassFailure();
   }
 };
@@ -519,12 +512,13 @@ struct IntRangeNarrowingPass final
     RewritePatternSet patterns(ctx);
     populateIntRangeNarrowingPatterns(patterns, solver, bitwidthsSupported);
 
+    GreedyRewriteConfig config;
     // We specifically need bottom-up traversal as cmpi pattern needs range
     // data, attached to its original argument values.
-    if (failed(applyPatternsGreedily(
-            op, std::move(patterns),
-            GreedyRewriteConfig().setUseTopDownTraversal(false).setListener(
-                &listener))))
+    config.useTopDownTraversal = false;
+    config.listener = &listener;
+
+    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
       signalPassFailure();
   }
 };

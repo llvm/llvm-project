@@ -43,7 +43,7 @@ void SubtargetFeatures::AddFeature(StringRef String, bool Enable) {
 
 void SubtargetFeatures::addFeaturesVector(
     const ArrayRef<std::string> OtherFeatures) {
-  llvm::append_range(Features, OtherFeatures);
+  Features.insert(Features.cend(), OtherFeatures.begin(), OtherFeatures.end());
 }
 
 SubtargetFeatures::SubtargetFeatures(StringRef Initial) {

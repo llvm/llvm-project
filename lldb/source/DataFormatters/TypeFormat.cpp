@@ -96,20 +96,16 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
 
         ExecutionContextScope *exe_scope =
             exe_ctx.GetBestExecutionContextScope();
-        auto size_or_err = compiler_type.GetByteSize(exe_scope);
-        if (!size_or_err) {
-          LLDB_LOG_ERRORV(
-              GetLog(LLDBLog::Types), size_or_err.takeError(),
-              "Cannot get size of type while formatting object: {0}");
+        std::optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
+        if (!size)
           return false;
-        }
         StreamString sstr;
         compiler_type.DumpTypeValue(
             &sstr,                          // The stream to use for display
             GetFormat(),                    // Format to display this type with
             data,                           // Data to extract from
             0,                              // Byte offset into "m_data"
-            *size_or_err,                   // Byte size of item in "m_data"
+            *size,                          // Byte size of item in "m_data"
             valobj->GetBitfieldBitSize(),   // Bitfield bit size
             valobj->GetBitfieldBitOffset(), // Bitfield bit offset
             exe_scope);

@@ -196,7 +196,9 @@ Expected<Tweak::Effect> RemoveUsingNamespace::apply(const Selection &Inputs) {
   }
   // Remove duplicates.
   llvm::sort(IdentsToQualify);
-  IdentsToQualify.erase(llvm::unique(IdentsToQualify), IdentsToQualify.end());
+  IdentsToQualify.erase(
+      std::unique(IdentsToQualify.begin(), IdentsToQualify.end()),
+      IdentsToQualify.end());
 
   // Produce replacements to remove the using directives.
   tooling::Replacements R;

@@ -67,8 +67,7 @@ def err_drv_no_cuda_libdevice : Error<
   "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1| for ABI version %1"
-  "%select{|, which requires ROCm %3 or higher}2}0; provide its path via "
+  "cannot find ROCm device library%select{| for %1| for ABI version %1}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
 def err_drv_no_asan_rt_lib : Error<
@@ -146,9 +145,6 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
-
-def warn_openacc_experimental : Warning<
-"OpenACC is NOT supported for AMDGPU">;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -289,11 +285,6 @@ def err_cpu_unsupported_isa
 def err_arch_unsupported_isa
   : Error<"architecture '%0' does not support '%1' execution mode">;
 
-def err_zos_target_release_discontinued
-  : Error<"z/OS target level \"%0\" is discontinued">;
-def err_zos_target_unrecognized_release
-  : Error<"z/OS target level \"%0\" is invalid">;
-
 def err_drv_I_dash_not_supported : Error<
   "'%0' not supported, please use -iquote instead">;
 def err_drv_unknown_argument : Error<"unknown argument: '%0'">;
@@ -409,14 +400,8 @@ def err_drv_print_header_env_var : Error<
   "environment variable CC_PRINT_HEADERS_%select{FORMAT|FILTERING}0 has invalid value %1">;
 def err_drv_print_header_env_var_combination : Error<
   "unsupported combination: CC_PRINT_HEADERS_FORMAT=%0 and CC_PRINT_HEADERS_FILTERING=%1">;
-def err_drv_print_header_env_var_invalid_format : Error<
-  "environment variable CC_PRINT_HEADERS_FORMAT=%0 requires a compatible value for CC_PRINT_HEADERS_FILTERING">;
-def err_drv_print_header_cc1_invalid_combination : Error<
+def err_drv_print_header_env_var_combination_cc1 : Error<
   "unsupported combination: -header-include-format=%0 and -header-include-filtering=%1">;
-def err_drv_print_header_cc1_invalid_filtering : Error<
-  "-header-include-filtering=%0 requires a compatible value for -header-include-format">;
-def err_drv_print_header_cc1_invalid_format : Error<
-  "-header-include-format=%0 requires a compatible value for -header-include-filtering">;
 
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
@@ -578,11 +563,6 @@ def err_test_module_file_extension_format : Error<
 
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' cannot be used with multiple arch options">;
-
-def err_drv_reduced_module_output_overrided : Warning<
-  "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
-  "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
-  InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -877,9 +857,4 @@ def warn_missing_include_dirs : Warning<
 
 def err_drv_malformed_warning_suppression_mapping : Error<
   "failed to process suppression mapping file '%0': %1">;
-
-def warn_drv_openacc_without_cir
-    : Warning<"OpenACC directives will result in no runtime behavior; use "
-              "-fclangir to enable runtime effect">,
-      InGroup<SourceUsesOpenACC>;
 }

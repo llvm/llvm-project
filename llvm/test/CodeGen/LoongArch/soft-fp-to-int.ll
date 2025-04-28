@@ -25,8 +25,7 @@ define i32 @fptosi_i32_fp128(fp128 %X) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    pcaddu18i $ra, %call36(__fixtfsi)
-; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    bl %plt(__fixtfsi)
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -48,8 +47,7 @@ define i32 @fptosi_i32_double(double %X) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    pcaddu18i $ra, %call36(__fixdfsi)
-; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    bl %plt(__fixdfsi)
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -71,8 +69,7 @@ define i32 @fptosi_i32_float(float %X) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    pcaddu18i $ra, %call36(__fixsfsi)
-; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    bl %plt(__fixsfsi)
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -103,8 +100,7 @@ define i64 @fptosi_i64_fp128(fp128 %X) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    pcaddu18i $ra, %call36(__fixtfdi)
-; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    bl %plt(__fixtfdi)
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -126,8 +122,7 @@ define i64 @fptosi_i64_double(double %X) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    pcaddu18i $ra, %call36(__fixdfdi)
-; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    bl %plt(__fixdfdi)
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
@@ -149,8 +144,7 @@ define i64 @fptosi_i64_float(float %X) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $sp, $sp, -16
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64-NEXT:    pcaddu18i $ra, %call36(__fixsfdi)
-; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    bl %plt(__fixsfdi)
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret

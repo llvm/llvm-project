@@ -13,14 +13,6 @@
 // RUN: %clang_cc1 -DOMP51 -DOMPX -verify -fopenmp-simd -fopenmp-extensions -ast-print %s | FileCheck -check-prefixes=CHECK,OMP51,OMPX %s
 // RUN: %clang_cc1 -DOMP51 -DOMPX -fopenmp-simd -fopenmp-extensions -x c++ -std=c++11 -emit-pch -o %t %s
 // RUN: %clang_cc1 -DOMP51 -DOMPX -fopenmp-simd -fopenmp-extensions -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP51,OMPX %s
-
-// RUN: %clang_cc1 -DOMP60 -verify -fopenmp -fopenmp-version=60 -fopenmp-extensions -ast-print %s | FileCheck -check-prefixes=CHECK,OMP60 %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -fopenmp-extensions -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -fopenmp-extensions -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP60 %s
-
-// RUN: %clang_cc1 -DOMP60 -verify -fopenmp-simd -fopenmp -fopenmp-version=60 -fopenmp-extensions -ast-print %s | FileCheck -check-prefixes=CHECK,OMP60 %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp -fopenmp-version=60 -fopenmp-extensions -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp -fopenmp-version=60 -fopenmp-extensions -std=c++11 -include-pch %t -verify %s -ast-print | FileCheck -check-prefixes=CHECK,OMP60 %s
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -59,11 +51,6 @@ T tmain(T argc, T *argv) {
 #pragma omp target data map(close,alloc: e)
   foo();
 
-#ifdef OMP60
-#pragma omp target data map(self,alloc: e)
-  foo();
-#endif
-
 #ifdef OMP51
 #pragma omp target data map(present,alloc: e)
   foo();
@@ -81,10 +68,6 @@ T tmain(T argc, T *argv) {
     foo();
   #pragma omp target map(close, alloc: e)
     foo();
-#ifdef OMP60
-  #pragma omp target map(self,alloc: e)
-    foo();
-#endif
 #ifdef OMP51
   #pragma omp target map(present, alloc: e)
     foo();
@@ -118,8 +101,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(close,alloc: e)
 // CHECK-NEXT: foo();
-// OMP60-NEXT: #pragma omp target data map(self,alloc: e)
-// OMP60-NEXT: foo();
 // OMP51-NEXT: #pragma omp target data map(present,alloc: e)
 // OMP51-NEXT: foo();
 //  OMPX-NEXT: #pragma omp target data map(ompx_hold,alloc: e)
@@ -130,8 +111,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target map(close,alloc: e)
 // CHECK-NEXT: foo();
-// OMP60-NEXT: #pragma omp target map(self,alloc: e)
-// OMP60-NEXT: foo();
 // OMP51-NEXT: #pragma omp target map(present,alloc: e)
 // OMP51-NEXT: foo();
 //  OMPX-NEXT: #pragma omp target map(ompx_hold,alloc: e)
@@ -156,8 +135,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(close,alloc: e)
 // CHECK-NEXT: foo();
-// OMP60-NEXT: #pragma omp target data map(self,alloc: e)
-// OMP60-NEXT: foo();
 // OMP51-NEXT: #pragma omp target data map(present,alloc: e)
 // OMP51-NEXT: foo();
 //  OMPX-NEXT: #pragma omp target data map(ompx_hold,alloc: e)
@@ -168,8 +145,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target map(close,alloc: e)
 // CHECK-NEXT: foo();
-// OMP60-NEXT: #pragma omp target map(self,alloc: e)
-// OMP60-NEXT: foo();
 // OMP51-NEXT: #pragma omp target map(present,alloc: e)
 // OMP51-NEXT: foo();
 //  OMPX-NEXT: #pragma omp target map(ompx_hold,alloc: e)
@@ -194,8 +169,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target data map(close,alloc: e)
 // CHECK-NEXT: foo();
-// OMP60-NEXT: #pragma omp target data map(self,alloc: e)
-// OMP60-NEXT: foo();
 // OMP51-NEXT: #pragma omp target data map(present,alloc: e)
 // OMP51-NEXT: foo();
 //  OMPX-NEXT: #pragma omp target data map(ompx_hold,alloc: e)
@@ -206,8 +179,6 @@ T tmain(T argc, T *argv) {
 // CHECK-NEXT: foo();
 // CHECK-NEXT: #pragma omp target map(close,alloc: e)
 // CHECK-NEXT: foo();
-// OMP60-NEXT: #pragma omp target map(self,alloc: e)
-// OMP60-NEXT: foo();
 // OMP51-NEXT: #pragma omp target map(present,alloc: e)
 // OMP51-NEXT: foo();
 //  OMPX-NEXT: #pragma omp target map(ompx_hold,alloc: e)
@@ -263,13 +234,6 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: #pragma omp target data map(close,alloc: e)
   foo();
 // CHECK-NEXT: foo();
-
-// OMP60-NEXT: #pragma omp target data map(self,alloc: e)
-// OMP60-NEXT: foo();
-#ifdef OMP60
-#pragma omp target data map(self,alloc: e)
-  foo();
-#endif
 
 // OMP51-NEXT: #pragma omp target data map(present,alloc: e)
 // OMP51-NEXT: foo();

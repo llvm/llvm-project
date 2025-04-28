@@ -214,9 +214,10 @@ struct UndefinedDiag {
   std::vector<File> files;
 };
 
-void SymbolTable::reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
+static void reportUndefinedSymbol(COFFLinkerContext &ctx,
+                                  const UndefinedDiag &undefDiag) {
   auto diag = errorOrWarn(ctx);
-  diag << "undefined symbol: " << printSymbol(undefDiag.sym);
+  diag << "undefined symbol: " << undefDiag.sym;
 
   const size_t maxUndefReferences = 3;
   size_t numDisplayedRefs = 0, numRefs = 0;
@@ -231,17 +232,6 @@ void SymbolTable::reportUndefinedSymbol(const UndefinedDiag &undefDiag) {
   }
   if (numDisplayedRefs < numRefs)
     diag << "\n>>> referenced " << numRefs - numDisplayedRefs << " more times";
-
-  // Hints
-  StringRef name = undefDiag.sym->getName();
-  if (name.consume_front("__imp_")) {
-    Symbol *imp = find(name);
-    if (imp && imp->isLazy()) {
-      diag << "\nNOTE: a relevant symbol '" << imp->getName()
-           << "' is available in " << toString(imp->getFile())
-           << " but cannot be used because it is not an import library.";
-    }
-  }
 }
 
 void SymbolTable::loadMinGWSymbols() {
@@ -373,12 +363,12 @@ void SymbolTable::reportProblemSymbols(
 
   for (Symbol *b : ctx.config.gcroot) {
     if (undefs.count(b))
-      errorOrWarn(ctx) << "<root>: undefined symbol: " << printSymbol(b);
+      errorOrWarn(ctx) << "<root>: undefined symbol: " << b;
     if (localImports)
       if (Symbol *imp = localImports->lookup(b))
-        Warn(ctx) << "<root>: locally defined symbol imported: "
-                  << printSymbol(imp) << " (defined in "
-                  << toString(imp->getFile()) << ") [LNK4217]";
+        Warn(ctx) << "<root>: locally defined symbol imported: " << imp
+                  << " (defined in " << toString(imp->getFile())
+                  << ") [LNK4217]";
   }
 
   std::vector<UndefinedDiag> undefDiags;
@@ -399,8 +389,7 @@ void SymbolTable::reportProblemSymbols(
       }
       if (localImports)
         if (Symbol *imp = localImports->lookup(sym))
-          Warn(ctx) << file
-                    << ": locally defined symbol imported: " << printSymbol(imp)
+          Warn(ctx) << file << ": locally defined symbol imported: " << imp
                     << " (defined in " << imp->getFile() << ") [LNK4217]";
     }
   };
@@ -413,7 +402,7 @@ void SymbolTable::reportProblemSymbols(
       processFile(file, file->getSymbols());
 
   for (const UndefinedDiag &undefDiag : undefDiags)
-    reportUndefinedSymbol(undefDiag);
+    reportUndefinedSymbol(ctx, undefDiag);
 }
 
 void SymbolTable::reportUnresolvable() {
@@ -443,10 +432,11 @@ void SymbolTable::reportUnresolvable() {
   reportProblemSymbols(undefs, /*localImports=*/nullptr, true);
 }
 
-void SymbolTable::resolveRemainingUndefines() {
+bool SymbolTable::resolveRemainingUndefines() {
   llvm::TimeTraceScope timeScope("Resolve remaining undefined symbols");
   SmallPtrSet<Symbol *, 8> undefs;
   DenseMap<Symbol *, Symbol *> localImports;
+  bool foundLazy = false;
 
   for (auto &i : symMap) {
     Symbol *sym = i.second;
@@ -491,6 +481,11 @@ void SymbolTable::resolveRemainingUndefines() {
             imp = findLocalSym(*mangledName);
         }
       }
+      if (imp && imp->isLazy()) {
+        forceLazy(imp);
+        foundLazy = true;
+        continue;
+      }
       if (imp && isa<Defined>(imp)) {
         auto *d = cast<Defined>(imp);
         replaceSymbol<DefinedLocalImport>(sym, ctx, name, d);
@@ -518,6 +513,7 @@ void SymbolTable::resolveRemainingUndefines() {
   reportProblemSymbols(
       undefs, ctx.config.warnLocallyDefinedImported ? &localImports : nullptr,
       false);
+  return foundLazy;
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef name) {
@@ -826,7 +822,7 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
                                   uint32_t newSectionOffset) {
   COFFSyncStream diag(ctx, ctx.config.forceMultiple ? DiagLevel::Warn
                                                     : DiagLevel::Err);
-  diag << "duplicate symbol: " << printSymbol(existing);
+  diag << "duplicate symbol: " << existing;
 
   DefinedRegular *d = dyn_cast<DefinedRegular>(existing);
   if (d && isa<ObjFile>(d->getFile())) {
@@ -1324,41 +1320,8 @@ void SymbolTable::parseModuleDefs(StringRef path) {
   }
 }
 
-// Parse a string of the form of "<from>=<to>".
-void SymbolTable::parseAlternateName(StringRef s) {
-  auto [from, to] = s.split('=');
-  if (from.empty() || to.empty())
-    Fatal(ctx) << "/alternatename: invalid argument: " << s;
-  auto it = alternateNames.find(from);
-  if (it != alternateNames.end() && it->second != to)
-    Fatal(ctx) << "/alternatename: conflicts: " << s;
-  alternateNames.insert(it, std::make_pair(from, to));
-}
-
-// Parses /aligncomm option argument.
-void SymbolTable::parseAligncomm(StringRef s) {
-  auto [name, align] = s.split(',');
-  if (name.empty() || align.empty()) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  int v;
-  if (align.getAsInteger(0, v)) {
-    Err(ctx) << "/aligncomm: invalid argument: " << s;
-    return;
-  }
-  alignComm[std::string(name)] = std::max(alignComm[std::string(name)], 1 << v);
-}
-
 Symbol *SymbolTable::addUndefined(StringRef name) {
   return addUndefined(name, nullptr, false);
-}
-
-std::string SymbolTable::printSymbol(Symbol *sym) const {
-  std::string name = maybeDemangleSymbol(ctx, sym->getName());
-  if (ctx.hybridSymtab)
-    return name + (isEC() ? " (EC symbol)" : " (native symbol)");
-  return name;
 }
 
 void SymbolTable::compileBitcodeFiles() {

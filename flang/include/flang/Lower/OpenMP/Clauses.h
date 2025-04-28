@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/ClauseT.h"
-#include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 #include <optional>
 #include <type_traits>
@@ -144,9 +143,6 @@ inline ObjectList makeObjects(const parser::OmpObjectList &objects,
   return makeList(objects.v, makeObjectFn(semaCtx));
 }
 
-ObjectList makeObjects(const parser::OmpArgumentList &objects,
-                       semantics::SemanticsContext &semaCtx);
-
 template <typename FuncTy, //
           typename ArgTy,  //
           typename ResultTy = std::invoke_result_t<FuncTy, ArgTy>>
@@ -235,7 +231,6 @@ using Inbranch = tomp::clause::InbranchT<TypeTy, IdTy, ExprTy>;
 using Inclusive = tomp::clause::InclusiveT<TypeTy, IdTy, ExprTy>;
 using Indirect = tomp::clause::IndirectT<TypeTy, IdTy, ExprTy>;
 using Init = tomp::clause::InitT<TypeTy, IdTy, ExprTy>;
-using Initializer = tomp::clause::InitializerT<TypeTy, IdTy, ExprTy>;
 using InReduction = tomp::clause::InReductionT<TypeTy, IdTy, ExprTy>;
 using IsDevicePtr = tomp::clause::IsDevicePtrT<TypeTy, IdTy, ExprTy>;
 using Lastprivate = tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy>;
@@ -290,7 +285,6 @@ using To = tomp::clause::ToT<TypeTy, IdTy, ExprTy>;
 using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdTy, ExprTy>;
 using UnifiedSharedMemory =
     tomp::clause::UnifiedSharedMemoryT<TypeTy, IdTy, ExprTy>;
-using SelfMaps = tomp::clause::SelfMapsT<TypeTy, IdTy, ExprTy>;
 using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;
@@ -307,8 +301,7 @@ using Write = tomp::clause::WriteT<TypeTy, IdTy, ExprTy>;
 using tomp::type::operator==;
 
 struct CancellationConstructType {
-  using WrapperTrait = std::true_type;
-  llvm::omp::CancellationConstructType v;
+  using EmptyTrait = std::true_type;
 };
 struct Depobj {
   using EmptyTrait = std::true_type;

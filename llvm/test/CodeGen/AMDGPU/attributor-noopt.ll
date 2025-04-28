@@ -30,11 +30,9 @@
 ; NOOPT: .amdhsa_system_sgpr_workgroup_id_z 1
 ; NOOPT: .amdhsa_system_sgpr_workgroup_info 0
 ; NOOPT: .amdhsa_system_vgpr_workitem_id 2
-define amdgpu_kernel void @foo() #0 {
+define amdgpu_kernel void @foo() {
   ret void
 }
-
-attributes #0 = { "amdgpu-no-flat-scratch-init" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 CODE_OBJECT_VERSION}

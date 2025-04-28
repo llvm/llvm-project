@@ -28,9 +28,8 @@ EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
            {SAs.Finalize, rt::SimpleExecutorMemoryManagerFinalizeWrapperName},
            {SAs.Deallocate,
             rt::SimpleExecutorMemoryManagerDeallocateWrapperName},
-           {SAs.RegisterEHFrame, rt::RegisterEHFrameSectionAllocActionName},
-           {SAs.DeregisterEHFrame,
-            rt::DeregisterEHFrameSectionAllocActionName}}))
+           {SAs.RegisterEHFrame, rt::RegisterEHFrameSectionWrapperName},
+           {SAs.DeregisterEHFrame, rt::DeregisterEHFrameSectionWrapperName}}))
     return std::move(Err);
   return std::make_unique<EPCGenericRTDyldMemoryManager>(EPC, std::move(SAs));
 }

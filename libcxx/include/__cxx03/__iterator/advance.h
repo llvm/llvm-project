@@ -11,7 +11,11 @@
 #define _LIBCPP___CXX03___ITERATOR_ADVANCE_H
 
 #include <__cxx03/__assert>
+#include <__cxx03/__concepts/assignable.h>
+#include <__cxx03/__concepts/same_as.h>
 #include <__cxx03/__config>
+#include <__cxx03/__iterator/concepts.h>
+#include <__cxx03/__iterator/incrementable_traits.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__type_traits/enable_if.h>
 #include <__cxx03/__type_traits/is_integral.h>

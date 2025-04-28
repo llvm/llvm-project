@@ -14,7 +14,7 @@
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
-    !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__)
+    !(defined(__sun__) && defined(__svr4__))
 #  error "This operating system is not supported"
 #endif
 
@@ -53,12 +53,6 @@
 #  define SANITIZER_SOLARIS 1
 #else
 #  define SANITIZER_SOLARIS 0
-#endif
-
-#if defined(__HAIKU__)
-#  define SANITIZER_HAIKU 1
-#else
-#  define SANITIZER_HAIKU 0
 #endif
 
 // - SANITIZER_APPLE: all Apple code
@@ -142,9 +136,9 @@
 #  define SANITIZER_MUSL 0
 #endif
 
-#define SANITIZER_POSIX                                       \
+#define SANITIZER_POSIX                                     \
   (SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_APPLE || \
-   SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU)
+   SANITIZER_NETBSD || SANITIZER_SOLARIS)
 
 #if __LP64__ || defined(_WIN64)
 #  define SANITIZER_WORDSIZE 64
@@ -416,8 +410,7 @@
 #  define SANITIZER_SUPPRESS_LEAK_ON_PTHREAD_EXIT 0
 #endif
 
-#if SANITIZER_FREEBSD || SANITIZER_APPLE || SANITIZER_NETBSD || \
-    SANITIZER_SOLARIS || SANITIZER_HAIKU
+#if SANITIZER_FREEBSD || SANITIZER_APPLE || SANITIZER_NETBSD || SANITIZER_SOLARIS
 #  define SANITIZER_MADVISE_DONTNEED MADV_FREE
 #else
 #  define SANITIZER_MADVISE_DONTNEED MADV_DONTNEED

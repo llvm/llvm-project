@@ -362,9 +362,8 @@ static void clobberRegEntries(InlinedEntity Var, unsigned RegNo,
       FellowRegisters.push_back(Reg);
 
   // Drop all entries that have ended.
-  auto &Entries = LiveEntries[Var];
   for (auto Index : IndicesToErase)
-    Entries.erase(Index);
+    LiveEntries[Var].erase(Index);
 }
 
 /// Add a new debug value for \p Var. Closes all overlapping debug values.
@@ -401,9 +400,10 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
       for (const MachineOperand &Op : DV.debug_operands()) {
         if (Op.isReg() && Op.getReg()) {
           Register NewReg = Op.getReg();
-          if (TrackedRegs.insert_or_assign(NewReg, true).second)
+          if (!TrackedRegs.count(NewReg))
             addRegDescribedVar(RegVars, NewReg, Var);
           LiveEntries[Var].insert(NewIndex);
+          TrackedRegs[NewReg] = true;
         }
       }
     }
@@ -558,6 +558,75 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
 
       LiveEntries.clear();
       RegVars.clear();
+    }
+  }
+}
+
+DbgDefKillHistoryMap::Entry::Entry(const MachineInstr &Begin)
+    : Begin(&Begin), End(nullptr), LastLiveBlock(Begin.getParent()) {}
+
+const MachineInstr *DbgDefKillHistoryMap::Entry::getBegin() const {
+  return Begin;
+}
+const MachineInstr *DbgDefKillHistoryMap::Entry::getEnd() const {
+  if (End)
+    return End;
+  return &LastLiveBlock->back();
+}
+bool DbgDefKillHistoryMap::Entry::isLiveThroughFunction() const {
+  if (End)
+    return false;
+  // FIXME: This doesn't consider other instructions preceding this DBG_DEF in
+  // the prologue.
+  if (!Begin->getParent()->pred_empty())
+    return false;
+  return LastLiveBlock->succ_empty();
+}
+
+void DbgDefKillHistoryMap::handleDbgDef(const MachineInstr &MI,
+                                        bool IsCoalescable) {
+  LLVM_DEBUG(dbgs() << "Handling DbgDef: " << MI << '\n');
+  auto &Entries = Lifetime2Entries[MI.getDebugLifetime()];
+  if (IsCoalescable && !Entries.empty() && !Entries.back().End) {
+    Entries.back().LastLiveBlock = MI.getParent();
+    return;
+  }
+  Entries.emplace_back(MI);
+}
+
+void DbgDefKillHistoryMap::handleDbgKill(const MachineInstr &MI) {
+  LLVM_DEBUG(dbgs() << "Handling DbgKill: " << MI << '\n');
+  auto &Entries = Lifetime2Entries[MI.getDebugLifetime()];
+  assert(!Entries.empty());
+  assert(!Entries.back().End);
+  Entries.back().End = &MI;
+}
+
+void llvm::calculateHeterogeneousDbgEntityHistory(
+    const MachineFunction *MF, const TargetRegisterInfo *TRI,
+    DbgDefKillHistoryMap &DbgDefKillHistory, DbgLabelInstrMap &DbgLabels) {
+  for (const auto &MBB : *MF) {
+    bool IsCoalescable = true;
+    for (const auto &MI : MBB) {
+      if (!MI.isMetaInstruction()) {
+        IsCoalescable = false;
+        continue;
+      }
+      if (MI.isDebugDef()) {
+        DbgDefKillHistory.handleDbgDef(MI, IsCoalescable);
+      } else if (MI.isDebugKill()) {
+        DbgDefKillHistory.handleDbgKill(MI);
+      } else if (MI.isDebugLabel()) {
+        assert(MI.getNumOperands() == 1 && "Invalid DBG_LABEL instruction!");
+        const DILabel *RawLabel = MI.getDebugLabel();
+        assert(RawLabel->isValidLocationForIntrinsic(MI.getDebugLoc()) &&
+               "Expected inlined-at fields to agree");
+        // When collecting debug information for labels, there is no MCSymbol
+        // generated for it. So, we keep MachineInstr in DbgLabels in order
+        // to query MCSymbol afterward.
+        InlinedEntity L(RawLabel, MI.getDebugLoc()->getInlinedAt());
+        DbgLabels.addInstr(L, MI);
+      }
     }
   }
 }

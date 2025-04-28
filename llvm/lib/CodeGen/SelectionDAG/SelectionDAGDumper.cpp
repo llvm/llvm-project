@@ -21,7 +21,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -68,9 +67,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
       return "<<Unknown Machine Node #" + utostr(getOpcode()) + ">>";
     }
     if (G) {
-      const SelectionDAGTargetInfo &TSI = G->getSelectionDAGInfo();
-      if (const char *Name = TSI.getTargetNodeName(getOpcode()))
-        return Name;
       const TargetLowering &TLI = G->getTargetLoweringInfo();
       const char *Name = TLI.getTargetNodeName(getOpcode());
       if (Name) return Name;
@@ -122,7 +118,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::TokenFactor:                return "TokenFactor";
   case ISD::AssertSext:                 return "AssertSext";
   case ISD::AssertZext:                 return "AssertZext";
-  case ISD::AssertNoFPClass:            return "AssertNoFPClass";
   case ISD::AssertAlign:                return "AssertAlign";
 
   case ISD::BasicBlock:                 return "BasicBlock";
@@ -190,7 +185,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CopyToReg:                  return "CopyToReg";
   case ISD::CopyFromReg:                return "CopyFromReg";
   case ISD::UNDEF:                      return "undef";
-  case ISD::POISON:                     return "poison";
   case ISD::VSCALE:                     return "vscale";
   case ISD::MERGE_VALUES:               return "merge_values";
   case ISD::INLINEASM:                  return "inlineasm";
@@ -574,11 +568,6 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     return "find_last_active";
-
-  case ISD::PARTIAL_REDUCE_UMLA:
-    return "partial_reduce_umla";
-  case ISD::PARTIAL_REDUCE_SMLA:
-    return "partial_reduce_smla";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
@@ -995,7 +984,7 @@ LLVM_DUMP_METHOD void SDDbgValue::print(raw_ostream &OS) const {
       OS << "FRAMEIX=" << Op.getFrameIx();
       break;
     case SDDbgOperand::VREG:
-      OS << "VREG=" << printReg(Op.getVReg());
+      OS << "VREG=" << Op.getVReg();
       break;
     }
     Comma = true;

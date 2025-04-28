@@ -1,3 +1,10 @@
+set(LLVM_LINK_COMPONENTS
+  BitReader
+  BitstreamReader
+  FrontendOpenMP
+  Support
+  )
+
 add_clang_unittest(SerializationTests
   ForceCheckFileInputTest.cpp
   InMemoryModuleCacheTest.cpp
@@ -7,7 +14,10 @@ add_clang_unittest(SerializationTests
   LoadSpecLazilyTest.cpp
   SourceLocationEncodingTest.cpp
   VarDeclConstantInitTest.cpp
-  CLANG_LIBS
+  )
+
+clang_target_link_libraries(SerializationTests
+  PRIVATE
   clangAST
   clangBasic
   clangFrontend
@@ -16,9 +26,4 @@ add_clang_unittest(SerializationTests
   clangSerialization
   clangTooling
   clangASTMatchers
-  LLVM_COMPONENTS
-  BitReader
-  BitstreamReader
-  FrontendOpenMP
-  Support
   )

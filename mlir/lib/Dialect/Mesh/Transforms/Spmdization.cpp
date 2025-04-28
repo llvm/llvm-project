@@ -561,8 +561,7 @@ TypedValue<ShapedType> reshard(ImplicitLocOpBuilder &builder, MeshOp mesh,
                                TypedValue<ShapedType> sourceUnshardedValue,
                                TypedValue<ShapedType> sourceShard) {
   // If source and destination sharding are the same, no need to do anything.
-  if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&
-                                           isFullReplication(targetSharding))) {
+  if (sourceSharding == targetSharding) {
     return sourceShard;
   }
 
@@ -622,7 +621,7 @@ shardedBlockArgumentTypes(Block &block,
       block.getArguments(), std::back_inserter(res),
       [&symbolTableCollection](BlockArgument arg) {
         auto rankedTensorArg = dyn_cast<TypedValue<RankedTensorType>>(arg);
-        if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0) {
+        if (!rankedTensorArg) {
           return arg.getType();
         }
 
@@ -636,6 +635,14 @@ shardedBlockArgumentTypes(Block &block,
       });
   return res;
 }
+
+void spmdizeTriviallyShardableOperation(Operation &op,
+                                        ArrayRef<Value> spmdizedOperands,
+                                        ArrayRef<MeshSharding> operandShardings,
+                                        ArrayRef<MeshSharding> resultShardings,
+                                        IRMapping &spmdizationMap,
+                                        SymbolTableCollection &symbolTable,
+                                        OpBuilder &builder);
 
 static LogicalResult spmdizeOperation(
     Operation &op, ArrayRef<Value> spmdizedOperands,
@@ -672,7 +679,7 @@ static std::vector<MeshSharding> getOperandShardings(Operation &op) {
   llvm::transform(op.getOperands(), std::back_inserter(res), [](Value operand) {
     TypedValue<RankedTensorType> rankedTensor =
         dyn_cast<TypedValue<RankedTensorType>>(operand);
-    if (!rankedTensor || rankedTensor.getType().getRank() == 0) {
+    if (!rankedTensor) {
       return MeshSharding();
     }
 
@@ -689,33 +696,19 @@ static std::vector<MeshSharding> getOperandShardings(Operation &op) {
 static std::vector<MeshSharding> getResultShardings(Operation &op) {
   std::vector<MeshSharding> res;
   res.reserve(op.getNumResults());
-  llvm::transform(
-      op.getResults(), std::back_inserter(res), [&op](OpResult result) {
-        if (!result.hasOneUse() || result.use_empty()) {
-          return MeshSharding();
-        }
-        TypedValue<RankedTensorType> rankedTensor =
-            dyn_cast<TypedValue<RankedTensorType>>(result);
-        if (!rankedTensor) {
-          return MeshSharding();
-        }
-        Operation *userOp = *result.getUsers().begin();
-        ShardOp shardOp = llvm::dyn_cast<ShardOp>(userOp);
-        if (shardOp) {
-          return MeshSharding(shardOp.getSharding());
-        }
-        if (rankedTensor.getType().getRank() == 0) {
-          // This is a 0d tensor result without explicit sharding.
-          // Find mesh symbol from operands, if any.
-          // Shardings without mesh are not always fully supported yet.
-          for (auto operand : op.getOperands()) {
-            if (auto sharding = operand.getDefiningOp<ShardingOp>()) {
-              return MeshSharding(sharding.getMeshAttr());
-            }
-          }
-        }
-        return MeshSharding();
-      });
+  llvm::transform(op.getResults(), std::back_inserter(res),
+                  [](OpResult result) {
+                    TypedValue<RankedTensorType> rankedTensor =
+                        dyn_cast<TypedValue<RankedTensorType>>(result);
+                    if (!rankedTensor) {
+                      return MeshSharding();
+                    }
+
+                    assert(result.hasOneUse());
+                    Operation *userOp = *result.getUsers().begin();
+                    ShardOp shardOp = llvm::cast<ShardOp>(userOp);
+                    return MeshSharding(shardOp.getSharding());
+                  });
   return res;
 }
 
@@ -751,15 +744,6 @@ spmdizeOperation(Operation &op, IRMapping &spmdizationMap,
   if (isa<ShardingOp>(op)) {
     return success();
   }
-  if (auto getShardingOp = dyn_cast<GetShardingOp>(op)) {
-    auto shardOp = getShardingOp.getSource().getDefiningOp<ShardOp>();
-    if (!shardOp) {
-      return op.emitError("expected a shard op as source of get_sharding");
-    }
-    auto newSharding = builder.clone(*shardOp.getSharding().getDefiningOp());
-    spmdizationMap.map(op.getResult(0), newSharding->getResult(0));
-    return success();
-  }
 
   ShardOp shardOp = llvm::dyn_cast<ShardOp>(op);
   if (shardOp) {
@@ -781,7 +765,6 @@ spmdizeOperation(Operation &op, IRMapping &spmdizationMap,
 static LogicalResult spmdizeBlock(Block &block, IRMapping &spmdizationMap,
                                   SymbolTableCollection &symbolTableCollection,
                                   OpBuilder &builder) {
-
   SmallVector<Location> argLocations;
   llvm::transform(block.getArguments(), std::back_inserter(argLocations),
                   [](BlockArgument arg) { return arg.getLoc(); });
@@ -813,12 +796,8 @@ spmdizeFuncOp(FunctionOpInterface op, IRMapping &spmdizationMap,
   // Snapshot the original blocks to not mess up the iteration when adding new
   // blocks.
   SmallVector<Block *> originalBlocks;
-  for (Block &b : op.getBlocks()) {
-    if (llvm::any_of(b.getOperations(),
-                     [](Operation &op) { return isa<ShardOp>(op); })) {
-      originalBlocks.push_back(&b);
-    }
-  }
+  llvm::transform(op.getBlocks(), std::back_inserter(originalBlocks),
+                  [](Block &b) { return &b; });
 
   for (Block *block : originalBlocks) {
     if (failed(spmdizeBlock(*block, spmdizationMap, symbolTableCollection,
@@ -844,11 +823,10 @@ spmdizeFuncOp(FunctionOpInterface op, IRMapping &spmdizationMap,
       break;
     }
   }
-  if (returnOp) {
-    op.setType(FunctionType::get(
-        op->getContext(), op.getFunctionBody().front().getArgumentTypes(),
-        returnOp->getOperandTypes()));
-  }
+  assert(returnOp);
+  op.setType(FunctionType::get(op->getContext(),
+                               op.getFunctionBody().front().getArgumentTypes(),
+                               returnOp->getOperandTypes()));
 
   return success();
 }

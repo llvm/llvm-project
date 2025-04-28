@@ -232,7 +232,7 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     unsigned Idx = 0;
     while (auto Elt = C.getAggregateElement(Idx++)) {
       auto EltRegs = getOrCreateVRegs(*Elt);
-      llvm::append_range(*VRegs, EltRegs);
+      llvm::copy(EltRegs, std::back_inserter(*VRegs));
     }
   } else {
     assert(SplitTys.size() == 1 && "unexpectedly split LLT");
@@ -252,8 +252,8 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
 }
 
 int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
-  auto [MapEntry, Inserted] = FrameIndices.try_emplace(&AI);
-  if (!Inserted)
+  auto MapEntry = FrameIndices.find(&AI);
+  if (MapEntry != FrameIndices.end())
     return MapEntry->second;
 
   uint64_t ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
@@ -263,7 +263,7 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   // Always allocate at least one byte.
   Size = std::max<uint64_t>(Size, 1u);
 
-  int &FI = MapEntry->second;
+  int &FI = FrameIndices[&AI];
   FI = MF->getFrameInfo().CreateStackObject(Size, AI.getAlign(), false, &AI);
   return FI;
 }
@@ -1477,7 +1477,8 @@ static uint64_t getOffsetFromIndices(const User &U, const DataLayout &DL) {
     for (auto Idx : IVI->indices())
       Indices.push_back(ConstantInt::get(Int32Ty, Idx));
   } else {
-    llvm::append_range(Indices, drop_begin(U.operands()));
+    for (Value *Op : drop_begin(U.operands()))
+      Indices.push_back(Op);
   }
 
   return 8 * static_cast<uint64_t>(
@@ -2211,7 +2212,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::fake_use: {
     SmallVector<llvm::SrcOp, 4> VRegs;
     for (const auto &Arg : CI.args())
-      llvm::append_range(VRegs, getOrCreateVRegs(*Arg));
+      for (auto VReg : getOrCreateVRegs(*Arg))
+        VRegs.push_back(VReg);
     MIRBuilder.buildInstr(TargetOpcode::FAKE_USE, {}, VRegs);
     MF->setHasFakeUses(true);
     return true;
@@ -2264,8 +2266,37 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::dbg_def:
-  case Intrinsic::dbg_kill:
-    report_fatal_error("unsupported DIExpr-based metadata");
+  case Intrinsic::dbg_kill: {
+    const DbgDefKillIntrinsic &DDKI = cast<DbgDefKillIntrinsic>(CI);
+    const bool IsDef = ID == Intrinsic::dbg_def;
+    auto MIB = MIRBuilder.buildInstrNoInsert(IsDef ? TargetOpcode::DBG_DEF
+                                                   : TargetOpcode::DBG_KILL);
+    MIB.addMetadata(DDKI.getLifetime());
+    if (IsDef) {
+      const Value *Referrer = cast<DbgDefInst>(DDKI).getReferrer();
+      assert(Referrer);
+      if (const auto *CI = dyn_cast<ConstantInt>(Referrer)) {
+        MIB.addCImm(CI);
+      } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
+        MIB.addFPImm(CFP);
+      } else if (auto *AI = dyn_cast<AllocaInst>(Referrer)) {
+        MIB.addFrameIndex(getOrCreateFrameIndex(*AI));
+        DILifetime *Lifetime = cast<DbgDefInst>(DDKI).getLifetime();
+        // The translation from an alloca (semantically a pointer) to a frame
+        // index (semantically the stack slot itself) removes one level of
+        // indirection, which needs to be reflected in the expression.
+        Lifetime->setLocation(
+            Lifetime->getLocation()
+                ->builder()
+                .removeReferrerIndirection(AI->getAllocatedType())
+                .intoExpr());
+      } else {
+        MIB.addReg(getOrCreateVReg(*Referrer));
+      }
+    }
+    MIRBuilder.insertInstr(MIB);
+    return true;
+  }
   case Intrinsic::uadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDO, MIRBuilder);
   case Intrinsic::sadd_with_overflow:
@@ -3144,12 +3175,21 @@ bool IRTranslator::translateVAArg(const User &U, MachineIRBuilder &MIRBuilder) {
   return true;
 }
 
-bool IRTranslator::translateUnreachable(const User &U,
-                                        MachineIRBuilder &MIRBuilder) {
-  auto &UI = cast<UnreachableInst>(U);
-  if (!UI.shouldLowerToTrap(MF->getTarget().Options.TrapUnreachable,
-                            MF->getTarget().Options.NoTrapAfterNoreturn))
+bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuilder) {
+  if (!MF->getTarget().Options.TrapUnreachable)
     return true;
+
+  auto &UI = cast<UnreachableInst>(U);
+
+  // We may be able to ignore unreachable behind a noreturn call.
+  if (const CallInst *Call = dyn_cast_or_null<CallInst>(UI.getPrevNode());
+      Call && Call->doesNotReturn()) {
+    if (MF->getTarget().Options.NoTrapAfterNoreturn)
+      return true;
+    // Do not emit an additional trap instruction.
+    if (Call->isNonContinuableTrap())
+      return true;
+  }
 
   MIRBuilder.buildTrap();
   return true;
@@ -3166,7 +3206,7 @@ bool IRTranslator::translateInsertElement(const User &U,
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
   Register Elt = getOrCreateVReg(*U.getOperand(1));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
   Register Idx;
   if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(2))) {
     if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3192,7 +3232,7 @@ bool IRTranslator::translateInsertVector(const User &U,
   Register Elt = getOrCreateVReg(*U.getOperand(1));
 
   ConstantInt *CI = cast<ConstantInt>(U.getOperand(2));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
 
   // Resize Index to preferred index width.
   if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3247,7 +3287,7 @@ bool IRTranslator::translateExtractElement(const User &U,
 
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
   Register Idx;
   if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(1))) {
     if (CI->getBitWidth() != PreferredVecIdxWidth) {
@@ -3271,7 +3311,7 @@ bool IRTranslator::translateExtractVector(const User &U,
   Register Res = getOrCreateVReg(U);
   Register Vec = getOrCreateVReg(*U.getOperand(0));
   ConstantInt *CI = cast<ConstantInt>(U.getOperand(1));
-  unsigned PreferredVecIdxWidth = TLI->getVectorIdxWidth(*DL);
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
 
   // Resize Index to preferred index width.
   if (CI->getBitWidth() != PreferredVecIdxWidth) {

@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Container = deque<_Tp> >
-class stack;
+class _LIBCPP_TEMPLATE_VIS stack;
 
 _LIBCPP_END_NAMESPACE_STD
 

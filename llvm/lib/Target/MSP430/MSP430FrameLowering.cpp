@@ -14,7 +14,6 @@
 #include "MSP430InstrInfo.h"
 #include "MSP430MachineFunctionInfo.h"
 #include "MSP430Subtarget.h"
-#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -65,7 +64,7 @@ void MSP430FrameLowering::emitCalleeSavedFrameMoves(
   // Calculate offsets.
   for (const CalleeSavedInfo &I : CSI) {
     int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-    MCRegister Reg = I.getReg();
+    Register Reg = I.getReg();
     unsigned DwarfReg = MRI->getDwarfRegNum(Reg, true);
 
     if (IsPrologue) {
@@ -325,7 +324,7 @@ bool MSP430FrameLowering::spillCalleeSavedRegisters(
   MFI->setCalleeSavedFrameSize(CSI.size() * 2);
 
   for (const CalleeSavedInfo &I : CSI) {
-    MCRegister Reg = I.getReg();
+    Register Reg = I.getReg();
     // Add the callee-saved register as live-in. It's killed at the spill.
     MBB.addLiveIn(Reg);
     BuildMI(MBB, MI, DL, TII.get(MSP430::PUSH16r))
@@ -407,8 +406,9 @@ MachineBasicBlock::iterator MSP430FrameLowering::eliminateCallFramePseudoInstr(
               .addReg(MSP430::SP)
               .addImm(CalleeAmt);
       if (!hasFP(MF)) {
-        CFIInstBuilder(MBB, I, MachineInstr::NoFlags)
-            .buildAdjustCFAOffset(CalleeAmt);
+        DebugLoc DL = I->getDebugLoc();
+        BuildCFI(MBB, I, DL,
+                 MCCFIInstruction::createAdjustCfaOffset(nullptr, CalleeAmt));
       }
       // The SRW implicit def is dead.
       New->getOperand(3).setIsDead();

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/Attributes.h"
@@ -57,71 +56,40 @@ static bool isLessThanOrEqualTargetBitWidth(Type t, unsigned targetBitWidth) {
   return trailingVecDimBitWidth <= targetBitWidth;
 }
 
-static FailureOr<Attribute>
-linearizeConstAttr(Location loc, ConversionPatternRewriter &rewriter,
-                   VectorType resType, Attribute value) {
-  if (auto dstElementsAttr = dyn_cast<DenseElementsAttr>(value)) {
-    if (resType.isScalable() && !isa<SplatElementsAttr>(value))
-      return rewriter.notifyMatchFailure(
-          loc,
-          "Cannot linearize a constant scalable vector that's not a splat");
-
-    return dstElementsAttr.reshape(resType);
-  }
-
-  if (auto poisonAttr = dyn_cast<ub::PoisonAttr>(value))
-    return poisonAttr;
-
-  return rewriter.notifyMatchFailure(loc, "unsupported attr type");
-}
-
 namespace {
-struct LinearizeConstantLike final
-    : OpTraitConversionPattern<OpTrait::ConstantLike> {
-  using OpTraitConversionPattern::OpTraitConversionPattern;
-
-  LinearizeConstantLike(
+struct LinearizeConstant final : OpConversionPattern<arith::ConstantOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeConstant(
       const TypeConverter &typeConverter, MLIRContext *context,
       unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
       PatternBenefit benefit = 1)
-      : OpTraitConversionPattern(typeConverter, context, benefit),
+      : OpConversionPattern(typeConverter, context, benefit),
         targetVectorBitWidth(targetVectBitWidth) {}
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(arith::ConstantOp constOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Location loc = op->getLoc();
-    if (op->getNumResults() != 1)
-      return rewriter.notifyMatchFailure(loc, "expected 1 result");
-
-    const TypeConverter &converter = *getTypeConverter();
+    Location loc = constOp.getLoc();
     auto resType =
-        converter.convertType<VectorType>(op->getResult(0).getType());
+        getTypeConverter()->convertType<VectorType>(constOp.getType());
 
     if (!resType)
       return rewriter.notifyMatchFailure(loc, "can't convert return type");
 
-    if (!isLessThanTargetBitWidth(op, targetVectorBitWidth))
+    if (resType.isScalable() && !isa<SplatElementsAttr>(constOp.getValue()))
+      return rewriter.notifyMatchFailure(
+          loc,
+          "Cannot linearize a constant scalable vector that's not a splat");
+
+    if (!isLessThanTargetBitWidth(constOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           loc, "Can't flatten since targetBitWidth <= OpSize");
+    auto dstElementsAttr = dyn_cast<DenseElementsAttr>(constOp.getValue());
+    if (!dstElementsAttr)
+      return rewriter.notifyMatchFailure(loc, "unsupported attr type");
 
-    StringAttr attrName = rewriter.getStringAttr("value");
-    Attribute value = op->getAttr(attrName);
-    if (!value)
-      return rewriter.notifyMatchFailure(loc, "no 'value' attr");
-
-    FailureOr<Attribute> newValue =
-        linearizeConstAttr(loc, rewriter, resType, value);
-    if (failed(newValue))
-      return failure();
-
-    FailureOr<Operation *> convertResult =
-        convertOpResultTypes(op, /*operands=*/{}, converter, rewriter);
-    if (failed(convertResult))
-      return failure();
-
-    Operation *newOp = *convertResult;
-    newOp->setAttr(attrName, *newValue);
-    rewriter.replaceOp(op, newOp);
+    dstElementsAttr = dstElementsAttr.reshape(resType);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(constOp, resType,
+                                                   dstElementsAttr);
     return success();
   }
 
@@ -439,7 +407,7 @@ struct LinearizeVectorInsert final
       return rewriter.notifyMatchFailure(insertOp,
                                          "scalable vectors are not supported.");
 
-    if (!isLessThanOrEqualTargetBitWidth(insertOp.getValueToStoreType(),
+    if (!isLessThanOrEqualTargetBitWidth(insertOp.getSourceType(),
                                          targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           insertOp, "Can't flatten since targetBitWidth < OpSize");
@@ -448,7 +416,7 @@ struct LinearizeVectorInsert final
     if (insertOp.hasDynamicPosition())
       return rewriter.notifyMatchFailure(insertOp,
                                          "dynamic position is not supported.");
-    auto srcTy = insertOp.getValueToStoreType();
+    auto srcTy = insertOp.getSourceType();
     auto srcAsVec = dyn_cast<VectorType>(srcTy);
     uint64_t srcSize = 0;
     if (srcAsVec) {
@@ -484,7 +452,7 @@ struct LinearizeVectorInsert final
                                            // [offset+srcNumElements, end)
 
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        insertOp, dstTy, adaptor.getDest(), adaptor.getValueToStore(), indices);
+        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(), indices);
 
     return success();
   }
@@ -557,8 +525,7 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
   typeConverter.addTargetMaterialization(materializeCast);
   target.markUnknownOpDynamicallyLegal(
       [=](Operation *op) -> std::optional<bool> {
-        if ((isa<vector::BitCastOp>(op) ||
-             op->hasTrait<OpTrait::ConstantLike>() ||
+        if ((isa<arith::ConstantOp>(op) || isa<vector::BitCastOp>(op) ||
              op->hasTrait<OpTrait::Vectorizable>())) {
           return (isLessThanTargetBitWidth(op, targetBitWidth)
                       ? typeConverter.isLegal(op)
@@ -567,9 +534,9 @@ void mlir::vector::populateVectorLinearizeTypeConversionsAndLegality(
         return std::nullopt;
       });
 
-  patterns.add<LinearizeConstantLike, LinearizeVectorizable,
-               LinearizeVectorBitCast>(typeConverter, patterns.getContext(),
-                                       targetBitWidth);
+  patterns
+      .add<LinearizeConstant, LinearizeVectorizable, LinearizeVectorBitCast>(
+          typeConverter, patterns.getContext(), targetBitWidth);
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

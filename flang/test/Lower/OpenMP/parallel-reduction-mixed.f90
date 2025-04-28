@@ -17,7 +17,7 @@ subroutine proc
 end subroutine proc
 
 !CHECK-LABEL: define void @proc_()
-!CHECK: call void (ptr, i32, ptr, ...)
+!CHECK: call void
 !CHECK-SAME: @__kmpc_fork_call(ptr {{.*}}, i32 1, ptr @[[OMP_PAR:.*]], {{.*}})
 
 !CHECK: define internal void @[[OMP_PAR]](ptr {{.*}} %[[TID_ADDR:.*]], ptr noalias 
@@ -36,7 +36,8 @@ end subroutine proc
 
 !CHECK: [[MALLOC_BB]]:
 !CHECK-NOT: omp.par.{{.*}}:
-!CHECK: call ptr @malloc(i{{(32)|(64)}} 80)
+!CHECK: call ptr @malloc
+!CHECK-SAME: i64 10
 
 !CHECK: %[[RED_ARR_0:.*]] = getelementptr inbounds [2 x ptr], ptr %red.array, i64 0, i64 0
 !CHECK: store ptr %[[F_priv]], ptr %[[RED_ARR_0:.*]]

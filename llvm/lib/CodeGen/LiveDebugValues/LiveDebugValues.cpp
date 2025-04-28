@@ -8,7 +8,6 @@
 
 #include "LiveDebugValues.h"
 
-#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -66,93 +65,68 @@ namespace {
 /// Generic LiveDebugValues pass. Calls through to VarLocBasedLDV or
 /// InstrRefBasedLDV to perform location propagation, via the LDVImpl
 /// base class.
-class LiveDebugValuesLegacy : public MachineFunctionPass {
+class LiveDebugValues : public MachineFunctionPass {
 public:
   static char ID;
 
-  LiveDebugValuesLegacy();
-  ~LiveDebugValuesLegacy() = default;
+  LiveDebugValues();
+  ~LiveDebugValues() = default;
 
   /// Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<TargetPassConfig>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-};
-
-struct LiveDebugValues {
-  LiveDebugValues();
-  ~LiveDebugValues() = default;
-  bool run(MachineFunction &MF, bool ShouldEmitDebugEntryValues);
 
 private:
   std::unique_ptr<LDVImpl> InstrRefImpl;
   std::unique_ptr<LDVImpl> VarLocImpl;
+  std::unique_ptr<LDVImpl> HeterogeneousImpl;
+  TargetPassConfig *TPC = nullptr;
   MachineDominatorTree MDT;
 };
 } // namespace
 
-char LiveDebugValuesLegacy::ID = 0;
+char LiveDebugValues::ID = 0;
 
-char &llvm::LiveDebugValuesID = LiveDebugValuesLegacy::ID;
+char &llvm::LiveDebugValuesID = LiveDebugValues::ID;
 
-INITIALIZE_PASS(LiveDebugValuesLegacy, DEBUG_TYPE, "Live DEBUG_VALUE analysis",
-                false, false)
+INITIALIZE_PASS(LiveDebugValues, DEBUG_TYPE, "Live DEBUG_VALUE analysis", false,
+                false)
 
 /// Default construct and initialize the pass.
-LiveDebugValuesLegacy::LiveDebugValuesLegacy() : MachineFunctionPass(ID) {
-  initializeLiveDebugValuesLegacyPass(*PassRegistry::getPassRegistry());
-}
-
-LiveDebugValues::LiveDebugValues() {
+LiveDebugValues::LiveDebugValues() : MachineFunctionPass(ID) {
+  initializeLiveDebugValuesPass(*PassRegistry::getPassRegistry());
   InstrRefImpl =
       std::unique_ptr<LDVImpl>(llvm::makeInstrRefBasedLiveDebugValues());
   VarLocImpl = std::unique_ptr<LDVImpl>(llvm::makeVarLocBasedLiveDebugValues());
+  HeterogeneousImpl =
+      std::unique_ptr<LDVImpl>(llvm::makeHeterogeneousLiveDebugValues());
 }
 
-PreservedAnalyses
-LiveDebugValuesPass::run(MachineFunction &MF,
-                         MachineFunctionAnalysisManager &MFAM) {
-  if (!LiveDebugValues().run(MF, ShouldEmitDebugEntryValues))
-    return PreservedAnalyses::all();
-  auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
-
-void LiveDebugValuesPass::printPipeline(
-    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  OS << MapClassName2PassName(name());
-  if (ShouldEmitDebugEntryValues)
-    OS << "<emit-debug-entry-values>";
-}
-
-bool LiveDebugValuesLegacy::runOnMachineFunction(MachineFunction &MF) {
-  auto *TPC = &getAnalysis<TargetPassConfig>();
-  return LiveDebugValues().run(
-      MF, TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues());
-}
-
-bool LiveDebugValues::run(MachineFunction &MF,
-                          bool ShouldEmitDebugEntryValues) {
+bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   bool InstrRefBased = MF.useDebugInstrRef();
   // Allow the user to force selection of InstrRef LDV.
   InstrRefBased |= ForceInstrRefLDV;
 
+  TPC = getAnalysisIfAvailable<TargetPassConfig>();
   LDVImpl *TheImpl = &*VarLocImpl;
 
   MachineDominatorTree *DomTree = nullptr;
-  if (InstrRefBased) {
-    DomTree = &MDT;
-    MDT.recalculate(MF);
-    TheImpl = &*InstrRefImpl;
-  }
+  if (!llvm::isHeterogeneousDebug(*MF.getFunction().getParent())) {
+    if (InstrRefBased) {
+      DomTree = &MDT;
+      MDT.recalculate(MF);
+      TheImpl = &*InstrRefImpl;
+    }
+  } else
+    // Avoid DomTree calculation as non-used.
+    TheImpl = &*HeterogeneousImpl;
 
-  return TheImpl->ExtendRanges(MF, DomTree, ShouldEmitDebugEntryValues,
-                               InputBBLimit, InputDbgValueLimit);
+  return TheImpl->ExtendRanges(MF, DomTree, TPC, InputBBLimit,
+                               InputDbgValueLimit);
 }
 
 bool llvm::debuginfoShouldUseDebugInstrRef(const Triple &T) {

@@ -1186,7 +1186,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     // CFA.
     const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
     for (const CalleeSavedInfo &I : CSI) {
-      MCRegister Reg = I.getReg();
+      Register Reg = I.getReg();
       if (Reg == PPC::LR || Reg == PPC::LR8 || Reg == PPC::RM) continue;
 
       // This is a bit of a hack: CR2LT, CR2GT, CR2EQ and CR2UN are just
@@ -2108,7 +2108,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   SmallVector<CalleeSavedInfo, 18> VRegs;
 
   for (const CalleeSavedInfo &I : CSI) {
-    MCRegister Reg = I.getReg();
+    Register Reg = I.getReg();
     assert((!MF.getInfo<PPCFunctionInfo>()->mustSaveTOC() ||
             (Reg != PPC::X2 && Reg != PPC::R2)) &&
            "Not expecting to try to spill R2 in a function that must save TOC");
@@ -2343,9 +2343,9 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     // in our CalleSaveInfo vector.
 
     for (auto &CalleeSaveReg : CSI) {
-      MCRegister Reg = CalleeSaveReg.getReg();
-      MCRegister Lower = RegInfo->getSubReg(Reg, PPC::sub_32);
-      MCRegister Higher = RegInfo->getSubReg(Reg, PPC::sub_32_hi_phony);
+      MCPhysReg Reg = CalleeSaveReg.getReg();
+      MCPhysReg Lower = RegInfo->getSubReg(Reg, 1);
+      MCPhysReg Higher = RegInfo->getSubReg(Reg, 2);
 
       if ( // Check only for SuperRegs.
           Lower &&
@@ -2380,7 +2380,7 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     if (BVAllocatable.none())
       return false;
 
-    MCRegister Reg = CS.getReg();
+    Register Reg = CS.getReg();
 
     if (!PPC::G8RCRegClass.contains(Reg)) {
       AllSpilledToReg = false;
@@ -2437,7 +2437,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    MCRegister Reg = I.getReg();
+    Register Reg = I.getReg();
 
     // CR2 through CR4 are the nonvolatile CR fields.
     bool IsCRField = PPC::CR2 <= Reg && Reg <= PPC::CR4;
@@ -2489,23 +2489,22 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
         if (Spilled[Dst])
           continue;
 
-        const auto &VSR = VSRContainingGPRs[Dst];
-        if (VSR.second != 0) {
+        if (VSRContainingGPRs[Dst].second != 0) {
           assert(Subtarget.hasP9Vector() &&
                  "mtvsrdd is unavailable on pre-P9 targets.");
 
           NumPESpillVSR += 2;
           BuildMI(MBB, MI, DL, TII.get(PPC::MTVSRDD), Dst)
-              .addReg(VSR.first, getKillRegState(true))
-              .addReg(VSR.second, getKillRegState(true));
-        } else if (VSR.second == 0) {
+              .addReg(VSRContainingGPRs[Dst].first, getKillRegState(true))
+              .addReg(VSRContainingGPRs[Dst].second, getKillRegState(true));
+        } else if (VSRContainingGPRs[Dst].second == 0) {
           assert(Subtarget.hasP8Vector() &&
                  "Can't move GPR to VSR on pre-P8 targets.");
 
           ++NumPESpillVSR;
           BuildMI(MBB, MI, DL, TII.get(PPC::MTVSRD),
                   TRI->getSubReg(Dst, PPC::sub_64))
-              .addReg(VSR.first, getKillRegState(true));
+              .addReg(VSRContainingGPRs[Dst].first, getKillRegState(true));
         } else {
           llvm_unreachable("More than two GPRs spilled to a VSR!");
         }
@@ -2624,7 +2623,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
     --BeforeI;
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    MCRegister Reg = CSI[i].getReg();
+    Register Reg = CSI[i].getReg();
 
     if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
       continue;
@@ -2663,17 +2662,20 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
         if (Restored[Dst])
           continue;
 
-        const auto &VSR = VSRContainingGPRs[Dst];
-        if (VSR.second != 0) {
+        if (VSRContainingGPRs[Dst].second != 0) {
           assert(Subtarget.hasP9Vector());
           NumPEReloadVSR += 2;
-          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRLD), VSR.second).addReg(Dst);
-          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD), VSR.first)
+          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRLD),
+                  VSRContainingGPRs[Dst].second)
+              .addReg(Dst);
+          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD),
+                  VSRContainingGPRs[Dst].first)
               .addReg(TRI->getSubReg(Dst, PPC::sub_64), getKillRegState(true));
-        } else if (VSR.second == 0) {
+        } else if (VSRContainingGPRs[Dst].second == 0) {
           assert(Subtarget.hasP8Vector());
           ++NumPEReloadVSR;
-          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD), VSR.first)
+          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD),
+                  VSRContainingGPRs[Dst].first)
               .addReg(TRI->getSubReg(Dst, PPC::sub_64), getKillRegState(true));
         } else {
           llvm_unreachable("More than two GPRs spilled to a VSR!");

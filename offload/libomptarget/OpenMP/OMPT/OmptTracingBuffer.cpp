@@ -507,11 +507,6 @@ OmptTracingBufferMgr::findAndReserveFlushedBuf(uint64_t flush_id) {
   }
   assert(flush_itr->second.FlushStatus == Flush_waiting);
   flush_itr->second.FlushStatus = Flush_processing;
-  // Update the metadata cursor since more trace records may have been
-  // generated.
-  flush_itr->second.FlushCursor =
-      flush_itr->second.FlushBuf->Cursor.load(std::memory_order_acquire);
-
   FlushInfo flush_info(flush_itr->first, flush_itr->second.FlushCursor,
                        flush_itr->second.FlushBuf);
   DP("Reserved buffer: flush_id:%lu, cursor:%p, buf:%p\n", flush_itr->first,

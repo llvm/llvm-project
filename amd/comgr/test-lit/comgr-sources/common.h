@@ -1,11 +1,3 @@
-//===- common.h -----------------------------------------------------------===//
-//
-// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
-// amd/comgr/LICENSE.TXT in this repository for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 #ifndef COMGR_TEST_COMMON_H
 #define COMGR_TEST_COMMON_H
 
@@ -18,8 +10,8 @@
 
 #if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/stat.h>
-#include <sys/syscall.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #else // Windows
 #include <io.h>
@@ -27,15 +19,15 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define amd_comgr_(call)                                                       \
-  do {                                                                         \
-    amd_comgr_status_t status = amd_comgr_##call;                              \
-    if (status != AMD_COMGR_STATUS_SUCCESS) {                                  \
-      const char *reason = "";                                                 \
-      amd_comgr_status_string(status, &reason);                                \
-      fail(#call " failed: %s\n  file, line: %s, %d\n", reason, __FILE__,      \
-           __LINE__);                                                          \
-    }                                                                          \
+#define amd_comgr_(call)                                \
+  do {                                                  \
+    amd_comgr_status_t status = amd_comgr_ ## call;     \
+    if (status != AMD_COMGR_STATUS_SUCCESS) {           \
+      const char* reason = "";                          \
+      amd_comgr_status_string(status, &reason);         \
+      fail(#call " failed: %s\n  file, line: %s, %d\n", \
+           reason, __FILE__, __LINE__);                 \
+    }                                                   \
   } while (false)
 
 static void fail(const char *format, ...) {
@@ -66,7 +58,7 @@ static int setBuf(const char *infile, char **buf) {
   if (fseek(fp, 0, SEEK_SET) != 0)
     fail("fseek");
 
-  *buf = (char *)malloc(size + 1);
+  *buf = (char *) malloc(size + 1);
   if (!*buf)
     fail("malloc");
   if (fread(*buf, size, 1, fp) != 1)

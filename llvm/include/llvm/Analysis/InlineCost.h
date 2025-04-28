@@ -31,7 +31,6 @@ class Function;
 class ProfileSummaryInfo;
 class TargetTransformInfo;
 class TargetLibraryInfo;
-class EphemeralValuesCache;
 
 namespace InlineConstants {
 // Various thresholds used by inline cost analysis.
@@ -274,29 +273,28 @@ int getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
 ///
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
-InlineCost getInlineCost(
-    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
-    function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
-    function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
-    ProfileSummaryInfo *PSI = nullptr, OptimizationRemarkEmitter *ORE = nullptr,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-        nullptr);
+InlineCost
+getInlineCost(CallBase &Call, const InlineParams &Params,
+              TargetTransformInfo &CalleeTTI,
+              function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+              function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
+              function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
+              ProfileSummaryInfo *PSI = nullptr,
+              OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
 /// pointer. This behaves exactly as the version with no explicit callee
 /// parameter in all other respects.
 //
-InlineCost getInlineCost(
-    CallBase &Call, Function *Callee, const InlineParams &Params,
-    TargetTransformInfo &CalleeTTI,
-    function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
-    function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
-    ProfileSummaryInfo *PSI = nullptr, OptimizationRemarkEmitter *ORE = nullptr,
-    function_ref<EphemeralValuesCache &(Function &)> GetEphValuesCache =
-        nullptr);
+InlineCost
+getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
+              TargetTransformInfo &CalleeTTI,
+              function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+              function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
+              function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
+              ProfileSummaryInfo *PSI = nullptr,
+              OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns InlineResult::success() if the call site should be always inlined
 /// because of user directives, and the inlining is viable. Returns

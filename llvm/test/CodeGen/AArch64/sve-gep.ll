@@ -60,7 +60,8 @@ define <vscale x 2 x ptr> @scalable_of_fixed_1(ptr %base) {
 ; CHECK-NEXT:    add x8, x0, #1
 ; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    ret
-  %d = getelementptr i8, ptr %base, <vscale x 2 x i64> splat (i64 1)
+  %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+  %d = getelementptr i8, ptr %base, <vscale x 2 x i64> %idx
   ret <vscale x 2 x ptr> %d
 }
 
@@ -69,7 +70,8 @@ define <vscale x 2 x ptr> @scalable_of_fixed_2(<vscale x 2 x ptr> %base) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
 ; CHECK-NEXT:    ret
-  %d = getelementptr i8, <vscale x 2 x ptr> %base, <vscale x 2 x i64> splat (i64 1)
+  %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+  %d = getelementptr i8, <vscale x 2 x ptr> %base, <vscale x 2 x i64> %idx
   ret <vscale x 2 x ptr> %d
 }
 
@@ -205,7 +207,8 @@ define <vscale x 2 x ptr> @scalable_of_scalable_1(ptr %base) {
 ; CHECK-NEXT:    add x8, x0, x8
 ; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    ret
-  %d = getelementptr <vscale x 2 x i64>, ptr %base, <vscale x 2 x i64> splat (i64 1)
+  %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+  %d = getelementptr <vscale x 2 x i64>, ptr %base, <vscale x 2 x i64> %idx
   ret <vscale x 2 x ptr> %d
 }
 
@@ -214,7 +217,8 @@ define <vscale x 2 x ptr> @scalable_of_scalable_2(<vscale x 2 x ptr> %base) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    incd z0.d, all, mul #8
 ; CHECK-NEXT:    ret
-  %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x ptr> %base, <vscale x 2 x i64> splat (i64 1)
+  %idx = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 1, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+  %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x ptr> %base, <vscale x 2 x i64> %idx
   ret <vscale x 2 x ptr> %d
 }
 

@@ -112,14 +112,14 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
   void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
   void PrintOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
   void PrintModifiedOperand(const MachineInstr *MI, unsigned OpNo,
-                            raw_ostream &O, StringRef Modifier = {});
+                            raw_ostream &O, const char *Modifier);
   void PrintPCRelImm(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
   void PrintLeaMemReference(const MachineInstr *MI, unsigned OpNo,
-                            raw_ostream &O, StringRef Modifier = {});
+                            raw_ostream &O, const char *Modifier);
   void PrintMemReference(const MachineInstr *MI, unsigned OpNo, raw_ostream &O,
-                         StringRef Modifier = {});
+                         const char *Modifier);
   void PrintIntelMemReference(const MachineInstr *MI, unsigned OpNo,
-                              raw_ostream &O, StringRef Modifier = {});
+                              raw_ostream &O, const char *Modifier);
   const MCSubtargetInfo *getIFuncMCSubtargetInfo() const override;
   void emitMachOIFuncStubBody(Module &M, const GlobalIFunc &GI,
                               MCSymbol *LazyPointer) override;

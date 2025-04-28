@@ -236,7 +236,7 @@ some information about them:
     } else {
       // If there is no defining op, the Value is necessarily a Block
       // argument.
-      auto blockArg = cast<BlockArgument>(operand);
+      auto blockArg = operand.cast<BlockArgument>();
       llvm::outs() << "  - Operand produced by Block argument, number "
                    << blockArg.getArgNumber() << "\n";
     }

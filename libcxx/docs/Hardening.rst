@@ -248,11 +248,13 @@ Hardening assertion failure
 ===========================
 
 In production modes (``fast`` and ``extensive``), a hardening assertion failure
-immediately ``_traps <https://clang.llvm.org/docs/LanguageExtensions.html#builtin-verbose-trap>``
+immediately ``_traps <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>``
 the program. This is the safest approach that also minimizes the code size
 penalty as the failure handler maps to a single instruction. The downside is
 that the failure provides no additional details other than the stack trace
 (which might also be affected by optimizations).
+
+TODO(hardening): describe ``__builtin_verbose_trap`` once we can use it.
 
 In the ``debug`` mode, an assertion failure terminates the program in an
 unspecified manner and also outputs the associated error message to the error

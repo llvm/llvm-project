@@ -24,11 +24,17 @@
 
 using namespace llvm;
 
+namespace llvm {
+void initializeNVPTXProxyRegErasurePass(PassRegistry &);
+}
+
 namespace {
 
 struct NVPTXProxyRegErasure : public MachineFunctionPass {
   static char ID;
-  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {}
+  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {
+    initializeNVPTXProxyRegErasurePass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

@@ -1865,8 +1865,8 @@ public:
   Value *getCondition() const;
   void setCondition(Value *V);
   BasicBlock *getDefaultDest() const;
-  bool defaultDestUnreachable() const {
-    return cast<llvm::SwitchInst>(Val)->defaultDestUnreachable();
+  bool defaultDestUndefined() const {
+    return cast<llvm::SwitchInst>(Val)->defaultDestUndefined();
   }
   void setDefaultDest(BasicBlock *DefaultCase);
   unsigned getNumCases() const {

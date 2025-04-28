@@ -713,8 +713,7 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
   // Add macro references.
   for (const auto &IDToRefs : MacroRefsToIndex.MacroRefs) {
     for (const auto &MacroRef : IDToRefs.second) {
-      const auto &SR = MacroRef.toSourceRange(SM);
-      auto Range = halfOpenToRange(SM, SR);
+      const auto &Range = MacroRef.toRange(SM);
       bool IsDefinition = MacroRef.IsDefinition;
       Ref R;
       R.Location.Start.setLine(Range.start.line);
@@ -727,7 +726,9 @@ void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
       if (IsDefinition) {
         Symbol S;
         S.ID = IDToRefs.first;
-        S.Name = toSourceCode(SM, SR.getAsRange());
+        auto StartLoc = cantFail(sourceLocationInMainFile(SM, Range.start));
+        auto EndLoc = cantFail(sourceLocationInMainFile(SM, Range.end));
+        S.Name = toSourceCode(SM, SourceRange(StartLoc, EndLoc));
         S.SymInfo.Kind = index::SymbolKind::Macro;
         S.SymInfo.SubKind = index::SymbolSubKind::None;
         S.SymInfo.Properties = index::SymbolPropertySet();

@@ -19,8 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
-template <typename T>
-LIBC_INLINE int convert_current_pos(Reader<T> *reader,
+LIBC_INLINE int convert_current_pos(Reader *reader,
                                     const FormatSection &to_conv) {
   write_int_with_length(reader->chars_read(), to_conv);
   return READ_OK;

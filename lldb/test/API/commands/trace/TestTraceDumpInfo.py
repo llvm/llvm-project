@@ -64,7 +64,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
       hardware disabled tracing: 4
       trace synchronization point: 1""",
             ],
-            patterns=[r"Decoding instructions: \d.\d\ds"],
+            patterns=["Decoding instructions: \d.\d\ds"],
         )
 
     def testDumpRawTraceSizeJSON(self):

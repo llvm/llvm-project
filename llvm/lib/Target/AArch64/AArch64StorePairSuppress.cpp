@@ -38,7 +38,9 @@ class AArch64StorePairSuppress : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
+  AArch64StorePairSuppress() : MachineFunctionPass(ID) {
+    initializeAArch64StorePairSuppressPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 

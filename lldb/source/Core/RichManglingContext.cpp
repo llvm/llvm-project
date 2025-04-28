@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/RichManglingContext.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "lldb/Utility/LLDBLog.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -23,8 +24,9 @@ RichManglingContext::~RichManglingContext() {
 void RichManglingContext::ResetCxxMethodParser() {
   // If we want to support parsers for other languages some day, we need a
   // switch here to delete the correct parser type.
-  if (m_cxx_method_parser) {
+  if (m_cxx_method_parser.has_value()) {
     assert(m_provider == PluginCxxLanguage);
+    delete get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser);
     m_cxx_method_parser.reset();
   }
 }
@@ -56,11 +58,8 @@ bool RichManglingContext::FromItaniumName(ConstString mangled) {
 }
 
 bool RichManglingContext::FromCxxMethodName(ConstString demangled) {
-  auto *lang = Language::FindPlugin(eLanguageTypeC_plus_plus);
-  if (!lang)
-    return false;
   ResetProvider(PluginCxxLanguage);
-  m_cxx_method_parser = lang->GetMethodName(demangled);
+  m_cxx_method_parser = new CPlusPlusLanguage::MethodName(demangled);
   return true;
 }
 
@@ -71,7 +70,8 @@ bool RichManglingContext::IsCtorOrDtor() const {
     return m_ipd.isCtorOrDtor();
   case PluginCxxLanguage: {
     // We can only check for destructors here.
-    auto base_name = m_cxx_method_parser->GetBasename();
+    auto base_name =
+        get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)->GetBasename();
     return base_name.starts_with("~");
   }
   case None:
@@ -118,7 +118,8 @@ llvm::StringRef RichManglingContext::ParseFunctionBaseName() {
     return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    return m_cxx_method_parser->GetBasename();
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetBasename();
   case None:
     return {};
   }
@@ -134,7 +135,8 @@ llvm::StringRef RichManglingContext::ParseFunctionDeclContextName() {
     return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    return m_cxx_method_parser->GetContext();
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetContext();
   case None:
     return {};
   }
@@ -150,7 +152,9 @@ llvm::StringRef RichManglingContext::ParseFullName() {
     return processIPDStrResult(buf, n);
   }
   case PluginCxxLanguage:
-    return m_cxx_method_parser->GetFullName().GetStringRef();
+    return get<CPlusPlusLanguage::MethodName>(m_cxx_method_parser)
+        ->GetFullName()
+        .GetStringRef();
   case None:
     return {};
   }

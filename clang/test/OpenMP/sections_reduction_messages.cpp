@@ -268,7 +268,6 @@ T tmain(T argc) {
   {
     foo();
   }
-#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)       // expected-note 2 {{defined as private}}
 #pragma omp sections reduction(+ : fl) // expected-error 2 {{reduction variable must be shared}}
   {
@@ -279,7 +278,6 @@ T tmain(T argc) {
   {
     foo();
   }
-#endif
 
   return T();
 }
@@ -455,13 +453,11 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)       // expected-note {{defined as private}}
 #pragma omp sections reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   {
     foo();
   }
-#endif
 #pragma omp parallel reduction(* : fl) // expected-note {{defined as reduction}}
 #pragma omp sections reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   {

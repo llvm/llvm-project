@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
@@ -57,7 +58,8 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   std::vector<Type *> HelperArgTypes;
   for (auto *Arg : HelperPrefixArgs)
     HelperArgTypes.push_back(Arg->getType());
-  llvm::append_range(HelperArgTypes, WrapperFnType->params());
+  for (auto *T : WrapperFnType->params())
+    HelperArgTypes.push_back(T);
   auto *HelperFnType =
       FunctionType::get(WrapperFnType->getReturnType(), HelperArgTypes, false);
   auto *HelperFn = Function::Create(HelperFnType, GlobalValue::ExternalLinkage,
@@ -71,7 +73,8 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
   IRBuilder<> IB(EntryBlock);
 
   std::vector<Value *> HelperArgs;
-  llvm::append_range(HelperArgs, HelperPrefixArgs);
+  for (auto *Arg : HelperPrefixArgs)
+    HelperArgs.push_back(Arg);
   for (auto &Arg : WrapperFn->args())
     HelperArgs.push_back(&Arg);
   auto *HelperResult = IB.CreateCall(HelperFn, HelperArgs);
@@ -829,7 +832,8 @@ Error LLJITBuilderState::prepareForConstruction() {
         JTMB->setCodeModel(CodeModel::Small);
       JTMB->setRelocationModel(Reloc::PIC_);
       CreateObjectLinkingLayer =
-          [](ExecutionSession &ES) -> Expected<std::unique_ptr<ObjectLayer>> {
+          [](ExecutionSession &ES,
+             const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
         return std::make_unique<ObjectLinkingLayer>(ES);
       };
     }
@@ -947,7 +951,7 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
 
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer)
-    return S.CreateObjectLinkingLayer(ES);
+    return S.CreateObjectLinkingLayer(ES, S.JTMB->getTargetTriple());
 
   // Otherwise default to creating an RTDyldObjectLinkingLayer that constructs
   // a new SectionMemoryManager for each object.
@@ -1237,8 +1241,8 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
 
       // If UseEHFrames hasn't been set then we're good to use compact-unwind.
       if (!UseEHFrames) {
-        if (auto UIRP =
-                UnwindInfoRegistrationPlugin::Create(J.getExecutionSession())) {
+        if (auto UIRP = UnwindInfoRegistrationPlugin::Create(
+                J.getIRCompileLayer(), PlatformJD)) {
           OLL->addPlugin(std::move(*UIRP));
           LLVM_DEBUG(dbgs() << "Enabled compact-unwind support.\n");
         } else
@@ -1249,11 +1253,12 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
     // Otherwise fall back to standard unwind registration.
     if (UseEHFrames) {
       auto &ES = J.getExecutionSession();
-      if (auto EHFP = EHFrameRegistrationPlugin::Create(ES)) {
-        OLL->addPlugin(std::move(*EHFP));
+      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
+        OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
+            ES, std::move(*EHFrameRegistrar)));
         LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
       } else
-        return EHFP.takeError();
+        return EHFrameRegistrar.takeError();
     }
   }
 
@@ -1338,8 +1343,8 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 // In-process LLJIT uses eh-frame section wrappers via EPC, so we need to force
 // them to be linked in.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
-         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction;
+  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
 }
 
 } // End namespace orc.

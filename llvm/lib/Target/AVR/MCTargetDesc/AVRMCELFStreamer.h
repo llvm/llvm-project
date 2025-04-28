@@ -43,7 +43,7 @@ public:
 
   void emitValueForModiferKind(
       const MCSymbol *Sym, unsigned SizeInBytes, SMLoc Loc = SMLoc(),
-      AVRMCExpr::Specifier ModifierKind = AVRMCExpr::VK_AVR_NONE);
+      AVRMCExpr::VariantKind ModifierKind = AVRMCExpr::VK_AVR_None);
 };
 
 MCStreamer *createAVRELFStreamer(Triple const &TT, MCContext &Context,

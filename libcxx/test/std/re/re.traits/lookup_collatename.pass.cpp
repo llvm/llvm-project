@@ -24,7 +24,6 @@
 
 // TODO: investigation needed
 // XFAIL: target={{.*}}-linux-gnu{{.*}}
-// XFAIL: target={{.*}}-amazon-linux{{.*}}
 
 #include <regex>
 #include <iterator>

@@ -834,9 +834,7 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
                                            unsigned SubOperandID,
                                            StringRef ParentSymbolicName) {
   std::string ParentName(ParentSymbolicName);
-  auto [It, Inserted] = ComplexSubOperands.try_emplace(
-      SymbolicName, ComplexPattern, RendererID, SubOperandID);
-  if (!Inserted) {
+  if (ComplexSubOperands.count(SymbolicName)) {
     const std::string &RecordedParentName =
         ComplexSubOperandsParentName[SymbolicName];
     if (RecordedParentName != ParentName)
@@ -849,6 +847,7 @@ Error RuleMatcher::defineComplexSubOperand(StringRef SymbolicName,
     return Error::success();
   }
 
+  ComplexSubOperands[SymbolicName] = {ComplexPattern, RendererID, SubOperandID};
   ComplexSubOperandsParentName[SymbolicName] = std::move(ParentName);
 
   return Error::success();

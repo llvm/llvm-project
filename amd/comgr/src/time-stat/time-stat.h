@@ -1,11 +1,3 @@
-//===- time-stat.h - Timing statistics ------------------------------------===//
-//
-// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
-// amd/comgr/LICENSE.TXT in this repository for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-
 #ifndef AMD_COMGR_TIME_STAT_H
 #define AMD_COMGR_TIME_STAT_H
 

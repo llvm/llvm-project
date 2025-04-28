@@ -35,6 +35,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
+}
+
 namespace {
 
 class SPIRVPrepareFunctions : public ModulePass {
@@ -44,8 +48,9 @@ class SPIRVPrepareFunctions : public ModulePass {
 
 public:
   static char ID;
-  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
-      : ModulePass(ID), TM(TM) {}
+  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {
+    initializeSPIRVPrepareFunctionsPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnModule(Module &M) override;
 
@@ -63,7 +68,7 @@ char SPIRVPrepareFunctions::ID = 0;
 INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
                 "SPIRV prepare functions", false, false)
 
-static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
+std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
   Function *IntrinsicFunc = II->getCalledFunction();
   assert(IntrinsicFunc && "Missing function");
   std::string FuncName = IntrinsicFunc->getName().str();
@@ -380,7 +385,6 @@ static bool toSpvOverloadedIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID,
 // or calls to proper generated functions. Returns True if F was modified.
 bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
   bool Changed = false;
-  const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
       auto Call = dyn_cast<CallInst>(&I);
@@ -401,22 +405,19 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       case Intrinsic::assume:
-      case Intrinsic::expect:
+      case Intrinsic::expect: {
+        const SPIRVSubtarget &STI = TM.getSubtarget<SPIRVSubtarget>(*F);
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
-        break;
+      } break;
       case Intrinsic::lifetime_start:
-        if (STI.isOpenCLEnv()) {
-          Changed |= toSpvOverloadedIntrinsic(
-              II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
-        }
+        Changed |= toSpvOverloadedIntrinsic(
+            II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
         break;
       case Intrinsic::lifetime_end:
-        if (STI.isOpenCLEnv()) {
-          Changed |= toSpvOverloadedIntrinsic(
-              II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
-        }
+        Changed |= toSpvOverloadedIntrinsic(
+            II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
         break;
       case Intrinsic::ptr_annotation:
         lowerPtrAnnotation(II);

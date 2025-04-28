@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits = char_traits<_CharT> >
-class basic_streambuf;
+class _LIBCPP_TEMPLATE_VIS basic_streambuf;
 
 using streambuf = basic_streambuf<char>;
 

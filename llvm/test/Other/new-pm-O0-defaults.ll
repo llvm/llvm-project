@@ -51,7 +51,6 @@
 ; CHECK-LTO-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
-; CHECK-LTO-NEXT: CoroConditionalWrapper
 ; CHECK-CORO-NEXT: Running pass: AnnotationRemarksPass
 ; CHECK-CORO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass

@@ -72,23 +72,11 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
                      "default marker and process each chunk independently"),
       llvm::cl::init("")};
 
-  static llvm::cl::opt<SourceMgrDiagnosticVerifierHandler::Level>
-      verifyDiagnostics{
-          "verify-diagnostics", llvm::cl::ValueOptional,
-          llvm::cl::desc("Check that emitted diagnostics match expected-* "
-                         "lines on the corresponding line"),
-          llvm::cl::values(
-              clEnumValN(
-                  SourceMgrDiagnosticVerifierHandler::Level::All, "all",
-                  "Check all diagnostics (expected, unexpected, near-misses)"),
-              // Implicit value: when passed with no arguments, e.g.
-              // `--verify-diagnostics` or `--verify-diagnostics=`.
-              clEnumValN(
-                  SourceMgrDiagnosticVerifierHandler::Level::All, "",
-                  "Check all diagnostics (expected, unexpected, near-misses)"),
-              clEnumValN(
-                  SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected,
-                  "only-expected", "Check only expected diagnostics"))};
+  static llvm::cl::opt<bool> verifyDiagnostics(
+      "verify-diagnostics",
+      llvm::cl::desc("Check that emitted diagnostics match "
+                     "expected-* lines on the corresponding line"),
+      llvm::cl::init(false));
 
   static llvm::cl::opt<bool> errorDiagnosticsOnly(
       "error-diagnostics-only",
@@ -161,17 +149,17 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
       MLIRContext context;
       context.allowUnregisteredDialects(allowUnregisteredDialects);
-      context.printOpOnDiagnostic(verifyDiagnostics.getNumOccurrences() == 0);
+      context.printOpOnDiagnostic(!verifyDiagnostics);
       auto sourceMgr = std::make_shared<llvm::SourceMgr>();
       sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
-      if (verifyDiagnostics.getNumOccurrences()) {
+      if (verifyDiagnostics) {
         // In the diagnostic verification flow, we ignore whether the
         // translation failed (in most cases, it is expected to fail) and we do
         // not filter non-error diagnostics even if `errorDiagnosticsOnly` is
         // set. Instead, we check if the diagnostics were produced as expected.
-        SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
-            *sourceMgr, &context, verifyDiagnostics);
+        SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr,
+                                                            &context);
         (void)(*translationRequested)(sourceMgr, os, &context);
         result = sourceMgrHandler.verify();
       } else if (errorDiagnosticsOnly) {

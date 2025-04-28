@@ -82,7 +82,6 @@ struct LSPServer {
 
 //===----------------------------------------------------------------------===//
 // Initialization
-//===----------------------------------------------------------------------===//
 
 void LSPServer::onInitialize(const InitializeParams &params,
                              Callback<llvm::json::Value> reply) {
@@ -117,7 +116,6 @@ void LSPServer::onShutdown(const NoParams &, Callback<std::nullptr_t> reply) {
 
 //===----------------------------------------------------------------------===//
 // Document Change
-//===----------------------------------------------------------------------===//
 
 void LSPServer::onDocumentDidOpen(const DidOpenTextDocumentParams &params) {
   PublishDiagnosticsParams diagParams(params.textDocument.uri,
@@ -152,7 +150,6 @@ void LSPServer::onDocumentDidChange(const DidChangeTextDocumentParams &params) {
 
 //===----------------------------------------------------------------------===//
 // Definitions and References
-//===----------------------------------------------------------------------===//
 
 void LSPServer::onGoToDefinition(const TextDocumentPositionParams &params,
                                  Callback<std::vector<Location>> reply) {
@@ -170,7 +167,6 @@ void LSPServer::onReference(const ReferenceParams &params,
 
 //===----------------------------------------------------------------------===//
 // DocumentLink
-//===----------------------------------------------------------------------===//
 
 void LSPServer::onDocumentLink(const DocumentLinkParams &params,
                                Callback<std::vector<DocumentLink>> reply) {
@@ -181,7 +177,6 @@ void LSPServer::onDocumentLink(const DocumentLinkParams &params,
 
 //===----------------------------------------------------------------------===//
 // Hover
-//===----------------------------------------------------------------------===//
 
 void LSPServer::onHover(const TextDocumentPositionParams &params,
                         Callback<std::optional<Hover>> reply) {

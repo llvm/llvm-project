@@ -1,6 +1,5 @@
 import os
 import time
-import subprocess
 
 import dap_server
 from lldbsuite.test.lldbtest import *
@@ -11,26 +10,25 @@ import lldbgdbserverutils
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    timeoutval = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
+    timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adapter(self, lldbDAPEnv=None, connection=None):
-        """Create the Visual Studio Code debug adapter"""
+    def create_debug_adaptor(self, lldbDAPEnv=None):
+        """Create the Visual Studio Code debug adaptor"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap_server = dap_server.DebugAdapterServer(
+        self.dap_server = dap_server.DebugAdaptorServer(
             executable=self.lldbDAPExec,
-            connection=connection,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
         )
 
-    def build_and_create_debug_adapter(self, lldbDAPEnv=None):
+    def build_and_create_debug_adaptor(self, lldbDAPEnv=None):
         self.build()
-        self.create_debug_adapter(lldbDAPEnv)
+        self.create_debug_adaptor(lldbDAPEnv)
 
     def set_source_breakpoints(self, source_path, lines, data=None):
         """Sets source breakpoints and returns an array of strings containing
@@ -161,14 +159,10 @@ class DAPTestCaseBase(TestBase):
         return value
 
     def get_stackFrames_and_totalFramesCount(
-        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
+        self, threadId=None, startFrame=None, levels=None, dump=False
     ):
         response = self.dap_server.request_stackTrace(
-            threadId=threadId,
-            startFrame=startFrame,
-            levels=levels,
-            format=format,
-            dump=dump,
+            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
         )
         if response:
             stackFrames = self.get_dict_value(response, ["body", "stackFrames"])
@@ -181,15 +175,9 @@ class DAPTestCaseBase(TestBase):
             return (stackFrames, totalFrames)
         return (None, 0)
 
-    def get_stackFrames(
-        self, threadId=None, startFrame=None, levels=None, format=None, dump=False
-    ):
+    def get_stackFrames(self, threadId=None, startFrame=None, levels=None, dump=False):
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount(
-            threadId=threadId,
-            startFrame=startFrame,
-            levels=levels,
-            format=format,
-            dump=dump,
+            threadId=threadId, startFrame=startFrame, levels=levels, dump=dump
         )
         return stackFrames
 
@@ -334,11 +322,11 @@ class DAPTestCaseBase(TestBase):
         gdbRemotePort=None,
         gdbRemoteHostname=None,
     ):
-        """Build the default Makefile target, create the DAP debug adapter,
+        """Build the default Makefile target, create the DAP debug adaptor,
         and attach to the process.
         """
 
-        # Make sure we disconnect and terminate the DAP debug adapter even
+        # Make sure we disconnect and terminate the DAP debug adaptor even
         # if we throw an exception during the test case.
         def cleanup():
             if disconnectAutomatically:
@@ -489,10 +477,10 @@ class DAPTestCaseBase(TestBase):
         launchCommands=None,
         expectFailure=False,
     ):
-        """Build the default Makefile target, create the DAP debug adapter,
+        """Build the default Makefile target, create the DAP debug adaptor,
         and launch the process.
         """
-        self.build_and_create_debug_adapter(lldbDAPEnv)
+        self.build_and_create_debug_adaptor(lldbDAPEnv)
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(

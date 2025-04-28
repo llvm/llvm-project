@@ -11,7 +11,6 @@ add_mlir_conversion_library(MLIRMeshToMPI
   Core
 
   LINK_LIBS PUBLIC
-  MLIRDLTIDialect
   MLIRFuncDialect
   MLIRIR
   MLIRLinalgTransforms

@@ -370,7 +370,8 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
   // relations being stored in both the shards containing their
   // subject and object.
   llvm::sort(AllRelations);
-  AllRelations.erase(llvm::unique(AllRelations), AllRelations.end());
+  AllRelations.erase(std::unique(AllRelations.begin(), AllRelations.end()),
+                     AllRelations.end());
 
   size_t StorageSize =
       RefsStorage.size() * sizeof(Ref) + SymsStorage.size() * sizeof(Symbol);

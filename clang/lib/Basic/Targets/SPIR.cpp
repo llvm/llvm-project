@@ -59,7 +59,6 @@ void SPIR64TargetInfo::getTargetDefines(const LangOptions &Opts,
 void BaseSPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,
                                            MacroBuilder &Builder) const {
   DefineStd(Builder, "SPIRV", Opts);
-  DefineStd(Builder, "spirv", Opts);
 }
 
 void SPIRVTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -151,8 +150,4 @@ void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
     HasFloat128 = true;
     Float128Format = DoubleFormat;
   }
-}
-
-bool SPIRV64AMDGCNTargetInfo::isValidCPUName(StringRef CPU) const {
-  return AMDGPUTI.isValidCPUName(CPU);
 }

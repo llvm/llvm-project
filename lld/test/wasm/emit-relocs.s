@@ -27,12 +27,6 @@ foo:
   .int32  0
   .size   foo, 4
 
-.section .debug_info,"",@
-.p2align 2
-.int32 unused_function
-.int32 _start
-.int32 0
-
 # CHECK:        - Type:            CODE
 # CHECK-NEXT:     Relocations:
 # CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
@@ -47,15 +41,6 @@ foo:
 # CHECK-NEXT:           Opcode:          I32_CONST
 # CHECK-NEXT:           Value:           1024
 # CHECK-NEXT:         Content:         '00000000'
-
-# There should be a single relocation in this section (just the live symbol)
-# CHECK-NEXT:  - Type:            CUSTOM
-# CHECK-NEXT:    Relocations:
-# CHECK-NEXT:      - Type:            R_WASM_FUNCTION_OFFSET_I32
-# CHECK-NEXT:        Index:           0
-# CHECK-NEXT:        Offset:          0x4
-# CHECK-NEXT:    Name:            .debug_info
-# CHECK-NEXT:    Payload:         FFFFFFFF0200000000000000
 
 # CHECK:        - Type:            CUSTOM
 # CHECK-NEXT:     Name:            linking

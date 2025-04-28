@@ -40,7 +40,10 @@ private:
   void processMachineBasicBlock(MachineBasicBlock &MBB);
 public:
   static char ID; // Pass identification, replacement for typeid.
-  AArch64DeadRegisterDefinitions() : MachineFunctionPass(ID) {}
+  AArch64DeadRegisterDefinitions() : MachineFunctionPass(ID) {
+    initializeAArch64DeadRegisterDefinitionsPass(
+        *PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

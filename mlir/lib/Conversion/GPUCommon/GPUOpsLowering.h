@@ -43,9 +43,8 @@ struct GPUDynamicSharedMemoryOpLowering
   using ConvertOpToLLVMPattern<
       gpu::DynamicSharedMemoryOp>::ConvertOpToLLVMPattern;
   GPUDynamicSharedMemoryOpLowering(const LLVMTypeConverter &converter,
-                                   unsigned alignmentBit = 0,
-                                   PatternBenefit benefit = 1)
-      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter, benefit),
+                                   unsigned alignmentBit = 0)
+      : ConvertOpToLLVMPattern<gpu::DynamicSharedMemoryOp>(converter),
         alignmentBit(alignmentBit) {}
 
   LogicalResult
@@ -82,9 +81,8 @@ struct GPUFuncOpLoweringOptions {
 
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
   GPUFuncOpLowering(const LLVMTypeConverter &converter,
-                    const GPUFuncOpLoweringOptions &options,
-                    PatternBenefit benefit = 1)
-      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter, benefit),
+                    const GPUFuncOpLoweringOptions &options)
+      : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
         allocaAddrSpace(options.allocaAddrSpace),
         workgroupAddrSpace(options.workgroupAddrSpace),
         kernelAttributeName(options.kernelAttributeName),
@@ -174,13 +172,13 @@ struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
 };
 
 namespace impl {
-/// Unrolls op to array/vector elements.
+/// Unrolls op if it's operating on vectors.
 LogicalResult scalarizeVectorOp(Operation *op, ValueRange operands,
                                 ConversionPatternRewriter &rewriter,
                                 const LLVMTypeConverter &converter);
 } // namespace impl
 
-/// Unrolls SourceOp to array/vector elements.
+/// Rewriting that unrolls SourceOp to scalars if it's operating on vectors.
 template <typename SourceOp>
 struct ScalarizeVectorOpLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
@@ -193,7 +191,6 @@ public:
                                    *this->getTypeConverter());
   }
 };
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_

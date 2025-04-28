@@ -181,7 +181,8 @@ std::unique_ptr<Iterator> Dex::createFileProximityIterator(
     Sources[Path] = SourceParams();
     auto PathURI = URI::create(Path).toString();
     const auto PathProximityURIs = generateProximityURIs(PathURI.c_str());
-    ParentURIs.insert_range(PathProximityURIs);
+    for (const auto &ProximityURI : PathProximityURIs)
+      ParentURIs.insert(ProximityURI);
   }
   // Use SymbolRelevanceSignals for symbol relevance evaluation: use defaults
   // for all parameters except for Proximity Path distance signal.

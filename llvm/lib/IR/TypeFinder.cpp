@@ -99,11 +99,7 @@ void TypeFinder::run(const Module &M, bool onlyNamed) {
             if (DVI->isDbgAssign()) {
               if (Value *Addr = DVI->getAddress())
                 incorporateValue(Addr);
-              if (auto *Expr = DVI->getRawAddressExpression())
-                incorporateMDNode(Expr);
             }
-            if (auto *Expr = DVI->getRawExpression())
-              incorporateMDNode(Expr);
           }
         }
       }
@@ -213,6 +209,14 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
             [&](DIOp::Fragment F) {}),
         Op);
   };
+
+  // The operations in a DIExpr are not exposed as operands, so handle such
+  // nodes specifically here.
+  if (const auto *E = dyn_cast<DIExpr>(V)) {
+    for (const auto &Op : E->builder())
+      incorporateDIOp(Op);
+    return;
+  }
 
   if (const auto *E = dyn_cast<DIExpression>(V)) {
     if (auto Elems = E->getNewElementsRef()) {

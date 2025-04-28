@@ -21,7 +21,7 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
+namespace std { // purposefully not using versioning namespace
 
 #if defined(_LIBCPP_ABI_VCRUNTIME) && (!defined(_HAS_EXCEPTIONS) || _HAS_EXCEPTIONS != 0)
 // The std::exception class was already included above, but we're explicit about this condition here for clarity.
@@ -89,6 +89,6 @@ public:
 };
 #endif // !_LIBCPP_ABI_VCRUNTIME
 
-_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+} // namespace std
 
 #endif // _LIBCPP___EXCEPTION_EXCEPTION_H

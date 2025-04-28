@@ -150,7 +150,8 @@ static void MarkBlocksLiveIn(BasicBlock *BB,
   if (!LiveBBs.insert(BB).second)
     return; // already been here.
 
-  LiveBBs.insert_range(inverse_depth_first(BB));
+  for (BasicBlock *B : inverse_depth_first(BB))
+    LiveBBs.insert(B);
 }
 
 /// substituteLPadValues - Substitute the values returned by the landingpad

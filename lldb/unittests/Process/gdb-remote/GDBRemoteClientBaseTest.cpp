@@ -5,20 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include <future>
 
-#include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "GDBRemoteTestUtils.h"
+
 #include "Plugins/Process/Utility/LinuxSignals.h"
+#include "Plugins/Process/gdb-remote/GDBRemoteClientBase.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServer.h"
 #include "lldb/Utility/GDBRemote.h"
-#include "lldb/Utility/Listener.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Testing/Support/Error.h"
-#include "gtest/gtest.h"
-#include <chrono>
-#include <future>
-#include <string>
-#include <vector>
 
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;

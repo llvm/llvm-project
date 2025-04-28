@@ -38,7 +38,7 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
-/// Unrolls 2 or more dimensional `vector.gather` ops by unrolling the
+/// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension. For example:
 /// ```
 /// %g = vector.gather %base[%c0][%v], %mask, %pass_thru :
@@ -56,14 +56,14 @@ namespace {
 /// When applied exhaustively, this will produce a sequence of 1-d gather ops.
 ///
 /// Supports vector types with a fixed leading dimension.
-struct UnrollGather : OpRewritePattern<vector::GatherOp> {
+struct FlattenGather : OpRewritePattern<vector::GatherOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::GatherOp op,
                                 PatternRewriter &rewriter) const override {
     VectorType resultTy = op.getType();
     if (resultTy.getRank() < 2)
-      return rewriter.notifyMatchFailure(op, "already 1-D");
+      return rewriter.notifyMatchFailure(op, "already flat");
 
     // Unrolling doesn't take vscale into account. Pattern is disabled for
     // vectors with leading scalable dim(s).
@@ -107,8 +107,7 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
 /// ```mlir
 ///   %subview = memref.subview %M (...)
 ///     : memref<100x3xf32> to memref<100xf32, strided<[3]>>
-///   %gather = vector.gather %subview[%idxs] (...)
-///     : memref<100xf32, strided<[3]>>
+///   %gather = vector.gather %subview[%idxs] (...) : memref<100xf32, strided<[3]>>
 /// ```
 /// ==>
 /// ```mlir
@@ -270,11 +269,6 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
 void mlir::vector::populateVectorGatherLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<UnrollGather>(patterns.getContext(), benefit);
-}
-
-void mlir::vector::populateVectorGatherToConditionalLoadPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns.add<RemoveStrideFromGatherSource, Gather1DToConditionalLoads>(
-      patterns.getContext(), benefit);
+  patterns.add<FlattenGather, RemoveStrideFromGatherSource,
+               Gather1DToConditionalLoads>(patterns.getContext(), benefit);
 }

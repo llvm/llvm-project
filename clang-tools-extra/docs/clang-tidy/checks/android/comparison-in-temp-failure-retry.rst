@@ -41,4 +41,3 @@ Options
 .. option:: RetryMacros
 
    A comma-separated list of the names of retry macros to be checked.
-   Default is `TEMP_FAILURE_RETRY`.

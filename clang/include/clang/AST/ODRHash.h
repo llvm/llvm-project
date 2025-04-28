@@ -94,7 +94,6 @@ public:
   void AddStmt(const Stmt *S);
   void AddIdentifierInfo(const IdentifierInfo *II);
   void AddNestedNameSpecifier(const NestedNameSpecifier *NNS);
-  void AddDependentTemplateName(const DependentTemplateStorage &Name);
   void AddTemplateName(TemplateName Name);
   void AddDeclarationName(DeclarationName Name, bool TreatAsDecl = false);
   void AddTemplateArgument(TemplateArgument TA);

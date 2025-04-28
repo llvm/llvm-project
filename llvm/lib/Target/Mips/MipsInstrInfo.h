@@ -113,8 +113,6 @@ public:
   /// Predicate to determine if an instruction has a load delay slot.
   bool HasLoadDelaySlot(const MachineInstr &MI) const;
 
-  bool isAsCheapAsAMove(const MachineInstr &MI) const override;
-
   /// Insert nop instruction when hazard condition is found
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;

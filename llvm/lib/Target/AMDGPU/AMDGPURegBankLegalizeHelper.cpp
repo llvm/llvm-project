@@ -134,26 +134,6 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
   switch (Mapping.LoweringMethod) {
   case DoNotLower:
     return;
-  case VccExtToSel: {
-    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    Register Src = MI.getOperand(1).getReg();
-    unsigned Opc = MI.getOpcode();
-    if (Ty == S32 || Ty == S16) {
-      auto True = B.buildConstant({VgprRB, Ty}, Opc == G_SEXT ? -1 : 1);
-      auto False = B.buildConstant({VgprRB, Ty}, 0);
-      B.buildSelect(MI.getOperand(0).getReg(), Src, True, False);
-    }
-    if (Ty == S64) {
-      auto True = B.buildConstant({VgprRB, S32}, Opc == G_SEXT ? -1 : 1);
-      auto False = B.buildConstant({VgprRB, S32}, 0);
-      auto Sel = B.buildSelect({VgprRB, S32}, Src, True, False);
-      B.buildMergeValues(
-          MI.getOperand(0).getReg(),
-          {Sel.getReg(0), Opc == G_SEXT ? Sel.getReg(0) : False.getReg(0)});
-    }
-    MI.eraseFromParent();
-    return;
-  }
   case UniExtToSel: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     auto True = B.buildConstant({SgprRB, Ty},
@@ -296,8 +276,6 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr64:
   case Vgpr64:
     return LLT::scalar(64);
-  case VgprP0:
-    return LLT::pointer(0, 64);
   case SgprP1:
   case VgprP1:
     return LLT::pointer(1, 64);
@@ -405,7 +383,6 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
     return SgprRB;
   case Vgpr32:
   case Vgpr64:
-  case VgprP0:
   case VgprP1:
   case VgprP3:
   case VgprP4:
@@ -448,7 +425,6 @@ void RegBankLegalizeHelper::applyMappingDst(
     case SgprV4S32:
     case Vgpr32:
     case Vgpr64:
-    case VgprP0:
     case VgprP1:
     case VgprP3:
     case VgprP4:
@@ -579,7 +555,6 @@ void RegBankLegalizeHelper::applyMappingSrc(
     // vgpr scalars, pointers and vectors
     case Vgpr32:
     case Vgpr64:
-    case VgprP0:
     case VgprP1:
     case VgprP3:
     case VgprP4:
@@ -678,8 +653,7 @@ void RegBankLegalizeHelper::applyMappingPHI(MachineInstr &MI) {
   // We accept all types that can fit in some register class.
   // Uniform G_PHIs have all sgpr registers.
   // Divergent G_PHIs have vgpr dst but inputs can be sgpr or vgpr.
-  if (Ty == LLT::scalar(32) || Ty == LLT::pointer(1, 64) ||
-      Ty == LLT::pointer(4, 64)) {
+  if (Ty == LLT::scalar(32) || Ty == LLT::pointer(4, 64)) {
     return;
   }
 

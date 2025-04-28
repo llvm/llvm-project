@@ -31,29 +31,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static AddressRange CollapseRanges(llvm::ArrayRef<AddressRange> ranges) {
-  if (ranges.empty())
-    return AddressRange();
-  if (ranges.size() == 1)
-    return ranges[0];
+/// constructor
 
-  Address lowest_addr = ranges[0].GetBaseAddress();
-  addr_t highest_addr = lowest_addr.GetFileAddress() + ranges[0].GetByteSize();
-  for (const AddressRange &range : ranges.drop_front()) {
-    Address range_begin = range.GetBaseAddress();
-    addr_t range_end = range_begin.GetFileAddress() + range.GetByteSize();
-    if (range_begin.GetFileAddress() < lowest_addr.GetFileAddress())
-      lowest_addr = range_begin;
-    if (range_end > highest_addr)
-      highest_addr = range_end;
-  }
-  return AddressRange(lowest_addr, highest_addr - lowest_addr.GetFileAddress());
-}
-
-FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, Address addr,
-                             AddressRanges ranges)
-    : m_unwind_table(unwind_table), m_addr(std::move(addr)),
-      m_ranges(std::move(ranges)), m_range(CollapseRanges(m_ranges)),
+FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, AddressRange range)
+    : m_unwind_table(unwind_table), m_range(range), m_mutex(),
+      m_unwind_plan_assembly_sp(), m_unwind_plan_eh_frame_sp(),
+      m_unwind_plan_eh_frame_augmented_sp(), m_unwind_plan_compact_unwind(),
+      m_unwind_plan_arm_unwind_sp(), m_unwind_plan_fast_sp(),
+      m_unwind_plan_arch_default_sp(),
+      m_unwind_plan_arch_default_at_func_entry_sp(),
       m_tried_unwind_plan_assembly(false), m_tried_unwind_plan_eh_frame(false),
       m_tried_unwind_plan_object_file(false),
       m_tried_unwind_plan_debug_frame(false),
@@ -71,47 +57,40 @@ FuncUnwinders::FuncUnwinders(UnwindTable &unwind_table, Address addr,
 
 FuncUnwinders::~FuncUnwinders() = default;
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetUnwindPlanAtCallSite(Target &target, Thread &thread) {
+UnwindPlanSP FuncUnwinders::GetUnwindPlanAtCallSite(Target &target,
+                                                    Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetObjectFileUnwindPlan(target))
+  if (UnwindPlanSP plan_sp = GetObjectFileUnwindPlan(target))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetSymbolFileUnwindPlan(thread))
+  if (UnwindPlanSP plan_sp = GetSymbolFileUnwindPlan(thread))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetDebugFrameUnwindPlan(target))
+  if (UnwindPlanSP plan_sp = GetDebugFrameUnwindPlan(target))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp = GetEHFrameUnwindPlan(target))
+  if (UnwindPlanSP plan_sp = GetEHFrameUnwindPlan(target))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetCompactUnwindUnwindPlan(target))
+  if (UnwindPlanSP plan_sp = GetCompactUnwindUnwindPlan(target))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetArmUnwindUnwindPlan(target))
+  if (UnwindPlanSP plan_sp = GetArmUnwindUnwindPlan(target))
     return plan_sp;
 
   return nullptr;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetCompactUnwindUnwindPlan(Target &target) {
+UnwindPlanSP FuncUnwinders::GetCompactUnwindUnwindPlan(Target &target) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_compact_unwind.size() > 0)
     return m_unwind_plan_compact_unwind[0]; // FIXME support multiple compact
                                             // unwind plans for one func
   if (m_tried_unwind_plan_compact_unwind)
-    return nullptr;
+    return UnwindPlanSP();
 
   m_tried_unwind_plan_compact_unwind = true;
   if (m_range.GetBaseAddress().IsValid()) {
     Address current_pc(m_range.GetBaseAddress());
     CompactUnwindInfo *compact_unwind = m_unwind_table.GetCompactUnwindInfo();
     if (compact_unwind) {
-      auto unwind_plan_sp =
-          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      UnwindPlanSP unwind_plan_sp(new UnwindPlan(lldb::eRegisterKindGeneric));
       if (compact_unwind->GetUnwindPlan(target, current_pc, *unwind_plan_sp)) {
         m_unwind_plan_compact_unwind.push_back(unwind_plan_sp);
         return m_unwind_plan_compact_unwind[0]; // FIXME support multiple
@@ -120,11 +99,10 @@ FuncUnwinders::GetCompactUnwindUnwindPlan(Target &target) {
       }
     }
   }
-  return nullptr;
+  return UnwindPlanSP();
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetObjectFileUnwindPlan(Target &target) {
+lldb::UnwindPlanSP FuncUnwinders::GetObjectFileUnwindPlan(Target &target) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_object_file_sp.get() ||
       m_tried_unwind_plan_object_file)
@@ -134,16 +112,17 @@ FuncUnwinders::GetObjectFileUnwindPlan(Target &target) {
   if (m_range.GetBaseAddress().IsValid()) {
     CallFrameInfo *object_file_frame = m_unwind_table.GetObjectFileUnwindInfo();
     if (object_file_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (object_file_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_object_file_sp = std::move(plan_sp);
+      m_unwind_plan_object_file_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      if (!object_file_frame->GetUnwindPlan(m_range,
+                                            *m_unwind_plan_object_file_sp))
+        m_unwind_plan_object_file_sp.reset();
     }
   }
   return m_unwind_plan_object_file_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetEHFrameUnwindPlan(Target &target) {
+UnwindPlanSP FuncUnwinders::GetEHFrameUnwindPlan(Target &target) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_eh_frame_sp.get() || m_tried_unwind_plan_eh_frame)
     return m_unwind_plan_eh_frame_sp;
@@ -152,16 +131,16 @@ FuncUnwinders::GetEHFrameUnwindPlan(Target &target) {
   if (m_range.GetBaseAddress().IsValid()) {
     DWARFCallFrameInfo *eh_frame = m_unwind_table.GetEHFrameInfo();
     if (eh_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (eh_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_eh_frame_sp = std::move(plan_sp);
+      m_unwind_plan_eh_frame_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      if (!eh_frame->GetUnwindPlan(m_range, *m_unwind_plan_eh_frame_sp))
+        m_unwind_plan_eh_frame_sp.reset();
     }
   }
   return m_unwind_plan_eh_frame_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetDebugFrameUnwindPlan(Target &target) {
+UnwindPlanSP FuncUnwinders::GetDebugFrameUnwindPlan(Target &target) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_debug_frame_sp || m_tried_unwind_plan_debug_frame)
     return m_unwind_plan_debug_frame_sp;
@@ -170,16 +149,16 @@ FuncUnwinders::GetDebugFrameUnwindPlan(Target &target) {
   if (m_range.GetBaseAddress().IsValid()) {
     DWARFCallFrameInfo *debug_frame = m_unwind_table.GetDebugFrameInfo();
     if (debug_frame) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (debug_frame->GetUnwindPlan(m_range, *plan_sp))
-        m_unwind_plan_debug_frame_sp = std::move(plan_sp);
+      m_unwind_plan_debug_frame_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      if (!debug_frame->GetUnwindPlan(m_range, *m_unwind_plan_debug_frame_sp))
+        m_unwind_plan_debug_frame_sp.reset();
     }
   }
   return m_unwind_plan_debug_frame_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetArmUnwindUnwindPlan(Target &target) {
+UnwindPlanSP FuncUnwinders::GetArmUnwindUnwindPlan(Target &target) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_arm_unwind_sp.get() || m_tried_unwind_plan_arm_unwind)
     return m_unwind_plan_arm_unwind_sp;
@@ -189,9 +168,11 @@ FuncUnwinders::GetArmUnwindUnwindPlan(Target &target) {
     Address current_pc(m_range.GetBaseAddress());
     ArmUnwindInfo *arm_unwind_info = m_unwind_table.GetArmUnwindInfo();
     if (arm_unwind_info) {
-      auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-      if (arm_unwind_info->GetUnwindPlan(target, current_pc, *plan_sp))
-        m_unwind_plan_arm_unwind_sp = std::move(plan_sp);
+      m_unwind_plan_arm_unwind_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      if (!arm_unwind_info->GetUnwindPlan(target, current_pc,
+                                          *m_unwind_plan_arm_unwind_sp))
+        m_unwind_plan_arm_unwind_sp.reset();
     }
   }
   return m_unwind_plan_arm_unwind_sp;
@@ -215,8 +196,7 @@ private:
 };
 } // namespace
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetSymbolFileUnwindPlan(Thread &thread) {
+UnwindPlanSP FuncUnwinders::GetSymbolFileUnwindPlan(Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_symbol_file_sp.get() || m_tried_unwind_plan_symbol_file)
     return m_unwind_plan_symbol_file_sp;
@@ -230,9 +210,9 @@ FuncUnwinders::GetSymbolFileUnwindPlan(Thread &thread) {
   return m_unwind_plan_symbol_file_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
+UnwindPlanSP
 FuncUnwinders::GetObjectFileAugmentedUnwindPlan(Target &target,
-                                                Thread &thread) {
+                                                     Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_object_file_augmented_sp.get() ||
       m_tried_unwind_plan_object_file_augmented)
@@ -240,27 +220,30 @@ FuncUnwinders::GetObjectFileAugmentedUnwindPlan(Target &target,
 
   m_tried_unwind_plan_object_file_augmented = true;
 
-  std::shared_ptr<const UnwindPlan> object_file_unwind_plan =
-      GetObjectFileUnwindPlan(target);
+  UnwindPlanSP object_file_unwind_plan = GetObjectFileUnwindPlan(target);
   if (!object_file_unwind_plan)
     return m_unwind_plan_object_file_augmented_sp;
+
+  m_unwind_plan_object_file_augmented_sp =
+      std::make_shared<UnwindPlan>(*object_file_unwind_plan);
 
   // Augment the instructions with epilogue descriptions if necessary
   // so the UnwindPlan can be used at any instruction in the function.
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
-    auto plan_sp = std::make_shared<UnwindPlan>(*object_file_unwind_plan);
-
-    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_range, thread,
-                                                            *plan_sp))
-      m_unwind_plan_object_file_augmented_sp = std::move(plan_sp);
+    if (!assembly_profiler_sp->AugmentUnwindPlanFromCallSite(
+            m_range, thread, *m_unwind_plan_object_file_augmented_sp)) {
+      m_unwind_plan_object_file_augmented_sp.reset();
+    }
+  } else {
+    m_unwind_plan_object_file_augmented_sp.reset();
   }
   return m_unwind_plan_object_file_augmented_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target, Thread &thread) {
+UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
+                                                          Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_eh_frame_augmented_sp.get() ||
       m_tried_unwind_plan_eh_frame_augmented)
@@ -278,27 +261,30 @@ FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target, Thread &thread) {
 
   m_tried_unwind_plan_eh_frame_augmented = true;
 
-  std::shared_ptr<const UnwindPlan> eh_frame_plan =
-      GetEHFrameUnwindPlan(target);
+  UnwindPlanSP eh_frame_plan = GetEHFrameUnwindPlan(target);
   if (!eh_frame_plan)
     return m_unwind_plan_eh_frame_augmented_sp;
+
+  m_unwind_plan_eh_frame_augmented_sp =
+      std::make_shared<UnwindPlan>(*eh_frame_plan);
 
   // Augment the eh_frame instructions with epilogue descriptions if necessary
   // so the UnwindPlan can be used at any instruction in the function.
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
-    auto plan_sp = std::make_shared<UnwindPlan>(*eh_frame_plan);
-    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_range, thread,
-                                                            *plan_sp))
-      m_unwind_plan_eh_frame_augmented_sp = std::move(plan_sp);
+    if (!assembly_profiler_sp->AugmentUnwindPlanFromCallSite(
+            m_range, thread, *m_unwind_plan_eh_frame_augmented_sp)) {
+      m_unwind_plan_eh_frame_augmented_sp.reset();
+    }
+  } else {
+    m_unwind_plan_eh_frame_augmented_sp.reset();
   }
   return m_unwind_plan_eh_frame_augmented_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target,
-                                                Thread &thread) {
+UnwindPlanSP FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target,
+                                                             Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_debug_frame_augmented_sp.get() ||
       m_tried_unwind_plan_debug_frame_augmented)
@@ -316,10 +302,12 @@ FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target,
 
   m_tried_unwind_plan_debug_frame_augmented = true;
 
-  std::shared_ptr<const UnwindPlan> debug_frame_plan =
-      GetDebugFrameUnwindPlan(target);
+  UnwindPlanSP debug_frame_plan = GetDebugFrameUnwindPlan(target);
   if (!debug_frame_plan)
     return m_unwind_plan_debug_frame_augmented_sp;
+
+  m_unwind_plan_debug_frame_augmented_sp =
+      std::make_shared<UnwindPlan>(*debug_frame_plan);
 
   // Augment the debug_frame instructions with epilogue descriptions if
   // necessary so the UnwindPlan can be used at any instruction in the
@@ -327,17 +315,17 @@ FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target,
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
-    auto plan_sp = std::make_shared<UnwindPlan>(*debug_frame_plan);
-
-    if (assembly_profiler_sp->AugmentUnwindPlanFromCallSite(m_range, thread,
-                                                            *plan_sp))
-      m_unwind_plan_debug_frame_augmented_sp = std::move(plan_sp);
-  }
+    if (!assembly_profiler_sp->AugmentUnwindPlanFromCallSite(
+            m_range, thread, *m_unwind_plan_debug_frame_augmented_sp)) {
+      m_unwind_plan_debug_frame_augmented_sp.reset();
+    }
+  } else
+    m_unwind_plan_debug_frame_augmented_sp.reset();
   return m_unwind_plan_debug_frame_augmented_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetAssemblyUnwindPlan(Target &target, Thread &thread) {
+UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
+                                                  Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_assembly_sp.get() || m_tried_unwind_plan_assembly ||
       !m_unwind_table.GetAllowAssemblyEmulationUnwindPlans()) {
@@ -358,10 +346,12 @@ FuncUnwinders::GetAssemblyUnwindPlan(Target &target, Thread &thread) {
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
-    auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-    if (assembly_profiler_sp->GetNonCallSiteUnwindPlanFromAssembly(
-            range, thread, *plan_sp))
-      m_unwind_plan_assembly_sp = std::move(plan_sp);
+    m_unwind_plan_assembly_sp =
+        std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+    if (!assembly_profiler_sp->GetNonCallSiteUnwindPlanFromAssembly(
+            range, thread, *m_unwind_plan_assembly_sp)) {
+      m_unwind_plan_assembly_sp.reset();
+    }
   }
   return m_unwind_plan_assembly_sp;
 }
@@ -370,18 +360,17 @@ FuncUnwinders::GetAssemblyUnwindPlan(Target &target, Thread &thread) {
 // If they have the same way of getting the pc value (e.g. "CFA - 8" + "CFA is
 // sp"), then it will return LazyBoolTrue.
 LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
-    Thread &thread, const std::shared_ptr<const UnwindPlan> &a,
-    const std::shared_ptr<const UnwindPlan> &b) {
+    Thread &thread, const UnwindPlanSP &a, const UnwindPlanSP &b) {
   LazyBool plans_are_identical = eLazyBoolCalculate;
 
   RegisterNumber pc_reg(thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
   uint32_t pc_reg_lldb_regnum = pc_reg.GetAsKind(eRegisterKindLLDB);
 
-  if (a && b) {
-    const UnwindPlan::Row *a_first_row = a->GetRowAtIndex(0);
-    const UnwindPlan::Row *b_first_row = b->GetRowAtIndex(0);
+  if (a.get() && b.get()) {
+    UnwindPlan::RowSP a_first_row = a->GetRowAtIndex(0);
+    UnwindPlan::RowSP b_first_row = b->GetRowAtIndex(0);
 
-    if (a_first_row && b_first_row) {
+    if (a_first_row.get() && b_first_row.get()) {
       UnwindPlan::Row::AbstractRegisterLocation a_pc_regloc;
       UnwindPlan::Row::AbstractRegisterLocation b_pc_regloc;
 
@@ -401,19 +390,17 @@ LazyBool FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation(
   return plans_are_identical;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target, Thread &thread) {
-  std::shared_ptr<const UnwindPlan> eh_frame_sp = GetEHFrameUnwindPlan(target);
+UnwindPlanSP FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target,
+                                                       Thread &thread) {
+  UnwindPlanSP eh_frame_sp = GetEHFrameUnwindPlan(target);
   if (!eh_frame_sp)
     eh_frame_sp = GetDebugFrameUnwindPlan(target);
   if (!eh_frame_sp)
     eh_frame_sp = GetObjectFileUnwindPlan(target);
-  std::shared_ptr<const UnwindPlan> arch_default_at_entry_sp =
+  UnwindPlanSP arch_default_at_entry_sp =
       GetUnwindPlanArchitectureDefaultAtFunctionEntry(thread);
-  std::shared_ptr<const UnwindPlan> arch_default_sp =
-      GetUnwindPlanArchitectureDefault(thread);
-  std::shared_ptr<const UnwindPlan> assembly_sp =
-      GetAssemblyUnwindPlan(target, thread);
+  UnwindPlanSP arch_default_sp = GetUnwindPlanArchitectureDefault(thread);
+  UnwindPlanSP assembly_sp = GetAssemblyUnwindPlan(target, thread);
 
   // This point of this code is to detect when a function is using a non-
   // standard ABI, and the eh_frame correctly describes that alternate ABI.
@@ -442,24 +429,20 @@ FuncUnwinders::GetUnwindPlanAtNonCallSite(Target &target, Thread &thread) {
     return eh_frame_sp;
   }
 
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetSymbolFileUnwindPlan(thread))
+  if (UnwindPlanSP plan_sp = GetSymbolFileUnwindPlan(thread))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetDebugFrameAugmentedUnwindPlan(target, thread))
+  if (UnwindPlanSP plan_sp = GetDebugFrameAugmentedUnwindPlan(target, thread))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetEHFrameAugmentedUnwindPlan(target, thread))
+  if (UnwindPlanSP plan_sp = GetEHFrameAugmentedUnwindPlan(target, thread))
     return plan_sp;
-  if (std::shared_ptr<const UnwindPlan> plan_sp =
-          GetObjectFileAugmentedUnwindPlan(target, thread))
+  if (UnwindPlanSP plan_sp = GetObjectFileAugmentedUnwindPlan(target, thread))
     return plan_sp;
 
   return assembly_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetUnwindPlanFastUnwind(Target &target, Thread &thread) {
+UnwindPlanSP FuncUnwinders::GetUnwindPlanFastUnwind(Target &target,
+                                                    Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_fast_sp.get() || m_tried_unwind_fast)
     return m_unwind_plan_fast_sp;
@@ -468,31 +451,40 @@ FuncUnwinders::GetUnwindPlanFastUnwind(Target &target, Thread &thread) {
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
-    auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
-    if (assembly_profiler_sp->GetFastUnwindPlan(m_range, thread, *plan_sp))
-      m_unwind_plan_fast_sp = std::move(plan_sp);
+    m_unwind_plan_fast_sp =
+        std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+    if (!assembly_profiler_sp->GetFastUnwindPlan(m_range, thread,
+                                                 *m_unwind_plan_fast_sp)) {
+      m_unwind_plan_fast_sp.reset();
+    }
   }
   return m_unwind_plan_fast_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
-FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
+UnwindPlanSP FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_arch_default_sp.get() || m_tried_unwind_arch_default)
     return m_unwind_plan_arch_default_sp;
 
   m_tried_unwind_arch_default = true;
 
+  Address current_pc;
   ProcessSP process_sp(thread.CalculateProcess());
   if (process_sp) {
-    if (ABI *abi = process_sp->GetABI().get())
-      m_unwind_plan_arch_default_sp = abi->CreateDefaultUnwindPlan();
+    ABI *abi = process_sp->GetABI().get();
+    if (abi) {
+      m_unwind_plan_arch_default_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      if (!abi->CreateDefaultUnwindPlan(*m_unwind_plan_arch_default_sp)) {
+        m_unwind_plan_arch_default_sp.reset();
+      }
+    }
   }
 
   return m_unwind_plan_arch_default_sp;
 }
 
-std::shared_ptr<const UnwindPlan>
+UnwindPlanSP
 FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (m_unwind_plan_arch_default_at_func_entry_sp.get() ||
@@ -504,9 +496,14 @@ FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
   Address current_pc;
   ProcessSP process_sp(thread.CalculateProcess());
   if (process_sp) {
-    if (ABI *abi = process_sp->GetABI().get()) {
+    ABI *abi = process_sp->GetABI().get();
+    if (abi) {
       m_unwind_plan_arch_default_at_func_entry_sp =
-          abi->CreateFunctionEntryUnwindPlan();
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
+      if (!abi->CreateFunctionEntryUnwindPlan(
+              *m_unwind_plan_arch_default_at_func_entry_sp)) {
+        m_unwind_plan_arch_default_at_func_entry_sp.reset();
+      }
     }
   }
 
@@ -526,7 +523,9 @@ Address &FuncUnwinders::GetFirstNonPrologueInsn(Target &target) {
   return m_first_non_prologue_insn;
 }
 
-const Address &FuncUnwinders::GetFunctionStartAddress() const { return m_addr; }
+const Address &FuncUnwinders::GetFunctionStartAddress() const {
+  return m_range.GetBaseAddress();
+}
 
 lldb::UnwindAssemblySP
 FuncUnwinders::GetUnwindAssemblyProfiler(Target &target) {
@@ -536,4 +535,38 @@ FuncUnwinders::GetUnwindAssemblyProfiler(Target &target) {
     assembly_profiler_sp = UnwindAssembly::FindPlugin(arch);
   }
   return assembly_profiler_sp;
+}
+
+Address FuncUnwinders::GetLSDAAddress(Target &target) {
+  Address lsda_addr;
+
+  UnwindPlanSP unwind_plan_sp = GetEHFrameUnwindPlan(target);
+  if (unwind_plan_sp.get() == nullptr) {
+    unwind_plan_sp = GetCompactUnwindUnwindPlan(target);
+  }
+  if (unwind_plan_sp.get() == nullptr) {
+    unwind_plan_sp = GetObjectFileUnwindPlan(target);
+  }
+  if (unwind_plan_sp.get() && unwind_plan_sp->GetLSDAAddress().IsValid()) {
+    lsda_addr = unwind_plan_sp->GetLSDAAddress();
+  }
+  return lsda_addr;
+}
+
+Address FuncUnwinders::GetPersonalityRoutinePtrAddress(Target &target) {
+  Address personality_addr;
+
+  UnwindPlanSP unwind_plan_sp = GetEHFrameUnwindPlan(target);
+  if (unwind_plan_sp.get() == nullptr) {
+    unwind_plan_sp = GetCompactUnwindUnwindPlan(target);
+  }
+  if (unwind_plan_sp.get() == nullptr) {
+    unwind_plan_sp = GetObjectFileUnwindPlan(target);
+  }
+  if (unwind_plan_sp.get() &&
+      unwind_plan_sp->GetPersonalityFunctionPtr().IsValid()) {
+    personality_addr = unwind_plan_sp->GetPersonalityFunctionPtr();
+  }
+
+  return personality_addr;
 }

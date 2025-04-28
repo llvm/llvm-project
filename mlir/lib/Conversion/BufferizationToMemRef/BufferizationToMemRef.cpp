@@ -24,7 +24,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTBUFFERIZATIONTOMEMREFPASS
+#define GEN_PASS_DEF_CONVERTBUFFERIZATIONTOMEMREF
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -121,8 +121,7 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
 
 namespace {
 struct BufferizationToMemRefPass
-    : public impl::ConvertBufferizationToMemRefPassBase<
-          BufferizationToMemRefPass> {
+    : public impl::ConvertBufferizationToMemRefBase<BufferizationToMemRefPass> {
   BufferizationToMemRefPass() = default;
 
   void runOnOperation() override {
@@ -168,3 +167,7 @@ struct BufferizationToMemRefPass
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::createBufferizationToMemRefPass() {
+  return std::make_unique<BufferizationToMemRefPass>();
+}

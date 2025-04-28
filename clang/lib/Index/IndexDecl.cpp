@@ -132,8 +132,8 @@ public:
         }
       }
     }
-    if (const AssociatedConstraint &C = D->getTrailingRequiresClause())
-      IndexCtx.indexBody(C.ConstraintExpr, Parent);
+    if (auto *C = D->getTrailingRequiresClause())
+      IndexCtx.indexBody(C, Parent);
   }
 
   bool handleObjCMethod(const ObjCMethodDecl *D,

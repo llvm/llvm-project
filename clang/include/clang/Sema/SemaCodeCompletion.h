@@ -152,7 +152,6 @@ public:
   void CodeCompleteDesignator(const QualType BaseType,
                               llvm::ArrayRef<Expr *> InitExprs,
                               const Designation &D);
-  void CodeCompleteKeywordAfterIf(bool AfterExclaim) const;
   void CodeCompleteAfterIf(Scope *S, bool IsBracedThen);
 
   void CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS, bool EnteringContext,
@@ -193,7 +192,8 @@ public:
   void CodeCompleteObjCForCollection(Scope *S, DeclGroupPtrTy IterationVar);
   void CodeCompleteObjCSelector(Scope *S,
                                 ArrayRef<const IdentifierInfo *> SelIdents);
-  void CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLoc> Protocols);
+  void
+  CodeCompleteObjCProtocolReferences(ArrayRef<IdentifierLocPair> Protocols);
   void CodeCompleteObjCProtocolDecl(Scope *S);
   void CodeCompleteObjCInterfaceDecl(Scope *S);
   void CodeCompleteObjCClassForwardDecl(Scope *S);

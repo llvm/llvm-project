@@ -14,14 +14,11 @@
 #include "ReduceGlobalVarInitializers.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Value.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
 
 /// Removes all the Initialized GVs that aren't inside the desired Chunks.
-void llvm::reduceGlobalsInitializersDeltaPass(Oracle &O,
-                                              ReducerWorkItem &WorkItem) {
+static void extractGVsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   // Drop initializers of out-of-chunk GVs
   for (auto &GV : WorkItem.getModule().globals())
     if (GV.hasInitializer() && !O.shouldKeep()) {
@@ -29,4 +26,8 @@ void llvm::reduceGlobalsInitializersDeltaPass(Oracle &O,
       GV.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
       GV.setComdat(nullptr);
     }
+}
+
+void llvm::reduceGlobalsInitializersDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractGVsFromModule, "Reducing GV Initializers");
 }

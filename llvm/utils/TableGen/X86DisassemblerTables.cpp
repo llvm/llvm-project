@@ -746,7 +746,8 @@ void DisassemblerTables::emitModRMDecision(raw_ostream &o1, raw_ostream &o2,
       ModRMDecision.push_back(decision.instructionIDs[index]);
     break;
   case MODRM_FULL:
-    llvm::append_range(ModRMDecision, decision.instructionIDs);
+    for (unsigned short InstructionID : decision.instructionIDs)
+      ModRMDecision.push_back(InstructionID);
     break;
   }
 

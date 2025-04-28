@@ -45,17 +45,10 @@ private:
   // Print various types of operand.
   void printOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printMemOperand(const MCInst *MI, int OpNUm, raw_ostream &O);
-  void printBranchTarget(const MCInst *MI, uint64_t Address, int OpNum,
-                         raw_ostream &O);
-  void printLoopTarget(const MCInst *MI, uint64_t Address, int OpNum,
-                       raw_ostream &O);
-  void printJumpTarget(const MCInst *MI, uint64_t Address, int OpNum,
-                       raw_ostream &O);
-  void printCallOperand(const MCInst *MI, uint64_t Address, int OpNum,
-                        raw_ostream &O);
-  void printL32RTarget(const MCInst *MI, uint64_t Address, int OpNum,
-                       raw_ostream &O);
-  void printPCRelImm(uint64_t Address, int64_t Offset, raw_ostream &O);
+  void printBranchTarget(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printJumpTarget(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printCallOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printL32RTarget(const MCInst *MI, int OpNum, raw_ostream &O);
 
   void printImm8_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printImm8_sh8_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
@@ -76,7 +69,6 @@ private:
   void printEntry_Imm12_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printB4const_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printB4constu_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  void printImm7_22_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 } // end namespace llvm
 

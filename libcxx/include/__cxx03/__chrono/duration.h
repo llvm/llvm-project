@@ -10,6 +10,8 @@
 #ifndef _LIBCPP___CXX03___CHRONO_DURATION_H
 #define _LIBCPP___CXX03___CHRONO_DURATION_H
 
+#include <__cxx03/__compare/ordering.h>
+#include <__cxx03/__compare/three_way_comparable.h>
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/common_type.h>
 #include <__cxx03/__type_traits/enable_if.h>

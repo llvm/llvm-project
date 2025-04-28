@@ -220,14 +220,12 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
-                 bool IsStatic = false)
-      : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
+      : FieldTypeInfo(TI, Name), Access(Access) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access, IsStatic, Description) ==
-           std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic,
-                    Other.Description);
+    return std::tie(Type, Name, Access, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.Description);
   }
 
   // Access level associated with this info (public, protected, private, none).
@@ -237,7 +235,6 @@ struct MemberTypeInfo : public FieldTypeInfo {
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
   std::vector<CommentInfo> Description; // Comment description of this field.
-  bool IsStatic = false;
 };
 
 struct Location {
@@ -323,6 +320,9 @@ struct SymbolInfo : public Info {
 
   void merge(SymbolInfo &&I);
 
+  std::optional<Location> DefLoc;     // Location where this decl is defined.
+  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
+
   bool operator<(const SymbolInfo &Other) const {
     // Sort by declaration location since we want the doc to be
     // generated in the order of the source code.
@@ -336,10 +336,6 @@ struct SymbolInfo : public Info {
 
     return extractName() < Other.extractName();
   }
-
-  std::optional<Location> DefLoc;     // Location where this decl is defined.
-  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
-  bool IsStatic = false;
 };
 
 // TODO: Expand to allow for documenting templating and default args.
@@ -511,8 +507,8 @@ struct ClangDocContext {
   ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
                   bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
-                  StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
-                  StringRef Base, std::vector<std::string> UserStylesheets);
+                  StringRef RepositoryUrl,
+                  std::vector<std::string> UserStylesheets);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.
@@ -522,14 +518,11 @@ struct ClangDocContext {
                             // the file is in this dir.
   // URL of repository that hosts code used for links to definition locations.
   std::optional<std::string> RepositoryUrl;
-  // Prefix of line code for repository.
-  std::optional<std::string> RepositoryLinePrefix;
   // Path of CSS stylesheets that will be copied to OutDirectory and used to
   // style all HTML files.
   std::vector<std::string> UserStylesheets;
-  // JavaScript files that will be imported in all HTML files.
+  // JavaScript files that will be imported in allHTML file.
   std::vector<std::string> JsScripts;
-  StringRef Base;
   Index Idx;
 };
 

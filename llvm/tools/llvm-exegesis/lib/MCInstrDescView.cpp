@@ -50,8 +50,6 @@ bool Operand::isTied() const { return TiedToIndex.has_value(); }
 
 bool Operand::isVariable() const { return VariableIndex.has_value(); }
 
-bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
-
 bool Operand::isMemory() const {
   return isExplicit() &&
          getExplicitOperandInfo().OperandType == MCOI::OPERAND_MEMORY;
@@ -117,8 +115,6 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < Description->getNumDefs());
-    Operand.IsEarlyClobber =
-        (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
     // TODO(gchatelet): Handle isLookupPtrRegClass.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);

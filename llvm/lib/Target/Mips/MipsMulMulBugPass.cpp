@@ -35,7 +35,9 @@ namespace {
 
 class MipsMulMulBugFix : public MachineFunctionPass {
 public:
-  MipsMulMulBugFix() : MachineFunctionPass(ID) {}
+  MipsMulMulBugFix() : MachineFunctionPass(ID) {
+    initializeMipsMulMulBugFixPass(*PassRegistry::getPassRegistry());
+  }
 
   StringRef getPassName() const override { return "Mips VR4300 mulmul bugfix"; }
 

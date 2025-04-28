@@ -48,13 +48,12 @@ class VPInterleavedAccessInfo {
 
 public:
   VPInterleavedAccessInfo(VPlan &Plan, InterleavedAccessInfo &IAI);
-  VPInterleavedAccessInfo(const VPInterleavedAccessInfo &) = delete;
-  VPInterleavedAccessInfo &operator=(const VPInterleavedAccessInfo &) = delete;
 
   ~VPInterleavedAccessInfo() {
+    SmallPtrSet<InterleaveGroup<VPInstruction> *, 4> DelSet;
     // Avoid releasing a pointer twice.
-    SmallPtrSet<InterleaveGroup<VPInstruction> *, 4> DelSet(
-        llvm::from_range, llvm::make_second_range(InterleaveGroupMap));
+    for (auto &I : InterleaveGroupMap)
+      DelSet.insert(I.second);
     for (auto *Ptr : DelSet)
       delete Ptr;
   }
@@ -85,7 +84,7 @@ class VPlanSlp {
     }
 
     static unsigned getHashValue(const SmallVector<VPValue *, 4> &V) {
-      return static_cast<unsigned>(hash_combine_range(V));
+      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
     }
 
     static bool isEqual(const SmallVector<VPValue *, 4> &LHS,

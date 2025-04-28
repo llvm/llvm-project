@@ -126,15 +126,18 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs);
   MaybeDestroyTemplateIds();
 
-  takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUOrMSAttrs));
+  // Attributes that are left should all go on the statement, so concatenate the
+  // two lists.
+  ParsedAttributes Attrs(AttrFactory);
+  takeAndConcatenateAttrs(CXX11Attrs, GNUOrMSAttrs, Attrs);
 
-  assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
+  assert((Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
 
-  if (CXX11Attrs.empty() || Res.isInvalid())
+  if (Attrs.empty() || Res.isInvalid())
     return Res;
 
-  return Actions.ActOnAttributedStmt(CXX11Attrs, Res.get());
+  return Actions.ActOnAttributedStmt(Attrs, Res.get());
 }
 
 namespace {
@@ -204,10 +207,11 @@ Retry:
       // Both C++11 and GNU attributes preceding the label appertain to the
       // label, so put them in a single list to pass on to
       // ParseLabeledStatement().
-      takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUAttrs));
+      ParsedAttributes Attrs(AttrFactory);
+      takeAndConcatenateAttrs(CXX11Attrs, GNUAttrs, Attrs);
 
       // identifier ':' statement
-      return ParseLabeledStatement(CXX11Attrs, StmtCtx);
+      return ParseLabeledStatement(Attrs, StmtCtx);
     }
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
@@ -298,7 +302,9 @@ Retry:
 
   case tok::kw_template: {
     SourceLocation DeclEnd;
+    ParsedAttributes Attrs(AttrFactory);
     ParseTemplateDeclarationOrSpecialization(DeclaratorContext::Block, DeclEnd,
+                                             Attrs,
                                              getAccessSpecifierIfPresent());
     return StmtError();
   }
@@ -1051,11 +1057,7 @@ StmtResult Parser::ParseCompoundStatement(bool isStmtExpr,
   ParseScope CompoundScope(this, ScopeFlags);
 
   // Parse the statements in the body.
-  StmtResult R;
-  StackHandler.runWithSufficientStackSpace(Tok.getLocation(), [&, this]() {
-    R = ParseCompoundStatementBody(isStmtExpr);
-  });
-  return R;
+  return ParseCompoundStatementBody(isStmtExpr);
 }
 
 /// Parse any pragmas at the start of the compound expression. We handle these
@@ -1220,7 +1222,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   while (Tok.is(tok::kw___label__)) {
     SourceLocation LabelLoc = ConsumeToken();
 
-    SmallVector<Decl *, 4> DeclsInGroup;
+    SmallVector<Decl *, 8> DeclsInGroup;
     while (true) {
       if (Tok.isNot(tok::identifier)) {
         Diag(Tok, diag::err_expected) << tok::identifier;
@@ -1550,11 +1552,6 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                                           : diag::ext_consteval_if);
       IsConsteval = true;
       ConstevalLoc = ConsumeToken();
-    } else if (Tok.is(tok::code_completion)) {
-      cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteKeywordAfterIf(
-          NotLocation.isValid());
-      return StmtError();
     }
   }
   if (!IsConsteval && (NotLocation.isValid() || Tok.isNot(tok::l_paren))) {
@@ -2142,13 +2139,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     }
     DeclGroupPtrTy DG;
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-    if (!getLangOpts().CPlusPlus &&
-        Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
-      ProhibitAttributes(attrs);
-      Decl *D = ParseStaticAssertDeclaration(DeclEnd);
-      DG = Actions.ConvertDeclToDeclGroup(D);
-      FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
-    } else if (Tok.is(tok::kw_using)) {
+    if (Tok.is(tok::kw_using)) {
       DG = ParseAliasDeclarationInInitStatement(DeclaratorContext::ForInit,
                                                 attrs);
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
@@ -2545,9 +2536,9 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc, Hint.StateLoc,
                             ArgsUnion(Hint.ValueExpr)};
-    TempAttrs.addNew(Hint.PragmaNameLoc->getIdentifierInfo(), Hint.Range,
-                     /*scopeName=*/nullptr, Hint.PragmaNameLoc->getLoc(),
-                     ArgHints, /*numArgs=*/4, ParsedAttr::Form::Pragma());
+    TempAttrs.addNew(Hint.PragmaNameLoc->Ident, Hint.Range, nullptr,
+                     Hint.PragmaNameLoc->Loc, ArgHints, 4,
+                     ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.

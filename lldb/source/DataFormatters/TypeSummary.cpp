@@ -59,7 +59,6 @@ std::string TypeSummaryImpl::GetSummaryKindName() {
   case Kind::eBytecode:
     return "bytecode";
   }
-  llvm_unreachable("Unknown type kind name");
 }
 
 StringSummaryFormat::StringSummaryFormat(const TypeSummaryImpl::Flags &flags,

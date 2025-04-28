@@ -51,7 +51,8 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
 
   SetVector<Value> outputs;
   if (getOutputs()) {
-    outputs.insert_range(state.getPayloadValues(getOutputs()));
+    for (auto output : state.getPayloadValues(getOutputs()))
+      outputs.insert(output);
 
     // Verify that the set of output values to be replaced is unique.
     if (outputs.size() !=

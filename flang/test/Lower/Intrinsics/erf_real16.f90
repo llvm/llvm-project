@@ -4,8 +4,6 @@
 ! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
 
 ! CHECK: fir.call @_FortranAErfF128({{.*}}){{.*}}: (f128) -> f128
-! CHECK: fir.call @_FortranAErfF128({{.*}}){{.*}}: (f128) -> f128
-  real(16) :: a, b, c
+  real(16) :: a, b
   b = erf(a)
-  c = qerf(a)
 end

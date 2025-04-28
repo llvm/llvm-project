@@ -23,12 +23,3 @@ void test_wscanf_s(void) {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
   // CHECK-MESSAGES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
 }
-
-int remove(const char *path);
-int removeNonStdLibFunc(const char *path);
-void test_remove(void) {
-  remove("123");
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: the value returned by this function should not be disregarded; neglecting it may lead to errors
-  // CHECK-MESSAGES: [[@LINE-2]]:3: note: cast the expression to void to silence this warning
-  removeNonStdLibFunc("123");
-}

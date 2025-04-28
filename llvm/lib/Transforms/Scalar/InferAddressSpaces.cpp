@@ -305,16 +305,10 @@ static bool isNoopPtrIntCastPair(const Operator *I2P, const DataLayout &DL,
 }
 
 // Returns true if V is an address expression.
-// TODO: Currently, we only consider:
-//   - arguments
-//   - phi, bitcast, addrspacecast, and getelementptr operators
+// TODO: Currently, we consider only phi, bitcast, addrspacecast, and
+// getelementptr operators.
 static bool isAddressExpression(const Value &V, const DataLayout &DL,
                                 const TargetTransformInfo *TTI) {
-
-  if (const Argument *Arg = dyn_cast<Argument>(&V))
-    return Arg->getType()->isPointerTy() &&
-           TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace;
-
   const Operator *Op = dyn_cast<Operator>(&V);
   if (!Op)
     return false;
@@ -347,9 +341,6 @@ static bool isAddressExpression(const Value &V, const DataLayout &DL,
 static SmallVector<Value *, 2>
 getPointerOperands(const Value &V, const DataLayout &DL,
                    const TargetTransformInfo *TTI) {
-  if (isa<Argument>(&V))
-    return {};
-
   const Operator &Op = cast<Operator>(V);
   switch (Op.getOpcode()) {
   case Instruction::PHI: {
@@ -514,11 +505,13 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
     if (Visited.insert(V).second) {
       PostorderStack.emplace_back(V, false);
 
-      if (auto *Op = dyn_cast<Operator>(V))
-        for (auto &O : Op->operands())
-          if (ConstantExpr *CE = dyn_cast<ConstantExpr>(O))
-            if (isAddressExpression(*CE, *DL, TTI) && Visited.insert(CE).second)
-              PostorderStack.emplace_back(CE, false);
+      Operator *Op = cast<Operator>(V);
+      for (unsigned I = 0, E = Op->getNumOperands(); I != E; ++I) {
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Op->getOperand(I))) {
+          if (isAddressExpression(*CE, *DL, TTI) && Visited.insert(CE).second)
+            PostorderStack.emplace_back(CE, false);
+        }
+      }
     }
   }
 }
@@ -835,18 +828,6 @@ Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
   assert(V->getType()->getPointerAddressSpace() == FlatAddrSpace &&
          isAddressExpression(*V, *DL, TTI));
 
-  if (auto *Arg = dyn_cast<Argument>(V)) {
-    // Arguments are address space casted in the function body, as we do not
-    // want to change the function signature.
-    Function *F = Arg->getParent();
-    BasicBlock::iterator Insert = F->getEntryBlock().getFirstNonPHIIt();
-
-    Type *NewPtrTy = PointerType::get(Arg->getContext(), NewAddrSpace);
-    auto *NewI = new AddrSpaceCastInst(Arg, NewPtrTy);
-    NewI->insertBefore(Insert);
-    return NewI;
-  }
-
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     Value *NewV = cloneInstructionWithNewAddressSpace(
         I, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
@@ -914,7 +895,7 @@ void InferAddressSpacesImpl::inferAddressSpaces(
     ArrayRef<WeakTrackingVH> Postorder,
     ValueToAddrSpaceMapTy &InferredAddrSpace,
     PredicatedAddrSpaceMapTy &PredicatedAS) const {
-  SetVector<Value *> Worklist(llvm::from_range, Postorder);
+  SetVector<Value *> Worklist(Postorder.begin(), Postorder.end());
   // Initially, all expressions are in the uninitialized address space.
   for (Value *V : Postorder)
     InferredAddrSpace[V] = UninitializedAddressSpace;
@@ -985,12 +966,8 @@ bool InferAddressSpacesImpl::updateAddressSpace(
   // of all its pointer operands.
   unsigned NewAS = UninitializedAddressSpace;
 
-  // isAddressExpression should guarantee that V is an operator or an argument.
-  assert(isa<Operator>(V) || isa<Argument>(V));
-
-  if (isa<Operator>(V) &&
-      cast<Operator>(V).getOpcode() == Instruction::Select) {
-    const Operator &Op = cast<Operator>(V);
+  const Operator &Op = cast<Operator>(V);
+  if (Op.getOpcode() == Instruction::Select) {
     Value *Src0 = Op.getOperand(1);
     Value *Src1 = Op.getOperand(2);
 
@@ -1281,7 +1258,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
   }
 
   // Otherwise, replaces the use with flat(NewV).
-  if (isa<Instruction>(V) || isa<Instruction>(NewV)) {
+  if (Instruction *VInst = dyn_cast<Instruction>(V)) {
     // Don't create a copy of the original addrspacecast.
     if (U == V && isa<AddrSpaceCastInst>(V))
       return;
@@ -1291,7 +1268,7 @@ void InferAddressSpacesImpl::performPointerReplacement(
     if (Instruction *NewVInst = dyn_cast<Instruction>(NewV))
       InsertPos = std::next(NewVInst->getIterator());
     else
-      InsertPos = std::next(cast<Instruction>(V)->getIterator());
+      InsertPos = std::next(VInst->getIterator());
 
     while (isa<PHINode>(InsertPos))
       ++InsertPos;

@@ -178,7 +178,9 @@ class PPCBoolRetToInt : public FunctionPass {
  public:
   static char ID;
 
-  PPCBoolRetToInt() : FunctionPass(ID) {}
+  PPCBoolRetToInt() : FunctionPass(ID) {
+    initializePPCBoolRetToIntPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
@@ -239,11 +241,9 @@ class PPCBoolRetToInt : public FunctionPass {
       ++NumBoolCallPromotion;
     ++NumBoolToIntPromotion;
 
-    for (Value *V : Defs) {
-      auto [It, Inserted] = BoolToIntMap.try_emplace(V);
-      if (Inserted)
-        It->second = translate(V);
-    }
+    for (Value *V : Defs)
+      if (!BoolToIntMap.count(V))
+        BoolToIntMap[V] = translate(V);
 
     // Replace the operands of the translated instructions. They were set to
     // zero in the translate function.

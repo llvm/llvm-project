@@ -686,7 +686,7 @@ void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
     return SectionMap[ContainingSect]->Address + Asm.getSymbolOffset(*Sym);
   };
 
-  const MCSymbol *const SymA = Target.getAddSym();
+  const MCSymbol *const SymA = &Target.getSymA()->getSymbol();
 
   MCAsmBackend &Backend = Asm.getBackend();
   bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
@@ -782,9 +782,10 @@ void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
          "Expected containing csect to exist in map.");
   SectionMap[RelocationSec]->Relocations.push_back(Reloc);
 
-  const MCSymbol *const SymB = Target.getSubSym();
-  if (!SymB)
+  if (!Target.getSymB())
     return;
+
+  const MCSymbol *const SymB = &Target.getSymB()->getSymbol();
   if (SymA == SymB)
     report_fatal_error("relocation for opposite term is not yet supported");
 

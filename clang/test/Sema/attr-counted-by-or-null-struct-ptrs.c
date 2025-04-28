@@ -22,12 +22,14 @@ struct on_member_pointer_complete_ty {
 
 struct on_member_pointer_incomplete_ty {
   int count;
-  struct size_unknown * buf __counted_by_or_null(count); // ok
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'struct size_unknown' is an incomplete type}}
+  struct size_unknown * buf __counted_by_or_null(count);
 };
 
 struct on_member_pointer_const_incomplete_ty {
   int count;
-  const struct size_unknown * buf __counted_by_or_null(count); // ok
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'const struct size_unknown' is an incomplete type}}
+  const struct size_unknown * buf __counted_by_or_null(count);
 };
 
 struct on_member_pointer_void_ty {
@@ -114,12 +116,14 @@ struct on_member_pointer_complete_ty_ty_pos {
 
 struct on_member_pointer_incomplete_ty_ty_pos {
   int count;
-  struct size_unknown * __counted_by_or_null(count) buf; // ok
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'struct size_unknown' is an incomplete type}}
+  struct size_unknown * __counted_by_or_null(count) buf;
 };
 
 struct on_member_pointer_const_incomplete_ty_ty_pos {
   int count;
-  const struct size_unknown * __counted_by_or_null(count) buf; // ok
+  // expected-error@+1{{'counted_by_or_null' cannot be applied to a pointer with pointee of unknown size because 'const struct size_unknown' is an incomplete type}}
+  const struct size_unknown * __counted_by_or_null(count) buf;
 };
 
 struct on_member_pointer_void_ty_ty_pos {

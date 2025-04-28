@@ -388,7 +388,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   ConstantInt *UpperBound = nullptr;
   bool DefaultIsUnreachableFromSwitch = false;
 
-  if (SI->defaultDestUnreachable()) {
+  if (isa<UnreachableInst>(Default->getFirstNonPHIOrDbg())) {
     // Make the bounds tightly fitted around the case value range, because we
     // know that the value passed to the switch must be exactly one of the case
     // values.

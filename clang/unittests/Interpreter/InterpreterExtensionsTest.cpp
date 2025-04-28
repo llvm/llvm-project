@@ -61,7 +61,7 @@ public:
     TT.setOS(llvm::Triple::UnknownOS);
 
     std::string UnusedErr;
-    return llvm::TargetRegistry::lookupTarget(TT, UnusedErr);
+    return llvm::TargetRegistry::lookupTarget(TT.str(), UnusedErr);
   }
 };
 

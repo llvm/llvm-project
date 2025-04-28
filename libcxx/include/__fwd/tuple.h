@@ -19,15 +19,15 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <size_t, class>
-struct tuple_element;
+struct _LIBCPP_TEMPLATE_VIS tuple_element;
 
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class...>
-class tuple;
+class _LIBCPP_TEMPLATE_VIS tuple;
 
 template <class>
-struct tuple_size;
+struct _LIBCPP_TEMPLATE_VIS tuple_size;
 
 template <size_t _Ip, class... _Tp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, tuple<_Tp...> >::type&

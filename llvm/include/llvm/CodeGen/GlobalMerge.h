@@ -25,6 +25,7 @@ struct GlobalMergeOptions {
   unsigned MinSize = 0;
   bool GroupByUse = true;
   bool IgnoreSingleUse = true;
+  bool MergeConst = false;
   /// Whether we should merge global variables that have external linkage.
   bool MergeExternal = true;
   /// Whether we should merge constant global variables.

@@ -110,7 +110,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
@@ -2334,9 +2333,9 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
     OS << "  // " << InstructionConversionKinds[Row] << "\n";
     OS << "  { ";
     for (unsigned i = 0, e = ConversionTable[Row].size(); i != e; i += 2) {
-      const auto &OCK = OperandConversionKinds[ConversionTable[Row][i]];
-      OS << OCK << ", ";
-      if (OCK != CachedHashString("CVT_Tied")) {
+      OS << OperandConversionKinds[ConversionTable[Row][i]] << ", ";
+      if (OperandConversionKinds[ConversionTable[Row][i]] !=
+          CachedHashString("CVT_Tied")) {
         OS << (unsigned)(ConversionTable[Row][i + 1]) << ", ";
         continue;
       }
@@ -3934,7 +3933,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
           "convert to\n";
     OS << "    // an MCInst, so bail out on this instruction variant now.\n";
     OS << "    if (OperandNearMiss) {\n";
-    OS << "      // If the operand mismatch was the only problem, report it as "
+    OS << "      // If the operand mismatch was the only problem, reprrt it as "
           "a near-miss.\n";
     OS << "      if (NearMisses && !FeaturesNearMiss && "
           "!EarlyPredicateNearMiss) {\n";

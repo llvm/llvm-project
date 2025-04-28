@@ -98,10 +98,9 @@ Value::~Value() {
     dbgs() << "While deleting: " << *VTy << " %" << getName() << "\n";
     for (auto *U : users())
       dbgs() << "Use still stuck around after Def is destroyed:" << *U << "\n";
-
-    llvm_unreachable("Uses remain when a value is destroyed!");
   }
 #endif
+  assert(materialized_use_empty() && "Uses remain when a value is destroyed!");
 
   // If this value is named, destroy the name.  This should not be in a symtab
   // at this point.
@@ -216,19 +215,20 @@ void Value::dropDroppableUsesIn(User &Usr) {
 }
 
 void Value::dropDroppableUse(Use &U) {
+  U.removeFromList();
   if (auto *Assume = dyn_cast<AssumeInst>(U.getUser())) {
     unsigned OpNo = U.getOperandNo();
     if (OpNo == 0)
       U.set(ConstantInt::getTrue(Assume->getContext()));
     else {
-      U.set(PoisonValue::get(U.get()->getType()));
+      U.set(UndefValue::get(U.get()->getType()));
       CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
       BOI.Tag = Assume->getContext().pImpl->getOrInsertBundleTag("ignore");
     }
     return;
   }
 
-  llvm_unreachable("unknown droppable use");
+  llvm_unreachable("unkown droppable use");
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
@@ -441,6 +441,7 @@ void Value::takeName(Value *V) {
     ST->reinsertValue(this);
 }
 
+#ifndef NDEBUG
 std::string Value::getNameOrAsOperand() const {
   if (!getName().empty())
     return std::string(getName());
@@ -450,6 +451,7 @@ std::string Value::getNameOrAsOperand() const {
   printAsOperand(OS, false);
   return OS.str();
 }
+#endif
 
 void Value::assertModuleIsMaterializedImpl() const {
 #ifndef NDEBUG

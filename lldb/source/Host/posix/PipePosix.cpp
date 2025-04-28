@@ -12,9 +12,7 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Errno.h"
-#include "llvm/Support/Error.h"
 #include <functional>
-#include <system_error>
 #include <thread>
 
 #include <cerrno>
@@ -166,27 +164,26 @@ Status PipePosix::OpenAsReader(llvm::StringRef name,
   return error;
 }
 
-llvm::Error PipePosix::OpenAsWriter(llvm::StringRef name,
-                                    bool child_process_inherit,
-                                    const Timeout<std::micro> &timeout) {
+Status
+PipePosix::OpenAsWriterWithTimeout(llvm::StringRef name,
+                                   bool child_process_inherit,
+                                   const std::chrono::microseconds &timeout) {
   std::lock_guard<std::mutex> guard(m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
-    return llvm::createStringError("Pipe is already opened");
+    return Status::FromErrorString("Pipe is already opened");
 
   int flags = O_WRONLY | O_NONBLOCK;
   if (!child_process_inherit)
     flags |= O_CLOEXEC;
 
   using namespace std::chrono;
-  std::optional<time_point<steady_clock>> finish_time;
-  if (timeout)
-    finish_time = Now() + *timeout;
+  const auto finish_time = Now() + timeout;
 
   while (!CanWriteUnlocked()) {
-    if (timeout) {
-      if (Now() > finish_time)
-        return llvm::createStringError(
-            std::make_error_code(std::errc::timed_out),
+    if (timeout != microseconds::zero()) {
+      const auto dur = duration_cast<microseconds>(finish_time - Now()).count();
+      if (dur <= 0)
+        return Status::FromErrorString(
             "timeout exceeded - reader hasn't opened so far");
     }
 
@@ -196,8 +193,7 @@ llvm::Error PipePosix::OpenAsWriter(llvm::StringRef name,
       const auto errno_copy = errno;
       // We may get ENXIO if a reader side of the pipe hasn't opened yet.
       if (errno_copy != ENXIO && errno_copy != EINTR)
-        return llvm::errorCodeToError(
-            std::error_code(errno_copy, std::generic_category()));
+        return Status(errno_copy, eErrorTypePOSIX);
 
       std::this_thread::sleep_for(
           milliseconds(OPEN_WRITER_SLEEP_TIMEOUT_MSECS));
@@ -206,7 +202,7 @@ llvm::Error PipePosix::OpenAsWriter(llvm::StringRef name,
     }
   }
 
-  return llvm::Error::success();
+  return Status();
 }
 
 int PipePosix::GetReadFileDescriptor() const {
@@ -304,51 +300,70 @@ void PipePosix::CloseWriteFileDescriptorUnlocked() {
   }
 }
 
-llvm::Expected<size_t> PipePosix::Read(void *buf, size_t size,
-                                       const Timeout<std::micro> &timeout) {
+Status PipePosix::ReadWithTimeout(void *buf, size_t size,
+                                  const std::chrono::microseconds &timeout,
+                                  size_t &bytes_read) {
   std::lock_guard<std::mutex> guard(m_read_mutex);
+  bytes_read = 0;
   if (!CanReadUnlocked())
-    return llvm::errorCodeToError(
-        std::make_error_code(std::errc::invalid_argument));
+    return Status(EINVAL, eErrorTypePOSIX);
 
   const int fd = GetReadFileDescriptorUnlocked();
 
   SelectHelper select_helper;
-  if (timeout)
-    select_helper.SetTimeout(*timeout);
+  select_helper.SetTimeout(timeout);
   select_helper.FDSetRead(fd);
 
-  if (llvm::Error error = select_helper.Select().takeError())
-    return error;
-
-  ssize_t result = ::read(fd, buf, size);
-  if (result == -1)
-    return llvm::errorCodeToError(
-        std::error_code(errno, std::generic_category()));
-
-  return result;
+  Status error;
+  while (error.Success()) {
+    error = select_helper.Select();
+    if (error.Success()) {
+      auto result =
+          ::read(fd, static_cast<char *>(buf) + bytes_read, size - bytes_read);
+      if (result != -1) {
+        bytes_read += result;
+        if (bytes_read == size || result == 0)
+          break;
+      } else if (errno == EINTR) {
+        continue;
+      } else {
+        error = Status::FromErrno();
+        break;
+      }
+    }
+  }
+  return error;
 }
 
-llvm::Expected<size_t> PipePosix::Write(const void *buf, size_t size,
-                                        const Timeout<std::micro> &timeout) {
+Status PipePosix::WriteWithTimeout(const void *buf, size_t size,
+                                   const std::chrono::microseconds &timeout,
+                                   size_t &bytes_written) {
   std::lock_guard<std::mutex> guard(m_write_mutex);
+  bytes_written = 0;
   if (!CanWriteUnlocked())
-    return llvm::errorCodeToError(
-        std::make_error_code(std::errc::invalid_argument));
+    return Status(EINVAL, eErrorTypePOSIX);
 
   const int fd = GetWriteFileDescriptorUnlocked();
   SelectHelper select_helper;
-  if (timeout)
-    select_helper.SetTimeout(*timeout);
+  select_helper.SetTimeout(timeout);
   select_helper.FDSetWrite(fd);
 
-  if (llvm::Error error = select_helper.Select().takeError())
-    return error;
-
-  ssize_t result = ::write(fd, buf, size);
-  if (result == -1)
-    return llvm::errorCodeToError(
-        std::error_code(errno, std::generic_category()));
-
-  return result;
+  Status error;
+  while (error.Success()) {
+    error = select_helper.Select();
+    if (error.Success()) {
+      auto result = ::write(fd, static_cast<const char *>(buf) + bytes_written,
+                            size - bytes_written);
+      if (result != -1) {
+        bytes_written += result;
+        if (bytes_written == size)
+          break;
+      } else if (errno == EINTR) {
+        continue;
+      } else {
+        error = Status::FromErrno();
+      }
+    }
+  }
+  return error;
 }

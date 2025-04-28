@@ -8,7 +8,7 @@
 // CHECK-LABEL: test_fadd_local
 // CHECK: = atomicrmw fadd ptr addrspace(3) %{{.+}}, float %{{.+}} monotonic, align 4
 // GFX8-LABEL: test_fadd_local$local:
-// GFX8: ds_add_rtn_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+// GFX8: ds_add_rtn_f32 v2, v0, v1
 // GFX8: s_endpgm
 kernel void test_fadd_local(__local float *ptr, float val){
     float *res;

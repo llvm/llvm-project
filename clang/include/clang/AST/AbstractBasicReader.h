@@ -279,8 +279,10 @@ public:
         continue;
 
       case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
         cur = NestedNameSpecifier::Create(ctx, cur,
-                                          asImpl().readQualType().getTypePtr());
+                          kind == NestedNameSpecifier::TypeSpecWithTemplate,
+                          asImpl().readQualType().getTypePtr());
         continue;
 
       case NestedNameSpecifier::Global:

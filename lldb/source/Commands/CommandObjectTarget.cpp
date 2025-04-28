@@ -57,7 +57,6 @@
 #include "lldb/Utility/Timer.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-enumerations.h"
-#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 
 #include "clang/Frontend/CompilerInstance.h"
@@ -804,9 +803,7 @@ public:
 protected:
   void DumpGlobalVariableList(const ExecutionContext &exe_ctx,
                               const SymbolContext &sc,
-                              const VariableList &variable_list,
-                              CommandReturnObject &result) {
-    Stream &s = result.GetOutputStream();
+                              const VariableList &variable_list, Stream &s) {
     if (variable_list.Empty())
       return;
     if (sc.module_sp) {
@@ -827,16 +824,15 @@ protected:
       ValueObjectSP valobj_sp(ValueObjectVariable::Create(
           exe_ctx.GetBestExecutionContextScope(), var_sp));
 
-      if (valobj_sp) {
-        result.GetValueObjectList().Append(valobj_sp);
+      if (valobj_sp)
         DumpValueObject(s, var_sp, valobj_sp, var_sp->GetName().GetCString());
-      }
     }
   }
 
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Target *target = m_exe_ctx.GetTargetPtr();
     const size_t argc = args.GetArgumentCount();
+    Stream &s = result.GetOutputStream();
 
     if (argc > 0) {
       for (const Args::ArgEntry &arg : args) {
@@ -878,7 +874,7 @@ protected:
                     m_exe_ctx.GetBestExecutionContextScope(), var_sp);
 
               if (valobj_sp)
-                DumpValueObject(result.GetOutputStream(), var_sp, valobj_sp,
+                DumpValueObject(s, var_sp, valobj_sp,
                                 use_var_name ? var_sp->GetName().GetCString()
                                              : arg.c_str());
             }
@@ -907,8 +903,7 @@ protected:
             if (comp_unit_varlist_sp) {
               size_t count = comp_unit_varlist_sp->GetSize();
               if (count > 0) {
-                DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp,
-                                       result);
+                DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp, s);
                 success = true;
               }
             }
@@ -969,8 +964,7 @@ protected:
             VariableListSP comp_unit_varlist_sp(
                 sc.comp_unit->GetVariableList(can_create));
             if (comp_unit_varlist_sp)
-              DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp,
-                                     result);
+              DumpGlobalVariableList(m_exe_ctx, sc, *comp_unit_varlist_sp, s);
           } else if (sc.module_sp) {
             // Get all global variables for this module
             lldb_private::RegularExpression all_globals_regex(
@@ -978,7 +972,7 @@ protected:
             VariableList variable_list;
             sc.module_sp->FindGlobalVariables(all_globals_regex, UINT32_MAX,
                                               variable_list);
-            DumpGlobalVariableList(m_exe_ctx, sc, variable_list, result);
+            DumpGlobalVariableList(m_exe_ctx, sc, variable_list, s);
           }
         }
       }
@@ -3641,70 +3635,77 @@ protected:
 
       result.GetOutputStream().Printf("\n");
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread)) {
+      UnwindPlanSP non_callsite_unwind_plan =
+          func_unwinders_sp->GetUnwindPlanAtNonCallSite(*target, *thread);
+      if (non_callsite_unwind_plan) {
         result.GetOutputStream().Printf(
             "Asynchronous (not restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+            non_callsite_unwind_plan->GetSourceName().AsCString());
       }
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread)) {
+      UnwindPlanSP callsite_unwind_plan =
+          func_unwinders_sp->GetUnwindPlanAtCallSite(*target, *thread);
+      if (callsite_unwind_plan) {
         result.GetOutputStream().Printf(
             "Synchronous (restricted to call-sites) UnwindPlan is '%s'\n",
-            plan_sp->GetSourceName().AsCString());
+            callsite_unwind_plan->GetSourceName().AsCString());
       }
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
-        result.GetOutputStream().Printf("Fast UnwindPlan is '%s'\n",
-                                        plan_sp->GetSourceName().AsCString());
+      UnwindPlanSP fast_unwind_plan =
+          func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread);
+      if (fast_unwind_plan) {
+        result.GetOutputStream().Printf(
+            "Fast UnwindPlan is '%s'\n",
+            fast_unwind_plan->GetSourceName().AsCString());
       }
 
       result.GetOutputStream().Printf("\n");
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread)) {
+      UnwindPlanSP assembly_sp =
+          func_unwinders_sp->GetAssemblyUnwindPlan(*target, *thread);
+      if (assembly_sp) {
         result.GetOutputStream().Printf(
             "Assembly language inspection UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        assembly_sp->Dump(result.GetOutputStream(), thread.get(),
+                          LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetObjectFileUnwindPlan(*target)) {
+      UnwindPlanSP of_unwind_sp =
+          func_unwinders_sp->GetObjectFileUnwindPlan(*target);
+      if (of_unwind_sp) {
         result.GetOutputStream().Printf("object file UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        of_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
+                           LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetObjectFileAugmentedUnwindPlan(*target,
-                                                                  *thread)) {
+      UnwindPlanSP of_unwind_augmented_sp =
+          func_unwinders_sp->GetObjectFileAugmentedUnwindPlan(*target, *thread);
+      if (of_unwind_augmented_sp) {
         result.GetOutputStream().Printf("object file augmented UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        of_unwind_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
+                                     LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetEHFrameUnwindPlan(*target)) {
+      UnwindPlanSP ehframe_sp =
+          func_unwinders_sp->GetEHFrameUnwindPlan(*target);
+      if (ehframe_sp) {
         result.GetOutputStream().Printf("eh_frame UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        ehframe_sp->Dump(result.GetOutputStream(), thread.get(),
+                         LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target,
-                                                               *thread)) {
+      UnwindPlanSP ehframe_augmented_sp =
+          func_unwinders_sp->GetEHFrameAugmentedUnwindPlan(*target, *thread);
+      if (ehframe_augmented_sp) {
         result.GetOutputStream().Printf("eh_frame augmented UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        ehframe_augmented_sp->Dump(result.GetOutputStream(), thread.get(),
+                                   LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
+      if (UnwindPlanSP plan_sp =
               func_unwinders_sp->GetDebugFrameUnwindPlan(*target)) {
         result.GetOutputStream().Printf("debug_frame UnwindPlan:\n");
         plan_sp->Dump(result.GetOutputStream(), thread.get(),
@@ -3712,7 +3713,7 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
+      if (UnwindPlanSP plan_sp =
               func_unwinders_sp->GetDebugFrameAugmentedUnwindPlan(*target,
                                                                   *thread)) {
         result.GetOutputStream().Printf("debug_frame augmented UnwindPlan:\n");
@@ -3721,52 +3722,55 @@ protected:
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetArmUnwindUnwindPlan(*target)) {
+      UnwindPlanSP arm_unwind_sp =
+          func_unwinders_sp->GetArmUnwindUnwindPlan(*target);
+      if (arm_unwind_sp) {
         result.GetOutputStream().Printf("ARM.exidx unwind UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        arm_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
+                            LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
+      if (UnwindPlanSP symfile_plan_sp =
               func_unwinders_sp->GetSymbolFileUnwindPlan(*thread)) {
         result.GetOutputStream().Printf("Symbol file UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        symfile_plan_sp->Dump(result.GetOutputStream(), thread.get(),
+                              LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetCompactUnwindUnwindPlan(*target)) {
+      UnwindPlanSP compact_unwind_sp =
+          func_unwinders_sp->GetCompactUnwindUnwindPlan(*target);
+      if (compact_unwind_sp) {
         result.GetOutputStream().Printf("Compact unwind UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        compact_unwind_sp->Dump(result.GetOutputStream(), thread.get(),
+                                LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
-      if (std::shared_ptr<const UnwindPlan> plan_sp =
-              func_unwinders_sp->GetUnwindPlanFastUnwind(*target, *thread)) {
+      if (fast_unwind_plan) {
         result.GetOutputStream().Printf("Fast UnwindPlan:\n");
-        plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                      LLDB_INVALID_ADDRESS);
+        fast_unwind_plan->Dump(result.GetOutputStream(), thread.get(),
+                               LLDB_INVALID_ADDRESS);
         result.GetOutputStream().Printf("\n");
       }
 
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
-        if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
+        UnwindPlan arch_default(lldb::eRegisterKindGeneric);
+        if (abi_sp->CreateDefaultUnwindPlan(arch_default)) {
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
-          plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                        LLDB_INVALID_ADDRESS);
+          arch_default.Dump(result.GetOutputStream(), thread.get(),
+                            LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
 
-        if (UnwindPlanSP plan_sp = abi_sp->CreateFunctionEntryUnwindPlan()) {
+        UnwindPlan arch_entry(lldb::eRegisterKindGeneric);
+        if (abi_sp->CreateFunctionEntryUnwindPlan(arch_entry)) {
           result.GetOutputStream().Printf(
               "Arch default at entry point UnwindPlan:\n");
-          plan_sp->Dump(result.GetOutputStream(), thread.get(),
-                        LLDB_INVALID_ADDRESS);
+          arch_entry.Dump(result.GetOutputStream(), thread.get(),
+                          LLDB_INVALID_ADDRESS);
           result.GetOutputStream().Printf("\n");
         }
       }
@@ -4914,13 +4918,11 @@ Filter Options:
 
 protected:
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
-    if (interactive) {
-      if (lldb::LockableStreamFileSP output_sp =
-              io_handler.GetOutputStreamFileSP()) {
-        LockedStreamFile locked_stream = output_sp->Lock();
-        locked_stream.PutCString(
-            "Enter your stop hook command(s).  Type 'DONE' to end.\n");
-      }
+    StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+    if (output_sp && interactive) {
+      output_sp->PutCString(
+          "Enter your stop hook command(s).  Type 'DONE' to end.\n");
+      output_sp->Flush();
     }
   }
 
@@ -4928,12 +4930,12 @@ protected:
                               std::string &line) override {
     if (m_stop_hook_sp) {
       if (line.empty()) {
-        if (lldb::LockableStreamFileSP error_sp =
-                io_handler.GetErrorStreamFileSP()) {
-          LockedStreamFile locked_stream = error_sp->Lock();
-          locked_stream.Printf("error: stop hook #%" PRIu64
-                               " aborted, no commands.\n",
-                               m_stop_hook_sp->GetID());
+        StreamFileSP error_sp(io_handler.GetErrorStreamFileSP());
+        if (error_sp) {
+          error_sp->Printf("error: stop hook #%" PRIu64
+                           " aborted, no commands.\n",
+                           m_stop_hook_sp->GetID());
+          error_sp->Flush();
         }
         GetTarget().UndoCreateStopHook(m_stop_hook_sp->GetID());
       } else {
@@ -4942,11 +4944,11 @@ protected:
             static_cast<Target::StopHookCommandLine *>(m_stop_hook_sp.get());
 
         hook_ptr->SetActionFromString(line);
-        if (lldb::LockableStreamFileSP output_sp =
-                io_handler.GetOutputStreamFileSP()) {
-          LockedStreamFile locked_stream = output_sp->Lock();
-          locked_stream.Printf("Stop hook #%" PRIu64 " added.\n",
-                               m_stop_hook_sp->GetID());
+        StreamFileSP output_sp(io_handler.GetOutputStreamFileSP());
+        if (output_sp) {
+          output_sp->Printf("Stop hook #%" PRIu64 " added.\n",
+                            m_stop_hook_sp->GetID());
+          output_sp->Flush();
         }
       }
       m_stop_hook_sp.reset();

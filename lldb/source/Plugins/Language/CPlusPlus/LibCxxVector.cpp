@@ -33,6 +33,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -51,6 +53,8 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
+
+  bool MightHaveChildren() override { return true; }
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -83,30 +87,19 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
 llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxStdVectorSyntheticFrontEnd::CalculateNumChildren() {
   if (!m_start || !m_finish)
-    return llvm::createStringError(
-        "Failed to determine start/end of vector data.");
-
+    return 0;
   uint64_t start_val = m_start->GetValueAsUnsigned(0);
   uint64_t finish_val = m_finish->GetValueAsUnsigned(0);
 
-  // A default-initialized empty vector.
-  if (start_val == 0 && finish_val == 0)
+  if (start_val == 0 || finish_val == 0)
     return 0;
 
-  if (start_val == 0)
-    return llvm::createStringError("Invalid value for start of vector.");
-
-  if (finish_val == 0)
-    return llvm::createStringError("Invalid value for end of vector.");
-
-  if (start_val > finish_val)
-    return llvm::createStringError(
-        "Start of vector data begins after end pointer.");
+  if (start_val >= finish_val)
+    return 0;
 
   size_t num_children = (finish_val - start_val);
   if (num_children % m_element_size)
-    return llvm::createStringError("Size not multiple of element size.");
-
+    return 0;
   return num_children / m_element_size;
 }
 
@@ -148,12 +141,8 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   m_element_type = data_sp->GetCompilerType().GetPointeeType();
-  llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
-  if (!size_or_err)
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
-                    "{0}");
-  else {
-    m_element_size = *size_or_err;
+  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
+    m_element_size = *size;
 
     if (m_element_size > 0) {
       // store raw pointers or end up with a circular dependency
@@ -162,6 +151,11 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
     }
   }
   return lldb::ChildCacheState::eRefetch;
+}
+
+bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
+    MightHaveChildren() {
+  return true;
 }
 
 size_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
@@ -213,8 +207,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
     return {};
   mask = 1 << bit_index;
   bool bit_set = ((byte & mask) != 0);
-  std::optional<uint64_t> size =
-      llvm::expectedToOptional(m_bool_type.GetByteSize(nullptr));
+  std::optional<uint64_t> size = m_bool_type.GetByteSize(nullptr);
   if (!size)
     return {};
   WritableDataBufferSP buffer_sp(new DataBufferHeap(*size, 0));

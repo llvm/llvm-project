@@ -85,20 +85,18 @@ mlirExecutionEngineInvokePacked(MlirExecutionEngine jit, MlirStringRef name,
 
 extern "C" void *mlirExecutionEngineLookupPacked(MlirExecutionEngine jit,
                                                  MlirStringRef name) {
-  auto optionalFPtr =
-      llvm::expectedToOptional(unwrap(jit)->lookupPacked(unwrap(name)));
-  if (!optionalFPtr)
+  auto expectedFPtr = unwrap(jit)->lookupPacked(unwrap(name));
+  if (!expectedFPtr)
     return nullptr;
-  return reinterpret_cast<void *>(*optionalFPtr);
+  return reinterpret_cast<void *>(*expectedFPtr);
 }
 
 extern "C" void *mlirExecutionEngineLookup(MlirExecutionEngine jit,
                                            MlirStringRef name) {
-  auto optionalFPtr =
-      llvm::expectedToOptional(unwrap(jit)->lookup(unwrap(name)));
-  if (!optionalFPtr)
+  auto expectedFPtr = unwrap(jit)->lookup(unwrap(name));
+  if (!expectedFPtr)
     return nullptr;
-  return *optionalFPtr;
+  return reinterpret_cast<void *>(*expectedFPtr);
 }
 
 extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,

@@ -253,8 +253,7 @@ enum class NodeKind {
   LocalStaticGuardVariable,
   FunctionSymbol,
   VariableSymbol,
-  SpecialTableSymbol,
-  PointerAuthQualifier,
+  SpecialTableSymbol
 };
 
 struct Node {
@@ -296,7 +295,6 @@ struct SymbolNode;
 struct FunctionSymbolNode;
 struct VariableSymbolNode;
 struct SpecialTableSymbolNode;
-struct PointerAuthQualifierNode;
 
 struct TypeNode : public Node {
   explicit TypeNode(NodeKind K) : Node(K) {}
@@ -469,8 +467,6 @@ struct PointerTypeNode : public TypeNode {
   // If this is a member pointer, this is the class that the member is in.
   QualifiedNameNode *ClassParent = nullptr;
 
-  PointerAuthQualifierNode *PointerAuthQualifier = nullptr;
-
   // Represents a type X in "a pointer to X", "a reference to X", or
   // "rvalue-reference to X"
   TypeNode *Pointee = nullptr;
@@ -627,22 +623,6 @@ struct FunctionSymbolNode : public SymbolNode {
   void output(OutputBuffer &OB, OutputFlags Flags) const override;
 
   FunctionSignatureNode *Signature = nullptr;
-};
-
-struct PointerAuthQualifierNode : public Node {
-  PointerAuthQualifierNode() : Node(NodeKind::PointerAuthQualifier) {}
-
-  // __ptrauth takes three arguments:
-  //  - key
-  //  - isAddressDiscriminated
-  //  - extra discriminator
-  static constexpr unsigned NumArgs = 3;
-  typedef std::array<uint64_t, NumArgs> ArgArray;
-
-  void output(OutputBuffer &OB, OutputFlags Flags) const override;
-
-  // List of arguments.
-  NodeArrayNode *Components = nullptr;
 };
 
 } // namespace ms_demangle

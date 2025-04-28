@@ -1,21 +1,37 @@
-//===- comgr-metadata.cpp - Metadata query functions ----------------------===//
-//
-// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
-// amd/comgr/LICENSE.TXT in this repository for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file contains functions used to implement the Comgr metadata query
-/// APIs, including:
-///   amd_comgr_get_isa_count()
-///   amd_comgr_get_isa_name()
-///   amd_comgr_action_info_set_isa_name()
-///   amd_comgr_get_isa_metadata()
-///   amd_comgr_lookup_code_object()
-///
-//===----------------------------------------------------------------------===//
+/*******************************************************************************
+ *
+ * University of Illinois/NCSA
+ * Open Source License
+ *
+ * Copyright (c) 2018 Advanced Micro Devices, Inc. All Rights Reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimers.
+ *
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimers in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ *     * Neither the names of Advanced Micro Devices, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this Software without specific prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ ******************************************************************************/
 
 #include "comgr-metadata.h"
 #include "llvm/ADT/SmallVector.h"
@@ -341,7 +357,6 @@ struct IsaInfo {
   bool XnackSupported;
   unsigned ElfMachine;
   bool TrapHandlerEnabled;
-  bool ImageSupport;
   unsigned LDSSize;
   unsigned LDSBankCount;
   unsigned EUsPerCU;
@@ -356,17 +371,16 @@ struct IsaInfo {
 } IsaInfos[] = {
 #define HANDLE_ISA(TARGET_TRIPLE, PROCESSOR, SRAMECC_SUPPORTED,                \
                    XNACK_SUPPORTED, ELF_MACHINE, TRAP_HANDLER_ENABLED,         \
-                   IMAGE_SUPPORT, LDS_SIZE, LDS_BANK_COUNT, EUS_PER_CU,        \
-                   MAX_WAVES_PER_CU, MAX_FLAT_WORK_GROUP_SIZE,                 \
-                   SGPR_ALLOC_GRANULE, TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS, \
-                   VGPR_ALLOC_GRANULE, TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS) \
+                   LDS_SIZE, LDS_BANK_COUNT, EUS_PER_CU, MAX_WAVES_PER_CU,     \
+                   MAX_FLAT_WORK_GROUP_SIZE, SGPR_ALLOC_GRANULE,               \
+                   TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS, VGPR_ALLOC_GRANULE, \
+                   TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS)                     \
   {TARGET_TRIPLE "-" PROCESSOR,                                                \
    PROCESSOR,                                                                  \
    SRAMECC_SUPPORTED,                                                          \
    XNACK_SUPPORTED,                                                            \
    ELF::ELF_MACHINE,                                                           \
    TRAP_HANDLER_ENABLED,                                                       \
-   IMAGE_SUPPORT,                                                              \
    LDS_SIZE,                                                                   \
    LDS_BANK_COUNT,                                                             \
    EUS_PER_CU,                                                                 \
@@ -866,8 +880,6 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName,
   auto Info = IsaInfos[IsaIndex];
   Root["TrapHandlerEnabled"] =
       Doc.getNode(std::to_string(Info.TrapHandlerEnabled), /*Copy=*/true);
-  Root["ImageSupport"] =
-      Doc.getNode(std::to_string(Info.ImageSupport), /*Copy=*/true);
   Root["LocalMemorySize"] =
       Doc.getNode(std::to_string(Info.LDSSize), /*Copy=*/true);
   Root["EUsPerCU"] = Doc.getNode(std::to_string(Info.EUsPerCU), /*Copy=*/true);

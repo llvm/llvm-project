@@ -31,6 +31,11 @@ static cl::opt<unsigned> VExtractThreshold(
     "hexagon-vextract-threshold", cl::Hidden, cl::init(1),
     cl::desc("Threshold for triggering vextract replacement"));
 
+namespace llvm {
+  void initializeHexagonVExtractPass(PassRegistry& Registry);
+  FunctionPass *createHexagonVExtract();
+}
+
 namespace {
   class HexagonVExtract : public MachineFunctionPass {
   public:

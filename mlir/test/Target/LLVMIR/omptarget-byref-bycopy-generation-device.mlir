@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-/ needs flang to be default
+/ needs flang-new to be default
 // XFAIL: *
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {

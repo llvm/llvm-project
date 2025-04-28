@@ -760,13 +760,13 @@ def STFDXTLS : XForm_8<31, 727, (outs), (ins f8rc:$RST, ptr_rc_nor0:$RA, tlsreg:
 let isCommutable = 1 in
 defm ADDC8 : XOForm_1rc<31, 10, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
                         "addc", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i64:$RT, (PPCaddc i64:$RA, i64:$RB))]>,
+                        [(set i64:$RT, (addc i64:$RA, i64:$RB))]>,
                         PPC970_DGroup_Cracked;
 
 let Defs = [CARRY] in
 def ADDIC8 : DForm_2<12, (outs g8rc:$RST), (ins g8rc:$RA, s16imm64:$D),
                      "addic $RST, $RA, $D", IIC_IntGeneral,
-                     [(set i64:$RST, (PPCaddc i64:$RA, imm64SExt16:$D))]>;
+                     [(set i64:$RST, (addc i64:$RA, imm64SExt16:$D))]>;
 def ADDI8  : DForm_2<14, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s16imm64:$D),
                      "addi $RST, $RA, $D", IIC_IntSimple,
                      [(set i64:$RST, (add i64:$RA, imm64SExt16:$D))]>;
@@ -782,11 +782,11 @@ def LA8     : DForm_2<14, (outs g8rc:$RST), (ins g8rc_nox0:$RA, s16imm64:$D),
 let Defs = [CARRY] in {
 def SUBFIC8: DForm_2< 8, (outs g8rc:$RST), (ins g8rc:$RA, s16imm64:$D),
                      "subfic $RST, $RA, $D", IIC_IntGeneral,
-                     [(set i64:$RST, (PPCsubc imm64SExt16:$D, i64:$RA))]>;
+                     [(set i64:$RST, (subc imm64SExt16:$D, i64:$RA))]>;
 }
 defm SUBFC8 : XOForm_1rc<31, 8, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
                         "subfc", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i64:$RT, (PPCsubc i64:$RB, i64:$RA))]>,
+                        [(set i64:$RT, (subc i64:$RB, i64:$RA))]>,
                         PPC970_DGroup_Cracked;
 defm SUBF8 : XOForm_1rx<31, 40, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
                         "subf", "$RT, $RA, $RB", IIC_IntGeneral,
@@ -798,22 +798,22 @@ let Uses = [CARRY] in {
 let isCommutable = 1 in
 defm ADDE8   : XOForm_1rc<31, 138, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
                           "adde", "$RT, $RA, $RB", IIC_IntGeneral,
-                          [(set i64:$RT, (PPCadde i64:$RA, i64:$RB, CARRY))]>;
+                          [(set i64:$RT, (adde i64:$RA, i64:$RB))]>;
 defm ADDME8  : XOForm_3rc<31, 234, 0, (outs g8rc:$RT), (ins g8rc:$RA),
                           "addme", "$RT, $RA", IIC_IntGeneral,
-                          [(set i64:$RT, (PPCadde i64:$RA, -1, CARRY))]>;
+                          [(set i64:$RT, (adde i64:$RA, -1))]>;
 defm ADDZE8  : XOForm_3rc<31, 202, 0, (outs g8rc:$RT), (ins g8rc:$RA),
                           "addze", "$RT, $RA", IIC_IntGeneral,
-                          [(set i64:$RT, (PPCadde i64:$RA, 0, CARRY))]>;
+                          [(set i64:$RT, (adde i64:$RA, 0))]>;
 defm SUBFE8  : XOForm_1rc<31, 136, 0, (outs g8rc:$RT), (ins g8rc:$RA, g8rc:$RB),
                           "subfe", "$RT, $RA, $RB", IIC_IntGeneral,
-                          [(set i64:$RT, (PPCsube i64:$RB, i64:$RA, CARRY))]>;
+                          [(set i64:$RT, (sube i64:$RB, i64:$RA))]>;
 defm SUBFME8 : XOForm_3rc<31, 232, 0, (outs g8rc:$RT), (ins g8rc:$RA),
                           "subfme", "$RT, $RA", IIC_IntGeneral,
-                          [(set i64:$RT, (PPCsube -1, i64:$RA, CARRY))]>;
+                          [(set i64:$RT, (sube -1, i64:$RA))]>;
 defm SUBFZE8 : XOForm_3rc<31, 200, 0, (outs g8rc:$RT), (ins g8rc:$RA),
                           "subfze", "$RT, $RA", IIC_IntGeneral,
-                          [(set i64:$RT, (PPCsube 0, i64:$RA, CARRY))]>;
+                          [(set i64:$RT, (sube 0, i64:$RA))]>;
 }
 } // isCodeGenOnly
 

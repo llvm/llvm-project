@@ -12,10 +12,8 @@
 #include "DAPForward.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
-#include "lldb/API/SBError.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -51,16 +49,12 @@ namespace lldb_dap {
 ///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
 ///     each command is executed verbatim.
 ///
-/// \param[in] echo_commands
-///     If \b true, the command are echoed to the stream.
-///
 /// \return
 ///     \b true, unless a command prefixed with \b ! fails and parsing of
 ///     command directives is enabled.
 bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                      const llvm::ArrayRef<std::string> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives,
-                     bool echo_commands);
+                     llvm::raw_ostream &strm, bool parse_command_directives);
 
 /// Run a list of LLDB commands in the LLDB command interpreter.
 ///
@@ -85,17 +79,18 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 ///     If \b false, then command prefixes like \b ! or \b ? are not parsed and
 ///     each command is executed verbatim.
 ///
-/// \param[in] echo_commands
-///     If \b true, the command are echoed to the stream.
-///
 /// \return
 ///     A std::string that contains the prefix and all commands and
 ///     command output.
 std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
-                            bool parse_command_directives = true,
-                            bool echo_commands = false);
+                            bool parse_command_directives = true);
+
+/// Similar to the method above, but without parsing command directives.
+std::string
+RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger, llvm::StringRef prefix,
+                        const llvm::ArrayRef<std::string> &commands);
 
 /// Check if a thread has a stop reason.
 ///
@@ -158,9 +153,6 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 ///     The environment variables stored in the env key
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
-
-/// Take ownership of the stored error.
-llvm::Error ToError(const lldb::SBError &error);
 
 } // namespace lldb_dap
 

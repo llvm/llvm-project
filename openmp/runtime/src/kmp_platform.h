@@ -22,7 +22,6 @@
 #define KMP_OS_OPENBSD 0
 #define KMP_OS_DARWIN 0
 #define KMP_OS_WINDOWS 0
-#define KMP_OS_HAIKU 0
 #define KMP_OS_HURD 0
 #define KMP_OS_SOLARIS 0
 #define KMP_OS_WASI 0
@@ -74,11 +73,6 @@
 #define KMP_OS_OPENBSD 1
 #endif
 
-#if (defined __HAIKU__)
-#undef KMP_OS_HAIKU
-#define KMP_OS_HAIKU 1
-#endif
-
 #if (defined __GNU__)
 #undef KMP_OS_HURD
 #define KMP_OS_HURD 1
@@ -100,14 +94,14 @@
 #endif
 
 #if (1 != KMP_OS_LINUX + KMP_OS_DRAGONFLY + KMP_OS_FREEBSD + KMP_OS_NETBSD +   \
-              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HAIKU + \
-              KMP_OS_HURD + KMP_OS_SOLARIS + KMP_OS_WASI + KMP_OS_AIX)
+              KMP_OS_OPENBSD + KMP_OS_DARWIN + KMP_OS_WINDOWS + KMP_OS_HURD +  \
+              KMP_OS_SOLARIS + KMP_OS_WASI + KMP_OS_AIX)
 #error Unknown OS
 #endif
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HAIKU || KMP_OS_HURD ||          \
-    KMP_OS_SOLARIS || KMP_OS_WASI || KMP_OS_AIX
+    KMP_OS_OPENBSD || KMP_OS_DARWIN || KMP_OS_HURD || KMP_OS_SOLARIS ||        \
+    KMP_OS_WASI || KMP_OS_AIX
 #undef KMP_OS_UNIX
 #define KMP_OS_UNIX 1
 #endif
@@ -129,7 +123,6 @@
 #define KMP_ARCH_LOONGARCH64 0
 #define KMP_ARCH_VE 0
 #define KMP_ARCH_S390X 0
-#define KMP_ARCH_SPARC 0
 
 #if KMP_OS_WINDOWS
 #if defined(_M_AMD64) || defined(__x86_64)
@@ -201,9 +194,6 @@
 #elif defined __s390x__
 #undef KMP_ARCH_S390X
 #define KMP_ARCH_S390X 1
-#elif defined __sparc || defined __sparc__
-#undef KMP_ARCH_SPARC
-#define KMP_ARCH_SPARC 1
 #endif
 #endif
 
@@ -250,17 +240,6 @@
 #define KMP_ARCH_PPC64                                                         \
   (KMP_ARCH_PPC64_ELFv2 || KMP_ARCH_PPC64_ELFv1 || KMP_ARCH_PPC64_XCOFF)
 
-#if defined(KMP_ARCH_SPARC)
-#undef KMP_ARCH_SPARC32
-#undef KMP_ARCH_SPARC64
-#if defined(__sparcv9) || defined(__sparc64__)
-#define KMP_ARCH_SPARC64 1
-#endif
-#if defined(__sparc) && !defined(__sparcv9) && !defined(__sparc64__)
-#define KMP_ARCH_SPARC32 1
-#endif
-#endif
-
 #if defined(__MIC__) || defined(__MIC2__)
 #define KMP_MIC 1
 #if __MIC2__ || __KNC__
@@ -279,7 +258,7 @@
 /* Specify 32 bit architectures here */
 #define KMP_32_BIT_ARCH                                                        \
   (KMP_ARCH_X86 || KMP_ARCH_ARM || KMP_ARCH_MIPS || KMP_ARCH_WASM ||           \
-   KMP_ARCH_PPC || KMP_ARCH_AARCH64_32 || KMP_ARCH_SPARC32)
+   KMP_ARCH_PPC || KMP_ARCH_AARCH64_32)
 
 // Platforms which support Intel(R) Many Integrated Core Architecture
 #define KMP_MIC_SUPPORTED                                                      \
@@ -290,7 +269,7 @@
               KMP_ARCH_AARCH64 + KMP_ARCH_MIPS + KMP_ARCH_MIPS64 +             \
               KMP_ARCH_RISCV64 + KMP_ARCH_LOONGARCH64 + KMP_ARCH_VE +          \
               KMP_ARCH_S390X + KMP_ARCH_WASM + KMP_ARCH_PPC +                  \
-              KMP_ARCH_AARCH64_32 + KMP_ARCH_SPARC)
+              KMP_ARCH_AARCH64_32)
 #error Unknown or unsupported architecture
 #endif
 

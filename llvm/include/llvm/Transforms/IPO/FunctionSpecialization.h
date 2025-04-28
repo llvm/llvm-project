@@ -119,7 +119,8 @@ struct SpecSig {
   }
 
   friend hash_code hash_value(const SpecSig &S) {
-    return hash_combine(hash_value(S.Key), hash_combine_range(S.Args));
+    return hash_combine(hash_value(S.Key),
+                        hash_combine_range(S.Args.begin(), S.Args.end()));
   }
 };
 

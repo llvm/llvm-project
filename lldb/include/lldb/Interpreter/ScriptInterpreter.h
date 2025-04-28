@@ -116,12 +116,8 @@ public:
   ~ScriptInterpreterIORedirect();
 
   lldb::FileSP GetInputFile() const { return m_input_file_sp; }
-  lldb::FileSP GetOutputFile() const {
-    return m_output_file_sp->GetUnlockedFileSP();
-  }
-  lldb::FileSP GetErrorFile() const {
-    return m_error_file_sp->GetUnlockedFileSP();
-  }
+  lldb::FileSP GetOutputFile() const { return m_output_file_sp->GetFileSP(); }
+  lldb::FileSP GetErrorFile() const { return m_error_file_sp->GetFileSP(); }
 
   /// Flush our output and error file handles.
   void Flush();
@@ -132,9 +128,8 @@ private:
   ScriptInterpreterIORedirect(Debugger &debugger, CommandReturnObject *result);
 
   lldb::FileSP m_input_file_sp;
-  lldb::LockableStreamFileSP m_output_file_sp;
-  lldb::LockableStreamFileSP m_error_file_sp;
-  LockableStreamFile::Mutex m_output_mutex;
+  lldb::StreamFileSP m_output_file_sp;
+  lldb::StreamFileSP m_error_file_sp;
   ThreadedCommunication m_communication;
   bool m_disconnect;
 };
@@ -483,7 +478,7 @@ public:
     dest.clear();
     return false;
   }
-
+  
   virtual StructuredData::ObjectSP
   GetOptionsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
@@ -493,9 +488,9 @@ public:
   GetArgumentsForCommandObject(StructuredData::GenericSP cmd_obj_sp) {
     return {};
   }
-
+  
   virtual bool SetOptionValueForCommandObject(
-      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx,
+      StructuredData::GenericSP cmd_obj_sp, ExecutionContext *exe_ctx, 
       llvm::StringRef long_option, llvm::StringRef value) {
     return false;
   }
@@ -522,8 +517,7 @@ public:
   LoadScriptingModule(const char *filename, const LoadScriptOptions &options,
                       lldb_private::Status &error,
                       StructuredData::ObjectSP *module_sp = nullptr,
-                      FileSpec extra_search_dir = {},
-                      lldb::TargetSP loaded_into_target_sp = {});
+                      FileSpec extra_search_dir = {});
 
   virtual bool IsReservedWord(const char *word) { return false; }
 

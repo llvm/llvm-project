@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
   std::vector<std::string> Objects;
   for (const std::string &Filename : InputFilenames) {
     std::vector<std::string> Objs = expandBundle(Filename);
-    llvm::append_range(Objects, Objs);
+    Objects.insert(Objects.end(), Objs.begin(), Objs.end());
   }
 
   propagateOptions();

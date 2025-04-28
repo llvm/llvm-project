@@ -12,7 +12,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "SIPostRABundler.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
@@ -24,13 +23,13 @@ using namespace llvm;
 
 namespace {
 
-class SIPostRABundlerLegacy : public MachineFunctionPass {
+class SIPostRABundler : public MachineFunctionPass {
 public:
   static char ID;
 
 public:
-  SIPostRABundlerLegacy() : MachineFunctionPass(ID) {
-    initializeSIPostRABundlerLegacyPass(*PassRegistry::getPassRegistry());
+  SIPostRABundler() : MachineFunctionPass(ID) {
+    initializeSIPostRABundlerPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -43,11 +42,6 @@ public:
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-};
-
-class SIPostRABundler {
-public:
-  bool run(MachineFunction &MF);
 
 private:
   const SIRegisterInfo *TRI;
@@ -68,15 +62,14 @@ constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIPostRABundlerLegacy, DEBUG_TYPE, "SI post-RA bundler", false,
-                false)
+INITIALIZE_PASS(SIPostRABundler, DEBUG_TYPE, "SI post-RA bundler", false, false)
 
-char SIPostRABundlerLegacy::ID = 0;
+char SIPostRABundler::ID = 0;
 
-char &llvm::SIPostRABundlerLegacyID = SIPostRABundlerLegacy::ID;
+char &llvm::SIPostRABundlerID = SIPostRABundler::ID;
 
 FunctionPass *llvm::createSIPostRABundlerPass() {
-  return new SIPostRABundlerLegacy();
+  return new SIPostRABundler();
 }
 
 bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
@@ -128,19 +121,9 @@ bool SIPostRABundler::canBundle(const MachineInstr &MI,
           !isDependentLoad(NextMI));
 }
 
-bool SIPostRABundlerLegacy::runOnMachineFunction(MachineFunction &MF) {
+bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
-  return SIPostRABundler().run(MF);
-}
-
-PreservedAnalyses SIPostRABundlerPass::run(MachineFunction &MF,
-                                           MachineFunctionAnalysisManager &) {
-  SIPostRABundler().run(MF);
-  return PreservedAnalyses::all();
-}
-
-bool SIPostRABundler::run(MachineFunction &MF) {
 
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   BitVector BundleUsedRegUnits(TRI->getNumRegUnits());

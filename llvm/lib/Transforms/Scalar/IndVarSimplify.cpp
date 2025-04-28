@@ -406,7 +406,9 @@ bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
   // the SCEV routines.
   BasicBlock *Header = L->getHeader();
 
-  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(Header->phis()));
+  SmallVector<WeakTrackingVH, 8> PHIs;
+  for (PHINode &PN : Header->phis())
+    PHIs.push_back(&PN);
 
   bool Changed = false;
   for (WeakTrackingVH &PHI : PHIs)
@@ -597,8 +599,9 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
       L->getBlocks()[0]->getModule(), Intrinsic::experimental_guard);
   bool HasGuards = GuardDecl && !GuardDecl->use_empty();
 
-  SmallVector<PHINode *, 8> LoopPhis(
-      llvm::make_pointer_range(L->getHeader()->phis()));
+  SmallVector<PHINode *, 8> LoopPhis;
+  for (PHINode &PN : L->getHeader()->phis())
+    LoopPhis.push_back(&PN);
 
   // Each round of simplification iterates through the SimplifyIVUsers worklist
   // for all current phis, then determines whether any IVs can be
@@ -1093,12 +1096,10 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   if (!Preheader) return false;
 
   bool MadeAnyChanges = false;
-  for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
-
-    // Skip BB Terminator.
-    if (Preheader->getTerminator() == &I)
-      continue;
-
+  BasicBlock::iterator InsertPt = ExitBlock->getFirstInsertionPt();
+  BasicBlock::iterator I(Preheader->getTerminator());
+  while (I != Preheader->begin()) {
+    --I;
     // New instructions were inserted at the end of the preheader.
     if (isa<PHINode>(I))
       break;
@@ -1109,28 +1110,28 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     // memory. Note that it's okay if the instruction might have undefined
     // behavior: LoopSimplify guarantees that the preheader dominates the exit
     // block.
-    if (I.mayHaveSideEffects() || I.mayReadFromMemory())
+    if (I->mayHaveSideEffects() || I->mayReadFromMemory())
       continue;
 
-    // Skip debug or pseudo instructions.
-    if (I.isDebugOrPseudoInst())
+    // Skip debug info intrinsics.
+    if (isa<DbgInfoIntrinsic>(I))
       continue;
 
     // Skip eh pad instructions.
-    if (I.isEHPad())
+    if (I->isEHPad())
       continue;
 
     // Don't sink alloca: we never want to sink static alloca's out of the
     // entry block, and correctly sinking dynamic alloca's requires
     // checks for stacksave/stackrestore intrinsics.
     // FIXME: Refactor this check somehow?
-    if (isa<AllocaInst>(&I))
+    if (isa<AllocaInst>(I))
       continue;
 
     // Determine if there is a use in or before the loop (direct or
     // otherwise).
     bool UsedInLoop = false;
-    for (Use &U : I.uses()) {
+    for (Use &U : I->uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UseBB = User->getParent();
       if (PHINode *P = dyn_cast<PHINode>(User)) {
@@ -1149,9 +1150,26 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       continue;
 
     // Otherwise, sink it to the exit block.
-    I.moveBefore(ExitBlock->getFirstInsertionPt());
-    SE->forgetValue(&I);
+    Instruction *ToMove = &*I;
+    bool Done = false;
+
+    if (I != Preheader->begin()) {
+      // Skip debug info intrinsics.
+      do {
+        --I;
+      } while (I->isDebugOrPseudoInst() && I != Preheader->begin());
+
+      if (I->isDebugOrPseudoInst() && I == Preheader->begin())
+        Done = true;
+    } else {
+      Done = true;
+    }
+
     MadeAnyChanges = true;
+    ToMove->moveBefore(*ExitBlock, InsertPt);
+    SE->forgetValue(ToMove);
+    if (Done) break;
+    InsertPt = ToMove->getIterator();
   }
 
   return MadeAnyChanges;

@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGOpenMPRuntimeGPU.h"
-#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -30,6 +29,8 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
+
+#define NO_LOOP_XTEAM_RED "no-loop-xteam-red"
 
 namespace {
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
@@ -1031,7 +1032,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
       CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetNoLoopKernel(D);
       DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
                       CGM.emitNxResult("[No-Loop/Big-Jump-Loop]", D, NxStatus));
-      if (NxStatus != CodeGenModule::NxSuccess) {
+      if (NxStatus) {
         NxStatus = CGM.checkAndSetXteamRedKernel(D);
         DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
                         CGM.emitNxResult("[Xteam]", D, NxStatus));
@@ -2520,10 +2521,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::SM_90a:
       case OffloadArch::SM_100:
       case OffloadArch::SM_100a:
-      case OffloadArch::SM_101:
-      case OffloadArch::SM_101a:
-      case OffloadArch::SM_120:
-      case OffloadArch::SM_120a:
       case OffloadArch::GFX600:
       case OffloadArch::GFX601:
       case OffloadArch::GFX602:
@@ -2548,6 +2545,8 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
       case OffloadArch::GFX90a:
       case OffloadArch::GFX90c:
       case OffloadArch::GFX9_4_GENERIC:
+      case OffloadArch::GFX940:
+      case OffloadArch::GFX941:
       case OffloadArch::GFX942:
       case OffloadArch::GFX950:
       case OffloadArch::GFX10_1_GENERIC:
@@ -2626,309 +2625,125 @@ llvm::Value *CGOpenMPRuntimeGPU::initSpecializedKernel(CodeGenFunction &CGF) {
 }
 
 std::pair<llvm::Value *, llvm::Value *>
-CGOpenMPRuntimeGPU::getXteamRedFunctionPtrs(
-    CodeGenFunction &CGF, llvm::Type *RedVarType,
-    CodeGenModule::XteamRedOpKind Opcode) {
+CGOpenMPRuntimeGPU::getXteamRedFunctionPtrs(CodeGenFunction &CGF,
+                                            llvm::Type *RedVarType) {
   if (RedVarType->isIntegerTy()) {
     if (RedVarType->getPrimitiveSizeInBits() == 16) {
-      switch (Opcode) {
-      case CodeGenModule::XR_OP_unknown:
-        llvm_unreachable("Xteam reduction opcode cannot be unknown");
-      case CodeGenModule::XR_OP_add:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_sum_s)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_sum_lds_s)
-                .getCallee());
-      case CodeGenModule::XR_OP_min:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_min_s)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_min_lds_s)
-                .getCallee());
-      case CodeGenModule::XR_OP_max:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_max_s)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_max_lds_s)
-                .getCallee());
-      }
+      return std::make_pair(
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_s)
+              .getCallee(),
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_lds_s)
+              .getCallee());
     }
     if (RedVarType->getPrimitiveSizeInBits() == 32) {
-      switch (Opcode) {
-      case CodeGenModule::XR_OP_unknown:
-        llvm_unreachable("Xteam reduction opcode cannot be unknown");
-      case CodeGenModule::XR_OP_add:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_sum_i)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_sum_lds_i)
-                .getCallee());
-      case CodeGenModule::XR_OP_min:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_min_i)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_min_lds_i)
-                .getCallee());
-      case CodeGenModule::XR_OP_max:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_max_i)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_max_lds_i)
-                .getCallee());
-      }
+      return std::make_pair(
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_i)
+              .getCallee(),
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_lds_i)
+              .getCallee());
     }
     if (RedVarType->getPrimitiveSizeInBits() == 64) {
-      switch (Opcode) {
-      case CodeGenModule::XR_OP_unknown:
-        llvm_unreachable("Xteam reduction opcode cannot be unknown");
-      case CodeGenModule::XR_OP_add:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_sum_l)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_sum_lds_l)
-                .getCallee());
-      case CodeGenModule::XR_OP_min:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_min_l)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_min_lds_l)
-                .getCallee());
-      case CodeGenModule::XR_OP_max:
-        return std::make_pair(
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_max_l)
-                .getCallee(),
-            OMPBuilder
-                .getOrCreateRuntimeFunction(CGM.getModule(),
-                                            OMPRTL___kmpc_rfun_max_lds_l)
-                .getCallee());
-      }
+      return std::make_pair(
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_l)
+              .getCallee(),
+          OMPBuilder
+              .getOrCreateRuntimeFunction(CGM.getModule(),
+                                          OMPRTL___kmpc_rfun_sum_lds_l)
+              .getCallee());
     }
   }
 
   if (RedVarType->isFloatTy()) {
-    switch (Opcode) {
-    case CodeGenModule::XR_OP_unknown:
-      llvm_unreachable("Xteam reduction opcode cannot be unknown");
-    case CodeGenModule::XR_OP_add:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_f)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_lds_f)
-              .getCallee());
-    case CodeGenModule::XR_OP_min:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_f)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_lds_f)
-              .getCallee());
-    case CodeGenModule::XR_OP_max:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_f)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_lds_f)
-              .getCallee());
-    }
+    return std::make_pair(OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_f)
+                              .getCallee(),
+                          OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_lds_f)
+                              .getCallee());
   }
 
   if (RedVarType->isDoubleTy()) {
-    switch (Opcode) {
-    case CodeGenModule::XR_OP_unknown:
-      llvm_unreachable("Xteam reduction opcode cannot be unknown");
-    case CodeGenModule::XR_OP_add:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_d)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_lds_d)
-              .getCallee());
-    case CodeGenModule::XR_OP_min:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_d)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_lds_d)
-              .getCallee());
-    case CodeGenModule::XR_OP_max:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_d)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_lds_d)
-              .getCallee());
-    }
+    return std::make_pair(OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_d)
+                              .getCallee(),
+                          OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_lds_d)
+                              .getCallee());
   }
 
   if (RedVarType->isHalfTy()) {
-    switch (Opcode) {
-    case CodeGenModule::XR_OP_unknown:
-      llvm_unreachable("Xteam reduction opcode cannot be unknown");
-    case CodeGenModule::XR_OP_add:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_h)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_lds_h)
-              .getCallee());
-    case CodeGenModule::XR_OP_min:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_h)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_lds_h)
-              .getCallee());
-    case CodeGenModule::XR_OP_max:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_h)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_lds_h)
-              .getCallee());
-    }
+    return std::make_pair(OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_h)
+                              .getCallee(),
+                          OMPBuilder
+                              .getOrCreateRuntimeFunction(
+                                  CGM.getModule(), OMPRTL___kmpc_rfun_sum_lds_h)
+                              .getCallee());
   }
 
   if (RedVarType->isBFloatTy()) {
-    switch (Opcode) {
-    case CodeGenModule::XR_OP_unknown:
-      llvm_unreachable("Xteam reduction opcode cannot be unknown");
-    case CodeGenModule::XR_OP_add:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_bf)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_sum_lds_bf)
-              .getCallee());
-    case CodeGenModule::XR_OP_min:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_bf)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_min_lds_bf)
-              .getCallee());
-    case CodeGenModule::XR_OP_max:
-      return std::make_pair(
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_bf)
-              .getCallee(),
-          OMPBuilder
-              .getOrCreateRuntimeFunction(CGM.getModule(),
-                                          OMPRTL___kmpc_rfun_max_lds_bf)
-              .getCallee());
-    }
+    return std::make_pair(
+        OMPBuilder
+            .getOrCreateRuntimeFunction(CGM.getModule(),
+                                        OMPRTL___kmpc_rfun_sum_bf)
+            .getCallee(),
+        OMPBuilder
+            .getOrCreateRuntimeFunction(CGM.getModule(),
+                                        OMPRTL___kmpc_rfun_sum_lds_bf)
+            .getCallee());
   }
+
   llvm_unreachable("No support for other types currently.");
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
-    CodeGenFunction &CGF, llvm::Value *Val, llvm::Value *OrigVarPtr,
+llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
+    CodeGenFunction &CGF, llvm::Value *Val, llvm::Value *SumPtr,
     llvm::Value *DTeamVals, llvm::Value *DTeamsDonePtr,
     llvm::Value *ThreadStartIndex, llvm::Value *NumTeams, int BlockSize,
-    CodeGenModule::XteamRedOpKind Opcode, bool IsFast) {
+    bool IsFast) {
   // TODO handle more types
-  llvm::Type *RedVarType = Val->getType();
-  assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
-          RedVarType->isHalfTy() || RedVarType->isBFloatTy() ||
-          (RedVarType->isIntegerTy() &&
-           (RedVarType->getPrimitiveSizeInBits() == 16 ||
-            RedVarType->getPrimitiveSizeInBits() == 32 ||
-            RedVarType->getPrimitiveSizeInBits() == 64))) &&
-         "Unhandled type");
-  assert((Opcode == CodeGenModule::XR_OP_add ||
-          Opcode == CodeGenModule::XR_OP_min ||
-          Opcode == CodeGenModule::XR_OP_max) &&
-         "Unexpected Xteam reduction operator");
-  std::pair<llvm::Value *, llvm::Value *> RfunPair =
-      getXteamRedFunctionPtrs(CGF, RedVarType, Opcode);
-  // The initial value (referred to as the sentinel value) of the local
-  // reduction variable depends on the opcode.
-  llvm::Value *SentinelVal = CGF.getXteamRedSentinel(RedVarType, Opcode);
+  llvm::Type *SumType = Val->getType();
+  assert(
+      (SumType->isFloatTy() || SumType->isDoubleTy() || SumType->isHalfTy() ||
+       SumType->isBFloatTy() ||
+       (SumType->isIntegerTy() && (SumType->getPrimitiveSizeInBits() == 16 ||
+                                   SumType->getPrimitiveSizeInBits() == 32 ||
+                                   SumType->getPrimitiveSizeInBits() == 64))) &&
+      "Unhandled type");
 
-  llvm::Value *Args[] = {
-      Val,
-      OrigVarPtr,
-      DTeamVals,
-      DTeamsDonePtr,
-      RfunPair.first,
-      RfunPair.second,
-      SentinelVal,
-      ThreadStartIndex,
-      NumTeams,
-      CGF.CGM.getLangOpts().OpenMPTargetMultiDevice
-          ? llvm::ConstantInt::get(CGF.CGM.Int32Ty,
-                                   0) /* __MEMORY_SCOPE_SYSTEM */
-          : llvm::ConstantInt::get(CGF.CGM.Int32Ty,
-                                   1) /* __MEMORY_SCOPE_DEVICE */};
+  llvm::Type *Int16Ty = llvm::Type::getInt16Ty(CGM.getLLVMContext());
+  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(CGM.getLLVMContext());
+  llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
+
+  std::pair<llvm::Value *, llvm::Value *> RfunPair =
+      getXteamRedFunctionPtrs(CGF, SumType);
+  llvm::Value *ZeroVal = (SumType->isFloatTy() || SumType->isDoubleTy()) ||
+                                 SumType->isHalfTy() || SumType->isBFloatTy()
+                             ? llvm::ConstantFP::getZero(SumType)
+                         : SumType->getPrimitiveSizeInBits() == 16
+                             ? llvm::ConstantInt::get(Int16Ty, 0)
+                         : SumType->getPrimitiveSizeInBits() == 32
+                             ? llvm::ConstantInt::get(Int32Ty, 0)
+                             : llvm::ConstantInt::get(Int64Ty, 0);
+
+  llvm::Value *Args[] = {Val,           SumPtr,           DTeamVals,
+                         DTeamsDonePtr, RfunPair.first,   RfunPair.second,
+                         ZeroVal,       ThreadStartIndex, NumTeams};
 
   unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
   assert(WarpSize == 32 || WarpSize == 64);
@@ -2938,14 +2753,8 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
   assert(((BlockSize & (BlockSize - 1)) == 0) &&
          "XTeam Reduction blocksize must be a power of two");
 
-  // Prior analysis ensures that Xteam min/max reduction is not initiated if
-  // fast reduction is requested by the user.
-  if (IsFast)
-    assert(Opcode == CodeGenModule::XR_OP_add &&
-           "Fast reduction is not enabled for min and max");
-
-  if (RedVarType->isIntegerTy()) {
-    if (RedVarType->getPrimitiveSizeInBits() == 16) {
+  if (SumType->isIntegerTy()) {
+    if (SumType->getPrimitiveSizeInBits() == 16) {
       if (WarpSize == 32) {
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
@@ -2960,7 +2769,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
             Args);
       }
     }
-    if (RedVarType->getPrimitiveSizeInBits() == 32) {
+    if (SumType->getPrimitiveSizeInBits() == 32) {
       if (WarpSize == 32) {
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
@@ -2975,7 +2784,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
             Args);
       }
     }
-    if (RedVarType->getPrimitiveSizeInBits() == 64) {
+    if (SumType->getPrimitiveSizeInBits() == 64) {
       if (WarpSize == 32) {
         return CGF.EmitRuntimeCall(
             OMPBuilder.getOrCreateRuntimeFunction(
@@ -2991,7 +2800,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
       }
     }
   }
-  if (RedVarType->isFloatTy()) {
+  if (SumType->isFloatTy()) {
     if (WarpSize == 32) {
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(
@@ -3006,7 +2815,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
           Args);
     }
   }
-  if (RedVarType->isDoubleTy()) {
+  if (SumType->isDoubleTy()) {
     if (WarpSize == 32) {
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(
@@ -3021,7 +2830,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
           Args);
     }
   }
-  if (RedVarType->isHalfTy()) {
+  if (SumType->isHalfTy()) {
     if (WarpSize == 32) {
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(
@@ -3036,7 +2845,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedOperation(
           Args);
     }
   }
-  if (RedVarType->isBFloatTy()) {
+  if (SumType->isBFloatTy()) {
     if (WarpSize == 32) {
       return CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(
@@ -3071,7 +2880,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamScanSum(
   llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
 
   std::pair<llvm::Value *, llvm::Value *> RfunPair =
-      getXteamRedFunctionPtrs(CGF, SumType, CodeGenModule::XR_OP_add);
+      getXteamRedFunctionPtrs(CGF, SumType);
   llvm::Value *ZeroVal = (SumType->isFloatTy() || SumType->isDoubleTy())
                              ? llvm::ConstantFP::getZero(SumType)
                          : SumType->getPrimitiveSizeInBits() == 32
@@ -3283,7 +3092,7 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamScanPhaseTwo(
   llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGM.getLLVMContext());
 
   std::pair<llvm::Value *, llvm::Value *> RfunPair =
-      getXteamRedFunctionPtrs(CGF, SumType, CodeGenModule::XR_OP_add);
+      getXteamRedFunctionPtrs(CGF, SumType);
   llvm::Value *ZeroVal = (SumType->isFloatTy() || SumType->isDoubleTy())
                              ? llvm::ConstantFP::getZero(SumType)
                          : SumType->getPrimitiveSizeInBits() == 32
@@ -3569,6 +3378,58 @@ void CGOpenMPRuntimeGPU::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
         llvm_unreachable("Unexpected atomic ordering for flush directive.");
       }
   }
+}
+
+// The only allowed atomicrmw is add on int 32 and 64 bits, cmp_and_swap, swap.
+bool CGOpenMPRuntimeGPU::mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X,
+                                            RValue Update,
+                                            BinaryOperatorKind BO) {
+  ASTContext &Context = CGF.getContext();
+  OffloadArch Arch = getOffloadArch(CGM);
+
+  if (!Context.getTargetInfo().getTriple().isAMDGCN() ||
+      !CGF.CGM.getLangOpts().OpenMPIsTargetDevice)
+    return false;
+
+  if (Arch != OffloadArch::GFX941)
+    return false;
+
+  // Non simple types cannot be used in atomicRMW and are handled elsewhere
+  if (!X.isSimple())
+    return false;
+
+  // Integer types are lowered by backend to atomic ISA (32 and 64 bits) or to
+  // CAS loop (all other bit widths).
+  if (BO == BO_Add && Update.getScalarVal()->getType()->isIntegerTy())
+    return false;
+
+  // For all other operations, integer types that are not 32 or 64 bits are
+  // already converted to CAS loop by clang codegen or backend. This allows for
+  // simpler handling in devicertl call.
+  if (Update.getScalarVal()->getType()->isIntegerTy() &&
+      (Context.getTypeSize(X.getType()) < 32 ||
+       Context.getTypeSize(X.getType()) > 64))
+    return false;
+
+  // float and double have a atomic ISA for min, max, and add that need to be
+  // bypassed. All other operations on float and double are lowered to cas loop
+  // by the backend
+  if ((Update.getScalarVal()->getType()->isFloatTy() ||
+       Update.getScalarVal()->getType()->isDoubleTy()) &&
+      !((BO == BO_Add) || (BO == BO_LT) || (BO == BO_GT)))
+    return false;
+
+  // For all types, the ISA only supports certain operations in a "native" way.
+  // All others are lowered to a CAS loop by the backend
+  if (!((BO == BO_Add) || (BO == BO_Sub) || (BO == BO_LT) || (BO == BO_GT) ||
+        (BO == BO_And) || (BO == BO_Or) || (BO == BO_Xor)))
+    return false;
+
+  // all other cases must be lowered to safe CAS loop
+  // which is hidden in a runtime function that uses cmpxchg directly and not
+  // atomicrmw. This is effectively bypassing the backend on the decision of
+  // what atomic to use.
+  return true;
 }
 
 std::pair<bool, RValue>

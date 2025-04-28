@@ -41,13 +41,11 @@ enum CondCode {
   COND_GE,
   COND_LTU,
   COND_GEU,
-  COND_CV_BEQIMM,
-  COND_CV_BNEIMM,
   COND_INVALID
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(CondCode CC);
+unsigned getBrCond(CondCode CC, bool Imm = false);
 
 } // end of namespace RISCVCC
 
@@ -67,16 +65,16 @@ public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
   MCInst getNop() const override;
-  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC) const;
+  const MCInstrDesc &getBrCond(RISCVCC::CondCode CC, bool Imm = false) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
   Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
-                               TypeSize &MemBytes) const override;
+                               unsigned &MemBytes) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
-                              TypeSize &MemBytes) const override;
+                              unsigned &MemBytes) const override;
 
   bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
 
@@ -90,7 +88,7 @@ public:
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
                          const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                   const DebugLoc &DL, Register DstReg, Register SrcReg,
+                   const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
@@ -219,9 +217,10 @@ public:
       unsigned MinRepeats) const override;
 
   // Return if/how a given MachineInstr should be outlined.
-  outliner::InstrType getOutliningTypeImpl(const MachineModuleInfo &MMI,
-                                           MachineBasicBlock::iterator &MBBI,
-                                           unsigned Flags) const override;
+  virtual outliner::InstrType
+  getOutliningTypeImpl(const MachineModuleInfo &MMI,
+                       MachineBasicBlock::iterator &MBBI,
+                       unsigned Flags) const override;
 
   // Insert a custom frame for outlined functions.
   void buildOutlinedFrame(MachineBasicBlock &MBB, MachineFunction &MF,
@@ -276,7 +275,7 @@ public:
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const override;
+      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
 
   bool hasReassociableOperands(const MachineInstr &Inst,
                                const MachineBasicBlock *MBB) const override;
@@ -300,23 +299,6 @@ public:
 
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
-
-  bool isHighLatencyDef(int Opc) const override;
-
-  /// Return true if pairing the given load or store may be paired with another.
-  static bool isPairableLdStInstOpc(unsigned Opc);
-
-  static bool isLdStSafeToPair(const MachineInstr &LdSt,
-                               const TargetRegisterInfo *TRI);
-
-  /// Return the result of the evaluation of C0 CC C1, where CC is a
-  /// RISCVCC::CondCode.
-  static bool evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1);
-
-  /// Return true if the operand is a load immediate instruction and
-  /// sets Imm to the immediate value.
-  static bool isFromLoadImm(const MachineRegisterInfo &MRI,
-                            const MachineOperand &Op, int64_t &Imm);
 
 protected:
   const RISCVSubtarget &STI;
@@ -347,6 +329,9 @@ std::optional<std::pair<unsigned, unsigned>>
 isRVVSpillForZvlsseg(unsigned Opcode);
 
 bool isFaultFirstLoad(const MachineInstr &MI);
+
+// Implemented in RISCVGenInstrInfo.inc
+int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
 
 // Return true if both input instructions have equal rounding mode. If at least
 // one of the instructions does not have rounding mode, false will be returned.

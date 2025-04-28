@@ -6,7 +6,6 @@
 #
 # ===----------------------------------------------------------------------===##
 
-
 # Run our custom libc++ clang-tidy checks on all public headers.
 
 # RUN: %{python} %s %{libcxx-dir}/utils
@@ -23,9 +22,6 @@ for header in public_headers:
 //--- {header}.sh.cpp
 
 // REQUIRES: has-clang-tidy
-
-// The frozen headers should not be updated to the latest libc++ style, so don't test.
-// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc

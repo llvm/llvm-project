@@ -110,7 +110,9 @@ struct PPCVSXSwapRemoval : public MachineFunctionPass {
   // Swap entries are represented by their VSEId fields.
   EquivalenceClasses<int> *EC;
 
-  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {}
+  PPCVSXSwapRemoval() : MachineFunctionPass(ID) {
+    initializePPCVSXSwapRemovalPass(*PassRegistry::getPassRegistry());
+  }
 
 private:
   // Initialize data structures.
@@ -209,7 +211,6 @@ public:
     return Changed;
   }
 };
-} // end anonymous namespace
 
 // Initialize data structures for this pass.  In particular, clear the
 // swap vector and allocate the equivalence class mapping before
@@ -1059,6 +1060,8 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
   dbgs() << "\n";
 }
 #endif
+
+} // end default namespace
 
 INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE,
                       "PowerPC VSX Swap Removal", false, false)

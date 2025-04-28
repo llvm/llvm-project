@@ -76,13 +76,13 @@ public:
 
   // Init 'thunk' so that it be a direct jump to 'branchTarget'.
   virtual void initICFSafeThunkBody(InputSection *thunk,
-                                    Symbol *targetSym) const {
+                                    InputSection *branchTarget) const {
     llvm_unreachable("target does not support ICF safe thunks");
   }
 
   // Given a thunk for which `initICFSafeThunkBody` was called, return the
   // branchTarget it was initialized with.
-  virtual Symbol *getThunkBranchTarget(InputSection *thunk) const {
+  virtual InputSection *getThunkBranchTarget(InputSection *thunk) const {
     llvm_unreachable("target does not support ICF safe thunks");
   }
 

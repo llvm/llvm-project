@@ -94,7 +94,7 @@ private:
 
   /// Used for parsing specific pre-aggregated input files.
   struct AggregatedLBREntry {
-    enum Type : char { BRANCH = 0, FT, FT_EXTERNAL_ORIGIN, TRACE };
+    enum Type : char { BRANCH = 0, FT, FT_EXTERNAL_ORIGIN };
     Location From;
     Location To;
     uint64_t Count;
@@ -197,10 +197,6 @@ private:
 
   BoltAddressTranslation *BAT{nullptr};
 
-  /// Whether pre-aggregated profile needs to convert branch profile into call
-  /// to continuation fallthrough profile.
-  bool NeedsConvertRetProfileToCallCont{false};
-
   /// Update function execution profile with a recorded trace.
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
@@ -223,8 +219,7 @@ private:
   bool recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
                   uint64_t Count = 1) const;
 
-  /// Branch stacks aggregation statistics
-  uint64_t NumTraces{0};
+  /// Aggregation statistics
   uint64_t NumInvalidTraces{0};
   uint64_t NumLongRangeTraces{0};
   /// Specifies how many samples were recorded in cold areas if we are dealing
@@ -232,7 +227,6 @@ private:
   /// for the source of the branch to avoid counting cold activity twice (one
   /// for source and another for destination).
   uint64_t NumColdSamples{0};
-  uint64_t NumTotalSamples{0};
 
   /// Looks into system PATH for Linux Perf and set up the aggregator to use it
   void findPerfExecutable();
@@ -274,7 +268,8 @@ private:
                      uint64_t Mispreds);
 
   /// Register a \p Branch.
-  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds);
+  bool doBranch(uint64_t From, uint64_t To, uint64_t Count, uint64_t Mispreds,
+                bool IsPreagg);
 
   /// Register a trace between two LBR entries supplied in execution order.
   bool doTrace(const LBREntry &First, const LBREntry &Second,
@@ -303,7 +298,7 @@ private:
   ErrorOr<PerfMemSample> parseMemSample();
 
   /// Parse pre-aggregated LBR samples created by an external tool
-  std::error_code parseAggregatedLBREntry();
+  ErrorOr<AggregatedLBREntry> parseAggregatedLBREntry();
 
   /// Parse either buildid:offset or just offset, representing a location in the
   /// binary. Used exclusively for pre-aggregated LBR samples.
@@ -329,8 +324,8 @@ private:
   /// Parse a single LBR entry as output by perf script -Fbrstack
   ErrorOr<LBREntry> parseLBREntry();
 
-  /// Parse LBR sample.
-  void parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
+  /// Parse LBR sample, returns the number of traces.
+  uint64_t parseLBRSample(const PerfBranchSample &Sample, bool NeedsSkylakeFix);
 
   /// Parse and pre-aggregate branch events.
   std::error_code parseBranchEvents();
@@ -389,15 +384,14 @@ private:
   /// memory.
   ///
   /// File format syntax:
-  /// {B|F|f|T} [<start_id>:]<start_offset> [<end_id>:]<end_offset> [<ft_end>]
-  ///       <count> [<mispred_count>]
+  /// {B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> <count>
+  ///       [<mispred_count>]
   ///
   /// B - indicates an aggregated branch
   /// F - an aggregated fall-through
   /// f - an aggregated fall-through with external origin - used to disambiguate
   ///       between a return hitting a basic block head and a regular internal
   ///       jump to the block
-  /// T - an aggregated trace: branch with a fall-through (from, to, ft_end)
   ///
   /// <start_id> - build id of the object containing the start address. We can
   /// skip it for the main binary and use "X" for an unknown object. This will
@@ -407,8 +401,6 @@ private:
   /// main executable unless it's PIE) to the start address.
   ///
   /// <end_id>, <end_offset> - same for the end address.
-  ///
-  /// <ft_end> - same for the fallthrough_end address.
   ///
   /// <count> - total aggregated count of the branch or a fall-through.
   ///
@@ -488,13 +480,6 @@ private:
   void dump(const LBREntry &LBR) const;
   void dump(const PerfBranchSample &Sample) const;
   void dump(const PerfMemSample &Sample) const;
-
-  /// Profile diagnostics print methods
-  void printColdSamplesDiagnostic() const;
-  void printLongRangeTracesDiagnostic() const;
-  void printBranchSamplesDiagnostics() const;
-  void printBasicSamplesDiagnostics(uint64_t OutOfRangeSamples) const;
-  void printBranchStacksDiagnostics(uint64_t IgnoredSamples) const;
 
 public:
   /// If perf.data was collected without build ids, the buildid-list may contain

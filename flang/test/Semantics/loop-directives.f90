@@ -1,3 +1,5 @@
+! -fopenacc unsupported on AMD downstream
+! UNSUPPORTED: true
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc -Werror
 

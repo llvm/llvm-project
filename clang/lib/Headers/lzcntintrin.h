@@ -14,15 +14,13 @@
 #ifndef __LZCNTINTRIN_H
 #define __LZCNTINTRIN_H
 
-/* Define the default attributes for the functions in this file.
-   Allow using the lzcnt intrinsics even for non-LZCNT targets. Since the LZCNT
-   intrinsics are mapped to llvm.ctlz.*, false, which can be lowered to BSR on
-   non-LZCNT targets with zero-value input handled correctly. */
+/* Define the default attributes for the functions in this file. */
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__)) constexpr
+  __attribute__((__always_inline__, __nodebug__, __target__("lzcnt"))) constexpr
 #else
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("lzcnt")))
 #endif
 
 #ifndef _MSC_VER

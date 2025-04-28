@@ -9,7 +9,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -24,14 +23,14 @@ void MCValue::print(raw_ostream &OS) const {
 
   // FIXME: prints as a number, which isn't ideal. But the meaning will be
   // target-specific anyway.
-  if (getSpecifier())
-    OS << ':' << getSpecifier() << ':';
+  if (getRefKind())
+    OS << ':' << getRefKind() <<  ':';
 
-  SymA->print(OS, nullptr);
+  OS << *getSymA();
 
-  if (auto *B = getSubSym()) {
+  if (getSymB()) {
     OS << " - ";
-    B->print(OS, nullptr);
+    OS << *getSymB();
   }
 
   if (getConstant())
@@ -43,3 +42,17 @@ LLVM_DUMP_METHOD void MCValue::dump() const {
   print(dbgs());
 }
 #endif
+
+MCSymbolRefExpr::VariantKind MCValue::getAccessVariant() const {
+  const MCSymbolRefExpr *B = getSymB();
+  if (B) {
+    if (B->getKind() != MCSymbolRefExpr::VK_None)
+      llvm_unreachable("unsupported");
+  }
+
+  const MCSymbolRefExpr *A = getSymA();
+  if (!A)
+    return MCSymbolRefExpr::VK_None;
+
+  return A->getKind();
+}

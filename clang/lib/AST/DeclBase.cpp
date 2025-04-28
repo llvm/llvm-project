@@ -21,7 +21,6 @@
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DependentDiagnostic.h"
@@ -439,7 +438,7 @@ bool Decl::isFileContextDecl() const {
 }
 
 bool Decl::isFlexibleArrayMemberLike(
-    const ASTContext &Ctx, const Decl *D, QualType Ty,
+    ASTContext &Ctx, const Decl *D, QualType Ty,
     LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
     bool IgnoreTemplateOrMacroSubstitution) {
   // For compatibility with existing code, we treat arrays of length 0 or
@@ -993,8 +992,6 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case LifetimeExtendedTemporary:
     case RequiresExprBody:
     case ImplicitConceptSpecialization:
-    case OpenACCDeclare:
-    case OpenACCRoutine:
       // Never looked up by name.
       return 0;
   }
@@ -1981,7 +1978,7 @@ void DeclContext::localUncachedLookup(DeclarationName Name,
   // the results.
   if (!hasExternalVisibleStorage() && !hasExternalLexicalStorage() && Name) {
     lookup_result LookupResults = lookup(Name);
-    llvm::append_range(Results, LookupResults);
+    Results.insert(Results.end(), LookupResults.begin(), LookupResults.end());
     if (!Results.empty())
       return;
   }

@@ -352,7 +352,8 @@ void LoopEmitter::initSubSectIterator(OpBuilder &builder, Location loc) {
     if (depRedOrder.empty())
       continue;
 
-    llvm::sort(depRedOrder, llvm::less_first());
+    std::sort(depRedOrder.begin(), depRedOrder.end(),
+              [](auto &l, auto &r) { return std::get<0>(l) < std::get<0>(r); });
 
     SmallVector<SparseIterator *> lastIter(tensors.size(), nullptr);
     for (auto [loop, t, lvl] : depRedOrder) {

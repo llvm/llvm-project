@@ -128,16 +128,13 @@ void createHLFIRToFIRPassPipeline(
     mlir::PassManager &pm, bool enableOpenMP,
     llvm::OptimizationLevel optLevel = defaultOptLevel);
 
+using DoConcurrentMappingKind =
+    Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+
 struct OpenMPFIRPassPipelineOpts {
-  /// Whether code is being generated for a target device rather than the host
-  /// device
   bool isTargetDevice;
   bool enableOffloadGlobalFiltering;
-
-  /// Controls how to map `do concurrent` loops; to device, host, or none at
-  /// all.
-  Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind
-      doConcurrentMappingKind;
+  DoConcurrentMappingKind doConcurrentMappingKind;
 };
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
@@ -147,8 +144,8 @@ struct OpenMPFIRPassPipelineOpts {
 /// that the FIR is correct with respect to OpenMP operations/attributes.
 ///
 /// \param pm - MLIR pass manager that will hold the pipeline definition.
-/// \param opts - options to control OpenMP code-gen; see struct docs for more
-/// details.
+/// \param isTargetDevice - Whether code is being generated for a target device
+/// rather than the host device.
 void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
                                  OpenMPFIRPassPipelineOpts opts);
 

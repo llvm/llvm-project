@@ -445,7 +445,8 @@ void LVPatterns::addGenericPatterns(StringSet<> &Patterns) {
 }
 
 void LVPatterns::addOffsetPatterns(const LVOffsetSet &Patterns) {
-  llvm::append_range(OffsetMatchInfo, Patterns);
+  for (const LVOffset &Entry : Patterns)
+    OffsetMatchInfo.push_back(Entry);
   if (OffsetMatchInfo.size()) {
     options().setSelectOffsetPattern();
     options().setSelectExecute();

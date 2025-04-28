@@ -60,7 +60,7 @@ class LangOptions;
 class MacroDefinitionRecord;
 class MacroInfo;
 class Module;
-class ModuleCache;
+class InMemoryModuleCache;
 class ModuleFileExtension;
 class ModuleFileExtensionWriter;
 class NamedDecl;
@@ -117,7 +117,7 @@ private:
   const SmallVectorImpl<char> &Buffer;
 
   /// The PCM manager which manages memory buffers for pcm files.
-  ModuleCache &ModCache;
+  InMemoryModuleCache &ModuleCache;
 
   /// The preprocessor we're writing.
   Preprocessor *PP = nullptr;
@@ -370,7 +370,7 @@ private:
   ///
   /// Only meaningful for standard C++ named modules. See the comments in
   /// createSignatureForNamedModule() for details.
-  llvm::SetVector<Module *> TouchedTopLevelModules;
+  llvm::DenseSet<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
@@ -571,7 +571,7 @@ private:
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
   ASTFileSignature createSignatureForNamedModule() const;
 
-  void WriteInputFiles(SourceManager &SourceMgr);
+  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
@@ -682,7 +682,7 @@ public:
   /// Create a new precompiled header writer that outputs to
   /// the given bitstream.
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            ModuleCache &ModCache,
+            InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true, bool BuildingImplicitModule = false,
             bool GeneratingReducedBMI = false);
@@ -750,6 +750,9 @@ public:
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
+
+  /// Determine the ID of an already-emitted macro.
+  serialization::MacroID getMacroID(MacroInfo *MI);
 
   uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 
@@ -986,8 +989,9 @@ protected:
   virtual Module *getEmittingModule(ASTContext &Ctx);
 
 public:
-  PCHGenerator(Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
-               StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+  PCHGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+               StringRef OutputFile, StringRef isysroot,
+               std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true,
                bool BuildingImplicitModule = false,
@@ -1009,14 +1013,14 @@ class CXX20ModulesGenerator : public PCHGenerator {
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
-  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                         StringRef OutputFile, bool GeneratingReducedBMI,
                         bool AllowASTWithErrors);
 
 public:
-  CXX20ModulesGenerator(Preprocessor &PP, ModuleCache &ModCache,
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                         StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
                               /*GeneratingReducedBMI=*/false,
                               AllowASTWithErrors) {}
 
@@ -1027,9 +1031,9 @@ class ReducedBMIGenerator : public CXX20ModulesGenerator {
   void anchor() override;
 
 public:
-  ReducedBMIGenerator(Preprocessor &PP, ModuleCache &ModCache,
+  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                       StringRef OutputFile, bool AllowASTWithErrors = false)
-      : CXX20ModulesGenerator(PP, ModCache, OutputFile,
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
                               /*GeneratingReducedBMI=*/true,
                               AllowASTWithErrors) {}
 };

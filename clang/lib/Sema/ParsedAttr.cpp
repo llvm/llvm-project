@@ -23,6 +23,14 @@
 
 using namespace clang;
 
+IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,
+                                     IdentifierInfo *Ident) {
+  IdentifierLoc *Result = new (Ctx) IdentifierLoc;
+  Result->Loc = Loc;
+  Result->Ident = Ident;
+  return Result;
+}
+
 size_t ParsedAttr::allocated_size() const {
   if (IsAvailability) return AttributeFactory::AvailabilityAllocSize;
   else if (IsTypeTagForDatatype)
@@ -54,7 +62,8 @@ void *AttributeFactory::allocate(size_t size) {
   // Check for a previously reclaimed attribute.
   size_t index = getFreeListIndexForSize(size);
   if (index < FreeLists.size() && !FreeLists[index].empty()) {
-    ParsedAttr *attr = FreeLists[index].pop_back_val();
+    ParsedAttr *attr = FreeLists[index].back();
+    FreeLists[index].pop_back();
     return attr;
   }
 
@@ -85,14 +94,14 @@ void AttributeFactory::reclaimPool(AttributePool &cur) {
 }
 
 void AttributePool::takePool(AttributePool &pool) {
-  llvm::append_range(Attrs, pool.Attrs);
+  Attrs.insert(Attrs.end(), pool.Attrs.begin(), pool.Attrs.end());
   pool.Attrs.clear();
 }
 
 void AttributePool::takeFrom(ParsedAttributesView &List, AttributePool &Pool) {
   assert(&Pool != this && "AttributePool can't take attributes from itself");
   llvm::for_each(List.AttrList, [&Pool](ParsedAttr *A) { Pool.remove(A); });
-  llvm::append_range(Attrs, List.AttrList);
+  Attrs.insert(Attrs.end(), List.AttrList.begin(), List.AttrList.end());
 }
 
 namespace {
@@ -301,13 +310,18 @@ bool ParsedAttr::checkAtMostNumArgs(Sema &S, unsigned Num) const {
 }
 
 void clang::takeAndConcatenateAttrs(ParsedAttributes &First,
-                                    ParsedAttributes &&Second) {
-
-  First.takeAllAtEndFrom(Second);
-
-  if (!First.Range.getBegin().isValid())
-    First.Range.setBegin(Second.Range.getBegin());
-
+                                    ParsedAttributes &Second,
+                                    ParsedAttributes &Result) {
+  // Note that takeAllFrom() puts the attributes at the beginning of the list,
+  // so to obtain the correct ordering, we add `Second`, then `First`.
+  Result.takeAllFrom(Second);
+  Result.takeAllFrom(First);
+  if (First.Range.getBegin().isValid())
+    Result.Range.setBegin(First.Range.getBegin());
+  else
+    Result.Range.setBegin(Second.Range.getBegin());
   if (Second.Range.getEnd().isValid())
-    First.Range.setEnd(Second.Range.getEnd());
+    Result.Range.setEnd(Second.Range.getEnd());
+  else
+    Result.Range.setEnd(First.Range.getEnd());
 }

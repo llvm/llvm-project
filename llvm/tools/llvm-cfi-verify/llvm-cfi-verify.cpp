@@ -35,25 +35,23 @@ using namespace llvm::cfi_verify;
 
 static cl::OptionCategory CFIVerifyCategory("CFI Verify Options");
 
-static cl::opt<std::string> InputFilename(cl::Positional,
-                                          cl::desc("<input file>"),
-                                          cl::Required,
-                                          cl::cat(CFIVerifyCategory));
-static cl::opt<std::string> IgnorelistFilename(cl::Positional,
-                                               cl::desc("[ignorelist file]"),
-                                               cl::init("-"),
-                                               cl::cat(CFIVerifyCategory));
-static cl::opt<bool> PrintGraphs(
+cl::opt<std::string> InputFilename(cl::Positional, cl::desc("<input file>"),
+                                   cl::Required, cl::cat(CFIVerifyCategory));
+cl::opt<std::string> IgnorelistFilename(cl::Positional,
+                                        cl::desc("[ignorelist file]"),
+                                        cl::init("-"),
+                                        cl::cat(CFIVerifyCategory));
+cl::opt<bool> PrintGraphs(
     "print-graphs",
     cl::desc("Print graphs around indirect CF instructions in DOT format."),
     cl::init(false), cl::cat(CFIVerifyCategory));
-static cl::opt<unsigned> PrintBlameContext(
+cl::opt<unsigned> PrintBlameContext(
     "blame-context",
     cl::desc("Print the blame context (if possible) for BAD instructions. This "
              "specifies the number of lines of context to include, where zero "
              "disables this feature."),
     cl::init(0), cl::cat(CFIVerifyCategory));
-static cl::opt<unsigned> PrintBlameContextAll(
+cl::opt<unsigned> PrintBlameContextAll(
     "blame-context-all",
     cl::desc("Prints the blame context (if possible) for ALL instructions. "
              "This specifies the number of lines of context for non-BAD "
@@ -61,8 +59,8 @@ static cl::opt<unsigned> PrintBlameContextAll(
              "unspecified, it prints this number of contextual lines for BAD "
              "instructions as well."),
     cl::init(0), cl::cat(CFIVerifyCategory));
-static cl::opt<bool> Summarize("summarize", cl::desc("Print the summary only."),
-                               cl::init(false), cl::cat(CFIVerifyCategory));
+cl::opt<bool> Summarize("summarize", cl::desc("Print the summary only."),
+                        cl::init(false), cl::cat(CFIVerifyCategory));
 
 ExitOnError ExitOnErr;
 

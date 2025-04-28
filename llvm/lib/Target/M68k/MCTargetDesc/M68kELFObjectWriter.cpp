@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/M68kFixupKinds.h"
-#include "MCTargetDesc/M68kMCExpr.h"
 #include "MCTargetDesc/M68kMCTargetDesc.h"
 
 #include "llvm/BinaryFormat/ELF.h"
@@ -45,8 +44,8 @@ M68kELFObjectWriter::~M68kELFObjectWriter() {}
 
 enum M68kRelType { RT_32, RT_16, RT_8 };
 
-static M68kRelType getType(unsigned Kind, M68kMCExpr::Specifier &Modifier,
-                           bool &IsPCRel) {
+static M68kRelType
+getType(unsigned Kind, MCSymbolRefExpr::VariantKind &Modifier, bool &IsPCRel) {
   switch (Kind) {
   case FK_Data_4:
   case FK_PCRel_4:
@@ -65,27 +64,14 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
                                            const MCValue &Target,
                                            const MCFixup &Fixup,
                                            bool IsPCRel) const {
-  auto Specifier = M68kMCExpr::Specifier(Target.getSpecifier());
+  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
   unsigned Kind = Fixup.getKind();
-  M68kRelType Type = getType(Kind, Specifier, IsPCRel);
-  switch (Specifier) {
-  case M68kMCExpr::VK_GOTTPOFF:
-  case M68kMCExpr::VK_TLSGD:
-  case M68kMCExpr::VK_TLSLD:
-  case M68kMCExpr::VK_TLSLDM:
-  case M68kMCExpr::VK_TPOFF:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
-    break;
-  default:
-    break;
-  }
-
-  switch (Specifier) {
+  M68kRelType Type = getType(Kind, Modifier, IsPCRel);
+  switch (Modifier) {
   default:
     llvm_unreachable("Unimplemented");
 
-  case M68kMCExpr::VK_TLSGD:
+  case MCSymbolRefExpr::VK_TLSGD:
     switch (Type) {
     case RT_32:
       return ELF::R_68K_TLS_GD32;
@@ -95,7 +81,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_68K_TLS_GD8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_TLSLDM:
+  case MCSymbolRefExpr::VK_TLSLDM:
     switch (Type) {
     case RT_32:
       return ELF::R_68K_TLS_LDM32;
@@ -105,7 +91,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_68K_TLS_LDM8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_TLSLD:
+  case MCSymbolRefExpr::VK_TLSLD:
     switch (Type) {
     case RT_32:
       return ELF::R_68K_TLS_LDO32;
@@ -115,7 +101,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_68K_TLS_LDO8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_GOTTPOFF:
+  case MCSymbolRefExpr::VK_GOTTPOFF:
     switch (Type) {
     case RT_32:
       return ELF::R_68K_TLS_IE32;
@@ -125,7 +111,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_68K_TLS_IE8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_TPOFF:
+  case MCSymbolRefExpr::VK_TPOFF:
     switch (Type) {
     case RT_32:
       return ELF::R_68K_TLS_LE32;
@@ -135,7 +121,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_68K_TLS_LE8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_None:
+  case MCSymbolRefExpr::VK_None:
     switch (Type) {
     case RT_32:
       return IsPCRel ? ELF::R_68K_PC32 : ELF::R_68K_32;
@@ -145,7 +131,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return IsPCRel ? ELF::R_68K_PC8 : ELF::R_68K_8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_GOTPCREL:
+  case MCSymbolRefExpr::VK_GOTPCREL:
     switch (Type) {
     case RT_32:
       return ELF::R_68K_GOTPCREL32;
@@ -155,7 +141,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_68K_GOTPCREL8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_GOTOFF:
+  case MCSymbolRefExpr::VK_GOTOFF:
     assert(!IsPCRel);
     switch (Type) {
     case RT_32:
@@ -166,7 +152,7 @@ unsigned M68kELFObjectWriter::getRelocType(MCContext &Ctx,
       return ELF::R_68K_GOTOFF8;
     }
     llvm_unreachable("Unrecognized size");
-  case M68kMCExpr::VK_PLT:
+  case MCSymbolRefExpr::VK_PLT:
     switch (Type) {
     case RT_32:
       return ELF::R_68K_PLT32;

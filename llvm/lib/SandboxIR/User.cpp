@@ -90,20 +90,17 @@ bool User::classof(const Value *From) {
 
 void User::setOperand(unsigned OperandIdx, Value *Operand) {
   assert(isa<llvm::User>(Val) && "No operands!");
-  const auto &U = getOperandUse(OperandIdx);
-  Ctx.getTracker().emplaceIfTracking<UseSet>(U);
-  Ctx.runSetUseCallbacks(U, Operand);
+  Ctx.getTracker().emplaceIfTracking<UseSet>(getOperandUse(OperandIdx));
   // We are delegating to llvm::User::setOperand().
   cast<llvm::User>(Val)->setOperand(OperandIdx, Operand->Val);
 }
 
 bool User::replaceUsesOfWith(Value *FromV, Value *ToV) {
   auto &Tracker = Ctx.getTracker();
-  for (auto OpIdx : seq<unsigned>(0, getNumOperands())) {
-    auto Use = getOperandUse(OpIdx);
-    if (Use.get() == FromV) {
-      Ctx.runSetUseCallbacks(Use, ToV);
-      if (Tracker.isTracking())
+  if (Tracker.isTracking()) {
+    for (auto OpIdx : seq<unsigned>(0, getNumOperands())) {
+      auto Use = getOperandUse(OpIdx);
+      if (Use.get() == FromV)
         Tracker.emplaceIfTracking<UseSet>(Use);
     }
   }

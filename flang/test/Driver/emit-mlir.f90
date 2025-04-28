@@ -13,7 +13,6 @@
 ! CHECK-SAME: dlti.dl_spec =
 ! CHECK-SAME: llvm.data_layout =
 ! CHECK-LABEL: func @_QQmain() {
-! CHECK-NEXT:  fir.dummy_scope
 ! CHECK-NEXT:  return
 ! CHECK-NEXT: }
 ! CHECK-NEXT: func.func private @_FortranAProgramStart(i32, !llvm.ptr, !llvm.ptr, !llvm.ptr)

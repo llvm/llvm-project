@@ -20,12 +20,12 @@ const LanaiMCExpr *LanaiMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 }
 
 void LanaiMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  if (specifier == VK_Lanai_None) {
+  if (Kind == VK_Lanai_None) {
     Expr->print(OS, MAI);
     return;
   }
 
-  switch (specifier) {
+  switch (Kind) {
   default:
     llvm_unreachable("Invalid kind!");
   case VK_Lanai_ABS_HI:
@@ -47,9 +47,13 @@ void LanaiMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 }
 
 bool LanaiMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
+                                            const MCAssembler *Asm,
+                                            const MCFixup *Fixup) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
     return false;
-  Res.setSpecifier(specifier);
+
+  Res =
+      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+
   return true;
 }

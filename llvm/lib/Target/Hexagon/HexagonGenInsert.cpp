@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitTracker.h"
-#include "Hexagon.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -168,7 +167,7 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return Register(v).virtRegIndex();
+      return Register::virtReg2Index(v);
     }
 
     static inline unsigned x2v(unsigned x) {
@@ -272,7 +271,7 @@ namespace {
     CellMapShadow(const BitTracker &T) : BT(T) {}
 
     const BitTracker::RegisterCell &lookup(unsigned VR) {
-      unsigned RInd = Register(VR).virtRegIndex();
+      unsigned RInd = Register::virtReg2Index(VR);
       // Grow the vector to at least 32 elements.
       if (RInd >= CVect.size())
         CVect.resize(std::max(RInd+16, 32U), nullptr);
@@ -494,13 +493,22 @@ namespace {
 
 } // end anonymous namespace
 
+namespace llvm {
+
+  void initializeHexagonGenInsertPass(PassRegistry&);
+  FunctionPass *createHexagonGenInsert();
+
+} // end namespace llvm
+
 namespace {
 
   class HexagonGenInsert : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonGenInsert() : MachineFunctionPass(ID) {}
+    HexagonGenInsert() : MachineFunctionPass(ID) {
+      initializeHexagonGenInsertPass(*PassRegistry::getPassRegistry());
+    }
 
     StringRef getPassName() const override {
       return "Hexagon generate \"insert\" instructions";
@@ -1570,7 +1578,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
 
     IterListType Out;
     for (IFMapType::iterator I = IFMap.begin(), E = IFMap.end(); I != E; ++I) {
-      unsigned Idx = Register(I->first).virtRegIndex();
+      unsigned Idx = Register::virtReg2Index(I->first);
       if (Idx >= Cutoff)
         Out.push_back(I);
     }

@@ -43,13 +43,17 @@ public:
                   const MCSubtargetInfo *STI) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
-  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+
+  unsigned getNumFixupKinds() const override {
+    return AVR::NumTargetFixupKinds;
+  }
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t Value,
                              const MCSubtargetInfo *STI) override;
 
 private:

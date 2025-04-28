@@ -34,7 +34,9 @@ namespace {
   // copies into subregister copies with other restrictions.
   struct PPCVSXCopy : public MachineFunctionPass {
     static char ID;
-    PPCVSXCopy() : MachineFunctionPass(ID) {}
+    PPCVSXCopy() : MachineFunctionPass(ID) {
+      initializePPCVSXCopyPass(*PassRegistry::getPassRegistry());
+    }
 
     const TargetInstrInfo *TII;
 
@@ -149,7 +151,7 @@ public:
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
-  } // end anonymous namespace
+}
 
 INITIALIZE_PASS(PPCVSXCopy, DEBUG_TYPE,
                 "PowerPC VSX Copy Legalization", false, false)

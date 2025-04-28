@@ -121,13 +121,13 @@ public:
     OriginalRelValueRef.Addend = Addend;
     OriginalRelValueRef.SymbolName = TargetName.data();
 
-    auto [Stub, Inserted] = Stubs.try_emplace(OriginalRelValueRef);
-    if (Inserted) {
+    auto Stub = Stubs.find(OriginalRelValueRef);
+    if (Stub == Stubs.end()) {
       LLVM_DEBUG(dbgs() << " Create a new stub function for "
                         << TargetName.data() << "\n");
 
       StubOffset = Section.getStubOffset();
-      Stub->second = StubOffset;
+      Stubs[OriginalRelValueRef] = StubOffset;
       createStubFunction(Section.getAddressWithOffset(StubOffset));
       Section.advanceStubOffset(getMaxStubSize());
     } else {

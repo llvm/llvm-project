@@ -1415,11 +1415,11 @@ void DataFlowGraph::recordDefsForDF(BlockRefsMap &PhiM,
 
   // Calculate the iterated dominance frontier of BB.
   const MachineDominanceFrontier::DomSetType &DF = DFLoc->second;
-  SetVector<MachineBasicBlock *> IDF(llvm::from_range, DF);
+  SetVector<MachineBasicBlock *> IDF(DF.begin(), DF.end());
   for (unsigned i = 0; i < IDF.size(); ++i) {
     auto F = MDF.find(IDF[i]);
     if (F != MDF.end())
-      IDF.insert_range(F->second);
+      IDF.insert(F->second.begin(), F->second.end());
   }
 
   // Finally, add the set of defs to each block in the iterated dominance

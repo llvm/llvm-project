@@ -75,12 +75,14 @@ protected:
       LangOpts.ImplicitModules = true;
     }
 
-    HeaderInfo.emplace(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
+    HeaderInfo.emplace(std::make_shared<HeaderSearchOptions>(), SourceMgr,
+                       Diags, LangOpts, Target.get());
 
-    return std::make_unique<Preprocessor>(PPOpts, Diags, LangOpts, SourceMgr,
-                                          *HeaderInfo, ModLoader,
-                                          /*IILookup=*/nullptr,
-                                          /*OwnsHeaderSearch=*/false);
+    return std::make_unique<Preprocessor>(
+        std::make_shared<PreprocessorOptions>(), Diags, LangOpts, SourceMgr,
+        *HeaderInfo, ModLoader,
+        /*IILookup =*/nullptr,
+        /*OwnsHeaderSearch =*/false);
   }
 
   void preprocess(Preprocessor &PP, std::unique_ptr<PPCallbacks> C) {
@@ -100,9 +102,7 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
   LangOptions LangOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearchOptions HSOpts;
   std::optional<HeaderSearch> HeaderInfo;
-  PreprocessorOptions PPOpts;
 };
 
 TEST_F(ModuleDeclStateTest, NamedModuleInterface) {

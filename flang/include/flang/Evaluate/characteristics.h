@@ -220,7 +220,7 @@ protected:
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target, DeducedFromActual, OnlyIntrinsicInquiry)
+      Volatile, Pointer, Target, DeducedFromActual)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
     return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
@@ -349,8 +349,8 @@ struct FunctionResult {
 
 // 15.3.1
 struct Procedure {
-  ENUM_CLASS(Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer,
-      NullAllocatable, Subroutine)
+  ENUM_CLASS(
+      Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   Procedure(){};
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);

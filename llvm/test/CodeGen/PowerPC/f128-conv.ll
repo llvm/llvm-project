@@ -10,11 +10,11 @@
 @umem = global [5 x i64] [i64 560, i64 100, i64 34, i64 2, i64 5], align 8
 @swMem = global [5 x i32] [i32 5, i32 2, i32 3, i32 4, i32 0], align 4
 @uwMem = global [5 x i32] [i32 5, i32 2, i32 3, i32 4, i32 0], align 4
-@uhwMem = global [5 x i16] [i16 5, i16 2, i16 3, i16 4, i16 0], align 2
-@ubMem = global [5 x i8] c"\05\02\03\04\00", align 1
+@uhwMem = local_unnamed_addr global [5 x i16] [i16 5, i16 2, i16 3, i16 4, i16 0], align 2
+@ubMem = local_unnamed_addr global [5 x i8] c"\05\02\03\04\00", align 1
 
 ; Function Attrs: norecurse nounwind
-define void @sdwConv2qp(ptr nocapture %a, i64 %b) nounwind {
+define void @sdwConv2qp(ptr nocapture %a, i64 %b) {
 ; CHECK-LABEL: sdwConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrd v2, r4
@@ -25,6 +25,9 @@ define void @sdwConv2qp(ptr nocapture %a, i64 %b) nounwind {
 ; CHECK-P8-LABEL: sdwConv2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -47,10 +50,13 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
+define void @sdwConv2qp_01(ptr nocapture %a, i128 %b) {
 ; CHECK-LABEL: sdwConv2qp_01:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    mr r30, r3
@@ -69,6 +75,9 @@ define void @sdwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
 ; CHECK-P8-LABEL: sdwConv2qp_01:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -92,7 +101,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwConv2qp_02(ptr nocapture %a) nounwind {
+define void @sdwConv2qp_02(ptr nocapture %a) {
 ; CHECK-LABEL: sdwConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
@@ -105,6 +114,9 @@ define void @sdwConv2qp_02(ptr nocapture %a) nounwind {
 ; CHECK-P8-LABEL: sdwConv2qp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -122,16 +134,16 @@ define void @sdwConv2qp_02(ptr nocapture %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i64, ptr getelementptr inbounds
+  %0 = load i64, ptr getelementptr inbounds
                         ([5 x i64], ptr @mem, i64 0, i64 2), align 8
-  %conv = sitofp i64 %i to fp128
+  %conv = sitofp i64 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) nounwind {
+define void @sdwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: sdwConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsd v2, 0(r4)
@@ -142,6 +154,9 @@ define void @sdwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) nounwind
 ; CHECK-P8-LABEL: sdwConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -157,15 +172,15 @@ define void @sdwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) nounwind
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i64, ptr %b, align 8
-  %conv = sitofp i64 %i to fp128
+  %0 = load i64, ptr %b, align 8
+  %conv = sitofp i64 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwConv2qp_04(ptr nocapture %a, i1 %b) nounwind {
+define void @sdwConv2qp_04(ptr nocapture %a, i1 %b) {
 ; CHECK-LABEL: sdwConv2qp_04:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. r4, r4, 1
@@ -180,6 +195,9 @@ define void @sdwConv2qp_04(ptr nocapture %a, i1 %b) nounwind {
 ; CHECK-P8-LABEL: sdwConv2qp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -205,7 +223,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwConv2qp(ptr nocapture %a, i64 %b) nounwind {
+define void @udwConv2qp(ptr nocapture %a, i64 %b) {
 ; CHECK-LABEL: udwConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrd v2, r4
@@ -216,6 +234,9 @@ define void @udwConv2qp(ptr nocapture %a, i64 %b) nounwind {
 ; CHECK-P8-LABEL: udwConv2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -238,10 +259,13 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
+define void @udwConv2qp_01(ptr nocapture %a, i128 %b) {
 ; CHECK-LABEL: udwConv2qp_01:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset r30, -16
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    mr r30, r3
@@ -260,6 +284,9 @@ define void @udwConv2qp_01(ptr nocapture %a, i128 %b) nounwind {
 ; CHECK-P8-LABEL: udwConv2qp_01:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -283,7 +310,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwConv2qp_02(ptr nocapture %a) nounwind {
+define void @udwConv2qp_02(ptr nocapture %a) {
 ; CHECK-LABEL: udwConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC1@toc@ha
@@ -296,6 +323,9 @@ define void @udwConv2qp_02(ptr nocapture %a) nounwind {
 ; CHECK-P8-LABEL: udwConv2qp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -313,16 +343,16 @@ define void @udwConv2qp_02(ptr nocapture %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i64, ptr getelementptr inbounds
+  %0 = load i64, ptr getelementptr inbounds
                         ([5 x i64], ptr @umem, i64 0, i64 4), align 8
-  %conv = uitofp i64 %i to fp128
+  %conv = uitofp i64 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) nounwind {
+define void @udwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: udwConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsd v2, 0(r4)
@@ -333,6 +363,9 @@ define void @udwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) nounwind
 ; CHECK-P8-LABEL: udwConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -348,15 +381,15 @@ define void @udwConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) nounwind
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i64, ptr %b, align 8
-  %conv = uitofp i64 %i to fp128
+  %0 = load i64, ptr %b, align 8
+  %conv = uitofp i64 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwConv2qp_04(ptr nocapture %a, i1 %b) nounwind {
+define void @udwConv2qp_04(ptr nocapture %a, i1 %b) {
 ; CHECK-LABEL: udwConv2qp_04:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    clrlwi r4, r4, 31
@@ -368,6 +401,9 @@ define void @udwConv2qp_04(ptr nocapture %a, i1 %b) nounwind {
 ; CHECK-P8-LABEL: udwConv2qp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -403,6 +439,9 @@ define ptr @sdwConv2qp_testXForm(ptr returned %sink,
 ; CHECK-P8-LABEL: sdwConv2qp_testXForm:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -420,11 +459,11 @@ define ptr @sdwConv2qp_testXForm(ptr returned %sink,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                                 ptr nocapture readonly %a) nounwind {
+                                    ptr nocapture readonly %a) {
 entry:
   %add.ptr = getelementptr inbounds i8, ptr %a, i64 73333
-  %i = load i64, ptr %add.ptr, align 8
-  %conv = sitofp i64 %i to fp128
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = sitofp i64 %0 to fp128
   store fp128 %conv, ptr %sink, align 16
   ret ptr %sink
 
@@ -444,6 +483,9 @@ define ptr @udwConv2qp_testXForm(ptr returned %sink,
 ; CHECK-P8-LABEL: udwConv2qp_testXForm:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -461,18 +503,18 @@ define ptr @udwConv2qp_testXForm(ptr returned %sink,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                                 ptr nocapture readonly %a) nounwind {
+                                    ptr nocapture readonly %a) {
 entry:
   %add.ptr = getelementptr inbounds i8, ptr %a, i64 73333
-  %i = load i64, ptr %add.ptr, align 8
-  %conv = uitofp i64 %i to fp128
+  %0 = load i64, ptr %add.ptr, align 8
+  %conv = uitofp i64 %0 to fp128
   store fp128 %conv, ptr %sink, align 16
   ret ptr %sink
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @swConv2qp(ptr nocapture %a, i32 signext %b) nounwind {
+define void @swConv2qp(ptr nocapture %a, i32 signext %b) {
 ; CHECK-LABEL: swConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrwa v2, r4
@@ -483,6 +525,9 @@ define void @swConv2qp(ptr nocapture %a, i32 signext %b) nounwind {
 ; CHECK-P8-LABEL: swConv2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -505,7 +550,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @swConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind {
+define void @swConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: swConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsiwax v2, 0, r4
@@ -516,6 +561,9 @@ define void @swConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind 
 ; CHECK-P8-LABEL: swConv2qp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -531,15 +579,15 @@ define void @swConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind 
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i32, ptr %b, align 4
-  %conv = sitofp i32 %i to fp128
+  %0 = load i32, ptr %b, align 4
+  %conv = sitofp i32 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @swConv2qp_03(ptr nocapture %a) nounwind {
+define void @swConv2qp_03(ptr nocapture %a) {
 ; CHECK-LABEL: swConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC2@toc@ha
@@ -553,6 +601,9 @@ define void @swConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-LABEL: swConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -570,16 +621,16 @@ define void @swConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i32, ptr getelementptr inbounds
+  %0 = load i32, ptr getelementptr inbounds
                         ([5 x i32], ptr @swMem, i64 0, i64 3), align 4
-  %conv = sitofp i32 %i to fp128
+  %conv = sitofp i32 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uwConv2qp(ptr nocapture %a, i32 zeroext %b) nounwind {
+define void @uwConv2qp(ptr nocapture %a, i32 zeroext %b) {
 ; CHECK-LABEL: uwConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrwz v2, r4
@@ -590,6 +641,9 @@ define void @uwConv2qp(ptr nocapture %a, i32 zeroext %b) nounwind {
 ; CHECK-P8-LABEL: uwConv2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -612,7 +666,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind {
+define void @uwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: uwConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsiwzx v2, 0, r4
@@ -623,6 +677,9 @@ define void @uwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind 
 ; CHECK-P8-LABEL: uwConv2qp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -638,15 +695,15 @@ define void @uwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind 
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i32, ptr %b, align 4
-  %conv = uitofp i32 %i to fp128
+  %0 = load i32, ptr %b, align 4
+  %conv = uitofp i32 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uwConv2qp_03(ptr nocapture %a) nounwind {
+define void @uwConv2qp_03(ptr nocapture %a) {
 ; CHECK-LABEL: uwConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC3@toc@ha
@@ -660,6 +717,9 @@ define void @uwConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-LABEL: uwConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -677,9 +737,9 @@ define void @uwConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i32, ptr getelementptr inbounds
+  %0 = load i32, ptr getelementptr inbounds
                         ([5 x i32], ptr @uwMem, i64 0, i64 3), align 4
-  %conv = uitofp i32 %i to fp128
+  %conv = uitofp i32 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -699,6 +759,9 @@ define void @uwConv2qp_04(ptr nocapture %a,
 ; CHECK-P8-LABEL: uwConv2qp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -715,10 +778,10 @@ define void @uwConv2qp_04(ptr nocapture %a,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                          i32 zeroext %b, ptr nocapture readonly %c) nounwind {
+                          i32 zeroext %b, ptr nocapture readonly %c) {
 entry:
-  %i = load i32, ptr %c, align 4
-  %add = add i32 %i, %b
+  %0 = load i32, ptr %c, align 4
+  %add = add i32 %0, %b
   %conv = uitofp i32 %add to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
@@ -726,7 +789,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwConv2qp(ptr nocapture %a, i16 zeroext %b) nounwind {
+define void @uhwConv2qp(ptr nocapture %a, i16 zeroext %b) {
 ; CHECK-LABEL: uhwConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrwz v2, r4
@@ -737,6 +800,9 @@ define void @uhwConv2qp(ptr nocapture %a, i16 zeroext %b) nounwind {
 ; CHECK-P8-LABEL: uhwConv2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -760,7 +826,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind {
+define void @uhwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: uhwConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsihzx v2, 0, r4
@@ -771,6 +837,9 @@ define void @uhwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind
 ; CHECK-P8-LABEL: uhwConv2qp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -786,15 +855,15 @@ define void @uhwConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i16, ptr %b, align 2
-  %conv = uitofp i16 %i to fp128
+  %0 = load i16, ptr %b, align 2
+  %conv = uitofp i16 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwConv2qp_03(ptr nocapture %a) nounwind {
+define void @uhwConv2qp_03(ptr nocapture %a) {
 ; CHECK-LABEL: uhwConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC4@toc@ha
@@ -808,6 +877,9 @@ define void @uhwConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-LABEL: uhwConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -825,9 +897,9 @@ define void @uhwConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i16, ptr getelementptr inbounds
+  %0 = load i16, ptr getelementptr inbounds
                         ([5 x i16], ptr @uhwMem, i64 0, i64 3), align 2
-  %conv = uitofp i16 %i to fp128
+  %conv = uitofp i16 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -847,6 +919,9 @@ define void @uhwConv2qp_04(ptr nocapture %a, i16 zeroext %b,
 ; CHECK-P8-LABEL: uhwConv2qp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -863,11 +938,11 @@ define void @uhwConv2qp_04(ptr nocapture %a, i16 zeroext %b,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                           ptr nocapture readonly %c) nounwind {
+                           ptr nocapture readonly %c) {
 entry:
   %conv = zext i16 %b to i32
-  %i = load i16, ptr %c, align 2
-  %conv1 = zext i16 %i to i32
+  %0 = load i16, ptr %c, align 2
+  %conv1 = zext i16 %0 to i32
   %add = add nuw nsw i32 %conv1, %conv
   %conv2 = sitofp i32 %add to fp128
   store fp128 %conv2, ptr %a, align 16
@@ -876,7 +951,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubConv2qp(ptr nocapture %a, i8 zeroext %b) nounwind {
+define void @ubConv2qp(ptr nocapture %a, i8 zeroext %b) {
 ; CHECK-LABEL: ubConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtvsrwz v2, r4
@@ -887,6 +962,9 @@ define void @ubConv2qp(ptr nocapture %a, i8 zeroext %b) nounwind {
 ; CHECK-P8-LABEL: ubConv2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -909,7 +987,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind {
+define void @ubConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: ubConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsibzx v2, 0, r4
@@ -920,6 +998,9 @@ define void @ubConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind 
 ; CHECK-P8-LABEL: ubConv2qp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -935,15 +1016,15 @@ define void @ubConv2qp_02(ptr nocapture %a, ptr nocapture readonly %b) nounwind 
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i8, ptr %b, align 1
-  %conv = uitofp i8 %i to fp128
+  %0 = load i8, ptr %b, align 1
+  %conv = uitofp i8 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubConv2qp_03(ptr nocapture %a) nounwind {
+define void @ubConv2qp_03(ptr nocapture %a) {
 ; CHECK-LABEL: ubConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC5@toc@ha
@@ -957,6 +1038,9 @@ define void @ubConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-LABEL: ubConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -974,9 +1058,9 @@ define void @ubConv2qp_03(ptr nocapture %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load i8, ptr getelementptr inbounds
+  %0 = load i8, ptr getelementptr inbounds
                       ([5 x i8], ptr @ubMem, i64 0, i64 2), align 1
-  %conv = uitofp i8 %i to fp128
+  %conv = uitofp i8 %0 to fp128
   store fp128 %conv, ptr %a, align 16
   ret void
 
@@ -996,6 +1080,9 @@ define void @ubConv2qp_04(ptr nocapture %a, i8 zeroext %b,
 ; CHECK-P8-LABEL: ubConv2qp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -1012,11 +1099,11 @@ define void @ubConv2qp_04(ptr nocapture %a, i8 zeroext %b,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                          ptr nocapture readonly %c) nounwind {
+                          ptr nocapture readonly %c) {
 entry:
   %conv = zext i8 %b to i32
-  %i = load i8, ptr %c, align 1
-  %conv1 = zext i8 %i to i32
+  %0 = load i8, ptr %c, align 1
+  %conv1 = zext i8 %0 to i32
   %add = add nuw nsw i32 %conv1, %conv
   %conv2 = sitofp i32 %add to fp128
   store fp128 %conv2, ptr %a, align 16
@@ -1034,7 +1121,7 @@ entry:
 @f128global = global fp128 0xL300000000000000040089CA8F5C28F5C, align 16
 
 ; Function Attrs: norecurse nounwind readonly
-define double @qpConv2dp(ptr nocapture readonly %a) nounwind {
+define double @qpConv2dp(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2dp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -1047,6 +1134,8 @@ define double @qpConv2dp(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __trunckfdf2
@@ -1056,13 +1145,13 @@ define double @qpConv2dp(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr %a, align 16
-  %conv = fptrunc fp128 %i to double
+  %0 = load fp128, ptr %a, align 16
+  %conv = fptrunc fp128 %0 to double
   ret double %conv
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2dp_02(ptr nocapture %res) nounwind {
+define void @qpConv2dp_02(ptr nocapture %res) {
 ; CHECK-LABEL: qpConv2dp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC6@toc@ha
@@ -1075,6 +1164,9 @@ define void @qpConv2dp_02(ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: qpConv2dp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -1092,14 +1184,14 @@ define void @qpConv2dp_02(ptr nocapture %res) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr @f128global, align 16
-  %conv = fptrunc fp128 %i to double
+  %0 = load fp128, ptr @f128global, align 16
+  %conv = fptrunc fp128 %0 to double
   store double %conv, ptr %res, align 8
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2dp_03(ptr nocapture %res, i32 signext %idx) nounwind {
+define void @qpConv2dp_03(ptr nocapture %res, i32 signext %idx) {
 ; CHECK-LABEL: qpConv2dp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC7@toc@ha
@@ -1113,6 +1205,10 @@ define void @qpConv2dp_03(ptr nocapture %res, i32 signext %idx) nounwind {
 ; CHECK-P8-LABEL: qpConv2dp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r29, -24
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
@@ -1134,8 +1230,8 @@ define void @qpConv2dp_03(ptr nocapture %res, i32 signext %idx) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr @f128Array, align 16
-  %conv = fptrunc fp128 %i to double
+  %0 = load fp128, ptr @f128Array, align 16
+  %conv = fptrunc fp128 %0 to double
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds double, ptr %res, i64 %idxprom
   store double %conv, ptr %arrayidx, align 8
@@ -1143,7 +1239,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2dp_04(ptr nocapture readonly %a, ptr nocapture readonly %b,
+define void @qpConv2dp_04(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %res) {
 ; CHECK-LABEL: qpConv2dp_04:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -1156,6 +1252,9 @@ define void @qpConv2dp_04(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-P8-LABEL: qpConv2dp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -1174,11 +1273,10 @@ define void @qpConv2dp_04(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                          ptr nocapture %res) nounwind {
 entry:
-  %i = load fp128, ptr %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = load fp128, ptr %b, align 16
-  %add = fadd fp128 %i, %1
+  %add = fadd fp128 %0, %1
   %conv = fptrunc fp128 %add to double
   store double %conv, ptr %res, align 8
   ret void
@@ -1187,7 +1285,7 @@ entry:
 ;  Convert QP to SP
 
 ; Function Attrs: norecurse nounwind readonly
-define float @qpConv2sp(ptr nocapture readonly %a) nounwind {
+define float @qpConv2sp(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2sp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -1200,6 +1298,8 @@ define float @qpConv2sp(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __trunckfsf2
@@ -1209,13 +1309,13 @@ define float @qpConv2sp(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr %a, align 16
-  %conv = fptrunc fp128 %i to float
+  %0 = load fp128, ptr %a, align 16
+  %conv = fptrunc fp128 %0 to float
   ret float %conv
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2sp_02(ptr nocapture %res) nounwind {
+define void @qpConv2sp_02(ptr nocapture %res) {
 ; CHECK-LABEL: qpConv2sp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC6@toc@ha
@@ -1229,6 +1329,9 @@ define void @qpConv2sp_02(ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: qpConv2sp_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    mr r30, r3
@@ -1246,14 +1349,14 @@ define void @qpConv2sp_02(ptr nocapture %res) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr @f128global, align 16
-  %conv = fptrunc fp128 %i to float
+  %0 = load fp128, ptr @f128global, align 16
+  %conv = fptrunc fp128 %0 to float
   store float %conv, ptr %res, align 4
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2sp_03(ptr nocapture %res, i32 signext %idx) nounwind {
+define void @qpConv2sp_03(ptr nocapture %res, i32 signext %idx) {
 ; CHECK-LABEL: qpConv2sp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r5, r2, .LC7@toc@ha
@@ -1268,6 +1371,10 @@ define void @qpConv2sp_03(ptr nocapture %res, i32 signext %idx) nounwind {
 ; CHECK-P8-LABEL: qpConv2sp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r29, -24
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
@@ -1290,8 +1397,8 @@ define void @qpConv2sp_03(ptr nocapture %res, i32 signext %idx) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr getelementptr inbounds ([4 x fp128], ptr @f128Array, i64 0, i64 3), align 16
-  %conv = fptrunc fp128 %i to float
+  %0 = load fp128, ptr getelementptr inbounds ([4 x fp128], ptr @f128Array, i64 0, i64 3), align 16
+  %conv = fptrunc fp128 %0 to float
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr %res, i64 %idxprom
   store float %conv, ptr %arrayidx, align 4
@@ -1299,7 +1406,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2sp_04(ptr nocapture readonly %a, ptr nocapture readonly %b,
+define void @qpConv2sp_04(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr nocapture %res) {
 ; CHECK-LABEL: qpConv2sp_04:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -1313,6 +1420,9 @@ define void @qpConv2sp_04(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-P8-LABEL: qpConv2sp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -1331,78 +1441,19 @@ define void @qpConv2sp_04(ptr nocapture readonly %a, ptr nocapture readonly %b,
 ; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                          ptr nocapture %res) nounwind {
 entry:
-  %i = load fp128, ptr %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %1 = load fp128, ptr %b, align 16
-  %add = fadd fp128 %i, %1
+  %add = fadd fp128 %0, %1
   %conv = fptrunc fp128 %add to float
   store float %conv, ptr %res, align 4
   ret void
 }
 
-define half @trunc(fp128 %a) nounwind {
-; CHECK-LABEL: trunc:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    bl __trunckfhf2
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    clrlwi r3, r3, 16
-; CHECK-NEXT:    mtfprwz f0, r3
-; CHECK-NEXT:    xscvhpdp f1, f0
-; CHECK-NEXT:    addi r1, r1, 32
-; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    mtlr r0
-; CHECK-NEXT:    blr
-;
-; CHECK-P8-LABEL: trunc:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    stdu r1, -32(r1)
-; CHECK-P8-NEXT:    std r0, 48(r1)
-; CHECK-P8-NEXT:    bl __trunckfhf2
-; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    clrldi r3, r3, 48
-; CHECK-P8-NEXT:    bl __extendhfsf2
-; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 32
-; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    mtlr r0
-; CHECK-P8-NEXT:    blr
-entry:
-  %i = fptrunc fp128 %a to half
-  ret half %i
-}
-
-define fp128 @ext(half %a) nounwind {
-; CHECK-LABEL: ext:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xscpsgndp v2, f1, f1
-; CHECK-NEXT:    xscvdpqp v2, v2
-; CHECK-NEXT:    blr
-;
-; CHECK-P8-LABEL: ext:
-; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    stdu r1, -32(r1)
-; CHECK-P8-NEXT:    std r0, 48(r1)
-; CHECK-P8-NEXT:    bl __extendsfkf2
-; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    addi r1, r1, 32
-; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    mtlr r0
-; CHECK-P8-NEXT:    blr
-entry:
-  %i = fpext half %a to fp128
-  ret fp128 %i
-}
-
 @f128Glob = common global fp128 0xL00000000000000000000000000000000, align 16
 
 ; Function Attrs: norecurse nounwind readnone
-define fp128 @dpConv2qp(double %a) nounwind {
+define fp128 @dpConv2qp(double %a) {
 ; CHECK-LABEL: dpConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
@@ -1414,6 +1465,8 @@ define fp128 @dpConv2qp(double %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl __extenddfkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -1426,7 +1479,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2qp_02(ptr nocapture readonly %a) nounwind {
+define void @dpConv2qp_02(ptr nocapture readonly %a) {
 ; CHECK-LABEL: dpConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsd v2, 0(r3)
@@ -1441,6 +1494,8 @@ define void @dpConv2qp_02(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lfd f1, 0(r3)
 ; CHECK-P8-NEXT:    bl __extenddfkf2
 ; CHECK-P8-NEXT:    nop
@@ -1453,14 +1508,14 @@ define void @dpConv2qp_02(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load double, ptr %a, align 8
-  %conv = fpext double %i to fp128
+  %0 = load double, ptr %a, align 8
+  %conv = fpext double %0 to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) nounwind {
+define void @dpConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) {
 ; CHECK-LABEL: dpConv2qp_02b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sldi r4, r4, 3
@@ -1475,8 +1530,10 @@ define void @dpConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) nounwind
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
-; CHECK-P8-NEXT:    sldi r4, r4, 3
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    sldi r4, r4, 3
 ; CHECK-P8-NEXT:    lfdx f1, r3, r4
 ; CHECK-P8-NEXT:    bl __extenddfkf2
 ; CHECK-P8-NEXT:    nop
@@ -1491,14 +1548,14 @@ define void @dpConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) nounwind
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds double, ptr %a, i64 %idxprom
-  %i = load double, ptr %arrayidx, align 8
-  %conv = fpext double %i to fp128
+  %0 = load double, ptr %arrayidx, align 8
+  %conv = fpext double %0 to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2qp_03(ptr nocapture %res, i32 signext %idx, double %a) nounwind {
+define void @dpConv2qp_03(ptr nocapture %res, i32 signext %idx, double %a) {
 ; CHECK-LABEL: dpConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
@@ -1510,6 +1567,10 @@ define void @dpConv2qp_03(ptr nocapture %res, i32 signext %idx, double %a) nounw
 ; CHECK-P8-LABEL: dpConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r29, -24
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
@@ -1536,7 +1597,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2qp_04(double %a, ptr nocapture %res) nounwind {
+define void @dpConv2qp_04(double %a, ptr nocapture %res) {
 ; CHECK-LABEL: dpConv2qp_04:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
@@ -1547,6 +1608,9 @@ define void @dpConv2qp_04(double %a, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: dpConv2qp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -1567,7 +1631,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define fp128 @spConv2qp(float %a) nounwind {
+define fp128 @spConv2qp(float %a) {
 ; CHECK-LABEL: spConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
@@ -1579,6 +1643,8 @@ define fp128 @spConv2qp(float %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl __extendsfkf2
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    addi r1, r1, 32
@@ -1591,7 +1657,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2qp_02(ptr nocapture readonly %a) nounwind {
+define void @spConv2qp_02(ptr nocapture readonly %a) {
 ; CHECK-LABEL: spConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxssp v2, 0(r3)
@@ -1606,6 +1672,8 @@ define void @spConv2qp_02(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lfs f1, 0(r3)
 ; CHECK-P8-NEXT:    bl __extendsfkf2
 ; CHECK-P8-NEXT:    nop
@@ -1618,14 +1686,14 @@ define void @spConv2qp_02(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load float, ptr %a, align 4
-  %conv = fpext float %i to fp128
+  %0 = load float, ptr %a, align 4
+  %conv = fpext float %0 to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) nounwind {
+define void @spConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) {
 ; CHECK-LABEL: spConv2qp_02b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sldi r4, r4, 2
@@ -1640,8 +1708,10 @@ define void @spConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) nounwind
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
-; CHECK-P8-NEXT:    sldi r4, r4, 2
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    sldi r4, r4, 2
 ; CHECK-P8-NEXT:    lfsx f1, r3, r4
 ; CHECK-P8-NEXT:    bl __extendsfkf2
 ; CHECK-P8-NEXT:    nop
@@ -1656,14 +1726,14 @@ define void @spConv2qp_02b(ptr nocapture readonly %a, i32 signext %idx) nounwind
 entry:
   %idxprom = sext i32 %idx to i64
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %idxprom
-  %i = load float, ptr %arrayidx, align 4
-  %conv = fpext float %i to fp128
+  %0 = load float, ptr %arrayidx, align 4
+  %conv = fpext float %0 to fp128
   store fp128 %conv, ptr @f128Glob, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2qp_03(ptr nocapture %res, i32 signext %idx, float %a) nounwind {
+define void @spConv2qp_03(ptr nocapture %res, i32 signext %idx, float %a) {
 ; CHECK-LABEL: spConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
@@ -1675,6 +1745,10 @@ define void @spConv2qp_03(ptr nocapture %res, i32 signext %idx, float %a) nounwi
 ; CHECK-P8-LABEL: spConv2qp_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r29, -24
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -64(r1)
@@ -1701,7 +1775,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2qp_04(float %a, ptr nocapture %res) nounwind {
+define void @spConv2qp_04(float %a, ptr nocapture %res) {
 ; CHECK-LABEL: spConv2qp_04:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscpsgndp v2, f1, f1
@@ -1712,6 +1786,9 @@ define void @spConv2qp_04(float %a, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: spConv2qp_04:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    std r0, 64(r1)
@@ -1733,7 +1810,7 @@ entry:
 
 
 ; Function Attrs: norecurse nounwind
-define void @cvdp2sw2qp(double %val, ptr nocapture %res) nounwind {
+define void @cvdp2sw2qp(double %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvdp2sw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws v2, f1
@@ -1745,6 +1822,9 @@ define void @cvdp2sw2qp(double %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvdp2sw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f1
@@ -1769,7 +1849,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @cvdp2sdw2qp(double %val, ptr nocapture %res) nounwind {
+define void @cvdp2sdw2qp(double %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvdp2sdw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxds v2, f1
@@ -1780,6 +1860,9 @@ define void @cvdp2sdw2qp(double %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvdp2sdw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpsxds f0, f1
@@ -1803,7 +1886,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @cvsp2sw2qp(float %val, ptr nocapture %res) nounwind {
+define void @cvsp2sw2qp(float %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvsp2sw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxws v2, f1
@@ -1815,6 +1898,9 @@ define void @cvsp2sw2qp(float %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvsp2sw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f1
@@ -1839,7 +1925,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @cvsp2sdw2qp(float %val, ptr nocapture %res) nounwind {
+define void @cvsp2sdw2qp(float %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvsp2sdw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpsxds v2, f1
@@ -1850,6 +1936,9 @@ define void @cvsp2sdw2qp(float %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvsp2sdw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpsxds f0, f1
@@ -1873,7 +1962,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @cvdp2uw2qp(double %val, ptr nocapture %res) nounwind {
+define void @cvdp2uw2qp(double %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvdp2uw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
@@ -1885,6 +1974,9 @@ define void @cvdp2uw2qp(double %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvdp2uw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpuxws f0, f1
@@ -1908,7 +2000,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @cvdp2udw2qp(double %val, ptr nocapture %res) nounwind {
+define void @cvdp2udw2qp(double %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvdp2udw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxds v2, f1
@@ -1919,6 +2011,9 @@ define void @cvdp2udw2qp(double %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvdp2udw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpuxds f0, f1
@@ -1942,7 +2037,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @cvsp2uw2qp(float %val, ptr nocapture %res) nounwind {
+define void @cvsp2uw2qp(float %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvsp2uw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
@@ -1954,6 +2049,9 @@ define void @cvsp2uw2qp(float %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvsp2uw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpuxws f0, f1
@@ -1977,7 +2075,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @cvsp2udw2qp(float %val, ptr nocapture %res) nounwind {
+define void @cvsp2udw2qp(float %val, ptr nocapture %res) {
 ; CHECK-LABEL: cvsp2udw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxds v2, f1
@@ -1988,6 +2086,9 @@ define void @cvsp2udw2qp(float %val, ptr nocapture %res) nounwind {
 ; CHECK-P8-LABEL: cvsp2udw2qp:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
 ; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-P8-NEXT:    stdu r1, -48(r1)
 ; CHECK-P8-NEXT:    xscvdpuxds f0, f1
@@ -2011,12 +2112,14 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define i128 @qpConv2i128(ptr nocapture readonly %a) nounwind {
+define i128 @qpConv2i128(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2i128:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    bl __fixkfti
 ; CHECK-NEXT:    nop
@@ -2030,6 +2133,8 @@ define i128 @qpConv2i128(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __fixkfti
@@ -2039,18 +2144,20 @@ define i128 @qpConv2i128(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr %a, align 16
-  %conv = fptosi fp128 %i to i128
+  %0 = load fp128, ptr %a, align 16
+  %conv = fptosi fp128 %0 to i128
   ret i128 %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define i128 @qpConv2ui128(ptr nocapture readonly %a) nounwind {
+define i128 @qpConv2ui128(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2ui128:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    bl __fixunskfti
 ; CHECK-NEXT:    nop
@@ -2064,6 +2171,8 @@ define i128 @qpConv2ui128(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __fixunskfti
@@ -2073,13 +2182,13 @@ define i128 @qpConv2ui128(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr %a, align 16
-  %conv = fptoui fp128 %i to i128
+  %0 = load fp128, ptr %a, align 16
+  %conv = fptoui fp128 %0 to i128
   ret i128 %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define i1 @qpConv2ui1(ptr nocapture readonly %a) nounwind {
+define i1 @qpConv2ui1(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2ui1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -2092,6 +2201,8 @@ define i1 @qpConv2ui1(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __fixkfsi
@@ -2101,13 +2212,13 @@ define i1 @qpConv2ui1(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr %a, align 16
-  %conv = fptoui fp128 %i to i1
+  %0 = load fp128, ptr %a, align 16
+  %conv = fptoui fp128 %0 to i1
   ret i1 %conv
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define i1 @qpConv2si1(ptr nocapture readonly %a) nounwind {
+define i1 @qpConv2si1(ptr nocapture readonly %a) {
 ; CHECK-LABEL: qpConv2si1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 0(r3)
@@ -2120,6 +2231,8 @@ define i1 @qpConv2si1(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mflr r0
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
 ; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl __fixkfsi
@@ -2129,7 +2242,7 @@ define i1 @qpConv2si1(ptr nocapture readonly %a) nounwind {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %i = load fp128, ptr %a, align 16
-  %conv = fptosi fp128 %i to i1
+  %0 = load fp128, ptr %a, align 16
+  %conv = fptosi fp128 %0 to i1
   ret i1 %conv
 }

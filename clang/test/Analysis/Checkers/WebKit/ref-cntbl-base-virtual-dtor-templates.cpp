@@ -337,12 +337,12 @@ public:
   void deref() const
   {
     if (!--refCount)
-      const_cast<BaseClass3*>(this)->destroy();
+      const_cast<BaseClass3*>(this)->destory();
   }
   virtual bool isDerived() { return false; }
 
 private:
-  void destroy();
+  void destory();
 
   mutable unsigned refCount { 0 };
 };
@@ -353,7 +353,7 @@ class DerivedClass13 : public BaseClass3 {
 
 void UseDerivedClass11(DerivedClass13& obj) { obj.deref(); }
 
-void BaseClass3::destroy() {
+void BaseClass3::destory() {
   if (isDerived())
     delete static_cast<DerivedClass13*>(this);
   else

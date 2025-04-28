@@ -77,24 +77,24 @@ def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "mlir::Type":$eleTy);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
-      return Base::get(eleTy.getContext(), eleTy, isVolatile);
+        "mlir::Type":$eleTy), [{
+      return Base::get(eleTy.getContext(), eleTy);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
-    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = "`<` $eleTy `>`";
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -146,20 +146,16 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
     is equivalent to a fir.box type with a dynamic type.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "mlir::Type":$eleTy);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
-      return $_get(eleTy.getContext(), eleTy, isVolatile);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy), [{
+      return $_get(eleTy.getContext(), eleTy);
     }]>
   ];
 
-  let extraClassDeclaration = [{
-    bool isVolatile() const { return getIsVolatile(); }
-  }];
-
   let genVerifyDecl = 1;
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $eleTy `>`";
 }
 
 def fir_FieldType : FIR_Type<"Field", "field"> {
@@ -367,19 +363,18 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
     The type of a reference to an entity in memory.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
+  let parameters = (ins "mlir::Type":$eleTy);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVolatile), [{
-      return Base::get(elementType.getContext(), elementType, isVolatile);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
+      return Base::get(elementType.getContext(), elementType);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
-    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;
@@ -663,12 +658,5 @@ def ArrayOrBoxOrRecord : TypeConstraint<Or<[fir_SequenceType.predicate,
     IsBaseBoxTypePred, fir_RecordType.predicate]>,
     "fir.box, fir.array or fir.type">;
 
-// Returns true iff the type is an array box or a reference to such type.
-def IsArrayBoxPred : CPred<"::fir::getBoxRank($_self) != 0">;
-
-// Any boxed array type (not a reference to a boxed array type).
-def AnyBoxedArray
-    : TypeConstraint<And<[BoxOrClassType.predicate, IsArrayBoxPred]>,
-                     "any boxed array">;
 
 #endif // FIR_DIALECT_FIR_TYPES

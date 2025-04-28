@@ -23,7 +23,6 @@ namespace mlir {
 
 //===----------------------------------------------------------------------===//
 // TypeRange
-//===----------------------------------------------------------------------===//
 
 /// This class provides an abstraction over the various different ranges of
 /// value types. In many cases, this prevents the need to explicitly materialize
@@ -72,7 +71,7 @@ private:
 
 /// Make TypeRange hashable.
 inline ::llvm::hash_code hash_value(TypeRange arg) {
-  return ::llvm::hash_combine_range(arg);
+  return ::llvm::hash_combine_range(arg.begin(), arg.end());
 }
 
 /// Emit a type range to the given output stream.
@@ -83,7 +82,6 @@ inline raw_ostream &operator<<(raw_ostream &os, const TypeRange &types) {
 
 //===----------------------------------------------------------------------===//
 // TypeRangeRange
-//===----------------------------------------------------------------------===//
 
 using TypeRangeRangeIterator =
     llvm::mapped_iterator<llvm::iota_range<unsigned>::iterator,
@@ -113,7 +111,6 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ValueTypeRange
-//===----------------------------------------------------------------------===//
 
 /// This class implements iteration on the types of a given range of values.
 template <typename ValueIteratorT>

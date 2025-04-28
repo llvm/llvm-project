@@ -15,6 +15,8 @@
 
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 
+#define DEBUG_TYPE "lanai-disassembler"
+
 namespace llvm {
 
 class LanaiDisassembler : public MCDisassembler {

@@ -310,7 +310,7 @@ bb0:
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, ptr addrspace(1) poison
+  store volatile i32 17, ptr addrspace(1) undef
   br label %bb4
 
 bb3:

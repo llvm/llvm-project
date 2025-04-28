@@ -24,7 +24,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/Telemetry.h"
 #include "lldb/DataFormatters/FormatterSection.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -212,7 +211,6 @@ Target::~Target() {
 
 void Target::PrimeFromDummyTarget(Target &target) {
   m_stop_hooks = target.m_stop_hooks;
-  m_stop_hook_next_id = target.m_stop_hook_next_id;
 
   for (const auto &breakpoint_sp : target.m_breakpoint_list.Breakpoints()) {
     if (breakpoint_sp->IsInternal())
@@ -1534,15 +1532,15 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
   if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
                                                              feedback_stream)) {
     if (error.AsCString())
-      target->GetDebugger().GetAsyncErrorStream()->Printf(
+      target->GetDebugger().GetErrorStream().Printf(
           "unable to load scripting data for module %s - error reported was "
           "%s\n",
           module_sp->GetFileSpec().GetFileNameStrippingExtension().GetCString(),
           error.AsCString());
   }
   if (feedback_stream.GetSize())
-    target->GetDebugger().GetAsyncErrorStream()->Printf(
-        "%s\n", feedback_stream.GetData());
+    target->GetDebugger().GetErrorStream().Printf("%s\n",
+                                                  feedback_stream.GetData());
 }
 
 void Target::ClearModules(bool delete_locations) {
@@ -1560,30 +1558,10 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
-  telemetry::ScopedDispatcher<telemetry::ExecutableModuleInfo> helper(
-      &m_debugger);
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
   if (executable_sp) {
-    lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-    if (ProcessSP proc = GetProcessSP())
-      pid = proc->GetID();
-
-    helper.DispatchNow([&](telemetry::ExecutableModuleInfo *info) {
-      info->exec_mod = executable_sp;
-      info->uuid = executable_sp->GetUUID();
-      info->pid = pid;
-      info->triple = executable_sp->GetArchitecture().GetTriple().getTriple();
-      info->is_start_entry = true;
-    });
-
-    helper.DispatchOnExit([&, pid](telemetry::ExecutableModuleInfo *info) {
-      info->exec_mod = executable_sp;
-      info->uuid = executable_sp->GetUUID();
-      info->pid = pid;
-    });
-
     ElapsedTime elapsed(m_stats.GetCreateTime());
     LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
                        executable_sp->GetFileSpec().GetPath().c_str());
@@ -2641,8 +2619,9 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
   }
 
   std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
-  scratch_type_systems.erase(llvm::unique(scratch_type_systems),
-                             scratch_type_systems.end());
+  scratch_type_systems.erase(
+      std::unique(scratch_type_systems.begin(), scratch_type_systems.end()),
+      scratch_type_systems.end());
   return scratch_type_systems;
 }
 
@@ -3053,9 +3032,15 @@ bool Target::RunStopHooks() {
   if (m_stop_hooks.empty())
     return false;
 
-  bool no_active_hooks =
-      llvm::none_of(m_stop_hooks, [](auto &p) { return p.second->IsActive(); });
-  if (no_active_hooks)
+  // If there aren't any active stop hooks, don't bother either.
+  bool any_active_hooks = false;
+  for (auto hook : m_stop_hooks) {
+    if (hook.second->IsActive()) {
+      any_active_hooks = true;
+      break;
+    }
+  }
+  if (!any_active_hooks)
     return false;
 
   // Make sure we check that we are not stopped because of us running a user
@@ -3089,12 +3074,13 @@ bool Target::RunStopHooks() {
     return false;
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
-  auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
 
+  bool auto_continue = false;
+  bool hooks_ran = false;
   bool print_hook_header = (m_stop_hooks.size() != 1);
   bool print_thread_header = (num_exe_ctx != 1);
   bool should_stop = false;
-  bool requested_continue = false;
+  bool somebody_restarted = false;
 
   for (auto stop_entry : m_stop_hooks) {
     StopHookSP cur_hook_sp = stop_entry.second;
@@ -3103,8 +3089,20 @@ bool Target::RunStopHooks() {
 
     bool any_thread_matched = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {
+      // We detect somebody restarted in the stop-hook loop, and broke out of
+      // that loop back to here.  So break out of here too.
+      if (somebody_restarted)
+        break;
+
       if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
         continue;
+
+      // We only consult the auto-continue for a stop hook if it matched the
+      // specifier.
+      auto_continue |= cur_hook_sp->GetAutoContinue();
+
+      if (!hooks_ran)
+        hooks_ran = true;
 
       if (print_hook_header && !any_thread_matched) {
         StreamString s;
@@ -3121,40 +3119,59 @@ bool Target::RunStopHooks() {
         output_sp->Printf("-- Thread %d\n",
                           exc_ctx.GetThreadPtr()->GetIndexID());
 
-      auto result = cur_hook_sp->HandleStop(exc_ctx, output_sp);
-      switch (result) {
+      StopHook::StopHookResult this_result =
+          cur_hook_sp->HandleStop(exc_ctx, output_sp);
+      bool this_should_stop = true;
+
+      switch (this_result) {
       case StopHook::StopHookResult::KeepStopped:
+        // If this hook is set to auto-continue that should override the
+        // HandleStop result...
         if (cur_hook_sp->GetAutoContinue())
-          requested_continue = true;
+          this_should_stop = false;
         else
-          should_stop = true;
+          this_should_stop = true;
+
         break;
       case StopHook::StopHookResult::RequestContinue:
-        requested_continue = true;
-        break;
-      case StopHook::StopHookResult::NoPreference:
-        // Do nothing
+        this_should_stop = false;
         break;
       case StopHook::StopHookResult::AlreadyContinued:
         // We don't have a good way to prohibit people from restarting the
         // target willy nilly in a stop hook.  If the hook did so, give a
-        // gentle suggestion here and back out of the hook processing.
+        // gentle suggestion here and bag out if the hook processing.
         output_sp->Printf("\nAborting stop hooks, hook %" PRIu64
                           " set the program running.\n"
                           "  Consider using '-G true' to make "
                           "stop hooks auto-continue.\n",
                           cur_hook_sp->GetID());
-        // FIXME: if we are doing non-stop mode for real, we would have to
-        // check that OUR thread was restarted, otherwise we should keep
-        // processing stop hooks.
-        return true;
+        somebody_restarted = true;
+        break;
       }
+      // If we're already restarted, stop processing stop hooks.
+      // FIXME: if we are doing non-stop mode for real, we would have to
+      // check that OUR thread was restarted, otherwise we should keep
+      // processing stop hooks.
+      if (somebody_restarted)
+        break;
+
+      // If anybody wanted to stop, we should all stop.
+      if (!should_stop)
+        should_stop = this_should_stop;
     }
   }
 
-  // Resume iff at least one hook requested to continue and no hook asked to
-  // stop.
-  if (requested_continue && !should_stop) {
+  output_sp->Flush();
+
+  // If one of the commands in the stop hook already restarted the target,
+  // report that fact.
+  if (somebody_restarted)
+    return true;
+
+  // Finally, if auto-continue was requested, do it now:
+  // We only compute should_stop against the hook results if a hook got to run
+  // which is why we have to do this conjoint test.
+  if ((hooks_ran && !should_stop) || auto_continue) {
     Log *log = GetLog(LLDBLog::Process);
     Status error = m_process_sp->PrivateResume();
     if (error.Success()) {
@@ -4482,12 +4499,6 @@ llvm::StringRef TargetProperties::GetLaunchWorkingDirectory() const {
   const uint32_t idx = ePropertyLaunchWorkingDir;
   return GetPropertyAtIndexAs<llvm::StringRef>(
       idx, g_target_properties[idx].default_cstr_value);
-}
-
-bool TargetProperties::GetParallelModuleLoad() const {
-  const uint32_t idx = ePropertyParallelModuleLoad;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_target_properties[idx].default_uint_value != 0);
 }
 
 const char *TargetProperties::GetDisassemblyFlavor() const {

@@ -13,7 +13,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Constant.h"
@@ -33,8 +32,6 @@
 #define DEBUG_TYPE "cgscc"
 
 using namespace llvm;
-
-STATISTIC(LargestCGSCC, "Number of functions in the largest SCC");
 
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
@@ -84,8 +81,6 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // pass, skip its execution completely if asked to (callback returns false).
     if (!PI.runBeforePass(*Pass, *C))
       continue;
-
-    LargestCGSCC.updateMax(C->size());
 
     PreservedAnalyses PassPA = Pass->run(*C, AM, G, UR);
 
@@ -515,7 +510,9 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-  SmallVector<LazyCallGraph::Node *, 4> Nodes(llvm::make_pointer_range(C));
+  SmallVector<LazyCallGraph::Node *, 4> Nodes;
+  for (LazyCallGraph::Node &N : C)
+    Nodes.push_back(&N);
 
   // The SCC may get split while we are optimizing functions due to deleting
   // edges. If this happens, the current SCC can shift, so keep track of
@@ -1069,7 +1066,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
 
   // We added a ref edge earlier for new call edges, promote those to call edges
   // alongside PromotedRefTargets.
-  PromotedRefTargets.insert_range(NewCallEdges);
+  for (Node *E : NewCallEdges)
+    PromotedRefTargets.insert(E);
 
   // Now promote ref edges into call edges.
   for (Node *CallTarget : PromotedRefTargets) {

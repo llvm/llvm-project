@@ -14,7 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPU.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -29,11 +28,13 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUReserveWWMRegsLegacy : public MachineFunctionPass {
+class AMDGPUReserveWWMRegs : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUReserveWWMRegsLegacy() : MachineFunctionPass(ID) {}
+  AMDGPUReserveWWMRegs() : MachineFunctionPass(ID) {
+    initializeAMDGPUReserveWWMRegsPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -47,34 +48,16 @@ public:
   }
 };
 
-class AMDGPUReserveWWMRegs {
-public:
-  bool run(MachineFunction &MF);
-};
-
 } // End anonymous namespace.
 
-INITIALIZE_PASS(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPUReserveWWMRegs, DEBUG_TYPE,
                 "AMDGPU Reserve WWM Registers", false, false)
 
-char AMDGPUReserveWWMRegsLegacy::ID = 0;
+char AMDGPUReserveWWMRegs::ID = 0;
 
-char &llvm::AMDGPUReserveWWMRegsLegacyID = AMDGPUReserveWWMRegsLegacy::ID;
+char &llvm::AMDGPUReserveWWMRegsID = AMDGPUReserveWWMRegs::ID;
 
-bool AMDGPUReserveWWMRegsLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return AMDGPUReserveWWMRegs().run(MF);
-}
-
-PreservedAnalyses
-AMDGPUReserveWWMRegsPass::run(MachineFunction &MF,
-                              MachineFunctionAnalysisManager &) {
-  AMDGPUReserveWWMRegs().run(MF);
-  // TODO: This should abandon RegisterClassInfo once it is turned into an
-  // analysis.
-  return PreservedAnalyses::all();
-}
-
-bool AMDGPUReserveWWMRegs::run(MachineFunction &MF) {
+bool AMDGPUReserveWWMRegs::runOnMachineFunction(MachineFunction &MF) {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   bool Changed = false;

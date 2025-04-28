@@ -259,8 +259,8 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (C.getDriver().IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    TC.addFortranRuntimeLibraryPath(Args, CmdArgs);
-    TC.addFortranRuntimeLibs(Args, CmdArgs);
+    addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
+    addFortranRuntimeLibs(TC, Args, CmdArgs);
   }
 
   // TODO: Add profile stuff here

@@ -1144,25 +1144,20 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
 
     switch (Kind) {
     // ---- STRINGS ----
-    case DiagnosticsEngine::ak_std_string:
-    case DiagnosticsEngine::ak_c_string: {
-      StringRef S = [&]() -> StringRef {
-        if (Kind == DiagnosticsEngine::ak_std_string)
-          return getArgStdStr(ArgNo);
-        const char *SZ = getArgCStr(ArgNo);
-        // Don't crash if get passed a null pointer by accident.
-        return SZ ? SZ : "(null)";
-      }();
-      bool Quoted = false;
-      if (ModifierIs(Modifier, ModifierLen, "quoted")) {
-        Quoted = true;
-        OutStr.push_back('\'');
-      } else {
-        assert(ModifierLen == 0 && "unknown modifier for string");
-      }
+    case DiagnosticsEngine::ak_std_string: {
+      const std::string &S = getArgStdStr(ArgNo);
+      assert(ModifierLen == 0 && "No modifiers for strings yet");
       EscapeStringForDiagnostic(S, OutStr);
-      if (Quoted)
-        OutStr.push_back('\'');
+      break;
+    }
+    case DiagnosticsEngine::ak_c_string: {
+      const char *S = getArgCStr(ArgNo);
+      assert(ModifierLen == 0 && "No modifiers for strings yet");
+
+      // Don't crash if get passed a null pointer by accident.
+      if (!S)
+        S = "(null)";
+      EscapeStringForDiagnostic(S, OutStr);
       break;
     }
     // ---- INTEGERS ----
@@ -1252,7 +1247,6 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     case DiagnosticsEngine::ak_nestednamespec:
     case DiagnosticsEngine::ak_declcontext:
     case DiagnosticsEngine::ak_attr:
-    case DiagnosticsEngine::ak_expr:
       getDiags()->ConvertArgToString(Kind, getRawArg(ArgNo),
                                      StringRef(Modifier, ModifierLen),
                                      StringRef(Argument, ArgumentLen),

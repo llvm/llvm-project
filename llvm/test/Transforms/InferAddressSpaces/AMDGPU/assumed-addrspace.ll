@@ -1,6 +1,6 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=infer-address-spaces -o - %s | FileCheck %s
 
-@c0 = addrspace(4) global ptr poison
+@c0 = addrspace(4) global ptr undef
 
 ; CHECK-LABEL: @generic_ptr_from_constant
 ; CHECK: addrspacecast ptr %p to ptr addrspace(1)

@@ -94,7 +94,7 @@ class SISchedMachineModel : SchedMachineModel {
 def SIFullSpeedModel : SISchedMachineModel;
 def SIQuarterSpeedModel : SISchedMachineModel;
 def SIDPFullSpeedModel : SISchedMachineModel;
-def SIDPGFX942FullSpeedModel : SISchedMachineModel;
+def SIDPGFX940FullSpeedModel : SISchedMachineModel;
 def SIDPGFX950FullSpeedModel : SISchedMachineModel;
 def GFX10SpeedModel : SISchedMachineModel;
 def GFX11SpeedModel : SISchedMachineModel;
@@ -276,7 +276,7 @@ def : InstRW<[Write8PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_16X16X")>;
 
 } // End SchedModel = SIDPFullSpeedModel
 
-let SchedModel = SIDPGFX942FullSpeedModel in {
+let SchedModel = SIDPGFX940FullSpeedModel in {
 
 defm : SICommonWriteRes;
 
@@ -308,7 +308,7 @@ def : InstRW<[Write8PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_16X16X")>;
 def : InstRW<[Write4PassMAI,   MIMFMARead], (instregex "^V_SMFMAC_.32_16X16X")>;
 def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_SMFMAC_.32_32X32X")>;
 
-} // End SchedModel = SIDPGFX942FullSpeedModel
+} // End SchedModel = SIDPGFX940FullSpeedModel
 
 
 let SchedModel = SIDPGFX950FullSpeedModel in {

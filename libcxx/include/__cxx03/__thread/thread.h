@@ -21,6 +21,7 @@
 #include <__cxx03/__thread/id.h>
 #include <__cxx03/__thread/support.h>
 #include <__cxx03/__utility/forward.h>
+#include <__cxx03/tuple>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <__cxx03/locale>

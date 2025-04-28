@@ -777,7 +777,7 @@ protected:
   std::error_code readSecHdrTable();
 
   std::error_code readFuncMetadata(bool ProfileHasAttribute,
-                                   DenseSet<FunctionSamples *> &Profiles);
+                                   SampleProfileMap &Profiles);
   std::error_code readFuncMetadata(bool ProfileHasAttribute);
   std::error_code readFuncMetadata(bool ProfileHasAttribute,
                                    FunctionSamples *FProfile);

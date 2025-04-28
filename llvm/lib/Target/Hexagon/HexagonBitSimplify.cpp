@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitTracker.h"
-#include "Hexagon.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -20,6 +22,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -27,8 +30,20 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <deque>
+#include <iterator>
+#include <limits>
+#include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "hexbit"
 
@@ -50,6 +65,13 @@ static unsigned CountBitSplit = 0;
 
 static cl::opt<unsigned> RegisterSetLimit("hexbit-registerset-limit",
   cl::Hidden, cl::init(1000));
+
+namespace llvm {
+
+  void initializeHexagonBitSimplifyPass(PassRegistry& Registry);
+  FunctionPass *createHexagonBitSimplify();
+
+} // end namespace llvm
 
 namespace {
 
@@ -154,7 +176,7 @@ namespace {
     }
 
     static inline unsigned v2x(unsigned v) {
-      return Register(v).virtRegIndex();
+      return Register::virtReg2Index(v);
     }
 
     static inline unsigned x2v(unsigned x) {
@@ -2891,13 +2913,22 @@ bool HexagonBitSimplify::runOnMachineFunction(MachineFunction &MF) {
 //   r5:4 = memd(r0++#8)
 // }:endloop0
 
+namespace llvm {
+
+  FunctionPass *createHexagonLoopRescheduling();
+  void initializeHexagonLoopReschedulingPass(PassRegistry&);
+
+} // end namespace llvm
+
 namespace {
 
   class HexagonLoopRescheduling : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonLoopRescheduling() : MachineFunctionPass(ID) {}
+    HexagonLoopRescheduling() : MachineFunctionPass(ID) {
+      initializeHexagonLoopReschedulingPass(*PassRegistry::getPassRegistry());
+    }
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -2942,8 +2973,8 @@ namespace {
 
 char HexagonLoopRescheduling::ID = 0;
 
-INITIALIZE_PASS(HexagonLoopRescheduling, "hexagon-loop-resched-pass",
-                "Hexagon Loop Rescheduling", false, false)
+INITIALIZE_PASS(HexagonLoopRescheduling, "hexagon-loop-resched",
+  "Hexagon Loop Rescheduling", false, false)
 
 HexagonLoopRescheduling::PhiInfo::PhiInfo(MachineInstr &P,
       MachineBasicBlock &B) {

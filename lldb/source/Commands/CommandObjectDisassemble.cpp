@@ -21,7 +21,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include <iterator>
 
 static constexpr unsigned default_disasm_byte_size = 32;
 static constexpr unsigned default_disasm_num_ins = 4;
@@ -237,31 +236,25 @@ CommandObjectDisassemble::CommandObjectDisassemble(
 
 CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 
-llvm::Expected<std::vector<AddressRange>>
-CommandObjectDisassemble::CheckRangeSize(std::vector<AddressRange> ranges,
-                                         llvm::StringRef what) {
-  addr_t total_range_size = 0;
-  for (const AddressRange &r : ranges)
-    total_range_size += r.GetByteSize();
-
+llvm::Error CommandObjectDisassemble::CheckRangeSize(const AddressRange &range,
+                                                     llvm::StringRef what) {
   if (m_options.num_instructions > 0 || m_options.force ||
-      total_range_size < GetDebugger().GetStopDisassemblyMaxSize())
-    return ranges;
-
+      range.GetByteSize() < GetDebugger().GetStopDisassemblyMaxSize())
+    return llvm::Error::success();
   StreamString msg;
   msg << "Not disassembling " << what << " because it is very large ";
-  for (const AddressRange &r : ranges)
-    r.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
-           Address::DumpStyleFileAddress);
+  range.Dump(&msg, &GetTarget(), Address::DumpStyleLoadAddress,
+             Address::DumpStyleFileAddress);
   msg << ". To disassemble specify an instruction count limit, start/stop "
          "addresses or use the --force option.";
-  return llvm::createStringError(msg.GetString());
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 msg.GetString());
 }
 
 llvm::Expected<std::vector<AddressRange>>
 CommandObjectDisassemble::GetContainingAddressRanges() {
   std::vector<AddressRange> ranges;
-  const auto &get_ranges = [&](Address addr) {
+  const auto &get_range = [&](Address addr) {
     ModuleSP module_sp(addr.GetModule());
     SymbolContext sc;
     bool resolve_tail_call_address = true;
@@ -269,11 +262,9 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
         addr, eSymbolContextEverything, sc, resolve_tail_call_address);
     if (sc.function || sc.symbol) {
       AddressRange range;
-      for (uint32_t idx = 0;
-           sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol,
-                              idx, false, range);
-           ++idx)
-        ranges.push_back(range);
+      sc.GetAddressRange(eSymbolContextFunction | eSymbolContextSymbol, 0,
+                         false, range);
+      ranges.push_back(range);
     }
   };
 
@@ -282,14 +273,14 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
     Address symbol_containing_address;
     if (target.ResolveLoadAddress(m_options.symbol_containing_addr,
                                   symbol_containing_address)) {
-      get_ranges(symbol_containing_address);
+      get_range(symbol_containing_address);
     }
   } else {
     for (lldb::ModuleSP module_sp : target.GetImages().Modules()) {
       Address file_address;
       if (module_sp->ResolveFileAddress(m_options.symbol_containing_addr,
                                         file_address)) {
-        get_ranges(file_address);
+        get_range(file_address);
       }
     }
   }
@@ -301,7 +292,9 @@ CommandObjectDisassemble::GetContainingAddressRanges() {
         m_options.symbol_containing_addr);
   }
 
-  return CheckRangeSize(std::move(ranges), "the function");
+  if (llvm::Error err = CheckRangeSize(ranges[0], "the function"))
+    return std::move(err);
+  return ranges;
 }
 
 llvm::Expected<std::vector<AddressRange>>
@@ -311,24 +304,29 @@ CommandObjectDisassemble::GetCurrentFunctionRanges() {
   if (!frame) {
     if (process) {
       return llvm::createStringError(
-          "Cannot disassemble around the current function without the process "
-          "being stopped.\n");
+          llvm::inconvertibleErrorCode(),
+          "Cannot disassemble around the current "
+          "function without the process being stopped.\n");
+    } else {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Cannot disassemble around the current "
+                                     "function without a selected frame: "
+                                     "no currently running process.\n");
     }
-    return llvm::createStringError(
-        "Cannot disassemble around the current function without a selected "
-        "frame: no currently running process.\n");
   }
-  SymbolContext sc =
-      frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
-  std::vector<AddressRange> ranges;
+  SymbolContext sc(
+      frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
+  AddressRange range;
   if (sc.function)
-    ranges = sc.function->GetAddressRanges();
-  else if (sc.symbol && sc.symbol->ValueIsAddress())
-    ranges.emplace_back(sc.symbol->GetAddress(), sc.symbol->GetByteSize());
-  else
-    ranges.emplace_back(frame->GetFrameCodeAddress(), default_disasm_byte_size);
+    range = sc.function->GetAddressRange();
+  else if (sc.symbol && sc.symbol->ValueIsAddress()) {
+    range = {sc.symbol->GetAddress(), sc.symbol->GetByteSize()};
+  } else
+    range = {frame->GetFrameCodeAddress(), default_disasm_byte_size};
 
-  return CheckRangeSize(std::move(ranges), "the current function");
+  if (llvm::Error err = CheckRangeSize(range, "the current function"))
+    return std::move(err);
+  return std::vector<AddressRange>{range};
 }
 
 llvm::Expected<std::vector<AddressRange>>
@@ -374,23 +372,19 @@ CommandObjectDisassemble::GetNameRanges(CommandReturnObject &result) {
 
   std::vector<AddressRange> ranges;
   llvm::Error range_errs = llvm::Error::success();
+  AddressRange range;
   const uint32_t scope =
       eSymbolContextBlock | eSymbolContextFunction | eSymbolContextSymbol;
   const bool use_inline_block_range = true;
   for (SymbolContext sc : sc_list.SymbolContexts()) {
-    std::vector<AddressRange> fn_ranges;
-    AddressRange range;
     for (uint32_t range_idx = 0;
          sc.GetAddressRange(scope, range_idx, use_inline_block_range, range);
-         ++range_idx)
-      fn_ranges.push_back(std::move(range));
-
-    if (llvm::Expected<std::vector<AddressRange>> checked_ranges =
-            CheckRangeSize(std::move(fn_ranges), "a function"))
-      llvm::move(*checked_ranges, std::back_inserter(ranges));
-    else
-      range_errs =
-          joinErrors(std::move(range_errs), checked_ranges.takeError());
+         ++range_idx) {
+      if (llvm::Error err = CheckRangeSize(range, "a range"))
+        range_errs = joinErrors(std::move(range_errs), std::move(err));
+      else
+        ranges.push_back(range);
+    }
   }
   if (ranges.empty()) {
     if (range_errs)

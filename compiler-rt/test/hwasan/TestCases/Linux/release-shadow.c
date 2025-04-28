@@ -7,7 +7,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/auxv.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -18,18 +17,17 @@
 const unsigned char kTag = 42;
 const size_t kNumShadowPages = 1024;
 const size_t kNumPages = 16 * kNumShadowPages;
-
-size_t page_size, map_size;
+const size_t kPageSize = 4096;
+const size_t kMapSize = kNumPages * kPageSize;
 
 void sync_rss() {
-  char *page = (char *)mmap(0, page_size, PROT_READ | PROT_WRITE,
-                            MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+  char *page = (char *)mmap(0, kPageSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   // Linux kernel updates RSS counters after a set number of page faults.
   for (int i = 0; i < 100; ++i) {
     page[0] = 42;
-    madvise(page, page_size, MADV_DONTNEED);
+    madvise(page, kPageSize, MADV_DONTNEED);
   }
-  munmap(page, page_size);
+  munmap(page, kPageSize);
 }
 
 size_t current_rss() {
@@ -47,9 +45,9 @@ size_t current_rss() {
 }
 
 int test_rss_difference(void *p) {
-  __hwasan_tag_memory(p, kTag, map_size);
+  __hwasan_tag_memory(p, kTag, kMapSize);
   size_t rss_before = current_rss();
-  __hwasan_tag_memory(p, 0, map_size);
+  __hwasan_tag_memory(p, 0, kMapSize);
   size_t rss_after = current_rss();
   fprintf(stderr, "%zu -> %zu\n", rss_before, rss_after);
   if (rss_before <= rss_after)
@@ -61,14 +59,10 @@ int test_rss_difference(void *p) {
 }
 
 int main() {
-  page_size = getauxval(AT_PAGESZ);
-  map_size = kNumPages * page_size;
-
   fprintf(stderr, "starting rss %zu\n", current_rss());
   fprintf(stderr, "shadow pages: %zu\n", kNumShadowPages);
 
-  void *p = mmap(0, map_size, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+  void *p = mmap(0, kMapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
   fprintf(stderr, "p = %p\n", p);
 
   size_t total_count = 10;

@@ -15,6 +15,9 @@ namespace llvm {
 class Module;
 class PassRegistry;
 
+extern char &NVPTXCtorDtorLoweringLegacyPassID;
+extern void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
+
 /// Lower llvm.global_ctors and llvm.global_dtors to special kernels.
 class NVPTXCtorDtorLoweringPass
     : public PassInfoMixin<NVPTXCtorDtorLoweringPass> {

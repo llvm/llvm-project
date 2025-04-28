@@ -12,7 +12,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
-#include "src/__support/macros/properties/cpu_features.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #error "Invalid include"
@@ -23,21 +22,21 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-#ifdef LIBC_TARGET_CPU_HAS_FPU_FLOAT
+#ifdef __riscv_flen
 template <> LIBC_INLINE float sqrt<float>(float x) {
   float result;
-  asm("fsqrt.s %0, %1\n\t" : "=f"(result) : "f"(x));
+  __asm__ __volatile__("fsqrt.s %0, %1\n\t" : "=f"(result) : "f"(x));
   return result;
 }
-#endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
 
-#ifdef LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+#if __riscv_flen >= 64
 template <> LIBC_INLINE double sqrt<double>(double x) {
   double result;
-  asm("fsqrt.d %0, %1\n\t" : "=f"(result) : "f"(x));
+  __asm__ __volatile__("fsqrt.d %0, %1\n\t" : "=f"(result) : "f"(x));
   return result;
 }
-#endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
+#endif // __riscv_flen >= 64
+#endif // __riscv_flen
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

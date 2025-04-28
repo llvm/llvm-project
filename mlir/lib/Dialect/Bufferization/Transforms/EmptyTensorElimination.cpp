@@ -20,7 +20,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_EMPTYTENSORELIMINATIONPASS
+#define GEN_PASS_DEF_EMPTYTENSORELIMINATION
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -187,9 +187,9 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
 
 namespace {
 struct EmptyTensorElimination
-    : public bufferization::impl::EmptyTensorEliminationPassBase<
+    : public bufferization::impl::EmptyTensorEliminationBase<
           EmptyTensorElimination> {
-  using Base::Base;
+  EmptyTensorElimination() = default;
 
   void runOnOperation() override;
 
@@ -226,4 +226,8 @@ void EmptyTensorElimination::runOnOperation() {
   IRRewriter rewriter(getOperation()->getContext());
   if (failed(bufferization::eliminateEmptyTensors(rewriter, getOperation())))
     signalPassFailure();
+}
+
+std::unique_ptr<Pass> mlir::bufferization::createEmptyTensorEliminationPass() {
+  return std::make_unique<EmptyTensorElimination>();
 }

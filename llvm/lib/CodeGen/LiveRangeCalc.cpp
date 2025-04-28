@@ -83,7 +83,7 @@ void LiveRangeCalc::updateFromLiveIns() {
   LiveIn.clear();
 }
 
-void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, Register PhysReg,
+void LiveRangeCalc::extend(LiveRange &LR, SlotIndex Use, unsigned PhysReg,
                            ArrayRef<SlotIndex> Undefs) {
   assert(Use.isValid() && "Invalid SlotIndex");
   assert(Indexes && "Missing SlotIndexes");
@@ -188,7 +188,7 @@ bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
 }
 
 bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
-                                     SlotIndex Use, Register PhysReg,
+                                     SlotIndex Use, unsigned PhysReg,
                                      ArrayRef<SlotIndex> Undefs) {
   unsigned UseMBBNum = UseMBB.getNumber();
 
@@ -216,7 +216,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
       report_fatal_error("Use not jointly dominated by defs.");
     }
 
-    if (PhysReg.isPhysical()) {
+    if (Register::isPhysicalRegister(PhysReg)) {
       const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
       bool IsLiveIn = MBB->isLiveIn(PhysReg);
       for (MCRegAliasIterator Alias(PhysReg, TRI, false); !IsLiveIn && Alias.isValid(); ++Alias)

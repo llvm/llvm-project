@@ -24,6 +24,12 @@ static SmallVector<Value> flattenValues(ArrayRef<ValueRange> values) {
   return result;
 }
 
+/// Assert that the given value range contains a single value and return it.
+static Value getSingleValue(ValueRange values) {
+  assert(values.size() == 1 && "expected single value");
+  return values.front();
+}
+
 // CRTP
 // A base class that takes care of 1:N type conversion, which maps the converted
 // op results (computed by the derived class) and materializes 1:N conversion.
@@ -113,9 +119,9 @@ public:
     // We can not do clone as the number of result types after conversion
     // might be different.
     ForOp newOp = rewriter.create<ForOp>(
-        op.getLoc(), llvm::getSingleElement(adaptor.getLowerBound()),
-        llvm::getSingleElement(adaptor.getUpperBound()),
-        llvm::getSingleElement(adaptor.getStep()),
+        op.getLoc(), getSingleValue(adaptor.getLowerBound()),
+        getSingleValue(adaptor.getUpperBound()),
+        getSingleValue(adaptor.getStep()),
         flattenValues(adaptor.getInitArgs()));
 
     // Reserve whatever attributes in the original op.
@@ -143,8 +149,7 @@ public:
                                       TypeRange dstTypes) const {
 
     IfOp newOp = rewriter.create<IfOp>(
-        op.getLoc(), dstTypes, llvm::getSingleElement(adaptor.getCondition()),
-        true);
+        op.getLoc(), dstTypes, getSingleValue(adaptor.getCondition()), true);
     newOp->setAttrs(op->getAttrs());
 
     // We do not need the empty blocks created by rewriter.

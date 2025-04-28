@@ -209,7 +209,7 @@ unsigned MDNodeOpsKey::calculateHash(MDNode *N, unsigned Offset) {
 }
 
 unsigned MDNodeOpsKey::calculateHash(ArrayRef<Metadata *> Ops) {
-  return hash_combine_range(Ops);
+  return hash_combine_range(Ops.begin(), Ops.end());
 }
 
 StringMapEntry<uint32_t> *LLVMContextImpl::getOrInsertBundleTag(StringRef Tag) {

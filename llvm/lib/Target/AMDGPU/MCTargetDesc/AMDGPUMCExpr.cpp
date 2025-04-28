@@ -77,7 +77,7 @@ void AMDGPUMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
     break;
   }
   for (const auto *It = Args.begin(); It != Args.end(); ++It) {
-    (*It)->print(OS, MAI);
+    (*It)->print(OS, MAI, /*InParens=*/false);
     if ((It + 1) != Args.end())
       OS << ", ";
   }
@@ -95,11 +95,11 @@ static int64_t op(AMDGPUMCExpr::VariantKind Kind, int64_t Arg1, int64_t Arg2) {
   }
 }
 
-bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
-                                      const MCAssembler *Asm) const {
+bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
+                                      const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -124,11 +124,11 @@ bool AMDGPUMCExpr::evaluateExtraSGPRs(MCValue &Res,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
-                                        const MCAssembler *Asm) const {
+bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
+                                        const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -151,10 +151,11 @@ bool AMDGPUMCExpr::evaluateTotalNumVGPR(MCValue &Res,
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
+bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
+                                   const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -171,11 +172,11 @@ bool AMDGPUMCExpr::evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const {
   return true;
 }
 
-bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
-                                     const MCAssembler *Asm) const {
+bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
+                                     const MCFixup *Fixup) const {
   auto TryGetMCExprValue = [&](const MCExpr *Arg, uint64_t &ConstantValue) {
     MCValue MCVal;
-    if (!Arg->evaluateAsRelocatable(MCVal, Asm) || !MCVal.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(MCVal, Asm, Fixup) || !MCVal.isAbsolute())
       return false;
 
     ConstantValue = MCVal.getConstant();
@@ -215,24 +216,25 @@ bool AMDGPUMCExpr::evaluateOccupancy(MCValue &Res,
 }
 
 bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                             const MCAssembler *Asm) const {
+                                             const MCAssembler *Asm,
+                                             const MCFixup *Fixup) const {
   std::optional<int64_t> Total;
   switch (Kind) {
   default:
     break;
   case AGVK_ExtraSGPRs:
-    return evaluateExtraSGPRs(Res, Asm);
+    return evaluateExtraSGPRs(Res, Asm, Fixup);
   case AGVK_AlignTo:
-    return evaluateAlignTo(Res, Asm);
+    return evaluateAlignTo(Res, Asm, Fixup);
   case AGVK_TotalNumVGPRs:
-    return evaluateTotalNumVGPR(Res, Asm);
+    return evaluateTotalNumVGPR(Res, Asm, Fixup);
   case AGVK_Occupancy:
-    return evaluateOccupancy(Res, Asm);
+    return evaluateOccupancy(Res, Asm, Fixup);
   }
 
   for (const MCExpr *Arg : Args) {
     MCValue ArgRes;
-    if (!Arg->evaluateAsRelocatable(ArgRes, Asm) || !ArgRes.isAbsolute())
+    if (!Arg->evaluateAsRelocatable(ArgRes, Asm, Fixup) || !ArgRes.isAbsolute())
       return false;
 
     if (!Total.has_value())

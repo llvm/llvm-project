@@ -546,47 +546,36 @@ void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
         Context.getTrivialTypeSourceInfo(getTypePtr()->getBaseType(), Loc));
 }
 
-template <class TL>
-static void initializeElaboratedKeyword(TL T, SourceLocation Loc) {
-  T.setElaboratedKeywordLoc(T.getTypePtr()->getKeyword() !=
-                                    ElaboratedTypeKeyword::None
-                                ? Loc
-                                : SourceLocation());
-}
-
-static NestedNameSpecifierLoc
-initializeQualifier(ASTContext &Context, NestedNameSpecifier *Qualifier,
-                    SourceLocation Loc) {
-  if (!Qualifier)
-    return NestedNameSpecifierLoc();
-  NestedNameSpecifierLocBuilder Builder;
-  Builder.MakeTrivial(Context, Qualifier, Loc);
-  return Builder.getWithLocInContext(Context);
-}
-
 void ElaboratedTypeLoc::initializeLocal(ASTContext &Context,
                                         SourceLocation Loc) {
   if (isEmpty())
     return;
-  initializeElaboratedKeyword(*this, Loc);
-  setQualifierLoc(
-      initializeQualifier(Context, getTypePtr()->getQualifier(), Loc));
+  setElaboratedKeywordLoc(Loc);
+  NestedNameSpecifierLocBuilder Builder;
+  Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
+  setQualifierLoc(Builder.getWithLocInContext(Context));
 }
 
 void DependentNameTypeLoc::initializeLocal(ASTContext &Context,
                                            SourceLocation Loc) {
-  initializeElaboratedKeyword(*this, Loc);
-  setQualifierLoc(
-      initializeQualifier(Context, getTypePtr()->getQualifier(), Loc));
+  setElaboratedKeywordLoc(Loc);
+  NestedNameSpecifierLocBuilder Builder;
+  Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
+  setQualifierLoc(Builder.getWithLocInContext(Context));
   setNameLoc(Loc);
 }
 
 void
 DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
                                                         SourceLocation Loc) {
-  initializeElaboratedKeyword(*this, Loc);
-  setQualifierLoc(initializeQualifier(
-      Context, getTypePtr()->getDependentTemplateName().getQualifier(), Loc));
+  setElaboratedKeywordLoc(Loc);
+  if (getTypePtr()->getQualifier()) {
+    NestedNameSpecifierLocBuilder Builder;
+    Builder.MakeTrivial(Context, getTypePtr()->getQualifier(), Loc);
+    setQualifierLoc(Builder.getWithLocInContext(Context));
+  } else {
+    setQualifierLoc(NestedNameSpecifierLoc());
+  }
   setTemplateKeywordLoc(Loc);
   setTemplateNameLoc(Loc);
   setLAngleLoc(Loc);

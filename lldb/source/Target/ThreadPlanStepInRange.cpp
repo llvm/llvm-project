@@ -27,8 +27,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 uint32_t ThreadPlanStepInRange::s_default_flag_values =
-    ThreadPlanShouldStopHere::eStepInAvoidNoDebug |
-    ThreadPlanShouldStopHere::eStepOutPastThunks;
+    ThreadPlanShouldStopHere::eStepInAvoidNoDebug;
 
 // ThreadPlanStepInRange: Step through a stack range, either stepping over or
 // into based on the value of \a type.
@@ -370,7 +369,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
   if (!should_stop_here)
     return false;
 
-  if (current_plan->GetKind() == eKindStepInRange &&
+  if (should_stop_here && current_plan->GetKind() == eKindStepInRange &&
       operation == eFrameCompareYounger) {
     ThreadPlanStepInRange *step_in_range_plan =
         static_cast<ThreadPlanStepInRange *>(current_plan);

@@ -10,8 +10,6 @@
 
 // is_trivial
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
-
 #include <type_traits>
 #include "test_macros.h"
 

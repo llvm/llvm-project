@@ -444,11 +444,7 @@ Error RawMemProfReader::setupForSymbolization() {
       ProfiledTextSegmentEnd = Entry.End;
     }
   }
-  if (NumMatched == 0)
-    return make_error<StringError>(
-        Twine("No matching executable segments found in binary ") +
-            Binary.getBinary()->getFileName(),
-        inconvertibleErrorCode());
+  assert(NumMatched != 0 && "No matching executable segments in segment info.");
   assert((PreferredTextSegmentAddress == 0 ||
           (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
          "Expect text segment address to be 0 or equal to profiled text "
@@ -525,7 +521,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // we insert a new entry for callsite data if we need to.
     IndexedMemProfRecord &Record = MemProfData.Records[Id];
     for (LocationPtr Loc : Locs)
-      Record.CallSites.emplace_back(MemProfData.addCallStack(*Loc));
+      Record.CallSiteIds.push_back(MemProfData.addCallStack(*Loc));
   }
 
   return Error::success();
@@ -600,12 +596,9 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    if (auto It = CallstackProfileData.find(Id);
-        It != CallstackProfileData.end()) {
-      if (It->second.AccessHistogramSize > 0)
-        free((void *)It->second.AccessHistogram);
-      CallstackProfileData.erase(It);
-    }
+    if (CallstackProfileData[Id].AccessHistogramSize > 0)
+      free((void *)CallstackProfileData[Id].AccessHistogram);
+    CallstackProfileData.erase(Id);
   }
 
   if (StackMap.empty())
@@ -815,10 +808,10 @@ void YAMLMemProfReader::parse(StringRef YAMLData) {
       IndexedRecord.AllocSites.emplace_back(CSId, AI.Info);
     }
 
-    // Populate CallSites with CalleeGuids.
+    // Populate CallSiteIds.
     for (const auto &CallSite : Record.CallSites) {
-      CallStackId CSId = AddCallStack(CallSite.Frames);
-      IndexedRecord.CallSites.emplace_back(CSId, CallSite.CalleeGuids);
+      CallStackId CSId = AddCallStack(CallSite);
+      IndexedRecord.CallSiteIds.push_back(CSId);
     }
 
     MemProfData.Records.try_emplace(GUID, std::move(IndexedRecord));

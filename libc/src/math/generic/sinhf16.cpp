@@ -20,8 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr fputil::ExceptValues<float16, 17> SINHF16_EXCEPTS_POS = {{
+static constexpr fputil::ExceptValues<float16, 16> SINHF16_EXCEPTS_POS = {{
     // x = 0x1.714p-5, sinhf16(x) = 0x1.714p-5 (RZ)
     {0x29c5U, 0x29c5U, 1U, 0U, 1U},
     // x = 0x1.25p-4, sinhf16(x) = 0x1.25p-4 (RZ)
@@ -54,11 +53,9 @@ static constexpr fputil::ExceptValues<float16, 17> SINHF16_EXCEPTS_POS = {{
     {0x4629U, 0x5b65U, 1U, 0U, 1U},
     // x = 0x1.5fp+3, sinhf16(x) = 0x1.c54p+14 (RZ)
     {0x497cU, 0x7715U, 1U, 0U, 1U},
-    // x = 0x1.3c8p+1, sinhf16(x) = 0x1.78ap+2 (RZ)
-    {0x40f2U, 0x45e2U, 1U, 0U, 1U},
 }};
 
-static constexpr fputil::ExceptValues<float16, 13> SINHF16_EXCEPTS_NEG = {{
+static constexpr fputil::ExceptValues<float16, 12> SINHF16_EXCEPTS_NEG = {{
     // x = -0x1.714p-5, sinhf16(x) = -0x1.714p-5 (RZ)
     {0xa9c5U, 0xa9c5U, 0U, 1U, 1U},
     // x = -0x1.25p-4, sinhf16(x) = -0x1.25p-4 (RZ)
@@ -83,10 +80,7 @@ static constexpr fputil::ExceptValues<float16, 13> SINHF16_EXCEPTS_NEG = {{
     {0xc629U, 0xdb65U, 0U, 1U, 1U},
     // x = -0x1.5fp+3, sinhf16(x) = -0x1.c54p+14 (RZ)
     {0xc97cU, 0xf715U, 0U, 1U, 1U},
-    // x = -0x1.3c8p+1, sinhf16(x) = -0x1.78ap+2 (RZ)
-    {0xc0f2U, 0xc5e2U, 0U, 1U, 1U},
 }};
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, sinhf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -136,7 +130,6 @@ LLVM_LIBC_FUNCTION(float16, sinhf16, (float16 x)) {
     return FPBits(static_cast<uint16_t>(x_u)).get_val();
   }
 
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (x_bits.is_pos()) {
     if (auto r = SINHF16_EXCEPTS_POS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
       return r.value();
@@ -144,7 +137,6 @@ LLVM_LIBC_FUNCTION(float16, sinhf16, (float16 x)) {
     if (auto r = SINHF16_EXCEPTS_NEG.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
       return r.value();
   }
-#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   return eval_sinh_or_cosh</*IsSinh=*/true>(x);
 }

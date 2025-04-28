@@ -31,9 +31,6 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
-#include "lldb/ValueObject/DILEval.h"
-#include "lldb/ValueObject/DILLexer.h"
-#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -526,42 +523,10 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error) {
-
-  const bool check_ptr_vs_member =
-      (options & eExpressionPathOptionCheckPtrVsMember) != 0;
-  const bool no_fragile_ivar =
-      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
-  const bool no_synth_child =
-      (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
-
-  // Lex the expression.
-  auto lex_or_err = dil::DILLexer::Create(var_expr);
-  if (!lex_or_err) {
-    error = Status::FromError(lex_or_err.takeError());
-    return ValueObjectSP();
-  }
-
-  // Parse the expression.
-  auto tree_or_error = dil::DILParser::Parse(
-      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic,
-      !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
-  if (!tree_or_error) {
-    error = Status::FromError(tree_or_error.takeError());
-    return ValueObjectSP();
-  }
-
-  // Evaluate the parsed expression.
-  lldb::TargetSP target = this->CalculateTarget();
-  dil::Interpreter interpreter(target, var_expr, use_dynamic,
-                               shared_from_this());
-
-  auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
-  if (!valobj_or_error) {
-    error = Status::FromError(valobj_or_error.takeError());
-    return ValueObjectSP();
-  }
-
-  return *valobj_or_error;
+  // This is a place-holder for the calls into the DIL parser and
+  // evaluator.  For now, just call the "real" frame variable implementation.
+  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
+                                                 var_sp, error);
 }
 
 ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
@@ -1515,9 +1480,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
 namespace {
 ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
                                 int64_t offset) {
-  if (offset < 0 ||
-      uint64_t(offset) >=
-          llvm::expectedToOptional(parent->GetByteSize()).value_or(0)) {
+  if (offset < 0 || uint64_t(offset) >= parent->GetByteSize()) {
     return ValueObjectSP();
   }
 
@@ -1534,8 +1497,7 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
     }
 
     int64_t child_offset = child_sp->GetByteOffset();
-    int64_t child_size =
-        llvm::expectedToOptional(child_sp->GetByteSize()).value_or(0);
+    int64_t child_size = child_sp->GetByteSize().value_or(0);
 
     if (offset >= child_offset && offset < (child_offset + child_size)) {
       return GetValueForOffset(frame, child_sp, offset - child_offset);
@@ -1567,13 +1529,9 @@ ValueObjectSP GetValueForDereferincingOffset(StackFrame &frame,
     return ValueObjectSP();
   }
 
-  if (offset >= 0 &&
-      uint64_t(offset) >=
-          llvm::expectedToOptional(pointee->GetByteSize()).value_or(0)) {
-    uint64_t size =
-        llvm::expectedToOptional(pointee->GetByteSize()).value_or(1);
-    int64_t index = offset / size;
-    offset = offset % size;
+  if (offset >= 0 && uint64_t(offset) >= pointee->GetByteSize()) {
+    int64_t index = offset / pointee->GetByteSize().value_or(1);
+    offset = offset % pointee->GetByteSize().value_or(1);
     const bool can_create = true;
     pointee = base->GetSyntheticArrayMember(index, can_create);
   }
@@ -1712,14 +1670,13 @@ lldb::ValueObjectSP DoGuessValueAt(StackFrame &frame, ConstString reg,
         break;
       case Instruction::Operand::Type::Immediate: {
         SymbolContext sc;
-        if (!pc.GetModule())
+        Address load_address;
+        if (!frame.CalculateTarget()->ResolveLoadAddress(
+                operands[0].m_immediate, load_address)) {
           break;
-        Address address(operands[0].m_immediate,
-                        pc.GetModule()->GetSectionList());
-        if (!address.IsValid())
-          break;
+        }
         frame.CalculateTarget()->GetImages().ResolveSymbolContextForAddress(
-            address, eSymbolContextFunction, sc);
+            load_address, eSymbolContextFunction, sc);
         if (!sc.function) {
           break;
         }
@@ -1818,11 +1775,15 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
     return ValueObjectSP();
   }
 
-  AddressRange unused_range;
-  if (!function->GetRangeContainingLoadAddress(
-          GetFrameCodeAddress().GetLoadAddress(target_sp.get()), *target_sp,
-          unused_range))
+  AddressRange pc_range = function->GetAddressRange();
+
+  if (GetFrameCodeAddress().GetFileAddress() <
+          pc_range.GetBaseAddress().GetFileAddress() ||
+      GetFrameCodeAddress().GetFileAddress() -
+              pc_range.GetBaseAddress().GetFileAddress() >=
+          pc_range.GetByteSize()) {
     return ValueObjectSP();
+  }
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
@@ -1830,8 +1791,8 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
   const char *features = nullptr;
   const bool force_live_memory = true;
   DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      target_arch, plugin_name, flavor, cpu, features, *target_sp,
-      function->GetAddressRanges(), force_live_memory);
+      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
+      force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();

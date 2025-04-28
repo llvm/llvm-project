@@ -1,17 +1,46 @@
-//===- comgr-compiler.h - Comgr compiler Action internals -----------------===//
-//
-// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
-// amd/comgr/LICENSE.TXT in this repository for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//===----------------------------------------------------------------------===//
+/*******************************************************************************
+ *
+ * University of Illinois/NCSA
+ * Open Source License
+ *
+ * Copyright (c) 2003-2017 University of Illinois at Urbana-Champaign.
+ * Modifications (c) 2018 Advanced Micro Devices, Inc.
+ * All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * with the Software without restriction, including without limitation the
+ * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+ * sell copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ *     * Redistributions of source code must retain the above copyright notice,
+ *       this list of conditions and the following disclaimers.
+ *
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimers in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ *     * Neither the names of the LLVM Team, University of Illinois at
+ *       Urbana-Champaign, nor the names of its contributors may be used to
+ *       endorse or promote products derived from this Software without specific
+ *       prior written permission.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+ * CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH
+ * THE SOFTWARE.
+ *
+ ******************************************************************************/
 
 #ifndef COMGR_COMPILER_H
 #define COMGR_COMPILER_H
 
 #include "comgr.h"
 #include "clang/Driver/Driver.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 namespace COMGR {
 
@@ -37,31 +66,21 @@ class AMDGPUCompiler {
   llvm::StringSaver Saver = Allocator;
   /// Whether we need to disable Clang's device-lib linking.
   bool NoGpuLib = true;
-  bool UseVFS = false;
-
-  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
 
   amd_comgr_status_t createTmpDirs();
   amd_comgr_status_t removeTmpDirs();
-  amd_comgr_status_t processFile(DataObject *Input, const char *InputFilePath,
+  amd_comgr_status_t processFile(const char *InputFilePath,
                                  const char *OutputFilePath);
   /// Process each file in @c InSet individually, placing output in @c OutSet.
   amd_comgr_status_t processFiles(amd_comgr_data_kind_t OutputKind,
                                   const char *OutputSuffix);
-  amd_comgr_status_t processFiles(amd_comgr_data_kind_t OutputKind,
-                                  const char *OutputSuffix, DataSet *InSet);
   amd_comgr_status_t addIncludeFlags();
   amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr,
                                               bool CompilingSrc);
   amd_comgr_status_t addCompilationFlags();
   amd_comgr_status_t addDeviceLibraries();
-  amd_comgr_status_t extractSpirvFlags(DataSet *BcSet);
 
   amd_comgr_status_t executeInProcessDriver(llvm::ArrayRef<const char *> Args);
-
-  amd_comgr_status_t translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
-                                                 DataSet *BcOutSet);
 
 public:
   AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet,
@@ -79,7 +98,6 @@ public:
   amd_comgr_status_t linkToRelocatable();
   amd_comgr_status_t linkToExecutable();
   amd_comgr_status_t compileToExecutable();
-  amd_comgr_status_t compileSpirvToRelocatable();
   amd_comgr_status_t translateSpirvToBitcode();
 
   amd_comgr_language_t getLanguage() const { return ActionInfo->Language; }

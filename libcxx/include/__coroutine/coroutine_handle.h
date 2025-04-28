@@ -28,10 +28,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // [coroutine.handle]
 template <class _Promise = void>
-struct coroutine_handle;
+struct _LIBCPP_TEMPLATE_VIS coroutine_handle;
 
 template <>
-struct coroutine_handle<void> {
+struct _LIBCPP_TEMPLATE_VIS coroutine_handle<void> {
 public:
   // [coroutine.handle.con], construct/reset
   constexpr coroutine_handle() noexcept = default;
@@ -93,7 +93,7 @@ operator<=>(coroutine_handle<> __x, coroutine_handle<> __y) noexcept {
 }
 
 template <class _Promise>
-struct coroutine_handle {
+struct _LIBCPP_TEMPLATE_VIS coroutine_handle {
 public:
   // [coroutine.handle.con], construct/reset
   constexpr coroutine_handle() noexcept = default;

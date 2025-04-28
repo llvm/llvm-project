@@ -684,7 +684,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // share the same exit blocks). We'll keep track of loops for which we can
   // break this so that later we can re-simplify them.
   SmallSetVector<Loop *, 4> LoopsToSimplify;
-  LoopsToSimplify.insert_range(*L);
+  for (Loop *SubLoop : *L)
+    LoopsToSimplify.insert(SubLoop);
 
   // When a FSDiscriminator is enabled, we don't need to add the multiply
   // factors to the discriminators.

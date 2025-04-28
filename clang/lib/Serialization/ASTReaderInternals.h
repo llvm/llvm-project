@@ -69,7 +69,7 @@ public:
         }
 
         // Switch to tracking found IDs in the set.
-        Found.insert_range(Data);
+        Found.insert(Data.begin(), Data.end());
       }
 
       if (Found.insert(ID).second)
@@ -191,7 +191,7 @@ public:
         }
 
         // Switch to tracking found IDs in the set.
-        Found.insert_range(Data);
+        Found.insert(Data.begin(), Data.end());
       }
 
       if (Found.insert(Info).second)
@@ -286,8 +286,6 @@ class ASTIdentifierLookupTrait : public ASTIdentifierLookupTraitBase {
   // identifier that was constructed before the AST file was read.
   IdentifierInfo *KnownII;
 
-  bool hasMacroDefinitionInDependencies = false;
-
 public:
   using data_type = IdentifierInfo *;
 
@@ -302,10 +300,6 @@ public:
   IdentifierID ReadIdentifierID(const unsigned char *d);
 
   ASTReader &getReader() const { return Reader; }
-
-  bool hasMoreInformationInDependencies() const {
-    return hasMacroDefinitionInDependencies;
-  }
 };
 
 /// The on-disk hash table used to contain information about

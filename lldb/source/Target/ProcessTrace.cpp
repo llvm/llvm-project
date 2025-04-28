@@ -36,8 +36,7 @@ ProcessSP ProcessTrace::CreateInstance(TargetSP target_sp,
                                        bool can_connect) {
   if (can_connect)
     return nullptr;
-  return std::make_shared<ProcessTrace>(target_sp, listener_sp,
-                                        crash_file ? *crash_file : FileSpec());
+  return std::make_shared<ProcessTrace>(target_sp, listener_sp, *crash_file);
 }
 
 bool ProcessTrace::CanDebug(TargetSP target_sp, bool plugin_specified_by_name) {

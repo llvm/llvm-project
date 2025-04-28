@@ -80,10 +80,12 @@ public:
     sumSigns.append(gf.signs);
 
     std::vector<ParamPoint> sumNumerators = numerators;
-    llvm::append_range(sumNumerators, gf.numerators);
+    sumNumerators.insert(sumNumerators.end(), gf.numerators.begin(),
+                         gf.numerators.end());
 
     std::vector<std::vector<Point>> sumDenominators = denominators;
-    llvm::append_range(sumDenominators, gf.denominators);
+    sumDenominators.insert(sumDenominators.end(), gf.denominators.begin(),
+                           gf.denominators.end());
     return GeneratingFunction(numParam, sumSigns, sumNumerators,
                               sumDenominators);
   }

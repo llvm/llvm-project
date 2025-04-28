@@ -101,7 +101,7 @@ TokenSequence Definition::Tokenize(const std::vector<std::string> &argNames,
         continue;
       }
     }
-    result.AppendRange(token, firstToken + j, 1);
+    result.Put(token, firstToken + j, 1);
   }
   return result;
 }
@@ -170,7 +170,7 @@ static TokenSequence TokenPasting(TokenSequence &&text) {
       }
     } else if (pasting && text.TokenAt(j).IsBlank()) {
     } else {
-      result.AppendRange(text, j, 1);
+      result.Put(text, j, 1);
       pasting = false;
     }
   }
@@ -223,7 +223,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
         CHECK(resultSize > 0 &&
             result.TokenAt(resultSize - 1) == replacement_.TokenAt(prev - 1));
         result.pop_back();
-        result.CopyAll(Stringify(args[index], prescanner.allSources()));
+        result.Put(Stringify(args[index], prescanner.allSources()));
       } else {
         const TokenSequence *arg{&args[index]};
         std::optional<TokenSequence> replaced;
@@ -243,7 +243,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
             }
           }
         }
-        result.CopyAll(DEREF(arg));
+        result.Put(DEREF(arg));
       }
     } else if (bytes == 11 && isVariadic_ &&
         token.ToString() == "__VA_ARGS__") {
@@ -254,7 +254,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
         if (k > argumentCount()) {
           result.Put(","s, commaProvenance);
         }
-        result.CopyAll(args[k]);
+        result.Put(args[k]);
       }
     } else if (bytes == 10 && isVariadic_ && token.ToString() == "__VA_OPT__" &&
         j + 2 < tokens && replacement_.TokenAt(j + 1).OnlyNonBlank() == '(' &&
@@ -274,7 +274,7 @@ TokenSequence Definition::Apply(const std::vector<TokenSequence> &args,
           }
         }
       }
-      result.AppendRange(replacement_, j);
+      result.Put(replacement_, j);
     }
   }
   return TokenPasting(std::move(result));
@@ -338,18 +338,18 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
           inIfExpression](std::size_t after, const TokenSequence &replacement,
           std::size_t pFLMOffset) {
         if (after < input.SizeInTokens()) {
-          result.AppendRange(replacement, 0, pFLMOffset);
+          result.Put(replacement, 0, pFLMOffset);
           TokenSequence suffix;
-          suffix.AppendRange(
+          suffix.Put(
               replacement, pFLMOffset, replacement.SizeInTokens() - pFLMOffset);
-          suffix.AppendRange(input, after, input.SizeInTokens() - after);
+          suffix.Put(input, after, input.SizeInTokens() - after);
           auto further{ReplaceMacros(
               suffix, prescanner, partialFunctionLikeMacro, inIfExpression)};
           if (partialFunctionLikeMacro && *partialFunctionLikeMacro) {
             // still not closed
             **partialFunctionLikeMacro += result.SizeInTokens();
           }
-          result.CopyAll(further);
+          result.Put(further);
           return true;
         } else {
           if (partialFunctionLikeMacro) {
@@ -362,7 +362,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
   for (; j < tokens; ++j) {
     CharBlock token{input.TokenAt(j)};
     if (token.IsBlank() || !IsLegalIdentifierStart(token[0])) {
-      result.AppendRange(input, j);
+      result.Put(input, j);
       continue;
     }
     // Process identifier in replacement text.
@@ -388,12 +388,12 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       }
     }
     if (it == definitions_.end()) {
-      result.AppendRange(input, j);
+      result.Put(input, j);
       continue;
     }
     Definition *def{&it->second};
     if (def->isDisabled()) {
-      result.AppendRange(input, j);
+      result.Put(input, j);
       continue;
     }
     if (!def->isFunctionLike()) {
@@ -444,7 +444,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         ProvenanceRange use{input.GetTokenProvenanceRange(j)};
         ProvenanceRange newRange{
             allSources_.AddMacroCall(from, use, replaced.ToString())};
-        result.CopyWithProvenance(replaced, newRange);
+        result.Put(replaced, newRange);
       }
     } else {
       // Possible function-like macro call.  Skip spaces and newlines to see
@@ -461,10 +461,10 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       if (!leftParen) {
         if (partialFunctionLikeMacro) {
           *partialFunctionLikeMacro = result.SizeInTokens();
-          result.AppendRange(input, j, tokens - j);
+          result.Put(input, j, tokens - j);
           return result;
         } else {
-          result.AppendRange(input, j);
+          result.Put(input, j);
           continue;
         }
       }
@@ -491,11 +491,11 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
       }
       if (k >= tokens && partialFunctionLikeMacro) {
         *partialFunctionLikeMacro = result.SizeInTokens();
-        result.AppendRange(input, j, tokens - j);
+        result.Put(input, j, tokens - j);
         return result;
       } else if (k >= tokens || argStart.size() < def->argumentCount() ||
           (argStart.size() > def->argumentCount() && !def->isVariadic())) {
-        result.AppendRange(input, j);
+        result.Put(input, j);
         continue;
       }
       std::vector<TokenSequence> args;
@@ -520,7 +520,7 @@ std::optional<TokenSequence> Preprocessor::MacroReplacement(
         ProvenanceRange use{input.GetIntervalProvenanceRange(j, k - j)};
         ProvenanceRange newRange{
             allSources_.AddMacroCall(from, use, replaced.ToString())};
-        result.CopyWithProvenance(replaced, newRange);
+        result.Put(replaced, newRange);
       }
       j = k; // advance to the terminal ')'
     }
@@ -840,15 +840,6 @@ CharBlock Preprocessor::SaveTokenAsName(const CharBlock &t) {
 
 bool Preprocessor::IsNameDefined(const CharBlock &token) {
   return definitions_.find(token) != definitions_.end();
-}
-
-bool Preprocessor::IsNameDefinedEmpty(const CharBlock &token) {
-  if (auto it{definitions_.find(token)}; it != definitions_.end()) {
-    const Definition &def{it->second};
-    return !def.isFunctionLike() && def.replacement().SizeInChars() == 0;
-  } else {
-    return false;
-  }
 }
 
 bool Preprocessor::IsFunctionLikeDefinition(const CharBlock &token) {

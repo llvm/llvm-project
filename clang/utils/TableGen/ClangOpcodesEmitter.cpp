@@ -171,12 +171,16 @@ void ClangOpcodesEmitter::EmitDisasm(raw_ostream &OS, StringRef N,
   OS << "#ifdef GET_DISASM\n";
   Enumerate(R, N, [R, &OS](ArrayRef<const Record *>, const Twine &ID) {
     OS << "case OP_" << ID << ":\n";
-    OS << "  Text.Op = PrintName(\"" << ID << "\");\n";
-    for (const auto *Arg : R->getValueAsListOfDefs("Args"))
-      OS << "  Text.Args.push_back(printArg<" << Arg->getValueAsString("Name")
-         << ">(P, PC));\n";
+    OS << "  PrintName(\"" << ID << "\");\n";
+    OS << "  OS << \"\\t\"";
 
-    OS << "  break;\n";
+    for (const auto *Arg : R->getValueAsListOfDefs("Args")) {
+      OS << " << ReadArg<" << Arg->getValueAsString("Name") << ">(P, PC)";
+      OS << " << \" \"";
+    }
+
+    OS << " << \"\\n\";\n";
+    OS << "  continue;\n";
   });
   OS << "#endif\n";
 }

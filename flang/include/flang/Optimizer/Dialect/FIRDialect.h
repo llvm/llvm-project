@@ -44,9 +44,6 @@ void addFIRInlinerExtension(mlir::DialectRegistry &registry);
 // Register implementation of LLVMTranslationDialectInterface.
 void addFIRToLLVMIRExtension(mlir::DialectRegistry &registry);
 
-void registerFortranTempArrayCopyIsSafeExternalModels(
-    mlir::DialectRegistry &registry);
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H

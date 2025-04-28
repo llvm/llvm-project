@@ -43,8 +43,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 1, "");
     static_assert(sizeof(T1) == 10, "");
@@ -57,8 +56,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 2, "");
     static_assert(sizeof(T1) == 10, "");
@@ -71,8 +69,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 12, "");
@@ -85,8 +82,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
@@ -99,8 +95,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 16, "");
     static_assert(sizeof(T1) == 16, "");
@@ -113,8 +108,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 32, "");
     static_assert(sizeof(T1) == 32, "");
@@ -127,8 +121,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 32, "");
     static_assert(sizeof(T1) == 32, "");
@@ -141,8 +134,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 32, "");
     static_assert(sizeof(T1) == 64, "");
@@ -155,8 +147,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 16, "");
     static_assert(sizeof(T1) == 16, "");
@@ -169,8 +160,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 1, "");
     static_assert(sizeof(T1) == 1, "");
@@ -183,8 +173,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 2, "");
     static_assert(sizeof(T1) == 2, "");
@@ -197,8 +186,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 2, "");
     static_assert(sizeof(T1) == 4, "");
@@ -211,8 +199,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 4, "");
@@ -225,8 +212,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 8, "");
@@ -236,8 +222,7 @@ int main(int, char**)
 #if TEST_STD_VER > 11
     ASSERT_SAME_TYPE(T1, std::aligned_storage_t<7>);
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 4, "");
     static_assert(sizeof(T1) == 8, "");
@@ -250,8 +235,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 8, "");
@@ -264,8 +248,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
@@ -278,8 +261,7 @@ int main(int, char**)
 #if TEST_STD_VER <= 17
     static_assert(std::is_pod<T1>::value, "");
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
@@ -289,8 +271,7 @@ int main(int, char**)
 #if TEST_STD_VER > 11
     ASSERT_SAME_TYPE(T1, std::aligned_storage_t<16>);
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
 #if TEST_STD_VER >= 11
     const std::size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
@@ -308,8 +289,7 @@ int main(int, char**)
 #if TEST_STD_VER > 11
     ASSERT_SAME_TYPE(T1, std::aligned_storage_t<17>);
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
 #if TEST_STD_VER >= 11
     const std::size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
@@ -328,8 +308,7 @@ int main(int, char**)
 #if TEST_STD_VER > 11
     ASSERT_SAME_TYPE(T1, std::aligned_storage_t<10>);
 #endif
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == 8, "");
     static_assert(sizeof(T1) == 16, "");
@@ -337,8 +316,7 @@ int main(int, char**)
   {
     const int Align = 8192;
     typedef typename std::aligned_storage<1, Align>::type T1;
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == Align, "");
     static_assert(sizeof(T1) == Align, "");
@@ -348,8 +326,7 @@ int main(int, char**)
   {
     const int Align = 65536;
     typedef typename std::aligned_storage<1, Align>::type T1;
-    static_assert(std::is_trivially_copyable<T1>::value, "");
-    static_assert(std::is_trivially_default_constructible<T1>::value, "");
+    static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
     static_assert(std::alignment_of<T1>::value == Align, "");
     static_assert(sizeof(T1) == Align, "");

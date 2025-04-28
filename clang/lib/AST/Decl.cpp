@@ -57,7 +57,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -810,7 +809,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // functions as the host-callable kernel functions are emitted at codegen.
     if (Context.getLangOpts().OpenMP &&
         Context.getLangOpts().OpenMPIsTargetDevice &&
-        (Context.getTargetInfo().getTriple().isGPU() ||
+        ((Context.getTargetInfo().getTriple().isAMDGPU() ||
+          Context.getTargetInfo().getTriple().isNVPTX()) ||
          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Function)))
       LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
@@ -1747,10 +1747,6 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       }
     }
 
-    // Suppress transparent contexts like export or HLSLBufferDecl context
-    if (Ctx->isTransparentContext())
-      continue;
-
     // Skip non-named contexts such as linkage specifications and ExportDecls.
     const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
     if (!ND)
@@ -2009,8 +2005,8 @@ void DeclaratorDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   }
 }
 
-void DeclaratorDecl::setTrailingRequiresClause(const AssociatedConstraint &AC) {
-  assert(AC);
+void DeclaratorDecl::setTrailingRequiresClause(Expr *TrailingRequiresClause) {
+  assert(TrailingRequiresClause);
   // Make sure the extended decl info is allocated.
   if (!hasExtInfo()) {
     // Save (non-extended) type source info pointer.
@@ -2021,7 +2017,7 @@ void DeclaratorDecl::setTrailingRequiresClause(const AssociatedConstraint &AC) {
     getExtInfo()->TInfo = savedTInfo;
   }
   // Set requires clause info.
-  getExtInfo()->TrailingRequiresClause = AC;
+  getExtInfo()->TrailingRequiresClause = TrailingRequiresClause;
 }
 
 void DeclaratorDecl::setTemplateParameterListsInfo(
@@ -3047,7 +3043,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            TypeSourceInfo *TInfo, StorageClass S,
                            bool UsesFPIntrin, bool isInlineSpecified,
                            ConstexprSpecKind ConstexprKind,
-                           const AssociatedConstraint &TrailingRequiresClause)
+                           Expr *TrailingRequiresClause)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
       DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
@@ -3082,7 +3078,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
       static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
-
   if (TrailingRequiresClause)
     setTrailingRequiresClause(TrailingRequiresClause);
 }
@@ -3362,13 +3357,15 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
 }
 
 bool FunctionDecl::isReservedGlobalPlacementOperator() const {
-  if (!getDeclName().isAnyOperatorNewOrDelete())
+  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
+    return false;
+  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
     return false;
 
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
-    return false;
-
-  if (isTypeAwareOperatorNewOrDelete())
     return false;
 
   const auto *proto = getType()->castAs<FunctionProtoType>();
@@ -3384,9 +3381,14 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   return (proto->getParamType(1).getCanonicalType() == Context.VoidPtrTy);
 }
 
-bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
-    UnsignedOrNone *AlignmentParam, bool *IsNothrow) const {
-  if (!getDeclName().isAnyOperatorNewOrDelete())
+bool FunctionDecl::isReplaceableGlobalAllocationFunction(
+    std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
+  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
+    return false;
+  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
+      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
     return false;
 
   if (isa<CXXRecordDecl>(getDeclContext()))
@@ -3396,31 +3398,8 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
-  if (isVariadic())
-    return false;
-
-  if (isTypeAwareOperatorNewOrDelete()) {
-    bool IsDelete = getDeclName().isAnyOperatorDelete();
-    unsigned RequiredParameterCount =
-        IsDelete ? FunctionDecl::RequiredTypeAwareDeleteParameterCount
-                 : FunctionDecl::RequiredTypeAwareNewParameterCount;
-    if (AlignmentParam)
-      *AlignmentParam =
-          /* type identity */ 1U + /* address */ IsDelete + /* size */ 1U;
-    if (RequiredParameterCount == getNumParams())
-      return true;
-    if (getNumParams() > RequiredParameterCount + 1)
-      return false;
-    if (!getParamDecl(RequiredParameterCount)->getType()->isNothrowT())
-      return false;
-
-    if (IsNothrow)
-      *IsNothrow = true;
-    return true;
-  }
-
   const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4)
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4 || FPT->isVariadic())
     return false;
 
   // If this is a single-parameter function, it must be a replaceable global
@@ -3440,7 +3419,8 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
   // In C++14, the next parameter can be a 'std::size_t' for sized delete.
   bool IsSizedDelete = false;
   if (Ctx.getLangOpts().SizedDeallocation &&
-      getDeclName().isAnyOperatorDelete() &&
+      (getDeclName().getCXXOverloadedOperator() == OO_Delete ||
+       getDeclName().getCXXOverloadedOperator() == OO_Array_Delete) &&
       Ctx.hasSameType(Ty, Ctx.getSizeType())) {
     IsSizedDelete = true;
     Consume();
@@ -3510,19 +3490,17 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
 }
 
 bool FunctionDecl::isDestroyingOperatorDelete() const {
-  return getASTContext().isDestroyingOperatorDelete(this);
-}
+  // C++ P0722:
+  //   Within a class C, a single object deallocation function with signature
+  //     (T, std::destroying_delete_t, <more params>)
+  //   is a destroying operator delete.
+  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete ||
+      getNumParams() < 2)
+    return false;
 
-void FunctionDecl::setIsDestroyingOperatorDelete(bool IsDestroyingDelete) {
-  getASTContext().setIsDestroyingOperatorDelete(this, IsDestroyingDelete);
-}
-
-bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
-  return getASTContext().isTypeAwareOperatorNewOrDelete(this);
-}
-
-void FunctionDecl::setIsTypeAwareOperatorNewOrDelete(bool IsTypeAware) {
-  getASTContext().setIsTypeAwareOperatorNewOrDelete(this, IsTypeAware);
+  auto *RD = getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
+         RD->getIdentifier()->isStr("destroying_delete_t");
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {
@@ -3589,7 +3567,7 @@ bool FunctionDecl::isMemberLikeConstrainedFriend() const {
     // If these friends don't have constraints, they aren't constrained, and
     // thus don't fall under temp.friend p9. Else the simple presence of a
     // constraint makes them unique.
-    return !getTrailingRequiresClause().isNull();
+    return getTrailingRequiresClause();
   }
 
   return FriendConstraintRefersToEnclosingTemplate();
@@ -3910,25 +3888,8 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
 
 FunctionTypeLoc FunctionDecl::getFunctionTypeLoc() const {
   const TypeSourceInfo *TSI = getTypeSourceInfo();
-
-  if (!TSI)
-    return FunctionTypeLoc();
-
-  TypeLoc TL = TSI->getTypeLoc();
-  FunctionTypeLoc FTL;
-
-  while (!(FTL = TL.getAs<FunctionTypeLoc>())) {
-    if (const auto PTL = TL.getAs<ParenTypeLoc>())
-      TL = PTL.getInnerLoc();
-    else if (const auto ATL = TL.getAs<AttributedTypeLoc>())
-      TL = ATL.getEquivalentTypeLoc();
-    else if (const auto MQTL = TL.getAs<MacroQualifiedTypeLoc>())
-      TL = MQTL.getInnerLoc();
-    else
-      break;
-  }
-
-  return FTL;
+  return TSI ? TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>()
+             : FunctionTypeLoc();
 }
 
 SourceRange FunctionDecl::getReturnTypeSourceRange() const {
@@ -5488,7 +5449,7 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                      TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                      bool isInlineSpecified, bool hasWrittenPrototype,
                      ConstexprSpecKind ConstexprKind,
-                     const AssociatedConstraint &TrailingRequiresClause) {
+                     Expr *TrailingRequiresClause) {
   FunctionDecl *New = new (C, DC) FunctionDecl(
       Function, C, DC, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
       isInlineSpecified, ConstexprKind, TrailingRequiresClause);
@@ -5499,12 +5460,7 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
 FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) FunctionDecl(
       Function, C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(),
-      nullptr, SC_None, false, false, ConstexprSpecKind::Unspecified,
-      /*TrailingRequiresClause=*/{});
-}
-
-bool FunctionDecl::isReferenceableKernel() const {
-  return hasAttr<CUDAGlobalAttr>() || hasAttr<OpenCLKernelAttr>();
+      nullptr, SC_None, false, false, ConstexprSpecKind::Unspecified, nullptr);
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
@@ -5761,7 +5717,7 @@ HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
                                SourceLocation IDLoc, SourceLocation LBrace)
     : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
       DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
-      IsCBuffer(CBuffer), HasValidPackoffset(false), LayoutStruct(nullptr) {}
+      IsCBuffer(CBuffer) {}
 
 HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
                                        DeclContext *LexicalParent, bool CBuffer,
@@ -5785,58 +5741,10 @@ HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
   return Result;
 }
 
-HLSLBufferDecl *
-HLSLBufferDecl::CreateDefaultCBuffer(ASTContext &C, DeclContext *LexicalParent,
-                                     ArrayRef<Decl *> DefaultCBufferDecls) {
-  DeclContext *DC = LexicalParent;
-  IdentifierInfo *II = &C.Idents.get("$Globals", tok::TokenKind::identifier);
-  HLSLBufferDecl *Result = new (C, DC) HLSLBufferDecl(
-      DC, true, SourceLocation(), II, SourceLocation(), SourceLocation());
-  Result->setImplicit(true);
-  Result->setDefaultBufferDecls(DefaultCBufferDecls);
-  return Result;
-}
-
 HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID) {
   return new (C, ID) HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
                                     SourceLocation(), SourceLocation());
-}
-
-void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
-  assert(LayoutStruct == nullptr && "layout struct has already been set");
-  LayoutStruct = LS;
-  addDecl(LS);
-}
-
-void HLSLBufferDecl::setDefaultBufferDecls(ArrayRef<Decl *> Decls) {
-  assert(!Decls.empty());
-  assert(DefaultBufferDecls.empty() && "default decls are already set");
-  assert(isImplicit() &&
-         "default decls can only be added to the implicit/default constant "
-         "buffer $Globals");
-
-  // allocate array for default decls with ASTContext allocator
-  Decl **DeclsArray = new (getASTContext()) Decl *[Decls.size()];
-  std::copy(Decls.begin(), Decls.end(), DeclsArray);
-  DefaultBufferDecls = ArrayRef<Decl *>(DeclsArray, Decls.size());
-}
-
-HLSLBufferDecl::buffer_decl_iterator
-HLSLBufferDecl::buffer_decls_begin() const {
-  return buffer_decl_iterator(llvm::iterator_range(DefaultBufferDecls.begin(),
-                                                   DefaultBufferDecls.end()),
-                              decl_range(decls_begin(), decls_end()));
-}
-
-HLSLBufferDecl::buffer_decl_iterator HLSLBufferDecl::buffer_decls_end() const {
-  return buffer_decl_iterator(
-      llvm::iterator_range(DefaultBufferDecls.end(), DefaultBufferDecls.end()),
-      decl_range(decls_end(), decls_end()));
-}
-
-bool HLSLBufferDecl::buffer_decls_empty() {
-  return DefaultBufferDecls.empty() && decls_empty();
 }
 
 //===----------------------------------------------------------------------===//

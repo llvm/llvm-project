@@ -22,11 +22,10 @@ using namespace mlir::mesh;
 
 namespace {
 
-// Sharding of tensor.empty/tensor.splat
-template <typename OpTy>
-struct CreatorOpShardingInterface
-    : public ShardingInterface::ExternalModel<CreatorOpShardingInterface<OpTy>,
-                                              OpTy> {
+// Sharding of tensor.empty
+struct EmptyOpShardingInterface
+    : public ShardingInterface::ExternalModel<EmptyOpShardingInterface,
+                                              tensor::EmptyOp> {
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto ndims = mlir::cast<ShapedType>(op->getResult(0).getType()).getRank();
     return SmallVector<utils::IteratorType>(ndims,
@@ -39,9 +38,7 @@ struct CreatorOpShardingInterface
     auto type = dyn_cast<RankedTensorType>(val.getType());
     if (!type)
       return {};
-    return SmallVector<AffineMap>(
-        op->getNumOperands() + op->getNumResults(),
-        {AffineMap::getMultiDimIdentityMap(type.getRank(), ctx)});
+    return {AffineMap::getMultiDimIdentityMap(type.getRank(), ctx)};
   }
 
   LogicalResult spmdize(Operation *op, ArrayRef<Value> spmdizedOperands,
@@ -50,41 +47,34 @@ struct CreatorOpShardingInterface
                         IRMapping &spmdizationMap,
                         SymbolTableCollection &symbolTable,
                         OpBuilder &builder) const {
-    assert(resultShardings.size() == 1);
-    auto resType = cast<RankedTensorType>(op->getResult(0).getType());
-    mlir::mesh::MeshOp mesh;
-    ShapedType shardType;
-    if (resType.getRank() > 0) {
-      mesh = mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable);
-      shardType =
-          cast<ShapedType>(mesh::shardType(resType, mesh, resultShardings[0]));
-    } else {
-      shardType = resType;
-    }
+    auto shardType = cast<ShapedType>(mesh::shardType(
+        op->getResult(0).getType(),
+        mesh::getMesh(op, resultShardings[0].getMeshAttr(), symbolTable),
+        resultShardings[0]));
     Operation *newOp = nullptr;
     // if the sharding introduces a new dynamic dimension, we take it from
     // the dynamic sharding info. For now bail out if it's not
     // provided.
+    assert(resultShardings.size() == 1);
     if (!shardType.hasStaticShape()) {
       assert(op->getResult(0).hasOneUse());
       SmallVector<Value> newOperands;
-      auto oldType = cast<ShapedType>(resType);
+      auto oldType = cast<ShapedType>(op->getResult(0).getType());
       assert(oldType.getRank() == shardType.getRank());
       int currOldOprndNum = -1;
       mesh::ShardShapeOp shapeForDevice;
-      ValueRange device;
+      Value device;
       Operation *newSharding = nullptr;
       for (auto i = 0; i < oldType.getRank(); ++i) {
         if (!oldType.isDynamicDim(i) && shardType.isDynamicDim(i)) {
           if (!newSharding) {
             newSharding =
                 builder.create<ShardingOp>(op->getLoc(), resultShardings[0]);
-            device =
-                builder.create<mesh::ProcessMultiIndexOp>(op->getLoc(), mesh)
-                    .getResults();
+            device = builder.create<mesh::ProcessLinearIndexOp>(
+                op->getLoc(), resultShardings[0].getMesh());
             shapeForDevice = builder.create<mesh::ShardShapeOp>(
-                op->getLoc(), oldType.getShape(), spmdizedOperands,
-                newSharding->getResult(0), device);
+                op->getLoc(), oldType.getShape(), newSharding->getResult(0),
+                device);
           }
           newOperands.emplace_back(shapeForDevice.getResult()[i]);
         } else if (oldType.isDynamicDim(i)) {
@@ -92,7 +82,8 @@ struct CreatorOpShardingInterface
           newOperands.emplace_back(spmdizedOperands[++currOldOprndNum]);
         }
       }
-      newOp = builder.create<OpTy>(op->getLoc(), shardType, newOperands);
+      newOp =
+          builder.create<tensor::EmptyOp>(op->getLoc(), shardType, newOperands);
       spmdizationMap.map(op->getResult(0), newOp->getResult(0));
     } else {
       // `clone` will populate the mapping of old to new results.
@@ -109,9 +100,6 @@ void mlir::tensor::registerShardingInterfaceExternalModels(
     DialectRegistry &registry) {
 
   registry.addExtension(+[](MLIRContext *ctx, TensorDialect *dialect) {
-    EmptyOp::template attachInterface<CreatorOpShardingInterface<EmptyOp>>(
-        *ctx);
-    SplatOp::template attachInterface<CreatorOpShardingInterface<SplatOp>>(
-        *ctx);
+    EmptyOp::template attachInterface<EmptyOpShardingInterface>(*ctx);
   });
 }

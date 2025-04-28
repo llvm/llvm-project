@@ -481,7 +481,7 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
       if (CS.isSpilledToReg())
         continue;
 
-      MCRegister Reg = CS.getReg();
+      unsigned Reg = CS.getReg();
       const TargetRegisterClass *RC = RegInfo->getMinimalPhysRegClass(Reg);
 
       int FrameIdx;
@@ -570,7 +570,7 @@ static void updateLiveness(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const CalleeSavedInfo &I : CSI) {
     for (MachineBasicBlock *MBB : Visited) {
-      MCRegister Reg = I.getReg();
+      MCPhysReg Reg = I.getReg();
       // Add the callee-saved register as live-in.
       // It's killed at the spill.
       if (!MRI.isReserved(Reg) && !MBB->isLiveIn(Reg))
@@ -585,7 +585,7 @@ static void updateLiveness(MachineFunction &MF) {
       for (MachineBasicBlock &MBB : MF) {
         if (Visited.count(&MBB))
           continue;
-        MCRegister DstReg = I.getDstReg();
+        MCPhysReg DstReg = I.getDstReg();
         if (!MBB.isLiveIn(DstReg))
           MBB.addLiveIn(DstReg);
       }
@@ -605,12 +605,12 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
-      MCRegister Reg = CS.getReg();
+      unsigned Reg = CS.getReg();
 
       if (CS.isSpilledToReg()) {
-        BuildMI(SaveBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY),
-                CS.getDstReg())
-            .addReg(Reg, getKillRegState(true));
+        BuildMI(SaveBlock, I, DebugLoc(),
+                TII.get(TargetOpcode::COPY), CS.getDstReg())
+          .addReg(Reg, getKillRegState(true));
       } else {
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
@@ -634,10 +634,10 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      MCRegister Reg = CI.getReg();
+      unsigned Reg = CI.getReg();
       if (CI.isSpilledToReg()) {
         BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
-            .addReg(CI.getDstReg(), getKillRegState(true));
+          .addReg(CI.getDstReg(), getKillRegState(true));
       } else {
         const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
         TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC,
@@ -1386,6 +1386,48 @@ bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
                                       unsigned OpIdx, int SPAdj) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  const DataLayout &DL = MF.getDataLayout();
+  const Function &F = MF.getFunction();
+  LLVMContext &Context = F.getContext();
+
+  if (MI.isDebugDef()) {
+    MachineOperand &Op = MI.getOperand(OpIdx);
+    assert(MI.isDebugOperand(&Op) &&
+           "Frame indices can only appear as a debug operand in a DBG_DEF"
+           " machine instruction");
+    assert(&Op == &MI.getDebugReferrer() &&
+           "Frame indices can only appear as the referrer of DBG_DEF "
+           "machine instructions");
+    Register Reg;
+    unsigned FrameIdx = Op.getIndex();
+    StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
+
+    if (Reg) {
+      Op.ChangeToRegister(Reg, false /*isDef*/);
+      Op.setIsDebug();
+    } else {
+      Op.ChangeToImmediate(0);
+    }
+
+    DILifetime *Lifetime = MI.getDebugLifetime();
+    DIExprBuilder Builder = Lifetime->getLocation()->builder();
+    for (auto &&I = Builder.begin(); I != Builder.end(); ++I) {
+      if (auto *Referrer = std::get_if<DIOp::Referrer>(&*I)) {
+        Type *ResultType = Referrer->getResultType();
+        unsigned PointerSizeInBits =
+            DL.getPointerSizeInBits(DL.getAllocaAddrSpace());
+        ConstantData *C =
+            ConstantInt::get(IntegerType::get(Context, PointerSizeInBits),
+                             Offset.getFixed(), true);
+        std::initializer_list<DIOp::Variant> IL = {
+            DIOp::Constant(C), DIOp::ByteOffset(ResultType)};
+        I = TFI->insertFrameLocation(
+            MF, Builder, Builder.insert(Builder.erase(I), IL), ResultType);
+      }
+    }
+    Lifetime->setLocation(Builder.intoExpr());
+    return true;
+  }
 
   if (MI.isDebugValue() && MI.getDebugExpression()->holdsNewElements()) {
     MachineOperand &Op = MI.getOperand(OpIdx);

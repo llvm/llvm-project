@@ -81,7 +81,9 @@ class AArch64A53Fix835769 : public MachineFunctionPass {
 
 public:
   static char ID;
-  explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {}
+  explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {
+    initializeAArch64A53Fix835769Pass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

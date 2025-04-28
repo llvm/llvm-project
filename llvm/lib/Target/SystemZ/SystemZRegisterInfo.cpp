@@ -58,7 +58,8 @@ static void addHints(ArrayRef<MCPhysReg> Order,
                      SmallVectorImpl<MCPhysReg> &Hints,
                      const TargetRegisterClass *RC,
                      const MachineRegisterInfo *MRI) {
-  SmallSet<unsigned, 4> CopyHints(llvm::from_range, Hints);
+  SmallSet<unsigned, 4> CopyHints;
+  CopyHints.insert(Hints.begin(), Hints.end());
   Hints.clear();
   for (MCPhysReg Reg : Order)
     if (CopyHints.count(Reg) &&
@@ -232,9 +233,8 @@ SystemZELFRegisters::getCallPreservedMask(const MachineFunction &MF,
   return CSR_SystemZ_ELF_RegMask;
 }
 
-SystemZRegisterInfo::SystemZRegisterInfo(unsigned int RA, unsigned int HwMode)
-    : SystemZGenRegisterInfo(RA, /*DwarfFlavour=*/0, /*EHFlavour=*/0, /*PC=*/0,
-                             HwMode) {}
+SystemZRegisterInfo::SystemZRegisterInfo(unsigned int RA)
+    : SystemZGenRegisterInfo(RA) {}
 
 const MCPhysReg *
 SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {

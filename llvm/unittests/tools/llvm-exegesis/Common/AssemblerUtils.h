@@ -29,15 +29,16 @@ namespace exegesis {
 
 class MachineFunctionGeneratorBaseTest : public ::testing::Test {
 protected:
-  MachineFunctionGeneratorBaseTest(const std::string &TargetStr,
+  MachineFunctionGeneratorBaseTest(const std::string &TT,
                                    const std::string &CpuName)
-      : TT(TargetStr), CpuName(CpuName),
-        CanExecute(TT.getArch() == Triple(sys::getProcessTriple()).getArch()),
-        ET(ExegesisTarget::lookup(TT)) {
+      : TT(TT), CpuName(CpuName),
+        CanExecute(Triple(TT).getArch() ==
+                   Triple(sys::getProcessTriple()).getArch()),
+        ET(ExegesisTarget::lookup(Triple(TT))) {
     assert(ET);
     if (!CanExecute) {
       outs() << "Skipping execution, host:" << sys::getProcessTriple()
-             << ", target:" << TT.str() << "\n";
+             << ", target:" << TT << "\n";
     }
   }
 
@@ -63,11 +64,11 @@ private:
   std::unique_ptr<TargetMachine> createTargetMachine() {
     std::string Error;
     const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
-    EXPECT_TRUE(TheTarget) << Error << " " << TT.str();
+    EXPECT_TRUE(TheTarget) << Error << " " << TT;
     const TargetOptions Options;
     TargetMachine *TM = TheTarget->createTargetMachine(TT, CpuName, "", Options,
                                                        Reloc::Model::Static);
-    EXPECT_TRUE(TM) << TT.str() << " " << CpuName;
+    EXPECT_TRUE(TM) << TT << " " << CpuName;
     return std::unique_ptr<TargetMachine>(TM);
   }
 
@@ -89,7 +90,7 @@ private:
     return std::move(*ExecFunc);
   }
 
-  const Triple TT;
+  const std::string TT;
   const std::string CpuName;
   const bool CanExecute;
   const ExegesisTarget *const ET;

@@ -230,7 +230,7 @@ Error LVCompare::execute(LVReader *ReferenceReader, LVReader *TargetReader) {
         }
         if (Pass == LVComparePass::Added)
           // Record all the current missing elements for this category.
-          llvm::append_range(Set, Elements);
+          Set.insert(Set.end(), Elements.begin(), Elements.end());
         if (options().getReportList()) {
           if (Elements.size()) {
             OS << "\n(" << Elements.size() << ") "

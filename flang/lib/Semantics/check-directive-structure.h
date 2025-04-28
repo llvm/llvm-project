@@ -202,7 +202,6 @@ protected:
     const PC *clause{nullptr};
     ClauseMapTy clauseInfo;
     std::list<C> actualClauses;
-    std::list<C> endDirectiveClauses;
     std::list<C> crtGroup;
     Symbol *loopIV{nullptr};
   };

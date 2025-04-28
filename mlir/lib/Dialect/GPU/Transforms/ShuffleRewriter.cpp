@@ -40,9 +40,8 @@ struct GpuShuffleRewriter : public OpRewritePattern<gpu::ShuffleOp> {
     auto i64 = rewriter.getI64Type();
 
     // If the type of the value is either i32 or f32, the op is already valid.
-    if (!valueType.isIntOrFloat() || valueType.getIntOrFloatBitWidth() != 64)
-      return rewriter.notifyMatchFailure(
-          op, "only 64-bit int/float types are supported");
+    if (valueType.getIntOrFloatBitWidth() == 32)
+      return failure();
 
     Value lo, hi;
 

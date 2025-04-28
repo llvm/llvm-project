@@ -56,6 +56,8 @@ public:
 
   lldb::ChildCacheState Update() override = 0;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 protected:
@@ -218,6 +220,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
+  bool MightHaveChildren() override;
+
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -320,6 +324,8 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
+
+  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 };
@@ -526,6 +532,11 @@ lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<D32, D64>::Update() {
                          : lldb::ChildCacheState::eRefetch;
 }
 
+bool
+lldb_private::formatters::NSArrayMSyntheticFrontEndBase::MightHaveChildren() {
+  return true;
+}
+
 size_t
 lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetIndexOfChildWithName(
     ConstString name) {
@@ -664,6 +675,13 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64,
 }
 
 template <typename D32, typename D64, bool Inline>
+bool
+lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
+  MightHaveChildren() {
+  return true;
+}
+
+template <typename D32, typename D64, bool Inline>
 lldb::ValueObjectSP
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   GetChildAtIndex(uint32_t idx) {
@@ -744,6 +762,10 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::CalculateNumChildren() {
 lldb::ChildCacheState
 lldb_private::formatters::NSArray1SyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
+}
+
+bool lldb_private::formatters::NSArray1SyntheticFrontEnd::MightHaveChildren() {
+  return true;
 }
 
 lldb::ValueObjectSP

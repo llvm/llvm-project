@@ -1856,7 +1856,8 @@ static void joinOperandTree(EquivalenceClasses<Instruction *> &UnionFind,
         continue;
 
       // Check if OpInst is in the BB and is a modeled instruction.
-      if (!UnionFind.contains(OpInst))
+      auto OpVal = UnionFind.findValue(OpInst);
+      if (OpVal == UnionFind.end())
         continue;
 
       UnionFind.unionSets(Inst, OpInst);
@@ -2632,7 +2633,8 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
         if (auto *Ptr = dyn_cast<Instruction>(Load->getPointerOperand())) {
           const auto &It = State.find(Ptr);
           if (It != State.end())
-            InvalidLoads.insert_range(llvm::make_first_range(It->second));
+            for (const auto &FlowInSetElem : It->second)
+              InvalidLoads.insert(FlowInSetElem.first);
         }
 
         // If this load is used outside this stmt, invalidate it.
@@ -2652,7 +2654,8 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
                 dyn_cast<Instruction>(Store->getPointerOperand())) {
           const auto &It = State.find(Ptr);
           if (It != State.end())
-            InvalidLoads.insert_range(llvm::make_first_range(It->second));
+            for (const auto &FlowInSetElem : It->second)
+              InvalidLoads.insert(FlowInSetElem.first);
         }
 
         // Propagate the uses of the value operand to the store
@@ -2707,7 +2710,8 @@ void ScopBuilder::checkForReductions(ScopStmt &Stmt) {
       // If this operation is used outside the stmt, invalidate all the loads
       // which feed into it.
       if (UsedOutsideStmt)
-        InvalidLoads.insert_range(llvm::make_first_range(InstInFlowSet));
+        for (const auto &FlowInSetElem : InstInFlowSet)
+          InvalidLoads.insert(FlowInSetElem.first);
     }
   }
 

@@ -56,7 +56,9 @@ struct DomViewerWrapperPass
   DomViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             DominatorTreeWrapperPass, false, DominatorTree *,
-            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {}
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {
+    initializeDomViewerWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
 };
 
 struct DomOnlyViewerWrapperPass
@@ -67,7 +69,9 @@ struct DomOnlyViewerWrapperPass
   DomOnlyViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             DominatorTreeWrapperPass, true, DominatorTree *,
-            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {}
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {
+    initializeDomOnlyViewerWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
 };
 
 struct LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits {
@@ -85,7 +89,9 @@ struct PostDomViewerWrapperPass
       : DOTGraphTraitsViewerWrapperPass<
             PostDominatorTreeWrapperPass, false, PostDominatorTree *,
             LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>("postdom",
-                                                                   ID) {}
+                                                                   ID) {
+    initializePostDomViewerWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
 };
 
 struct PostDomOnlyViewerWrapperPass
@@ -97,7 +103,10 @@ struct PostDomOnlyViewerWrapperPass
       : DOTGraphTraitsViewerWrapperPass<
             PostDominatorTreeWrapperPass, true, PostDominatorTree *,
             LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>(
-            "postdomonly", ID) {}
+            "postdomonly", ID) {
+    initializePostDomOnlyViewerWrapperPassPass(
+        *PassRegistry::getPassRegistry());
+  }
 };
 } // end anonymous namespace
 
@@ -129,7 +138,9 @@ struct DomPrinterWrapperPass
   DomPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             DominatorTreeWrapperPass, false, DominatorTree *,
-            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {}
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("dom", ID) {
+    initializeDomPrinterWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
 };
 
 struct DomOnlyPrinterWrapperPass
@@ -140,7 +151,9 @@ struct DomOnlyPrinterWrapperPass
   DomOnlyPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             DominatorTreeWrapperPass, true, DominatorTree *,
-            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {}
+            LegacyDominatorTreeWrapperPassAnalysisGraphTraits>("domonly", ID) {
+    initializeDomOnlyPrinterWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
 };
 
 struct PostDomPrinterWrapperPass
@@ -152,7 +165,9 @@ struct PostDomPrinterWrapperPass
       : DOTGraphTraitsPrinterWrapperPass<
             PostDominatorTreeWrapperPass, false, PostDominatorTree *,
             LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>("postdom",
-                                                                   ID) {}
+                                                                   ID) {
+    initializePostDomPrinterWrapperPassPass(*PassRegistry::getPassRegistry());
+  }
 };
 
 struct PostDomOnlyPrinterWrapperPass
@@ -164,7 +179,10 @@ struct PostDomOnlyPrinterWrapperPass
       : DOTGraphTraitsPrinterWrapperPass<
             PostDominatorTreeWrapperPass, true, PostDominatorTree *,
             LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits>(
-            "postdomonly", ID) {}
+            "postdomonly", ID) {
+    initializePostDomOnlyPrinterWrapperPassPass(
+        *PassRegistry::getPassRegistry());
+  }
 };
 } // end anonymous namespace
 

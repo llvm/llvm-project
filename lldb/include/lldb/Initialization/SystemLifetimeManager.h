@@ -23,7 +23,8 @@ public:
   SystemLifetimeManager();
   ~SystemLifetimeManager();
 
-  llvm::Error Initialize(std::unique_ptr<SystemInitializer> initializer);
+  llvm::Error Initialize(std::unique_ptr<SystemInitializer> initializer,
+                         LoadPluginCallbackType plugin_callback);
   void Terminate();
 
 private:

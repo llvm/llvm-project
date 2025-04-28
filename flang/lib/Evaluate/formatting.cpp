@@ -129,8 +129,7 @@ llvm::raw_ostream &Constant<Type<TypeCategory::Character, KIND>>::AsFortran(
 llvm::raw_ostream &EmitVar(llvm::raw_ostream &o, const Symbol &symbol,
     std::optional<parser::CharBlock> name = std::nullopt) {
   const auto &renamings{symbol.owner().context().moduleFileOutputRenamings()};
-  if (auto iter{renamings.find(&symbol.GetUltimate())};
-      iter != renamings.end()) {
+  if (auto iter{renamings.find(&symbol)}; iter != renamings.end()) {
     return o << iter->second.ToString();
   } else if (name) {
     return o << name->ToString();

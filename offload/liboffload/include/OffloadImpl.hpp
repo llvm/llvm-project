@@ -22,7 +22,6 @@
 
 struct OffloadConfig {
   bool TracingEnabled = false;
-  bool ValidationEnabled = true;
 };
 
 OffloadConfig &offloadConfig();

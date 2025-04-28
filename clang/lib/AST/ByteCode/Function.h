@@ -91,7 +91,6 @@ public:
     Dtor,
     LambdaStaticInvoker,
     LambdaCallOperator,
-    CopyOrMoveOperator,
   };
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
 
@@ -160,10 +159,6 @@ public:
   bool isConstructor() const { return Kind == FunctionKind::Ctor; }
   /// Checks if the function is a destructor.
   bool isDestructor() const { return Kind == FunctionKind::Dtor; }
-  /// Checks if the function is copy or move operator.
-  bool isCopyOrMoveOperator() const {
-    return Kind == FunctionKind::CopyOrMoveOperator;
-  }
 
   /// Returns whether this function is a lambda static invoker,
   /// which we generate custom byte code for.
@@ -237,7 +232,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO, bool IsLambdaStaticInvoker);
+           bool HasRVO);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -257,7 +252,6 @@ private:
 private:
   friend class Program;
   friend class ByteCodeEmitter;
-  friend class Context;
 
   /// Program reference.
   Program &P;

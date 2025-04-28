@@ -392,8 +392,7 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10:       argumentInfo:
 ; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
+; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            call_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
@@ -421,8 +420,7 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10:       argumentInfo:
 ; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
+; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            call_both_with_and_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
@@ -436,8 +434,7 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10:       argumentInfo:
 ; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
+; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            call_call_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
@@ -465,8 +462,7 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10:       argumentInfo:
 ; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
+; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            call_call_both_with_and_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
@@ -480,8 +476,7 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10:       argumentInfo:
 ; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
+; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_cast_call_without_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
@@ -495,8 +490,7 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10:       argumentInfo:
 ; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
+; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_cast_call_with_private_to_flat_addrspacecast
 ; GFX10:       argumentInfo:
@@ -510,8 +504,7 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 ; GFX10:       argumentInfo:
 ; GFX10-NEXT:    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 ; GFX10-NEXT:    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-; GFX10-NEXT:    flatScratchInit: { reg: '$sgpr6_sgpr7' }
-; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr8' }
+; GFX10-NEXT:    workGroupIDX:    { reg: '$sgpr6' }
 ;
 ; GFX10: name:            with_indirect_call
 ; GFX10:       argumentInfo:

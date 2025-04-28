@@ -6,16 +6,14 @@ add_flang_library(FIRAnalysis
   FIRDialect
   FIRSupport
   HLFIRDialect
+  MLIRIR
+  MLIROpenMPDialect
 
   LINK_LIBS
   FIRBuilder
   FIRDialect
   FIRSupport
   HLFIRDialect
-
-  MLIR_DEPS
-  MLIRIR
-  MLIROpenMPDialect
 
   MLIR_LIBS
   MLIRFuncDialect

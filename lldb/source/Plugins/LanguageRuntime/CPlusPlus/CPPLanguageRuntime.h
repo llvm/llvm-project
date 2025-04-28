@@ -78,9 +78,6 @@ public:
                                                   bool stop_others) override;
 
   bool IsAllowedRuntimeValue(ConstString name) override;
-
-  bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
-
 protected:
   // Classes that inherit from CPPLanguageRuntime can see and modify these
   CPPLanguageRuntime(Process *process);

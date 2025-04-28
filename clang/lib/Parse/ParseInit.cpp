@@ -445,13 +445,13 @@ ExprResult Parser::createEmbedExpr() {
           Context.MakeIntValue(Str.size(), Context.getSizeType());
       QualType ArrayTy = Context.getConstantArrayType(
           Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
-      return StringLiteral::Create(Context, Str, StringLiteralKind::Binary,
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
                                    false, ArrayTy, StartLoc);
     };
 
     StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
         Data->BinaryData, Context.UnsignedCharTy);
-    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg, Data->FileName);
+    Res = Actions.ActOnEmbedExpr(StartLoc, BinaryDataArg);
   }
   return Res;
 }

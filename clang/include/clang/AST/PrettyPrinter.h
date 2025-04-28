@@ -76,7 +76,7 @@ struct PrintingPolicy {
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
         SuppressImplicitBase(false), FullyQualifiedName(false),
-        PrintAsCanonical(false), PrintInjectedClassNameWithArguments(true),
+        PrintCanonicalTypes(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
         UseEnumerators(true), UseHLSLTypes(LO.HLSL) {}
@@ -310,9 +310,9 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned FullyQualifiedName : 1;
 
-  /// Whether to print entities as written or canonically.
+  /// Whether to print types as written or canonically.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned PrintAsCanonical : 1;
+  unsigned PrintCanonicalTypes : 1;
 
   /// Whether to print an InjectedClassNameType with template arguments or as
   /// written. When a template argument is unnamed, printing it results in

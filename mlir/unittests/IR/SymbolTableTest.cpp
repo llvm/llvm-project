@@ -49,7 +49,8 @@ protected:
     // Check that it got renamed.
     bool calleeFound = false;
     fooOp->walk([&](CallOpInterface callOp) {
-      StringAttr callee = dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee())
+      StringAttr callee = callOp.getCallableForCallee()
+                              .dyn_cast<SymbolRefAttr>()
                               .getLeafReference();
       EXPECT_EQ(callee, "baz");
       calleeFound = true;

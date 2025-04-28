@@ -181,11 +181,13 @@ Expected<int> LLI::ExecuteProgram(const std::string &Bitcode,
   }
 
   // Add any extra LLI args.
-  llvm::append_range(LLIArgs, ToolArgs);
+  for (unsigned i = 0, e = ToolArgs.size(); i != e; ++i)
+    LLIArgs.push_back(ToolArgs[i]);
 
   LLIArgs.push_back(Bitcode);
   // Add optional parameters to the running program from Argv
-  llvm::append_range(LLIArgs, Args);
+  for (unsigned i = 0, e = Args.size(); i != e; ++i)
+    LLIArgs.push_back(Args[i]);
 
   outs() << "<lli>";
   outs().flush();
@@ -266,11 +268,13 @@ Error CustomCompiler::compileProgram(const std::string &Bitcode,
   std::vector<StringRef> ProgramArgs;
   ProgramArgs.push_back(CompilerCommand);
 
-  llvm::append_range(ProgramArgs, CompilerArgs);
+  for (const auto &Arg : CompilerArgs)
+    ProgramArgs.push_back(Arg);
   ProgramArgs.push_back(Bitcode);
 
   // Add optional parameters to the running program from Argv
-  llvm::append_range(ProgramArgs, CompilerArgs);
+  for (const auto &Arg : CompilerArgs)
+    ProgramArgs.push_back(Arg);
 
   if (RunProgramWithTimeout(CompilerCommand, ProgramArgs, "", "", "", Timeout,
                             MemoryLimit))
@@ -313,11 +317,13 @@ Expected<int> CustomExecutor::ExecuteProgram(
   std::vector<StringRef> ProgramArgs;
   ProgramArgs.push_back(ExecutionCommand);
 
-  llvm::append_range(ProgramArgs, ExecutorArgs);
+  for (std::size_t i = 0; i < ExecutorArgs.size(); ++i)
+    ProgramArgs.push_back(ExecutorArgs[i]);
   ProgramArgs.push_back(Bitcode);
 
   // Add optional parameters to the running program from Argv
-  llvm::append_range(ProgramArgs, Args);
+  for (unsigned i = 0, e = Args.size(); i != e; ++i)
+    ProgramArgs.push_back(Args[i]);
 
   return RunProgramWithTimeout(ExecutionCommand, ProgramArgs, InputFile,
                                OutputFile, OutputFile, Timeout, MemoryLimit);
@@ -441,7 +447,8 @@ Expected<CC::FileType> LLC::OutputCode(const std::string &Bitcode,
   LLCArgs.push_back(LLCPath);
 
   // Add any extra LLC args.
-  llvm::append_range(LLCArgs, ToolArgs);
+  for (unsigned i = 0, e = ToolArgs.size(); i != e; ++i)
+    LLCArgs.push_back(ToolArgs[i]);
 
   LLCArgs.push_back("-o");
   LLCArgs.push_back(OutputAsmFile); // Output to the Asm file
@@ -556,7 +563,8 @@ Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
   JITArgs.push_back("-force-interpreter=false");
 
   // Add any extra LLI args.
-  llvm::append_range(JITArgs, ToolArgs);
+  for (unsigned i = 0, e = ToolArgs.size(); i != e; ++i)
+    JITArgs.push_back(ToolArgs[i]);
 
   for (unsigned i = 0, e = SharedLibs.size(); i != e; ++i) {
     JITArgs.push_back("-load");
@@ -564,7 +572,8 @@ Expected<int> JIT::ExecuteProgram(const std::string &Bitcode,
   }
   JITArgs.push_back(Bitcode);
   // Add optional parameters to the running program from Argv
-  llvm::append_range(JITArgs, Args);
+  for (unsigned i = 0, e = Args.size(); i != e; ++i)
+    JITArgs.push_back(Args[i]);
 
   outs() << "<jit>";
   outs().flush();
@@ -665,7 +674,8 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
   // most likely -L and -l options that need to come before other libraries but
   // after the source. Other options won't be sensitive to placement on the
   // command line, so this should be safe.
-  llvm::append_range(CCArgs, ArgsForCC);
+  for (unsigned i = 0, e = ArgsForCC.size(); i != e; ++i)
+    CCArgs.push_back(ArgsForCC[i]);
 
   CCArgs.push_back("-lm"); // Hard-code the math library...
   CCArgs.push_back("-O2"); // Optimize the program a bit...
@@ -715,7 +725,8 @@ Expected<int> CC::ExecuteProgram(const std::string &ProgramFile,
   }
 
   // Add optional parameters to the running program from Argv
-  llvm::append_range(ProgramArgs, Args);
+  for (unsigned i = 0, e = Args.size(); i != e; ++i)
+    ProgramArgs.push_back(Args[i]);
 
   // Now that we have a binary, run it!
   outs() << "<program>";
@@ -812,7 +823,8 @@ Error CC::MakeSharedObject(const std::string &InputFile, FileType fileType,
   // most likely -L and -l options that need to come before other libraries but
   // after the source. Other options won't be sensitive to placement on the
   // command line, so this should be safe.
-  llvm::append_range(CCArgs, ArgsForCC);
+  for (unsigned i = 0, e = ArgsForCC.size(); i != e; ++i)
+    CCArgs.push_back(ArgsForCC[i]);
 
   outs() << "<CC>";
   outs().flush();

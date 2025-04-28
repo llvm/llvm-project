@@ -21,7 +21,6 @@ Options
 
    The check can generate fixes after this option has been set to the name of
    the include file that contains ``gsl::at()``, e.g. `"gsl/gsl.h"`.
-   Default is an empty string.
 
 .. option:: IncludeStyle
 

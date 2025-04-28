@@ -267,7 +267,8 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
 void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
   NameSet.insert(getFunction());
   for (const auto &BS : BodySamples)
-    NameSet.insert_range(llvm::make_first_range(BS.second.getCallTargets()));
+    for (const auto &TS : BS.second.getCallTargets())
+      NameSet.insert(TS.first);
 
   for (const auto &CS : CallsiteSamples) {
     for (const auto &NameFS : CS.second) {

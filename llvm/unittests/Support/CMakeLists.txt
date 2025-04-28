@@ -18,7 +18,6 @@ add_llvm_unittest(SupportTests
   BranchProbabilityTest.cpp
   CachePruningTest.cpp
   CrashRecoveryTest.cpp
-  Caching.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
   Chrono.cpp
@@ -50,7 +49,6 @@ add_llvm_unittest(SupportTests
   HashBuilderTest.cpp
   IndexedAccessorTest.cpp
   InstructionCostTest.cpp
-  InterleavedRangeTest.cpp
   JSONTest.cpp
   KnownBitsTest.cpp
   LEB128Test.cpp
@@ -63,7 +61,6 @@ add_llvm_unittest(SupportTests
   MemoryBufferRefTest.cpp
   MemoryBufferTest.cpp
   MemoryTest.cpp
-  MustacheTest.cpp
   ModRefTest.cpp
   NativeFormatTests.cpp
   OptimizedStructLayoutTest.cpp

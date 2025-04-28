@@ -1210,7 +1210,9 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
 // LoopInfo implementation
 //
 
-LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {}
+LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {
+  initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
 
 char LoopInfoWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopInfoWrapperPass, "loops", "Natural Loop Information",

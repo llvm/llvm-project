@@ -260,6 +260,7 @@ public:
         continue;
 
       case NestedNameSpecifier::TypeSpec:
+      case NestedNameSpecifier::TypeSpecWithTemplate:
         asImpl().writeQualType(QualType(NNS->getAsType(), 0));
         continue;
 

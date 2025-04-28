@@ -30,7 +30,11 @@ class RISCVAsmBackend : public MCAsmBackend {
 
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
-                  const MCTargetOptions &Options);
+                  const MCTargetOptions &Options)
+      : MCAsmBackend(llvm::endianness::little, RISCV::fixup_riscv_relax),
+        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
+    RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
+  }
   ~RISCVAsmBackend() override = default;
 
   void setForceRelocs() { ForceRelocs = true; }
@@ -45,8 +49,8 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                            const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI,
-                           uint64_t &Value) override;
+                           const MCSubtargetInfo *STI, uint64_t &Value,
+                           bool &WasForced) override;
 
   bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
@@ -61,19 +65,26 @@ public:
   createObjectTargetWriter() const override;
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t Value,
                              const MCSubtargetInfo *STI) override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCFixup &, const MCValue &, uint64_t,
-                                    bool) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+                                    const MCFixup &Fixup, bool Resolved,
+                                    uint64_t Value,
+                                    const MCRelaxableFragment *DF,
+                                    const bool WasForced) const override;
+
+  unsigned getNumFixupKinds() const override {
+    return RISCV::NumTargetFixupKinds;
+  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
+  unsigned getRelaxedOpcode(unsigned Op) const;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;

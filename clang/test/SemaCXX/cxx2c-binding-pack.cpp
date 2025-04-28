@@ -59,7 +59,6 @@ template <typename T>
 void decompose_struct() {
   T obj{1, 2, 3, 6};
   auto [x, ...rest, y] = obj;
-  static_assert(sizeof...(rest) == 2);
 
   auto [...empty] = type_<int>{};
   static_assert(sizeof...(empty) == 0);
@@ -125,14 +124,6 @@ void lambda_capture() {
   [&x...] { (void)sum(x...); }();
 }
 
-struct S2 {
-    int a, b, c;
-};
-
-auto X = [] <typename = void> () {
-    auto [...pack] = S2{};
-};
-
 int main() {
   decompose_array<int>();
   decompose_tuple<fake_tuple>();
@@ -142,8 +133,6 @@ int main() {
   lambda_capture<int[5]>();
   lambda_capture<fake_tuple>();
   lambda_capture<my_struct>();
-  X();
-
 }
 
 // P1061R10 Stuff
@@ -199,37 +188,3 @@ void other_main() {
   static_assert(f<int>() == 2);
 }
 }  // namespace
-
-namespace {
-struct S {
-  int a,b,c;
-};
-
-clsss S2 { // expected-error{{{unknown type name 'clsss'}}}
-public:
-  int a,b,c;
-};
-
-// Should not crash.
-auto X = [] <typename = void> () {
-    auto [...pack,a,b,c] = S{};
-    auto [x,y,z,...pack2] = S{};
-    auto [...pack3] = S2{};
-    static_assert(sizeof...(pack3) == 5);
-};
-}  // namespace
-
-namespace GH125165 {
-
-template <typename = void>
-auto f(auto t) {
-    const auto& [...pack] = t;
-    // expected-error@-1 {{cannot decompose non-class, non-array type 'char const'}}
-    (pack, ...);
-};
-
-void g() {
-    f('x'); // expected-note {{in instantiation}}
-}
-
-}

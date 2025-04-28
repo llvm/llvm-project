@@ -302,10 +302,6 @@ private:
   /// context.
   llvm::Regex *getHeaderFilter();
 
-  /// Returns the \c ExcludeHeaderFilter constructed for the options set in the
-  /// context.
-  llvm::Regex *getExcludeHeaderFilter();
-
   /// Updates \c LastErrorRelatesToUserCode and LastErrorPassesLineFilter
   /// according to the diagnostic \p Location.
   void checkFilters(SourceLocation Location, const SourceManager &Sources);

@@ -1151,7 +1151,8 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
     SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
-      auto [V, IsPositive] = Worklist.pop_back_val();
+      auto [V, IsPositive] = Worklist.back();
+      Worklist.pop_back();
       if (!Visited.insert(V).second)
         continue;
 
@@ -1167,7 +1168,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       // the latter case, we will attempt to separately identify the complex
       // operation from here in order to create a shared
       // ComplexDeinterleavingCompositeNode.
-      if (I != Insn && I->hasNUsesOrMore(2)) {
+      if (I != Insn && I->getNumUses() > 1) {
         LLVM_DEBUG(dbgs() << "Found potential sub-expression: " << *I << "\n");
         Addends.emplace_back(I, IsPositive);
         continue;
@@ -1740,17 +1741,6 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
       LLVM_DEBUG(
           dbgs() << "Identified single reduction starting from instruction: "
                  << *Real << "/" << *ReductionInfo[Real].second << "\n");
-
-      // Reducing to a single vector is not supported, only permit reducing down
-      // to scalar values.
-      // Doing this here will leave the prior node in the graph,
-      // however with no uses the node will be unreachable by the replacement
-      // process. That along with the usage outside the graph should prevent the
-      // replacement process from kicking off at all for this graph.
-      // TODO Add support for reducing to a single vector value
-      if (ReductionInfo[Real].second->getType()->isVectorTy())
-        continue;
-
       Processed[i] = true;
       auto RootNode = prepareCompositeNode(
           ComplexDeinterleavingOperation::ReductionSingle, Real, nullptr);
@@ -1792,7 +1782,8 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // Extract all instructions that are used by all XCMLA/XCADD/ADD/SUB/NEG
   // chains
   while (!Worklist.empty()) {
-    auto *I = Worklist.pop_back_val();
+    auto *I = Worklist.back();
+    Worklist.pop_back();
 
     if (!AllInstructions.insert(I).second)
       continue;
@@ -1826,7 +1817,8 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // that somehow connect to those instructions.
   SmallPtrSet<Instruction *, 16> Visited;
   while (!Worklist.empty()) {
-    auto *I = Worklist.pop_back_val();
+    auto *I = Worklist.back();
+    Worklist.pop_back();
     if (!Visited.insert(I).second)
       continue;
 
@@ -2329,9 +2321,8 @@ void ComplexDeinterleavingGraph::replaceNodes() {
     } else if (RootNode->Operation ==
                ComplexDeinterleavingOperation::ReductionSingle) {
       auto *RootInst = cast<Instruction>(RootNode->Real);
-      auto &Info = ReductionInfo[RootInst];
-      Info.first->removeIncomingValue(BackEdge);
-      DeadInstrRoots.push_back(Info.second);
+      ReductionInfo[RootInst].first->removeIncomingValue(BackEdge);
+      DeadInstrRoots.push_back(ReductionInfo[RootInst].second);
     } else {
       assert(R && "Unable to find replacement for RootInstruction");
       DeadInstrRoots.push_back(RootInstruction);

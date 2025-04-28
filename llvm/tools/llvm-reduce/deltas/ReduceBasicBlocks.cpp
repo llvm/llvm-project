@@ -23,19 +23,17 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 #include <vector>
 
 #define DEBUG_TYPE "llvm-reduce"
 
 using namespace llvm;
 
-using BlockSet = SetVector<BasicBlock *>;
-
 /// Replaces BB Terminator with one that only contains Chunk BBs
 static void replaceBranchTerminator(BasicBlock &BB,
-                                    const BlockSet &BBsToDelete) {
+                                    const DenseSet<BasicBlock *> &BBsToDelete) {
   auto *Term = BB.getTerminator();
   std::vector<BasicBlock *> ChunkSuccessors;
   for (auto *Succ : successors(&BB)) {
@@ -106,8 +104,9 @@ static void replaceBranchTerminator(BasicBlock &BB,
 /// Removes uninteresting BBs from switch, if the default case ends up being
 /// uninteresting, the switch is replaced with a void return (since it has to be
 /// replace with something)
-static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
-                                             const BlockSet &BBsToDelete) {
+static void
+removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
+                                 const DenseSet<BasicBlock *> &BBsToDelete) {
   for (int I = 0, E = SwInst.getNumCases(); I != E; ++I) {
     auto Case = SwInst.case_begin() + I;
     if (BBsToDelete.count(Case->getCaseSuccessor())) {
@@ -142,9 +141,8 @@ static void removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-void llvm::reduceBasicBlocksDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
-  BlockSet BBsToDelete;
-
+static void extractBasicBlocksFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  DenseSet<BasicBlock *> BBsToDelete;
   df_iterator_default_set<BasicBlock *> Reachable;
 
   for (auto &F : WorkItem.getModule()) {
@@ -185,14 +183,17 @@ void llvm::reduceBasicBlocksDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
     // Cleanup any blocks that are now dead after eliminating this set. This
     // will likely be larger than the number of blocks the oracle told us to
     // delete.
-    simpleSimplifyCFG(F, BBsToDelete.getArrayRef());
-
+    EliminateUnreachableBlocks(F);
     BBsToDelete.clear();
   }
 }
 
-void llvm::reduceUnreachableBasicBlocksDeltaPass(Oracle &O,
-                                                 ReducerWorkItem &WorkItem) {
+void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks");
+}
+
+static void removeUnreachableBasicBlocksFromModule(Oracle &O,
+                                                   ReducerWorkItem &WorkItem) {
   std::vector<BasicBlock *> DeadBlocks;
   df_iterator_default_set<BasicBlock *> Reachable;
 
@@ -217,4 +218,9 @@ void llvm::reduceUnreachableBasicBlocksDeltaPass(Oracle &O,
 
     Reachable.clear();
   }
+}
+
+void llvm::reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, removeUnreachableBasicBlocksFromModule,
+               "Removing Unreachable Basic Blocks");
 }

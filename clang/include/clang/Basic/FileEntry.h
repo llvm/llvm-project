@@ -82,7 +82,6 @@ public:
   inline const llvm::sys::fs::UniqueID &getUniqueID() const;
   inline time_t getModificationTime() const;
   inline bool isNamedPipe() const;
-  inline bool isDeviceFile() const;
   inline void closeFile() const;
 
   /// Check if the underlying FileEntry is the same, intentially ignoring
@@ -317,7 +316,6 @@ class FileEntry {
   llvm::sys::fs::UniqueID UniqueID;
   unsigned UID = 0; // A unique (small) ID for the file.
   bool IsNamedPipe = false;
-  bool IsDeviceFile = false;
 
   /// The open file, if it is owned by the \p FileEntry.
   mutable std::unique_ptr<llvm::vfs::File> File;
@@ -342,7 +340,6 @@ public:
   /// Check whether the file is a named pipe (and thus can't be opened by
   /// the native FileManager methods).
   bool isNamedPipe() const { return IsNamedPipe; }
-  bool isDeviceFile() const { return IsDeviceFile; }
 
   void closeFile() const;
 };
@@ -360,9 +357,6 @@ time_t FileEntryRef::getModificationTime() const {
 }
 
 bool FileEntryRef::isNamedPipe() const { return getFileEntry().isNamedPipe(); }
-bool FileEntryRef::isDeviceFile() const {
-  return getFileEntry().isDeviceFile();
-}
 
 void FileEntryRef::closeFile() const { getFileEntry().closeFile(); }
 

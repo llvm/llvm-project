@@ -74,10 +74,7 @@ void ensureRegionTerminator(
 
 /// Structure used by default as a "marker" when no "Properties" are set on an
 /// Operation.
-struct EmptyProperties {
-  bool operator==(const EmptyProperties &) const { return true; }
-  bool operator!=(const EmptyProperties &) const { return false; }
-};
+struct EmptyProperties {};
 
 /// Traits to detect whether an Operation defined a `Properties` type, otherwise
 /// it'll default to `EmptyProperties`.
@@ -385,7 +382,6 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // Operand Traits
-//===----------------------------------------------------------------------===//
 
 namespace detail {
 /// Utility trait base that provides accessors for derived traits that have
@@ -515,7 +511,6 @@ class VariadicOperands
 
 //===----------------------------------------------------------------------===//
 // Region Traits
-//===----------------------------------------------------------------------===//
 
 /// This class provides verification for ops that are known to have zero
 /// regions.
@@ -608,7 +603,6 @@ class VariadicRegions
 
 //===----------------------------------------------------------------------===//
 // Result Traits
-//===----------------------------------------------------------------------===//
 
 /// This class provides return value APIs for ops that are known to have
 /// zero results.
@@ -760,7 +754,6 @@ class VariadicResults
 
 //===----------------------------------------------------------------------===//
 // Terminator Traits
-//===----------------------------------------------------------------------===//
 
 /// This class indicates that the regions associated with this op don't have
 /// terminators.
@@ -872,7 +865,6 @@ class VariadicSuccessors
 
 //===----------------------------------------------------------------------===//
 // SingleBlock
-//===----------------------------------------------------------------------===//
 
 /// This class provides APIs and verifiers for ops with regions having a single
 /// block.
@@ -954,7 +946,6 @@ public:
 
 //===----------------------------------------------------------------------===//
 // SingleBlockImplicitTerminator
-//===----------------------------------------------------------------------===//
 
 /// This class provides APIs and verifiers for ops with regions having a single
 /// block that must terminate with `TerminatorOpType`.
@@ -1040,7 +1031,6 @@ struct hasSingleBlockImplicitTerminator<Op, false> {
 
 //===----------------------------------------------------------------------===//
 // Misc Traits
-//===----------------------------------------------------------------------===//
 
 /// This class provides verification for ops that are known to have the same
 /// operand shape: all operands are scalars, vectors/tensors of the same
@@ -1521,7 +1511,6 @@ bool hasElementwiseMappableTraits(Operation *op);
 namespace op_definition_impl {
 //===----------------------------------------------------------------------===//
 // Trait Existence
-//===----------------------------------------------------------------------===//
 
 /// Returns true if this given Trait ID matches the IDs of any of the provided
 /// trait types `Traits`.
@@ -1540,7 +1529,6 @@ inline bool hasTrait<>(TypeID traitID) {
 
 //===----------------------------------------------------------------------===//
 // Trait Folding
-//===----------------------------------------------------------------------===//
 
 /// Trait to check if T provides a 'foldTrait' method for single result
 /// operations.
@@ -1613,7 +1601,6 @@ static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
 
 //===----------------------------------------------------------------------===//
 // Trait Verification
-//===----------------------------------------------------------------------===//
 
 /// Trait to check if T provides a `verifyTrait` method.
 template <typename T, typename... Args>

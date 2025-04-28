@@ -150,7 +150,9 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   // The maximum of N is curently 10 and it is for ST4 case.
   static const unsigned MaxNumRepl = 10;
 
-  AArch64SIMDInstrOpt() : MachineFunctionPass(ID) {}
+  AArch64SIMDInstrOpt() : MachineFunctionPass(ID) {
+    initializeAArch64SIMDInstrOptPass(*PassRegistry::getPassRegistry());
+  }
 
   /// Based only on latency of instructions, determine if it is cost efficient
   /// to replace the instruction InstDesc by the instructions stored in the

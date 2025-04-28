@@ -248,8 +248,7 @@ void SerializeGPUModuleBase::addControlVariables(
     controlVariable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Local);
   };
 
-  // Note that COV6 requires ROCm 6.3+.
-  int abi = 600;
+  int abi = 500;
   abiVer.getAsInteger(0, abi);
   module.addModuleFlag(llvm::Module::Error, "amdhsa_code_object_version", abi);
   // Return if no device libraries are required.

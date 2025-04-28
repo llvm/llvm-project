@@ -37,38 +37,41 @@ using namespace llvm;
 
 MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
                                       const MCSymbol *Symbol) {
-  auto Specifier = ARMMCExpr::VK_None;
+  MCSymbolRefExpr::VariantKind SymbolVariant = MCSymbolRefExpr::VK_None;
   if (MO.getTargetFlags() & ARMII::MO_SBREL)
-    Specifier = ARMMCExpr::VK_SBREL;
+    SymbolVariant = MCSymbolRefExpr::VK_ARM_SBREL;
 
-  const MCExpr *Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
   switch (MO.getTargetFlags() & ARMII::MO_OPTION_MASK) {
   default:
     llvm_unreachable("Unknown target flag on symbol operand");
   case ARMII::MO_NO_FLAG:
     break;
   case ARMII::MO_LO16:
-    Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
+    Expr =
+        MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createLower16(Expr, OutContext);
     break;
   case ARMII::MO_HI16:
-    Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
+    Expr =
+        MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createUpper16(Expr, OutContext);
     break;
   case ARMII::MO_LO_0_7:
-    Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createLower0_7(Expr, OutContext);
     break;
   case ARMII::MO_LO_8_15:
-    Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createLower8_15(Expr, OutContext);
     break;
   case ARMII::MO_HI_0_7:
-    Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createUpper0_7(Expr, OutContext);
     break;
   case ARMII::MO_HI_8_15:
-    Expr = MCSymbolRefExpr::create(Symbol, Specifier, OutContext);
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createUpper8_15(Expr, OutContext);
     break;
   }

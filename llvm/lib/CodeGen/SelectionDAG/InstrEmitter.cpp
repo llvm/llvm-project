@@ -827,7 +827,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
   //
   // i.e., point the instruction at the vreg, and patch it up later in
   // MachineFunction::finalizeDebugInstrRefs.
-  auto AddVRegOp = [&](Register VReg) {
+  auto AddVRegOp = [&](unsigned VReg) {
     MOs.push_back(MachineOperand::CreateReg(
         /* Reg */ VReg, /* isDef */ false, /* isImp */ false,
         /* isKill */ false, /* isDead */ false,
@@ -840,7 +840,7 @@ InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
 
     // Try to find both the defined register and the instruction defining it.
     MachineInstr *DefMI = nullptr;
-    Register VReg;
+    unsigned VReg;
 
     if (DbgOperand.getKind() == SDDbgOperand::VREG) {
       VReg = DbgOperand.getVReg();
@@ -982,6 +982,50 @@ InstrEmitter::EmitDbgLabel(SDDbgLabel *SD) {
   const MCInstrDesc &II = TII->get(TargetOpcode::DBG_LABEL);
   MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
   MIB.addMetadata(Label);
+
+  return &*MIB;
+}
+
+MachineInstr *
+InstrEmitter::EmitDbgDefKill(SDDbgDefKill *SDDK,
+                             SmallDenseMap<SDValue, Register, 16> &VRBaseMap) {
+  DILifetime *Lifetime = SDDK->getLifetime();
+  DebugLoc DL = SDDK->getDebugLoc();
+
+  bool IsDef = isa<SDDbgDef>(SDDK);
+  unsigned Opcode = IsDef ? TargetOpcode::DBG_DEF : TargetOpcode::DBG_KILL;
+
+  const MCInstrDesc &II = TII->get(Opcode);
+  MachineInstrBuilder MIB = BuildMI(*MF, DL, II);
+  MIB.addMetadata(Lifetime);
+
+  if (IsDef) {
+    SDDbgDef *Def = cast<SDDbgDef>(SDDK);
+    const Value *Referrer = Def->getReferrer();
+    assert(Referrer);
+    if (isa<UndefValue>(Referrer)) {
+      MIB.addReg(Register());
+    } else if (const auto *CI = dyn_cast<ConstantInt>(Referrer)) {
+      MIB.addCImm(CI);
+    } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
+      MIB.addFPImm(CFP);
+    } else if (auto *AI = dyn_cast<AllocaInst>(Referrer)) {
+      MIB.addFrameIndex(Def->getFI());
+      Lifetime->setLocation(
+          Lifetime->getLocation()
+              ->builder()
+              .removeReferrerIndirection(AI->getAllocatedType())
+              .intoExpr());
+    } else if (Def->getSDValue() &&
+               VRBaseMap.find(*Def->getSDValue()) != VRBaseMap.end()) {
+      MIB.addReg(VRBaseMap.find(*Def->getSDValue())->second);
+    } else if (isa<Argument>(Referrer)) {
+      MIB.addReg(Def->getReg());
+    } else {
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << SDDK << "\n");
+      return nullptr;
+    }
+  }
 
   return &*MIB;
 }
@@ -1195,7 +1239,8 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   // Add rounding control registers as implicit def for function call.
   if (II.isCall() && MF->getFunction().hasFnAttribute(Attribute::StrictFP)) {
     ArrayRef<MCPhysReg> RCRegs = TLI->getRoundingControlRegisters();
-    llvm::append_range(UsedRegs, RCRegs);
+    for (MCPhysReg Reg : RCRegs)
+      UsedRegs.push_back(Reg);
   }
 
   // Finally mark unused registers as dead.

@@ -118,12 +118,8 @@ AtomicInfo::EmitAtomicLoadLibcall(AtomicOrdering AO) {
   Value *PtrVal = getAtomicPointer();
   PtrVal = Builder->CreateAddrSpaceCast(PtrVal, PointerType::getUnqual(Ctx));
   Args.push_back(PtrVal);
-
-  auto CurrentIP = Builder->saveIP();
-  Builder->restoreIP(AllocaIP);
   AllocaInst *AllocaResult =
       CreateAlloca(Ty, getAtomicPointer()->getName() + "atomic.temp.load");
-  Builder->restoreIP(CurrentIP);
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
   AllocaResult->setAlignment(AllocaAlignment);
   Args.push_back(AllocaResult);

@@ -24,8 +24,7 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
                              SPIRV::ModuleAnalysisInfo *MAI) const {
   OutMI.setOpcode(MI->getOpcode());
   // Propagate previously set flags
-  if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH16)
-    OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH16);
+  OutMI.setFlags(MI->getAsmPrinterFlags());
   const MachineFunction *MF = MI->getMF();
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
@@ -34,7 +33,7 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
     default:
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_GlobalAddress: {
-      MCRegister FuncReg = MAI->getFuncReg(dyn_cast<Function>(MO.getGlobal()));
+      Register FuncReg = MAI->getFuncReg(dyn_cast<Function>(MO.getGlobal()));
       if (!FuncReg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
@@ -49,14 +48,13 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
       MCOp = MCOperand::createReg(MAI->getOrCreateMBBRegister(*MO.getMBB()));
       break;
     case MachineOperand::MO_Register: {
-      MCRegister NewReg = MAI->getRegisterAlias(MF, MO.getReg());
-      MCOp = MCOperand::createReg(NewReg.isValid() ? NewReg
-                                                   : MO.getReg().asMCReg());
+      Register NewReg = MAI->getRegisterAlias(MF, MO.getReg());
+      MCOp = MCOperand::createReg(NewReg.isValid() ? NewReg : MO.getReg());
       break;
     }
     case MachineOperand::MO_Immediate:
       if (MI->getOpcode() == SPIRV::OpExtInst && i == 2) {
-        MCRegister Reg = MAI->getExtInstSetReg(MO.getImm());
+        Register Reg = MAI->getExtInstSetReg(MO.getImm());
         MCOp = MCOperand::createReg(Reg);
       } else {
         MCOp = MCOperand::createImm(MO.getImm());

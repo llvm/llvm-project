@@ -23,17 +23,20 @@ using namespace mlir;
 
 spirv::TargetEnv::TargetEnv(spirv::TargetEnvAttr targetAttr)
     : targetAttr(targetAttr) {
-  givenExtensions.insert_range(targetAttr.getExtensions());
+  for (spirv::Extension ext : targetAttr.getExtensions())
+    givenExtensions.insert(ext);
 
   // Add extensions implied by the current version.
-  givenExtensions.insert_range(
-      spirv::getImpliedExtensions(targetAttr.getVersion()));
+  for (spirv::Extension ext :
+       spirv::getImpliedExtensions(targetAttr.getVersion()))
+    givenExtensions.insert(ext);
 
   for (spirv::Capability cap : targetAttr.getCapabilities()) {
     givenCapabilities.insert(cap);
 
     // Add capabilities implied by the current capability.
-    givenCapabilities.insert_range(spirv::getRecursiveImpliedCapabilities(cap));
+    for (spirv::Capability c : spirv::getRecursiveImpliedCapabilities(cap))
+      givenCapabilities.insert(c);
   }
 }
 

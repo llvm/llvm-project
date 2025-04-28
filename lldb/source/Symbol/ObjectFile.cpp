@@ -734,9 +734,10 @@ void llvm::format_provider<ObjectFile::Strata>::format(
   }
 }
 
-Symtab *ObjectFile::GetSymtab(bool can_create) {
+
+Symtab *ObjectFile::GetSymtab() {
   ModuleSP module_sp(GetModule());
-  if (module_sp && can_create) {
+  if (module_sp) {
     // We can't take the module lock in ObjectFile::GetSymtab() or we can
     // deadlock in DWARF indexing when any file asks for the symbol table from
     // an object file. This currently happens in the preloading of symbols in
@@ -772,15 +773,6 @@ uint32_t ObjectFile::GetCacheHash() {
   strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
-}
-
-std::string ObjectFile::GetObjectName() const {
-  if (ModuleSP module_sp = GetModule())
-    if (ConstString object_name = module_sp->GetObjectName())
-      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
-                           object_name.GetString())
-          .str();
-  return GetFileSpec().GetFilename().GetString();
 }
 
 namespace llvm {

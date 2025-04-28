@@ -25,7 +25,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -84,7 +83,6 @@ struct RecordKeeperImpl {
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
-  FoldingSet<InstancesOpInit> TheInstancesOpInitPool;
   DenseMap<std::pair<const RecTy *, const Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<const TypedInit *, unsigned>, VarBitInit *>
       TheVarBitInitPool;
@@ -336,7 +334,7 @@ static const RecordRecTy *resolveRecordTypes(const RecordRecTy *T1,
     if (T2->isSubClassOf(R)) {
       CommonSuperClasses.push_back(R);
     } else {
-      append_range(Stack, make_first_range(R->getDirectSuperClasses()));
+      R->getDirectSuperClasses(Stack);
     }
   }
 
@@ -1015,7 +1013,8 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
           const auto *InnerList = dyn_cast<ListInit>(InnerInit);
           if (!InnerList)
             return std::nullopt;
-          llvm::append_range(Flattened, InnerList->getValues());
+          for (const Init *InnerElem : InnerList->getValues())
+            Flattened.push_back(InnerElem);
         };
         return Flattened;
       };
@@ -1319,23 +1318,6 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
     }
     break;
   }
-  case MATCH: {
-    const auto *StrInit = dyn_cast<StringInit>(LHS);
-    if (!StrInit)
-      return this;
-
-    const auto *RegexInit = dyn_cast<StringInit>(RHS);
-    if (!RegexInit)
-      return this;
-
-    StringRef RegexStr = RegexInit->getValue();
-    llvm::Regex Matcher(RegexStr);
-    if (!Matcher.isValid())
-      PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
-
-    return BitInit::get(LHS->getRecordKeeper(),
-                        Matcher.match(StrInit->getValue()));
-  }
   case LISTCONCAT: {
     const auto *LHSs = dyn_cast<ListInit>(LHS);
     const auto *RHSs = dyn_cast<ListInit>(RHS);
@@ -1604,9 +1586,6 @@ std::string BinOpInit::getAsString() const {
   case RANGEC:
     return LHS->getAsString() + "..." + RHS->getAsString();
   case CONCAT: Result = "!con"; break;
-  case MATCH:
-    Result = "!match";
-    break;
   case ADD: Result = "!add"; break;
   case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
@@ -2115,12 +2094,10 @@ const Init *IsAOpInit::Fold() const {
       return IntInit::get(getRecordKeeper(), 1);
 
     if (isa<RecordRecTy>(CheckType)) {
-      // If the target type is not a subclass of the expression type once the
-      // expression has been made concrete, or if the expression has fully
-      // resolved to a record, we know that it can't be of the required type.
-      if ((!CheckType->typeIsConvertibleTo(TI->getType()) &&
-           Expr->isConcrete()) ||
-          isa<DefInit>(Expr))
+      // If the target type is not a subclass of the expression type, or if
+      // the expression has fully resolved to a record, we know that it can't
+      // be of the required type.
+      if (!CheckType->typeIsConvertibleTo(TI->getType()) || isa<DefInit>(Expr))
         return IntInit::get(getRecordKeeper(), 0);
     } else {
       // We treat non-record types as not castable.
@@ -2220,70 +2197,6 @@ std::string ExistsOpInit::getAsString() const {
   return (Twine("!exists<") + CheckType->getAsString() + ">(" +
           Expr->getAsString() + ")")
       .str();
-}
-
-static void ProfileInstancesOpInit(FoldingSetNodeID &ID, const RecTy *Type,
-                                   const Init *Regex) {
-  ID.AddPointer(Type);
-  ID.AddPointer(Regex);
-}
-
-const InstancesOpInit *InstancesOpInit::get(const RecTy *Type,
-                                            const Init *Regex) {
-  FoldingSetNodeID ID;
-  ProfileInstancesOpInit(ID, Type, Regex);
-
-  detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const InstancesOpInit *I =
-          RK.TheInstancesOpInitPool.FindNodeOrInsertPos(ID, IP))
-    return I;
-
-  InstancesOpInit *I = new (RK.Allocator) InstancesOpInit(Type, Regex);
-  RK.TheInstancesOpInitPool.InsertNode(I, IP);
-  return I;
-}
-
-void InstancesOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileInstancesOpInit(ID, Type, Regex);
-}
-
-const Init *InstancesOpInit::Fold(const Record *CurRec, bool IsFinal) const {
-  if (CurRec && !IsFinal)
-    return this;
-
-  const auto *RegexInit = dyn_cast<StringInit>(Regex);
-  if (!RegexInit)
-    return this;
-
-  StringRef RegexStr = RegexInit->getValue();
-  llvm::Regex Matcher(RegexStr);
-  if (!Matcher.isValid())
-    PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
-
-  const RecordKeeper &RK = Type->getRecordKeeper();
-  SmallVector<Init *, 8> Selected;
-  for (auto &Def : RK.getAllDerivedDefinitionsIfDefined(Type->getAsString()))
-    if (Matcher.match(Def->getName()))
-      Selected.push_back(Def->getDefInit());
-
-  return ListInit::get(Selected, Type);
-}
-
-const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
-  const Init *NewRegex = Regex->resolveReferences(R);
-  if (Regex != NewRegex || R.isFinal())
-    return get(Type, NewRegex)->Fold(R.getCurrentRecord(), R.isFinal());
-  return this;
-}
-
-const Init *InstancesOpInit::getBit(unsigned Bit) const {
-  return VarBitInit::get(this, Bit);
-}
-
-std::string InstancesOpInit::getAsString() const {
-  return "!instances<" + Type->getAsString() + ">(" + Regex->getAsString() +
-         ")";
 }
 
 const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {
@@ -2482,8 +2395,11 @@ const DefInit *VarDefInit::instantiate() {
 
   NewRec->resolveReferences(R);
 
-  // Add superclass.
-  NewRec->addDirectSuperClass(
+  // Add superclasses.
+  for (const auto &[SC, Loc] : Class->getSuperClasses())
+    NewRec->addSuperClass(SC, Loc);
+
+  NewRec->addSuperClass(
       Class, SMRange(Class->getLoc().back(), Class->getLoc().back()));
 
   // Resolve internal references and store in record keeper
@@ -2959,7 +2875,7 @@ void Record::checkName() {
 
 const RecordRecTy *Record::getType() const {
   SmallVector<const Record *, 4> DirectSCs;
-  append_range(DirectSCs, make_first_range(getDirectSuperClasses()));
+  getDirectSuperClasses(DirectSCs);
   return RecordRecTy::get(TrackedRecords, DirectSCs);
 }
 
@@ -2989,6 +2905,35 @@ void Record::setName(const Init *NewName) {
   // record name be an Init is to provide this flexibility.  The extra
   // resolve steps after completely instantiating defs takes care of
   // this.  See TGParser::ParseDef and TGParser::ParseDefm.
+}
+
+// NOTE for the next two functions:
+// Superclasses are in post-order, so the final one is a direct
+// superclass. All of its transitive superclases immediately precede it,
+// so we can step through the direct superclasses in reverse order.
+
+bool Record::hasDirectSuperClass(const Record *Superclass) const {
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
+
+  for (int I = SCs.size() - 1; I >= 0; --I) {
+    const Record *SC = SCs[I].first;
+    if (SC == Superclass)
+      return true;
+    I -= SC->getSuperClasses().size();
+  }
+
+  return false;
+}
+
+void Record::getDirectSuperClasses(
+    SmallVectorImpl<const Record *> &Classes) const {
+  ArrayRef<std::pair<const Record *, SMRange>> SCs = getSuperClasses();
+
+  while (!SCs.empty()) {
+    const Record *SC = SCs.back().first;
+    SCs = SCs.drop_back(1 + SC->getSuperClasses().size());
+    Classes.push_back(SC);
+  }
 }
 
 void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
@@ -3064,10 +3009,10 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   }
 
   OS << " {";
-  std::vector<const Record *> SCs = R.getSuperClasses();
-  if (!SCs.empty()) {
+  ArrayRef<std::pair<const Record *, SMRange>> SC = R.getSuperClasses();
+  if (!SC.empty()) {
     OS << "\t//";
-    for (const Record *SC : SCs)
+    for (const auto &[SC, _] : SC)
       OS << " " << SC->getNameInitAsString();
   }
   OS << "\n";
