@@ -399,6 +399,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::ExtVector:
+  case Type::Vector: {
+    const VectorType *vec = cast<VectorType>(ty);
+    const mlir::Type elemTy = convertType(vec->getElementType());
+    resultType = cir::VectorType::get(elemTy, vec->getNumElements());
+    break;
+  }
+
   case Type::FunctionNoProto:
   case Type::FunctionProto:
     resultType = convertFunctionTypeInternal(type);
@@ -443,6 +451,27 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
     assert(!qualType->isBitIntType() && "Bit field with type _BitInt NYI");
 
   return convertedType;
+}
+
+/// Return record layout info for the given record decl.
+const CIRGenRecordLayout &
+CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
+  const auto *key = astContext.getTagDeclType(rd).getTypePtr();
+
+  // If we have already computed the layout, return it.
+  auto it = cirGenRecordLayouts.find(key);
+  if (it != cirGenRecordLayouts.end())
+    return *it->second;
+
+  // Compute the type information.
+  convertRecordDeclType(rd);
+
+  // Now try again.
+  it = cirGenRecordLayouts.find(key);
+
+  assert(it != cirGenRecordLayouts.end() &&
+         "Unable to find record layout information for type");
+  return *it->second;
 }
 
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {

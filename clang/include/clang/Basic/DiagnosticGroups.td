@@ -154,8 +154,11 @@ def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
+def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe">;
+def DefaultConstInit : DiagGroup<"default-const-init", [DefaultConstInitUnsafe]>;
+def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
+def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit]>;
 
-def CXXCompat: DiagGroup<"c++-compat">;
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
 def GNUCaseRange : DiagGroup<"gnu-case-range">;
@@ -183,6 +186,13 @@ def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor",
 def AbstractFinalClass : DiagGroup<"abstract-final-class">;
 def FinalDtorNonFinalClass : DiagGroup<"final-dtor-non-final-class">;
 def GNUOffsetofExtensions : DiagGroup<"gnu-offsetof-extensions">;
+
+def InitializerOverrides : DiagGroup<"initializer-overrides">;
+// For compatibility with GCC; -Woverride-init = -Winitializer-overrides
+def : DiagGroup<"override-init", [InitializerOverrides]>;
+def ReorderCtor : DiagGroup<"reorder-ctor">;
+def ReorderInitList : DiagGroup<"reorder-init-list">;
+def Reorder : DiagGroup<"reorder", [ReorderCtor, ReorderInitList]>;
 
 def CXX11CompatDeprecatedWritableStr :
   DiagGroup<"c++11-compat-deprecated-writable-strings">;
@@ -250,7 +260,9 @@ def Deprecated : DiagGroup<"deprecated", [DeprecatedAnonEnumEnumConversion,
 def CXX20Designator : DiagGroup<"c++20-designator">;
 // Allow -Wno-c99-designator to be used to turn off all warnings on valid C99
 // designators (including the warning controlled by -Wc++20-designator).
-def C99Designator : DiagGroup<"c99-designator", [CXX20Designator]>;
+def C99Designator : DiagGroup<"c99-designator", [CXX20Designator,
+                                                 InitializerOverrides,
+                                                 ReorderInitList]>;
 def GNUDesignator : DiagGroup<"gnu-designator">;
 def DtorName : DiagGroup<"dtor-name">;
 
@@ -595,9 +607,6 @@ def NullabilityCompleteness : DiagGroup<"nullability-completeness",
 def NullArithmetic : DiagGroup<"null-arithmetic">;
 def NullCharacter : DiagGroup<"null-character">;
 def NullDereference : DiagGroup<"null-dereference">;
-def InitializerOverrides : DiagGroup<"initializer-overrides">;
-// For compatibility with GCC; -Woverride-init = -Winitializer-overrides
-def : DiagGroup<"override-init", [InitializerOverrides]>;
 def NonNull : DiagGroup<"nonnull">;
 def NonPODVarargs : DiagGroup<"non-pod-varargs">;
 def ClassVarargs : DiagGroup<"class-varargs", [NonPODVarargs]>;
@@ -919,9 +928,6 @@ def UsedButMarkedUnused : DiagGroup<"used-but-marked-unused">;
 def UsedSearchPath : DiagGroup<"search-path-usage">;
 def UserDefinedLiterals : DiagGroup<"user-defined-literals">;
 def UserDefinedWarnings : DiagGroup<"user-defined-warnings">;
-def ReorderCtor : DiagGroup<"reorder-ctor">;
-def ReorderInitList : DiagGroup<"reorder-init-list">;
-def Reorder : DiagGroup<"reorder", [ReorderCtor, ReorderInitList]>;
 def UndeclaredSelector : DiagGroup<"undeclared-selector">;
 def ImplicitAtomic : DiagGroup<"implicit-atomic-properties">;
 def AtomicAlignment : DiagGroup<"atomic-alignment">;

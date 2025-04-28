@@ -127,7 +127,7 @@ where type is not necessary.
 Arrays are not types in Fortran.
 Being an array is a property of an object or function, not of a type.
 Unlike C, one cannot have an array of arrays or an array of pointers,
-although can can have an array of a derived type that has arrays or
+although one can have an array of a derived type that has arrays or
 pointers as components.
 Arrays are multidimensional, and the number of dimensions is called
 the _rank_ of the array.
