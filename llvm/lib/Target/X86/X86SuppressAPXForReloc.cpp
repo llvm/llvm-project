@@ -85,7 +85,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
     return false;
 
   auto suppressEGPRInInstrWithReloc = [&](MachineInstr &MI,
-                                ArrayRef<unsigned> OpNoArray) {
+                                          ArrayRef<unsigned> OpNoArray) {
     int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                   X86II::getOperandBias(MI.getDesc());
     auto &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
@@ -165,10 +165,9 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          auto &CopyMI =
-              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-                      Reg)
-                  .addReg(MI.getOperand(1).getReg());
+          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
+                                 TII->get(TargetOpcode::COPY), Reg)
+                             .addReg(MI.getOperand(1).getReg());
           MI.getOperand(1).setReg(Reg);
           const MCInstrDesc &NewDesc = TII->get(X86::ADD64rm);
           MI.setDesc(NewDesc);
@@ -187,10 +186,9 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
                             << MI);
           suppressEGPRRegClass(MF, MI, 0);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
-          auto &CopyMI =
-              BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-                      Reg)
-                  .addReg(MI.getOperand(6).getReg());
+          auto &CopyMI = BuildMI(MBB, MI, MI.getDebugLoc(),
+                                 TII->get(TargetOpcode::COPY), Reg)
+                             .addReg(MI.getOperand(6).getReg());
           auto &NewMI =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(X86::ADD64rm),
                       MI.getOperand(0).getReg())
