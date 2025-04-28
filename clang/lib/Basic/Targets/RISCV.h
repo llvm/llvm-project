@@ -20,6 +20,10 @@
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
+namespace llvm {
+class Function;
+}
+
 namespace clang {
 namespace targets {
 
@@ -99,8 +103,8 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts,
-                 bool IsArmStreamingFunction) const override;
+  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+                 llvm::Function *F = nullptr) const override;
 
   bool hasFeature(StringRef Feature) const override;
 

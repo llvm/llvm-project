@@ -19,6 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/Function.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include <optional>
@@ -794,7 +795,8 @@ AArch64TargetInfo::getTargetBuiltins() const {
 
 std::optional<std::pair<unsigned, unsigned>>
 AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                  bool IsArmStreamingFunction) const {
+                                  bool IsArmStreamingFunction,
+                                  llvm::Function *F) const {
   if (LangOpts.VScaleMin || LangOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
@@ -802,6 +804,13 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
   if (hasFeature("sve") || (IsArmStreamingFunction && hasFeature("sme")))
     return std::pair<unsigned, unsigned>(1, 16);
 
+  if (F && F->hasFnAttribute("target-features")) {
+    StringRef Str = F->getFnAttribute("target-features").getValueAsString();
+    for (const auto &s : llvm::split(Str, ",")) {
+      if (s == "+sve")
+        return std::pair<unsigned, unsigned>(1, 16);
+    }
+  }
   return std::nullopt;
 }
 
