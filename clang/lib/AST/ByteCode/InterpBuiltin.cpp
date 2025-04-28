@@ -33,45 +33,6 @@ static unsigned callArgSize(const InterpState &S, const CallExpr *C) {
   return O;
 }
 
-template <typename T>
-static T getParam(const InterpFrame *Frame, unsigned Index) {
-  assert(Frame->getFunction()->getNumParams() > Index);
-  unsigned Offset = Frame->getFunction()->getParamOffset(Index);
-  return Frame->getParam<T>(Offset);
-}
-
-static APSInt getAPSIntParam(const InterpFrame *Frame, unsigned Index) {
-  APSInt R;
-  unsigned Offset = Frame->getFunction()->getParamOffset(Index);
-  INT_TYPE_SWITCH(Frame->getFunction()->getParamType(Index),
-                  R = Frame->getParam<T>(Offset).toAPSInt());
-  return R;
-}
-
-static PrimType getIntPrimType(const InterpState &S) {
-  const TargetInfo &TI = S.getASTContext().getTargetInfo();
-  unsigned IntWidth = TI.getIntWidth();
-
-  if (IntWidth == 32)
-    return PT_Sint32;
-  else if (IntWidth == 16)
-    return PT_Sint16;
-  llvm_unreachable("Int isn't 16 or 32 bit?");
-}
-
-static PrimType getLongPrimType(const InterpState &S) {
-  const TargetInfo &TI = S.getASTContext().getTargetInfo();
-  unsigned LongWidth = TI.getLongWidth();
-
-  if (LongWidth == 64)
-    return PT_Sint64;
-  else if (LongWidth == 32)
-    return PT_Sint32;
-  else if (LongWidth == 16)
-    return PT_Sint16;
-  llvm_unreachable("long isn't 16, 32 or 64 bit?");
-}
-
 /// Peek an integer value from the stack into an APSInt.
 static APSInt peekToAPSInt(InterpStack &Stk, PrimType T, size_t Offset = 0) {
   if (Offset == 0)
@@ -206,10 +167,14 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call) {
-  unsigned ID = Func->getBuiltinID();
-  const Pointer &A = getParam<Pointer>(Frame, 0);
-  const Pointer &B = getParam<Pointer>(Frame, 1);
+                                   const CallExpr *Call, unsigned ID) {
+  unsigned LimitSize =
+      Call->getNumArgs() == 2
+          ? 0
+          : align(primSize(*S.getContext().classify(Call->getArg(2))));
+  const Pointer &A =
+      S.Stk.peek<Pointer>(align(primSize(PT_Ptr)) * 2 + LimitSize);
+  const Pointer &B = S.Stk.peek<Pointer>(align(primSize(PT_Ptr)) + LimitSize);
 
   if (ID == Builtin::BIstrcmp || ID == Builtin::BIstrncmp ||
       ID == Builtin::BIwcscmp || ID == Builtin::BIwcsncmp)
@@ -290,9 +255,8 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call) {
-  unsigned ID = Func->getBuiltinID();
-  const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
+                                   const CallExpr *Call, unsigned ID) {
+  const Pointer &StrPtr = S.Stk.peek<Pointer>();
 
   if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
@@ -345,9 +309,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame, const Function *F,
+                                const InterpFrame *Frame, const CallExpr *Call,
                                 bool Signaling) {
-  const Pointer &Arg = getParam<Pointer>(Frame, 0);
+  const Pointer &Arg = S.Stk.peek<Pointer>();
 
   if (!CheckLoad(S, OpPC, Arg))
     return false;
@@ -377,7 +341,8 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
     return false;
 
   const llvm::fltSemantics &TargetSemantics =
-      S.getASTContext().getFloatTypeSemantics(F->getDecl()->getReturnType());
+      S.getASTContext().getFloatTypeSemantics(
+          Call->getDirectCallee()->getReturnType());
 
   Floating Result;
   if (S.getASTContext().getTargetInfo().isNan2008()) {
@@ -406,19 +371,20 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_inf(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame, const Function *F) {
+                                const InterpFrame *Frame,
+                                const CallExpr *Call) {
   const llvm::fltSemantics &TargetSemantics =
-      S.getASTContext().getFloatTypeSemantics(F->getDecl()->getReturnType());
+      S.getASTContext().getFloatTypeSemantics(
+          Call->getDirectCallee()->getReturnType());
 
   S.Stk.push<Floating>(Floating::getInf(TargetSemantics));
   return true;
 }
 
 static bool interp__builtin_copysign(InterpState &S, CodePtr OpPC,
-                                     const InterpFrame *Frame,
-                                     const Function *F) {
-  const Floating &Arg1 = getParam<Floating>(Frame, 0);
-  const Floating &Arg2 = getParam<Floating>(Frame, 1);
+                                     const InterpFrame *Frame) {
+  const Floating &Arg1 = S.Stk.peek<Floating>(align(primSize(PT_Float)) * 2);
+  const Floating &Arg2 = S.Stk.peek<Floating>();
 
   APFloat Copy = Arg1.getAPFloat();
   Copy.copySign(Arg2.getAPFloat());
@@ -428,10 +394,9 @@ static bool interp__builtin_copysign(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
-                                 const InterpFrame *Frame, const Function *F,
-                                 bool IsNumBuiltin) {
-  const Floating &LHS = getParam<Floating>(Frame, 0);
-  const Floating &RHS = getParam<Floating>(Frame, 1);
+                                 const InterpFrame *Frame, bool IsNumBuiltin) {
+  const Floating &LHS = S.Stk.peek<Floating>(align(primSize(PT_Float)) * 2);
+  const Floating &RHS = S.Stk.peek<Floating>();
 
   if (IsNumBuiltin)
     S.Stk.push<Floating>(llvm::minimumnum(LHS.getAPFloat(), RHS.getAPFloat()));
@@ -441,10 +406,9 @@ static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_fmax(InterpState &S, CodePtr OpPC,
-                                 const InterpFrame *Frame, const Function *Func,
-                                 bool IsNumBuiltin) {
-  const Floating &LHS = getParam<Floating>(Frame, 0);
-  const Floating &RHS = getParam<Floating>(Frame, 1);
+                                 const InterpFrame *Frame, bool IsNumBuiltin) {
+  const Floating &LHS = S.Stk.peek<Floating>(align(primSize(PT_Float)) * 2);
+  const Floating &RHS = S.Stk.peek<Floating>();
 
   if (IsNumBuiltin)
     S.Stk.push<Floating>(llvm::maximumnum(LHS.getAPFloat(), RHS.getAPFloat()));
@@ -457,7 +421,7 @@ static bool interp__builtin_fmax(InterpState &S, CodePtr OpPC,
 /// take a float, double, long double, etc.
 /// But for us, that's all a Floating anyway.
 static bool interp__builtin_isnan(InterpState &S, CodePtr OpPC,
-                                  const InterpFrame *Frame, const Function *F,
+                                  const InterpFrame *Frame,
                                   const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
@@ -467,7 +431,6 @@ static bool interp__builtin_isnan(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_issignaling(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
-                                        const Function *F,
                                         const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
@@ -476,8 +439,8 @@ static bool interp__builtin_issignaling(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
-                                  const InterpFrame *Frame, const Function *F,
-                                  bool CheckSign, const CallExpr *Call) {
+                                  const InterpFrame *Frame, bool CheckSign,
+                                  const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
   bool IsInf = Arg.isInf();
 
@@ -490,7 +453,7 @@ static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_isfinite(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
-                                     const Function *F, const CallExpr *Call) {
+                                     const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
   pushInteger(S, Arg.isFinite(), Call->getType());
@@ -499,7 +462,7 @@ static bool interp__builtin_isfinite(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_isnormal(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
-                                     const Function *F, const CallExpr *Call) {
+                                     const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
   pushInteger(S, Arg.isNormal(), Call->getType());
@@ -508,7 +471,6 @@ static bool interp__builtin_isnormal(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_issubnormal(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
-                                        const Function *F,
                                         const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
@@ -517,7 +479,7 @@ static bool interp__builtin_issubnormal(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_iszero(InterpState &S, CodePtr OpPC,
-                                   const InterpFrame *Frame, const Function *F,
+                                   const InterpFrame *Frame,
                                    const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
@@ -526,7 +488,7 @@ static bool interp__builtin_iszero(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_signbit(InterpState &S, CodePtr OpPC,
-                                    const InterpFrame *Frame, const Function *F,
+                                    const InterpFrame *Frame,
                                     const CallExpr *Call) {
   const Floating &Arg = S.Stk.peek<Floating>();
 
@@ -535,12 +497,9 @@ static bool interp__builtin_signbit(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const Function *F,
-                                       const CallExpr *Call) {
+                                       const CallExpr *Call, unsigned ID) {
   const Floating &RHS = S.Stk.peek<Floating>();
   const Floating &LHS = S.Stk.peek<Floating>(align(2u * primSize(PT_Float)));
-  unsigned ID = F->getBuiltinID();
 
   pushInteger(
       S,
@@ -574,7 +533,6 @@ static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
 /// second one is an integral value.
 static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
-                                      const Function *Func,
                                       const CallExpr *Call) {
   PrimType FPClassArgT = *S.getContext().classify(Call->getArg(1)->getType());
   APSInt FPClassArg = peekToAPSInt(S.Stk, FPClassArgT);
@@ -591,7 +549,6 @@ static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
 /// Five int values followed by one floating value.
 static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
-                                       const Function *Func,
                                        const CallExpr *Call) {
   const Floating &Val = S.Stk.peek<Floating>();
 
@@ -613,11 +570,12 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
 
   // The last argument is first on the stack.
   assert(Index <= 4);
-  unsigned IntSize = primSize(getIntPrimType(S));
+  PrimType IntT = *S.getContext().classify(Call->getArg(0));
+  unsigned IntSize = primSize(IntT);
   unsigned Offset =
       align(primSize(PT_Float)) + ((1 + (4 - Index)) * align(IntSize));
 
-  APSInt I = peekToAPSInt(S.Stk, getIntPrimType(S), Offset);
+  APSInt I = peekToAPSInt(S.Stk, IntT, Offset);
   pushInteger(S, I, Call->getType());
   return true;
 }
@@ -628,16 +586,15 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
 // proceed without regard to the floating point settings.
 // Reference, WG14 N2478 F.10.4.3
 static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
-                                 const InterpFrame *Frame,
-                                 const Function *Func) {
-  const Floating &Val = getParam<Floating>(Frame, 0);
+                                 const InterpFrame *Frame) {
+  const Floating &Val = S.Stk.peek<Floating>();
 
   S.Stk.push<Floating>(Floating::abs(Val));
   return true;
 }
 
 static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame, const Function *Func,
+                                const InterpFrame *Frame,
                                 const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
@@ -652,7 +609,6 @@ static bool interp__builtin_abs(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
                                      const InterpFrame *Frame,
-                                     const Function *Func,
                                      const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
@@ -662,7 +618,7 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_parity(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call) {
+                                   const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
   pushInteger(S, Val.popcount() % 2, Call->getType());
@@ -671,7 +627,7 @@ static bool interp__builtin_parity(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame,
-                                  const Function *Func, const CallExpr *Call) {
+                                  const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
   pushInteger(S, Val.getBitWidth() - Val.getSignificantBits(), Call->getType());
@@ -680,7 +636,6 @@ static bool interp__builtin_clrsb(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
-                                       const Function *Func,
                                        const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Val = peekToAPSInt(S.Stk, ArgT);
@@ -690,7 +645,6 @@ static bool interp__builtin_bitreverse(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
                                           const InterpFrame *Frame,
-                                          const Function *Func,
                                           const CallExpr *Call) {
   // This is an unevaluated call, so there are no arguments on the stack.
   assert(Call->getNumArgs() == 1);
@@ -707,14 +661,14 @@ static bool interp__builtin_classify_type(InterpState &S, CodePtr OpPC,
 // __builtin_expect_with_probability(long, long, double)
 static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call) {
+                                   const CallExpr *Call) {
   // The return value is simply the value of the first parameter.
   // We ignore the probability.
   unsigned NumArgs = Call->getNumArgs();
   assert(NumArgs == 2 || NumArgs == 3);
 
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
-  unsigned Offset = align(primSize(getLongPrimType(S))) * 2;
+  unsigned Offset = align(ArgT) * 2;
   if (NumArgs == 3)
     Offset += align(primSize(PT_Float));
 
@@ -726,8 +680,7 @@ static bool interp__builtin_expect(InterpState &S, CodePtr OpPC,
 /// rotateleft(value, amount)
 static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call,
-                                   bool Right) {
+                                   const CallExpr *Call, bool Right) {
   PrimType AmountT = *S.getContext().classify(Call->getArg(1)->getType());
   PrimType ValueT = *S.getContext().classify(Call->getArg(0)->getType());
 
@@ -748,7 +701,7 @@ static bool interp__builtin_rotate(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame, const Function *Func,
+                                const InterpFrame *Frame,
                                 const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Value = peekToAPSInt(S.Stk, ArgT);
@@ -760,7 +713,6 @@ static bool interp__builtin_ffs(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
-                                      const Function *Func,
                                       const CallExpr *Call) {
   assert(Call->getArg(0)->isLValue());
   PrimType PtrT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
@@ -775,19 +727,18 @@ static bool interp__builtin_addressof(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_move(InterpState &S, CodePtr OpPC,
-                                 const InterpFrame *Frame, const Function *Func,
+                                 const InterpFrame *Frame,
                                  const CallExpr *Call) {
 
   PrimType ArgT = S.getContext().classify(Call->getArg(0)).value_or(PT_Ptr);
 
   TYPE_SWITCH(ArgT, const T &Arg = S.Stk.peek<T>(); S.Stk.push<T>(Arg););
 
-  return Func->getDecl()->isConstexpr();
+  return Call->getDirectCallee()->isConstexpr();
 }
 
 static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
                                                  const InterpFrame *Frame,
-                                                 const Function *Func,
                                                  const CallExpr *Call) {
   PrimType ArgT = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt Arg = peekToAPSInt(S.Stk, ArgT);
@@ -799,8 +750,7 @@ static bool interp__builtin_eh_return_data_regno(InterpState &S, CodePtr OpPC,
 }
 
 /// Just takes the first Argument to the call and puts it on the stack.
-static bool noopPointer(InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
-                        const Function *Func, const CallExpr *Call) {
+static bool noopPointer(InterpState &S) {
   const Pointer &Arg = S.Stk.peek<Pointer>();
   S.Stk.push<Pointer>(Arg);
   return true;
@@ -808,14 +758,12 @@ static bool noopPointer(InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
 
 // Two integral values followed by a pointer (lhs, rhs, resultOut)
 static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
-                                       const InterpFrame *Frame,
-                                       const Function *Func,
-                                       const CallExpr *Call) {
+                                       const CallExpr *Call,
+                                       unsigned BuiltinOp) {
   Pointer &ResultPtr = S.Stk.peek<Pointer>();
   if (ResultPtr.isDummy())
     return false;
 
-  unsigned BuiltinOp = Func->getBuiltinID();
   PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
   PrimType LHST = *S.getContext().classify(Call->getArg(0)->getType());
   APSInt RHS = peekToAPSInt(S.Stk, RHST,
@@ -908,7 +856,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
   // Write Result to ResultPtr and put Overflow on the stacl.
   assignInteger(ResultPtr, ResultT, Result);
   ResultPtr.initialize();
-  assert(Func->getDecl()->getReturnType()->isBooleanType());
+  assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
   return true;
 }
@@ -916,9 +864,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 /// Three integral values followed by a pointer (lhs, rhs, carry, carryOut).
 static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
                                     const InterpFrame *Frame,
-                                    const Function *Func,
-                                    const CallExpr *Call) {
-  unsigned BuiltinOp = Func->getBuiltinID();
+                                    const CallExpr *Call, unsigned BuiltinOp) {
   PrimType LHST = *S.getContext().classify(Call->getArg(0)->getType());
   PrimType RHST = *S.getContext().classify(Call->getArg(1)->getType());
   PrimType CarryT = *S.getContext().classify(Call->getArg(2)->getType());
@@ -976,10 +922,9 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame, const Function *Func,
-                                const CallExpr *Call) {
+                                const InterpFrame *Frame, const CallExpr *Call,
+                                unsigned BuiltinOp) {
   unsigned CallSize = callArgSize(S, Call);
-  unsigned BuiltinOp = Func->getBuiltinID();
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
   const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
@@ -990,8 +935,7 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
                          BuiltinOp != Builtin::BI__lzcnt64;
 
   if (Val == 0) {
-    if (Func->getBuiltinID() == Builtin::BI__builtin_clzg &&
-        Call->getNumArgs() == 2) {
+    if (BuiltinOp == Builtin::BI__builtin_clzg && Call->getNumArgs() == 2) {
       // We have a fallback parameter.
       PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
       const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
@@ -1008,15 +952,14 @@ static bool interp__builtin_clz(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
-                                const InterpFrame *Frame, const Function *Func,
-                                const CallExpr *Call) {
+                                const InterpFrame *Frame, const CallExpr *Call,
+                                unsigned BuiltinID) {
   unsigned CallSize = callArgSize(S, Call);
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
   const APSInt &Val = peekToAPSInt(S.Stk, ValT, CallSize);
 
   if (Val == 0) {
-    if (Func->getBuiltinID() == Builtin::BI__builtin_ctzg &&
-        Call->getNumArgs() == 2) {
+    if (BuiltinID == Builtin::BI__builtin_ctzg && Call->getNumArgs() == 2) {
       // We have a fallback parameter.
       PrimType FallbackT = *S.getContext().classify(Call->getArg(1));
       const APSInt &Fallback = peekToAPSInt(S.Stk, FallbackT);
@@ -1032,7 +975,7 @@ static bool interp__builtin_ctz(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_bswap(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame,
-                                  const Function *Func, const CallExpr *Call) {
+                                  const CallExpr *Call) {
   PrimType ReturnT = *S.getContext().classify(Call->getType());
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
   const APSInt &Val = peekToAPSInt(S.Stk, ValT);
@@ -1048,10 +991,8 @@ static bool interp__builtin_bswap(InterpState &S, CodePtr OpPC,
 /// bool __c11_atomic_is_lock_free(size_t)
 static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
                                              const InterpFrame *Frame,
-                                             const Function *Func,
-                                             const CallExpr *Call) {
-  unsigned BuiltinOp = Func->getBuiltinID();
-
+                                             const CallExpr *Call,
+                                             unsigned BuiltinOp) {
   PrimType ValT = *S.getContext().classify(Call->getArg(0));
   unsigned SizeValOffset = 0;
   if (BuiltinOp != Builtin::BI__c11_atomic_is_lock_free)
@@ -1127,7 +1068,6 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
 /// __builtin_complex(Float A, float B);
 static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
                                     const InterpFrame *Frame,
-                                    const Function *Func,
                                     const CallExpr *Call) {
   const Floating &Arg2 = S.Stk.peek<Floating>();
   const Floating &Arg1 = S.Stk.peek<Floating>(align(primSize(PT_Float)) * 2);
@@ -1150,9 +1090,8 @@ static bool interp__builtin_complex(InterpState &S, CodePtr OpPC,
 /// The second parameter is the requested alignment as an integer.
 static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
                                                const InterpFrame *Frame,
-                                               const Function *Func,
-                                               const CallExpr *Call) {
-  unsigned BuiltinOp = Func->getBuiltinID();
+                                               const CallExpr *Call,
+                                               unsigned BuiltinOp) {
   unsigned CallSize = callArgSize(S, Call);
 
   PrimType AlignmentT = *S.Ctx.classify(Call->getArg(1));
@@ -1257,7 +1196,6 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
 /// __builtin_assume_aligned(Ptr, Alignment[, ExtraOffset])
 static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
                                            const InterpFrame *Frame,
-                                           const Function *Func,
                                            const CallExpr *Call) {
   assert(Call->getNumArgs() == 2 || Call->getNumArgs() == 3);
 
@@ -1321,7 +1259,6 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
-                                       const Function *Func,
                                        const CallExpr *Call) {
   if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType())
@@ -1352,7 +1289,6 @@ static bool interp__builtin_ia32_bextr(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
-                                      const Function *Func,
                                       const CallExpr *Call) {
   QualType CallType = Call->getType();
   if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
@@ -1379,7 +1315,6 @@ static bool interp__builtin_ia32_bzhi(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
-                                       const Function *Func,
                                        const CallExpr *Call) {
   QualType CallType = Call->getType();
   if (!CallType->isIntegerType() ||
@@ -1393,7 +1328,6 @@ static bool interp__builtin_ia32_lzcnt(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
                                        const InterpFrame *Frame,
-                                       const Function *Func,
                                        const CallExpr *Call) {
   QualType CallType = Call->getType();
   if (!CallType->isIntegerType() ||
@@ -1407,7 +1341,6 @@ static bool interp__builtin_ia32_tzcnt(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
-                                      const Function *Func,
                                       const CallExpr *Call) {
   if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType())
@@ -1432,7 +1365,6 @@ static bool interp__builtin_ia32_pdep(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
-                                      const Function *Func,
                                       const CallExpr *Call) {
   if (Call->getNumArgs() != 2 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType())
@@ -1458,17 +1390,23 @@ static bool interp__builtin_ia32_pext(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
                                                     CodePtr OpPC,
                                                     const InterpFrame *Frame,
-                                                    const Function *Func,
-                                                    const CallExpr *Call) {
+                                                    const CallExpr *Call,
+                                                    unsigned BuiltinOp) {
   if (Call->getNumArgs() != 4 || !Call->getArg(0)->getType()->isIntegerType() ||
       !Call->getArg(1)->getType()->isIntegerType() ||
       !Call->getArg(2)->getType()->isIntegerType())
     return false;
 
-  unsigned BuiltinOp = Func->getBuiltinID();
-  APSInt CarryIn = getAPSIntParam(Frame, 0);
-  APSInt LHS = getAPSIntParam(Frame, 1);
-  APSInt RHS = getAPSIntParam(Frame, 2);
+  APSInt CarryIn = peekToAPSInt(
+      S.Stk, *S.getContext().classify(Call->getArg(0)),
+      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
+          align(primSize(*S.getContext().classify(Call->getArg(1)))) +
+          align(primSize(*S.getContext().classify(Call->getArg(0)))));
+  APSInt LHS = peekToAPSInt(
+      S.Stk, *S.getContext().classify(Call->getArg(1)),
+      align(primSize(*S.getContext().classify(Call->getArg(2)))) +
+          align(primSize(*S.getContext().classify(Call->getArg(1)))));
+  APSInt RHS = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
 
   bool IsAdd = BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u32 ||
                BuiltinOp == clang::X86::BI__builtin_ia32_addcarryx_u64;
@@ -1496,7 +1434,6 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
 static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
                                                       CodePtr OpPC,
                                                       const InterpFrame *Frame,
-                                                      const Function *Func,
                                                       const CallExpr *Call) {
   analyze_os_log::OSLogBufferLayout Layout;
   analyze_os_log::computeOSLogBufferLayout(S.getASTContext(), Call, Layout);
@@ -1504,9 +1441,10 @@ static bool interp__builtin_os_log_format_buffer_size(InterpState &S,
   return true;
 }
 
-static bool interp__builtin_ptrauth_string_discriminator(
-    InterpState &S, CodePtr OpPC, const InterpFrame *Frame,
-    const Function *Func, const CallExpr *Call) {
+static bool
+interp__builtin_ptrauth_string_discriminator(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const CallExpr *Call) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   assert(Ptr.getFieldDesc()->isPrimitiveArray());
 
@@ -1521,7 +1459,6 @@ static bool interp__builtin_ptrauth_string_discriminator(
 
 static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
                                          const InterpFrame *Frame,
-                                         const Function *Func,
                                          const CallExpr *Call) {
   // A call to __operator_new is only valid within std::allocate<>::allocate.
   // Walk up the call stack to find the appropriate caller and get the
@@ -1617,7 +1554,6 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
                                             const InterpFrame *Frame,
-                                            const Function *Func,
                                             const CallExpr *Call) {
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
@@ -1670,7 +1606,6 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_arithmetic_fence(InterpState &S, CodePtr OpPC,
                                              const InterpFrame *Frame,
-                                             const Function *Func,
                                              const CallExpr *Call) {
   const Floating &Arg0 = S.Stk.peek<Floating>();
   S.Stk.push<Floating>(Arg0);
@@ -1678,13 +1613,10 @@ static bool interp__builtin_arithmetic_fence(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
-                                          const InterpFrame *Frame,
-                                          const Function *Func,
-                                          const CallExpr *Call) {
+                                          const CallExpr *Call, unsigned ID) {
   const Pointer &Arg = S.Stk.peek<Pointer>();
   assert(Arg.getFieldDesc()->isPrimitiveArray());
 
-  unsigned ID = Func->getBuiltinID();
   QualType ElemType = Arg.getFieldDesc()->getElemQualType();
   assert(Call->getType() == ElemType);
   PrimType ElemT = *S.getContext().classify(ElemType);
@@ -1733,7 +1665,6 @@ static bool interp__builtin_vector_reduce(InterpState &S, CodePtr OpPC,
 /// Can be called with an integer or vector as the first and only parameter.
 static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
                                                  const InterpFrame *Frame,
-                                                 const Function *Func,
                                                  const CallExpr *Call) {
   assert(Call->getNumArgs() == 1);
   if (Call->getArg(0)->getType()->isIntegerType()) {
@@ -1769,13 +1700,16 @@ static bool interp__builtin_elementwise_popcount(InterpState &S, CodePtr OpPC,
 
 static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call) {
+                                   const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 3);
-  unsigned ID = Func->getBuiltinID();
-  Pointer DestPtr = getParam<Pointer>(Frame, 0);
   const ASTContext &ASTCtx = S.getASTContext();
-  const Pointer &SrcPtr = getParam<Pointer>(Frame, 1);
-  APSInt Size = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  PrimType SizeT = *S.getContext().classify(Call->getArg(2));
+  Pointer DestPtr = S.Stk.peek<Pointer>(align(primSize(SizeT)) +
+                                        (align(primSize(PT_Ptr)) * 2));
+  const Pointer SrcPtr = S.Stk.peek<Pointer>(align(primSize(SizeT)) +
+                                             (align(primSize(PT_Ptr)) * 1));
+  APSInt Size = peekToAPSInt(S.Stk, SizeT);
+
   assert(!Size.isSigned() && "memcpy and friends take an unsigned size");
 
   if (ID == Builtin::BImemcpy || ID == Builtin::BImemmove)
@@ -1917,13 +1851,14 @@ static bool isOneByteCharacterType(QualType T) {
 
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call) {
+                                   const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 3);
-  unsigned ID = Func->getBuiltinID();
-  const Pointer &PtrA = getParam<Pointer>(Frame, 0);
-  const Pointer &PtrB = getParam<Pointer>(Frame, 1);
-  const APSInt &Size =
-      peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  PrimType SizeT = *S.getContext().classify(Call->getArg(2));
+  const APSInt &Size = peekToAPSInt(S.Stk, SizeT);
+  const Pointer &PtrA = S.Stk.peek<Pointer>(align(primSize(SizeT)) +
+                                            (align(primSize(PT_Ptr)) * 2));
+  const Pointer &PtrB = S.Stk.peek<Pointer>(align(primSize(SizeT)) +
+                                            (align(primSize(PT_Ptr)) * 1));
 
   if (ID == Builtin::BImemcmp || ID == Builtin::BIbcmp ||
       ID == Builtin::BIwmemcmp)
@@ -2026,26 +1961,26 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
 }
 
 static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
-                                   const InterpFrame *Frame,
-                                   const Function *Func, const CallExpr *Call) {
-  unsigned ID = Func->getBuiltinID();
+                                   const CallExpr *Call, unsigned ID) {
   if (ID == Builtin::BImemchr || ID == Builtin::BIwcschr ||
       ID == Builtin::BIstrchr || ID == Builtin::BIwmemchr)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
-  const Pointer &Ptr = getParam<Pointer>(Frame, 0);
+  unsigned ArgOffset = 0;
   APSInt Desired;
   std::optional<APSInt> MaxLength;
+  PrimType DesiredT = *S.getContext().classify(Call->getArg(1));
   if (Call->getNumArgs() == 3) {
-    MaxLength =
-        peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)), 0);
-    Desired = peekToAPSInt(
-        S.Stk, *S.getContext().classify(Call->getArg(1)),
-        align(primSize(*S.getContext().classify(Call->getArg(2)))) +
-            align(primSize(*S.getContext().classify(Call->getArg(1)))));
+    PrimType MaxT = *S.getContext().classify(Call->getArg(2));
+    MaxLength = peekToAPSInt(S.Stk, MaxT);
+
+    ArgOffset += align(primSize(MaxT)) + align(primSize(DesiredT));
+    Desired = peekToAPSInt(S.Stk, DesiredT, ArgOffset);
   } else {
-    Desired = peekToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(1)));
+    Desired = peekToAPSInt(S.Stk, DesiredT);
+    ArgOffset += align(primSize(DesiredT));
   }
+  const Pointer &Ptr = S.Stk.peek<Pointer>(ArgOffset + align(primSize(PT_Ptr)));
 
   if (MaxLength && MaxLength->isZero()) {
     S.Stk.push<Pointer>();
@@ -2197,7 +2132,6 @@ static unsigned computePointerOffset(const ASTContext &ASTCtx,
 
 static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
                                         const InterpFrame *Frame,
-                                        const Function *Func,
                                         const CallExpr *Call) {
   PrimType KindT = *S.getContext().classify(Call->getArg(1));
   [[maybe_unused]] unsigned Kind = peekToAPSInt(S.Stk, KindT).getZExtValue();
@@ -2249,14 +2183,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIwcsncmp:
   case Builtin::BI__builtin_wcscmp:
   case Builtin::BIwcscmp:
-    if (!interp__builtin_strcmp(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_strcmp(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
   case Builtin::BI__builtin_strlen:
   case Builtin::BIstrlen:
   case Builtin::BI__builtin_wcslen:
   case Builtin::BIwcslen:
-    if (!interp__builtin_strlen(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_strlen(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
   case Builtin::BI__builtin_nan:
@@ -2264,7 +2198,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_nanl:
   case Builtin::BI__builtin_nanf16:
   case Builtin::BI__builtin_nanf128:
-    if (!interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/false))
+    if (!interp__builtin_nan(S, OpPC, Frame, Call, /*Signaling=*/false))
       return false;
     break;
   case Builtin::BI__builtin_nans:
@@ -2272,7 +2206,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_nansl:
   case Builtin::BI__builtin_nansf16:
   case Builtin::BI__builtin_nansf128:
-    if (!interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/true))
+    if (!interp__builtin_nan(S, OpPC, Frame, Call, /*Signaling=*/true))
       return false;
     break;
 
@@ -2286,14 +2220,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_infl:
   case Builtin::BI__builtin_inff16:
   case Builtin::BI__builtin_inff128:
-    if (!interp__builtin_inf(S, OpPC, Frame, F))
+    if (!interp__builtin_inf(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_copysign:
   case Builtin::BI__builtin_copysignf:
   case Builtin::BI__builtin_copysignl:
   case Builtin::BI__builtin_copysignf128:
-    if (!interp__builtin_copysign(S, OpPC, Frame, F))
+    if (!interp__builtin_copysign(S, OpPC, Frame))
       return false;
     break;
 
@@ -2302,7 +2236,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminf128:
-    if (!interp__builtin_fmin(S, OpPC, Frame, F, /*IsNumBuiltin=*/false))
+    if (!interp__builtin_fmin(S, OpPC, Frame, /*IsNumBuiltin=*/false))
       return false;
     break;
 
@@ -2311,7 +2245,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fminimum_numl:
   case Builtin::BI__builtin_fminimum_numf16:
   case Builtin::BI__builtin_fminimum_numf128:
-    if (!interp__builtin_fmin(S, OpPC, Frame, F, /*IsNumBuiltin=*/true))
+    if (!interp__builtin_fmin(S, OpPC, Frame, /*IsNumBuiltin=*/true))
       return false;
     break;
 
@@ -2320,7 +2254,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxf128:
-    if (!interp__builtin_fmax(S, OpPC, Frame, F, /*IsNumBuiltin=*/false))
+    if (!interp__builtin_fmax(S, OpPC, Frame, /*IsNumBuiltin=*/false))
       return false;
     break;
 
@@ -2329,49 +2263,49 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fmaximum_numl:
   case Builtin::BI__builtin_fmaximum_numf16:
   case Builtin::BI__builtin_fmaximum_numf128:
-    if (!interp__builtin_fmax(S, OpPC, Frame, F, /*IsNumBuiltin=*/true))
+    if (!interp__builtin_fmax(S, OpPC, Frame, /*IsNumBuiltin=*/true))
       return false;
     break;
 
   case Builtin::BI__builtin_isnan:
-    if (!interp__builtin_isnan(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_isnan(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_issignaling:
-    if (!interp__builtin_issignaling(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_issignaling(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_isinf:
-    if (!interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/false, Call))
+    if (!interp__builtin_isinf(S, OpPC, Frame, /*Sign=*/false, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_isinf_sign:
-    if (!interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/true, Call))
+    if (!interp__builtin_isinf(S, OpPC, Frame, /*Sign=*/true, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_isfinite:
-    if (!interp__builtin_isfinite(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_isfinite(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_isnormal:
-    if (!interp__builtin_isnormal(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_isnormal(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_issubnormal:
-    if (!interp__builtin_issubnormal(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_issubnormal(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_iszero:
-    if (!interp__builtin_iszero(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_iszero(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_signbit:
   case Builtin::BI__builtin_signbitf:
   case Builtin::BI__builtin_signbitl:
-    if (!interp__builtin_signbit(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_signbit(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_isgreater:
@@ -2380,15 +2314,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
-    if (!interp_floating_comparison(S, OpPC, Frame, F, Call))
+    if (!interp_floating_comparison(S, OpPC, Call, BuiltinID))
       return false;
     break;
   case Builtin::BI__builtin_isfpclass:
-    if (!interp__builtin_isfpclass(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_isfpclass(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BI__builtin_fpclassify:
-    if (!interp__builtin_fpclassify(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_fpclassify(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2396,14 +2330,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl:
   case Builtin::BI__builtin_fabsf128:
-    if (!interp__builtin_fabs(S, OpPC, Frame, F))
+    if (!interp__builtin_fabs(S, OpPC, Frame))
       return false;
     break;
 
   case Builtin::BI__builtin_abs:
   case Builtin::BI__builtin_labs:
   case Builtin::BI__builtin_llabs:
-    if (!interp__builtin_abs(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_abs(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2414,21 +2348,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__popcnt16: // Microsoft variants of popcount
   case Builtin::BI__popcnt:
   case Builtin::BI__popcnt64:
-    if (!interp__builtin_popcount(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_popcount(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_parity:
   case Builtin::BI__builtin_parityl:
   case Builtin::BI__builtin_parityll:
-    if (!interp__builtin_parity(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_parity(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_clrsb:
   case Builtin::BI__builtin_clrsbl:
   case Builtin::BI__builtin_clrsbll:
-    if (!interp__builtin_clrsb(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_clrsb(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2436,18 +2370,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
   case Builtin::BI__builtin_bitreverse64:
-    if (!interp__builtin_bitreverse(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_bitreverse(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_classify_type:
-    if (!interp__builtin_classify_type(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_classify_type(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_expect:
   case Builtin::BI__builtin_expect_with_probability:
-    if (!interp__builtin_expect(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_expect(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2460,7 +2394,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI_rotl:
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
-    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/false))
+    if (!interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/false))
       return false;
     break;
 
@@ -2473,20 +2407,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
-    if (!interp__builtin_rotate(S, OpPC, Frame, F, Call, /*Right=*/true))
+    if (!interp__builtin_rotate(S, OpPC, Frame, Call, /*Right=*/true))
       return false;
     break;
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll:
-    if (!interp__builtin_ffs(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ffs(S, OpPC, Frame, Call))
       return false;
     break;
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
-    if (!interp__builtin_addressof(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_addressof(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2495,17 +2429,17 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIforward_like:
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
-    if (!interp__builtin_move(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_move(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_eh_return_data_regno:
-    if (!interp__builtin_eh_return_data_regno(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_eh_return_data_regno(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_launder:
-    if (!noopPointer(S, OpPC, Frame, F, Call))
+    if (!noopPointer(S))
       return false;
     break;
 
@@ -2530,7 +2464,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_smul_overflow:
   case Builtin::BI__builtin_smull_overflow:
   case Builtin::BI__builtin_smulll_overflow:
-    if (!interp__builtin_overflowop(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_overflowop(S, OpPC, Call, BuiltinID))
       return false;
     break;
 
@@ -2544,7 +2478,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_subc:
   case Builtin::BI__builtin_subcl:
   case Builtin::BI__builtin_subcll:
-    if (!interp__builtin_carryop(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_carryop(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
 
@@ -2556,7 +2490,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__lzcnt16: // Microsoft variants of count leading-zeroes
   case Builtin::BI__lzcnt:
   case Builtin::BI__lzcnt64:
-    if (!interp__builtin_clz(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_clz(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
 
@@ -2565,38 +2499,38 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_ctzll:
   case Builtin::BI__builtin_ctzs:
   case Builtin::BI__builtin_ctzg:
-    if (!interp__builtin_ctz(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ctz(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
 
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
-    if (!interp__builtin_bswap(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_bswap(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
   case Builtin::BI__c11_atomic_is_lock_free:
-    if (!interp__builtin_atomic_lock_free(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_atomic_lock_free(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
 
   case Builtin::BI__builtin_complex:
-    if (!interp__builtin_complex(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_complex(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_is_aligned:
   case Builtin::BI__builtin_align_up:
   case Builtin::BI__builtin_align_down:
-    if (!interp__builtin_is_aligned_up_down(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_is_aligned_up_down(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
 
   case Builtin::BI__builtin_assume_aligned:
-    if (!interp__builtin_assume_aligned(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_assume_aligned(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2604,39 +2538,39 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case clang::X86::BI__builtin_ia32_bextr_u64:
   case clang::X86::BI__builtin_ia32_bextri_u32:
   case clang::X86::BI__builtin_ia32_bextri_u64:
-    if (!interp__builtin_ia32_bextr(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ia32_bextr(S, OpPC, Frame, Call))
       return false;
     break;
 
   case clang::X86::BI__builtin_ia32_bzhi_si:
   case clang::X86::BI__builtin_ia32_bzhi_di:
-    if (!interp__builtin_ia32_bzhi(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ia32_bzhi(S, OpPC, Frame, Call))
       return false;
     break;
 
   case clang::X86::BI__builtin_ia32_lzcnt_u16:
   case clang::X86::BI__builtin_ia32_lzcnt_u32:
   case clang::X86::BI__builtin_ia32_lzcnt_u64:
-    if (!interp__builtin_ia32_lzcnt(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ia32_lzcnt(S, OpPC, Frame, Call))
       return false;
     break;
 
   case clang::X86::BI__builtin_ia32_tzcnt_u16:
   case clang::X86::BI__builtin_ia32_tzcnt_u32:
   case clang::X86::BI__builtin_ia32_tzcnt_u64:
-    if (!interp__builtin_ia32_tzcnt(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ia32_tzcnt(S, OpPC, Frame, Call))
       return false;
     break;
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
-    if (!interp__builtin_ia32_pdep(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ia32_pdep(S, OpPC, Frame, Call))
       return false;
     break;
 
   case clang::X86::BI__builtin_ia32_pext_si:
   case clang::X86::BI__builtin_ia32_pext_di:
-    if (!interp__builtin_ia32_pext(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ia32_pext(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2644,17 +2578,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
   case clang::X86::BI__builtin_ia32_subborrow_u32:
   case clang::X86::BI__builtin_ia32_subborrow_u64:
-    if (!interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ia32_addcarry_subborrow(S, OpPC, Frame, Call,
+                                                 BuiltinID))
       return false;
     break;
 
   case Builtin::BI__builtin_os_log_format_buffer_size:
-    if (!interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_os_log_format_buffer_size(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_ptrauth_string_discriminator:
-    if (!interp__builtin_ptrauth_string_discriminator(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_ptrauth_string_discriminator(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2663,17 +2598,17 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     break;
 
   case Builtin::BI__builtin_operator_new:
-    if (!interp__builtin_operator_new(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_operator_new(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__builtin_operator_delete:
-    if (!interp__builtin_operator_delete(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_operator_delete(S, OpPC, Frame, Call))
       return false;
     break;
 
   case Builtin::BI__arithmetic_fence:
-    if (!interp__builtin_arithmetic_fence(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_arithmetic_fence(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2682,12 +2617,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_reduce_and:
   case Builtin::BI__builtin_reduce_or:
   case Builtin::BI__builtin_reduce_xor:
-    if (!interp__builtin_vector_reduce(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_vector_reduce(S, OpPC, Call, BuiltinID))
       return false;
     break;
 
   case Builtin::BI__builtin_elementwise_popcount:
-    if (!interp__builtin_elementwise_popcount(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_elementwise_popcount(S, OpPC, Frame, Call))
       return false;
     break;
 
@@ -2699,7 +2634,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BImemmove:
   case Builtin::BI__builtin_wmemmove:
   case Builtin::BIwmemmove:
-    if (!interp__builtin_memcpy(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_memcpy(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
 
@@ -2709,7 +2644,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIbcmp:
   case Builtin::BI__builtin_wmemcmp:
   case Builtin::BIwmemcmp:
-    if (!interp__builtin_memcmp(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_memcmp(S, OpPC, Frame, Call, BuiltinID))
       return false;
     break;
 
@@ -2722,13 +2657,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BIwcschr:
   case Builtin::BI__builtin_wcschr:
   case Builtin::BI__builtin_char_memchr:
-    if (!interp__builtin_memchr(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_memchr(S, OpPC, Call, BuiltinID))
       return false;
     break;
 
   case Builtin::BI__builtin_object_size:
   case Builtin::BI__builtin_dynamic_object_size:
-    if (!interp__builtin_object_size(S, OpPC, Frame, F, Call))
+    if (!interp__builtin_object_size(S, OpPC, Frame, Call))
       return false;
     break;
 
