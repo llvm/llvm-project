@@ -447,7 +447,7 @@ protected:
   bool canFoldInboundsGEP(GetElementPtrInst &I);
   bool accumulateGEPOffset(GEPOperator &GEP, APInt &Offset);
   bool simplifyCallSite(Function *F, CallBase &Call);
-  bool simplifyCmpInst(Function *F, CmpInst &Cmp);
+  bool simplifyCmpInstForRecCall(CmpInst &Cmp);
   bool simplifyInstruction(Instruction &I);
   bool simplifyIntrinsicCallIsConstant(CallBase &CB);
   bool simplifyIntrinsicCallObjectSize(CallBase &CB);
@@ -1681,13 +1681,14 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
 }
 
 // Simplify \p Cmp if RHS is const and we can ValueTrack LHS.
-// This handles the case when the Cmp instruction is guarding a recursive call
+// This handles the case only when the Cmp instruction is guarding a recursive call
 // that will cause the Cmp to fail/succeed for the recursive call.
-bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
+bool CallAnalyzer::simplifyCmpInstForRecCall(CmpInst &Cmp) {
   // Bail out if LHS is not a function argument or RHS is NOT const:
   if (!isa<Argument>(Cmp.getOperand(0)) || !isa<Constant>(Cmp.getOperand(1)))
     return false;
   auto *CmpOp = Cmp.getOperand(0);
+  Function *F = Cmp.getFunction();
   // Iterate over the users of the function to check if it's a recursive
   // function:
   for (auto *U : F->users()) {
@@ -2134,7 +2135,7 @@ bool CallAnalyzer::visitCmpInst(CmpInst &I) {
     return true;
 
   // Try to handle comparison that can be simplified using ValueTracking.
-  if (simplifyCmpInst(I.getFunction(), I))
+  if (simplifyCmpInstForRecCall(I))
     return true;
 
   if (I.getOpcode() == Instruction::FCmp)
