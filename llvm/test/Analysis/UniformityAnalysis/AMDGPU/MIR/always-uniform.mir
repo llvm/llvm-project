@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -passes='print<machine-uniformity>' -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -mcpu=gfx900 -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 # readlane, readfirstlane is always uniform
 
