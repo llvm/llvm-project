@@ -1851,6 +1851,7 @@ public:
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
+  // If this recipe is unrolled it will have 2 additional operands.
   bool isUnrolled() const { return getNumOperands() == 5; }
 
 public:
@@ -1901,8 +1902,8 @@ public:
   const VPValue *getVFValue() const { return getOperand(2); }
 
   VPValue *getSplatVFValue() {
-    // If the recipe has been unrolled (4 operands), return the VPValue for the
-    // induction increment.
+    // If the recipe has been unrolled return the VPValue for the induction
+    // increment.
     return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
 
