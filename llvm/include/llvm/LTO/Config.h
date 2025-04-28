@@ -126,6 +126,9 @@ struct Config {
   /// Name remapping file for profile data.
   std::string ProfileRemapping;
 
+  /// Name propeller profile.
+  std::string PropellerProfile;
+
   /// The directory to store .dwo files.
   std::string DwoDir;
 

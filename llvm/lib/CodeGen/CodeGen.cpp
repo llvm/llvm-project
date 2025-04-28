@@ -47,10 +47,12 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeFinalizeISelPass(Registry);
   initializeFinalizeMachineBundlesPass(Registry);
   initializeFixupStatepointCallerSavedLegacyPass(Registry);
+  initializeFuncHotBBHashesProfileReaderPass(Registry);
   initializeFuncletLayoutPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
   initializeHardwareLoopsLegacyPass(Registry);
+  initializeHotMachineBasicBlockInfoGeneratorPass(Registry);
   initializeIfConverterPass(Registry);
   initializeImplicitNullChecksPass(Registry);
   initializeIndirectBrExpandLegacyPassPass(Registry);

@@ -1672,6 +1672,11 @@ def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
                as cold. Otherwise, treat callsites without profile samples as if
                we have no profile}]>,
    MarshallingInfoFlag<CodeGenOpts<"ProfileSampleAccurate">>;
+def fpropeller_profile_use_EQ : Joined<["-"], "fpropeller-profile-use=">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>, 
+    MetaVarName<"<pathname>">,
+    HelpText<"Use propeller profile for profile-guided optimization">,
+    MarshallingInfoString<CodeGenOpts<"PropellerProfileFile">>;
 def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
     Visibility<[ClangOption, CC1Option]>,
     Group<f_Group>,

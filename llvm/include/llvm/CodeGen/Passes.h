@@ -61,6 +61,10 @@ namespace llvm {
   /// This pass garbage-collects such basic blocks.
   MachineFunctionPass *createGCEmptyBasicBlocksPass();
 
+  /// createHotMachineBasicBlockInfoGenerator Pass - This pass generate the hot
+  /// machine basic block clusters that is used in asicBlockSections pass.
+  MachineFunctionPass *createHotMachineBasicBlockInfoGeneratorPass();
+
   /// createBasicBlockSections Pass - This pass assigns sections to machine
   /// basic blocks and is enabled with -fbasic-block-sections.
   MachineFunctionPass *createBasicBlockSectionsPass();

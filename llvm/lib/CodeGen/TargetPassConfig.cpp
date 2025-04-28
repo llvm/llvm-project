@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/CodeGen/FuncHotBBHashesProfileReader.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/Passes.h"
@@ -1270,14 +1271,24 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createStaticDataSplitterPass());
     addPass(createStaticDataAnnotatorPass());
   }
+
+  auto PGOOpt = TM->getPGOOption();
+  bool HavePropellerProfile = PGOOpt && !PGOOpt->PropellerProfileFile.empty();
+  if (HavePropellerProfile) {
+    addPass(llvm::createFuncHotBBHashesProfileReaderPass((*PGOOpt).PropellerProfileFile));
+  }
+
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
-      TM->Options.BBAddrMap) {
+      TM->Options.BBAddrMap || HavePropellerProfile) {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
       addPass(llvm::createBasicBlockPathCloningPass());
+    }
+    if (HavePropellerProfile) {
+      addPass(llvm::createHotMachineBasicBlockInfoGeneratorPass());
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }

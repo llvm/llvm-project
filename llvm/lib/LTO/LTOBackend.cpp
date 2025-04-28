@@ -246,22 +246,28 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::SampleUse,
-                        PGOOptions::NoCSAction,
+                        /*MemoryProfile=*/"", Conf.PropellerProfile, 
+                        FS, PGOOptions::SampleUse, PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   else if (Conf.RunCSIRInstr) {
     PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
-                        PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default,
-                        Conf.AddFSDiscriminator);
+                        /*MemoryProfile=*/"", Conf.PropellerProfile,
+                        FS, PGOOptions::IRUse, PGOOptions::CSIRInstr, 
+                        PGOOptions::ColdFuncOpt::Default, Conf.AddFSDiscriminator);
   } else if (!Conf.CSIRProfile.empty()) {
     PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
-                        PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default,
-                        Conf.AddFSDiscriminator);
+                        /*MemoryProfile=*/"", Conf.PropellerProfile,
+                        FS, PGOOptions::IRUse, PGOOptions::CSIRUse,
+                        PGOOptions::ColdFuncOpt::Default, Conf.AddFSDiscriminator);
     NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
+  } else if (!Conf.PropellerProfile.empty()) {
+    PGOOpt = PGOOptions("", "", Conf.ProfileRemapping,
+                        /*MemoryProfile=*/"", Conf.PropellerProfile,
+                        FS, PGOOptions::NoAction, PGOOptions::NoCSAction, 
+                        PGOOptions::ColdFuncOpt::Default, Conf.AddFSDiscriminator);
   } else if (Conf.AddFSDiscriminator) {
-    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", 
+                        /*PropellerProfile=*/"", nullptr,
                         PGOOptions::NoAction, PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   }

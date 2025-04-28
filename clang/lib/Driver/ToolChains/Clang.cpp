@@ -6416,6 +6416,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-sample-profile-use-profi");
   }
 
+  if (auto *PropellerUseArg = 
+    Args.getLastArg(options::OPT_fpropeller_profile_use_EQ)) {
+    if (Arg *A = Args.getLastArg(options::OPT_fbasic_block_sections_EQ)) {
+      StringRef Val = A->getValue();
+      if (Val.starts_with("list="))
+        D.Diag(diag::err_drv_argument_not_allowed_with) 
+          << PropellerUseArg->getAsString(Args)
+          << "-fbasic-block-sections=list";
+    }
+    PropellerUseArg->render(Args, CmdArgs);
+  }
+
   // Add runtime flag for PS4/PS5 when PGO, coverage, or sanitizers are enabled.
   if (RawTriple.isPS() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {

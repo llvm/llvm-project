@@ -30,6 +30,7 @@ struct PGOOptions {
   enum class ColdFuncOpt { Default, OptSize, MinSize, OptNone };
   PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
              std::string ProfileRemappingFile, std::string MemoryProfile,
+             std::string PropellerProfile,
              IntrusiveRefCntPtr<vfs::FileSystem> FS,
              PGOAction Action = NoAction, CSPGOAction CSAction = NoCSAction,
              ColdFuncOpt ColdType = ColdFuncOpt::Default,
@@ -44,6 +45,7 @@ struct PGOOptions {
   std::string CSProfileGenFile;
   std::string ProfileRemappingFile;
   std::string MemoryProfile;
+  std::string PropellerProfileFile;
   PGOAction Action;
   CSPGOAction CSAction;
   ColdFuncOpt ColdOptType;

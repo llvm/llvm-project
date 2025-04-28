@@ -288,6 +288,9 @@ public:
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;
 
+  /// Name of the profile file to use with -fpropeller-profile-use.
+  std::string PropellerProfileFile;
+
   /// Name of the profile file to use as output for with -fmemory-profile.
   std::string MemoryProfileOutput;
 

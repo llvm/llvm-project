@@ -835,7 +835,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
     PGOOpt = PGOOptions(getProfileGenName(CodeGenOpts), "", "",
-                        CodeGenOpts.MemoryProfileUsePath, nullptr,
+                        CodeGenOpts.MemoryProfileUsePath, 
+                        CodeGenOpts.PropellerProfileFile, nullptr,
                         PGOOptions::IRInstr, PGOOptions::NoCSAction,
                         ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling,
                         /*PseudoProbeForProfiling=*/false,
@@ -846,30 +847,41 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                                                     : PGOOptions::NoCSAction;
     PGOOpt = PGOOptions(CodeGenOpts.ProfileInstrumentUsePath, "",
                         CodeGenOpts.ProfileRemappingFile,
-                        CodeGenOpts.MemoryProfileUsePath, VFS,
+                        CodeGenOpts.MemoryProfileUsePath, 
+                        CodeGenOpts.PropellerProfileFile, VFS,
                         PGOOptions::IRUse, CSAction, ClPGOColdFuncAttr,
                         CodeGenOpts.DebugInfoForProfiling);
   } else if (!CodeGenOpts.SampleProfileFile.empty())
     // -fprofile-sample-use
     PGOOpt = PGOOptions(
         CodeGenOpts.SampleProfileFile, "", CodeGenOpts.ProfileRemappingFile,
-        CodeGenOpts.MemoryProfileUsePath, VFS, PGOOptions::SampleUse,
+        CodeGenOpts.MemoryProfileUsePath, 
+        CodeGenOpts.PropellerProfileFile, VFS, PGOOptions::SampleUse,
         PGOOptions::NoCSAction, ClPGOColdFuncAttr,
         CodeGenOpts.DebugInfoForProfiling, CodeGenOpts.PseudoProbeForProfiling);
   else if (!CodeGenOpts.MemoryProfileUsePath.empty())
     // -fmemory-profile-use (without any of the above options)
-    PGOOpt = PGOOptions("", "", "", CodeGenOpts.MemoryProfileUsePath, VFS,
+    PGOOpt = PGOOptions("", "", "", CodeGenOpts.MemoryProfileUsePath, 
+                        CodeGenOpts.PropellerProfileFile, VFS,
                         PGOOptions::NoAction, PGOOptions::NoCSAction,
                         ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
+  else if (!CodeGenOpts.PropellerProfileFile.empty())
+    // -fpropeller-profile-use (without any of the above options)
+    PGOOpt = PGOOptions("", "", "", "", 
+                        CodeGenOpts.PropellerProfileFile, VFS,
+                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+                        ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);                    
   else if (CodeGenOpts.PseudoProbeForProfiling)
     // -fpseudo-probe-for-profiling
     PGOOpt =
-        PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+        PGOOptions("", "", "", /*MemoryProfile=*/"", 
+                   /*PropellerProfileFile=*/"", nullptr,
                    PGOOptions::NoAction, PGOOptions::NoCSAction,
                    ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling, true);
   else if (CodeGenOpts.DebugInfoForProfiling)
     // -fdebug-info-for-profiling
-    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", 
+                        /*PropellerProfileFile=*/"", nullptr,
                         PGOOptions::NoAction, PGOOptions::NoCSAction,
                         ClPGOColdFuncAttr, true);
 
@@ -887,7 +899,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       PGOOpt->CSAction = PGOOptions::CSIRInstr;
     } else
       PGOOpt = PGOOptions("", getProfileGenName(CodeGenOpts), "",
-                          /*MemoryProfile=*/"", nullptr, PGOOptions::NoAction,
+                          /*MemoryProfile=*/"", /*PropellerProfileFile=*/"", 
+                          nullptr, PGOOptions::NoAction,
                           PGOOptions::CSIRInstr, ClPGOColdFuncAttr,
                           CodeGenOpts.DebugInfoForProfiling);
   }
@@ -1320,6 +1333,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.OptLevel = CGOpts.OptimizationLevel;
   initTargetOptions(CI, Diags, Conf.Options);
   Conf.SampleProfile = std::move(SampleProfile);
+  Conf.PropellerProfile = CGOpts.PropellerProfileFile;
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   // For historical reasons, loop interleaving is set to mirror setting for loop
