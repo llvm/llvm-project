@@ -2713,8 +2713,7 @@ void SelectionDAGISel::UpdateChains(
       assert(ChainVal.getValueType() == MVT::Other && "Not a chain?");
       SelectionDAG::DAGNodeDeletedListener NDL(
           *CurDAG, [&](SDNode *N, SDNode *E) {
-            std::replace(ChainNodesMatched.begin(), ChainNodesMatched.end(), N,
-                         static_cast<SDNode *>(nullptr));
+            llvm::replace(ChainNodesMatched, N, static_cast<SDNode *>(nullptr));
           });
       if (ChainNode->getOpcode() != ISD::TokenFactor)
         ReplaceUses(ChainVal, InputChain);
@@ -3265,6 +3264,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::AssertSext:
   case ISD::AssertZext:
+  case ISD::AssertNoFPClass:
   case ISD::AssertAlign:
     ReplaceUses(SDValue(NodeToMatch, 0), NodeToMatch->getOperand(0));
     CurDAG->RemoveDeadNode(NodeToMatch);

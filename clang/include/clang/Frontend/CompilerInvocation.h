@@ -268,10 +268,6 @@ public:
   /// Base class internals.
   /// @{
   using CompilerInvocationBase::LangOpts;
-  using CompilerInvocationBase::TargetOpts;
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() {
-    return HSOpts;
-  }
   std::shared_ptr<LangOptions> getLangOptsPtr() { return LangOpts; }
   /// @}
 

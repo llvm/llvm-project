@@ -146,7 +146,7 @@ exit:
   ret void
 }
 
-; Trvially no overlap due to maximum possible value of VLEN and LMUL
+; Trivially no overlap due to minimum distance (8192) exceeding value of VLEN and LMUL.
 define void @trivial_due_max_vscale(ptr %p) {
 ; CHECK-LABEL: 'trivial_due_max_vscale'
 ; CHECK-NEXT:    loop:
@@ -178,7 +178,7 @@ exit:
   ret void
 }
 
-; Dependence distance could be violated via LMUL>=2 or interleaving
+; Dependence distance could be violated via LMUL>=2 or interleaving.
 define void @no_high_lmul_or_interleave(ptr %p) {
 ; CHECK-LABEL: 'no_high_lmul_or_interleave'
 ; CHECK-NEXT:    loop:
@@ -214,9 +214,9 @@ exit:
   ret void
 }
 
-define void @non-power-2-storeloadforward(ptr %A) {
-; CHECK-LABEL: 'non-power-2-storeloadforward'
-; CHECK-NEXT:    for.body:
+define void @non_power_2_storeloadforward(ptr %A) {
+; CHECK-LABEL: 'non_power_2_storeloadforward'
+; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
@@ -237,24 +237,24 @@ define void @non-power-2-storeloadforward(ptr %A) {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
-  br label %for.body
+  br label %loop
 
-for.body:
-  %iv = phi i64 [ 16, %entry ], [ %iv.next, %for.body ]
+loop:
+  %iv = phi i64 [ 16, %entry ], [ %iv.next, %loop ]
   %0 = add nsw i64 %iv, -3
-  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %0
-  %1 = load i32, ptr %arrayidx, align 4
+  %gep.iv.sub.3 = getelementptr inbounds i32, ptr %A, i64 %0
+  %1 = load i32, ptr %gep.iv.sub.3, align 4
   %2 = add nsw i64 %iv, 4
-  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %2
-  %3 = load i32, ptr %arrayidx2, align 4
+  %gep.iv.4 = getelementptr inbounds i32, ptr %A, i64 %2
+  %3 = load i32, ptr %gep.iv.4, align 4
   %add3 = add nsw i32 %3, %1
-  %arrayidx5 = getelementptr inbounds i32, ptr %A, i64 %iv
-  store i32 %add3, ptr %arrayidx5, align 4
+  %gep.iv = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 %add3, ptr %gep.iv, align 4
   %iv.next = add i64 %iv, 1
-  %lftr.wideiv = trunc i64 %iv.next to i32
-  %exitcond = icmp ne i32 %lftr.wideiv, 128
-  br i1 %exitcond, label %for.body, label %for.end
+  %iv.trunc = trunc i64 %iv.next to i32
+  %exitcond = icmp ne i32 %iv.trunc, 128
+  br i1 %exitcond, label %loop, label %exit
 
-for.end:
+exit:
   ret void
 }
