@@ -1301,8 +1301,6 @@ llvm::Intrinsic::ID CvtToF6x2Op::getIntrinsicID(NVVM::CVTFP6Type type,
     return CVT_TO_F6X2_ID_IMPL(e2m3x2, hasRelu);
   case NVVM::CVTFP6Type::E3M2:
     return CVT_TO_F6X2_ID_IMPL(e3m2x2, hasRelu);
-  default:
-    llvm_unreachable("Invalid CVTFP6Type for CvtToF6x2Op");
   }
 }
 
