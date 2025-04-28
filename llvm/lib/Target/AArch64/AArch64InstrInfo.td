@@ -8527,7 +8527,9 @@ def : Pat<(v4f32 (any_fpextend (extract_high_v8bf16 (v8bf16 V128:$Rn)))),
 // Fallback pattern for when we don't have NEON
 def : Pat<(f32 (any_fpextend (bf16 FPR16:$Rn))),
           (f32 (COPY_TO_REGCLASS
-            (i32 (UBFMWri (i32 (SUBREG_TO_REG (i32 0), (bf16 FPR16:$Rn), hsub)),
+            (i32 (UBFMWri (COPY_TO_REGCLASS
+                            (f32 (SUBREG_TO_REG (i32 0), (bf16 FPR16:$Rn), hsub)),
+                            GPR32),
                           (i64 16), (i64 15))),
             FPR32))>;
 
