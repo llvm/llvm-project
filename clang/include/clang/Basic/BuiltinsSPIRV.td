@@ -8,6 +8,12 @@
 
 include "clang/Basic/BuiltinsBase.td"
 
+class SPIRVBuiltin<string prototype, list<Attribute> Attr> : Builtin {
+  let Spellings = ["__builtin_spirv_"#NAME];
+  let Prototype = prototype;
+  let Attributes = !listconcat([NoThrow], Attr);
+}
+
 def SPIRVDistance : Builtin {
   let Spellings = ["__builtin_spirv_distance"];
   let Attributes = [NoThrow, Const];
@@ -37,3 +43,6 @@ def SPIRVFaceForward : Builtin {
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
+
+def generic_cast_to_ptr_explicit
+    : SPIRVBuiltin<"void*(void*, int)", [NoThrow, Const, CustomTypeChecking]>;

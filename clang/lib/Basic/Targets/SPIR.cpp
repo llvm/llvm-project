@@ -35,7 +35,7 @@ static constexpr Builtin::Info BuiltinInfos[] = {
 static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 llvm::SmallVector<Builtin::InfosShard>
-SPIRVTargetInfo::getTargetBuiltins() const {
+BaseSPIRVTargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};
 }
 
