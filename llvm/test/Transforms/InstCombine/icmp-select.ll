@@ -634,9 +634,9 @@ define i1 @discr_eq(i8 %a, i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[B:%.*]], 1
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 3
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 3
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 3
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -655,9 +655,9 @@ define i1 @discr_ne(i8 %a, i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[A:%.*]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[B:%.*]], 1
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 3
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 3
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 3
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2]], i8 [[B]], i8 3
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne i8 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -696,8 +696,8 @@ define i1 @discr_eq_simple(i8 %a, i8 %b) {
 ; CHECK-LABEL: @discr_eq_simple(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 3
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[SEL1]], [[ADD2:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[CMP1]], i8 [[A]], i8 3
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[TMP0]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
