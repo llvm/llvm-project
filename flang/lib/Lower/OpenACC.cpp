@@ -375,6 +375,310 @@ getSymbolFromAccObject(const Fortran::parser::AccObject &accObject) {
   llvm::report_fatal_error("Could not find symbol");
 }
 
+/// Used to generate atomic.read operation which is created in existing
+/// location set by builder.
+static inline void
+genAtomicCaptureStatement(Fortran::lower::AbstractConverter &converter,
+                          mlir::Value fromAddress, mlir::Value toAddress,
+                          mlir::Type elementType, mlir::Location loc) {
+  // Generate `atomic.read` operation for atomic assigment statements
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  firOpBuilder.create<mlir::acc::AtomicReadOp>(
+      loc, fromAddress, toAddress, mlir::TypeAttr::get(elementType));
+}
+
+/// Used to generate atomic.write operation which is created in existing
+/// location set by builder.
+static inline void
+genAtomicWriteStatement(Fortran::lower::AbstractConverter &converter,
+                        mlir::Value lhsAddr, mlir::Value rhsExpr,
+                        mlir::Location loc,
+                        mlir::Value *evaluatedExprValue = nullptr) {
+  // Generate `atomic.write` operation for atomic assignment statements
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
+  // Create a conversion outside the capture block.
+  auto insertionPoint = firOpBuilder.saveInsertionPoint();
+  firOpBuilder.setInsertionPointAfter(rhsExpr.getDefiningOp());
+  rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
+  firOpBuilder.restoreInsertionPoint(insertionPoint);
+
+  firOpBuilder.create<mlir::acc::AtomicWriteOp>(loc, lhsAddr, rhsExpr);
+}
+
+/// Used to generate atomic.update operation which is created in existing
+/// location set by builder.
+static inline void genAtomicUpdateStatement(
+    Fortran::lower::AbstractConverter &converter, mlir::Value lhsAddr,
+    mlir::Type varType, const Fortran::parser::Variable &assignmentStmtVariable,
+    const Fortran::parser::Expr &assignmentStmtExpr, mlir::Location loc,
+    mlir::Operation *atomicCaptureOp = nullptr) {
+  // Generate `atomic.update` operation for atomic assignment statements
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+
+  //  Create the omp.atomic.update or acc.atomic.update operation
+  //
+  //  func.func @_QPsb() {
+  //    %0 = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFsbEa"}
+  //    %1 = fir.alloca i32 {bindc_name = "b", uniq_name = "_QFsbEb"}
+  //    %2 = fir.load %1 : !fir.ref<i32>
+  //    omp.atomic.update   %0 : !fir.ref<i32> {
+  //    ^bb0(%arg0: i32):
+  //      %3 = arith.addi %arg0, %2 : i32
+  //      omp.yield(%3 : i32)
+  //    }
+  //    return
+  //  }
+
+  auto getArgExpression =
+      [](std::list<Fortran::parser::ActualArgSpec>::const_iterator it) {
+        const auto &arg{std::get<Fortran::parser::ActualArg>((*it).t)};
+        const auto *parserExpr{
+            std::get_if<Fortran::common::Indirection<Fortran::parser::Expr>>(
+                &arg.u)};
+        return parserExpr;
+      };
+
+  // Lower any non atomic sub-expression before the atomic operation, and
+  // map its lowered value to the semantic representation.
+  Fortran::lower::ExprToValueMap exprValueOverrides;
+  // Max and min intrinsics can have a list of Args. Hence we need a list
+  // of nonAtomicSubExprs to hoist. Currently, only the load is hoisted.
+  llvm::SmallVector<const Fortran::lower::SomeExpr *> nonAtomicSubExprs;
+  Fortran::common::visit(
+      Fortran::common::visitors{
+          [&](const Fortran::common::Indirection<
+              Fortran::parser::FunctionReference> &funcRef) -> void {
+            const auto &args{
+                std::get<std::list<Fortran::parser::ActualArgSpec>>(
+                    funcRef.value().v.t)};
+            std::list<Fortran::parser::ActualArgSpec>::const_iterator beginIt =
+                args.begin();
+            std::list<Fortran::parser::ActualArgSpec>::const_iterator endIt =
+                args.end();
+            const auto *exprFirst{getArgExpression(beginIt)};
+            if (exprFirst && exprFirst->value().source ==
+                                 assignmentStmtVariable.GetSource()) {
+              // Add everything except the first
+              beginIt++;
+            } else {
+              // Add everything except the last
+              endIt--;
+            }
+            std::list<Fortran::parser::ActualArgSpec>::const_iterator it;
+            for (it = beginIt; it != endIt; it++) {
+              const Fortran::common::Indirection<Fortran::parser::Expr> *expr =
+                  getArgExpression(it);
+              if (expr)
+                nonAtomicSubExprs.push_back(Fortran::semantics::GetExpr(*expr));
+            }
+          },
+          [&](const auto &op) -> void {
+            using T = std::decay_t<decltype(op)>;
+            if constexpr (std::is_base_of<
+                              Fortran::parser::Expr::IntrinsicBinary,
+                              T>::value) {
+              const auto &exprLeft{std::get<0>(op.t)};
+              const auto &exprRight{std::get<1>(op.t)};
+              if (exprLeft.value().source == assignmentStmtVariable.GetSource())
+                nonAtomicSubExprs.push_back(
+                    Fortran::semantics::GetExpr(exprRight));
+              else
+                nonAtomicSubExprs.push_back(
+                    Fortran::semantics::GetExpr(exprLeft));
+            }
+          },
+      },
+      assignmentStmtExpr.u);
+  Fortran::lower::StatementContext nonAtomicStmtCtx;
+  if (!nonAtomicSubExprs.empty()) {
+    // Generate non atomic part before all the atomic operations.
+    auto insertionPoint = firOpBuilder.saveInsertionPoint();
+    if (atomicCaptureOp)
+      firOpBuilder.setInsertionPoint(atomicCaptureOp);
+    mlir::Value nonAtomicVal;
+    for (auto *nonAtomicSubExpr : nonAtomicSubExprs) {
+      nonAtomicVal = fir::getBase(converter.genExprValue(
+          currentLocation, *nonAtomicSubExpr, nonAtomicStmtCtx));
+      exprValueOverrides.try_emplace(nonAtomicSubExpr, nonAtomicVal);
+    }
+    if (atomicCaptureOp)
+      firOpBuilder.restoreInsertionPoint(insertionPoint);
+  }
+
+  mlir::Operation *atomicUpdateOp = nullptr;
+  atomicUpdateOp =
+      firOpBuilder.create<mlir::acc::AtomicUpdateOp>(currentLocation, lhsAddr);
+
+  llvm::SmallVector<mlir::Type> varTys = {varType};
+  llvm::SmallVector<mlir::Location> locs = {currentLocation};
+  firOpBuilder.createBlock(&atomicUpdateOp->getRegion(0), {}, varTys, locs);
+  mlir::Value val =
+      fir::getBase(atomicUpdateOp->getRegion(0).front().getArgument(0));
+
+  exprValueOverrides.try_emplace(
+      Fortran::semantics::GetExpr(assignmentStmtVariable), val);
+  {
+    // statement context inside the atomic block.
+    converter.overrideExprValues(&exprValueOverrides);
+    Fortran::lower::StatementContext atomicStmtCtx;
+    mlir::Value rhsExpr = fir::getBase(converter.genExprValue(
+        *Fortran::semantics::GetExpr(assignmentStmtExpr), atomicStmtCtx));
+    mlir::Value convertResult =
+        firOpBuilder.createConvert(currentLocation, varType, rhsExpr);
+    firOpBuilder.create<mlir::acc::YieldOp>(currentLocation, convertResult);
+    converter.resetExprOverrides();
+  }
+  firOpBuilder.setInsertionPointAfter(atomicUpdateOp);
+}
+
+/// Processes an atomic construct with write clause.
+void genAtomicWrite(Fortran::lower::AbstractConverter &converter,
+                    const Fortran::parser::AccAtomicWrite &atomicWrite,
+                    mlir::Location loc) {
+  const Fortran::parser::AssignmentStmt &stmt =
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicWrite.t)
+          .statement;
+  const Fortran::evaluate::Assignment &assign = *stmt.typedAssignment->v;
+  Fortran::lower::StatementContext stmtCtx;
+  // Get the value and address of atomic write operands.
+  mlir::Value rhsExpr =
+      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx));
+  mlir::Value lhsAddr =
+      fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx));
+  genAtomicWriteStatement(converter, lhsAddr, rhsExpr, loc);
+}
+
+/// Processes an atomic construct with read clause.
+void genAtomicRead(Fortran::lower::AbstractConverter &converter,
+                   const Fortran::parser::AccAtomicRead &atomicRead,
+                   mlir::Location loc) {
+  const auto &assignmentStmtExpr = std::get<Fortran::parser::Expr>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicRead.t)
+          .statement.t);
+  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicRead.t)
+          .statement.t);
+
+  Fortran::lower::StatementContext stmtCtx;
+  const Fortran::semantics::SomeExpr &fromExpr =
+      *Fortran::semantics::GetExpr(assignmentStmtExpr);
+  mlir::Type elementType = converter.genType(fromExpr);
+  mlir::Value fromAddress =
+      fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
+  mlir::Value toAddress = fir::getBase(converter.genExprAddr(
+      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  genAtomicCaptureStatement(converter, fromAddress, toAddress, elementType,
+                            loc);
+}
+
+/// Processes an atomic construct with update clause.
+void genAtomicUpdate(Fortran::lower::AbstractConverter &converter,
+                     const Fortran::parser::AccAtomicUpdate &atomicUpdate,
+                     mlir::Location loc) {
+  const auto &assignmentStmtExpr = std::get<Fortran::parser::Expr>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicUpdate.t)
+          .statement.t);
+  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
+      std::get<Fortran::parser::Statement<Fortran::parser::AssignmentStmt>>(
+          atomicUpdate.t)
+          .statement.t);
+
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value lhsAddr = fir::getBase(converter.genExprAddr(
+      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  mlir::Type varType = fir::unwrapRefType(lhsAddr.getType());
+  genAtomicUpdateStatement(converter, lhsAddr, varType, assignmentStmtVariable,
+                           assignmentStmtExpr, loc);
+}
+
+/// Processes an atomic construct with capture clause.
+void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
+                      const Fortran::parser::AccAtomicCapture &atomicCapture,
+                      mlir::Location loc) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  const Fortran::parser::AssignmentStmt &stmt1 =
+      std::get<Fortran::parser::AccAtomicCapture::Stmt1>(atomicCapture.t)
+          .v.statement;
+  const Fortran::evaluate::Assignment &assign1 = *stmt1.typedAssignment->v;
+  const auto &stmt1Var{std::get<Fortran::parser::Variable>(stmt1.t)};
+  const auto &stmt1Expr{std::get<Fortran::parser::Expr>(stmt1.t)};
+  const Fortran::parser::AssignmentStmt &stmt2 =
+      std::get<Fortran::parser::AccAtomicCapture::Stmt2>(atomicCapture.t)
+          .v.statement;
+  const Fortran::evaluate::Assignment &assign2 = *stmt2.typedAssignment->v;
+  const auto &stmt2Var{std::get<Fortran::parser::Variable>(stmt2.t)};
+  const auto &stmt2Expr{std::get<Fortran::parser::Expr>(stmt2.t)};
+
+  // Pre-evaluate expressions to be used in the various operations inside
+  // `atomic.capture` since it is not desirable to have anything other than
+  // a `atomic.read`, `atomic.write`, or `atomic.update` operation
+  // inside `atomic.capture`
+  Fortran::lower::StatementContext stmtCtx;
+  // LHS evaluations are common to all combinations of `atomic.capture`
+  mlir::Value stmt1LHSArg =
+      fir::getBase(converter.genExprAddr(assign1.lhs, stmtCtx));
+  mlir::Value stmt2LHSArg =
+      fir::getBase(converter.genExprAddr(assign2.lhs, stmtCtx));
+
+  // Type information used in generation of `atomic.update` operation
+  mlir::Type stmt1VarType =
+      fir::getBase(converter.genExprValue(assign1.lhs, stmtCtx)).getType();
+  mlir::Type stmt2VarType =
+      fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
+
+  mlir::Operation *atomicCaptureOp = nullptr;
+  atomicCaptureOp = firOpBuilder.create<mlir::acc::AtomicCaptureOp>(loc);
+
+  firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
+  mlir::Block &block = atomicCaptureOp->getRegion(0).back();
+  firOpBuilder.setInsertionPointToStart(&block);
+  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
+    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
+      // Atomic capture construct is of the form [capture-stmt, update-stmt]
+      const Fortran::semantics::SomeExpr &fromExpr =
+          *Fortran::semantics::GetExpr(stmt1Expr);
+      mlir::Type elementType = converter.genType(fromExpr);
+      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
+                                elementType, loc);
+      genAtomicUpdateStatement(converter, stmt2LHSArg, stmt2VarType, stmt2Var,
+                               stmt2Expr, loc, atomicCaptureOp);
+    } else {
+      // Atomic capture construct is of the form [capture-stmt, write-stmt]
+      firOpBuilder.setInsertionPoint(atomicCaptureOp);
+      mlir::Value stmt2RHSArg =
+          fir::getBase(converter.genExprValue(assign2.rhs, stmtCtx));
+      firOpBuilder.setInsertionPointToStart(&block);
+      const Fortran::semantics::SomeExpr &fromExpr =
+          *Fortran::semantics::GetExpr(stmt1Expr);
+      mlir::Type elementType = converter.genType(fromExpr);
+      genAtomicCaptureStatement(converter, stmt2LHSArg, stmt1LHSArg,
+                                elementType, loc);
+      genAtomicWriteStatement(converter, stmt2LHSArg, stmt2RHSArg, loc);
+    }
+  } else {
+    // Atomic capture construct is of the form [update-stmt, capture-stmt]
+    const Fortran::semantics::SomeExpr &fromExpr =
+        *Fortran::semantics::GetExpr(stmt2Expr);
+    mlir::Type elementType = converter.genType(fromExpr);
+    genAtomicUpdateStatement(converter, stmt1LHSArg, stmt1VarType, stmt1Var,
+                             stmt1Expr, loc, atomicCaptureOp);
+    genAtomicCaptureStatement(converter, stmt1LHSArg, stmt2LHSArg, elementType,
+                              loc);
+  }
+  firOpBuilder.setInsertionPointToEnd(&block);
+  firOpBuilder.create<mlir::acc::TerminatorOp>(loc);
+  firOpBuilder.setInsertionPointToStart(&block);
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -4352,24 +4656,16 @@ genACC(Fortran::lower::AbstractConverter &converter,
   Fortran::common::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::AccAtomicRead &atomicRead) {
-            Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
-                                                void>(converter, atomicRead,
-                                                      loc);
+            genAtomicRead(converter, atomicRead, loc);
           },
           [&](const Fortran::parser::AccAtomicWrite &atomicWrite) {
-            Fortran::lower::genOmpAccAtomicWrite<
-                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite,
-                                                       loc);
+            genAtomicWrite(converter, atomicWrite, loc);
           },
           [&](const Fortran::parser::AccAtomicUpdate &atomicUpdate) {
-            Fortran::lower::genOmpAccAtomicUpdate<
-                Fortran::parser::AccAtomicUpdate, void>(converter, atomicUpdate,
-                                                        loc);
+            genAtomicUpdate(converter, atomicUpdate, loc);
           },
           [&](const Fortran::parser::AccAtomicCapture &atomicCapture) {
-            Fortran::lower::genOmpAccAtomicCapture<
-                Fortran::parser::AccAtomicCapture, void>(converter,
-                                                         atomicCapture, loc);
+            genAtomicCapture(converter, atomicCapture, loc);
           },
       },
       atomicConstruct.u);
