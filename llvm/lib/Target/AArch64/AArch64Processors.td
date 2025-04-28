@@ -871,7 +871,7 @@ def ProcessorFeatures {
                                  FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
                                  FeatureDotProd, FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8,
                                  FeatureJS, FeatureLSE, FeatureNEON, FeaturePAuth, FeatureRAS,
-                                 FeatureRCPC, FeatureRDM];
+                                 FeatureRCPC, FeatureRDM, FeatureFPAC];
   list<SubtargetFeature> A64FX    = [HasV8_2aOps, FeatureFPARMv8, FeatureNEON,
                                      FeatureSHA2, FeaturePerfMon, FeatureFullFP16,
                                      FeatureSVE, FeatureComplxNum,
