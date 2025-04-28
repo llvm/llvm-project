@@ -49,6 +49,8 @@ class RegisterClassInfo {
   // entry is valid when its tag matches.
   unsigned Tag = 0;
 
+  bool Reverse = false;
+
   const MachineFunction *MF = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
@@ -87,7 +89,7 @@ public:
 
   /// runOnFunction - Prepare to answer questions about MF. This must be called
   /// before any other methods are used.
-  void runOnMachineFunction(const MachineFunction &MF);
+  void runOnMachineFunction(const MachineFunction &MF, bool Rev = false);
 
   /// getNumAllocatableRegs - Returns the number of actually allocatable
   /// registers in RC in the current function.
