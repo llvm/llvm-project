@@ -21,8 +21,6 @@
 namespace llvm {
 
 class Module;
-class StringRef;
-class VersionTuple;
 
 class AMDGPUPALMetadata {
 public:

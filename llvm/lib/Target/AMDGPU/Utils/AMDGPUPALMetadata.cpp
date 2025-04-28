@@ -260,10 +260,10 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
   getHwStage(CC)[".entry_point_symbol"] =
       MsgPackDoc.getNode(Name, /*Copy=*/true);
 
-  // For pal version 3.6 and above, entry_point is no longer required
+  // For PAL version 3.6 and above, entry_point is no longer required.
   if (getPALVersion() < VersionTuple(3, 6)) {
-    // Set .entry_point which is defined
-    // to be _amdgpu_<stage>_main and _amdgpu_cs_main for non-shader functions
+    // Set .entry_point which is defined to be _amdgpu_<stage>_main and
+    // _amdgpu_cs_main for non-shader functions.
     SmallString<16> EPName("_amdgpu_");
     raw_svector_ostream EPNameOS(EPName);
     EPNameOS << getStageName(CC) + 1 << "_main";
