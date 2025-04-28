@@ -185,7 +185,7 @@ public:
     VersionTuple ValVer = MetadataInfo.ValidatorVersion;
     bool SkipValidation = ValVer.getMajor() == 0 && ValVer.getMinor() == 0;
 
-    // construct whitelist of valid metadata node kinds
+    // construct allowlist of valid metadata node kinds
     std::array<unsigned, 6> DXILCompatibleMDs = getCompatibleInstructionMDs(M);
 
     for (auto &F : M.functions()) {
