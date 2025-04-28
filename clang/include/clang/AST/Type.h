@@ -2560,7 +2560,9 @@ public:
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
-  bool isSignableType() const;
+  bool isSignableType(const ASTContext &Ctx) const;
+  bool isSignablePointerType() const;
+  bool isSignableIntegerType(const ASTContext &Ctx) const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isBlockPointerType() const;
@@ -8222,7 +8224,13 @@ inline bool Type::isAnyPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
 
-inline bool Type::isSignableType() const { return isPointerType(); }
+inline bool Type::isSignableType(const ASTContext &Ctx) const {
+  return isSignablePointerType() || isSignableIntegerType(Ctx);
+}
+
+inline bool Type::isSignablePointerType() const {
+  return isPointerType() || isObjCClassType() || isObjCQualifiedClassType();
+}
 
 inline bool Type::isBlockPointerType() const {
   return isa<BlockPointerType>(CanonicalType);

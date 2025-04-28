@@ -24,8 +24,8 @@ typedef int *intp;
 int nonConstantGlobal = 5;
 
 __ptrauth(INVALID_KEY) int invalid2; // expected-error{{200 does not identify a valid pointer authentication key for the current target}}
-__ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
-__ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
+__ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
+__ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
 int * (__ptrauth(VALID_DATA_KEY) invalid5); // expected-error{{expected identifier or '('}} expected-error{{expected ')'}} expected-note {{to match this '('}}
 int *__ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already __ptrauth-qualified}}
 int * __ptrauth(VALID_DATA_KEY, 2) invalid7; // expected-error {{invalid address discrimination flag '2'; '__ptrauth' requires '0' or '1'}}
@@ -102,7 +102,7 @@ __attribute__((overloadable)) float overload_func(int * __ptrauth(VALID_DATA_KEY
 static_assert(_Generic(typeof(overload_func(&ptr0)), int : 1, default : 0));
 static_assert(_Generic(typeof(overload_func(&valid0)), float : 1, default : 0));
 
-void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int[10]' is invalid}}
+void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int[10]' is invalid}}
 
 struct S0 { // expected-note 4 {{struct S0' has subobjects that are non-trivial to copy}}
   intp __ptrauth(1, 1, 50) f0; // expected-note 4 {{f0 has type '__ptrauth(1,1,50) intp' (aka 'int *__ptrauth(1,1,50)') that is non-trivial to copy}}
