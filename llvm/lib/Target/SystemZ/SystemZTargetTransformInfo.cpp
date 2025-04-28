@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Debug.h"
@@ -95,26 +96,27 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   // callee.
   unsigned InstrCount = 0;
   SmallDenseMap<const Value *, unsigned> Ptr2NumUses;
-  for (auto &BB : *Callee)
-    for (auto &I : BB.instructionsWithoutDebug()) {
-      if (++InstrCount == 200)
-        goto GlobalsDone;
-      if (const auto *SI = dyn_cast<StoreInst>(&I)) {
-        if (!SI->isVolatile())
-          if (auto GV = dyn_cast<GlobalVariable>(SI->getPointerOperand()))
-            Ptr2NumUses[GV]++;
-      } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
-        if (!LI->isVolatile())
-          if (auto GV = dyn_cast<GlobalVariable>(LI->getPointerOperand()))
-            Ptr2NumUses[GV]++;
-      } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-        if (auto GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand())) {
-          unsigned NumStores = 0, NumLoads = 0;
-          countNumMemAccesses(GEP, NumStores, NumLoads, Callee);
-          Ptr2NumUses[GV] += NumLoads + NumStores;
-        }
+  for (auto &I : instructions(Callee)) {
+    if (++InstrCount == 200) {
+      Ptr2NumUses.clear();
+      break;
+    }
+    if (const auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (!SI->isVolatile())
+        if (auto GV = dyn_cast<GlobalVariable>(SI->getPointerOperand()))
+          Ptr2NumUses[GV]++;
+    } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!LI->isVolatile())
+        if (auto GV = dyn_cast<GlobalVariable>(LI->getPointerOperand()))
+          Ptr2NumUses[GV]++;
+    } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+      if (auto GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand())) {
+        unsigned NumStores = 0, NumLoads = 0;
+        countNumMemAccesses(GEP, NumStores, NumLoads, Callee);
+        Ptr2NumUses[GV] += NumLoads + NumStores;
       }
     }
+  }
 
   for (auto [Ptr, NumCalleeUses] : Ptr2NumUses)
     if (NumCalleeUses > 10) {
@@ -125,7 +127,6 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
         break;
       }
     }
-GlobalsDone:
 
   // Give bonus when Callee accesses an Alloca of Caller heavily.
   unsigned NumStores = 0;
