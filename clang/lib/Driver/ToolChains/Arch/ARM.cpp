@@ -794,8 +794,8 @@ fp16_fml_fallthrough:
   if (ItSimd != Features.rend())
     HasSimd = ItSimd->starts_with("+");
   if (!HasSimd && FPUSupportsNeon)
-    for (auto &F : {"-sha2", "-aes", "-crypto", "-dotprod", "-bf16", "-imm8"})
-      Features.push_back(F);
+    Features.insert(Features.end(),
+                    {"-sha2", "-aes", "-crypto", "-dotprod", "-bf16", "-imm8"});
 
   // For Arch >= ARMv8.0 && A or R profile:  crypto = sha2 + aes
   // Rather than replace within the feature vector, determine whether each
