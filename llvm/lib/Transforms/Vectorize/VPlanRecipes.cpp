@@ -2572,19 +2572,22 @@ VPExtendedReductionRecipe::computeCost(ElementCount VF,
 InstructionCost
 VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
                                             VPCostContext &Ctx) const {
+  VecOperandInfo Op0Info = getVecOp0Info();
+  VecOperandInfo Op1Info = getVecOp1Info();
   if (getVFScaleFactor() > 1) {
     return Ctx.TTI.getPartialReductionCost(
         Instruction::Add, Ctx.Types.inferScalarType(getVecOp0()),
         Ctx.Types.inferScalarType(getVecOp1()), getResultType(), VF,
-        TTI::getPartialReductionExtendKind(getExt0Opcode()),
-        TTI::getPartialReductionExtendKind(getExt1Opcode()), Instruction::Mul);
+        TTI::getPartialReductionExtendKind(Op0Info.ExtOp),
+        TTI::getPartialReductionExtendKind(Op1Info.ExtOp), Instruction::Mul);
   }
 
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  return Ctx.TTI.getMulAccReductionCost(isZExt0(), RedTy, SrcVecTy,
-                                        Ctx.CostKind);
+  return Ctx.TTI.getMulAccReductionCost(Op0Info.ExtOp ==
+                                            Instruction::CastOps::ZExt,
+                                        RedTy, SrcVecTy, Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2653,6 +2656,8 @@ void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
+  VecOperandInfo Op0Info = getVecOp0Info();
+  VecOperandInfo Op1Info = getVecOp1Info();
   O << Indent << "MULACC-REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
@@ -2670,14 +2675,14 @@ void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     O << "(";
   getVecOp0()->printAsOperand(O, SlotTracker);
   if (isExtended()) {
-    O << " " << Instruction::getOpcodeName(ExtOp0) << " to " << *getResultType()
-      << "), (";
+    O << " " << Instruction::getOpcodeName(Op0Info.ExtOp) << " to "
+      << *getResultType() << "), (";
   } else
     O << ", ";
   getVecOp1()->printAsOperand(O, SlotTracker);
   if (isExtended()) {
-    O << " " << Instruction::getOpcodeName(ExtOp1) << " to " << *getResultType()
-      << ")";
+    O << " " << Instruction::getOpcodeName(Op1Info.ExtOp) << " to "
+      << *getResultType() << ")";
   }
   if (isConditional()) {
     O << ", ";

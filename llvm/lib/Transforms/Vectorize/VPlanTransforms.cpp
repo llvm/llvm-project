@@ -30,6 +30,7 @@
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
@@ -2545,29 +2546,31 @@ expandVPMulAccumulateReduction(VPMulAccumulateReductionRecipe *MulAcc) {
   // reduce.add(ext(mul(ext, ext))) to reduce.add(mul(ext, ext)).
   VPValue *Op0, *Op1;
   if (MulAcc->isExtended()) {
+    VPMulAccumulateReductionRecipe::VecOperandInfo Op0Info =
+        MulAcc->getVecOp0Info();
+    VPMulAccumulateReductionRecipe::VecOperandInfo Op1Info =
+        MulAcc->getVecOp1Info();
     Type *RedTy = MulAcc->getResultType();
-    if (MulAcc->isZExt0())
-      Op0 = new VPWidenCastRecipe(MulAcc->getExt0Opcode(), MulAcc->getVecOp0(),
-                                  RedTy, VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg0()),
+    if (Op0Info.ExtOp == Instruction::CastOps::ZExt)
+      Op0 = new VPWidenCastRecipe(Op0Info.ExtOp, MulAcc->getVecOp0(), RedTy,
+                                  VPIRFlags::NonNegFlagsTy(Op0Info.IsNonNeg),
                                   MulAcc->getDebugLoc());
     else
-      Op0 = new VPWidenCastRecipe(MulAcc->getExt0Opcode(), MulAcc->getVecOp0(),
-                                  RedTy, {}, MulAcc->getDebugLoc());
+      Op0 = new VPWidenCastRecipe(Op0Info.ExtOp, MulAcc->getVecOp0(), RedTy, {},
+                                  MulAcc->getDebugLoc());
     Op0->getDefiningRecipe()->insertBefore(MulAcc);
     // Prevent reduce.add(mul(ext(A), ext(A))) generate duplicate
     // VPWidenCastRecipe.
     if (MulAcc->getVecOp0() == MulAcc->getVecOp1()) {
       Op1 = Op0;
     } else {
-      if (MulAcc->isZExt1())
-        Op1 = new VPWidenCastRecipe(MulAcc->getExt1Opcode(),
-                                    MulAcc->getVecOp1(), RedTy,
-            VPIRFlags::NonNegFlagsTy(MulAcc->isNonNeg1()),
+      if (Op1Info.ExtOp == Instruction::CastOps::ZExt)
+        Op1 = new VPWidenCastRecipe(Op1Info.ExtOp, MulAcc->getVecOp1(), RedTy,
+                                    VPIRFlags::NonNegFlagsTy(Op1Info.IsNonNeg),
                                     MulAcc->getDebugLoc());
       else
-        Op1 =
-            new VPWidenCastRecipe(MulAcc->getExt1Opcode(), MulAcc->getVecOp1(),
-                                  RedTy, {}, MulAcc->getDebugLoc());
+        Op1 = new VPWidenCastRecipe(Op1Info.ExtOp, MulAcc->getVecOp1(), RedTy,
+                                    {}, MulAcc->getDebugLoc());
       Op1->getDefiningRecipe()->insertBefore(MulAcc);
     }
   } else {
