@@ -339,23 +339,23 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
   switch (Kind) {
     // For most of the platforms we support, native and natural are the same.
     // With XL, native is the same as power, natural means something else.
-  case POAK_Native:
-  case POAK_Power:
+  case PragmaOptionsAlignKind::Native:
+  case PragmaOptionsAlignKind::Power:
     Action = Sema::PSK_Push_Set;
     break;
-  case POAK_Natural:
+  case PragmaOptionsAlignKind::Natural:
     Action = Sema::PSK_Push_Set;
     ModeVal = AlignPackInfo::Natural;
     break;
 
     // Note that '#pragma options align=packed' is not equivalent to attribute
     // packed, it has a different precedence relative to attribute aligned.
-  case POAK_Packed:
+  case PragmaOptionsAlignKind::Packed:
     Action = Sema::PSK_Push_Set;
     ModeVal = AlignPackInfo::Packed;
     break;
 
-  case POAK_Mac68k:
+  case PragmaOptionsAlignKind::Mac68k:
     // Check if the target supports this.
     if (!this->Context.getTargetInfo().hasAlignMac68kSupport()) {
       Diag(PragmaLoc, diag::err_pragma_options_align_mac68k_target_unsupported);
@@ -364,7 +364,7 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
     Action = Sema::PSK_Push_Set;
     ModeVal = AlignPackInfo::Mac68k;
     break;
-  case POAK_Reset:
+  case PragmaOptionsAlignKind::Reset:
     // Reset just pops the top of the stack, or resets the current alignment to
     // default.
     Action = Sema::PSK_Pop;
