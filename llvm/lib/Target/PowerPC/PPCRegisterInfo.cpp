@@ -1448,7 +1448,7 @@ void PPCRegisterInfo::lowerWACCRestore(MachineBasicBlock::iterator II,
                     FrameIndex, IsLittleEndian ? 0 : 32);
 
   // Kill VSRpReg0, VSRpReg1   (killedRegState::Killed)
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTFDMR512), DestReg)
+  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512), DestReg)
       .addReg(VSRpReg0, RegState::Kill)
       .addReg(VSRpReg1, RegState::Kill);
 

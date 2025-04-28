@@ -12,6 +12,7 @@
 #include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -1058,7 +1059,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
           if (const semantics::IntrinsicTypeSpec *
               intrinType{typeSpec->AsIntrinsic()}) {
             if (auto k{ToInt64(Fold(semantics::KindExpr{intrinType->kind()}))};
-                k && IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+                k &&
+                common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
               kind = *k;
             }
           }

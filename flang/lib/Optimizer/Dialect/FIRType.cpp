@@ -32,6 +32,21 @@ using namespace fir;
 
 namespace {
 
+static llvm::StringRef getVolatileKeyword() { return "volatile"; }
+
+static mlir::ParseResult parseOptionalCommaAndKeyword(mlir::AsmParser &parser,
+                                                      mlir::StringRef keyword,
+                                                      bool &parsedKeyword) {
+  if (!parser.parseOptionalComma()) {
+    if (parser.parseKeyword(keyword))
+      return mlir::failure();
+    parsedKeyword = true;
+    return mlir::success();
+  }
+  parsedKeyword = false;
+  return mlir::success();
+}
+
 template <typename TYPE>
 TYPE parseIntSingleton(mlir::AsmParser &parser) {
   int kind = 0;
@@ -213,6 +228,19 @@ mlir::Type getDerivedType(mlir::Type ty) {
       .Case<fir::BaseBoxType>(
           [](auto p) { return getDerivedType(p.getEleTy()); })
       .Default([](mlir::Type t) { return t; });
+}
+
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile) {
+  // If we already have the volatility we asked for, return the type unchanged.
+  if (fir::isa_volatile_type(type) == isVolatile)
+    return type;
+  return mlir::TypeSwitch<mlir::Type, mlir::Type>(type)
+      .Case<fir::BoxType, fir::ClassType, fir::ReferenceType>(
+          [&](auto ty) -> mlir::Type {
+            using TYPE = decltype(ty);
+            return TYPE::get(ty.getEleTy(), isVolatile);
+          })
+      .Default([&](mlir::Type t) -> mlir::Type { return t; });
 }
 
 mlir::Type dyn_cast_ptrEleTy(mlir::Type t) {
@@ -407,6 +435,7 @@ bool isRecordWithDescriptorMember(mlir::Type ty) {
   ty = unwrapSequenceType(ty);
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(ty))
     for (auto [field, memTy] : recTy.getTypeList()) {
+      memTy = unwrapSequenceType(memTy);
       if (mlir::isa<fir::BaseBoxType>(memTy))
         return true;
       if (mlir::isa<fir::RecordType>(memTy) &&
@@ -649,8 +678,13 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
       .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
         return fir::SequenceType::get(seqTy.getShape(), newElementType);
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ReferenceType,
-            fir::ClassType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType, fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        auto newEleTy =
+            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
+        return FIRT::get(newEleTy, t.isVolatile());
+      })
+      .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
         return FIRT::get(
             changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
@@ -659,8 +693,8 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
         mlir::Type newInnerType =
             changeElementType(t.getEleTy(), newElementType, false);
         if (turnBoxIntoClass)
-          return fir::ClassType::get(newInnerType);
-        return fir::BoxType::get(newInnerType);
+          return fir::ClassType::get(newInnerType, t.isVolatile());
+        return fir::BoxType::get(newInnerType, t.isVolatile());
       })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
@@ -701,6 +735,13 @@ bool fir::isa_unknown_size_box(mlir::Type t) {
   return false;
 }
 
+bool fir::isa_volatile_type(mlir::Type t) {
+  return llvm::TypeSwitch<mlir::Type, bool>(t)
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(
+          [](auto t) { return t.isVolatile(); })
+      .Default([](mlir::Type) { return false; });
+}
+
 //===----------------------------------------------------------------------===//
 // BoxProcType
 //===----------------------------------------------------------------------===//
@@ -738,9 +779,31 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
+// `box` `<` type (`, volatile` $volatile^)? `>`
+mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
+  mlir::Type eleTy;
+  auto location = parser.getCurrentLocation();
+  auto *context = parser.getContext();
+  bool isVolatile = false;
+  if (parser.parseLess() || parser.parseType(eleTy))
+    return {};
+  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
+    return {};
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<fir::BoxType>(location, context, eleTy, isVolatile);
+}
+
+void fir::BoxType::print(mlir::AsmPrinter &printer) const {
+  printer << "<" << getEleTy();
+  if (isVolatile())
+    printer << ", " << getVolatileKeyword();
+  printer << '>';
+}
+
 llvm::LogicalResult
 fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                     mlir::Type eleTy) {
+                     mlir::Type eleTy, bool isVolatile) {
   if (mlir::isa<fir::BaseBoxType>(eleTy))
     return emitError() << "invalid element type\n";
   // TODO
@@ -807,9 +870,32 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 // ClassType
 //===----------------------------------------------------------------------===//
 
+// `class` `<` type (`, volatile` $volatile^)? `>`
+mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
+  mlir::Type eleTy;
+  auto location = parser.getCurrentLocation();
+  auto *context = parser.getContext();
+  bool isVolatile = false;
+  if (parser.parseLess() || parser.parseType(eleTy))
+    return {};
+  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
+    return {};
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<fir::ClassType>(location, context, eleTy,
+                                           isVolatile);
+}
+
+void fir::ClassType::print(mlir::AsmPrinter &printer) const {
+  printer << "<" << getEleTy();
+  if (isVolatile())
+    printer << ", " << getVolatileKeyword();
+  printer << '>';
+}
+
 llvm::LogicalResult
 fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                       mlir::Type eleTy) {
+                       mlir::Type eleTy, bool isVolatile) {
   if (mlir::isa<fir::RecordType, fir::SequenceType, fir::HeapType,
                 fir::PointerType, mlir::NoneType, mlir::IntegerType,
                 mlir::FloatType, fir::CharacterType, fir::LogicalType,
@@ -1057,18 +1143,32 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
 // ReferenceType
 //===----------------------------------------------------------------------===//
 
-// `ref` `<` type `>`
+// `ref` `<` type (`, volatile` $volatile^)? `>`
 mlir::Type fir::ReferenceType::parse(mlir::AsmParser &parser) {
-  return parseTypeSingleton<fir::ReferenceType>(parser);
+  auto location = parser.getCurrentLocation();
+  auto *context = parser.getContext();
+  mlir::Type eleTy;
+  bool isVolatile = false;
+  if (parser.parseLess() || parser.parseType(eleTy))
+    return {};
+  if (parseOptionalCommaAndKeyword(parser, getVolatileKeyword(), isVolatile))
+    return {};
+  if (parser.parseGreater())
+    return {};
+  return parser.getChecked<fir::ReferenceType>(location, context, eleTy,
+                                               isVolatile);
 }
 
 void fir::ReferenceType::print(mlir::AsmPrinter &printer) const {
-  printer << "<" << getEleTy() << '>';
+  printer << "<" << getEleTy();
+  if (isVolatile())
+    printer << ", " << getVolatileKeyword();
+  printer << '>';
 }
 
 llvm::LogicalResult fir::ReferenceType::verify(
-    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type eleTy) {
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError, mlir::Type eleTy,
+    bool isVolatile) {
   if (mlir::isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
                 ReferenceType, TypeDescType>(eleTy))
     return emitError() << "cannot build a reference to type: " << eleTy << '\n';

@@ -31,6 +31,18 @@ LogicalResult oneToOneRewrite(
     IntegerOverflowFlags overflowFlags = IntegerOverflowFlags::none);
 
 } // namespace detail
+
+/// Decomposes a `src` value into a set of values of type `dstType` through
+/// series of bitcasts and vector ops. Src and dst types are expected to be int
+/// or float types or vector types of them.
+SmallVector<Value> decomposeValue(OpBuilder &builder, Location loc, Value src,
+                                  Type dstType);
+
+/// Composes a set of `src` values into a single value of type `dstType` through
+/// series of bitcasts and vector ops. Inversely to `decomposeValue`, this
+/// function is used to combine multiple values into a single value.
+Value composeValue(OpBuilder &builder, Location loc, ValueRange src,
+                   Type dstType);
 } // namespace LLVM
 
 /// Base class for operation conversions targeting the LLVM IR dialect. It
@@ -75,8 +87,8 @@ protected:
                              ValueRange indices,
                              ConversionPatternRewriter &rewriter) const;
 
-  /// Returns if the given memref has identity maps and the element type is
-  /// convertible to LLVM.
+  /// Returns if the given memref type is convertible to LLVM and has an
+  /// identity layout map.
   bool isConvertibleAndHasIdentityMaps(MemRefType type) const;
 
   /// Returns the type of a pointer to an element of the memref.

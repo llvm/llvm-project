@@ -1,4 +1,6 @@
-/* Minimal declarations for CUDA support.  Testing purposes only. */
+/* Minimal declarations for CUDA support.  Testing purposes only.
+ * This should stay in sync with clang/test/CodeGen/include/cuda.h
+ */
 #pragma once
 
 // Make this file work with nvcc, for testing compatibility.

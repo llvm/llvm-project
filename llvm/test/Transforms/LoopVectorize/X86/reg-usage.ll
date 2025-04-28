@@ -94,9 +94,11 @@ define i64 @bar(ptr nocapture %a) {
 ; CHECK-LABEL: bar
 ; CHECK:       LV(REG): VF = 2
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 3 registers
+; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
-; CHECK-NEXT: LV(REG): Found invariant usage: 0 item
+
 
 entry:
   br label %for.body

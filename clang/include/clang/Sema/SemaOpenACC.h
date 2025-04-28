@@ -78,7 +78,7 @@ private:
   /// Collapse has an 'N' count that makes it apply to a number of loops 'below'
   /// it.
   struct CollapseCheckingInfo {
-    OpenACCCollapseClause *ActiveCollapse = nullptr;
+    const OpenACCCollapseClause *ActiveCollapse = nullptr;
 
     /// This is a value that maintains the current value of the 'N' on the
     /// current collapse, minus the depth that has already been traversed. When
@@ -107,7 +107,7 @@ private:
     /// own counting of elements.
     UnsignedOrNone CurTileCount = std::nullopt;
 
-    /// Records whether we've hit a 'CurTileCount' of '0' on the wya down,
+    /// Records whether we've hit a 'CurTileCount' of '0' on the way down,
     /// which allows us to diagnose if the number of arguments is too large for
     /// the current number of 'for' loops.
     bool TileDepthSatisfied = true;
@@ -177,6 +177,21 @@ private:
 
   void CheckLastRoutineDeclNameConflict(const NamedDecl *ND);
 
+  bool DiagnoseRequiredClauses(OpenACCDirectiveKind DK, SourceLocation DirLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
+
+  bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                              SourceLocation ClauseLoc);
+
+public:
+  // Needed from the visitor, so should be public.
+  bool DiagnoseAllowedOnceClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                  SourceLocation ClauseLoc,
+                                  ArrayRef<const OpenACCClause *> Clauses);
+  bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                SourceLocation ClauseLoc,
+                                ArrayRef<const OpenACCClause *> Clauses);
+
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
     return ActiveComputeConstructInfo;
@@ -212,7 +227,7 @@ public:
   } LoopWithoutSeqInfo;
 
   // Redeclaration of the version in OpenACCClause.h.
-  using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
+  using DeviceTypeArgument = IdentifierLoc;
 
   /// A type to represent all the data for an OpenACC Clause that has been
   /// parsed, but not yet created/semantically analyzed. This is effectively a
@@ -238,8 +253,7 @@ public:
 
     struct VarListDetails {
       SmallVector<Expr *> VarList;
-      bool IsReadOnly;
-      bool IsZero;
+      OpenACCModifierKind ModifierKind;
     };
 
     struct WaitDetails {
@@ -451,11 +465,9 @@ public:
       return const_cast<OpenACCParsedClause *>(this)->getVarList();
     }
 
-    bool isReadOnly() const {
-      return std::get<VarListDetails>(Details).IsReadOnly;
+    OpenACCModifierKind getModifierList() const {
+      return std::get<VarListDetails>(Details).ModifierKind;
     }
-
-    bool isZero() const { return std::get<VarListDetails>(Details).IsZero; }
 
     bool isForce() const {
       assert(ClauseKind == OpenACCClauseKind::Collapse &&
@@ -552,8 +564,8 @@ public:
       Details = GangDetails{std::move(GKs), std::move(IntExprs)};
     }
 
-    void setVarListDetails(ArrayRef<Expr *> VarList, bool IsReadOnly,
-                           bool IsZero) {
+    void setVarListDetails(ArrayRef<Expr *> VarList,
+                           OpenACCModifierKind ModKind) {
       assert((ClauseKind == OpenACCClauseKind::Private ||
               ClauseKind == OpenACCClauseKind::NoCreate ||
               ClauseKind == OpenACCClauseKind::Present ||
@@ -582,23 +594,25 @@ public:
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+      assert((ModKind == OpenACCModifierKind::Invalid ||
+              ClauseKind == OpenACCClauseKind::Copy ||
+              ClauseKind == OpenACCClauseKind::PCopy ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
               ClauseKind == OpenACCClauseKind::PCopyIn ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
-             "readonly: tag only valid on copyin");
-      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
               ClauseKind == OpenACCClauseKind::PCopyOut ||
               ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
               ClauseKind == OpenACCClauseKind::Create ||
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
-             "zero: tag only valid on copyout/create");
-      Details =
-          VarListDetails{{VarList.begin(), VarList.end()}, IsReadOnly, IsZero};
+             "Modifier Kind only valid on copy, copyin, copyout, create");
+      Details = VarListDetails{{VarList.begin(), VarList.end()}, ModKind};
     }
 
-    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList, bool IsReadOnly,
-                           bool IsZero) {
+    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList,
+                           OpenACCModifierKind ModKind) {
       assert((ClauseKind == OpenACCClauseKind::Private ||
               ClauseKind == OpenACCClauseKind::NoCreate ||
               ClauseKind == OpenACCClauseKind::Present ||
@@ -627,18 +641,21 @@ public:
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+      assert((ModKind == OpenACCModifierKind::Invalid ||
+              ClauseKind == OpenACCClauseKind::Copy ||
+              ClauseKind == OpenACCClauseKind::PCopy ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
               ClauseKind == OpenACCClauseKind::PCopyIn ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
-             "readonly: tag only valid on copyin");
-      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
               ClauseKind == OpenACCClauseKind::PCopyOut ||
               ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
               ClauseKind == OpenACCClauseKind::Create ||
               ClauseKind == OpenACCClauseKind::PCreate ||
               ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
-             "zero: tag only valid on copyout/create");
-      Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
+             "Modifier Kind only valid on copy, copyin, copyout, create");
+      Details = VarListDetails{std::move(VarList), ModKind};
     }
 
     void setReductionDetails(OpenACCReductionOperator Op,
@@ -826,7 +843,8 @@ public:
 
   // Checking for the arguments specific to the declare-clause that need to be
   // checked during both phases of template translation.
-  bool CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause);
+  bool CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause,
+                          OpenACCModifierKind Mods);
 
   ExprResult ActOnRoutineName(Expr *RoutineName);
 

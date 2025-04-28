@@ -255,7 +255,13 @@ llvm.func @nvvm_shfl_pred(
 // CHECK-LABEL: @nvvm_vote
 llvm.func @nvvm_vote(%0 : i32, %1 : i1) -> i32 {
   // CHECK: call i32 @llvm.nvvm.vote.ballot.sync(i32 %{{.*}}, i1 %{{.*}})
-  %3 = nvvm.vote.ballot.sync %0, %1 : i32
+  %3 = nvvm.vote.sync ballot %0, %1 -> i32
+  // CHECK: call i1 @llvm.nvvm.vote.all.sync(i32 %{{.*}}, i1 %{{.*}})
+  %4 = nvvm.vote.sync all %0, %1 -> i1
+  // CHECK: call i1 @llvm.nvvm.vote.any.sync(i32 %{{.*}}, i1 %{{.*}})
+  %5 = nvvm.vote.sync any %0, %1 -> i1
+  // CHECK: call i1 @llvm.nvvm.vote.uni.sync(i32 %{{.*}}, i1 %{{.*}})
+  %6 = nvvm.vote.sync uni %0, %1 -> i1
   llvm.return %3 : i32
 }
 

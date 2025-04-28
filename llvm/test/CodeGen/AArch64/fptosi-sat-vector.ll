@@ -2382,11 +2382,11 @@ define <2 x i1> @test_signed_v2f64_v2i1(<2 x double> %f) {
 ; CHECK-GI-LABEL: test_signed_v2f64_v2i1:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-GI-NEXT:    movi v2.2d, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    cmlt v1.2d, v0.2d, #0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    cmgt v1.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmge v2.2d, v0.2d, #0
+; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    ret
     %x = call <2 x i1> @llvm.fptosi.sat.v2f64.v2i1(<2 x double> %f)

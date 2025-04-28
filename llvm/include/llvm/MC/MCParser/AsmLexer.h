@@ -53,7 +53,7 @@ class AsmLexer {
   const MCAsmInfo &MAI;
 
   bool IsAtStartOfLine = true;
-  bool AtStartOfStatement = true;
+  bool JustConsumedEOL = true;
   bool IsPeeking = false;
   bool EndStatementAtEOF = true;
 
@@ -91,7 +91,7 @@ public:
   const AsmToken &Lex() {
     assert(!CurTok.empty());
     // Mark if we parsing out a EndOfStatement.
-    AtStartOfStatement = CurTok.front().getKind() == AsmToken::EndOfStatement;
+    JustConsumedEOL = CurTok.front().getKind() == AsmToken::EndOfStatement;
     CurTok.erase(CurTok.begin());
     // LexToken may generate multiple tokens via UnLex but will always return
     // the first one. Place returned value at head of CurTok vector.
@@ -103,11 +103,10 @@ public:
   }
 
   void UnLex(AsmToken const &Token) {
-    AtStartOfStatement = false;
     CurTok.insert(CurTok.begin(), Token);
   }
 
-  bool isAtStartOfStatement() { return AtStartOfStatement; }
+  bool justConsumedEOL() { return JustConsumedEOL; }
 
   StringRef LexUntilEndOfStatement();
 

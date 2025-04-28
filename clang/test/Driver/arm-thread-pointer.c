@@ -88,6 +88,3 @@
 // RUN: %clang --target=thumbv6t2-linux -mtp=cp15 -x assembler -### %s 2>&1 | FileCheck -check-prefix=Thumbv6t2_Asm %s
 // Thumbv6t2_Asm-NOT: "-target-feature" "+read-tp-"
 
-// A dummy main is provided to form a valid translation unit.
-int main(void) { return 0; }
-

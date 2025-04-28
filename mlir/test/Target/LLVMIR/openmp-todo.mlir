@@ -26,12 +26,48 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
 
 // -----
 
-llvm.func @cancel() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel {
-    // expected-error@below {{not yet implemented: omp.cancel}}
-    // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
-    omp.cancel cancellation_construct_type(parallel)
+llvm.func @cancel_wsloop(%lb : i32, %ub : i32, %step: i32) {
+  // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
+  omp.wsloop {
+    // expected-error@below {{LLVM Translation failed for operation: omp.loop_nest}}
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
+      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
+      omp.cancel cancellation_construct_type(loop)
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @cancel_sections() {
+  // expected-error@below {{LLVM Translation failed for operation: omp.sections}}
+  omp.sections {
+    omp.section {
+      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
+      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
+      omp.cancel cancellation_construct_type(sections)
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @cancel_taskgroup() {
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup {
+    // expected-error@below {{LLVM Translation failed for operation: omp.task}}
+    omp.task {
+      // expected-error@below {{not yet implemented: Unhandled clause cancel directive construct type not yet supported in omp.cancel operation}}
+      // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
+      omp.cancel cancellation_construct_type(taskgroup)
+      omp.terminator
+    }
     omp.terminator
   }
   llvm.return
@@ -529,34 +565,6 @@ llvm.func @teams_private(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause privatization in omp.teams operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
   omp.teams private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-omp.declare_reduction @add_f32 : f32
-init {
-^bb0(%arg: f32):
-  %0 = llvm.mlir.constant(0.0 : f32) : f32
-  omp.yield (%0 : f32)
-}
-combiner {
-^bb1(%arg0: f32, %arg1: f32):
-  %1 = llvm.fadd %arg0, %arg1 : f32
-  omp.yield (%1 : f32)
-}
-atomic {
-^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
-  omp.yield
-}
-llvm.func @teams_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.teams operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
-  omp.teams reduction(@add_f32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
