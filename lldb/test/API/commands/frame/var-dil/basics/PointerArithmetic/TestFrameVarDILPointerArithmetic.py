@@ -46,5 +46,5 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect(
             "frame var '&*p_void'",
             error=True,
-            substrs=["indirection not permitted on operand of type 'void *'"],
+            substrs=["dereference failed: (void *) p_void"],
         )

@@ -249,12 +249,6 @@ Interpreter::Visit(const UnaryOpNode *node) {
     if (dynamic_rhs)
       rhs = dynamic_rhs;
 
-    if (rhs->GetCompilerType().IsPointerToVoid()) {
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, "indirection not permitted on operand of type 'void *'",
-          node->GetLocation());
-    }
-
     lldb::ValueObjectSP child_sp = rhs->Dereference(error);
     if (error.Fail())
       return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
