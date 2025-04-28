@@ -14916,7 +14916,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
           if (Mask[I] != PoisonMaskElem)
             ResizeMask[Mask[I]] = Mask[I];
         }
-        if (!ShuffleVectorInst::isIdentityMask(Mask, VF))
+        if (!ShuffleVectorInst::isIdentityMask(ResizeMask, VF))
           C = ::getShuffleCost(
               *TTI, TTI::SK_PermuteSingleSrc,
               getWidenedType(TE->getMainOp()->getType(), VecVF), ResizeMask);

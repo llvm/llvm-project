@@ -45,13 +45,12 @@ declare float @llvm.fmuladd.f32(float, float, float)
 define void @test(float %a) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[A:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[ADD_I157:%.*]] = fadd float 0.000000e+00, [[A:%.*]]
-; CHECK-NEXT:    [[ADD23_I:%.*]] = fadd float 0.000000e+00, [[A]]
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x float> zeroinitializer, float [[ADD_I157]], i64 0
-; CHECK-NEXT:    [[INSERT_I:%.*]] = insertelement <2 x float> [[INSERT]], float [[ADD23_I]], i64 1
-; CHECK-NEXT:    [[AGG:%.*]] = insertelement <2 x float> [[INSERT_I]], float [[ADD_I157]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
