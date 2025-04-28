@@ -8,6 +8,8 @@
 
 #ifndef LLVM_CLANG_CODEGEN_BACKENDUTIL_H
 #define LLVM_CLANG_CODEGEN_BACKENDUTIL_H
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/PGOOptions.h"
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -19,6 +21,7 @@ template <typename T> class Expected;
 template <typename T> class IntrusiveRefCntPtr;
 class Module;
 class MemoryBufferRef;
+extern cl::opt<llvm::PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr;
 namespace vfs {
 class FileSystem;
 } // namespace vfs

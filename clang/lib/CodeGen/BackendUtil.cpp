@@ -103,38 +103,16 @@ static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
     cl::desc("Insert sanitizers on OptimizerEarlyEP."));
 
-// Experiment to mark cold functions as optsize/minsize/optnone.
-// TODO: remove once this is exposed as a proper driver flag.
-static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
-    "pgo-cold-func-opt", cl::init(PGOOptions::ColdFuncOpt::Default), cl::Hidden,
-    cl::desc(
-        "Function attribute to apply to cold functions as determined by PGO"),
-    cl::values(clEnumValN(PGOOptions::ColdFuncOpt::Default, "default",
-                          "Default (no attribute)"),
-               clEnumValN(PGOOptions::ColdFuncOpt::OptSize, "optsize",
-                          "Mark cold functions with optsize."),
-               clEnumValN(PGOOptions::ColdFuncOpt::MinSize, "minsize",
-                          "Mark cold functions with minsize."),
-               clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
-                          "Mark cold functions with optnone.")));
-
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
-// Default filename used for profile generation.
-static std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
-}
-
 // Path and name of file used for profile generation
 static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
   std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
-                             ? getDefaultProfileGenName()
+                             ? llvm::driver::getDefaultProfileGenName()
                              : CodeGenOpts.InstrProfileOutput;
   if (CodeGenOpts.ContinuousProfileSync)
     FileName = "%c" + FileName;
@@ -834,12 +812,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
-    PGOOpt = PGOOptions(getProfileGenName(CodeGenOpts), "", "",
-                        CodeGenOpts.MemoryProfileUsePath, nullptr,
-                        PGOOptions::IRInstr, PGOOptions::NoCSAction,
-                        ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling,
-                        /*PseudoProbeForProfiling=*/false,
-                        CodeGenOpts.AtomicProfileUpdate);
+    PGOOpt = PGOOptions(
+        getProfileGenName(CodeGenOpts), "", "",
+        CodeGenOpts.MemoryProfileUsePath, nullptr, PGOOptions::IRInstr,
+        PGOOptions::NoCSAction, llvm::ClPGOColdFuncAttr,
+        CodeGenOpts.DebugInfoForProfiling,
+        /*PseudoProbeForProfiling=*/false, CodeGenOpts.AtomicProfileUpdate);
   else if (CodeGenOpts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = CodeGenOpts.hasProfileCSIRUse() ? PGOOptions::CSIRUse
@@ -847,14 +825,14 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     PGOOpt = PGOOptions(CodeGenOpts.ProfileInstrumentUsePath, "",
                         CodeGenOpts.ProfileRemappingFile,
                         CodeGenOpts.MemoryProfileUsePath, VFS,
-                        PGOOptions::IRUse, CSAction, ClPGOColdFuncAttr,
+                        PGOOptions::IRUse, CSAction, llvm::ClPGOColdFuncAttr,
                         CodeGenOpts.DebugInfoForProfiling);
   } else if (!CodeGenOpts.SampleProfileFile.empty())
     // -fprofile-sample-use
     PGOOpt = PGOOptions(
         CodeGenOpts.SampleProfileFile, "", CodeGenOpts.ProfileRemappingFile,
         CodeGenOpts.MemoryProfileUsePath, VFS, PGOOptions::SampleUse,
-        PGOOptions::NoCSAction, ClPGOColdFuncAttr,
+        PGOOptions::NoCSAction, llvm::ClPGOColdFuncAttr,
         CodeGenOpts.DebugInfoForProfiling, CodeGenOpts.PseudoProbeForProfiling);
   else if (!CodeGenOpts.MemoryProfileUsePath.empty())
     // -fmemory-profile-use (without any of the above options)
@@ -863,15 +841,15 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
                         ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
   else if (CodeGenOpts.PseudoProbeForProfiling)
     // -fpseudo-probe-for-profiling
-    PGOOpt =
-        PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
-                   PGOOptions::NoAction, PGOOptions::NoCSAction,
-                   ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling, true);
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+                        llvm::ClPGOColdFuncAttr,
+                        CodeGenOpts.DebugInfoForProfiling, true);
   else if (CodeGenOpts.DebugInfoForProfiling)
     // -fdebug-info-for-profiling
     PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
                         PGOOptions::NoAction, PGOOptions::NoCSAction,
-                        ClPGOColdFuncAttr, true);
+                        llvm::ClPGOColdFuncAttr, true);
 
   // Check to see if we want to generate a CS profile.
   if (CodeGenOpts.hasProfileCSIRInstr()) {

@@ -8,7 +8,26 @@
 
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/ProfileData/InstrProfCorrelator.h"
+#include "llvm/Support/PGOOptions.h"
 #include "llvm/TargetParser/Triple.h"
+namespace llvm {
+// Experiment to mark cold functions as optsize/minsize/optnone.
+// TODO: remove once this is exposed as a proper driver flag.
+cl::opt<llvm::PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
+    "pgo-cold-func-opt", cl::init(llvm::PGOOptions::ColdFuncOpt::Default),
+    cl::Hidden,
+    cl::desc(
+        "Function attribute to apply to cold functions as determined by PGO"),
+    cl::values(clEnumValN(llvm::PGOOptions::ColdFuncOpt::Default, "default",
+                          "Default (no attribute)"),
+               clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptSize, "optsize",
+                          "Mark cold functions with optsize."),
+               clEnumValN(llvm::PGOOptions::ColdFuncOpt::MinSize, "minsize",
+                          "Mark cold functions with minsize."),
+               clEnumValN(llvm::PGOOptions::ColdFuncOpt::OptNone, "optnone",
+                          "Mark cold functions with optnone.")));
+} // namespace llvm
 
 namespace llvm::driver {
 
@@ -56,4 +75,10 @@ TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
   return TLII;
 }
 
+std::string getDefaultProfileGenName() {
+  return llvm::DebugInfoCorrelate ||
+                 llvm::ProfileCorrelate != InstrProfCorrelator::NONE
+             ? "default_%m.proflite"
+             : "default_%m.profraw";
+}
 } // namespace llvm::driver

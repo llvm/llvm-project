@@ -30,6 +30,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -432,17 +433,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   }
 
   if (args.hasArg(clang::driver::options::OPT_fprofile_generate)) {
-    opts.setProfileInstr(
-        Fortran::frontend::CodeGenOptions::ProfileInstrKind::ProfileIRInstr);
-    opts.DebugInfoForProfiling =
-        args.hasArg(clang::driver::options::OPT_fdebug_info_for_profiling);
-    opts.AtomicProfileUpdate =
-        args.hasArg(clang::driver::options::OPT_fprofile_update_EQ);
+    opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
   }
 
   if (auto A = args.getLastArg(clang::driver::options::OPT_fprofile_use_EQ)) {
-    opts.setProfileUse(
-        Fortran::frontend::CodeGenOptions::ProfileInstrKind::ProfileIRInstr);
+    opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
     opts.ProfileInstrumentUsePath = A->getValue();
   }
 

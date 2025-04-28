@@ -20,8 +20,13 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/PGOOptions.h"
 #include <memory>
 
+namespace llvm {
+extern cl::opt<llvm::PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr;
+} // namespace llvm
 namespace Fortran::frontend {
 
 //===----------------------------------------------------------------------===//
