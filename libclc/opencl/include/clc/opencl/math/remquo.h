@@ -11,7 +11,7 @@
 #define __CLC_BODY <clc/math/remquo_decl.inc>
 #include <clc/math/gentype.inc>
 
-#if _CLC_DISTINCT_GENERIC_AS_SUPPORTED
+#if _CLC_GENERIC_AS_SUPPORTED
 #define __CLC_BODY <clc/math/remquo_decl.inc>
 #define __CLC_ADDRESS_SPACE generic
 #include <clc/math/gentype.inc>
