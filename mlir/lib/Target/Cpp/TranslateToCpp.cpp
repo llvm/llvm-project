@@ -187,7 +187,7 @@ struct CppEmitter {
 
   /// Return the existing or a new name for a loop induction variable of an
   /// emitc::ForOp.
-  StringRef getOrCreateName(emitc::ForOp forOp);
+  StringRef getOrCreateInductionVarName(Value val);
 
   // Returns the textual representation of a subscript operation.
   std::string getSubscriptName(emitc::SubscriptOp op);
@@ -906,12 +906,12 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
           emitter.emitType(forOp.getLoc(), forOp.getInductionVar().getType())))
     return failure();
   os << " ";
-  os << emitter.getOrCreateName(forOp);
+  os << emitter.getOrCreateInductionVarName(forOp.getInductionVar());
   os << " = ";
   if (failed(emitter.emitOperand(forOp.getLowerBound())))
     return failure();
   os << "; ";
-  os << emitter.getOrCreateName(forOp);
+  os << emitter.getOrCreateName(forOp.getInductionVar());
   os << " < ";
   Value upperBound = forOp.getUpperBound();
   bool upperBoundRequiresParentheses = requiresParentheses(upperBound);
@@ -922,7 +922,7 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::ForOp forOp) {
   if (upperBoundRequiresParentheses)
     os << ")";
   os << "; ";
-  os << emitter.getOrCreateName(forOp);
+  os << emitter.getOrCreateName(forOp.getInductionVar());
   os << " += ";
   if (failed(emitter.emitOperand(forOp.getStep())))
     return failure();
@@ -1286,9 +1286,7 @@ StringRef CppEmitter::getOrCreateName(Value val) {
 
 /// Return the existing or a new name for a loop induction variable Value.
 /// Loop induction variables follow natural naming: i, j, k,...
-StringRef CppEmitter::getOrCreateName(emitc::ForOp forOp) {
-  Value val = forOp.getInductionVar();
-
+StringRef CppEmitter::getOrCreateInductionVarName(Value val) {
   if (!valueMapper.count(val)) {
 
     int64_t identifier = 'i' + loopNestingLevel;
