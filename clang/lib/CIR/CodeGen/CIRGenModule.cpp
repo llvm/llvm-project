@@ -677,8 +677,9 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   // C++ Decls
+  case Decl::LinkageSpec:
   case Decl::Namespace:
-    emitDeclContext(cast<NamespaceDecl>(decl));
+    emitDeclContext(Decl::castToDeclContext(decl));
     break;
   }
 }

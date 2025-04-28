@@ -260,6 +260,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
 
 void CIRGenFunction::emitDecl(const Decl &d) {
   switch (d.getKind()) {
+  case Decl::LinkageSpec:
   case Decl::Namespace:
     llvm_unreachable("Declaration should not be in declstmts!");
 
