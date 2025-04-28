@@ -187,7 +187,7 @@ void fe1b(int ord) {
 // SPIRV-NEXT:    fence syncscope("singlethread") release
 // SPIRV-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 // SPIRV:       [[CLUSTER_SCOPE]]:
-// SPIRV-NEXT:    fence release
+// SPIRV-NEXT:    fence syncscope("cluster") release
 // SPIRV-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
 // X86_64-LABEL: define hidden void @fe1c(
@@ -219,6 +219,9 @@ void fe1b(int ord) {
 // X86_64-NEXT:    fence release
 // X86_64-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 // X86_64:       [[SINGLE_SCOPE]]:
+// X86_64-NEXT:    fence release
+// X86_64-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
+// X86_64:       [[CLUSTER_SCOPE]]:
 // X86_64-NEXT:    fence release
 // X86_64-NEXT:    br label %[[ATOMIC_SCOPE_CONTINUE]]
 //
