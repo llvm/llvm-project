@@ -604,6 +604,16 @@ enum class FunctionEffectMode : uint8_t {
   Dependent // effect(expr) where expr is dependent.
 };
 
+/// pragma clang section kind
+enum class PragmaClangSectionKind {
+  Invalid = 0,
+  BSS = 1,
+  Data = 2,
+  Rodata = 3,
+  Text = 4,
+  Relro = 5
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -1566,16 +1576,6 @@ public:
   /// Safety attribute-only mode is on.
   bool isCXXSafeBuffersBoundsSafetyInteropEnabledAt(SourceLocation Loc) const;
   /* TO_UPSTREAM(BoundsSafety) OFF */
-
-  /// pragma clang section kind
-  enum PragmaClangSectionKind {
-    PCSK_Invalid = 0,
-    PCSK_BSS = 1,
-    PCSK_Data = 2,
-    PCSK_Rodata = 3,
-    PCSK_Text = 4,
-    PCSK_Relro = 5
-  };
 
   enum PragmaClangSectionAction { PCSA_Set = 0, PCSA_Clear = 1 };
 

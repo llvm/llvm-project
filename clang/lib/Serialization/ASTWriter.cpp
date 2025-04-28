@@ -7750,7 +7750,7 @@ void ASTWriter::LazyAttributeToDecl(const Attr *Attr,
   if (Chain && Chain->isProcessingUpdateRecords()) return;
   // Reuse UPD_ADDED_ATTR_TO_RECORD to share its functionality to write and
   // read the attribute for Decl.
-  DeclUpdates[D].push_back(DeclUpdate(UPD_ADDED_ATTR_TO_RECORD, Attr));
+  DeclUpdates[D].push_back(DeclUpdate(DeclUpdateKind::AddedAttrToRecord, Attr));
 }
 /* TO_UPSTREAM(BoundsSafety) OFF*/
 
