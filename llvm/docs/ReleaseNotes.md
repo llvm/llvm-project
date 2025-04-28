@@ -72,6 +72,9 @@ Changes to LLVM infrastructure
   themselves (i.e., the `TargetIntrinsicInfo` class).
 * Fix Microsoft demangling of string literals to be stricter
   (#GH129970))
+* Added the support for ``fmaximum`` and ``fminimum`` in ``atomicrmw`` instruction. The
+  comparison is expected to match the behavior of ``llvm.maximum.*`` and
+  ``llvm.minimum.*`` respectively.
 
 Changes to building LLVM
 ------------------------
