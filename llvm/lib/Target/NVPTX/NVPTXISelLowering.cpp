@@ -1188,7 +1188,7 @@ NVPTXTargetLowering::LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const {
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *retTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs, MaybeAlign RetAlign,
-    std::optional<std::pair<unsigned, unsigned>> VAInfo, const CallBase &CB,
+    std::optional<unsigned> FirstVAArg, const CallBase &CB,
     unsigned UniqueCallSite) const {
   auto PtrVT = getPointerTy(DL);
 
@@ -1230,7 +1230,7 @@ std::string NVPTXTargetLowering::getPrototype(
 
   bool first = true;
 
-  const unsigned NumArgs = VAInfo ? VAInfo->first : Args.size();
+  const unsigned NumArgs = FirstVAArg.value_or(Args.size());
   auto AllOuts = ArrayRef(Outs);
   for (const unsigned I : llvm::seq(NumArgs)) {
     const auto ArgOuts =
@@ -1278,9 +1278,9 @@ std::string NVPTXTargetLowering::getPrototype(
     }
   }
 
-  if (VAInfo)
-    O << (first ? "" : ",") << " .param .align " << VAInfo->second
-      << " .b8 _[]\n";
+  if (FirstVAArg)
+    O << (first ? "" : ",") << " .param .align "
+      << STI.getMaxRequiredAlignment() << " .b8 _[]\n";
   O << ")";
   if (shouldEmitPTXNoReturn(&CB, *nvTM))
     O << " .noreturn";
@@ -1782,13 +1782,10 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // instruction.
     // The prototype is embedded in a string and put as the operand for a
     // CallPrototype SDNode which will print out to the value of the string.
-    std::string Proto = getPrototype(
-        DL, RetTy, Args, CLI.Outs, RetAlign,
-        HasVAArgs
-            ? std::optional(std::pair(CLI.NumFixedArgs,
-                                      VADeclareParam.getConstantOperandVal(1)))
-            : std::nullopt,
-        *CB, UniqueCallSite);
+    std::string Proto =
+        getPrototype(DL, RetTy, Args, CLI.Outs, RetAlign,
+                     HasVAArgs ? std::optional(FirstVAArg) : std::nullopt, *CB,
+                     UniqueCallSite);
     const char *ProtoStr = nvTM->getStrPool().save(Proto).data();
     SDValue ProtoOps[] = {
         Chain,
