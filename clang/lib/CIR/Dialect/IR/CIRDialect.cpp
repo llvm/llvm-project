@@ -882,9 +882,8 @@ void cir::SwitchOp::getSuccessorRegions(
   region.push_back(RegionSuccessor(&getBody()));
 }
 
-void cir::SwitchOp::build(
-    OpBuilder &builder, OperationState &result, Value cond,
-    function_ref<void(OpBuilder &, Location, OperationState &)> switchBuilder) {
+void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
+                          Value cond, BuilderOpStateCallbackRef switchBuilder) {
   assert(switchBuilder && "the builder callback for regions must be present");
   OpBuilder::InsertionGuard guardSwitch(builder);
   Region *switchRegion = result.addRegion();
@@ -893,7 +892,7 @@ void cir::SwitchOp::build(
   switchBuilder(builder, result.location, result);
 }
 
-void cir::SwitchOp::collectCases(llvm::SmallVector<CaseOp> &cases) {
+void cir::SwitchOp::collectCases(llvm::SmallVectorImpl<CaseOp> &cases) {
   walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
     // Don't walk in nested switch op.
     if (isa<cir::SwitchOp>(op) && op != *this)
@@ -906,7 +905,7 @@ void cir::SwitchOp::collectCases(llvm::SmallVector<CaseOp> &cases) {
   });
 }
 
-bool cir::SwitchOp::isSimpleForm(llvm::SmallVector<CaseOp> &cases) {
+bool cir::SwitchOp::isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases) {
   collectCases(cases);
 
   if (getBody().empty())

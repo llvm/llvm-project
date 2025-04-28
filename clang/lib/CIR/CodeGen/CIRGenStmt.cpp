@@ -458,8 +458,9 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
     } else if (isa<CaseStmt>(sub) && isa<DefaultStmt>(stmt)) {
       subStmtKind = SubStmtKind::Case;
       builder.createYield(loc);
-    } else
+    } else {
       result = emitStmt(sub, /*useCurrentScope=*/!isa<CompoundStmt>(sub));
+    }
 
     insertPoint = builder.saveInsertionPoint();
   }
@@ -496,16 +497,17 @@ CIRGenFunction::emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
   //
   // We don't need to revert this if we find the current switch can't be in
   // simple form later since the conversion itself should be harmless.
-  if (subStmtKind == SubStmtKind::Case)
+  if (subStmtKind == SubStmtKind::Case) {
     result = emitCaseStmt(*cast<CaseStmt>(sub), condType, buildingTopLevelCase);
-  else if (subStmtKind == SubStmtKind::Default) {
+  } else if (subStmtKind == SubStmtKind::Default) {
     getCIRGenModule().errorNYI(sub->getSourceRange(), "Default case");
     return mlir::failure();
-  } else if (buildingTopLevelCase)
+  } else if (buildingTopLevelCase) {
     // If we're building a top level case, try to restore the insert point to
     // the case we're building, then we can attach more random stmts to the
     // case to make generating `cir.switch` operation to be a simple form.
     builder.restoreInsertionPoint(insertPoint);
+  }
 
   return result;
 }
@@ -764,6 +766,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
   // only emit live cases. CIR should use MLIR to achieve similar things,
   // nothing to be done here.
   // if (ConstantFoldsToSimpleInteger(S.getCond(), ConstantCondValue))...
+  assert(!cir::MissingFeatures::constantFoldSwitchStatement());
 
   SwitchOp swop;
   auto switchStmtBuilder = [&]() -> mlir::LogicalResult {

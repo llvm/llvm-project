@@ -821,14 +821,14 @@ def SwitchOp : CIR_Op<"switch",
     operation in the `cir.switch` operation easily.
 
     The `cir.case` operations doesn't have to be in the region of `cir.switch`
-    directly. However, when all the `cir.case` operations lives in the region
-    of `cir.switch` directly and there is no other operations except the ending
-    `cir.yield` operation in the region of `cir.switch` directly, we call the
+    directly. However, when all the `cir.case` operations live in the region
+    of `cir.switch` directly and there are no other operations except the ending
+    `cir.yield` operation in the region of `cir.switch` directly, we say the
     `cir.switch` operation is in a simple form. Users can use
     `bool isSimpleForm(llvm::SmallVector<CaseOp> &cases)` member function to
     detect if the `cir.switch` operation is in a simple form. The simple form
-    makes analysis easier to handle the `cir.switch` operation
-    and makes the boundary to give up pretty clear.
+    makes it easier for analyses to handle the `cir.switch` operation
+    and makes the boundary to give up clear.
 
     To make the simple form as common as possible, CIR code generation attaches
     operations corresponding to the statements that lives between top level
@@ -840,9 +840,8 @@ def SwitchOp : CIR_Op<"switch",
     switch(int cond) {
       case 4:
         a++;
-
-      b++;
-      case 5;
+        b++;
+      case 5:
         c++;
 
       ...
@@ -877,7 +876,7 @@ def SwitchOp : CIR_Op<"switch",
     switch(int cond) {
       case 4:
       default;
-      case 5;
+      case 5:
         a++;
       ...
     }
@@ -901,13 +900,13 @@ def SwitchOp : CIR_Op<"switch",
     }
     ```
 
-    The cir.switch might not be considered "simple" if any of the following is
+    The cir.switch is not be considered "simple" if any of the following is
     true:
-    - There are case statements of the switch statement lives in other scopes
+    - There are case statements of the switch statement that are scope
       other than the top level compound statement scope. Note that a case
       statement itself doesn't form a scope.
     - The sub-statement of the switch statement is not a compound statement.
-    - There are codes before the first case statement. For example,
+    - There is any code before the first case statement. For example,
 
     ```
     switch(int cond) {
@@ -949,7 +948,7 @@ def SwitchOp : CIR_Op<"switch",
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "mlir::Value":$condition,
-               "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, mlir::OperationState &)>":$switchBuilder)>
+               "BuilderOpStateCallbackRef":$switchBuilder)>
   ];
 
   let assemblyFormat = [{
@@ -961,12 +960,12 @@ def SwitchOp : CIR_Op<"switch",
 
   let extraClassDeclaration = [{
     // Collect cases in the switch.
-    void collectCases(llvm::SmallVector<CaseOp> &cases);
+    void collectCases(llvm::SmallVectorImpl<CaseOp> &cases);
 
     // Check if the switch is in a simple form.
     // If yes, collect the cases to \param cases.
     // This is an expensive and need to be used with caution.
-    bool isSimpleForm(llvm::SmallVector<CaseOp> &cases);
+    bool isSimpleForm(llvm::SmallVectorImpl<CaseOp> &cases);
   }];
 }
 
