@@ -23501,9 +23501,9 @@ static Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
 static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
   if (match(I, m_BinOp(m_Value(V0), m_Value(V1))))
     return true;
-  if (match(I, m_FMax(m_Value(V0), m_Value(V1))))
+  if (match(I, m_FMaxNum(m_Value(V0), m_Value(V1))))
     return true;
-  if (match(I, m_FMin(m_Value(V0), m_Value(V1))))
+  if (match(I, m_FMinNum(m_Value(V0), m_Value(V1))))
     return true;
   if (match(I, m_FMaximum(m_Value(V0), m_Value(V1))))
     return true;

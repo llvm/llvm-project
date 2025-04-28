@@ -784,9 +784,9 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMax, I);
-  if (match(I, m_FMin(m_Value(), m_Value())))
+  if (match(I, m_FMinNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
-  if (match(I, m_FMax(m_Value(), m_Value())))
+  if (match(I, m_FMaxNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMax, I);
   if (match(I, m_FMinimumNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMinimumNum, I);
