@@ -299,13 +299,13 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
             Descriptor.ShaderRegister = Param.Descriptor.ShaderRegister;
             Descriptor.Flags = Param.Descriptor.getEncodedFlags();
           RS.ParametersContainer.addParameter(Header, Descriptor);
+          }
           break;
         default:
           // Handling invalid parameter type edge case
           RS.ParametersContainer.addInfo(Header, -1);
         }
       }
-    }
 
       RS.write(OS);
       break;

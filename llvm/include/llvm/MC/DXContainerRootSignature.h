@@ -29,8 +29,8 @@ struct RootParameterInfo {
       : Header(H), Location(L) {}
 };
 
-using RootDescriptor = std::variant<dxbc::RST0::v0::RootDescriptor *,
-                                    dxbc::RST0::v1::RootDescriptor *>;
+using RootDescriptor = std::variant<dxbc::RST0::v0::RootDescriptor,
+                                    dxbc::RST0::v1::RootDescriptor>;
 using ParametersView = std::variant<const dxbc::RootConstants *,
                                     const dxbc::RST0::v0::RootDescriptor *,
                                     const dxbc::RST0::v1::RootDescriptor *>;
@@ -52,13 +52,13 @@ struct RootParametersContainer {
   void addParameter(dxbc::RootParameterHeader H,
                     dxbc::RST0::v0::RootDescriptor D) {
     addInfo(H, Descriptors.size());
-    Descriptors.push_back(std::move(&D));
+    Descriptors.push_back(D);
   }
 
   void addParameter(dxbc::RootParameterHeader H,
                     dxbc::RST0::v1::RootDescriptor D) {
     addInfo(H, Descriptors.size());
-    Descriptors.push_back(std::move(&D));
+    Descriptors.push_back(D);
   }
 
   std::optional<ParametersView> getParameter(const RootParameterInfo *H) const {
@@ -68,11 +68,12 @@ struct RootParametersContainer {
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
-      RootDescriptor VersionedParam = Descriptors[H->Location];
-      if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor *>(
-              VersionedParam))
-        return std::get<dxbc::RST0::v0::RootDescriptor *>(VersionedParam);
-      return std::get<dxbc::RST0::v1::RootDescriptor *>(VersionedParam);
+      const RootDescriptor &VersionedParam = Descriptors[H->Location];
+      if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor>(
+              VersionedParam)) {
+        return &std::get<dxbc::RST0::v0::RootDescriptor>(VersionedParam);
+      }
+      return &std::get<dxbc::RST0::v1::RootDescriptor>(VersionedParam);
     }
 
     return std::nullopt;
