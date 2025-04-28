@@ -96,7 +96,7 @@ jobs:
         ${{ parameter.key }}: ${{ parameter.value }}
 
 - ${{ if and(eq(parameters.runAsPublic, 'false'), ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-  - ${{ if or(eq(parameters.enablePublishBuildAssets, true), eq(parameters.artifacts.publish.manifests, 'true'), ne(parameters.artifacts.publish.manifests, '')) }}:
+  - ${{ if or(eq(parameters.enablePublishBuildAssets, true), eq(parameters.artifacts.publish.manifests, 'true'), ne(parameters.artifacts.publish.manifests, ''), eq(parameters.isAssetlessBuild, true)) }}:
     - template: ../job/publish-build-assets.yml
       parameters:
         is1ESPipeline: ${{ parameters.is1ESPipeline }}
@@ -112,7 +112,7 @@ jobs:
           - Source_Build_Complete
 
         runAsPublic: ${{ parameters.runAsPublic }}
-        publishAssetsImmediately: ${{ parameters.publishAssetsImmediately }}
+        publishAssetsImmediately: ${{ or(parameters.publishAssetsImmediately, parameters.isAssetlessBuild) }}
         isAssetlessBuild: ${{ parameters.isAssetlessBuild }}
         enablePublishBuildArtifacts: ${{ parameters.enablePublishBuildArtifacts }}
         artifactsPublishingAdditionalParameters: ${{ parameters.artifactsPublishingAdditionalParameters }}

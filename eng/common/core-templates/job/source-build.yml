@@ -27,6 +27,8 @@ parameters:
   #   Specifies the build script to invoke to perform the build in the repo. The default
   #   './build.sh' should work for typical Arcade repositories, but this is customizable for
   #   difficult situations.
+  # buildArguments: ''
+  #   Specifies additional build arguments to pass to the build script.
   # jobProperties: {}
   #   A list of job properties to inject at the top level, for potential extensibility beyond
   #   container and pool.

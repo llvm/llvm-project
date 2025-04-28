@@ -5,5 +5,5 @@ diff -u -r a/usr/lib/libc.so b/usr/lib/libc.so
     Use the shared library, but some functions are only in
     the static library, so try that secondarily.  */
  OUTPUT_FORMAT(elf64-littleaarch64)
--GROUP ( /lib64/libc.so.6 /usr/lib64/libc_nonshared.a  AS_NEEDED ( /lib/ld-linux-aarch64.so.1 ) )
+-GROUP ( /lib64/libc.so.6 /usr/lib64/libc_nonshared.a  AS_NEEDED ( /lib64/ld-linux-aarch64.so.1 ) )
 +GROUP ( libc.so.6 libc_nonshared.a  AS_NEEDED ( ld-linux-aarch64.so.1 ) )

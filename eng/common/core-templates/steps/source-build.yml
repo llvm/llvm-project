@@ -84,6 +84,7 @@ steps:
     ${{ coalesce(parameters.platform.buildScript, './build.sh') }} --ci \
       --configuration $buildConfig \
       --restore --build --pack $publishArgs -bl \
+      ${{ parameters.platform.buildArguments }} \
       $officialBuildArgs \
       $internalRuntimeDownloadArgs \
       $internalRestoreArgs \
