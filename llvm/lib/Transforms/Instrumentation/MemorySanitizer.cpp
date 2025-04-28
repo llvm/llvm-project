@@ -4313,15 +4313,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // For sh.* compiler intrinsics:
-  // llvm.x86.avx512fp16.mask.{add/sub/mul/div/max/min}.sh.round
-  //   (<8 x half>, <8 x half>, <8 x half>, i8,  i32)
-  //    A           B           WriteThru   Mask RoundingMode
+  //   llvm.x86.avx512fp16.mask.{add/sub/mul/div/max/min}.sh.round
+  //     (<8 x half>, <8 x half>, <8 x half>, i8,  i32)
+  //      A           B           WriteThru   Mask RoundingMode
   //
-  // if (Mask[0])
-  //   DstShadow[0] = AShadow[0] | BShadow[0]
-  // else
-  //   DstShadow[0] = WriteThruShadow[0]
-  //
+  // DstShadow[0] = Mask[0] ? (AShadow[0] | BShadow[0]) : WriteThruShadow[0]
   // DstShadow[1..7] = AShadow[1..7]
   void visitGenericScalarHalfwordInst(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
@@ -4348,21 +4344,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Mask = IRB.CreateBitCast(
         Mask, FixedVectorType::get(IRB.getInt1Ty(), NumElements));
+    Value *MaskLower =
+        IRB.CreateExtractElement(Mask, ConstantInt::get(IRB.getInt32Ty(), 0));
 
     Value *AShadow = getShadow(A);
+    Value *AShadowLower = IRB.CreateExtractElement(
+        AShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+
     Value *BShadow = getShadow(B);
-    Value *ABLowerShadow =
-        IRB.CreateOr(IRB.CreateExtractElement(
-                         AShadow, ConstantInt::get(IRB.getInt32Ty(), 0)),
-                     IRB.CreateExtractElement(
-                         BShadow, ConstantInt::get(IRB.getInt32Ty(), 0)));
+    Value *BShadowLower = IRB.CreateExtractElement(
+        BShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+
+    Value *ABLowerShadow = IRB.CreateOr(AShadowLower, BShadowLower);
+
     Value *WriteThroughShadow = getShadow(WriteThrough);
     Value *WriteThroughLowerShadow = IRB.CreateExtractElement(
         WriteThroughShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
 
-    Value *DstLowerShadow = IRB.CreateSelect(
-        IRB.CreateExtractElement(Mask, ConstantInt::get(IRB.getInt32Ty(), 0)),
-        ABLowerShadow, WriteThroughLowerShadow);
+    Value *DstLowerShadow =
+        IRB.CreateSelect(MaskLower, ABLowerShadow, WriteThroughLowerShadow);
     Value *DstShadow = IRB.CreateInsertElement(
         AShadow, DstLowerShadow, ConstantInt::get(IRB.getInt32Ty(), 0),
         "_msprop");
