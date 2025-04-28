@@ -626,7 +626,7 @@ class VOPProfileMAI<VOPProfile P, RegisterOperand _SrcRC, RegisterOperand _DstRC
   // and with the earlyclobber flag on the dst. This is stricter than the
   // actual HW restriction. In particular earlyclobber also affects src0 and
   // src1 allocation which is not required.
-  bit NoDstOverlap = !gt(DstVT.Size, 128);
+  bit NoDstOverlap = 1; //!gt(DstVT.Size, 128);
 }
 
 class VOPProfileSMFMAC<VOPProfile P, RegisterOperand _DstRC,

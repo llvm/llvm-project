@@ -36,7 +36,7 @@ enum CondCodes {
   GE
 };
 }
-
+FunctionPass *createNVPTXRegCountPass();
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
                                  llvm::CodeGenOptLevel OptLevel);
 ModulePass *createNVPTXAssignValidGlobalNamesPass();

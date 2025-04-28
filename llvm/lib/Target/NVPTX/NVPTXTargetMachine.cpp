@@ -234,6 +234,19 @@ void NVPTXTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
   AAM.registerFunctionAnalysis<NVPTXAA>();
 }
 
+struct NVPTXModulePrinter : public PassInfoMixin<NVPTXModulePrinter> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
+    std::error_code EC;
+    raw_fd_ostream OutFile("/home/ubuntu/modular/delete-me-test_batch_kv_cache_flash_attention_causal_mask_ragged_paged.ll", EC);
+    if (!EC) {
+      M.print(OutFile, nullptr);
+    }
+    return PreservedAnalyses::all();
+  }
+  
+  static bool isRequired() { return true; }
+};
+
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
@@ -250,6 +263,7 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(NVVMIntrRangePass());
         if (EarlyByValArgsCopy)
           FPM.addPass(NVPTXCopyByValArgsPass());
+        //PM.addPass(NVPTXModulePrinter());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 
@@ -418,6 +432,7 @@ void NVPTXPassConfig::addPreRegAlloc() {
 
 void NVPTXPassConfig::addPostRegAlloc() {
   addPass(createNVPTXPrologEpilogPass());
+  addPass(createNVPTXRegCountPass());
   if (getOptLevel() != CodeGenOptLevel::None) {
     // NVPTXPrologEpilogPass calculates frame object offset and replace frame
     // index with VRFrame register. NVPTXPeephole need to be run after that and
