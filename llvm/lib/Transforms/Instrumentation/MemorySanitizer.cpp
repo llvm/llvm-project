@@ -4342,11 +4342,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(Mask->getType()->getPrimitiveSizeInBits() == NumElements);
     assert(RoundingMode->getType()->isIntegerTy());
 
-    Mask = IRB.CreateBitCast(
-        Mask, FixedVectorType::get(IRB.getInt1Ty(), NumElements));
-    Value *MaskLower =
-        IRB.CreateExtractElement(Mask, ConstantInt::get(IRB.getInt32Ty(), 0));
-
     Value *AShadow = getShadow(A);
     Value *AShadowLower = IRB.CreateExtractElement(
         AShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
@@ -4360,6 +4355,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *WriteThroughShadow = getShadow(WriteThrough);
     Value *WriteThroughLowerShadow = IRB.CreateExtractElement(
         WriteThroughShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+
+    Mask = IRB.CreateBitCast(
+        Mask, FixedVectorType::get(IRB.getInt1Ty(), NumElements));
+    Value *MaskLower =
+        IRB.CreateExtractElement(Mask, ConstantInt::get(IRB.getInt32Ty(), 0));
 
     Value *DstLowerShadow =
         IRB.CreateSelect(MaskLower, ABLowerShadow, WriteThroughLowerShadow);

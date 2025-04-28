@@ -1411,12 +1411,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_add_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 true, i16 [[TMP13]], i16 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[TMP14]], i32 0
 ; CHECK-NEXT:    [[RES0:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.add.sh.round(<8 x half> [[X1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 -1, i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i16> [[_MSPROP1]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i16 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i16 [[TMP18]], i16 [[TMP19]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i16> [[_MSPROP1]], i16 [[TMP21]], i32 0
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1426,11 +1426,11 @@ define <8 x half> @test_int_x86_avx512fp16_mask_add_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB23]]:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.add.sh.round(<8 x half> [[RES0]], <8 x half> [[X2]], <8 x half> [[SRC]], i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i16> [[_MSPROP2]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = or i16 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP30]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i16 [[TMP27]], i16 0
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = insertelement <8 x i16> [[_MSPROP2]], i16 [[TMP29]], i32 0
 ; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1440,12 +1440,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_add_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[RES2:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.add.sh.round(<8 x half> [[RES1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP32]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i16> [[_MSPROP3]], i32 0
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i16> [[_MSPROP]], i32 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = or i16 [[TMP33]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP39]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], i16 [[TMP35]], i16 [[TMP36]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = insertelement <8 x i16> [[_MSPROP3]], i16 [[TMP38]], i32 0
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1497,12 +1497,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_sub_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 true, i16 [[TMP13]], i16 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[TMP14]], i32 0
 ; CHECK-NEXT:    [[RES0:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.sub.sh.round(<8 x half> [[X1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 -1, i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i16> [[_MSPROP1]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i16 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i16 [[TMP18]], i16 [[TMP19]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i16> [[_MSPROP1]], i16 [[TMP21]], i32 0
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1512,11 +1512,11 @@ define <8 x half> @test_int_x86_avx512fp16_mask_sub_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB23]]:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.sub.sh.round(<8 x half> [[RES0]], <8 x half> [[X2]], <8 x half> [[SRC]], i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i16> [[_MSPROP2]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = or i16 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP30]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i16 [[TMP27]], i16 0
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = insertelement <8 x i16> [[_MSPROP2]], i16 [[TMP29]], i32 0
 ; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1526,12 +1526,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_sub_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[RES2:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.sub.sh.round(<8 x half> [[RES1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP32]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i16> [[_MSPROP3]], i32 0
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i16> [[_MSPROP]], i32 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = or i16 [[TMP33]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP39]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], i16 [[TMP35]], i16 [[TMP36]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = insertelement <8 x i16> [[_MSPROP3]], i16 [[TMP38]], i32 0
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1583,12 +1583,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_mul_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 true, i16 [[TMP13]], i16 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[TMP14]], i32 0
 ; CHECK-NEXT:    [[RES0:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> [[X1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 -1, i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i16> [[_MSPROP1]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i16 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i16 [[TMP18]], i16 [[TMP19]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i16> [[_MSPROP1]], i16 [[TMP21]], i32 0
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1598,11 +1598,11 @@ define <8 x half> @test_int_x86_avx512fp16_mask_mul_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB23]]:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> [[RES0]], <8 x half> [[X2]], <8 x half> [[SRC]], i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i16> [[_MSPROP2]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = or i16 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP30]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i16 [[TMP27]], i16 0
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = insertelement <8 x i16> [[_MSPROP2]], i16 [[TMP29]], i32 0
 ; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1612,12 +1612,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_mul_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[RES2:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> [[RES1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP32]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i16> [[_MSPROP3]], i32 0
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i16> [[_MSPROP]], i32 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = or i16 [[TMP33]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP39]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], i16 [[TMP35]], i16 [[TMP36]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = insertelement <8 x i16> [[_MSPROP3]], i16 [[TMP38]], i32 0
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1669,12 +1669,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_div_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 true, i16 [[TMP13]], i16 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[TMP14]], i32 0
 ; CHECK-NEXT:    [[RES0:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.div.sh.round(<8 x half> [[X1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 -1, i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i16> [[_MSPROP1]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i16 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i16 [[TMP18]], i16 [[TMP19]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i16> [[_MSPROP1]], i16 [[TMP21]], i32 0
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1684,11 +1684,11 @@ define <8 x half> @test_int_x86_avx512fp16_mask_div_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB23]]:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.div.sh.round(<8 x half> [[RES0]], <8 x half> [[X2]], <8 x half> [[SRC]], i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i16> [[_MSPROP2]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = or i16 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP30]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i16 [[TMP27]], i16 0
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = insertelement <8 x i16> [[_MSPROP2]], i16 [[TMP29]], i32 0
 ; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1698,12 +1698,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_div_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[RES2:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.div.sh.round(<8 x half> [[RES1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP32]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i16> [[_MSPROP3]], i32 0
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i16> [[_MSPROP]], i32 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = or i16 [[TMP33]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP39]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], i16 [[TMP35]], i16 [[TMP36]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = insertelement <8 x i16> [[_MSPROP3]], i16 [[TMP38]], i32 0
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1755,12 +1755,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_min_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 true, i16 [[TMP13]], i16 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[TMP14]], i32 0
 ; CHECK-NEXT:    [[RES0:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.min.sh.round(<8 x half> [[X1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 -1, i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i16> [[_MSPROP1]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i16 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i16 [[TMP18]], i16 [[TMP19]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i16> [[_MSPROP1]], i16 [[TMP21]], i32 0
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1770,11 +1770,11 @@ define <8 x half> @test_int_x86_avx512fp16_mask_min_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB23]]:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.min.sh.round(<8 x half> [[RES0]], <8 x half> [[X2]], <8 x half> [[SRC]], i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i16> [[_MSPROP2]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = or i16 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP30]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i16 [[TMP27]], i16 0
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = insertelement <8 x i16> [[_MSPROP2]], i16 [[TMP29]], i32 0
 ; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1784,12 +1784,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_min_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[RES2:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.min.sh.round(<8 x half> [[RES1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP32]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i16> [[_MSPROP3]], i32 0
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i16> [[_MSPROP]], i32 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = or i16 [[TMP33]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP39]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], i16 [[TMP35]], i16 [[TMP36]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = insertelement <8 x i16> [[_MSPROP3]], i16 [[TMP38]], i32 0
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1841,12 +1841,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_max_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 true, i16 [[TMP13]], i16 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[TMP14]], i32 0
 ; CHECK-NEXT:    [[RES0:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.max.sh.round(<8 x half> [[X1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 -1, i32 4)
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP15]], i32 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <8 x i16> [[_MSPROP1]], i32 0
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = or i16 [[TMP16]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <8 x i1> [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP20]], i16 [[TMP18]], i16 [[TMP19]]
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = insertelement <8 x i16> [[_MSPROP1]], i16 [[TMP21]], i32 0
 ; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1856,11 +1856,11 @@ define <8 x half> @test_int_x86_avx512fp16_mask_max_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB23]]:
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.max.sh.round(<8 x half> [[RES0]], <8 x half> [[X2]], <8 x half> [[SRC]], i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP24]], i32 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <8 x i16> [[_MSPROP2]], i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <8 x i16> [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = or i16 [[TMP25]], [[TMP26]]
+; CHECK-NEXT:    [[TMP30:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <8 x i1> [[TMP30]], i32 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i16 [[TMP27]], i16 0
 ; CHECK-NEXT:    [[_MSPROP3:%.*]] = insertelement <8 x i16> [[_MSPROP2]], i16 [[TMP29]], i32 0
 ; CHECK-NEXT:    [[_MSCMP9:%.*]] = icmp ne i8 [[TMP5]], 0
@@ -1870,12 +1870,12 @@ define <8 x half> @test_int_x86_avx512fp16_mask_max_sh(<8 x half> %x1, <8 x half
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB31]]:
 ; CHECK-NEXT:    [[RES2:%.*]] = call <8 x half> @llvm.x86.avx512fp16.mask.max.sh.round(<8 x half> [[RES1]], <8 x half> [[X2]], <8 x half> zeroinitializer, i8 [[MASK]], i32 4)
-; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP32]], i32 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <8 x i16> [[_MSPROP3]], i32 0
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <8 x i16> [[_MSPROP]], i32 0
 ; CHECK-NEXT:    [[TMP35:%.*]] = or i16 [[TMP33]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <8 x i16> [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP39:%.*]] = bitcast i8 [[MASK]] to <8 x i1>
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <8 x i1> [[TMP39]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = select i1 [[TMP37]], i16 [[TMP35]], i16 [[TMP36]]
 ; CHECK-NEXT:    [[_MSPROP4:%.*]] = insertelement <8 x i16> [[_MSPROP3]], i16 [[TMP38]], i32 0
 ; CHECK-NEXT:    [[_MSCMP14:%.*]] = icmp ne i8 [[TMP5]], 0
