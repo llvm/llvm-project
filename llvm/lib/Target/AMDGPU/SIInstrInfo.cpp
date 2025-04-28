@@ -10208,17 +10208,6 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   if (opcode == TargetOpcode::G_ADDRSPACE_CAST)
     return HandleAddrSpaceCast(MI);
 
-  // An alloca in AS0 is lowered to an alloca in AS5 followed by an address
-  // space cast.
-  if (opcode == TargetOpcode::G_FRAME_INDEX) {
-    Register Dst = MI.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(Dst);
-    unsigned DstAS = DstTy.getAddressSpace();
-    return DstAS == AMDGPUAS::FLAT_ADDRESS && ST.hasGloballyAddressableScratch()
-               ? InstructionUniformity::NeverUniform
-               : InstructionUniformity::Default;
-  }
-
   if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
     auto IID = GI->getIntrinsicID();
     if (AMDGPU::isIntrinsicSourceOfDivergence(IID))
