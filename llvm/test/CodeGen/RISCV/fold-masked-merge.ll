@@ -14,10 +14,9 @@
 define i32 @masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-I-LABEL: masked_merge0:
 ; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    and a1, a0, a1
-; CHECK-I-NEXT:    not a0, a0
-; CHECK-I-NEXT:    and a0, a0, a2
-; CHECK-I-NEXT:    or a0, a1, a0
+; CHECK-I-NEXT:    xor a1, a1, a2
+; CHECK-I-NEXT:    and a0, a1, a0
+; CHECK-I-NEXT:    xor a0, a0, a2
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: masked_merge0:
@@ -36,10 +35,9 @@ define i32 @masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 ; CHECK-I-LABEL: masked_merge1:
 ; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    and a1, a0, a1
-; CHECK-I-NEXT:    not a0, a0
-; CHECK-I-NEXT:    and a0, a2, a0
-; CHECK-I-NEXT:    or a0, a1, a0
+; CHECK-I-NEXT:    xor a1, a1, a2
+; CHECK-I-NEXT:    and a0, a1, a0
+; CHECK-I-NEXT:    xor a0, a0, a2
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: masked_merge1:
@@ -58,10 +56,7 @@ define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 define i8 @masked_merge2(i8 %a0, i8 %a1, i8 %a2) {
 ; CHECK-I-LABEL: masked_merge2:
 ; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    not a2, a0
-; CHECK-I-NEXT:    and a2, a2, a1
-; CHECK-I-NEXT:    and a0, a1, a0
-; CHECK-I-NEXT:    or a0, a2, a0
+; CHECK-I-NEXT:    mv a0, a1
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: masked_merge2:
@@ -80,28 +75,25 @@ define i8 @masked_merge2(i8 %a0, i8 %a1, i8 %a2) {
 define i64 @masked_merge3(i64 %a0, i64 %a1, i64 %a2) {
 ; RV32I-LABEL: masked_merge3:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    not a5, a5
+; RV32I-NEXT:    not a4, a4
+; RV32I-NEXT:    xor a3, a3, a5
+; RV32I-NEXT:    xor a2, a2, a4
 ; RV32I-NEXT:    not a2, a2
 ; RV32I-NEXT:    not a3, a3
-; RV32I-NEXT:    not a4, a4
-; RV32I-NEXT:    not a5, a5
-; RV32I-NEXT:    not a6, a0
-; RV32I-NEXT:    not a7, a1
-; RV32I-NEXT:    and a5, a7, a5
-; RV32I-NEXT:    and a4, a6, a4
-; RV32I-NEXT:    and a1, a3, a1
 ; RV32I-NEXT:    and a0, a2, a0
-; RV32I-NEXT:    or a0, a4, a0
-; RV32I-NEXT:    or a1, a5, a1
+; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:    xor a0, a0, a4
+; RV32I-NEXT:    xor a1, a1, a5
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: masked_merge3:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    not a2, a2
-; RV64I-NEXT:    not a3, a0
-; RV64I-NEXT:    and a2, a3, a2
+; RV64I-NEXT:    xor a1, a1, a2
+; RV64I-NEXT:    not a1, a1
 ; RV64I-NEXT:    and a0, a1, a0
-; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    xor a0, a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: masked_merge3:

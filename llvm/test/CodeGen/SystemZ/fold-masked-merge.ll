@@ -8,10 +8,9 @@
 define i32 @masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 ; NO-MISC3-LABEL: masked_merge0:
 ; NO-MISC3:       # %bb.0:
-; NO-MISC3-NEXT:    nr %r3, %r2
-; NO-MISC3-NEXT:    xilf %r2, 4294967295
-; NO-MISC3-NEXT:    nr %r2, %r4
-; NO-MISC3-NEXT:    or %r2, %r3
+; NO-MISC3-NEXT:    xr %r3, %r4
+; NO-MISC3-NEXT:    nr %r2, %r3
+; NO-MISC3-NEXT:    xr %r2, %r4
 ; NO-MISC3-NEXT:    br %r14
 ;
 ; MISC3-LABEL: masked_merge0:
@@ -30,17 +29,16 @@ define i32 @masked_merge0(i32 %a0, i32 %a1, i32 %a2) {
 define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 ; NO-MISC3-LABEL: masked_merge1:
 ; NO-MISC3:       # %bb.0:
-; NO-MISC3-NEXT:    nr %r3, %r2
-; NO-MISC3-NEXT:    xilf %r2, 4294967295
-; NO-MISC3-NEXT:    nr %r2, %r4
-; NO-MISC3-NEXT:    or %r2, %r3
+; NO-MISC3-NEXT:    xr %r3, %r4
+; NO-MISC3-NEXT:    nr %r2, %r3
+; NO-MISC3-NEXT:    xr %r2, %r4
 ; NO-MISC3-NEXT:    br %r14
 ;
 ; MISC3-LABEL: masked_merge1:
 ; MISC3:       # %bb.0:
-; MISC3-NEXT:    nr %r3, %r2
-; MISC3-NEXT:    ncrk %r2, %r4, %r2
-; MISC3-NEXT:    or %r2, %r3
+; MISC3-NEXT:    ncrk %r0, %r4, %r2
+; MISC3-NEXT:    nr %r2, %r3
+; MISC3-NEXT:    or %r2, %r0
 ; MISC3-NEXT:    br %r14
   %and0 = and i16 %a0, %a1
   %not = xor i16 %a0, -1
@@ -52,17 +50,12 @@ define i16 @masked_merge1(i16 %a0, i16 %a1, i16 %a2) {
 define i8 @masked_merge2(i8 %a0, i8 %a1, i8 %a2) {
 ; NO-MISC3-LABEL: masked_merge2:
 ; NO-MISC3:       # %bb.0:
-; NO-MISC3-NEXT:    nrk %r0, %r3, %r2
-; NO-MISC3-NEXT:    xilf %r2, 4294967295
-; NO-MISC3-NEXT:    nr %r2, %r3
-; NO-MISC3-NEXT:    or %r2, %r0
+; NO-MISC3-NEXT:    lr %r2, %r3
 ; NO-MISC3-NEXT:    br %r14
 ;
 ; MISC3-LABEL: masked_merge2:
 ; MISC3:       # %bb.0:
-; MISC3-NEXT:    ncrk %r0, %r3, %r2
-; MISC3-NEXT:    nr %r2, %r3
-; MISC3-NEXT:    or %r2, %r0
+; MISC3-NEXT:    lr %r2, %r3
 ; MISC3-NEXT:    br %r14
   %not = xor i8 %a0, -1
   %and0 = and i8 %not, %a1
@@ -76,12 +69,10 @@ define i64 @masked_merge3(i64 %a0, i64 %a1, i64 %a2) {
 ; NO-MISC3:       # %bb.0:
 ; NO-MISC3-NEXT:    lcgr %r0, %r4
 ; NO-MISC3-NEXT:    aghi %r0, -1
-; NO-MISC3-NEXT:    lgr %r1, %r0
-; NO-MISC3-NEXT:    ngr %r1, %r2
+; NO-MISC3-NEXT:    xgr %r3, %r0
 ; NO-MISC3-NEXT:    ngr %r3, %r2
-; NO-MISC3-NEXT:    xgr %r1, %r0
 ; NO-MISC3-NEXT:    xgr %r3, %r2
-; NO-MISC3-NEXT:    ogrk %r2, %r1, %r3
+; NO-MISC3-NEXT:    xgrk %r2, %r3, %r0
 ; NO-MISC3-NEXT:    br %r14
 ;
 ; MISC3-LABEL: masked_merge3:
