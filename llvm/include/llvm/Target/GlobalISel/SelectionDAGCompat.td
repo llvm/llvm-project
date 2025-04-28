@@ -266,8 +266,6 @@ def : GINodeEquiv<G_ATOMICRMW_FADD, atomic_load_fadd>;
 def : GINodeEquiv<G_ATOMICRMW_FSUB, atomic_load_fsub>;
 def : GINodeEquiv<G_ATOMICRMW_FMAX, atomic_load_fmax>;
 def : GINodeEquiv<G_ATOMICRMW_FMIN, atomic_load_fmin>;
-def : GINodeEquiv<G_ATOMICRMW_FMAXIMUM, atomic_load_fmaximum>;
-def : GINodeEquiv<G_ATOMICRMW_FMINIMUM, atomic_load_fminimum>;
 def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap>;
 def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap>;
 def : GINodeEquiv<G_ATOMICRMW_USUB_COND, atomic_load_usub_cond>;

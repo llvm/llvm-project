@@ -749,8 +749,6 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   KEYWORD(xchg); KEYWORD(nand); KEYWORD(max); KEYWORD(min); KEYWORD(umax);
   KEYWORD(umin); KEYWORD(fmax); KEYWORD(fmin);
-  KEYWORD(fmaximum);
-  KEYWORD(fminimum);
   KEYWORD(uinc_wrap);
   KEYWORD(udec_wrap);
   KEYWORD(usub_cond);
