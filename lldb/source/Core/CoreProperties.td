@@ -91,11 +91,13 @@ let Definition = "debugger" in {
     Global,
     DefaultUnsignedValue<4>,
     Desc<"The number of disassembly lines to show when displaying a stopped context.">;
-  def StopDisassemblyDisplay: Property<"stop-disassembly-display", "Enum">,
-    Global,
-    DefaultEnumValue<"Debugger::eStopDisassemblyTypeNoDebugInfo">,
-    EnumValues<"OptionEnumValues(g_show_disassembly_enum_values)">,
-    Desc<"Control when to display disassembly when displaying a stopped context.">;
+  def StopDisassemblyDisplay
+      : Property<"stop-disassembly-display", "Enum">,
+        Global,
+        DefaultEnumValue<"eStopDisassemblyTypeNoDebugInfo">,
+        EnumValues<"OptionEnumValues(g_show_disassembly_enum_values)">,
+        Desc<"Control when to display disassembly when displaying a stopped "
+             "context.">;
   def StopDisassemblyMaxSize: Property<"stop-disassembly-max-size", "UInt64">,
     Global,
     DefaultUnsignedValue<32000>,
