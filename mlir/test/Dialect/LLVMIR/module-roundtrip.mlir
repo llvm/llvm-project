@@ -9,7 +9,7 @@ module {
                      #llvm.mlir.module_flag<override, "probe-stack", "inline-asm">,
                      #llvm.mlir.module_flag<append, "CG Profile", [
                        #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
-                       #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+                       #llvm.cgprofile_entry<from = @from, count = 222>,
                        #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
                     ]>]
 }
@@ -23,6 +23,6 @@ module {
 // CHECK-SAME: #llvm.mlir.module_flag<override, "probe-stack", "inline-asm">,
 // CHECK-SAME: #llvm.mlir.module_flag<append, "CG Profile", [
 // CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = @to, count = 222>,
-// CHECK-SAME: #llvm.cgprofile_entry<from = @from, to = @from, count = 222>,
+// CHECK-SAME: #llvm.cgprofile_entry<from = @from, count = 222>,
 // CHECK-SAME: #llvm.cgprofile_entry<from = @to, to = @from, count = 222>
 // CHECK-SAME: ]>]
