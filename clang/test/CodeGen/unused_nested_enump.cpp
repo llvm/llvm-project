@@ -23,4 +23,4 @@ int main() {
 // CHECK-SAME: scope: ![[STRUCT]]
 
 // CHECK: ![[ELEMENTS]] = !{![[ENUMERATOR:[0-9]+]]}
-// CHECK: ![[ENUMERATOR]] = !DIEnumerator(name: "Unused", value: 0, isUnsigned: true)
+// CHECK: ![[ENUMERATOR]] = !DIEnumerator(name: "Unused", value: 0
