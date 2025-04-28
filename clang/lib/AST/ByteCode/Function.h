@@ -202,8 +202,6 @@ public:
 
   bool isBuiltin() const { return getBuiltinID() != 0; }
 
-  bool isUnevaluatedBuiltin() const;
-
   unsigned getNumParams() const { return ParamTypes.size(); }
 
   /// Returns the number of parameter this function takes when it's called,

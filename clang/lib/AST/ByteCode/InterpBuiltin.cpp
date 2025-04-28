@@ -81,14 +81,41 @@ static void assignInteger(Pointer &Dest, PrimType ValueT, const APSInt &Value) {
       ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
 }
 
+template <PrimType Name, class V = typename PrimConv<Name>::T>
+static bool retBI(InterpState &S, const CallExpr *Call, unsigned BuiltinID) {
+  // The return value of the function is already on the stack.
+  // Remove it, get rid of all the arguments and add it back.
+  const V &Val = S.Stk.pop<V>();
+  if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
+    for (int32_t I = Call->getNumArgs() - 1; I >= 0; --I) {
+      const Expr *A = Call->getArg(I);
+      PrimType Ty = S.getContext().classify(A).value_or(PT_Ptr);
+      TYPE_SWITCH(Ty, S.Stk.discard<T>());
+    }
+  }
+  S.Stk.push<V>(Val);
+  return true;
+}
+
 static bool retPrimValue(InterpState &S, CodePtr OpPC,
-                         std::optional<PrimType> &T) {
-  if (!T)
-    return RetVoid(S, OpPC);
+                         std::optional<PrimType> &T, const CallExpr *Call,
+                         unsigned BuiltinID) {
+
+  if (!T) {
+    if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
+      for (int32_t I = Call->getNumArgs() - 1; I >= 0; --I) {
+        const Expr *A = Call->getArg(I);
+        PrimType Ty = S.getContext().classify(A).value_or(PT_Ptr);
+        TYPE_SWITCH(Ty, S.Stk.discard<T>());
+      }
+    }
+
+    return true;
+  }
 
 #define RET_CASE(X)                                                            \
   case X:                                                                      \
-    return Ret<X>(S, OpPC);
+    return retBI<X>(S, Call, BuiltinID);
   switch (*T) {
     RET_CASE(PT_Ptr);
     RET_CASE(PT_Float);
@@ -147,17 +174,16 @@ static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
   // The one above that, potentially the one for std::is_constant_evaluated().
   if (S.inConstantContext() && !S.checkingPotentialConstantExpression() &&
       S.getEvalStatus().Diag &&
-      (Depth == 1 || (Depth == 2 && isStdCall(Caller->getCallee())))) {
-    if (Caller->Caller && isStdCall(Caller->getCallee())) {
-      const Expr *E = Caller->Caller->getExpr(Caller->getRetPC());
+      (Depth == 0 || (Depth == 1 && isStdCall(Frame->getCallee())))) {
+    if (Caller && isStdCall(Frame->getCallee())) {
+      const Expr *E = Caller->getExpr(Caller->getRetPC());
       S.report(E->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
           << "std::is_constant_evaluated" << E->getSourceRange();
     } else {
-      const Expr *E = Frame->Caller->getExpr(Frame->getRetPC());
-      S.report(E->getExprLoc(),
+      S.report(Call->getExprLoc(),
                diag::warn_is_constant_evaluated_always_true_constexpr)
-          << "__builtin_is_constant_evaluated" << E->getSourceRange();
+          << "__builtin_is_constant_evaluated" << Call->getSourceRange();
     }
   }
 
@@ -2675,7 +2701,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
     return false;
   }
 
-  return retPrimValue(S, OpPC, ReturnT);
+  return retPrimValue(S, OpPC, ReturnT, Call, BuiltinID);
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,

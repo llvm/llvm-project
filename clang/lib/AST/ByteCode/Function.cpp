@@ -62,19 +62,3 @@ SourceInfo Function::getSource(CodePtr PC) const {
     return SrcMap.back().second;
   return It->second;
 }
-
-/// Unevaluated builtins don't get their arguments put on the stack
-/// automatically. They instead operate on the AST of their Call
-/// Expression.
-/// Similar information is available via ASTContext::BuiltinInfo,
-/// but that is not correct for our use cases.
-static bool isUnevaluatedBuiltin(unsigned BuiltinID) {
-  return BuiltinID == Builtin::BI__builtin_classify_type ||
-         BuiltinID == Builtin::BI__builtin_os_log_format_buffer_size ||
-         BuiltinID == Builtin::BI__builtin_constant_p ||
-         BuiltinID == Builtin::BI__noop;
-}
-
-bool Function::isUnevaluatedBuiltin() const {
-  return ::isUnevaluatedBuiltin(BuiltinID);
-}

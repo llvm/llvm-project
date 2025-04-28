@@ -450,3 +450,9 @@ unsigned Context::collectBaseOffset(const RecordDecl *BaseDecl,
 const Record *Context::getRecord(const RecordDecl *D) const {
   return P->getOrCreateRecord(D);
 }
+
+bool Context::isUnevaluatedBuiltin(unsigned ID) {
+  return ID == Builtin::BI__builtin_classify_type ||
+         ID == Builtin::BI__builtin_os_log_format_buffer_size ||
+         ID == Builtin::BI__builtin_constant_p || ID == Builtin::BI__noop;
+}

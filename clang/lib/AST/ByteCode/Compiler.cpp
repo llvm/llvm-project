@@ -4825,7 +4825,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
   }
 
-  if (!Func->isUnevaluatedBuiltin()) {
+  if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
     // Put arguments on the stack.
     for (const auto *Arg : E->arguments()) {
       if (!this->visit(Arg))
