@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
+#include <cstdint>
 #include <numeric>
 
 using namespace mlir;
@@ -64,10 +65,19 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
 FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(VectorType originalType,
                                       xegpu::LayoutAttr layout) {
-  auto shape = originalType.getShape();
+  int64_t rank = originalType.getRank();
+  /// Distributed vector type is only supported for 1D, 2D and 3D vectors.
+  if (rank < 1 || rank > 3)
+    return failure();
+  ArrayRef<int64_t> shape = originalType.getShape();
+  /// arrayLength is 1 for 1D and 2D vectors, and equal to the first dimension
+  /// of the 3D vector.
+  int arrayLength = 1;
+  if (rank == 3)
+    arrayLength = shape[0];
   auto helperTdescTy = xegpu::TensorDescType::get(
-      shape, originalType.getElementType(),
-      /*array_length=*/1, /*boundary_check=*/true,
+      shape, originalType.getElementType(), arrayLength,
+      /*boundary_check=*/true,
       /*memory_space=*/xegpu::MemorySpace::Global, layout);
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
