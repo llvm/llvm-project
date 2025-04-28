@@ -867,8 +867,6 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
   //  The only OpenMP constructs that can be encountered during execution of
   // a simd region are the `atomic` construct, the `loop` construct, the `simd`
   // construct and the `ordered` construct with the `simd` clause.
-  // TODO:  Expand the check to include `LOOP` construct as well when it is
-  // supported.
 
   // Check if the parent context has the SIMD clause
   // Please note that we use GetContext() instead of GetContextParent()
@@ -911,14 +909,15 @@ void OmpStructureChecker::CheckSIMDNest(const parser::OpenMPConstruct &c) {
               }
             }
           },
-          // Allowing SIMD construct
+          // Allowing SIMD and loop construct
           [&](const parser::OpenMPLoopConstruct &c) {
             const auto &beginLoopDir{
                 std::get<parser::OmpBeginLoopDirective>(c.t)};
             const auto &beginDir{
                 std::get<parser::OmpLoopDirective>(beginLoopDir.t)};
             if ((beginDir.v == llvm::omp::Directive::OMPD_simd) ||
-                (beginDir.v == llvm::omp::Directive::OMPD_do_simd)) {
+                (beginDir.v == llvm::omp::Directive::OMPD_do_simd) ||
+                (beginDir.v == llvm::omp::Directive::OMPD_loop)) {
               eligibleSIMD = true;
             }
           },
