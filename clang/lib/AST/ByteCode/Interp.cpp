@@ -1607,15 +1607,15 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   return true;
 }
 
-bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
-            const CallExpr *CE, uint32_t BuiltinID) {
+bool CallBI(InterpState &S, CodePtr OpPC, const CallExpr *CE,
+            uint32_t BuiltinID) {
   // A little arbitrary, but the current interpreter allows evaluation
   // of builtin functions in this mode, with some exceptions.
   if (BuiltinID == Builtin::BI__builtin_operator_new &&
       S.checkingPotentialConstantExpression())
     return false;
 
-  return InterpretBuiltin(S, OpPC, Func, CE, BuiltinID);
+  return InterpretBuiltin(S, OpPC, CE, BuiltinID);
 }
 
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
