@@ -787,16 +787,16 @@ fp16_fml_fallthrough:
   // crypto feature.
   bool HasSimd = false;
   const auto ItSimd =
-  llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
-    return F.contains("neon");
-  });
+      llvm::find_if(llvm::reverse(Features),
+                    [](const StringRef F) { return F.contains("neon"); });
   const bool FoundSimd = ItSimd != Features.rend();
-  const bool FPUSupportsNeon =
-    (llvm::ARM::FPUNames[FPUKind].NeonSupport == llvm::ARM::NeonSupportLevel::Neon) ||
-    (llvm::ARM::FPUNames[FPUKind].NeonSupport == llvm::ARM::NeonSupportLevel::Crypto);
-  if(FoundSimd)
-  HasSimd = ItSimd->take_front() == "+";
-  if(!HasSimd && FPUSupportsNeon) {
+  const bool FPUSupportsNeon = (llvm::ARM::FPUNames[FPUKind].NeonSupport ==
+                                llvm::ARM::NeonSupportLevel::Neon) ||
+                               (llvm::ARM::FPUNames[FPUKind].NeonSupport ==
+                                llvm::ARM::NeonSupportLevel::Crypto);
+  if (FoundSimd)
+    HasSimd = ItSimd->take_front() == "+";
+  if (!HasSimd && FPUSupportsNeon) {
     Features.push_back("-sha2");
     Features.push_back("-aes");
     Features.push_back("-crypto");
@@ -831,17 +831,14 @@ fp16_fml_fallthrough:
         return F.contains("crypto") || F.contains("aes");
       });
   const auto ItBF16 =
-      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
-        return F.contains("bf16");
-      });
+      llvm::find_if(llvm::reverse(Features),
+                    [](const StringRef F) { return F.contains("bf16"); });
   const auto ItDotprod =
-      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
-        return F.contains("dotprod");
-      });
+      llvm::find_if(llvm::reverse(Features),
+                    [](const StringRef F) { return F.contains("dotprod"); });
   const auto ItI8MM =
-      llvm::find_if(llvm::reverse(Features), [](const StringRef F) {
-        return F.contains("i8mm");
-      });
+      llvm::find_if(llvm::reverse(Features),
+                    [](const StringRef F) { return F.contains("i8mm"); });
   if (ItSHA2 != Features.rend())
     HasSHA2 = ItSHA2->take_front() == "+";
   if (ItAES != Features.rend())
@@ -869,8 +866,6 @@ fp16_fml_fallthrough:
   // If any of these features are enabled, NEON should also be enabled.
   if (HasAES || HasSHA2 || HasBF16 || HasDotprod || HasI8MM)
     Features.push_back("+neon");
-
-  
 
   if (HasSHA2 || HasAES) {
     StringRef ArchSuffix = arm::getLLVMArchSuffixForARM(
