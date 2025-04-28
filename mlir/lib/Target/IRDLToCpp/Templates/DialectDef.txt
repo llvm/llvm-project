@@ -3,7 +3,8 @@ R"(
 __NAMESPACE_OPEN__
 
 __DIALECT_CPP_NAME__::__DIALECT_CPP_NAME__(::mlir::MLIRContext *context)
-    : ::mlir::Dialect(getDialectNamespace(), context, ::mlir::TypeID::get<__DIALECT_CPP_NAME__>())
+    : ::mlir::Dialect(getDialectNamespace(), context,
+                      ::mlir::TypeID::get<__DIALECT_CPP_NAME__>())
 {
   initialize();
 }

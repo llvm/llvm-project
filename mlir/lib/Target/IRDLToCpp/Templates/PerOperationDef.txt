@@ -8,7 +8,12 @@ __NAMESPACE_OPEN__
 
 __OP_BUILD_DEFS__
 
-void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes) {
+void __OP_CPP_NAME__::build(::mlir::OpBuilder &odsBuilder, 
+                            ::mlir::OperationState &odsState, 
+                            ::mlir::TypeRange resultTypes, 
+                            ::mlir::ValueRange operands, 
+                            ::llvm::ArrayRef<::mlir::NamedAttribute> attributes)
+{
   assert(operands.size() == __OP_OPERAND_COUNT__);
   assert(resultTypes.size() == __OP_RESULT_COUNT__);
   odsState.addOperands(operands);
