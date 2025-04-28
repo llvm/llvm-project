@@ -1851,6 +1851,8 @@ public:
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
+  bool isUnrolled() const { return getNumOperands() == 5; }
+
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
@@ -1901,7 +1903,7 @@ public:
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled (4 operands), return the VPValue for the
     // induction increment.
-    return getNumOperands() == 5 ? getOperand(3) : nullptr;
+    return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
@@ -1923,7 +1925,7 @@ public:
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return getNumOperands() == 5 ? getOperand(4) : this;
+    return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
   }
 };
 
