@@ -4974,7 +4974,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     // See if theFn was internalized, by checking index directly with
     // original name (this avoids the name adjustment done by getGUID() for
     // internal symbols).
-    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(F.getName()));
+    TheFnVI = ImportSummary->getValueInfo(
+        GlobalValue::getGUIDAssumingExternalLinkage(F.getName()));
   if (TheFnVI)
     return TheFnVI;
   // Now query with the original name before any promotion was performed.
@@ -5005,7 +5006,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     SrcFile = dyn_cast<MDString>(SrcFileMD->getOperand(0))->getString();
   std::string OrigId = GlobalValue::getGlobalIdentifier(
       OrigName, GlobalValue::InternalLinkage, SrcFile);
-  TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  TheFnVI = ImportSummary->getValueInfo(
+      GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
   // Internal func in original module may have gotten a numbered suffix if we
   // imported an external function with the same name. This happens
   // automatically during IR linking for naming conflicts. It would have to
@@ -5016,7 +5018,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     OrigName = F.getName().rsplit('.').first;
     OrigId = GlobalValue::getGlobalIdentifier(
         OrigName, GlobalValue::InternalLinkage, SrcFile);
-    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+    TheFnVI = ImportSummary->getValueInfo(
+        GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
   }
   // The only way we may not have a VI is if this is a declaration created for
   // an imported reference. For distributed ThinLTO we may not have a VI for
