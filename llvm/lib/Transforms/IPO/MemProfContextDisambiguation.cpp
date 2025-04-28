@@ -39,6 +39,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -2955,11 +2956,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::print(
   for (auto &Edge : CallerEdges)
     OS << "\t\t" << *Edge << "\n";
   if (!Clones.empty()) {
-    OS << "\tClones: ";
-    ListSeparator LS;
-    for (auto *Clone : Clones)
-      OS << LS << Clone;
-    OS << "\n";
+    OS << "\tClones: " << llvm::interleaved(Clones) << "\n";
   } else if (CloneOf) {
     OS << "\tClone of " << CloneOf << "\n";
   }
@@ -4977,7 +4974,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     // See if theFn was internalized, by checking index directly with
     // original name (this avoids the name adjustment done by getGUID() for
     // internal symbols).
-    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(F.getName()));
+    TheFnVI = ImportSummary->getValueInfo(
+        GlobalValue::getGUIDAssumingExternalLinkage(F.getName()));
   if (TheFnVI)
     return TheFnVI;
   // Now query with the original name before any promotion was performed.
@@ -5008,7 +5006,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     SrcFile = dyn_cast<MDString>(SrcFileMD->getOperand(0))->getString();
   std::string OrigId = GlobalValue::getGlobalIdentifier(
       OrigName, GlobalValue::InternalLinkage, SrcFile);
-  TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+  TheFnVI = ImportSummary->getValueInfo(
+      GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
   // Internal func in original module may have gotten a numbered suffix if we
   // imported an external function with the same name. This happens
   // automatically during IR linking for naming conflicts. It would have to
@@ -5019,7 +5018,8 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
     OrigName = F.getName().rsplit('.').first;
     OrigId = GlobalValue::getGlobalIdentifier(
         OrigName, GlobalValue::InternalLinkage, SrcFile);
-    TheFnVI = ImportSummary->getValueInfo(GlobalValue::getGUID(OrigId));
+    TheFnVI = ImportSummary->getValueInfo(
+        GlobalValue::getGUIDAssumingExternalLinkage(OrigId));
   }
   // The only way we may not have a VI is if this is a declaration created for
   // an imported reference. For distributed ThinLTO we may not have a VI for

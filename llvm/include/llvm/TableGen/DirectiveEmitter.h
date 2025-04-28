@@ -116,7 +116,7 @@ public:
   std::string getFormattedName() const {
     StringRef Name = Def->getValueAsString("name");
     std::string N = Name.str();
-    std::replace(N.begin(), N.end(), ' ', '_');
+    llvm::replace(N, ' ', '_');
     return N;
   }
 
@@ -211,7 +211,7 @@ public:
     StringRef Name = Def->getValueAsString("name");
     std::string N = Name.str();
     bool Cap = true;
-    std::transform(N.begin(), N.end(), N.begin(), [&Cap](unsigned char C) {
+    llvm::transform(N, N.begin(), [&Cap](unsigned char C) {
       if (Cap == true) {
         C = toUpper(C);
         Cap = false;
