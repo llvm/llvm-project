@@ -827,7 +827,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (isa<PHINode>(I))
       continue;
 
-    // Do not widen the operands of a call, as doing that would cause a
+    // Don't modify the types of operands of a call, as doing that would cause a
     // signature mismatch.
     if (isa<CallBase>(I))
       continue;
