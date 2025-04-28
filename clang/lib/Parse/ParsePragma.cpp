@@ -754,9 +754,8 @@ void Parser::HandlePragmaMSStruct() {
 
 void Parser::HandlePragmaAlign() {
   assert(Tok.is(tok::annot_pragma_align));
-  Sema::PragmaOptionsAlignKind Kind =
-    static_cast<Sema::PragmaOptionsAlignKind>(
-    reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+  PragmaOptionsAlignKind Kind = static_cast<PragmaOptionsAlignKind>(
+      reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
   Actions.ActOnPragmaOptionsAlign(Kind, Tok.getLocation());
   // Consume the token after processing the pragma to enable pragma-specific
   // #include warnings.
@@ -2393,20 +2392,20 @@ static void ParseAlignPragma(Preprocessor &PP, Token &FirstTok,
     return;
   }
 
-  Sema::PragmaOptionsAlignKind Kind = Sema::POAK_Natural;
+  PragmaOptionsAlignKind Kind = PragmaOptionsAlignKind::Natural;
   const IdentifierInfo *II = Tok.getIdentifierInfo();
   if (II->isStr("native"))
-    Kind = Sema::POAK_Native;
+    Kind = PragmaOptionsAlignKind::Native;
   else if (II->isStr("natural"))
-    Kind = Sema::POAK_Natural;
+    Kind = PragmaOptionsAlignKind::Natural;
   else if (II->isStr("packed"))
-    Kind = Sema::POAK_Packed;
+    Kind = PragmaOptionsAlignKind::Packed;
   else if (II->isStr("power"))
-    Kind = Sema::POAK_Power;
+    Kind = PragmaOptionsAlignKind::Power;
   else if (II->isStr("mac68k"))
-    Kind = Sema::POAK_Mac68k;
+    Kind = PragmaOptionsAlignKind::Mac68k;
   else if (II->isStr("reset"))
-    Kind = Sema::POAK_Reset;
+    Kind = PragmaOptionsAlignKind::Reset;
   else {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_align_invalid_option)
       << IsOptions;
