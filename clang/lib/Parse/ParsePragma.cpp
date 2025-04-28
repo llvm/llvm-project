@@ -2314,7 +2314,7 @@ void PragmaClangSectionHandler::HandlePragma(Preprocessor &PP,
                                              Token &FirstToken) {
 
   Token Tok;
-  auto SecKind = Sema::PragmaClangSectionKind::PCSK_Invalid;
+  auto SecKind = PragmaClangSectionKind::Invalid;
 
   PP.Lex(Tok); // eat 'section'
   while (Tok.isNot(tok::eod)) {
@@ -2325,15 +2325,15 @@ void PragmaClangSectionHandler::HandlePragma(Preprocessor &PP,
 
     const IdentifierInfo *SecType = Tok.getIdentifierInfo();
     if (SecType->isStr("bss"))
-      SecKind = Sema::PragmaClangSectionKind::PCSK_BSS;
+      SecKind = PragmaClangSectionKind::BSS;
     else if (SecType->isStr("data"))
-      SecKind = Sema::PragmaClangSectionKind::PCSK_Data;
+      SecKind = PragmaClangSectionKind::Data;
     else if (SecType->isStr("rodata"))
-      SecKind = Sema::PragmaClangSectionKind::PCSK_Rodata;
+      SecKind = PragmaClangSectionKind::Rodata;
     else if (SecType->isStr("relro"))
-      SecKind = Sema::PragmaClangSectionKind::PCSK_Relro;
+      SecKind = PragmaClangSectionKind::Relro;
     else if (SecType->isStr("text"))
-      SecKind = Sema::PragmaClangSectionKind::PCSK_Text;
+      SecKind = PragmaClangSectionKind::Text;
     else {
       PP.Diag(Tok.getLocation(), diag::err_pragma_expected_clang_section_name) << "clang section";
       return;
@@ -2342,7 +2342,7 @@ void PragmaClangSectionHandler::HandlePragma(Preprocessor &PP,
     SourceLocation PragmaLocation = Tok.getLocation();
     PP.Lex(Tok); // eat ['bss'|'data'|'rodata'|'text']
     if (Tok.isNot(tok::equal)) {
-      PP.Diag(Tok.getLocation(), diag::err_pragma_clang_section_expected_equal) << SecKind;
+      PP.Diag(Tok.getLocation(), diag::err_pragma_clang_section_expected_equal) << llvm::to_underlying(SecKind);
       return;
     }
 
