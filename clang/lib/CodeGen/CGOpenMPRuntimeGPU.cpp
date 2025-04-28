@@ -132,8 +132,8 @@ static RecordDecl *buildRecordForGlobalizedVars(
   //       };
   RecordDecl *GlobalizedRD = C.buildImplicitRecord("_globalized_locals_ty");
   GlobalizedRD->startDefinition();
-  llvm::SmallPtrSet<const ValueDecl *, 16> SingleEscaped(
-      EscapedDeclsForTeams.begin(), EscapedDeclsForTeams.end());
+  llvm::SmallPtrSet<const ValueDecl *, 16> SingleEscaped(llvm::from_range,
+                                                         EscapedDeclsForTeams);
   for (const auto &Pair : GlobalizedVars) {
     const ValueDecl *VD = Pair.second;
     QualType Type = VD->getType();
@@ -325,8 +325,7 @@ class CheckVarsEscapingDeclContext final
 public:
   CheckVarsEscapingDeclContext(CodeGenFunction &CGF,
                                ArrayRef<const ValueDecl *> TeamsReductions)
-      : CGF(CGF), EscapedDecls(TeamsReductions.begin(), TeamsReductions.end()) {
-  }
+      : CGF(CGF), EscapedDecls(llvm::from_range, TeamsReductions) {}
   virtual ~CheckVarsEscapingDeclContext() = default;
   void VisitDeclStmt(const DeclStmt *S) {
     if (!S)
