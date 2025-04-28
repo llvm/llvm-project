@@ -869,8 +869,8 @@ void Parser::HandlePragmaFloatControl() {
   // and the FloatControl is the lower 16 bits. Use shift and bit-and
   // to decode the parts.
   uintptr_t Value = reinterpret_cast<uintptr_t>(Tok.getAnnotationValue());
-  PragmaMsStackAction Action =
-      static_cast<PragmaMsStackAction>((Value >> 16) & 0xFFFF);
+  Sema::PragmaMsStackAction Action =
+      static_cast<Sema::PragmaMsStackAction>((Value >> 16) & 0xFFFF);
   PragmaFloatControlKind Kind = PragmaFloatControlKind(Value & 0xFFFF);
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
   Actions.ActOnPragmaFloatControl(PragmaLoc, Action, Kind);
@@ -1019,8 +1019,8 @@ void Parser::HandlePragmaMSPointersToMembers() {
 void Parser::HandlePragmaMSVtorDisp() {
   assert(Tok.is(tok::annot_pragma_ms_vtordisp));
   uintptr_t Value = reinterpret_cast<uintptr_t>(Tok.getAnnotationValue());
-  PragmaMsStackAction Action =
-      static_cast<PragmaMsStackAction>((Value >> 16) & 0xFFFF);
+  Sema::PragmaMsStackAction Action =
+      static_cast<Sema::PragmaMsStackAction>((Value >> 16) & 0xFFFF);
   MSVtorDispMode Mode = MSVtorDispMode(Value & 0xFFFF);
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
   Actions.ActOnPragmaMSVtorDisp(Action, PragmaLoc, Mode);
@@ -1151,21 +1151,21 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
     return false;
   }
   PP.Lex(Tok); // (
-  PragmaMsStackAction Action = PragmaMsStackAction::Reset;
+  Sema::PragmaMsStackAction Action = Sema::PSK_Reset;
   StringRef SlotLabel;
   if (Tok.isAnyIdentifier()) {
     StringRef PushPop = Tok.getIdentifierInfo()->getName();
     if (PushPop == "push")
-      Action = PragmaMsStackAction::Push;
+      Action = Sema::PSK_Push;
     else if (PushPop == "pop")
-      Action = PragmaMsStackAction::Pop;
+      Action = Sema::PSK_Pop;
     else {
       PP.Diag(PragmaLocation,
               diag::warn_pragma_expected_section_push_pop_or_name)
           << PragmaName;
       return false;
     }
-    if (Action != PragmaMsStackAction::Reset) {
+    if (Action != Sema::PSK_Reset) {
       PP.Lex(Tok); // push | pop
       if (Tok.is(tok::comma)) {
         PP.Lex(Tok); // ,
@@ -1191,12 +1191,10 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
   StringLiteral *SegmentName = nullptr;
   if (Tok.isNot(tok::r_paren)) {
     if (Tok.isNot(tok::string_literal)) {
-      unsigned DiagID =
-          Action != PragmaMsStackAction::Reset
-              ? !SlotLabel.empty()
-                    ? diag::warn_pragma_expected_section_name
-                    : diag::warn_pragma_expected_section_label_or_name
-              : diag::warn_pragma_expected_section_push_pop_or_name;
+      unsigned DiagID = Action != Sema::PSK_Reset ? !SlotLabel.empty() ?
+          diag::warn_pragma_expected_section_name :
+          diag::warn_pragma_expected_section_label_or_name :
+          diag::warn_pragma_expected_section_push_pop_or_name;
       PP.Diag(PragmaLocation, DiagID) << PragmaName;
       return false;
     }
@@ -1211,7 +1209,7 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
     }
     // Setting section "" has no effect
     if (SegmentName->getLength())
-      Action = (PragmaMsStackAction)(Action | PragmaMsStackAction::Set);
+      Action = (Sema::PragmaMsStackAction)(Action | Sema::PSK_Set);
   }
   if (Tok.isNot(tok::r_paren)) {
     PP.Diag(PragmaLocation, diag::warn_pragma_expected_rparen) << PragmaName;
@@ -1300,23 +1298,23 @@ bool Parser::HandlePragmaMSStrictGuardStackCheck(
                        PragmaName))
     return false;
 
-  PragmaMsStackAction Action = PragmaMsStackAction::Set;
+  Sema::PragmaMsStackAction Action = Sema::PSK_Set;
   if (Tok.is(tok::identifier)) {
     StringRef PushPop = Tok.getIdentifierInfo()->getName();
     if (PushPop == "push") {
       PP.Lex(Tok);
-      Action = PragmaMsStackAction::Push;
+      Action = Sema::PSK_Push;
       if (ExpectAndConsume(tok::comma, diag::warn_pragma_expected_punc,
                            PragmaName))
         return false;
     } else if (PushPop == "pop") {
       PP.Lex(Tok);
-      Action = PragmaMsStackAction::Pop;
+      Action = Sema::PSK_Pop;
     }
   }
 
   bool Value = false;
-  if (Action & PragmaMsStackAction::Push || Action & PragmaMsStackAction::Set) {
+  if (Action & Sema::PSK_Push || Action & Sema::PSK_Set) {
     const IdentifierInfo *II = Tok.getIdentifierInfo();
     if (II && II->isStr("off")) {
       PP.Lex(Tok);
@@ -2140,7 +2138,7 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  PragmaMsStackAction Action = PragmaMsStackAction::Reset;
+  Sema::PragmaMsStackAction Action = Sema::PSK_Reset;
   StringRef SlotLabel;
   Token Alignment;
   Alignment.startToken();
@@ -2154,12 +2152,12 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
     // the push/pop stack.
     // In Apple gcc/XL, #pragma pack(4) is equivalent to #pragma pack(push, 4)
     Action = (PP.getLangOpts().ApplePragmaPack || PP.getLangOpts().XLPragmaPack)
-                 ? PragmaMsStackAction::PushSet
-                 : PragmaMsStackAction::Set;
+                 ? Sema::PSK_Push_Set
+                 : Sema::PSK_Set;
   } else if (Tok.is(tok::identifier)) {
     // Map pragma pack options to pack (integer).
     auto MapPack = [&](const char *Literal) {
-      Action = PragmaMsStackAction::PushSet;
+      Action = Sema::PSK_Push_Set;
       Alignment = Tok;
       Alignment.setKind(tok::numeric_constant);
       Alignment.setLiteralData(Literal);
@@ -2168,7 +2166,7 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
 
     const IdentifierInfo *II = Tok.getIdentifierInfo();
     if (II->isStr("show")) {
-      Action = PragmaMsStackAction::Show;
+      Action = Sema::PSK_Show;
       PP.Lex(Tok);
     } else if (II->isStr("packed") && PP.getLangOpts().ZOSExt) {
       // #pragma pack(packed) is the same as #pragma pack(1)
@@ -2184,13 +2182,13 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
       PP.Lex(Tok);
     } else if (II->isStr("reset") && PP.getLangOpts().ZOSExt) {
       // #pragma pack(reset) is the same as #pragma pack(pop) on XL
-      Action = PragmaMsStackAction::Pop;
+      Action = Sema::PSK_Pop;
       PP.Lex(Tok);
     } else {
       if (II->isStr("push")) {
-        Action = PragmaMsStackAction::Push;
+        Action = Sema::PSK_Push;
       } else if (II->isStr("pop")) {
-        Action = PragmaMsStackAction::Pop;
+        Action = Sema::PSK_Pop;
       } else {
         PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_action) << "pack";
         return;
@@ -2201,7 +2199,7 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
         PP.Lex(Tok);
 
         if (Tok.is(tok::numeric_constant)) {
-          Action = (PragmaMsStackAction)(Action | PragmaMsStackAction::Set);
+          Action = (Sema::PragmaMsStackAction)(Action | Sema::PSK_Set);
           Alignment = Tok;
 
           PP.Lex(Tok);
@@ -2217,7 +2215,7 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
               return;
             }
 
-            Action = (PragmaMsStackAction)(Action | PragmaMsStackAction::Set);
+            Action = (Sema::PragmaMsStackAction)(Action | Sema::PSK_Set);
             Alignment = Tok;
 
             PP.Lex(Tok);
@@ -2234,7 +2232,7 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
     // the push/pop stack.
     // In Apple gcc and IBM XL, #pragma pack() is equivalent to #pragma
     // pack(pop).
-    Action = PragmaMsStackAction::Pop;
+    Action = Sema::PSK_Pop;
   }
 
   if (Tok.isNot(tok::r_paren)) {
@@ -2897,7 +2895,7 @@ void PragmaMSVtorDisp::HandlePragma(Preprocessor &PP,
   }
   PP.Lex(Tok);
 
-  PragmaMsStackAction Action = PragmaMsStackAction::Set;
+  Sema::PragmaMsStackAction Action = Sema::PSK_Set;
   const IdentifierInfo *II = Tok.getIdentifierInfo();
   if (II) {
     if (II->isStr("push")) {
@@ -2908,24 +2906,24 @@ void PragmaMSVtorDisp::HandlePragma(Preprocessor &PP,
         return;
       }
       PP.Lex(Tok);
-      Action = PragmaMsStackAction::PushSet;
+      Action = Sema::PSK_Push_Set;
       // not push, could be on/off
     } else if (II->isStr("pop")) {
       // #pragma vtordisp(pop)
       PP.Lex(Tok);
-      Action = PragmaMsStackAction::Pop;
+      Action = Sema::PSK_Pop;
     }
     // not push or pop, could be on/off
   } else {
     if (Tok.is(tok::r_paren)) {
       // #pragma vtordisp()
-      Action = PragmaMsStackAction::Reset;
+      Action = Sema::PSK_Reset;
     }
   }
 
 
   uint64_t Value = 0;
-  if (Action & PragmaMsStackAction::Push || Action & PragmaMsStackAction::Set) {
+  if (Action & Sema::PSK_Push || Action & Sema::PSK_Set) {
     const IdentifierInfo *II = Tok.getIdentifierInfo();
     if (II && II->isStr("off")) {
       PP.Lex(Tok);
@@ -3016,7 +3014,7 @@ void PragmaMSPragma::HandlePragma(Preprocessor &PP,
 void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
                                              PragmaIntroducer Introducer,
                                              Token &Tok) {
-  PragmaMsStackAction Action = PragmaMsStackAction::Set;
+  Sema::PragmaMsStackAction Action = Sema::PSK_Set;
   SourceLocation FloatControlLoc = Tok.getLocation();
   Token PragmaName = Tok;
   if (!PP.getTargetInfo().hasStrictFP() && !PP.getLangOpts().ExpStrictFP) {
@@ -3056,8 +3054,7 @@ void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
       return;
     }
     PP.Lex(Tok); // Eat the r_paren
-    Action = (Kind == PFC_Pop) ? PragmaMsStackAction::Pop
-                               : PragmaMsStackAction::Push;
+    Action = (Kind == PFC_Pop) ? Sema::PSK_Pop : Sema::PSK_Push;
   } else {
     if (Tok.is(tok::r_paren))
       // Selecting Precise or Except
@@ -3081,7 +3078,7 @@ void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
         if (Kind == PFC_Except)
           Kind = PFC_NoExcept;
       } else if (PushOnOff == "push") {
-        Action = PragmaMsStackAction::PushSet;
+        Action = Sema::PSK_Push_Set;
       } else {
         PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
         return;
@@ -3095,7 +3092,7 @@ void PragmaFloatControlHandler::HandlePragma(Preprocessor &PP,
         }
         StringRef ExpectedPush = Tok.getIdentifierInfo()->getName();
         if (ExpectedPush == "push") {
-          Action = PragmaMsStackAction::PushSet;
+          Action = Sema::PSK_Push_Set;
         } else {
           PP.Diag(Tok.getLocation(), diag::err_pragma_float_control_malformed);
           return;
