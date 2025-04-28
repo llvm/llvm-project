@@ -32,15 +32,18 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 
 size_t RootSignatureDesc::getSize() const {
   size_t Size = sizeof(dxbc::RootSignatureHeader) +
-                Parameters.size() * sizeof(dxbc::RootParameterHeader);
+                ParametersContainer.size() * sizeof(dxbc::RootParameterHeader);
 
-  for (const auto &P : Parameters) {
+  for (const auto &I : ParametersContainer) {
+    std::optional<ParametersView> P = ParametersContainer.getParameter(&I);
+    if (!P)
+      continue;
     std::visit(
         [&Size](auto &Value) -> void {
           using T = std::decay_t<decltype(Value)>;
           Size += sizeof(T);
         },
-        P);
+        *P);
   }
 
   return Size;
@@ -51,7 +54,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   raw_svector_ostream BOS(Storage);
   BOS.reserveExtraSpace(getSize());
 
-  const uint32_t NumParameters = Parameters.size();
+  const uint32_t NumParameters = ParametersContainer.size();
 
   support::endian::write(BOS, Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
@@ -61,18 +64,22 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
-  for (const auto &P : Parameters.Headers) {
-    support::endian::write(BOS, P.ParameterType, llvm::endianness::little);
-    support::endian::write(BOS, P.ShaderVisibility, llvm::endianness::little);
+  for (const auto &P : ParametersContainer) {
+    support::endian::write(BOS, P.Header.ParameterType,
+                           llvm::endianness::little);
+    support::endian::write(BOS, P.Header.ShaderVisibility,
+                           llvm::endianness::little);
 
     ParamsOffsets.push_back(writePlaceholder(BOS));
   }
 
   assert(NumParameters == ParamsOffsets.size());
-  auto P = Parameters.begin();
-  for (size_t I = 0; I < NumParameters; ++I, P++) {
+  const RootParameterInfo *H = ParametersContainer.begin();
+  for (size_t I = 0; I < NumParameters; ++I, H++) {
     rewriteOffsetToCurrentByte(BOS, ParamsOffsets[I]);
-
+    auto P = ParametersContainer.getParameter(H);
+    if (!P)
+      continue;
     if (std::holds_alternative<dxbc::RootConstants>(*P)) {
       auto Constants = std::get<dxbc::RootConstants>(*P);
       support::endian::write(BOS, Constants.ShaderRegister,

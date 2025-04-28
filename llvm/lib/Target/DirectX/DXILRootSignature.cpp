@@ -101,7 +101,7 @@ static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   else
     return reportError(Ctx, "Invalid value for Num32BitValues");
 
-  RSD.Parameters.addParameter(Header, Constants);
+  RSD.ParametersContainer.addParameter(Header, Constants);
 
   return false;
 }
@@ -166,11 +166,12 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
     return reportValueError(Ctx, "RootFlags", RSD.Flags);
   }
 
-  for (const mcdxbc::RootParameterHeader &Header : RSD.Parameters.Headers) {
-    if (!dxbc::isValidShaderVisibility(Header.ShaderVisibility))
-      return reportValueError(Ctx, "ShaderVisibility", Header.ShaderVisibility);
+  for (const llvm::mcdxbc::RootParameterInfo &Info : RSD.ParametersContainer) {
+    if (!dxbc::isValidShaderVisibility(Info.Header.ShaderVisibility))
+      return reportValueError(Ctx, "ShaderVisibility",
+                              Info.Header.ShaderVisibility);
 
-    assert(dxbc::isValidParameterType(Header.ParameterType) &&
+    assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
   }
 
@@ -288,16 +289,20 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "Version: " << RS.Version << "\n";
     OS << indent(Space) << "RootParametersOffset: " << RS.RootParameterOffset
        << "\n";
-    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << "\n";
+    OS << indent(Space) << "NumParameters: " << RS.ParametersContainer.size()
+       << "\n";
     Space++;
-    for (auto const &Header : RS.Parameters.Headers) {
-      OS << indent(Space) << "- Parameter Type: " << Header.ParameterType
+    for (auto const &Info : RS.ParametersContainer) {
+      OS << indent(Space) << "- Parameter Type: " << Info.Header.ParameterType
          << "\n";
       OS << indent(Space + 2)
-         << "Shader Visibility: " << Header.ShaderVisibility << "\n";
-      mcdxbc::ParametersView P = RS.Parameters.get(Header);
-      if (std::holds_alternative<dxbc::RootConstants>(P)) {
-        auto Constants = std::get<dxbc::RootConstants>(P);
+         << "Shader Visibility: " << Info.Header.ShaderVisibility << "\n";
+      std::optional<mcdxbc::ParametersView> P =
+          RS.ParametersContainer.getParameter(&Info);
+      if (!P)
+        continue;
+      if (std::holds_alternative<dxbc::RootConstants>(*P)) {
+        auto Constants = std::get<dxbc::RootConstants>(*P);
         OS << indent(Space + 2) << "Register Space: " << Constants.RegisterSpace
            << "\n";
         OS << indent(Space + 2)
