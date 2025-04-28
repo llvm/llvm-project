@@ -1294,7 +1294,7 @@ def FDIV32ri :
 //
 // F32 Accurate reciprocal
 //
-def FDIV321r_prec_ftz :
+def FRCP32r_prec_ftz :
   NVPTXInst<(outs Float32Regs:$dst),
             (ins Float32Regs:$b),
             "rcp.rn.ftz.f32 \t$dst, $b;",

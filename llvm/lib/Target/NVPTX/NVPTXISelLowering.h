@@ -217,7 +217,7 @@ public:
   // Get the degree of precision we want from 32-bit floating point division
   // operations.
   NVPTX::DivPrecisionLevel getDivF32Level(const MachineFunction &MF,
-                                          const SDNode *N) const;
+                                          const SDNode &N) const;
 
   // Get whether we should use a precise or approximate 32-bit floating point
   // sqrt instruction.
