@@ -1,7 +1,7 @@
-;; Test if the callee_type metadata is dropped when an indirect function call through a function ptr is promoted
-;; to a direct function call during instcombine.
+;; Test if the callee_type metadata is dropped when it is
+;; is mapped to a direct function call from an indirect call during inlining.
 
-; RUN: opt < %s -passes="cgscc(inline),instcombine" -S | FileCheck %s
+; RUN: opt < %s -passes="inline" -S | FileCheck %s
 
 define i32 @_Z13call_indirectPFicEc(ptr %func, i8 %x) local_unnamed_addr !type !0 {
 entry:
@@ -16,7 +16,6 @@ entry:
   %call = call i32 @_Z13call_indirectPFicEc(ptr nonnull @_Z3fooc, i8 97)
   ret i32 %call
 }
-
 declare !type !2 i32 @_Z3fooc(i8 signext)
 
 !0 = !{i64 0, !"_ZTSFiPvcE.generalized"}
