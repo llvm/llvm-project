@@ -149,10 +149,9 @@ if (LLVM_ENABLE_SPHINX)
     set(aopts_rst "${CMAKE_CURRENT_BINARY_DIR}/${aopts_rst_rel_path}")
     set(analyzeroptions_def "${CMAKE_CURRENT_SOURCE_DIR}/../include/clang/StaticAnalyzer/Core/AnalyzerOptions.def")
     set(aopts_rst_in "${CMAKE_CURRENT_SOURCE_DIR}/${aopts_rst_rel_path}.in")
-    set(generate_aopts_docs generate_analyzer_options_docs.py)
     add_custom_command(
       OUTPUT ${aopts_rst}
-      COMMAND ${Python3_EXECUTABLE} ${generate_aopts_docs} -i ${analyzeroptions_def} -t ${aopts_rst_in} -o ${aopts_rst}
+      COMMAND ${Python3_EXECUTABLE} generate_analyzer_options_docs.py -i ${analyzeroptions_def} -t ${aopts_rst_in} -o ${aopts_rst}
       WORKING_DIRECTORY ${docs_tools_dir}
       VERBATIM
       COMMENT "Generating ${aopts_rst}"
