@@ -481,12 +481,12 @@ public:
 #endif // !NDEBUG || LLVM_ENABLE_DUMP
 
 private:
-  void destroy();
-  void copyFrom(const Value &M);
+  LLVM_ABI void destroy();
+  LLVM_ABI void copyFrom(const Value &M);
   // We allow moving from *const* Values, by marking all members as mutable!
   // This hack is needed to support initializer-list syntax efficiently.
   // (std::initializer_list<T> is a container of const T).
-  void moveFrom(const Value &&M);
+  LLVM_ABI void moveFrom(const Value &&M);
   friend class Array;
   friend class Object;
 
@@ -531,7 +531,7 @@ private:
                                       llvm::StringRef, std::string, json::Array,
                                       json::Object>
       Union;
-  friend bool operator==(const Value &, const Value &);
+  LLVM_ABI_FRIEND friend bool operator==(const Value &, const Value &);
 };
 
 LLVM_ABI bool operator==(const Value &, const Value &);
@@ -713,7 +713,7 @@ class Path::Root {
   llvm::StringLiteral ErrorMessage;
   std::vector<Path::Segment> ErrorPath; // Only valid in error state. Reversed.
 
-  friend void Path::report(llvm::StringLiteral Message);
+  LLVM_ABI_FRIEND friend void Path::report(llvm::StringLiteral Message);
 
 public:
   Root(llvm::StringRef Name = "") : Name(Name), ErrorMessage("") {}
@@ -1079,9 +1079,9 @@ private:
     attributeEnd();
   }
 
-  void valueBegin();
-  void flushComment();
-  void newline();
+  LLVM_ABI void valueBegin();
+  LLVM_ABI void flushComment();
+  LLVM_ABI void newline();
 
   enum Context {
     Singleton, // Top level, or object attribute.

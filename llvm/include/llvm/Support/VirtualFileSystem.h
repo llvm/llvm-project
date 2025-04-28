@@ -1036,6 +1036,10 @@ private:
 
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
 
+  // Explicitly non-copyable.
+  RedirectingFileSystem(RedirectingFileSystem const &) = delete;
+  RedirectingFileSystem &operator=(RedirectingFileSystem const &) = delete;
+
   /// Looks up the path <tt>[Start, End)</tt> in \p From, possibly recursing
   /// into the contents of \p From if it is a directory. Returns a LookupResult
   /// giving the matched entry and, if that entry is a FileEntry or

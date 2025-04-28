@@ -35,7 +35,7 @@ class DynamicLibrary {
   // Placeholder whose address represents an invalid library.
   // We use this instead of NULL or a pointer-int pair because the OS library
   // might define 0 or 1 to be "special" handles, such as "search all".
-  static char Invalid;
+  LLVM_ABI static char Invalid;
 
   // Opaque data used to interface with OS-specific dynamic library handling.
   void *Data;

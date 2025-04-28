@@ -104,7 +104,7 @@ private:
     MD5_u32plus block[16];
   } InternalState;
 
-  const uint8_t *body(ArrayRef<uint8_t> Data);
+  LLVM_ABI const uint8_t *body(ArrayRef<uint8_t> Data);
 };
 
 /// Helper to compute and return lower 64 bits of the given string's MD5 hash.

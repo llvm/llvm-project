@@ -941,7 +941,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<bool>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<bool>;
 
 template <> class LLVM_ABI parser<bool> : public basic_parser<bool> {
 public:
@@ -968,7 +968,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<boolOrDefault>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<boolOrDefault>;
 
 template <>
 class LLVM_ABI parser<boolOrDefault> : public basic_parser<boolOrDefault> {
@@ -994,7 +994,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<int>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<int>;
 
 template <> class LLVM_ABI parser<int> : public basic_parser<int> {
 public:
@@ -1015,7 +1015,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<long>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<long>;
 
 template <> class LLVM_ABI parser<long> final : public basic_parser<long> {
 public:
@@ -1036,7 +1036,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<long long>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<long long>;
 
 template <> class LLVM_ABI parser<long long> : public basic_parser<long long> {
 public:
@@ -1057,7 +1057,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<unsigned>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<unsigned>;
 
 template <> class LLVM_ABI parser<unsigned> : public basic_parser<unsigned> {
 public:
@@ -1078,7 +1078,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<unsigned long>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<unsigned long>;
 
 template <>
 class LLVM_ABI parser<unsigned long> final
@@ -1101,7 +1101,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<unsigned long long>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<unsigned long long>;
 
 template <>
 class LLVM_ABI parser<unsigned long long>
@@ -1125,7 +1125,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<double>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<double>;
 
 template <> class LLVM_ABI parser<double> : public basic_parser<double> {
 public:
@@ -1146,7 +1146,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<float>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<float>;
 
 template <> class LLVM_ABI parser<float> : public basic_parser<float> {
 public:
@@ -1167,7 +1167,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<std::string>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<std::string>;
 
 template <>
 class LLVM_ABI parser<std::string> : public basic_parser<std::string> {
@@ -1192,7 +1192,7 @@ public:
 
 //--------------------------------------------------
 
-extern template class basic_parser<char>;
+extern template class LLVM_TEMPLATE_ABI basic_parser<char>;
 
 template <> class LLVM_ABI parser<char> : public basic_parser<char> {
 public:

@@ -262,7 +262,7 @@ private:
   // of debug prints can cause the function to be too large for inlining.  So
   // it's important that we define this function out of line so that it can't be
   // inlined.
-  [[noreturn]] void fatalUncheckedError() const;
+  [[noreturn]] LLVM_ABI void fatalUncheckedError() const;
 #endif
 
   void assertIsChecked() {
@@ -401,6 +401,10 @@ private:
     Payloads.push_back(std::move(Payload1));
     Payloads.push_back(std::move(Payload2));
   }
+
+  // Explicitly non-copyable.
+  ErrorList(ErrorList const &) = delete;
+  ErrorList &operator=(ErrorList const &) = delete;
 
   static Error join(Error E1, Error E2) {
     if (!E1)
@@ -1185,7 +1189,7 @@ private:
 /// (or Expected) and you want to call code that still returns
 /// std::error_codes.
 class LLVM_ABI ECError : public ErrorInfo<ECError> {
-  friend Error errorCodeToError(std::error_code);
+  LLVM_ABI_FRIEND friend Error errorCodeToError(std::error_code);
 
   void anchor() override;
 

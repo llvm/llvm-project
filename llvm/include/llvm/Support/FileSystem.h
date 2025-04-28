@@ -220,17 +220,17 @@ public:
 
 /// Represents the result of a call to sys::fs::status().
 class file_status : public basic_file_status {
-  friend bool equivalent(file_status A, file_status B);
+  LLVM_ABI_FRIEND friend bool equivalent(file_status A, file_status B);
 
-  #if defined(LLVM_ON_UNIX)
+#if defined(LLVM_ON_UNIX)
   dev_t fs_st_dev = 0;
   nlink_t fs_st_nlinks = 0;
   ino_t fs_st_ino = 0;
-  #elif defined (_WIN32)
+#elif defined(_WIN32)
   uint32_t NumLinks = 0;
   uint32_t VolumeSerialNumber = 0;
   uint64_t PathHash = 0;
-  #endif
+#endif
 
 public:
   file_status() = default;
@@ -645,7 +645,7 @@ LLVM_ABI std::error_code status(int FD, file_status &Result);
 
 #ifdef _WIN32
 /// A version for when a file descriptor is already available.
-std::error_code status(file_t FD, file_status &Result);
+LLVM_ABI std::error_code status(file_t FD, file_status &Result);
 #endif
 
 /// Get file creation mode mask of the process.
@@ -851,7 +851,7 @@ LLVM_ABI std::error_code createUniqueFile(const Twine &Model,
 /// properly handle errors in a destructor.
 class TempFile {
   bool Done = false;
-  TempFile(StringRef Name, int FD);
+  LLVM_ABI TempFile(StringRef Name, int FD);
 
 public:
   /// This creates a temporary file with createUniqueFile and schedules it for
@@ -992,7 +992,7 @@ LLVM_ABI Expected<file_t> openNativeFile(const Twine &Name,
 /// Converts from a Posix file descriptor number to a native file handle.
 /// On Windows, this retreives the underlying handle. On non-Windows, this is a
 /// no-op.
-file_t convertFDToNativeFile(int FD);
+LLVM_ABI file_t convertFDToNativeFile(int FD);
 
 #ifndef _WIN32
 inline file_t convertFDToNativeFile(int FD) { return FD; }
@@ -1305,10 +1305,11 @@ private:
     Moved.copyFrom(mapped_file_region());
   }
 
-  void unmapImpl();
-  void dontNeedImpl();
+  LLVM_ABI void unmapImpl();
+  LLVM_ABI void dontNeedImpl();
 
-  std::error_code init(sys::fs::file_t FD, uint64_t Offset, mapmode Mode);
+  LLVM_ABI std::error_code init(sys::fs::file_t FD, uint64_t Offset,
+                                mapmode Mode);
 
 public:
   mapped_file_region() = default;

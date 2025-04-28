@@ -31,8 +31,8 @@ class raw_socket_stream;
 /// Make sure that calls to WSAStartup and WSACleanup are balanced.
 class WSABalancer {
 public:
-  WSABalancer();
-  ~WSABalancer();
+  LLVM_ABI WSABalancer();
+  LLVM_ABI ~WSABalancer();
 };
 #endif // _WIN32
 
