@@ -48,7 +48,7 @@ public:
   AMDGPUTargetVerify(Module *Mod, DominatorTree *DT, PostDominatorTree *PDT, UniformityInfo *UA)
     : TargetVerify(Mod), Mod(Mod), DT(DT), PDT(PDT), UA(UA) {}
 
-  bool run(Function &F);
+  bool run(Function &F) override;
 };
 
 } // namespace llvm
