@@ -226,7 +226,7 @@ public:
     return (*G.roots_begin())->getLocation().getLocationContext();
   }
 
-  ConstCFGElementRef getCFGElementRef() const {
+  CFGBlock::ConstCFGElementRef getCFGElementRef() const {
     const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
     return {blockPtr, currStmtIdx};
   }

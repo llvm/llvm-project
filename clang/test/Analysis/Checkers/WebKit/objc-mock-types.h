@@ -61,7 +61,7 @@ typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVBufferRef;
 typedef CVBufferRef CVImageBufferRef;
 typedef CVImageBufferRef CVPixelBufferRef;
 typedef signed int CVReturn;
-CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut);
+CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CF_RETURNS_RETAINED CVPixelBufferRef * pixelBufferOut);
 
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
@@ -69,6 +69,12 @@ extern CFTypeRef CFRetain(CFTypeRef cf);
 extern void CFRelease(CFTypeRef cf);
 #define CFSTR(cStr) ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
 extern Class NSClassFromString(NSString *aClassName);
+
+#if __has_feature(objc_arc)
+id CFBridgingRelease(CFTypeRef X) {
+    return (__bridge_transfer id)X;
+}
+#endif
 
 __attribute__((objc_root_class))
 @interface NSObject
@@ -130,11 +136,13 @@ __attribute__((objc_root_class))
 
 @interface NSNumber : NSValue
 - (char)charValue;
+- (int)intValue;
 - (id)initWithInt:(int)value;
 + (NSNumber *)numberWithInt:(int)value;
 @end
 
 @interface SomeObj : NSObject
+- (instancetype)_init;
 - (SomeObj *)mutableCopy;
 - (SomeObj *)copyWithValue:(int)value;
 - (void)doWork;

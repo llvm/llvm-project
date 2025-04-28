@@ -128,3 +128,57 @@ def RI_VEXTRACT : CustomRivosXVI<0b010111, OPMVV, (outs GPR:$rd),
                                 (ins VR:$vs2, uimm5:$imm),
                                 "ri.vextract.x.v", "$rd, $vs2, $imm">;
 }
+
+
+def ri_vextract : SDNode<"RISCVISD::RI_VEXTRACT",
+                         SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisVec<1>,
+                                              SDTCisInt<2>,
+                                              SDTCisInt<1>]>>;
+
+def ri_vinsert_vl : SDNode<"RISCVISD::RI_VINSERT_VL",
+                           SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                SDTCisInt<0>,
+                                                SDTCisVT<2, XLenVT>,
+                                                SDTCisVT<3, XLenVT>,
+                                                SDTCisVT<4, XLenVT>]>>;
+
+let Predicates = [HasVendorXRivosVisni], mayLoad = 0, mayStore = 0,
+    hasSideEffects = 0, HasSEWOp = 1 in
+foreach m = MxList in {
+  defvar mx = m.MX;
+  let VLMul = m.value in {
+    let BaseInstr = RI_VEXTRACT in
+    def PseudoRI_VEXTRACT_  # mx :
+      Pseudo<(outs GPR:$rd), (ins m.vrclass:$rs2, uimm5:$idx, ixlenimm:$sew),
+             []>,
+      RISCVVPseudo;
+
+    let HasVLOp = 1, BaseInstr = RI_VINSERT, HasVecPolicyOp = 1,
+        Constraints = "$rd = $rs1" in
+    def PseudoRI_VINSERT_ # mx :
+      Pseudo<(outs m.vrclass:$rd),
+             (ins m.vrclass:$rs1, GPR:$rs2, uimm5:$idx, AVL:$vl,
+                  ixlenimm:$sew, ixlenimm:$policy),
+             []>,
+      RISCVVPseudo;
+  }
+}
+
+
+
+foreach vti = AllIntegerVectors in
+  let Predicates = GetVTypePredicates<vti>.Predicates in {
+    def : Pat<(XLenVT (ri_vextract (vti.Vector vti.RegClass:$vs2), uimm5:$imm)),
+              (!cast<Instruction>("PseudoRI_VEXTRACT_" # vti.LMul.MX)
+               $vs2, uimm5:$imm, vti.Log2SEW)>;
+
+    def : Pat<(vti.Vector (ri_vinsert_vl (vti.Vector vti.RegClass:$merge),
+                                          vti.ScalarRegClass:$rs1,
+                                          uimm5:$imm,
+                                          VLOpFrag,
+                                          (XLenVT timm:$policy))),
+              (!cast<Instruction>("PseudoRI_VINSERT_" # vti.LMul.MX)
+               $merge, vti.ScalarRegClass:$rs1, uimm5:$imm,
+               GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
+
+  }
