@@ -1673,7 +1673,7 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   OutStreamer->switchSection(FuncCGSection);
 
   // Emit format version number.
-  OutStreamer->emitInt64(0);
+  OutStreamer->emitInt64(CallGraphSectionFormatVersion::V_0);
 
   // Emit function's self information, which is composed of:
   //  1) FunctionEntryPc
