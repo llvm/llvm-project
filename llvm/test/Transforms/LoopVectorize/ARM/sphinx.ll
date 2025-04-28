@@ -34,36 +34,36 @@ define i32 @test(ptr nocapture readonly %x) {
 ; CHECK-NEXT:    [[ARRAYIDX113:%.*]] = getelementptr inbounds float, ptr [[T7]], i32 [[T2]]
 ; CHECK-NEXT:    [[T8:%.*]] = load float, ptr [[ARRAYIDX113]], align 4
 ; CHECK-NEXT:    [[CONV114:%.*]] = fpext float [[T8]] to double
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[T]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[T]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[T]], 2
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[T]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[T]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> zeroinitializer, double [[CONV114]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> zeroinitializer, double [[CONV114]], i32 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x double> [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP13:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x double> [ [[TMP0]], [[VECTOR_PH]] ], [ [[TMP12:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[T4]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <2 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x float> [[TMP6]] to <2 x double>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x double> [[TMP7]], [[TMP7]]
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fpext <4 x float> [[TMP8]] to <4 x double>
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <4 x double> [[TMP6]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[T6]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x float>, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = fpext <2 x float> [[WIDE_LOAD2]] to <2 x double>
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP8]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13]] = fsub fast <2 x double> [[VEC_PHI]], [[TMP12]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = fpext <4 x float> [[WIDE_LOAD2]] to <4 x double>
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP13]]
+; CHECK-NEXT:    [[TMP12]] = fsub fast <4 x double> [[VEC_PHI]], [[TMP11]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP15:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP13]])
+; CHECK-NEXT:    [[TMP15:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP12]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[T]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[OUTEREND]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
