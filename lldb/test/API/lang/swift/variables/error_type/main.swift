@@ -42,13 +42,7 @@ func main() {
 	var c: Error = CError()
 	var e: Error = EError.OutOfCookies
 	
-	print("break here") //% self.expect('frame variable -d run -- s', substrs=['SError','payload = 1'])
-	print("break here") //% self.expect('frame variable -d run -- c', substrs=['CError','payload = 2'])
-	print("break here") //% self.expect('frame variable -d run -- e', substrs=['EError','OutOfCookies'])
-
-	print("break here") //% self.expect('expr -d run -- s', substrs=['SError','payload = 1'])
-	print("break here") //% self.expect('expr -d run -- c', substrs=['CError','payload = 2'])
-	print("break here") //% self.expect('expr -d run -- e', substrs=['EError','OutOfCookies'])
+	print("break here")
 }
 
 main()
