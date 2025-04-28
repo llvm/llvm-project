@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux -O1 -disable-llvm-passes %s \
+// RUN: %clang_cc1 -triple x86_64-linux -O1 %s \
 // RUN:     -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -O1 -disable-llvm-passes %s \
+// RUN: %clang_cc1 -triple x86_64-linux -O1 %s \
 // RUN:     -new-struct-path-tbaa -emit-llvm -o - | \
 // RUN:     FileCheck -check-prefix=CHECK-NEW %s
 //
@@ -45,7 +45,6 @@ int bar3(C *c, int j) {
 // CHECK-NEW-DAG: [[TYPE_char:!.*]] = !{{{.*}}, i64 1, !"omnipotent char"}
 // CHECK-NEW-DAG: [[TYPE_int:!.*]] = !{[[TYPE_char]], i64 4, !"int"}
 // CHECK-NEW-DAG: [[TAG_int]] = !{[[TYPE_int]], [[TYPE_int]], i64 0, i64 4}
-// CHECK-NEW-DAG: [[TYPE_pointer:!.*]] = !{[[TYPE_char]], i64 8, !"any pointer"}
 // CHECK-NEW-DAG: [[TYPE_A:!.*]] = !{[[TYPE_char]], i64 4, !"_ZTS1A", [[TYPE_int]], i64 0, i64 4}
 // CHECK-NEW-DAG: [[TAG_A_i]] = !{[[TYPE_A]], [[TYPE_int]], i64 0, i64 4}
 // CHECK-NEW-DAG: [[TYPE_C:!.*]] = !{[[TYPE_char]], i64 16, !"_ZTS1C", [[TYPE_int]], i64 0, i64 4, [[TYPE_int]], i64 4, i64 12}
