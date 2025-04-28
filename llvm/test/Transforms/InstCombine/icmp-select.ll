@@ -709,6 +709,41 @@ entry:
   ret i1 %res
 }
 
+define i1 @discr_eq_add_commuted(i8 noundef %a, i8 %b, i8 %c, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @discr_eq_add_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[COND1:%.*]], i8 [[B:%.*]], i8 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i8 [[C:%.*]], i8 [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %add1 = add i8 %a, %b
+  %sel1 = select i1 %cond1, i8 %add1, i8 %a
+  %add2 = add i8 %c, %a
+  %sel2 = select i1 %cond2, i8 %add2, i8 %add1
+  %res = icmp eq i8 %sel1, %sel2
+  ret i1 %res
+}
+
+define i1 @discr_eq_sub(i8 noundef %a, i8 %b, i8 %c, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @discr_eq_sub(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[COND1:%.*]], i8 [[B:%.*]], i8 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND2:%.*]], i8 [[C:%.*]], i8 0
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %neg = sub i8 0, %a
+  %sub1 = sub i8 %b, %a
+  %sel1 = select i1 %cond1, i8 %sub1, i8 %neg
+  %sub2 = sub i8 %c, %a
+  %sel2 = select i1 %cond2, i8 %sub2, i8 %neg
+  %res = icmp eq i8 %sel1, %sel2
+  ret i1 %res
+}
+
 ; Negative tests
 
 define i1 @discr_eq_multi_use(i8 %a, i8 %b) {
@@ -774,4 +809,25 @@ entry:
   %add2 = add <2 x i8> %b, <i8 -2, i8 poison>
   %res = icmp eq <2 x i8> %sel1, %add2
   ret <2 x i1> %res
+}
+
+define i1 @discr_eq_sub_commuted(i8 noundef %a, i8 %b, i8 %c, i1 %cond1, i1 %cond2) {
+; CHECK-LABEL: @discr_eq_sub_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i8 [[A]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND1:%.*]], i8 [[SUB1]], i8 [[NEG]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i8 [[A]], [[C:%.*]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND2:%.*]], i8 [[SUB2]], i8 [[NEG]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[SEL1]], [[SEL2]]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %neg = sub i8 0, %a
+  %sub1 = sub i8 %a, %b
+  %sel1 = select i1 %cond1, i8 %sub1, i8 %neg
+  %sub2 = sub i8 %a, %c
+  %sel2 = select i1 %cond2, i8 %sub2, i8 %neg
+  %res = icmp eq i8 %sel1, %sel2
+  ret i1 %res
 }
