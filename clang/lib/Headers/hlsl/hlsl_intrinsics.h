@@ -512,24 +512,6 @@ const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
   return __detail::refract_impl(I, N, eta);
 }
 
-/*
-template <typename T, typename U>
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
-                                       __detail::is_same<half, T>::value,
-                                   T> refract(T I, T N, U eta) {
-  return __detail::refract_impl(I, N, eta);
-}
-
-template <typename T, typename U>
-_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline __detail::enable_if_t<__detail::is_arithmetic<U>::Value &&
-                                       __detail::is_same<half, T>::value,
-                                   T> refract(T I, T N, U eta) {
-  return __detail::refract_impl(I, N, eta);
-}
-*/
-
 template <typename T>
 const inline __detail::enable_if_t<
     __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>

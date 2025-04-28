@@ -7,26 +7,29 @@ typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: define spir_func <2 x float> @test_refract_float2(
-// CHECK-SAME: <2 x float> noundef [[X:%.*]], <2 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: <2 x float> noundef [[I:%.*]], <2 x float> noundef [[N:%.*]], float noundef [[ETA:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SPV_REFRACT:%.*]] = tail call <2 x float> @llvm.spv.refract.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
+// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[ETA]] to double
+// CHECK:    [[SPV_REFRACT:%.*]] = tail call <2 x float> @llvm.spv.refract.v2f32.f64(<2 x float> [[I]], <2 x float> [[N]], double [[CONV]])
 // CHECK-NEXT:    ret <2 x float> [[SPV_REFRACT]]
 //
-float2 test_refract_float2(float2 X, float2 Y, float eta) { return __builtin_spirv_refract(X, Y, eta); }
+float2 test_refract_float2(float2 I, float2 N, float eta) { return __builtin_spirv_refract(I, N, eta); }
 
 // CHECK-LABEL: define spir_func <3 x float> @test_refract_float3(
-// CHECK-SAME: <3 x float> noundef [[X:%.*]], <3 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <3 x float> noundef [[I:%.*]], <3 x float> noundef [[N:%.*]], float noundef [[ETA:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SPV_REFRACT:%.*]] = tail call <3 x float> @llvm.spv.refract.v3f32(<3 x float> [[X]], <3 x float> [[Y]])
+// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[ETA]] to double
+// CHECK-NEXT:    [[SPV_REFRACT:%.*]] = tail call <3 x float> @llvm.spv.refract.v3f32.f64(<3 x float> [[I]], <3 x float> [[N]], double [[CONV]])
 // CHECK-NEXT:    ret <3 x float> [[SPV_REFRACT]]
 //
-float3 test_refract_float3(float3 X, float3 Y, float eta) { return __builtin_spirv_refract(X, Y, eta); }
+float3 test_refract_float3(float3 I, float3 N, float eta) { return __builtin_spirv_refract(I, N, eta); }
 
 // CHECK-LABEL: define spir_func <4 x float> @test_refract_float4(
-// CHECK-SAME: <4 x float> noundef [[X:%.*]], <4 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <4 x float> noundef [[I:%.*]], <4 x float> noundef [[N:%.*]], float noundef [[ETA:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SPV_REFRACT:%.*]] = tail call <4 x float> @llvm.spv.refract.v4f32(<4 x float> [[X]], <4 x float> [[Y]])
+// CHECK-NEXT:    [[CONV:%.*]] = fpext float [[ETA]] to double
+// CHECK-NEXT:    [[SPV_REFRACT:%.*]] = tail call <4 x float> @llvm.spv.refract.v4f32.f64(<4 x float> [[I]], <4 x float> [[N]], double [[CONV]])
 // CHECK-NEXT:    ret <4 x float> [[SPV_REFRACT]]
 //
-float4 test_refract_float4(float4 X, float4 Y, float eta) { return __builtin_spirv_refract(X, Y, eta); }
+float4 test_refract_float4(float4 I, float4 N, float eta) { return __builtin_spirv_refract(I, N, eta); }
 

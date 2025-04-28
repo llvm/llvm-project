@@ -7,27 +7,31 @@
 ; CHECK-DAG: %[[#float_16:]] = OpTypeFloat 16
 ; CHECK-DAG: %[[#vec4_float_16:]] = OpTypeVector %[[#float_16]] 4
 ; CHECK-DAG: %[[#float_32:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#float_64:]] = OpTypeFloat 64
 ; CHECK-DAG: %[[#vec4_float_32:]] = OpTypeVector %[[#float_32]] 4
 
-define noundef <4 x half> @refract_half4(<4 x half> noundef %a, <4 x half> noundef %b, half %eta) {
+define noundef  <4 x half> @refract_half(<4 x half> noundef  %I, <4 x half> noundef  %N, half noundef  %ETA) {
 entry:
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_16]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_16]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_16]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_16]] %[[#op_ext_glsl]] refract %[[#arg0]] %[[#arg1]]
-  %spv.refract = call <4 x half> @llvm.spv.refract.f16(<4 x half> %a, <4 x half> %b)
-  ret <4 x half> %spv.refract
+  ; CHECK: %[[#arg2_float_16:]] = OpFunctionParameter %[[#float_16:]]
+  ; CHECK: %[[#arg2:]] = OpFConvert %[[#float_64:]] %[[#arg2_float_16:]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_16]] %[[#op_ext_glsl]] Refract %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  %conv.i = fpext reassoc nnan ninf nsz arcp afn half %ETA to double
+  %spv.refract.i = tail call reassoc nnan ninf nsz arcp afn noundef <4 x half> @llvm.spv.refract.v4f16.f64(<4 x half> %I, <4 x half> %N, double %conv.i)
+  ret <4 x half> %spv.refract.i
 }
 
-define noundef <4 x float> @refract_float4(<4 x float> noundef %a, <4 x float> noundef %b, float %eta) {
+define noundef  <4 x float> @refract_float4(<4 x float> noundef  %I, <4 x float> noundef  %N, float noundef  %ETA) {
 entry:
+  %conv.i = fpext reassoc nnan ninf nsz arcp afn float %ETA to double
   ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
   ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#vec4_float_32]]
   ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#vec4_float_32]]
-  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] refract %[[#arg0]] %[[#arg1]]
-  %spv.refract = call <4 x float> @llvm.spv.refract.f32(<4 x float> %a, <4 x float> %b)
-  ret <4 x float> %spv.refract
+  ; CHECK: %[[#arg2_float_32:]] = OpFunctionParameter %[[#float_32:]]
+  ; CHECK: %[[#arg2:]] = OpFConvert %[[#float_64:]] %[[#arg2_float_32:]]
+  ; CHECK: %[[#]] = OpExtInst %[[#vec4_float_32]] %[[#op_ext_glsl]] Refract %[[#arg0]] %[[#arg1]] %[[#arg2]]
+  %spv.refract.i = tail call reassoc nnan ninf nsz arcp afn noundef <4 x float> @llvm.spv.refract.v4f32.f64(<4 x float> %I, <4 x float> %N, double %conv.i)
+  ret <4 x float> %spv.refract.i
 }
-
-declare <4 x half> @llvm.spv.refract.f16(<4 x half>, <4 x half>, half)
-declare <4 x float> @llvm.spv.refract.f32(<4 x float>, <4 x float>, float)

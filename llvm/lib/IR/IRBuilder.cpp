@@ -865,27 +865,8 @@ CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
 
   SmallVector<Type *> ArgTys;
   ArgTys.reserve(Args.size());
-  int i =0;
-  Type * Ity;
-  Type * Nty;
-  Type * etaty;
-
-  for (auto &I : Args) {
-    if(i ==0)
-      Ity = I->getType();
-    if(i ==1)
-      Nty = I->getType();
-    if(i ==2)
-      etaty = I->getType();
+  for (auto &I : Args)
     ArgTys.push_back(I->getType());
-    i++;
-  }
-  //assert(Ity == RetTy);
-  //assert(Nty == RetTy);
-  assert(Nty == Ity);
-
-
-
   FunctionType *FTy = FunctionType::get(RetTy, ArgTys, false);
   SmallVector<Type *> OverloadTys;
   Intrinsic::MatchIntrinsicTypesResult Res =
