@@ -103,14 +103,14 @@ unsigned SystemZTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
     }
     if (const auto *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isVolatile())
-        if (auto GV = dyn_cast<GlobalVariable>(SI->getPointerOperand()))
+        if (auto *GV = dyn_cast<GlobalVariable>(SI->getPointerOperand()))
           Ptr2NumUses[GV]++;
     } else if (const auto *LI = dyn_cast<LoadInst>(&I)) {
       if (!LI->isVolatile())
-        if (auto GV = dyn_cast<GlobalVariable>(LI->getPointerOperand()))
+        if (auto *GV = dyn_cast<GlobalVariable>(LI->getPointerOperand()))
           Ptr2NumUses[GV]++;
     } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-      if (auto GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand())) {
+      if (auto *GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand())) {
         unsigned NumStores = 0, NumLoads = 0;
         countNumMemAccesses(GEP, NumStores, NumLoads, Callee);
         Ptr2NumUses[GV] += NumLoads + NumStores;
