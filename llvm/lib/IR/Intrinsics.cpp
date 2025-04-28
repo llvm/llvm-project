@@ -13,6 +13,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -752,6 +753,14 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 #define GET_INTRINSIC_ATTRIBUTES
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
+
+AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {
+  if (id == 0)
+    return AttributeSet();
+  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
+  uint8_t FnAttrID = PackedID >> 8;
+  return getIntrinsicFnAttributeSet(C, FnAttrID);
+}
 
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys) {

@@ -243,14 +243,10 @@ void RNBRemote::CreatePacketTable() {
                      "Read memory"));
   t.push_back(Packet(read_register, &RNBRemote::HandlePacket_p, NULL, "p",
                      "Read one register"));
-  t.push_back(Packet(read_general_regs, &RNBRemote::HandlePacket_g, NULL, "g",
-                     "Read registers"));
   t.push_back(Packet(write_memory, &RNBRemote::HandlePacket_M, NULL, "M",
                      "Write memory"));
   t.push_back(Packet(write_register, &RNBRemote::HandlePacket_P, NULL, "P",
                      "Write one register"));
-  t.push_back(Packet(write_general_regs, &RNBRemote::HandlePacket_G, NULL, "G",
-                     "Write registers"));
   t.push_back(Packet(insert_mem_bp, &RNBRemote::HandlePacket_z, NULL, "Z0",
                      "Insert memory breakpoint"));
   t.push_back(Packet(remove_mem_bp, &RNBRemote::HandlePacket_z, NULL, "z0",
@@ -824,7 +820,7 @@ rnb_err_t RNBRemote::GetPacketPayload(std::string &return_packet) {
   // (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
 
   {
-    PThreadMutex::Locker locker(m_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_rx_packets.empty()) {
       // Only reset the remote command available event if we have no more
       // packets
@@ -1054,84 +1050,82 @@ rnb_err_t RNBRemote::HandleReceivedPacket(PacketEnum *type) {
 void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s called",
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
-  {
-    // Put the packet data into the buffer in a thread safe fashion
-    PThreadMutex::Locker locker(m_mutex);
 
-    std::string data;
-    // See if we have any left over data from a previous call to this
-    // function?
-    if (!m_rx_partial_data.empty()) {
-      // We do, so lets start with that data
-      data.swap(m_rx_partial_data);
-    }
-    // Append the new incoming data
-    data += new_data;
+  // Put the packet data into the buffer in a thread safe fashion
+  std::lock_guard<std::mutex> guard(m_mutex);
 
-    // Parse up the packets into gdb remote packets
-    size_t idx = 0;
-    const size_t data_size = data.size();
+  std::string data;
+  // See if we have any left over data from a previous call to this
+  // function?
+  if (!m_rx_partial_data.empty()) {
+    // We do, so lets start with that data
+    data.swap(m_rx_partial_data);
+  }
+  // Append the new incoming data
+  data += new_data;
 
-    while (idx < data_size) {
-      // end_idx must be one past the last valid packet byte. Start
-      // it off with an invalid value that is the same as the current
-      // index.
-      size_t end_idx = idx;
+  // Parse up the packets into gdb remote packets
+  size_t idx = 0;
+  const size_t data_size = data.size();
 
-      switch (data[idx]) {
-      case '+':            // Look for ack
-      case '-':            // Look for cancel
-      case '\x03':         // ^C to halt target
-        end_idx = idx + 1; // The command is one byte long...
-        break;
+  while (idx < data_size) {
+    // end_idx must be one past the last valid packet byte. Start
+    // it off with an invalid value that is the same as the current
+    // index.
+    size_t end_idx = idx;
 
-      case '$':
-        // Look for a standard gdb packet?
-        end_idx = data.find('#', idx + 1);
-        if (end_idx == std::string::npos || end_idx + 3 > data_size) {
-          end_idx = std::string::npos;
-        } else {
-          // Add two for the checksum bytes and 1 to point to the
-          // byte just past the end of this packet
-          end_idx += 3;
-        }
-        break;
+    switch (data[idx]) {
+    case '+':            // Look for ack
+    case '-':            // Look for cancel
+    case '\x03':         // ^C to halt target
+      end_idx = idx + 1; // The command is one byte long...
+      break;
 
-      default:
-        break;
-      }
-
-      if (end_idx == std::string::npos) {
-        // Not all data may be here for the packet yet, save it for
-        // next time through this function.
-        m_rx_partial_data += data.substr(idx);
-        // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
-        // later[%u, npos):
-        // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-        // __FUNCTION__, idx, m_rx_partial_data.c_str());
-        idx = end_idx;
-      } else if (idx < end_idx) {
-        m_packets_recvd++;
-        // Hack to get rid of initial '+' ACK???
-        if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
-          // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
-          // ACK away....[%u, npos):
-          // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-          // __FUNCTION__, idx);
-        } else {
-          // We have a valid packet...
-          m_rx_packets.push_back(data.substr(idx, end_idx - idx));
-          DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
-                           m_rx_packets.back().c_str());
-        }
-        idx = end_idx;
+    case '$':
+      // Look for a standard gdb packet?
+      end_idx = data.find('#', idx + 1);
+      if (end_idx == std::string::npos || end_idx + 3 > data_size) {
+        end_idx = std::string::npos;
       } else {
-        DNBLogThreadedIf(LOG_RNB_MAX,
-                         "%8d RNBRemote::%s tossing junk byte at %c",
-                         (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-                         __FUNCTION__, data[idx]);
-        idx = idx + 1;
+        // Add two for the checksum bytes and 1 to point to the
+        // byte just past the end of this packet
+        end_idx += 3;
       }
+      break;
+
+    default:
+      break;
+    }
+
+    if (end_idx == std::string::npos) {
+      // Not all data may be here for the packet yet, save it for
+      // next time through this function.
+      m_rx_partial_data += data.substr(idx);
+      // DNBLogThreadedIf (LOG_RNB_MAX, "%8d RNBRemote::%s saving data for
+      // later[%u, npos):
+      // '%s'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+      // __FUNCTION__, idx, m_rx_partial_data.c_str());
+      idx = end_idx;
+    } else if (idx < end_idx) {
+      m_packets_recvd++;
+      // Hack to get rid of initial '+' ACK???
+      if (m_packets_recvd == 1 && (end_idx == idx + 1) && data[idx] == '+') {
+        // DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s throwing first
+        // ACK away....[%u, npos):
+        // '+'",(uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+        // __FUNCTION__, idx);
+      } else {
+        // We have a valid packet...
+        m_rx_packets.push_back(data.substr(idx, end_idx - idx));
+        DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
+                         m_rx_packets.back().c_str());
+      }
+      idx = end_idx;
+    } else {
+      DNBLogThreadedIf(LOG_RNB_MAX, "%8d RNBRemote::%s tossing junk byte at %c",
+                       (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+                       __FUNCTION__, data[idx]);
+      idx = idx + 1;
     }
   }
 
@@ -3288,97 +3282,6 @@ rnb_err_t RNBRemote::HandlePacket_X(const char *p) {
   if (wrote != data.size())
     return SendErrorPacket("E08");
   return SendPacket("OK");
-}
-
-/* 'g' -- read registers
- Get the contents of the registers for the current thread,
- send them to gdb.
- Should the setting of the Hg packet determine which thread's registers
- are returned?  */
-
-rnb_err_t RNBRemote::HandlePacket_g(const char *p) {
-  std::ostringstream ostrm;
-  if (!m_ctx.HasValidProcessID()) {
-    return SendErrorPacket("E11");
-  }
-
-  if (g_num_reg_entries == 0)
-    InitializeRegisters();
-
-  nub_process_t pid = m_ctx.ProcessID();
-  nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p + 1);
-  if (tid == INVALID_NUB_THREAD)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in p packet");
-
-  // Get the register context size first by calling with NULL buffer
-  nub_size_t reg_ctx_size = DNBThreadGetRegisterContext(pid, tid, NULL, 0);
-  if (reg_ctx_size) {
-    // Now allocate enough space for the entire register context
-    std::vector<uint8_t> reg_ctx;
-    reg_ctx.resize(reg_ctx_size);
-    // Now read the register context
-    reg_ctx_size =
-        DNBThreadGetRegisterContext(pid, tid, &reg_ctx[0], reg_ctx.size());
-    if (reg_ctx_size) {
-      append_hex_value(ostrm, reg_ctx.data(), reg_ctx.size(), false);
-      return SendPacket(ostrm.str());
-    }
-  }
-  return SendErrorPacket("E74");
-}
-
-/* 'G XXX...' -- write registers
- How is the thread for these specified, beyond "the current thread"?
- Does gdb actually use the Hg packet to set this?  */
-
-rnb_err_t RNBRemote::HandlePacket_G(const char *p) {
-  if (!m_ctx.HasValidProcessID()) {
-    return SendErrorPacket("E11");
-  }
-
-  if (g_num_reg_entries == 0)
-    InitializeRegisters();
-
-  p += 1; // Skip the 'G'
-
-  nub_process_t pid = m_ctx.ProcessID();
-  nub_thread_t tid = ExtractThreadIDFromThreadSuffix(p);
-  if (tid == INVALID_NUB_THREAD)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in p packet");
-  // Skip the thread specification in `G;thread:3488ea;[..data...]`
-  const char *last_semi = strrchr(p, ';');
-  if (last_semi)
-    p = last_semi + 1;
-
-  StdStringExtractor packet(p);
-
-  // Get the register context size first by calling with NULL buffer
-  nub_size_t reg_ctx_size = DNBThreadGetRegisterContext(pid, tid, NULL, 0);
-  if (reg_ctx_size) {
-    // Now allocate enough space for the entire register context
-    std::vector<uint8_t> reg_ctx;
-    reg_ctx.resize(reg_ctx_size);
-
-    const nub_size_t bytes_extracted =
-        packet.GetHexBytes(&reg_ctx[0], reg_ctx.size(), 0xcc);
-    if (bytes_extracted == reg_ctx.size()) {
-      // Now write the register context
-      reg_ctx_size =
-          DNBThreadSetRegisterContext(pid, tid, reg_ctx.data(), reg_ctx.size());
-      if (reg_ctx_size == reg_ctx.size())
-        return SendPacket("OK");
-      else
-        return SendErrorPacket("E55");
-    } else {
-      DNBLogError("RNBRemote::HandlePacket_G(%s): extracted %llu of %llu "
-                  "bytes, size mismatch\n",
-                  p, (uint64_t)bytes_extracted, (uint64_t)reg_ctx_size);
-      return SendErrorPacket("E64");
-    }
-  }
-  return SendErrorPacket("E65");
 }
 
 static bool RNBRemoteShouldCancelCallback(void *not_used) {

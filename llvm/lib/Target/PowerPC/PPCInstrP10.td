@@ -1139,17 +1139,11 @@ class MMIRR_XX3Form_XYP4_XAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Inst{63} = 0;
 }
 
-
-
 def Concats {
   dag VecsToVecPair0 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
-      $vs1, sub_vsx0));
+    (v256i1 (REG_SEQUENCE VSRpRC, $vs0, sub_vsx1, $vs1, sub_vsx0));
   dag VecsToVecPair1 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
-      $vs3, sub_vsx0));
+    (v256i1 (REG_SEQUENCE VSRpRC, $vs2, sub_vsx1, $vs3, sub_vsx0));
 }
 
 let Predicates = [PairedVectorMemops] in {
@@ -1281,9 +1275,9 @@ let Predicates = [PCRelativeMemops] in {
             (PSTDpc $RS, $ga, 0)>;
 
   // Atomic Load
-  def : Pat<(i32 (atomic_load_8 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i32 (atomic_load_azext_8 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLBZpc $ga, 0)>;
-  def : Pat<(i32 (atomic_load_16 (PPCmatpcreladdr PCRelForm:$ga))),
+  def : Pat<(i32 (atomic_load_azext_16 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLHZpc $ga, 0)>;
   def : Pat<(i32 (atomic_load_32 (PPCmatpcreladdr PCRelForm:$ga))),
             (PLWZpc $ga, 0)>;
@@ -2366,8 +2360,8 @@ let Predicates = [PrefixInstrs] in {
   def : Pat<(store i64:$rS, PDForm:$dst), (PSTD g8rc:$rS, memri34:$dst)>;
 
   // Atomic Load
-  def : Pat<(i32 (atomic_load_8 PDForm:$src)), (PLBZ memri34:$src)>;
-  def : Pat<(i32 (atomic_load_16 PDForm:$src)), (PLHZ memri34:$src)>;
+  def : Pat<(i32 (atomic_load_azext_8 PDForm:$src)), (PLBZ memri34:$src)>;
+  def : Pat<(i32 (atomic_load_azext_16 PDForm:$src)), (PLHZ memri34:$src)>;
   def : Pat<(i32 (atomic_load_32 PDForm:$src)), (PLWZ memri34:$src)>;
   def : Pat<(i64 (atomic_load_64 PDForm:$src)), (PLD memri34:$src)>;
 

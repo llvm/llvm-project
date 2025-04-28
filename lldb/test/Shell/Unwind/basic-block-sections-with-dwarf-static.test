@@ -1,0 +1,39 @@
+# Test unwind info for functions which have been split into two or more parts.
+# In particular, check we return the correct set of unwind plans when querying
+# addresses which are in the middle of discontinuous functions.
+
+# REQUIRES: lld, target-x86_64
+
+# RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj \
+# RUN:   %S/Inputs/basic-block-sections-with-dwarf.s > %t.o
+# RUN: ld.lld %t.o -o %t
+## NB: This minidump exists only as a receptacle for the object file built
+## above. This is a workaround for the fact that "image show-unwind" does not
+## work without a Process object.
+# RUN: yaml2obj %S/Inputs/linux-x86_64.yaml > %t.core
+# RUN: %lldb -c %t.core %t -o "image load --file %t --slide 0" -s %s -o exit | \
+# RUN:   FileCheck --implicit-check-not="UNWIND PLANS" %s
+
+image show-unwind --cached true -n foo
+# CHECK: UNWIND PLANS for {{.*}}`foo
+#
+# CHECK:      Assembly language inspection UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from assembly insn profiling
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: no.
+# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: yes.
+# CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
+# TODO: This address range isn't correct right now. We're just checking that
+# it's a different range from the one in the next query.
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 6-0x0000000000000046)
+
+image show-unwind --cached true -n bar
+# CHECK: UNWIND PLANS for {{.*}}`bar
+
+# CHECK:      Assembly language inspection UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from assembly insn profiling
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: no.
+# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: yes.
+# CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
+# TODO: This address range isn't correct right now. We're just checking that
+# it's a different range from the one in the previous query.
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 35-0x0000000000000033)

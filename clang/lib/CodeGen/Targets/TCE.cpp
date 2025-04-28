@@ -50,24 +50,21 @@ void TCETargetCodeGenInfo::setTargetAttributes(
             M.getModule().getOrInsertNamedMetadata(
                 "opencl.kernel_wg_size_info");
 
-        SmallVector<llvm::Metadata *, 5> Operands;
-        Operands.push_back(llvm::ConstantAsMetadata::get(F));
-
-        Operands.push_back(
+        auto Eval = [&](Expr *E) {
+          return E->EvaluateKnownConstInt(FD->getASTContext());
+        };
+        SmallVector<llvm::Metadata *, 5> Operands{
+            llvm::ConstantAsMetadata::get(F),
             llvm::ConstantAsMetadata::get(llvm::Constant::getIntegerValue(
-                M.Int32Ty, llvm::APInt(32, Attr->getXDim()))));
-        Operands.push_back(
+                M.Int32Ty, Eval(Attr->getXDim()))),
             llvm::ConstantAsMetadata::get(llvm::Constant::getIntegerValue(
-                M.Int32Ty, llvm::APInt(32, Attr->getYDim()))));
-        Operands.push_back(
+                M.Int32Ty, Eval(Attr->getYDim()))),
             llvm::ConstantAsMetadata::get(llvm::Constant::getIntegerValue(
-                M.Int32Ty, llvm::APInt(32, Attr->getZDim()))));
-
-        // Add a boolean constant operand for "required" (true) or "hint"
-        // (false) for implementing the work_group_size_hint attr later.
-        // Currently always true as the hint is not yet implemented.
-        Operands.push_back(
-            llvm::ConstantAsMetadata::get(llvm::ConstantInt::getTrue(Context)));
+                M.Int32Ty, Eval(Attr->getZDim()))),
+            // Add a boolean constant operand for "required" (true) or "hint"
+            // (false) for implementing the work_group_size_hint attr later.
+            // Currently always true as the hint is not yet implemented.
+            llvm::ConstantAsMetadata::get(llvm::ConstantInt::getTrue(Context))};
         OpenCLMetadata->addOperand(llvm::MDNode::get(Context, Operands));
       }
     }

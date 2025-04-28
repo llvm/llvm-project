@@ -85,10 +85,10 @@ protected:
     return DISubroutineType::getDistinct(Context, DINode::FlagZero, 0,
                                          getNode(nullptr));
   }
-  DISubprogram *getSubprogram() {
-    return DISubprogram::getDistinct(
-        Context, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
-        DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DISubprogram *getSubprogram(DIFile *F = nullptr) {
+    return DISubprogram::getDistinct(Context, nullptr, "", "", F, 0, nullptr, 0,
+                                     nullptr, 0, 0, DINode::FlagZero,
+                                     DISubprogram::SPFlagZero, nullptr);
   }
   DIFile *getFile() {
     return DIFile::getDistinct(Context, "file.c", "/path/to/dir");
@@ -919,8 +919,9 @@ TEST_F(MDNodeTest, deleteTemporaryWithTrackingRef) {
 typedef MetadataTest DILocationTest;
 
 TEST_F(DILocationTest, Merge) {
-  DISubprogram *N = getSubprogram();
-  DIScope *S = DILexicalBlock::get(Context, N, getFile(), 3, 4);
+  DIFile *F = getFile();
+  DISubprogram *N = getSubprogram(F);
+  DIScope *S = DILexicalBlock::get(Context, N, F, 3, 4);
 
   {
     // Identical.
@@ -930,6 +931,18 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(2u, M->getLine());
     EXPECT_EQ(7u, M->getColumn());
     EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Identical, inside DILexicalBlockFile.
+    auto *OtherF = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    auto *LBF = DILexicalBlockFile::get(Context, S, OtherF, 0);
+    auto *A = DILocation::get(Context, 2, 7, LBF);
+    auto *B = DILocation::get(Context, 2, 7, LBF);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(7u, M->getColumn());
+    EXPECT_EQ(LBF, M->getScope());
   }
 
   {
@@ -956,13 +969,50 @@ TEST_F(DILocationTest, Merge) {
   }
 
   {
-    // Different lines, same scopes.
+    // Same line, different column, same DILexicalBlockFile scope.
+    auto *OtherF = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    auto *LBF = DILexicalBlockFile::get(Context, S, OtherF, 0);
+    auto *A = DILocation::get(Context, 2, 7, LBF);
+    auto *B = DILocation::get(Context, 2, 10, LBF);
+    auto *M0 = DILocation::getMergedLocation(A, B);
+    auto *M1 = DILocation::getMergedLocation(B, A);
+    for (auto *M : {M0, M1}) {
+      EXPECT_EQ(2u, M->getLine());
+      EXPECT_EQ(0u, M->getColumn());
+      EXPECT_EQ(LBF, M->getScope());
+    }
+  }
+
+  {
+    // Different lines, same DISubprogram scopes.
     auto *A = DILocation::get(Context, 1, 6, N);
     auto *B = DILocation::get(Context, 2, 7, N);
     auto *M = DILocation::getMergedLocation(A, B);
     EXPECT_EQ(0u, M->getLine());
     EXPECT_EQ(0u, M->getColumn());
     EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Different lines, same DILexicalBlockFile scopes.
+    auto *OtherF = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    auto *LBF = DILexicalBlockFile::get(Context, S, OtherF, 0);
+    auto *A = DILocation::get(Context, 1, 6, LBF);
+    auto *B = DILocation::get(Context, 2, 7, LBF);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(LBF, M->getScope());
+  }
+
+  {
+    // Different lines, same DILexicalBlock scopes.
+    auto *A = DILocation::get(Context, 1, 6, S);
+    auto *B = DILocation::get(Context, 2, 7, S);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(S, M->getScope());
   }
 
   {
@@ -973,6 +1023,158 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(0u, M->getLine());
     EXPECT_EQ(0u, M->getColumn());
     EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Different files, same line numbers, same subprogram.
+    auto *F1 = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    auto *F2 = DIFile::getDistinct(Context, "file2.c", "/path/to/dir");
+    DISubprogram *N = getSubprogram(F1);
+    auto *LBF = DILexicalBlockFile::get(Context, N, F2, 0);
+    auto *A = DILocation::get(Context, 1, 6, N);
+    auto *B = DILocation::get(Context, 1, 6, LBF);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(0u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Different files, same line numbers.
+    auto *F1 = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    auto *F2 = DIFile::getDistinct(Context, "file2.c", "/path/to/dir");
+    DISubprogram *N = getSubprogram(F1);
+    auto *LB = DILexicalBlock::getDistinct(Context, N, F1, 4, 9);
+    auto *LBF = DILexicalBlockFile::get(Context, LB, F2, 0);
+    auto *A = DILocation::get(Context, 1, 6, LB);
+    auto *B = DILocation::get(Context, 1, 6, LBF);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(4u, M->getLine());
+    EXPECT_EQ(9u, M->getColumn());
+    EXPECT_EQ(LB, M->getScope());
+  }
+
+  {
+    // Different files, same line numbers,
+    // both locations have DILexicalBlockFile scopes.
+    auto *F1 = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    auto *F2 = DIFile::getDistinct(Context, "file2.c", "/path/to/dir");
+    auto *F3 = DIFile::getDistinct(Context, "file3.c", "/path/to/dir");
+    DISubprogram *N = getSubprogram(F1);
+    auto *LB = DILexicalBlock::getDistinct(Context, N, F1, 4, 9);
+    auto *LBF1 = DILexicalBlockFile::get(Context, LB, F2, 0);
+    auto *LBF2 = DILexicalBlockFile::get(Context, LB, F3, 0);
+    auto *A = DILocation::get(Context, 1, 6, LBF1);
+    auto *B = DILocation::get(Context, 1, 6, LBF2);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(4u, M->getLine());
+    EXPECT_EQ(9u, M->getColumn());
+    EXPECT_EQ(LB, M->getScope());
+  }
+
+  {
+    // Same file, same line numbers, but different LBF objects.
+    // both locations have DILexicalBlockFile scope.
+    auto *F1 = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    DISubprogram *N = getSubprogram(F1);
+    auto *LB1 = DILexicalBlock::getDistinct(Context, N, F1, 4, 9);
+    auto *LB2 = DILexicalBlock::getDistinct(Context, N, F1, 5, 9);
+    auto *F2 = DIFile::getDistinct(Context, "file2.c", "/path/to/dir");
+    auto *LBF1 = DILexicalBlockFile::get(Context, LB1, F2, 0);
+    auto *LBF2 = DILexicalBlockFile::get(Context, LB2, F2, 0);
+    auto *A = DILocation::get(Context, 1, 6, LBF1);
+    auto *B = DILocation::get(Context, 1, 6, LBF2);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(1u, M->getLine());
+    EXPECT_EQ(6u, M->getColumn());
+    EXPECT_EQ(LBF1->getFile(), M->getScope()->getFile());
+    EXPECT_EQ(N, M->getScope()->getScope());
+  }
+
+  {
+    // Merge locations A and B, where B is included in A's file
+    // at the same position as A's position.
+    auto *F1 = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    DISubprogram *N = getSubprogram(F1);
+    auto *LB = DILexicalBlock::getDistinct(Context, N, F1, 4, 9);
+    auto *F2 = DIFile::getDistinct(Context, "file2.c", "/path/to/dir");
+    auto *LBF = DILexicalBlockFile::get(Context, LB, F2, 0);
+    auto *A = DILocation::get(Context, 4, 9, LB);
+    auto *B = DILocation::get(Context, 1, 6, LBF);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(4u, M->getLine());
+    EXPECT_EQ(9u, M->getColumn());
+    EXPECT_EQ(LB, M->getScope());
+  }
+
+  {
+    // Different locations from different files included from the same block.
+    auto *F1 = DIFile::getDistinct(Context, "file1.c", "/path/to/dir");
+    DISubprogram *N = getSubprogram(F1);
+
+    auto *LBCommon = DILexicalBlock::getDistinct(Context, N, F1, 4, 9);
+
+    auto *F2 = DIFile::getDistinct(Context, "file2.c", "/path/to/dir");
+    LBCommon = DILexicalBlock::getDistinct(Context, LBCommon, F2, 5, 9);
+
+    auto *F3 = DIFile::getDistinct(Context, "file3.c", "/path/to/dir");
+    auto *LB1 = DILexicalBlock::getDistinct(Context, LBCommon, F3, 6, 9);
+
+    auto *F4 = DIFile::getDistinct(Context, "file4.c", "/path/to/dir");
+    auto *LB2 = DILexicalBlock::getDistinct(Context, LBCommon, F4, 7, 9);
+
+    auto *F5 = DIFile::getDistinct(Context, "file5.c", "/path/to/dir");
+    auto *LBF1 = DILexicalBlockFile::get(Context, LB1, F5, 0);
+
+    auto *A = DILocation::get(Context, 8, 9, LB2);
+    auto *B = DILocation::get(Context, 9, 6, LBF1);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(5u, M->getLine());
+    EXPECT_EQ(9u, M->getColumn());
+    EXPECT_EQ(LBCommon, M->getScope());
+  }
+
+  {
+    // Different locations from different files having common include parent.
+    auto *LBCommon = DILexicalBlock::getDistinct(Context, N, F, 4, 1);
+
+    // Different scopes.
+    DILexicalBlock *Block[2] = {};
+    Block[0] = DILexicalBlock::get(Context, LBCommon, F, 10, 2);
+    Block[1] = DILexicalBlock::get(Context, LBCommon, F, 20, 3);
+
+    // Includes of the same file.
+    auto *F1 = DIFile::getDistinct(Context, "file1.inc", "/path/to/dir");
+    DILexicalBlock *Block1[2] = {};
+    Block1[0] = DILexicalBlock::get(
+        Context, DILexicalBlockFile::get(Context, Block[0], F1, 0), F1, 30, 4);
+    Block1[1] = DILexicalBlock::get(
+        Context, DILexicalBlockFile::get(Context, Block[1], F1, 0), F1, 30, 4);
+
+    // Different sub-includes.
+    DIFile *F2[2] = {};
+    DILexicalBlock *Block2[2] = {};
+
+    F2[0] = DIFile::getDistinct(Context, "file2_a.inc", "/path/to/dir");
+    Block2[0] = DILexicalBlock::get(
+        Context, DILexicalBlockFile::get(Context, Block1[0], F2[0], 0), F2[0],
+        40, 5);
+
+    F2[1] = DIFile::getDistinct(Context, "file2_b.inc", "/path/to/dir");
+    Block2[1] = DILexicalBlock::get(
+        Context, DILexicalBlockFile::get(Context, Block1[1], F2[1], 0), F2[1],
+        50, 6);
+
+    auto *A = DILocation::get(Context, 41, 7, Block2[0]);
+    auto *B = DILocation::get(Context, 51, 8, Block2[1]);
+    auto *M = DILocation::getMergedLocation(A, B);
+    auto *MScope = dyn_cast<DILexicalBlock>(M->getScope());
+    EXPECT_EQ(30u, M->getLine());
+    EXPECT_EQ(4u, M->getColumn());
+    EXPECT_EQ(Block1[0]->getFile(), MScope->getFile());
+    EXPECT_EQ(Block1[0]->getLine(), MScope->getLine());
+    EXPECT_EQ(Block1[0]->getColumn(), MScope->getColumn());
+    EXPECT_EQ(LBCommon, MScope->getScope());
   }
 
   {

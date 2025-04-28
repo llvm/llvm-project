@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___CXX03___THREAD_ID_H
 #define _LIBCPP___CXX03___THREAD_ID_H
 
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/functional.h>
 #include <__cxx03/__fwd/ostream.h>

@@ -176,8 +176,11 @@ static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
 
 // Decoder for registers. Imm(7-bit) is number of register, uses decodeSrcOp to
 // get register class. Used by SGPR only operands.
-#define DECODE_OPERAND_REG_7(RegClass, OpWidth)                                \
+#define DECODE_OPERAND_SREG_7(RegClass, OpWidth)                               \
   DECODE_SrcOp(Decode##RegClass##RegisterClass, 7, OpWidth, Imm, false, 0)
+
+#define DECODE_OPERAND_SREG_8(RegClass, OpWidth)                               \
+  DECODE_SrcOp(Decode##RegClass##RegisterClass, 8, OpWidth, Imm, false, 0)
 
 // Decoder for registers. Imm(10-bit): Imm{7-0} is number of register,
 // Imm{9} is acc(agpr or vgpr) Imm{8} should be 0 (see VOP3Pe_SMFMAC).
@@ -265,25 +268,27 @@ DECODE_OPERAND_REG_8(VReg_128)
 DECODE_OPERAND_REG_8(VReg_192)
 DECODE_OPERAND_REG_8(VReg_256)
 DECODE_OPERAND_REG_8(VReg_288)
+DECODE_OPERAND_REG_8(VReg_320)
 DECODE_OPERAND_REG_8(VReg_352)
 DECODE_OPERAND_REG_8(VReg_384)
 DECODE_OPERAND_REG_8(VReg_512)
 DECODE_OPERAND_REG_8(VReg_1024)
 
-DECODE_OPERAND_REG_7(SReg_32, OPW32)
-DECODE_OPERAND_REG_7(SReg_32_XM0, OPW32)
-DECODE_OPERAND_REG_7(SReg_32_XEXEC, OPW32)
-DECODE_OPERAND_REG_7(SReg_32_XM0_XEXEC, OPW32)
-DECODE_OPERAND_REG_7(SReg_32_XEXEC_HI, OPW32)
-DECODE_OPERAND_REG_7(SReg_64, OPW64)
-DECODE_OPERAND_REG_7(SReg_64_XEXEC, OPW64)
-DECODE_OPERAND_REG_7(SReg_64_XEXEC_XNULL, OPW64)
-DECODE_OPERAND_REG_7(SReg_96, OPW96)
-DECODE_OPERAND_REG_7(SReg_128, OPW128)
-DECODE_OPERAND_REG_7(SReg_128_XNULL, OPW128)
-DECODE_OPERAND_REG_7(SReg_256, OPW256)
-DECODE_OPERAND_REG_7(SReg_256_XNULL, OPW256)
-DECODE_OPERAND_REG_7(SReg_512, OPW512)
+DECODE_OPERAND_SREG_7(SReg_32, OPW32)
+DECODE_OPERAND_SREG_7(SReg_32_XM0, OPW32)
+DECODE_OPERAND_SREG_7(SReg_32_XEXEC, OPW32)
+DECODE_OPERAND_SREG_7(SReg_32_XM0_XEXEC, OPW32)
+DECODE_OPERAND_SREG_7(SReg_32_XEXEC_HI, OPW32)
+DECODE_OPERAND_SREG_7(SReg_64_XEXEC, OPW64)
+DECODE_OPERAND_SREG_7(SReg_64_XEXEC_XNULL, OPW64)
+DECODE_OPERAND_SREG_7(SReg_96, OPW96)
+DECODE_OPERAND_SREG_7(SReg_128, OPW128)
+DECODE_OPERAND_SREG_7(SReg_128_XNULL, OPW128)
+DECODE_OPERAND_SREG_7(SReg_256, OPW256)
+DECODE_OPERAND_SREG_7(SReg_256_XNULL, OPW256)
+DECODE_OPERAND_SREG_7(SReg_512, OPW512)
+
+DECODE_OPERAND_SREG_8(SReg_64, OPW64)
 
 DECODE_OPERAND_REG_8(AGPR_32)
 DECODE_OPERAND_REG_8(AReg_64)
@@ -481,6 +486,46 @@ static DecodeStatus decodeVersionImm(MCInst &Inst, unsigned Imm,
 //===----------------------------------------------------------------------===//
 //
 //===----------------------------------------------------------------------===//
+
+template <typename InsnType>
+DecodeStatus AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table, MCInst &MI,
+                                               InsnType Inst, uint64_t Address,
+                                               raw_ostream &Comments) const {
+  assert(MI.getOpcode() == 0);
+  assert(MI.getNumOperands() == 0);
+  MCInst TmpInst;
+  HasLiteral = false;
+  const auto SavedBytes = Bytes;
+
+  SmallString<64> LocalComments;
+  raw_svector_ostream LocalCommentStream(LocalComments);
+  CommentStream = &LocalCommentStream;
+
+  DecodeStatus Res =
+      decodeInstruction(Table, TmpInst, Inst, Address, this, STI);
+
+  CommentStream = nullptr;
+
+  if (Res != MCDisassembler::Fail) {
+    MI = TmpInst;
+    Comments << LocalComments;
+    return MCDisassembler::Success;
+  }
+  Bytes = SavedBytes;
+  return MCDisassembler::Fail;
+}
+
+template <typename InsnType>
+DecodeStatus
+AMDGPUDisassembler::tryDecodeInst(const uint8_t *Table1, const uint8_t *Table2,
+                                  MCInst &MI, InsnType Inst, uint64_t Address,
+                                  raw_ostream &Comments) const {
+  for (const uint8_t *T : {Table1, Table2}) {
+    if (DecodeStatus Res = tryDecodeInst(T, MI, Inst, Address, Comments))
+      return Res;
+  }
+  return MCDisassembler::Fail;
+}
 
 template <typename T> static inline T eatBytes(ArrayRef<uint8_t>& Bytes) {
   assert(Bytes.size() >= sizeof(T));

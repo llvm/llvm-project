@@ -389,7 +389,7 @@ ABIArgInfo RISCVABIInfo::coerceAndExpandFPCCEligibleStruct(
 bool RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty, unsigned ABIVLen,
                                              llvm::Type *&VLSType) const {
   // No riscv_vls_cc attribute.
-  if (ABIVLen == 1)
+  if (ABIVLen == 0)
     return false;
 
   // Legal struct for VLS calling convention should fulfill following rules:
@@ -578,7 +578,9 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
   } else {
     // Check registers needed <= 8.
     if ((EltType->getScalarSizeInBits() * NumElts / ABIVLen) > 8)
-      return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+      return getNaturalAlignIndirect(
+          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/false);
 
     // Generic vector
     // The number of elements needs to be at least 1.
@@ -827,10 +829,39 @@ public:
     if (!Attr)
       return;
 
-    const char *Kind;
-    switch (Attr->getInterrupt()) {
-    case RISCVInterruptAttr::supervisor: Kind = "supervisor"; break;
-    case RISCVInterruptAttr::machine: Kind = "machine"; break;
+    StringRef Kind = "machine";
+    bool HasSiFiveCLICPreemptible = false;
+    bool HasSiFiveCLICStackSwap = false;
+    for (RISCVInterruptAttr::InterruptType type : Attr->interrupt()) {
+      switch (type) {
+      case RISCVInterruptAttr::machine:
+        // Do not update `Kind` because `Kind` is already "machine", or the
+        // kinds also contains SiFive types which need to be applied.
+        break;
+      case RISCVInterruptAttr::supervisor:
+        Kind = "supervisor";
+        break;
+      case RISCVInterruptAttr::qcinest:
+        Kind = "qci-nest";
+        break;
+      case RISCVInterruptAttr::qcinonest:
+        Kind = "qci-nonest";
+        break;
+      // There are three different LLVM IR attribute values for SiFive CLIC
+      // interrupt kinds, one for each kind and one extra for their combination.
+      case RISCVInterruptAttr::SiFiveCLICPreemptible: {
+        HasSiFiveCLICPreemptible = true;
+        Kind = HasSiFiveCLICStackSwap ? "SiFive-CLIC-preemptible-stack-swap"
+                                      : "SiFive-CLIC-preemptible";
+        break;
+      }
+      case RISCVInterruptAttr::SiFiveCLICStackSwap: {
+        HasSiFiveCLICStackSwap = true;
+        Kind = HasSiFiveCLICPreemptible ? "SiFive-CLIC-preemptible-stack-swap"
+                                        : "SiFive-CLIC-stack-swap";
+        break;
+      }
+      }
     }
 
     Fn->addFnAttr("interrupt", Kind);

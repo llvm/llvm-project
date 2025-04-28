@@ -4,16 +4,29 @@
 define void @test_phi_diff_size(i1 %c) sspstrong {
 ; CHECK-LABEL: test_phi_diff_size:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    movq %fs:40, %rax
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if
-; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq $0, (%rax)
-; CHECK-NEXT:    retq
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:  .LBB0_3: # %join
 ; CHECK-NEXT:    movq $0, (%rax)
+; CHECK-NEXT:    movq %fs:40, %rax
+; CHECK-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    jne .LBB0_5
+; CHECK-NEXT:  # %bb.4: # %SP_return
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_5: # %CallStackCheckFailBlk
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    callq __stack_chk_fail@PLT
 entry:
   %a = alloca i64
   br i1 %c, label %if, label %join
@@ -38,6 +51,8 @@ define void @test_phi_loop(i1 %c) sspstrong {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    andq $-131072, %rsp # imm = 0xFFFE0000
 ; CHECK-NEXT:    subq $262144, %rsp # imm = 0x40000
+; CHECK-NEXT:    movq %fs:40, %rax
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsp, %rax
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %loop
@@ -47,10 +62,17 @@ define void @test_phi_loop(i1 %c) sspstrong {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    movq %fs:40, %rax
+; CHECK-NEXT:    cmpq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    jne .LBB1_4
+; CHECK-NEXT:  # %bb.3: # %SP_return
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB1_4: # %CallStackCheckFailBlk
+; CHECK-NEXT:    .cfi_def_cfa %rbp, 16
+; CHECK-NEXT:    callq __stack_chk_fail@PLT
 entry:
   %a = alloca <10000 x i64>
   br label %loop
