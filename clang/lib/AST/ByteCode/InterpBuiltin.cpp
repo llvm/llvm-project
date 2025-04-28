@@ -2184,8 +2184,8 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
-                      const CallExpr *Call, uint32_t BuiltinID) {
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
+                      uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
     return Invalid(S, OpPC);
 
