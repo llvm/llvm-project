@@ -40,7 +40,7 @@ size_t RootSignatureDesc::getSize() const {
       continue;
     std::visit(
         [&Size](auto &Value) -> void {
-          using T = std::decay_t<decltype(Value)>;
+          using T = std::decay_t<decltype(*Value)>;
           Size += sizeof(T);
         },
         *P);
@@ -80,28 +80,28 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     auto P = ParametersContainer.getParameter(H);
     if (!P)
       continue;
-    if (std::holds_alternative<dxbc::RootConstants>(*P)) {
-      auto Constants = std::get<dxbc::RootConstants>(*P);
-      support::endian::write(BOS, Constants.ShaderRegister,
+    if (std::holds_alternative<const dxbc::RootConstants*>(*P)) {
+      auto* Constants = std::get<const dxbc::RootConstants*>(*P);
+      support::endian::write(BOS, Constants->ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, Constants.RegisterSpace,
+      support::endian::write(BOS, Constants->RegisterSpace,
                              llvm::endianness::little);
-      support::endian::write(BOS, Constants.Num32BitValues,
+      support::endian::write(BOS, Constants->Num32BitValues,
                              llvm::endianness::little);
-    } else if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor>(*P)) {
-      auto Descriptor = std::get<dxbc::RST0::v0::RootDescriptor>(*P);
-      support::endian::write(BOS, Descriptor.ShaderRegister,
+    } else if (std::holds_alternative<const dxbc::RST0::v0::RootDescriptor*>(*P)) {
+      auto* Descriptor = std::get<const dxbc::RST0::v0::RootDescriptor*>(*P);
+      support::endian::write(BOS, Descriptor->ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, Descriptor.RegisterSpace,
+      support::endian::write(BOS, Descriptor->RegisterSpace,
                              llvm::endianness::little);
-    } else if (std::holds_alternative<dxbc::RST0::v1::RootDescriptor>(*P)) {
-      auto Descriptor = std::get<dxbc::RST0::v1::RootDescriptor>(*P);
+    } else if (std::holds_alternative<const dxbc::RST0::v1::RootDescriptor*>(*P)) {
+      auto* Descriptor = std::get<const dxbc::RST0::v1::RootDescriptor*>(*P);
 
-      support::endian::write(BOS, Descriptor.ShaderRegister,
+      support::endian::write(BOS, Descriptor->ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, Descriptor.RegisterSpace,
+      support::endian::write(BOS, Descriptor->RegisterSpace,
                              llvm::endianness::little);
-      support::endian::write(BOS, Descriptor.Flags, llvm::endianness::little);
+      support::endian::write(BOS, Descriptor->Flags, llvm::endianness::little);
     }
   }
   assert(Storage.size() == getSize());

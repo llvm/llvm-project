@@ -8,10 +8,10 @@
 
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <utility>
 #include <variant>
 
 namespace llvm {
@@ -29,11 +29,11 @@ struct RootParameterInfo {
       : Header(H), Location(L) {}
 };
 
-using RootDescriptor = std::variant<dxbc::RST0::v0::RootDescriptor,
-                                    dxbc::RST0::v1::RootDescriptor>;
+using RootDescriptor = std::variant<dxbc::RST0::v0::RootDescriptor*,
+                                    dxbc::RST0::v1::RootDescriptor*>;
 using ParametersView =
-    std::variant<dxbc::RootConstants, dxbc::RST0::v0::RootDescriptor,
-                 dxbc::RST0::v1::RootDescriptor>;
+    std::variant<const dxbc::RootConstants*, const dxbc::RST0::v0::RootDescriptor*,
+                 const dxbc::RST0::v1::RootDescriptor*>;
 struct RootParametersContainer {
   SmallVector<RootParameterInfo> ParametersInfo;
 
@@ -52,27 +52,27 @@ struct RootParametersContainer {
   void addParameter(dxbc::RootParameterHeader H,
                     dxbc::RST0::v0::RootDescriptor D) {
     addInfo(H, Descriptors.size());
-    Descriptors.push_back(D);
+    Descriptors.push_back(std::move(&D));
   }
 
   void addParameter(dxbc::RootParameterHeader H,
                     dxbc::RST0::v1::RootDescriptor D) {
     addInfo(H, Descriptors.size());
-    Descriptors.push_back(D);
+    Descriptors.push_back(std::move(&D));
   }
 
   std::optional<ParametersView> getParameter(const RootParameterInfo *H) const {
     switch (H->Header.ParameterType) {
     case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit):
-      return Constants[H->Location];
+      return &Constants[H->Location];
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
       RootDescriptor VersionedParam = Descriptors[H->Location];
-      if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor>(
+      if (std::holds_alternative<dxbc::RST0::v0::RootDescriptor*>(
               VersionedParam))
-        return std::get<dxbc::RST0::v0::RootDescriptor>(VersionedParam);
-      return std::get<dxbc::RST0::v1::RootDescriptor>(VersionedParam);
+        return std::get<dxbc::RST0::v0::RootDescriptor*>(VersionedParam);
+      return std::get<dxbc::RST0::v1::RootDescriptor*>(VersionedParam);
     }
 
     return std::nullopt;
