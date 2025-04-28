@@ -9457,9 +9457,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           Range);
   DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
-  VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
-                                     PSE, RequiresScalarEpilogueCheck,
-                                     CM.foldTailByMasking(), OrigLoop);
+  VPlanTransforms::prepareForVectorization(
+      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
+      CM.foldTailByMasking(), OrigLoop);
+  VPlanTransforms::createLoopRegions(*Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -9749,8 +9750,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
 
   DenseMap<VPBlockBase *, BasicBlock *> VPB2IRBB;
   auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI, VPB2IRBB);
-  VPlanTransforms::createLoopRegions(*Plan, Legal->getWidestInductionType(),
-                                     PSE, true, false, OrigLoop);
+  VPlanTransforms::prepareForVectorization(
+      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop);
+  VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
