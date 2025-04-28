@@ -1918,7 +1918,7 @@ static bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
                                              const MachineRegisterInfo &MRI,
                                              unsigned Depth,
                                              UndefPoisonKind Kind) {
-  if (Depth >= MaxAnalysisRecursionDepth)
+  if (Depth >= getAnalysisRecursionDepthLimit())
     return false;
 
   MachineInstr *RegDef = MRI.getVRegDef(Reg);
