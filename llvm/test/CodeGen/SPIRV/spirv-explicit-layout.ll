@@ -3,9 +3,9 @@
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
 
-; CHECK: OpName [[ScalarBlock_var:%[0-9]+]] "__resource_p_12_{_u32[0]}_0_0"
-; CHECK: OpName [[buffer_var:%[0-9]+]] "__resource_p_12_{_{_{_u32_f32[3]}[10]}[0]}_0_0"
-; CHECK: OpName [[array_buffer_var:%[0-9]+]] "__resource_p_12_{_{_{_u32_f32[3]}[10]}[0]}[10]_0_0"
+; CHECK-DAG: OpName [[ScalarBlock_var:%[0-9]+]] "__resource_p_12_{_u32[0]}_0_0"
+; CHECK-DAG: OpName [[buffer_var:%[0-9]+]] "__resource_p_12_{_{_{_u32_f32[3]}[10]}[0]}_0_0"
+; CHECK-DAG: OpName [[array_buffer_var:%[0-9]+]] "__resource_p_12_{_{_{_u32_f32[3]}[10]}[0]}[10]_0_0"
 
 ; CHECK-DAG: OpMemberDecorate [[ScalarBlock:%[0-9]+]] 0 Offset 0
 ; CHECK-DAG: OpDecorate [[ScalarBlock]] Block
