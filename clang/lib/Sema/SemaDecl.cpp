@@ -6119,17 +6119,20 @@ static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo *II) {
   // or not. Note, this treats all keywords as being enabled, regardless of the
   // setting of other language options. It intentionally disables the modules
   // keywords because those are conditional keywords, so may be safe to use.
-  static llvm::SmallPtrSet<IdentifierInfo *, 32> Keywords;
+  static llvm::SmallVector<uintptr_t, 48> Keywords;
   if (Keywords.empty()) {
 #define MODULES_KEYWORD(NAME)
 #define KEYWORD(NAME, FLAGS)                                                   \
-  Keywords.insert(&S.getPreprocessor().getIdentifierTable().get(#NAME));
+  Keywords.push_back(reinterpret_cast<uint64_t>(                               \
+      &S.getPreprocessor().getIdentifierTable().get(#NAME)));
 #define CXX_KEYWORD_OPERATOR(NAME, TOK)                                        \
-  Keywords.insert(&S.getPreprocessor().getIdentifierTable().get(#NAME));
+  Keywords.push_back(reinterpret_cast<uint64_t>(                               \
+      &S.getPreprocessor().getIdentifierTable().get(#NAME)));
 #include "clang/Basic/TokenKinds.def"
+    llvm::sort(Keywords);
   }
 
-  return Keywords.contains(II);
+  return llvm::binary_search(Keywords, reinterpret_cast<uintptr_t>(II));
 }
 
 void Sema::warnOnReservedIdentifier(const NamedDecl *D) {
@@ -10451,7 +10454,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   // will not be pushed onto a scope chain. That means we will not issue any
   // reserved identifier warnings for the declaration, but we will for the
   // definition. Handle those here.
-  if (!Params.empty() && !D.isFunctionDefinition()) {
+  if (!D.isFunctionDefinition()) {
     for (const ParmVarDecl *PVD : Params)
       warnOnReservedIdentifier(PVD);
   }
