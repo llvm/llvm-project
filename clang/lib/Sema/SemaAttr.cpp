@@ -31,23 +31,25 @@ Sema::PragmaStackSentinelRAII::PragmaStackSentinelRAII(Sema &S,
                                                        bool ShouldAct)
     : S(S), SlotLabel(SlotLabel), ShouldAct(ShouldAct) {
   if (ShouldAct) {
-    S.VtorDispStack.SentinelAction(PSK_Push, SlotLabel);
-    S.DataSegStack.SentinelAction(PSK_Push, SlotLabel);
-    S.BSSSegStack.SentinelAction(PSK_Push, SlotLabel);
-    S.ConstSegStack.SentinelAction(PSK_Push, SlotLabel);
-    S.CodeSegStack.SentinelAction(PSK_Push, SlotLabel);
-    S.StrictGuardStackCheckStack.SentinelAction(PSK_Push, SlotLabel);
+    S.VtorDispStack.SentinelAction(PragmaMsStackAction::Push, SlotLabel);
+    S.DataSegStack.SentinelAction(PragmaMsStackAction::Push, SlotLabel);
+    S.BSSSegStack.SentinelAction(PragmaMsStackAction::Push, SlotLabel);
+    S.ConstSegStack.SentinelAction(PragmaMsStackAction::Push, SlotLabel);
+    S.CodeSegStack.SentinelAction(PragmaMsStackAction::Push, SlotLabel);
+    S.StrictGuardStackCheckStack.SentinelAction(PragmaMsStackAction::Push,
+                                                SlotLabel);
   }
 }
 
 Sema::PragmaStackSentinelRAII::~PragmaStackSentinelRAII() {
   if (ShouldAct) {
-    S.VtorDispStack.SentinelAction(PSK_Pop, SlotLabel);
-    S.DataSegStack.SentinelAction(PSK_Pop, SlotLabel);
-    S.BSSSegStack.SentinelAction(PSK_Pop, SlotLabel);
-    S.ConstSegStack.SentinelAction(PSK_Pop, SlotLabel);
-    S.CodeSegStack.SentinelAction(PSK_Pop, SlotLabel);
-    S.StrictGuardStackCheckStack.SentinelAction(PSK_Pop, SlotLabel);
+    S.VtorDispStack.SentinelAction(PragmaMsStackAction::Pop, SlotLabel);
+    S.DataSegStack.SentinelAction(PragmaMsStackAction::Pop, SlotLabel);
+    S.BSSSegStack.SentinelAction(PragmaMsStackAction::Pop, SlotLabel);
+    S.ConstSegStack.SentinelAction(PragmaMsStackAction::Pop, SlotLabel);
+    S.CodeSegStack.SentinelAction(PragmaMsStackAction::Pop, SlotLabel);
+    S.StrictGuardStackCheckStack.SentinelAction(PragmaMsStackAction::Pop,
+                                                SlotLabel);
   }
 }
 
@@ -333,7 +335,7 @@ void Sema::inferNullableClassAttribute(CXXRecordDecl *CRD) {
 
 void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
                                    SourceLocation PragmaLoc) {
-  PragmaMsStackAction Action = Sema::PSK_Reset;
+  PragmaMsStackAction Action = PragmaMsStackAction::Reset;
   AlignPackInfo::Mode ModeVal = AlignPackInfo::Native;
 
   switch (Kind) {
@@ -341,17 +343,17 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
     // With XL, native is the same as power, natural means something else.
   case POAK_Native:
   case POAK_Power:
-    Action = Sema::PSK_Push_Set;
+    Action = PragmaMsStackAction::PushSet;
     break;
   case POAK_Natural:
-    Action = Sema::PSK_Push_Set;
+    Action = PragmaMsStackAction::PushSet;
     ModeVal = AlignPackInfo::Natural;
     break;
 
     // Note that '#pragma options align=packed' is not equivalent to attribute
     // packed, it has a different precedence relative to attribute aligned.
   case POAK_Packed:
-    Action = Sema::PSK_Push_Set;
+    Action = PragmaMsStackAction::PushSet;
     ModeVal = AlignPackInfo::Packed;
     break;
 
@@ -361,17 +363,17 @@ void Sema::ActOnPragmaOptionsAlign(PragmaOptionsAlignKind Kind,
       Diag(PragmaLoc, diag::err_pragma_options_align_mac68k_target_unsupported);
       return;
     }
-    Action = Sema::PSK_Push_Set;
+    Action = PragmaMsStackAction::PushSet;
     ModeVal = AlignPackInfo::Mac68k;
     break;
   case POAK_Reset:
     // Reset just pops the top of the stack, or resets the current alignment to
     // default.
-    Action = Sema::PSK_Pop;
+    Action = PragmaMsStackAction::Pop;
     if (AlignPackStack.Stack.empty()) {
       if (AlignPackStack.CurrentValue.getAlignMode() != AlignPackInfo::Native ||
           AlignPackStack.CurrentValue.IsPackAttr()) {
-        Action = Sema::PSK_Reset;
+        Action = PragmaMsStackAction::Reset;
       } else {
         Diag(PragmaLoc, diag::warn_pragma_options_align_reset_failed)
             << "stack empty";
@@ -472,7 +474,7 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
     AlignmentVal = (unsigned)Val->getZExtValue();
   }
 
-  if (Action == Sema::PSK_Show) {
+  if (Action == PragmaMsStackAction::Show) {
     // Show the current alignment, making sure to show the right value
     // for the default.
     // FIXME: This should come from the target.
@@ -486,7 +488,7 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
 
   // MSDN, C/C++ Preprocessor Reference > Pragma Directives > pack:
   // "#pragma pack(pop, identifier, n) is undefined"
-  if (Action & Sema::PSK_Pop) {
+  if (Action & PragmaMsStackAction::Pop) {
     if (Alignment && !SlotLabel.empty())
       Diag(PragmaLoc, diag::warn_pragma_pack_pop_identifier_and_alignment);
     if (AlignPackStack.Stack.empty()) {
@@ -656,7 +658,7 @@ void Sema::ActOnPragmaFPEvalMethod(SourceLocation Loc,
     Diag(Loc, diag::err_setting_eval_method_used_in_unsafe_context) << 0 << 1;
   if (getLangOpts().AllowRecip)
     Diag(Loc, diag::err_setting_eval_method_used_in_unsafe_context) << 0 << 2;
-  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  FpPragmaStack.Act(Loc, PragmaMsStackAction::Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
   PP.setCurrentFPEvalMethod(Loc, Value);
 }
@@ -665,7 +667,9 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
                                    PragmaMsStackAction Action,
                                    PragmaFloatControlKind Value) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
-  if ((Action == PSK_Push_Set || Action == PSK_Push || Action == PSK_Pop) &&
+  if ((Action == PragmaMsStackAction::PushSet ||
+       Action == PragmaMsStackAction::Push ||
+       Action == PragmaMsStackAction::Pop) &&
       !CurContext->getRedeclContext()->isFileContext()) {
     // Push and pop can only occur at file or namespace scope, or within a
     // language linkage declaration.
@@ -700,7 +704,8 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
     break;
   case PFC_Push:
-    FpPragmaStack.Act(Loc, Sema::PSK_Push_Set, StringRef(), NewFPFeatures);
+    FpPragmaStack.Act(Loc, PragmaMsStackAction::PushSet, StringRef(),
+                      NewFPFeatures);
     break;
   case PFC_Pop:
     if (FpPragmaStack.Stack.empty()) {
@@ -725,7 +730,7 @@ void Sema::ActOnPragmaMSPointersToMembers(
 void Sema::ActOnPragmaMSVtorDisp(PragmaMsStackAction Action,
                                  SourceLocation PragmaLoc,
                                  MSVtorDispMode Mode) {
-  if (Action & PSK_Pop && VtorDispStack.Stack.empty())
+  if (Action & PragmaMsStackAction::Pop && VtorDispStack.Stack.empty())
     Diag(PragmaLoc, diag::warn_pragma_pop_failed) << "vtordisp"
                                                   << "stack empty";
   VtorDispStack.Act(PragmaLoc, Action, StringRef(), Mode);
@@ -736,15 +741,15 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
                                                  PragmaMsStackAction Action,
                                                  llvm::StringRef StackSlotLabel,
                                                  AlignPackInfo Value) {
-  if (Action == PSK_Reset) {
+  if (Action == PragmaMsStackAction::Reset) {
     CurrentValue = DefaultValue;
     CurrentPragmaLocation = PragmaLocation;
     return;
   }
-  if (Action & PSK_Push)
+  if (Action & PragmaMsStackAction::Push)
     Stack.emplace_back(Slot(StackSlotLabel, CurrentValue, CurrentPragmaLocation,
                             PragmaLocation));
-  else if (Action & PSK_Pop) {
+  else if (Action & PragmaMsStackAction::Pop) {
     if (!StackSlotLabel.empty()) {
       // If we've got a label, try to find it and jump there.
       auto I = llvm::find_if(llvm::reverse(Stack), [&](const Slot &x) {
@@ -787,7 +792,7 @@ void Sema::PragmaStack<Sema::AlignPackInfo>::Act(SourceLocation PragmaLocation,
       Stack.pop_back();
     }
   }
-  if (Action & PSK_Set) {
+  if (Action & PragmaMsStackAction::Set) {
     CurrentValue = Value;
     CurrentPragmaLocation = PragmaLocation;
   }
@@ -856,7 +861,7 @@ void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
         .Case("bss_seg", &BSSSegStack)
         .Case("const_seg", &ConstSegStack)
         .Case("code_seg", &CodeSegStack);
-  if (Action & PSK_Pop && Stack->Stack.empty())
+  if (Action & PragmaMsStackAction::Pop && Stack->Stack.empty())
     Diag(PragmaLocation, diag::warn_pragma_pop_failed) << PragmaName
         << "stack empty";
   if (SegmentName) {
@@ -875,7 +880,8 @@ void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
 void Sema::ActOnPragmaMSStrictGuardStackCheck(SourceLocation PragmaLocation,
                                               PragmaMsStackAction Action,
                                               bool Value) {
-  if (Action & PSK_Pop && StrictGuardStackCheckStack.Stack.empty())
+  if (Action & PragmaMsStackAction::Pop &&
+      StrictGuardStackCheckStack.Stack.empty())
     Diag(PragmaLocation, diag::warn_pragma_pop_failed) << "strict_gs_check"
                                                        << "stack empty";
 
@@ -1394,7 +1400,7 @@ void Sema::ActOnPragmaFPContract(SourceLocation Loc,
     NewFPFeatures.setDisallowFPContract();
     break;
   }
-  FpPragmaStack.Act(Loc, Sema::PSK_Set, StringRef(), NewFPFeatures);
+  FpPragmaStack.Act(Loc, PragmaMsStackAction::Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
@@ -1430,14 +1436,14 @@ void Sema::ActOnPragmaFPValueChangingOption(SourceLocation Loc,
     llvm_unreachable("unhandled value changing pragma fp");
   }
 
-  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  FpPragmaStack.Act(Loc, PragmaMsStackAction::Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
 void Sema::ActOnPragmaFEnvRound(SourceLocation Loc, llvm::RoundingMode FPR) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
   NewFPFeatures.setConstRoundingModeOverride(FPR);
-  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  FpPragmaStack.Act(Loc, PragmaMsStackAction::Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
@@ -1445,7 +1451,7 @@ void Sema::setExceptionMode(SourceLocation Loc,
                             LangOptions::FPExceptionModeKind FPE) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
   NewFPFeatures.setSpecifiedExceptionModeOverride(FPE);
-  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  FpPragmaStack.Act(Loc, PragmaMsStackAction::Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
@@ -1461,7 +1467,7 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
   }
   NewFPFeatures.setAllowFEnvAccessOverride(IsEnabled);
   NewFPFeatures.setRoundingMathOverride(IsEnabled);
-  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  FpPragmaStack.Act(Loc, PragmaMsStackAction::Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
@@ -1469,7 +1475,7 @@ void Sema::ActOnPragmaCXLimitedRange(SourceLocation Loc,
                                      LangOptions::ComplexRangeKind Range) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();
   NewFPFeatures.setComplexRangeOverride(Range);
-  FpPragmaStack.Act(Loc, PSK_Set, StringRef(), NewFPFeatures);
+  FpPragmaStack.Act(Loc, PragmaMsStackAction::Set, StringRef(), NewFPFeatures);
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 

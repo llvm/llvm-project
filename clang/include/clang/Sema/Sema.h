@@ -475,6 +475,16 @@ enum class PragmaClangSectionKind {
 
 enum class PragmaClangSectionAction { Set = 0, Clear = 1 };
 
+enum PragmaMsStackAction {
+  Reset = 0x0,          // #pragma ()
+  Set = 0x1,            // #pragma (value)
+  Push = 0x2,           // #pragma (push[, id])
+  Pop = 0x4,            // #pragma (pop[, id])
+  Show = 0x8,           // #pragma (show) -- only for "pack"!
+  PushSet = Push | Set, // #pragma (push[, id], value)
+  PopSet = Pop | Set,   // #pragma (pop[, id], value)
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -1436,16 +1446,6 @@ public:
   PragmaClangSection PragmaClangRelroSection;
   PragmaClangSection PragmaClangTextSection;
 
-  enum PragmaMsStackAction {
-    PSK_Reset = 0x0,                   // #pragma ()
-    PSK_Set = 0x1,                     // #pragma (value)
-    PSK_Push = 0x2,                    // #pragma (push[, id])
-    PSK_Pop = 0x4,                     // #pragma (pop[, id])
-    PSK_Show = 0x8,                    // #pragma (show) -- only for "pack"!
-    PSK_Push_Set = PSK_Push | PSK_Set, // #pragma (push[, id], value)
-    PSK_Pop_Set = PSK_Pop | PSK_Set,   // #pragma (pop[, id], value)
-  };
-
   struct PragmaPackInfo {
     PragmaMsStackAction Action;
     StringRef SlotLabel;
@@ -1569,15 +1569,15 @@ public:
 
     void Act(SourceLocation PragmaLocation, PragmaMsStackAction Action,
              llvm::StringRef StackSlotLabel, ValueType Value) {
-      if (Action == PSK_Reset) {
+      if (Action == PragmaMsStackAction::Reset) {
         CurrentValue = DefaultValue;
         CurrentPragmaLocation = PragmaLocation;
         return;
       }
-      if (Action & PSK_Push)
+      if (Action & PragmaMsStackAction::Push)
         Stack.emplace_back(StackSlotLabel, CurrentValue, CurrentPragmaLocation,
                            PragmaLocation);
-      else if (Action & PSK_Pop) {
+      else if (Action & PragmaMsStackAction::Pop) {
         if (!StackSlotLabel.empty()) {
           // If we've got a label, try to find it and jump there.
           auto I = llvm::find_if(llvm::reverse(Stack), [&](const Slot &x) {
@@ -1596,7 +1596,7 @@ public:
           Stack.pop_back();
         }
       }
-      if (Action & PSK_Set) {
+      if (Action & PragmaMsStackAction::Set) {
         CurrentValue = Value;
         CurrentPragmaLocation = PragmaLocation;
       }
@@ -1617,7 +1617,8 @@ public:
     //
     // Push / pop a named sentinel slot.
     void SentinelAction(PragmaMsStackAction Action, StringRef Label) {
-      assert((Action == PSK_Push || Action == PSK_Pop) &&
+      assert((Action == PragmaMsStackAction::Push ||
+              Action == PragmaMsStackAction::Pop) &&
              "Can only push / pop #pragma stack sentinels!");
       Act(CurrentPragmaLocation, Action, Label, CurrentValue);
     }
@@ -1629,7 +1630,7 @@ public:
     bool hasValue() const { return CurrentValue != DefaultValue; }
 
     SmallVector<Slot, 2> Stack;
-    ValueType DefaultValue; // Value used for PSK_Reset action.
+    ValueType DefaultValue; // Value used for PragmaMsStackAction::Reset action.
     ValueType CurrentValue;
     SourceLocation CurrentPragmaLocation;
   };
