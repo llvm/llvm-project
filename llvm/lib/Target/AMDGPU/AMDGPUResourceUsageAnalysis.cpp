@@ -161,24 +161,9 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
-      // Look for the Metadata for indexing and access-type
-      uint32_t AccessTypeMask = 0;
-      for (const MachineOperand &MO : MI.operands()) {
-        if (!MO.isMetadata())
-          continue;
-        const MDNode *Tuple = MO.getMetadata();
-        if (Tuple->getNumOperands() != 3)
-          continue;
-        const MDOperand &NameOp = Tuple->getOperand(0);
-        if (NameOp.equalsStr("vgpr_indexing_extra")) {
-          const MDOperand &MaskOp2 = Tuple->getOperand(2);
-          assert(isa<ConstantAsMetadata>(MaskOp2));
-          AccessTypeMask =
-              cast<ConstantInt>(cast<ConstantAsMetadata>(MaskOp2)->getValue())
-                  ->getZExtValue();
-          break;
-        }
-      }
+      // Look for the Metadata for indexing and access-type.
+      uint32_t AccessTypeMask = getVGPRIndexingMetaInfo(MI).second;
+
       // TODO: Check regmasks? Do they occur anywhere except calls?
       for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
         const MachineOperand &MO = MI.getOperand(i);

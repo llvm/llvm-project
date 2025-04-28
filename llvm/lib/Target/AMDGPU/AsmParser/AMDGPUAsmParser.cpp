@@ -3023,9 +3023,9 @@ struct RegInfo {
 };
 
 static constexpr RegInfo RegularRegisters[] = {
-    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR}, {{"ttmp"}, IS_TTMP},
-    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR}, {{"idx"}, IS_IDX_REG},
-};
+    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR},  {{"ttmp"}, IS_TTMP},
+    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR},  {{"idx"}, IS_IDX_REG},
+    {{"g1"}, IS_VGPR},  {{"g2"}, IS_VGPR}, {{"g3"}, IS_VGPR}};
 
 static bool isRegularReg(RegisterKind Kind) {
   return Kind == IS_VGPR || Kind == IS_SGPR || Kind == IS_TTMP ||
@@ -4157,7 +4157,6 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
 
 std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
     const MCInst &Inst, bool AsVOPD3) {
-
   const unsigned Opcode = Inst.getOpcode();
   if (!isVOPD(Opcode))
     return {};
@@ -4958,7 +4957,8 @@ bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
     if (!Op->isReg())
       continue;
     unsigned Reg = Op->getReg();
-    if (AMDGPU::isVGPR(Reg, MRI) && AMDGPU::getHWRegIndex(Reg, MRI) > 255) {
+    if (!isGFX13Plus() && AMDGPU::isVGPR(Reg, MRI) &&
+        AMDGPU::getHWRegIndex(Reg, MRI) > 255) {
       Error(getRegLoc(Reg, Operands), "register index is out of range");
       return false;
     }

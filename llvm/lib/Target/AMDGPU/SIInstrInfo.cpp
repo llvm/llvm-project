@@ -10406,6 +10406,33 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
   }
 }
 
+std::pair<uint32_t, uint32_t> llvm::getVGPRIndexingMetaInfo(const MachineInstr &MI) {
+  uint32_t IdxRegMask = 0;
+  uint32_t AccessTypeMask = 0;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isMetadata())
+      continue;
+    const MDNode *Tuple = MO.getMetadata();
+    if (Tuple->getNumOperands() != 3)
+      continue;
+    const MDOperand &NameOp = Tuple->getOperand(0);
+    if (NameOp.equalsStr("vgpr_indexing_extra")) {
+      const MDOperand &MaskOp1 = Tuple->getOperand(1);
+      const MDOperand &MaskOp2 = Tuple->getOperand(2);
+      assert(isa<ConstantAsMetadata>(MaskOp1) &&
+             isa<ConstantAsMetadata>(MaskOp2));
+      IdxRegMask =
+          cast<ConstantInt>(cast<ConstantAsMetadata>(MaskOp1)->getValue())
+              ->getZExtValue();
+      AccessTypeMask =
+          cast<ConstantInt>(cast<ConstantAsMetadata>(MaskOp2)->getValue())
+              ->getZExtValue();
+      break;
+    }
+  }
+  return {IdxRegMask, AccessTypeMask};
+}
+
 MachineInstr *SIInstrInfo::createPHIDestinationCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator LastPHIIt,
     const DebugLoc &DL, Register Src, Register Dst) const {

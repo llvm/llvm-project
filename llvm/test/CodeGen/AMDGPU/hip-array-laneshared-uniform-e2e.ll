@@ -37,28 +37,28 @@ define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr "amdgpu-wavegr
 ; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 6
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v7, v7, g1[0], s3
 ; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 5
-; CHECK-NEXT:    v_cndmask_b32_e64 v6, v6, v0, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v6, v6, g1[0], s3
 ; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 4
-; CHECK-NEXT:    v_cndmask_b32_e64 v5, v5, v0, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v5, v5, g1[0], s3
 ; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 3
-; CHECK-NEXT:    v_cndmask_b32_e64 v4, v4, v0, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, v4, g1[0], s3
 ; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 2
-; CHECK-NEXT:    v_cndmask_b32_e64 v3, v3, v0, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v3, v3, g1[0], s3
 ; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 1
-; CHECK-NEXT:    v_cndmask_b32_e64 v2, v2, v0, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v2, v2, g1[0], s3
 ; CHECK-NEXT:    s_cselect_b32 s3, -1, 0
 ; CHECK-NEXT:    s_cmp_eq_u32 s2, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, v1, v0, s3
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, v1, g1[0], s3
 ; CHECK-NEXT:    s_cselect_b32 s2, -1, 0
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v0, v0, s2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, v0, g1[0], s2
 ; CHECK-NEXT:    s_add_co_i32 s1, s1, 1
 ; CHECK-NEXT:    s_add_co_i32 s0, s0, 4
 ; CHECK-NEXT:    s_cmp_lg_u32 s1, 0x46
@@ -100,7 +100,7 @@ define dso_local amdgpu_kernel void @_Z3foov() local_unnamed_addr "amdgpu-wavegr
 ; CHECK-NEXT:    s_cmp_eq_u32 s1, 0x46
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, s3
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, v8, v7, s2
+; CHECK-NEXT:    v_cndmask_b32_e64 g1[0], v8, v7, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_3
 ; CHECK-NEXT:  ; %bb.4: ; %for.cond.cleanup6

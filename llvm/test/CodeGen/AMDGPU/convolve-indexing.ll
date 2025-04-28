@@ -12,7 +12,7 @@ define amdgpu_ps void @test_convolve.f32_iu4_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_iu4_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu4 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -42,7 +42,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f16_iu4_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -72,7 +72,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.f16_iu4_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -102,7 +102,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.f16_iu4_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -132,7 +132,7 @@ define amdgpu_ps void @test_convolve.i32_iu4_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.i32_iu4_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu4 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -162,7 +162,7 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32i32_iu4_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -192,7 +192,7 @@ define amdgpu_ps void @test_convolve.f32_iu8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_iu8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu8 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -222,7 +222,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f16_iu8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -252,7 +252,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.f16_iu8_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -282,7 +282,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.f16_iu8_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -312,7 +312,7 @@ define amdgpu_ps void @test_convolve.i32_iu8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.i32_iu8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu8 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -342,7 +342,7 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32i32_iu8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -372,7 +372,7 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_fp8_fp8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -402,7 +402,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -432,7 +432,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -462,7 +462,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -492,7 +492,7 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_fp8_bf8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -522,7 +522,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -552,7 +552,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -582,7 +582,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -612,7 +612,7 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_bf8_fp8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -642,7 +642,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -672,7 +672,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -702,7 +702,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -732,7 +732,7 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_bf8_bf8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -762,7 +762,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -792,7 +792,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -822,7 +822,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -852,7 +852,7 @@ define amdgpu_ps void @test_convolve.f32_f16_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_f16_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_f16 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -882,7 +882,7 @@ define amdgpu_ps void @test_convolve.f16_f16_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f16_f16_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -912,7 +912,7 @@ define amdgpu_ps void @test_convolve.f16_f16_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.f16_f16_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -942,7 +942,7 @@ define amdgpu_ps void @test_convolve.f16_f16_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.f16_f16_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -972,7 +972,7 @@ define amdgpu_ps void @test_convolve.f32_bf16_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.f32_bf16_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf16 v[0:3], v[48:51], v[16:33], v[12:14], v[8:10], v[4:6] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[0:3], g1[48:51], g1[16:33], g1[12:14], g1[8:10], g1[4:6] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -1002,7 +1002,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_3x3_4x2() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_3x3_4x2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:1], v[46:47], v[14:31], v[10:12], v[6:8], v[2:4] aux_data:3 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:1], g1[46:47], g1[14:31], g1[10:12], g1[6:8], g1[2:4] aux_data:3 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -1032,7 +1032,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_3x3_4x4() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_3x3_4x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[32:35], v[16:24], v[12:14], v[8:10], v[4:6] aux_data:2 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], g1[32:35], g1[16:24], g1[12:14], g1[8:10], g1[4:6] aux_data:2 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -1062,7 +1062,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_3x3_8x4() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_3x3_8x4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[24:27], v[16:20], v[12:15], v[8:11], v[4:7] clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], g1[24:27], g1[16:20], g1[12:15], g1[8:11], g1[4:7] clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
 
@@ -1092,13 +1092,13 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_iu4 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu4_1x1_4x2_iter_1
@@ -1126,11 +1126,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x2_iter_1
@@ -1157,7 +1157,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x4_iter_1
@@ -1185,11 +1185,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_8x4_iter_1
@@ -1217,13 +1217,13 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_i32_iu4 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu4_1x1_4x2_iter_1
@@ -1251,13 +1251,13 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu4_1x1_4x2_iter_1
@@ -1285,7 +1285,7 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu4 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu4_1x1_4x2_iter_2
@@ -1314,7 +1314,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x2_iter_2
@@ -1343,7 +1343,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x4_iter_2
@@ -1373,11 +1373,11 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_8x4_iter_2
@@ -1406,7 +1406,7 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.i32_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu4 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu4_1x1_4x2_iter_2
@@ -1435,7 +1435,7 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32i32_iu4_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu4_1x1_4x2_iter_2
@@ -1466,19 +1466,19 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32_iu4 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu4_1x1_4x2_iter_3
@@ -1510,16 +1510,16 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:1], v[6:7], v[0:5], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x2_iter_3
@@ -1551,14 +1551,14 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x4_iter_3
@@ -1589,7 +1589,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_8x4_iter_3
@@ -1621,19 +1621,19 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_i32_iu4 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu4_1x1_4x2_iter_3
@@ -1665,19 +1665,19 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu4_1x1_4x2_iter_3
@@ -1708,7 +1708,7 @@ define amdgpu_ps void @test_convolve.f32_iu4_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu4 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_iu4 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu4_1x1_4x2_iter_4
@@ -1740,7 +1740,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x2_iter_4
@@ -1772,7 +1772,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_4x4_iter_4
@@ -1804,7 +1804,7 @@ define amdgpu_ps void @test_convolve.f16_iu4_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_iu4_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu4 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu4 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu4_1x1_8x4_iter_4
@@ -1836,7 +1836,7 @@ define amdgpu_ps void @test_convolve.i32_iu4_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.i32_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu4 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_i32_iu4 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu4_1x1_4x2_iter_4
@@ -1868,7 +1868,7 @@ define amdgpu_ps void @test_convolve.f32i32_iu4_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32i32_iu4_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu4 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32i32_iu4 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu4_1x1_4x2_iter_4
@@ -1899,13 +1899,13 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_iu8 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu8_1x1_4x2_iter_1
@@ -1933,11 +1933,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x2_iter_1
@@ -1964,7 +1964,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x4_iter_1
@@ -1992,11 +1992,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_8x4_iter_1
@@ -2024,13 +2024,13 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_i32_iu8 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu8_1x1_4x2_iter_1
@@ -2058,13 +2058,13 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu8_1x1_4x2_iter_1
@@ -2092,7 +2092,7 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu8 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu8_1x1_4x2_iter_2
@@ -2121,7 +2121,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x2_iter_2
@@ -2150,7 +2150,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x4_iter_2
@@ -2180,11 +2180,11 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_8x4_iter_2
@@ -2213,7 +2213,7 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.i32_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu8 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu8_1x1_4x2_iter_2
@@ -2242,7 +2242,7 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32i32_iu8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu8_1x1_4x2_iter_2
@@ -2273,19 +2273,19 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32_iu8 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu8_1x1_4x2_iter_3
@@ -2317,16 +2317,16 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:1], v[6:7], v[0:5], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x2_iter_3
@@ -2358,14 +2358,14 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x4_iter_3
@@ -2396,7 +2396,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_8x4_iter_3
@@ -2428,19 +2428,19 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_i32_iu8 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu8_1x1_4x2_iter_3
@@ -2472,19 +2472,19 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu8_1x1_4x2_iter_3
@@ -2515,7 +2515,7 @@ define amdgpu_ps void @test_convolve.f32_iu8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_iu8 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_iu8 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_iu8_1x1_4x2_iter_4
@@ -2547,7 +2547,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x2_iter_4
@@ -2579,7 +2579,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_4x4_iter_4
@@ -2611,7 +2611,7 @@ define amdgpu_ps void @test_convolve.f16_iu8_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_iu8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_iu8 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_iu8 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_iu8_1x1_8x4_iter_4
@@ -2643,7 +2643,7 @@ define amdgpu_ps void @test_convolve.i32_iu8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.i32_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_i32_iu8 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_i32_iu8 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_i32_iu8_1x1_4x2_iter_4
@@ -2675,7 +2675,7 @@ define amdgpu_ps void @test_convolve.f32i32_iu8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32i32_iu8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32i32_iu8 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32i32_iu8 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x i32>, ptr addrspace(10) @acc_in_var_f32i32_iu8_1x1_4x2_iter_4
@@ -2706,13 +2706,13 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_fp8_1x1_4x2_iter_1
@@ -2740,11 +2740,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x2_iter_1
@@ -2771,7 +2771,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x4_iter_1
@@ -2799,11 +2799,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_8x4_iter_1
@@ -2831,7 +2831,7 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_fp8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_fp8_1x1_4x2_iter_2
@@ -2860,7 +2860,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x2_iter_2
@@ -2889,7 +2889,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x4_iter_2
@@ -2919,11 +2919,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_8x4_iter_2
@@ -2954,19 +2954,19 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_fp8_1x1_4x2_iter_3
@@ -2998,16 +2998,16 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:1], v[6:7], v[0:5], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x2_iter_3
@@ -3039,14 +3039,14 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x4_iter_3
@@ -3077,7 +3077,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_8x4_iter_3
@@ -3108,7 +3108,7 @@ define amdgpu_ps void @test_convolve.f32_fp8_fp8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_fp8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_fp8 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_fp8_fp8 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_fp8_1x1_4x2_iter_4
@@ -3140,7 +3140,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x2_iter_4
@@ -3172,7 +3172,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_4x4_iter_4
@@ -3204,7 +3204,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_fp8_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_fp8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_fp8 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_fp8_1x1_8x4_iter_4
@@ -3235,13 +3235,13 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_bf8_1x1_4x2_iter_1
@@ -3269,11 +3269,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x2_iter_1
@@ -3300,7 +3300,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x4_iter_1
@@ -3328,11 +3328,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_8x4_iter_1
@@ -3360,7 +3360,7 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_fp8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_bf8_1x1_4x2_iter_2
@@ -3389,7 +3389,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x2_iter_2
@@ -3418,7 +3418,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x4_iter_2
@@ -3448,11 +3448,11 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_8x4_iter_2
@@ -3483,19 +3483,19 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_bf8_1x1_4x2_iter_3
@@ -3527,16 +3527,16 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:1], v[6:7], v[0:5], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x2_iter_3
@@ -3568,14 +3568,14 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x4_iter_3
@@ -3606,7 +3606,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_8x4_iter_3
@@ -3637,7 +3637,7 @@ define amdgpu_ps void @test_convolve.f32_fp8_bf8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_fp8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_fp8_bf8 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_fp8_bf8 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_fp8_bf8_1x1_4x2_iter_4
@@ -3669,7 +3669,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x2_iter_4
@@ -3701,7 +3701,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_4x4_iter_4
@@ -3733,7 +3733,7 @@ define amdgpu_ps void @test_convolve.f16_fp8_bf8_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_fp8_bf8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_fp8_bf8 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_fp8_bf8 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_fp8_bf8_1x1_8x4_iter_4
@@ -3764,13 +3764,13 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_fp8_1x1_4x2_iter_1
@@ -3798,11 +3798,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x2_iter_1
@@ -3829,7 +3829,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x4_iter_1
@@ -3857,11 +3857,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_8x4_iter_1
@@ -3889,7 +3889,7 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_bf8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_fp8_1x1_4x2_iter_2
@@ -3918,7 +3918,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x2_iter_2
@@ -3947,7 +3947,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x4_iter_2
@@ -3977,11 +3977,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_8x4_iter_2
@@ -4012,19 +4012,19 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_fp8_1x1_4x2_iter_3
@@ -4056,16 +4056,16 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:1], v[6:7], v[0:5], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x2_iter_3
@@ -4097,14 +4097,14 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x4_iter_3
@@ -4135,7 +4135,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_8x4_iter_3
@@ -4166,7 +4166,7 @@ define amdgpu_ps void @test_convolve.f32_bf8_fp8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_bf8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_fp8 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_bf8_fp8 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_fp8_1x1_4x2_iter_4
@@ -4198,7 +4198,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x2_iter_4
@@ -4230,7 +4230,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_4x4_iter_4
@@ -4262,7 +4262,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_fp8_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_fp8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_fp8 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_fp8 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_fp8_1x1_8x4_iter_4
@@ -4293,13 +4293,13 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_bf8_1x1_4x2_iter_1
@@ -4327,11 +4327,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x2_iter_1
@@ -4358,7 +4358,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x4_iter_1
@@ -4386,11 +4386,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_8x4_iter_1
@@ -4418,7 +4418,7 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_bf8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_bf8_1x1_4x2_iter_2
@@ -4447,7 +4447,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x2_iter_2
@@ -4476,7 +4476,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x4_iter_2
@@ -4506,11 +4506,11 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_8x4_iter_2
@@ -4541,19 +4541,19 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v15
-; GFX13-NEXT:    v_mov_b32_e32 v7, v16
-; GFX13-NEXT:    v_mov_b32_e32 v8, v17
-; GFX13-NEXT:    v_mov_b32_e32 v9, v18
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[18]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[0:3], v[6:9], v[0:5], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[0:3], v[6:9], v[0:5], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_bf8_1x1_4x2_iter_3
@@ -4585,16 +4585,16 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:1], v[6:7], v[0:5], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:1], v[6:7], v[0:5], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x2_iter_3
@@ -4626,14 +4626,14 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x4_iter_3
@@ -4664,7 +4664,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_8x4_iter_3
@@ -4695,7 +4695,7 @@ define amdgpu_ps void @test_convolve.f32_bf8_bf8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_bf8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf8_bf8 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_bf8_bf8 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf8_bf8_1x1_4x2_iter_4
@@ -4727,7 +4727,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x2_iter_4
@@ -4759,7 +4759,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_4x4_iter_4
@@ -4791,7 +4791,7 @@ define amdgpu_ps void @test_convolve.f16_bf8_bf8_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_bf8_bf8_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_bf8_bf8 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_bf8_bf8 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_bf8_bf8_1x1_8x4_iter_4
@@ -4822,13 +4822,13 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_f16 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_f16 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_f16_1x1_4x2_iter_1
@@ -4856,11 +4856,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x2_iter_1
@@ -4887,7 +4887,7 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x4_iter_1
@@ -4915,11 +4915,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_8x4_iter_1
@@ -4947,7 +4947,7 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_f16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_f16 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_f16_1x1_4x2_iter_2
@@ -4976,7 +4976,7 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x2_iter_2
@@ -5005,7 +5005,7 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x4_iter_2
@@ -5035,11 +5035,11 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_8x4_iter_2
@@ -5070,19 +5070,19 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v8, v15
-; GFX13-NEXT:    v_mov_b32_e32 v9, v16
-; GFX13-NEXT:    v_mov_b32_e32 v10, v17
-; GFX13-NEXT:    v_mov_b32_e32 v11, v18
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_convolve_f32_f16 v[0:3], v[8:11], v[0:7], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v10, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v11, g1[18]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_convolve_f32_f16 g1[0:3], v[8:11], v[0:7], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_f16_1x1_4x2_iter_3
@@ -5114,17 +5114,17 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v8, v13
-; GFX13-NEXT:    v_mov_b32_e32 v9, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_mov_b32_e32 v6, v11
-; GFX13-NEXT:    v_mov_b32_e32 v7, v12
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[8:9], v[0:7], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[12]
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:1], v[8:9], v[0:7], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x2_iter_3
@@ -5156,14 +5156,14 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x4_iter_3
@@ -5194,7 +5194,7 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_8x4_iter_3
@@ -5225,7 +5225,7 @@ define amdgpu_ps void @test_convolve.f32_f16_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_f16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_f16 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_f16 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_f16_1x1_4x2_iter_4
@@ -5257,7 +5257,7 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x2_iter_4
@@ -5289,7 +5289,7 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_4x4_iter_4
@@ -5321,7 +5321,7 @@ define amdgpu_ps void @test_convolve.f16_f16_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.f16_f16_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f16_f16 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x half>, ptr addrspace(10) @acc_in_var_f16_f16_1x1_8x4_iter_4
@@ -5352,13 +5352,13 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v5
-; GFX13-NEXT:    v_mov_b32_e32 v5, v6
-; GFX13-NEXT:    v_convolve_f32_bf16 v[0:3], v[0:3], v[4:5], v4 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[6]
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf16_1x1_4x2_iter_1
@@ -5386,11 +5386,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v3
-; GFX13-NEXT:    v_mov_b32_e32 v3, v4
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:1], v[0:1], v[2:3], v2 aux_data:3 clamp idxs:0x1001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[3]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[4]
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:1], v[0:1], v[2:3], g1[2] aux_data:3 clamp idxs:0x1001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x2_iter_1
@@ -5417,7 +5417,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_1() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x4_iter_1:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[6:9], v5, v4 aux_data:2 clamp idxs:0x1111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], g1[6:9], g1[5], g1[4] aux_data:2 clamp idxs:0x1111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x4_iter_1
@@ -5445,11 +5445,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_1() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[0:3], v6, v[4:5] clamp idxs:0x1101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], v[0:3], g1[6], g1[4:5] clamp idxs:0x1101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_8x4_iter_1
@@ -5477,7 +5477,7 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.f32_bf16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf16 v[0:3], v[10:13], v[6:9], v5, v4 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[0:3], g1[10:13], g1[6:9], g1[5], g1[4] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf16_1x1_4x2_iter_2
@@ -5506,7 +5506,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_2() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x2_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:1], v[8:9], v[4:7], v3, v2 aux_data:4099 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:1], g1[8:9], g1[4:7], g1[3], g1[2] aux_data:4099 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x2_iter_2
@@ -5535,7 +5535,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_2() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x4_iter_2:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[8:11], v[6:7], v5, v4 aux_data:4098 clamp idxs:0x11111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], g1[8:11], g1[6:7], g1[5], g1[4] aux_data:4098 clamp idxs:0x11111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x4_iter_2
@@ -5565,11 +5565,11 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_2() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v9
-; GFX13-NEXT:    v_mov_b32_e32 v1, v10
-; GFX13-NEXT:    v_mov_b32_e32 v2, v11
-; GFX13-NEXT:    v_mov_b32_e32 v3, v12
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[0:3], v8, v[6:7], v[4:5] aux_data:4096 clamp idxs:0x11101
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[12]
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], v[0:3], g1[8], g1[6:7], g1[4:5] aux_data:4096 clamp idxs:0x11101
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_8x4_iter_2
@@ -5600,19 +5600,19 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v8, v15
-; GFX13-NEXT:    v_mov_b32_e32 v9, v16
-; GFX13-NEXT:    v_mov_b32_e32 v10, v17
-; GFX13-NEXT:    v_mov_b32_e32 v11, v18
-; GFX13-NEXT:    v_mov_b32_e32 v0, v7
-; GFX13-NEXT:    v_mov_b32_e32 v1, v8
-; GFX13-NEXT:    v_mov_b32_e32 v2, v9
-; GFX13-NEXT:    v_mov_b32_e32 v3, v10
-; GFX13-NEXT:    v_mov_b32_e32 v4, v11
-; GFX13-NEXT:    v_mov_b32_e32 v5, v12
-; GFX13-NEXT:    v_mov_b32_e32 v6, v13
-; GFX13-NEXT:    v_mov_b32_e32 v7, v14
-; GFX13-NEXT:    v_convolve_f32_bf16 v[0:3], v[8:11], v[0:7], v6, v5, v4 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[15]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[16]
+; GFX13-NEXT:    v_mov_b32_e32 v10, g1[17]
+; GFX13-NEXT:    v_mov_b32_e32 v11, g1[18]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[14]
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[0:3], v[8:11], v[0:7], g1[6], g1[5], g1[4] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf16_1x1_4x2_iter_3
@@ -5644,17 +5644,17 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v8, v13
-; GFX13-NEXT:    v_mov_b32_e32 v9, v14
-; GFX13-NEXT:    v_mov_b32_e32 v0, v5
-; GFX13-NEXT:    v_mov_b32_e32 v1, v6
-; GFX13-NEXT:    v_mov_b32_e32 v2, v7
-; GFX13-NEXT:    v_mov_b32_e32 v3, v8
-; GFX13-NEXT:    v_mov_b32_e32 v4, v9
-; GFX13-NEXT:    v_mov_b32_e32 v5, v10
-; GFX13-NEXT:    v_mov_b32_e32 v6, v11
-; GFX13-NEXT:    v_mov_b32_e32 v7, v12
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:1], v[8:9], v[0:7], v4, v3, v2 aux_data:8195 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v8, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v9, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[5]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[6]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[9]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[10]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v7, g1[12]
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:1], v[8:9], v[0:7], g1[4], g1[3], g1[2] aux_data:8195 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x2_iter_3
@@ -5686,14 +5686,14 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_3() {
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; GFX13-NEXT:    s_set_vgpr_frames 1 ; vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_mov_b32_e32 v0, v11
-; GFX13-NEXT:    v_mov_b32_e32 v1, v12
-; GFX13-NEXT:    v_mov_b32_e32 v2, v13
-; GFX13-NEXT:    v_mov_b32_e32 v3, v14
-; GFX13-NEXT:    v_mov_b32_e32 v4, v7
-; GFX13-NEXT:    v_mov_b32_e32 v5, v8
-; GFX13-NEXT:    v_mov_b32_e32 v6, v9
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[0:3], v[4:6], v6, v5, v4 aux_data:8194 clamp idxs:0x111001
+; GFX13-NEXT:    v_mov_b32_e32 v0, g1[11]
+; GFX13-NEXT:    v_mov_b32_e32 v1, g1[12]
+; GFX13-NEXT:    v_mov_b32_e32 v2, g1[13]
+; GFX13-NEXT:    v_mov_b32_e32 v3, g1[14]
+; GFX13-NEXT:    v_mov_b32_e32 v4, g1[7]
+; GFX13-NEXT:    v_mov_b32_e32 v5, g1[8]
+; GFX13-NEXT:    v_mov_b32_e32 v6, g1[9]
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], v[0:3], v[4:6], g1[6], g1[5], g1[4] aux_data:8194 clamp idxs:0x111001
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x4_iter_3
@@ -5724,7 +5724,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_3() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_8x4_iter_3:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[12:15], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:8192 clamp idxs:0x111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], g1[12:15], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:8192 clamp idxs:0x111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_8x4_iter_3
@@ -5755,7 +5755,7 @@ define amdgpu_ps void @test_convolve.f32_bf16_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.f32_bf16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_f32_bf16 v[0:3], v[16:19], v[8:15], v7, v6, v5, v4 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_f32_bf16 g1[0:3], g1[16:19], g1[8:15], g1[7], g1[6], g1[5], g1[4] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x float>, ptr addrspace(10) @acc_in_var_f32_bf16_1x1_4x2_iter_4
@@ -5787,7 +5787,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x2_iter_4() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x2_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:1], v[14:15], v[6:13], v5, v4, v3, v2 aux_data:12291 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:1], g1[14:15], g1[6:13], g1[5], g1[4], g1[3], g1[2] aux_data:12291 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <4 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x2_iter_4
@@ -5819,7 +5819,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_4x4_iter_4() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_4x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[12:15], v[8:11], v7, v6, v5, v4 aux_data:12290 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], g1[12:15], g1[8:11], g1[7], g1[6], g1[5], g1[4] aux_data:12290 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_4x4_iter_4
@@ -5851,7 +5851,7 @@ define amdgpu_ps void @test_convolve.bf16_bf16_1x1_8x4_iter_4() {
 ; GFX13-LABEL: test_convolve.bf16_bf16_1x1_8x4_iter_4:
 ; GFX13:       ; %bb.0: ; %bb
 ; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; GFX13-NEXT:    v_convolve_bf16_bf16 v[0:3], v[14:17], v[12:13], v[10:11], v[8:9], v[6:7], v[4:5] aux_data:12288 clamp idxs:0x1111111
+; GFX13-NEXT:    v_convolve_bf16_bf16 g1[0:3], g1[14:17], g1[12:13], g1[10:11], g1[8:9], g1[6:7], g1[4:5] aux_data:12288 clamp idxs:0x1111111
 ; GFX13-NEXT:    s_endpgm
 bb:
   %acc_in = load <8 x bfloat>, ptr addrspace(10) @acc_in_var_bf16_bf16_1x1_8x4_iter_4

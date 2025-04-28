@@ -149,10 +149,13 @@ bool AMDGPUMCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
 void AMDGPUMCInstrAnalysis::updateState(const MCInst &Inst, uint64_t Addr) {
   if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_MSB_gfx12)
     VgprMSBs = Inst.getOperand(0).getImm();
-  else if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_FRAMES_gfx13)
+  else if (Inst.getOpcode() == AMDGPU::S_SET_VGPR_FRAMES_gfx13) {
     VgprMSBs = Inst.getOperand(0).getImm() >> 8;
-  else if (isTerminator(Inst))
+    VgprIDXs = Inst.getOperand(0).getImm() & 0xff;
+  } else if (isTerminator(Inst)) {
     VgprMSBs = 0;
+    VgprIDXs = 0;
+  }
 }
 
 } // end namespace AMDGPU

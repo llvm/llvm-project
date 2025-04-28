@@ -656,6 +656,12 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
   MCContext &Ctx = MF.getContext();
 
+  MCInstPrinter *Printer = OutStreamer->getInstPrinterPtr();
+  if (Printer) {
+    MIA.reset(TM.getTarget().createMCInstrAnalysis(TM.getMCInstrInfo()));
+    Printer->setMCInstrAnalysis(MIA.get());
+  }
+
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
   MF.setAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
@@ -1740,7 +1746,7 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   // TODO: Should be able to support other operand types like globals.
   const MachineOperand &MO = MI->getOperand(OpNo);
   if (MO.isReg()) {
-    AMDGPUInstPrinter::printRegOperand(MO.getReg(), O,
+    AMDGPUInstPrinter::printRegOperand(MO.getReg(), *getGlobalSTI(), O,
                                        *MF->getSubtarget().getRegisterInfo());
     return false;
   }

@@ -80,7 +80,7 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) {
 ; CHECK-NEXT:    v_add_f32_e32 v30, 2.0, v0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 v1, v30
+; CHECK-NEXT:    v_mov_b32_e32 g1[1], v30
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.3: ; %bb3
@@ -90,11 +90,11 @@ define amdgpu_kernel void @basic(ptr addrspace(5) %out, ptr addrspace(5) %in) {
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_add_f32_e64 v1, v30, 2.0
+; CHECK-NEXT:    v_add_f32_e64 g1[1], v30, 2.0
 ; CHECK-NEXT:  .LBB0_5: ; %exit
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    scratch_store_b32 off, v1, s0
+; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, s0 offset:28
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
@@ -200,7 +200,7 @@ define amdgpu_kernel void @load_without_store(ptr addrspace(5) %out) {
 ; CHECK-NEXT:    scratch_store_b32 off, v0, s0 offset:12
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    scratch_store_b32 off, v1, s0 offset:28
+; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_endpgm
 entry:
@@ -271,11 +271,11 @@ define amdgpu_kernel void @bypassed_store(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:  ; %bb.1: ; %store
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 1.0
+; CHECK-NEXT:    v_mov_b32_e32 g1[1], 1.0
 ; CHECK-NEXT:  .LBB2_2: ; %skip
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    scratch_store_b32 off, v1, s0 offset:28
+; CHECK-NEXT:    scratch_store_b32 off, g1[1], s0 offset:28
 ; CHECK-NEXT:    s_endpgm
 entry:
   %out.3 = getelementptr i32, ptr addrspace(5) %out, i32 3
@@ -355,7 +355,7 @@ define amdgpu_kernel void @def_in_nonentry_block(ptr addrspace(5) %out, float %x
 ; CHECK-NEXT:    ; implicit-def: $vgpr29
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 v1, v30
+; CHECK-NEXT:    v_mov_b32_e32 g1[1], v30
 ; CHECK-NEXT:    scratch_store_b32 off, v30, s0 offset:28
 ; CHECK-NEXT:  .LBB3_2: ; %ret
 ; CHECK-NEXT:    s_endpgm
@@ -442,13 +442,13 @@ define amdgpu_kernel void @loop(ptr addrspace(5) %out, i32 %x) {
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_cmp_lt_u32 s2, s1
 ; CHECK-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_mov_b32_e32 v0, v30
+; CHECK-NEXT:    v_mov_b32_e32 g1[0], v30
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    scratch_store_b32 off, v5, s0
+; CHECK-NEXT:    scratch_store_b32 off, g1[5], s0
 ; CHECK-NEXT:    s_endpgm
 entry:
   %p = alloca [30 x i32], align 4, addrspace(5)
