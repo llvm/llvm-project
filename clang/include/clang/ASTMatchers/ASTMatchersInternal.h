@@ -872,7 +872,7 @@ IteratorT matchesFirstInPointerRange(const MatcherT &Matcher, IteratorT Start,
 }
 
 template <typename T> inline bool isDefaultedHelper(const T *FD) {
-  if constexpr (std::is_base_of<FunctionDecl, T>::value)
+  if constexpr (std::is_base_of_v<FunctionDecl, T>)
     return FD->isDefaulted();
   return false;
 }
