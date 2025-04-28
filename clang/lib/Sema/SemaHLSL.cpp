@@ -29,6 +29,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/Template.h"
@@ -948,6 +949,23 @@ void SemaHLSL::emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS,
   SourceRange FullRange = SourceRange(LHS->getBeginLoc(), RHS->getEndLoc());
   SemaRef.Diag(LHS->getBeginLoc(), diag::note_function_suggestion)
       << NewFnName << FixItHint::CreateReplacement(FullRange, OS.str());
+}
+
+void SemaHLSL::handleRootSignatureAttr(Decl *D, const ParsedAttr &AL) {
+  if (AL.getNumArgs() != 1) {
+    Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments) << AL << 1;
+    return;
+  }
+
+  IdentifierInfo *Ident = AL.getArgAsIdent(0)->getIdentifierInfo();
+  LookupResult R(SemaRef, Ident, SourceLocation(), Sema::LookupOrdinaryName);
+  if (SemaRef.LookupQualifiedName(R, D->getDeclContext()))
+    if (auto *SignatureDecl =
+            dyn_cast<HLSLRootSignatureDecl>(R.getFoundDecl())) {
+      // Perform validation of constructs here
+      D->addAttr(::new (getASTContext())
+                     RootSignatureAttr(getASTContext(), AL, Ident));
+    }
 }
 
 void SemaHLSL::handleNumThreadsAttr(Decl *D, const ParsedAttr &AL) {

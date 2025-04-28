@@ -5848,6 +5848,31 @@ bool HLSLBufferDecl::buffer_decls_empty() {
 }
 
 //===----------------------------------------------------------------------===//
+// HLSLRootSignatureDecl Implementation
+//===----------------------------------------------------------------------===//
+
+HLSLRootSignatureDecl::HLSLRootSignatureDecl(
+    DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements)
+    : NamedDecl(Decl::Kind::HLSLRootSignature, DC, Loc, DeclarationName(ID)),
+      RootElements(RootElements) {}
+
+HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements) {
+  HLSLRootSignatureDecl *Result =
+      new (C, DC) HLSLRootSignatureDecl(DC, Loc, ID, RootElements);
+  return Result;
+}
+
+HLSLRootSignatureDecl *
+HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  HLSLRootSignatureDecl *Result =
+      new (C, ID) HLSLRootSignatureDecl(nullptr, SourceLocation(), nullptr, {});
+  return Result;
+}
+
+//===----------------------------------------------------------------------===//
 // ImportDecl Implementation
 //===----------------------------------------------------------------------===//
 

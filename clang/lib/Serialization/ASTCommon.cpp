@@ -458,6 +458,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
   case Decl::HLSLBuffer:
+  case Decl::HLSLRootSignature:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
     return false;

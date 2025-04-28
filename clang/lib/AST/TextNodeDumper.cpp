@@ -3037,6 +3037,10 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   dumpName(D);
 }
 
+void TextNodeDumper::VisitHLSLRootSignatureDecl(const HLSLRootSignatureDecl *D) {
+  dumpName(D);
+}
+
 void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {
   OS << (E->isInOut() ? " inout" : " out");
 }

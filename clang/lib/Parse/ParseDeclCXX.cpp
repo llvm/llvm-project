@@ -21,10 +21,12 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Parse/ParseHLSLRootSignature.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
@@ -5311,6 +5313,92 @@ void Parser::ParseMicrosoftUuidAttributeArgs(ParsedAttributes &Attrs) {
   }
 }
 
+void Parser::ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
+  assert(Tok.is(tok::identifier) && "Not a Microsoft attribute list");
+  IdentifierInfo *RootSignatureIdent = Tok.getIdentifierInfo();
+  assert(RootSignatureIdent->getName() == "RootSignature" &&
+         "Not a Microsoft attribute list");
+
+  SourceLocation RootSignatureLoc = Tok.getLocation();
+  ConsumeToken();
+
+  // Ignore the left paren location for now.
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return;
+  }
+
+  if (!isTokenStringLiteral()) {
+    Diag(Tok, diag::err_expected_string_literal)
+        << /*in attributes...*/ 4 << RootSignatureIdent->getName();
+    SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
+    if (Tok.is(tok::r_paren))
+      T.consumeClose();
+    return;
+  }
+
+  ExprResult StringResult = ParseUnevaluatedStringLiteralExpression();
+  if (StringResult.isInvalid()) {
+    SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
+    if (Tok.is(tok::r_paren))
+      T.consumeClose();
+    return;
+  }
+
+  ArgsVector Args;
+  if (auto Lit = dyn_cast<StringLiteral>(StringResult.get())) {
+    // Construct our identifier
+    StringRef Signature = Lit->getString();
+    auto Hash = llvm::hash_value(Signature);
+    std::string IdStr = "__hlsl_rootsig_decl_" + std::to_string(Hash);
+    IdentifierInfo *DeclIdent = &(Actions.getASTContext().Idents.get(IdStr));
+
+    LookupResult R(Actions, DeclIdent, SourceLocation(),
+                   Sema::LookupOrdinaryName);
+    // Check if we have already found a decl of the same name, if we haven't
+    // then parse the root signature string and construct the in-memory elements
+    if (!Actions.LookupQualifiedName(R, Actions.CurContext)) {
+      // Invoke the root signature parser to construct the in-memory constructs
+      hlsl::RootSignatureLexer Lexer(Signature, RootSignatureLoc);
+      SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
+      hlsl::RootSignatureParser Parser(Elements, Lexer, PP);
+      if (Parser.parse()) {
+        SkipUntil(tok::r_square, StopAtSemi | StopBeforeMatch);
+        if (Tok.is(tok::r_paren))
+          T.consumeClose();
+        return;
+      }
+
+      // Allocate the root elements onto ASTContext
+      unsigned N = Elements.size();
+      auto RootElements = MutableArrayRef<llvm::hlsl::rootsig::RootElement>(
+          ::new (Actions.getASTContext()) llvm::hlsl::rootsig::RootElement[N],
+          N);
+      for (unsigned I = 0; I < N; ++I)
+        RootElements[I] = Elements[I];
+
+      // Create the Root Signature
+      auto *SignatureDecl = HLSLRootSignatureDecl::Create(
+          Actions.getASTContext(), /*FIXME?*/ Actions.CurContext,
+          RootSignatureLoc, DeclIdent, RootElements);
+      SignatureDecl->setImplicit();
+      Actions.PushOnScopeChains(SignatureDecl, getCurScope());
+    }
+
+    // Create the arg for the ParsedAttr
+    IdentifierLoc *ILoc = ::new (Actions.getASTContext())
+        IdentifierLoc(RootSignatureLoc, DeclIdent);
+    Args.push_back(ILoc);
+  }
+
+  if (!T.consumeClose())
+    Attrs.addNew(RootSignatureIdent,
+                 SourceRange(RootSignatureLoc, T.getCloseLocation()), nullptr,
+                 SourceLocation(), Args.data(), Args.size(),
+                 ParsedAttr::Form::Microsoft());
+}
+
 /// ParseMicrosoftAttributes - Parse Microsoft attributes [Attr]
 ///
 /// [MS] ms-attribute:
@@ -5345,6 +5433,8 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
         break;
       if (Tok.getIdentifierInfo()->getName() == "uuid")
         ParseMicrosoftUuidAttributeArgs(Attrs);
+      else if (Tok.getIdentifierInfo()->getName() == "RootSignature")
+        ParseMicrosoftRootSignatureAttributeArgs(Attrs);
       else {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         SourceLocation NameLoc = Tok.getLocation();
