@@ -226,9 +226,9 @@ def get_option_list(input_file):
 
 
 p = argparse.ArgumentParser()
-p.add_argument("-i", "--input", help="path to AnalyzerOptions.def")
-p.add_argument("-t", "--template", help="path of template file")
-p.add_argument("-o", "--output", help="path of output file")
+p.add_argument("--options-def", help="path to AnalyzerOptions.def")
+p.add_argument("--template", help="path of template file")
+p.add_argument("--out", help="path of output file")
 opts = p.parse_args()
 
 with open(opts.template, encoding="utf-8") as f:
@@ -236,7 +236,7 @@ with open(opts.template, encoding="utf-8") as f:
 
 PLACEHOLDER = ".. OPTIONS_LIST_PLACEHOLDER\n"
 
-rst_output = doc_template.replace(PLACEHOLDER, get_option_list(opts.input))
+rst_output = doc_template.replace(PLACEHOLDER, get_option_list(opts.options_def))
 
-with open(opts.output, "w", newline="", encoding="utf-8") as f:
+with open(opts.out, "w", newline="", encoding="utf-8") as f:
     f.write(rst_output)
