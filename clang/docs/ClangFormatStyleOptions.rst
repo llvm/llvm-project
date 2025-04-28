@@ -5195,6 +5195,29 @@ the configuration (without a prefix: ``Auto``).
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
 
+.. _OneLineFormatOffRegex:
+
+**OneLineFormatOffRegex** (``String``) :versionbadge:`clang-format 21` :ref:`¶ <OneLineFormatOffRegex>`
+  A regular expression that describes markers for turning formatting off for
+  one line. If it matches a line comment that is the first/only token of a
+  line, clang-format skips the next line. Otherwise, clang-format skips the
+  line that contains a matched token.
+
+  .. code-block:: c++
+
+     // OneLineFormatOffRegex: ^(// NOLINT|logger$)
+     // results in the output below:
+     int a;
+     int b ;  // NOLINT
+     int c;
+     // NOLINTNEXTLINE
+     int d ;
+     int e;
+     s = "// NOLINT";
+     logger() ;
+     logger2();
+     my_logger();
+
 .. _PPIndentWidth:
 
 **PPIndentWidth** (``Integer``) :versionbadge:`clang-format 13` :ref:`¶ <PPIndentWidth>`
