@@ -2062,7 +2062,7 @@ define <8 x i16> @test_concat_v8i16_v8i16_v4i16(<8 x i16> %x, <4 x i16> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v8i16_v8i16_v4i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v2.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov h2, v0.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v2.h[1], v0.h[1]
 ; CHECK-GI-NEXT:    mov v2.h[2], v0.h[2]
@@ -2189,7 +2189,7 @@ define <4 x i32> @test_concat_v4i32_v4i32_v2i32(<4 x i32> %x, <2 x i32> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v4i32_v4i32_v2i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v2.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov s2, v0.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
@@ -2252,7 +2252,7 @@ define <2 x i64> @test_concat_v2i64_v2i64_v1i64(<2 x i64> %x, <1 x i64> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v2i64_v2i64_v1i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[0], v0.d[0]
+; CHECK-GI-NEXT:    mov d0, v0.d[0]
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret

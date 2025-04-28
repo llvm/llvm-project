@@ -142,10 +142,6 @@ bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   if (T == PT_Ptr) {
     const auto &Ptr = S.Stk.pop<Pointer>();
     return this->emitBool(CheckBCPResult(S, Ptr), E);
-  } else if (T == PT_FnPtr) {
-    S.Stk.discard<FunctionPointer>();
-    // Never accepted
-    return this->emitBool(false, E);
   }
 
   // Otherwise, this is fine!
@@ -208,14 +204,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
     EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
   }
 
-  return true;
-}
-template <> bool EvalEmitter::emitRet<PT_FnPtr>(const SourceInfo &Info) {
-  if (!isActive())
-    return true;
-
-  // Function pointers cannot be converted to rvalues.
-  EvalResult.setFunctionPointer(S.Stk.pop<FunctionPointer>());
   return true;
 }
 

@@ -256,8 +256,6 @@ static const char *primTypeToString(PrimType T) {
     return "Float";
   case PT_Ptr:
     return "Ptr";
-  case PT_FnPtr:
-    return "FnPtr";
   case PT_MemberPtr:
     return "MemberPtr";
   case PT_FixedPoint:
@@ -376,6 +374,8 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   if (isDummy())
     OS << " dummy";
+  if (IsConstexprUnknown)
+    OS << " constexpr-unknown";
 }
 
 /// Dump descriptor, including all valid offsets.

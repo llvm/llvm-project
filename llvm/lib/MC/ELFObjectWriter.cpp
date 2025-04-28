@@ -1385,8 +1385,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
 
   auto EMachine = TargetObjectWriter->getEMachine();
   unsigned Type;
-  if (Fixup.getKind() >= FirstLiteralRelocationKind &&
-      EMachine != ELF::EM_LOONGARCH)
+  if (mc::isRelocRelocation(Fixup.getKind()))
     Type = Fixup.getKind() - FirstLiteralRelocationKind;
   else
     Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
@@ -1396,9 +1395,8 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   if (UseSectionSym) {
     UseSectionSym = useSectionSymbol(Asm, Target, SymA, C, Type);
 
-    // Disable STT_SECTION adjustment for CG Profile to help with --cg-profile.
-    const auto *Parent = cast<MCSectionELF>(Fragment->getParent());
-    UseSectionSym &= Parent->getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
+    // Disable STT_SECTION adjustment for .reloc directives.
+    UseSectionSym &= !mc::isRelocRelocation(Fixup.getKind());
   }
 
   uint64_t Addend = UseSectionSym ? C + Asm.getSymbolOffset(*SymA) : C;
