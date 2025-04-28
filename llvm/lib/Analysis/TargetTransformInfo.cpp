@@ -986,11 +986,10 @@ InstructionCost TargetTransformInfo::getShuffleCost(
 
 TargetTransformInfo::PartialReductionExtendKind
 TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
-  if (isa<SExtInst>(I))
-    return PR_SignExtend;
-  if (isa<ZExtInst>(I))
-    return PR_ZeroExtend;
-  return PR_None;
+  auto *Cast = dyn_cast<CastInst>(I);
+  if (!Cast)
+    return PR_None;
+  return getPartialReductionExtendKind(Cast->getOpcode());
 }
 
 TargetTransformInfo::PartialReductionExtendKind
