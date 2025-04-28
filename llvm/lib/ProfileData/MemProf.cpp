@@ -263,7 +263,7 @@ GlobalValue::GUID IndexedMemProfRecord::getGUID(const StringRef FunctionName) {
   // We use the function guid which we expect to be a uint64_t. At
   // this time, it is the lower 64 bits of the md5 of the canonical
   // function name.
-  return Function::getGUID(CanonicalName);
+  return Function::getGUIDAssumingExternalLinkage(CanonicalName);
 }
 
 Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
