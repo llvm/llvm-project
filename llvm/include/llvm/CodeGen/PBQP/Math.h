@@ -25,8 +25,6 @@ using PBQPNum = float;
 
 /// PBQP Vector class.
 class Vector {
-  friend hash_code hash_value(const Vector &);
-
 public:
   /// Construct a PBQP vector of the given size.
   explicit Vector(unsigned Length) : Data(Length) {}
@@ -96,7 +94,7 @@ private:
 inline hash_code hash_value(const Vector &V) {
   const unsigned *VBegin = reinterpret_cast<const unsigned *>(V.begin());
   const unsigned *VEnd = reinterpret_cast<const unsigned *>(V.end());
-  return hash_combine(V.Data.size(), hash_combine_range(VBegin, VEnd));
+  return hash_combine(V.getLength(), hash_combine_range(VBegin, VEnd));
 }
 
 /// Output a textual representation of the given vector on the given
