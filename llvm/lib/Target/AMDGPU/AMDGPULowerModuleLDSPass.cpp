@@ -186,6 +186,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1441,6 +1442,8 @@ private:
     if (!MaxDepth || (A == 1 && !AliasScope))
       return;
 
+    ScopedNoAliasAAResult ScopedNoAlias;
+
     for (User *U : Ptr->users()) {
       if (auto *I = dyn_cast<Instruction>(U)) {
         if (AliasScope && I->mayReadOrWriteMemory()) {
@@ -1450,7 +1453,34 @@ private:
           I->setMetadata(LLVMContext::MD_alias_scope, AS);
 
           MDNode *NA = I->getMetadata(LLVMContext::MD_noalias);
-          NA = (NA ? MDNode::intersect(NA, NoAlias) : NoAlias);
+
+          // Scoped aliases can originate from two different domains.
+          // First domain would be from LDS domain (created by this pass).
+          // All entries (LDS vars) into LDS struct will have same domain.
+
+          // Second domain could be existing scoped aliases that are the
+          // results of noalias params and subsequent optimizations that
+          // may alter thesse sets.
+
+          // We need to be careful how we create new alias sets, and
+          // have right scopes and domains for loads/stores of these new
+          // LDS variables. We intersect NoAlias set if alias sets belong
+          // to the same domain. This is the case if we have memcpy using
+          // LDS variables. Both src and dst of memcpy would belong to
+          // LDS struct, they donot alias.
+          // On the other hand, if one of the domains is LDS and other is
+          // existing domain prior to LDS, we need to have a union of all
+          // these aliases set to preserve existing aliasing information.
+
+          SmallPtrSet<const MDNode *, 16> ExistingDomains, LDSDomains;
+          ScopedNoAlias.collectScopedDomains(NA, ExistingDomains);
+          ScopedNoAlias.collectScopedDomains(NoAlias, LDSDomains);
+          auto Intersection = set_intersection(ExistingDomains, LDSDomains);
+          if (Intersection.empty()) {
+            NA = NA ? MDNode::concatenate(NA, NoAlias) : NoAlias;
+          } else {
+            NA = NA ? MDNode::intersect(NA, NoAlias) : NoAlias;
+          }
           I->setMetadata(LLVMContext::MD_noalias, NA);
         }
       }
