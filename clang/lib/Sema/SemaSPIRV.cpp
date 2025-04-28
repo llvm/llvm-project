@@ -110,7 +110,6 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(unsigned BuiltinID,
     QualType RetTy = ArgTyA;
     TheCall->setType(RetTy);
     assert(RetTy == ArgTyA);
-    //assert(ArgTyB == ArgTyA);
     break;
   }
   case SPIRV::BI__builtin_spirv_reflect: {
