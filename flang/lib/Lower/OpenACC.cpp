@@ -3754,7 +3754,7 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                            const Fortran::parser::AccObjectList &accObjectList,
                            mlir::acc::DataClause clause) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  auto genCtros = [&](const mlir::Location operandLocation,
+  auto genCtors = [&](const mlir::Location operandLocation,
                       const Fortran::semantics::Symbol &symbol) {
     std::string globalName = converter.mangleName(symbol);
     fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
@@ -3822,7 +3822,7 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
               if (const auto *name =
                       Fortran::semantics::getDesignatorNameIfDataRef(
                           designator)) {
-                genCtros(operandLocation, *name->symbol);
+                genCtors(operandLocation, *name->symbol);
               }
             },
             [&](const Fortran::parser::Name &name) {
@@ -3830,7 +3830,7 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                 if (const auto *commonBlockDetails =
                         symbol->detailsIf<
                             Fortran::semantics::CommonBlockDetails>()) {
-                  genCtros(operandLocation, *symbol);
+                  genCtors(operandLocation, *symbol);
                 } else {
                   TODO(operandLocation,
                        "OpenACC Global Ctor from parser::Name");
