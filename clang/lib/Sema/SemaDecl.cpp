@@ -6109,6 +6109,15 @@ static bool isFromSystemHeader(SourceManager &SM, const Decl *D) {
          SM.isInSystemMacro(D->getLocation());
 }
 
+constexpr unsigned countCPlusPlusKeywords() {
+  unsigned Ret = 0;
+#define MODULES_KEYWORD(NAME)
+#define KEYWORD(NAME, FLAGS) ++Ret;
+#define CXX_KEYWORD_OPERATOR(NAME, TOK) ++Ret;
+#include "clang/Basic/TokenKinds.def"
+  return Ret;
+}
+
 static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo *II) {
   if (!II)
     return false;
@@ -6119,16 +6128,18 @@ static bool isKeywordInCPlusPlus(const Sema &S, const IdentifierInfo *II) {
   // or not. Note, this treats all keywords as being enabled, regardless of the
   // setting of other language options. It intentionally disables the modules
   // keywords because those are conditional keywords, so may be safe to use.
-  static llvm::SmallVector<uintptr_t, 48> Keywords;
-  if (Keywords.empty()) {
+  static std::array<uintptr_t, countCPlusPlusKeywords()> Keywords = {};
+  if (!Keywords[0]) {
+    unsigned Idx = 0;
 #define MODULES_KEYWORD(NAME)
 #define KEYWORD(NAME, FLAGS)                                                   \
-  Keywords.push_back(reinterpret_cast<uint64_t>(                               \
-      &S.getPreprocessor().getIdentifierTable().get(#NAME)));
+  Keywords[Idx++] = reinterpret_cast<uint64_t>(                                \
+      &S.getPreprocessor().getIdentifierTable().get(#NAME));
 #define CXX_KEYWORD_OPERATOR(NAME, TOK)                                        \
-  Keywords.push_back(reinterpret_cast<uint64_t>(                               \
-      &S.getPreprocessor().getIdentifierTable().get(#NAME)));
+  Keywords[Idx++] = reinterpret_cast<uint64_t>(                                \
+      &S.getPreprocessor().getIdentifierTable().get(#NAME));
 #include "clang/Basic/TokenKinds.def"
+    assert(Idx == Keywords.size() && "expected to fill every member!");
     llvm::sort(Keywords);
   }
 
