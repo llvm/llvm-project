@@ -4312,6 +4312,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  Value *extractLowerShadow(IRBuilder<> &IRB, Value *V) {
+    assert(isa<FixedVectorType>(V->getType()));
+    assert(cast<FixedVectorType>(V->getType())->getNumElements() > 0);
+    Value *Shadow = getShadow(V);
+    return IRB.CreateExtractElement(Shadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+  }
+
   // For sh.* compiler intrinsics:
   //   llvm.x86.avx512fp16.mask.{add/sub/mul/div/max/min}.sh.round
   //     (<8 x half>, <8 x half>, <8 x half>, i8,  i32)
@@ -4329,7 +4336,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Mask = I.getOperand(3);
     Value *RoundingMode = I.getOperand(4);
 
-    // Technically, we could probably just check whether the LSB is initialized
+    // Technically, we could probably just check whether the LSB is
+    // initialized, but intuitively it feels like a partly uninitialized mask
+    // is unintended, and we should warn the user immediately.
     insertShadowCheck(Mask, &I);
     insertShadowCheck(RoundingMode, &I);
 
@@ -4342,25 +4351,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(Mask->getType()->getPrimitiveSizeInBits() == NumElements);
     assert(RoundingMode->getType()->isIntegerTy());
 
-    Value *AShadow = getShadow(A);
-    Value *AShadowLower = IRB.CreateExtractElement(
-        AShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+    Value *ALowerShadow = extractLowerShadow(IRB, A);
+    Value *BLowerShadow = extractLowerShadow(IRB, B);
 
-    Value *BShadow = getShadow(B);
-    Value *BShadowLower = IRB.CreateExtractElement(
-        BShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+    Value *ABLowerShadow = IRB.CreateOr(ALowerShadow, BLowerShadow);
 
-    Value *ABLowerShadow = IRB.CreateOr(AShadowLower, BShadowLower);
-
-    Value *WriteThroughShadow = getShadow(WriteThrough);
-    Value *WriteThroughLowerShadow = IRB.CreateExtractElement(
-        WriteThroughShadow, ConstantInt::get(IRB.getInt32Ty(), 0));
+    Value *WriteThroughLowerShadow = extractLowerShadow(IRB, WriteThrough);
 
     Mask = IRB.CreateBitCast(
         Mask, FixedVectorType::get(IRB.getInt1Ty(), NumElements));
     Value *MaskLower =
         IRB.CreateExtractElement(Mask, ConstantInt::get(IRB.getInt32Ty(), 0));
 
+    Value *AShadow = getShadow(A);
     Value *DstLowerShadow =
         IRB.CreateSelect(MaskLower, ABLowerShadow, WriteThroughLowerShadow);
     Value *DstShadow = IRB.CreateInsertElement(
