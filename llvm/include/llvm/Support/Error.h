@@ -262,7 +262,7 @@ private:
   // of debug prints can cause the function to be too large for inlining.  So
   // it's important that we define this function out of line so that it can't be
   // inlined.
-  [[noreturn]] void fatalUncheckedError() const;
+  [[noreturn]] LLVM_ABI void fatalUncheckedError() const;
 #endif
 
   void assertIsChecked() {
@@ -401,6 +401,10 @@ private:
     Payloads.push_back(std::move(Payload1));
     Payloads.push_back(std::move(Payload2));
   }
+
+  // Explicitly non-copyable.
+  ErrorList(ErrorList const &) = delete;
+  ErrorList &operator=(ErrorList const &) = delete;
 
   static Error join(Error E1, Error E2) {
     if (!E1)
@@ -1195,7 +1199,7 @@ public:
   void log(raw_ostream &OS) const override { OS << EC.message(); }
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  LLVM_ABI static char ID;
 
 protected:
   ECError() = default;

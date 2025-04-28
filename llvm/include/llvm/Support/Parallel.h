@@ -42,7 +42,7 @@ LLVM_ABI extern ThreadPoolStrategy strategy;
 #ifdef _WIN32
 // Direct access to thread_local variables from a different DLL isn't
 // possible with Windows Native TLS.
-unsigned getThreadIndex();
+LLVM_ABI unsigned getThreadIndex();
 #else
 // Don't access this directly, use the getThreadIndex wrapper.
 LLVM_ABI extern thread_local unsigned threadIndex;

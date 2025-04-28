@@ -181,7 +181,7 @@ public:
     bool OutlinerLeafDescendants = !LeafNodes.empty();
 
     /// Move the iterator to the next repeated substring.
-    void advance();
+    LLVM_ABI void advance();
 
   public:
     /// Return the current repeated substring.

@@ -28,6 +28,8 @@
 #ifndef LLVM_SUPPORT_DEBUG_H
 #define LLVM_SUPPORT_DEBUG_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class raw_ostream;
