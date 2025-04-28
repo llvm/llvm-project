@@ -2175,11 +2175,11 @@ multiclass FlatStorePats_t16<FLAT_Pseudo inst, SDPatternOperator node, ValueType
 
 let OtherPredicates = [HasFlatAddressSpace] in {
 
-defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i32>;
-defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_8_flat, i16>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_aext_8_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_UBYTE, atomic_load_zext_8_flat, i16>;
-defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i32>;
+defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_aext_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_16_flat, i16>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i32>;
 defm : FlatLoadPats <FLAT_LOAD_USHORT, atomic_load_zext_16_flat, i16>;
@@ -2319,11 +2319,11 @@ defm : FlatLoadPats_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 
 let OtherPredicates = [HasFlatGlobalInsts] in {
 
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i32>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_8_global, i16>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_aext_8_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_UBYTE, atomic_load_zext_8_global, i16>;
-defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i32>;
+defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_aext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_16_global, i16>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i32>;
 defm : GlobalFLATLoadPats <GLOBAL_LOAD_USHORT, atomic_load_zext_16_global, i16>;

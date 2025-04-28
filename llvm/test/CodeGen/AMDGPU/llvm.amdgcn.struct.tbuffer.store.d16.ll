@@ -80,7 +80,7 @@ define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data, i32 
 ; GFX13-PACKED-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v1, s7
-; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_x v0, v1, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_x v0, v1, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen scope:SCOPE_SE
 ; GFX13-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.f16(half %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 33, i32 0)
@@ -152,7 +152,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xy(<4 x i32> %rsrc, <2 x half> %dat
 ; GFX13-PACKED-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v1, s7
-; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_xy v0, v1, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_xy v0, v1, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen scope:SCOPE_SE
 ; GFX13-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v2f16(<2 x half> %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 33, i32 0)
@@ -239,7 +239,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, s10
-; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
 ; GFX12-PACKED-GISEL-NEXT:    s_endpgm
 ;
 ; GFX13-PACKED-SDAG-LABEL: tbuffer_store_d16_xyz:
@@ -252,7 +252,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v2, s10
 ; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s5
-; GFX13-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX13-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen scope:SCOPE_SE
 ; GFX13-PACKED-SDAG-NEXT:    s_endpgm
 ;
 ; GFX13-PACKED-GISEL-LABEL: tbuffer_store_d16_xyz:
@@ -264,7 +264,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX13-PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, s10
-; GFX13-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX13-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyz v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen scope:SCOPE_SE
 ; GFX13-PACKED-GISEL-NEXT:    s_endpgm
 main_body:
   %data_subvec = shufflevector <4 x half> %data, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
@@ -350,7 +350,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %d
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v1, s9
 ; GFX13-PACKED-NEXT:    v_mov_b32_e32 v2, s10
-; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen
+; GFX13-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], v2, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM] idxen scope:SCOPE_SE
 ; GFX13-PACKED-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.tbuffer.store.v4f16(<4 x half> %data, <4 x i32> %rsrc, i32 %vindex, i32 0, i32 0, i32 33, i32 0)

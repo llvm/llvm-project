@@ -399,10 +399,10 @@ def atomic_load_sext_glue :
   let IsSignExtLoad = true;
 }
 
-def atomic_load_8_glue : PatFrag<(ops node:$ptr),
-  (AMDGPUatomic_ld_glue node:$ptr)> {
-  let IsAtomic = 1;
-  let MemoryVT = i8;
+def atomic_load_aext_glue :
+  PatFrag<(ops node:$ptr), (AMDGPUatomic_ld_glue node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let IsAnyExtLoad = true;
 }
 
 def atomic_load_16_glue : PatFrag<(ops node:$ptr),
@@ -435,6 +435,12 @@ def atomic_load_sext_8_glue : PatFrag<(ops node:$ptr),
   let MemoryVT = i8;
 }
 
+def atomic_load_aext_8_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_aext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i8;
+}
+
 def atomic_load_zext_16_glue : PatFrag<(ops node:$ptr),
   (atomic_load_zext_glue node:$ptr)> {
   let IsAtomic = 1;
@@ -443,6 +449,12 @@ def atomic_load_zext_16_glue : PatFrag<(ops node:$ptr),
 
 def atomic_load_sext_16_glue : PatFrag<(ops node:$ptr),
   (atomic_load_sext_glue node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i16;
+}
+
+def atomic_load_aext_16_glue : PatFrag<(ops node:$ptr),
+  (atomic_load_aext_glue node:$ptr)> {
   let IsAtomic = 1;
   let MemoryVT = i16;
 }
@@ -520,8 +532,6 @@ def load_align16_local_m0 : PatFrag<(ops node:$ptr),
 }
 
 let IsAtomic = 1, AddressSpaces = LoadAddress_local.AddrSpaces in {
-def atomic_load_8_local_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_8_glue node:$ptr)>;
 def atomic_load_16_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_16_glue node:$ptr)>;
 def atomic_load_32_local_m0 : PatFrag<(ops node:$ptr),
@@ -533,10 +543,14 @@ def atomic_load_zext_8_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_8_glue node:$ptr)>;
 def atomic_load_sext_8_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_sext_8_glue node:$ptr)>;
+def atomic_load_aext_8_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_aext_8_glue node:$ptr)>;
 def atomic_load_zext_16_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_16_glue node:$ptr)>;
 def atomic_load_sext_16_local_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_sext_16_glue node:$ptr)>;
+def atomic_load_aext_16_local_m0 : PatFrag<(ops node:$ptr),
+                                      (atomic_load_aext_16_glue node:$ptr)>;
 } // End let AddressSpaces = LoadAddress_local.AddrSpaces
 
 
@@ -570,14 +584,12 @@ def truncstorei8_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i8;
-  let IsTruncStore = 1;
 }
 
 def truncstorei16_glue : PatFrag<(ops node:$val, node:$ptr),
                            (truncstore_glue node:$val, node:$ptr)> {
   let IsStore = 1;
   let MemoryVT = i16;
-  let IsTruncStore = 1;
 }
 
 let IsStore = 1, AddressSpaces = StoreAddress_local.AddrSpaces in {

@@ -2638,7 +2638,6 @@ bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
   if (Scope != CPol::SCOPE_CU)
     return false;
 
-  const Function &Fn = MI->getMF()->getFunction();
   if (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(*MI))
     return setScope(MI, CPol::SCOPE_SE);
 
