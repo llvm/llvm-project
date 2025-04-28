@@ -2518,6 +2518,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   ImplicitConversionKind SecondConv;
   switch (Conv) {
   case Sema::Compatible:
+  case Sema::CompatibleVoidPtrToNonVoidPtr: // __attribute__((overloadable))
     SecondConv = ICK_C_Only_Conversion;
     break;
   // For our purposes, discarding qualifiers is just as bad as using an

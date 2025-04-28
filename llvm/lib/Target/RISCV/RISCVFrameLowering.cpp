@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVFrameLowering.h"
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -26,6 +27,8 @@
 #include "llvm/Support/LEB128.h"
 
 #include <algorithm>
+
+#define DEBUG_TYPE "riscv-frame"
 
 using namespace llvm;
 
@@ -198,6 +201,149 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
       .setMIFlag(MachineInstr::FrameDestroy);
   // Restore the SCS pointer
   CFIInstBuilder(MBB, MI, MachineInstr::FrameDestroy).buildRestore(SCSPReg);
+}
+
+// Insert instruction to swap mscratchsw with sp
+static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator MBBI,
+                                    const DebugLoc &DL) {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  if (!RVFI->isSiFiveStackSwapInterrupt(MF))
+    return;
+
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+
+  assert(STI.hasVendorXSfmclic() && "Stack Swapping Requires XSfmclic");
+
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
+      .addReg(SPReg, RegState::Define)
+      .addImm(RISCVSysReg::sf_mscratchcsw)
+      .addReg(SPReg, RegState::Kill)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  // FIXME: CFI Information for this swap.
+}
+
+static void
+createSiFivePreemptibleInterruptFrameEntries(MachineFunction &MF,
+                                             RISCVMachineFunctionInfo &RVFI) {
+  if (!RVFI.isSiFivePreemptibleInterrupt(MF))
+    return;
+
+  const TargetRegisterClass &RC = RISCV::GPRRegClass;
+  const TargetRegisterInfo &TRI =
+      *MF.getSubtarget<RISCVSubtarget>().getRegisterInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Create two frame objects for spilling X8 and X9, which will be done in
+  // `emitSiFiveCLICPreemptibleSaves`. This is in addition to any other stack
+  // objects we might have for X8 and X9, as they might be saved twice.
+  for (int I = 0; I < 2; ++I) {
+    int FI = MFI.CreateStackObject(TRI.getSpillSize(RC), TRI.getSpillAlign(RC),
+                                   true);
+    RVFI.pushInterruptCSRFrameIndex(FI);
+  }
+}
+
+static void emitSiFiveCLICPreemptibleSaves(MachineFunction &MF,
+                                           MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL) {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  if (!RVFI->isSiFivePreemptibleInterrupt(MF))
+    return;
+
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+
+  // FIXME: CFI Information here is nonexistent/wrong.
+
+  // X8 and X9 might be stored into the stack twice, initially into the
+  // `interruptCSRFrameIndex` here, and then maybe again into their CSI frame
+  // index.
+  //
+  // This is done instead of telling the register allocator that we need two
+  // VRegs to store the value of `mcause` and `mepc` through the instruction,
+  // which affects other passes.
+  TII->storeRegToStackSlot(MBB, MBBI, RISCV::X8, /* IsKill=*/true,
+                           RVFI->getInterruptCSRFrameIndex(0),
+                           &RISCV::GPRRegClass, STI.getRegisterInfo(),
+                           Register(), MachineInstr::FrameSetup);
+  TII->storeRegToStackSlot(MBB, MBBI, RISCV::X9, /* IsKill=*/true,
+                           RVFI->getInterruptCSRFrameIndex(1),
+                           &RISCV::GPRRegClass, STI.getRegisterInfo(),
+                           Register(), MachineInstr::FrameSetup);
+
+  // Put `mcause` into X8 (s0), and `mepc` into X9 (s1). If either of these are
+  // used in the function, then they will appear in `getUnmanagedCSI` and will
+  // be saved again.
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS))
+      .addReg(RISCV::X8, RegState::Define)
+      .addImm(RISCVSysReg::mcause)
+      .addReg(RISCV::X0)
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRS))
+      .addReg(RISCV::X9, RegState::Define)
+      .addImm(RISCVSysReg::mepc)
+      .addReg(RISCV::X0)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  // Enable interrupts.
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRSI))
+      .addReg(RISCV::X0)
+      .addImm(RISCVSysReg::mstatus)
+      .addImm(8)
+      .setMIFlag(MachineInstr::FrameSetup);
+}
+
+static void emitSiFiveCLICPreemptibleRestores(MachineFunction &MF,
+                                              MachineBasicBlock &MBB,
+                                              MachineBasicBlock::iterator MBBI,
+                                              const DebugLoc &DL) {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  if (!RVFI->isSiFivePreemptibleInterrupt(MF))
+    return;
+
+  const auto &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVInstrInfo *TII = STI.getInstrInfo();
+
+  // FIXME: CFI Information here is nonexistent/wrong.
+
+  // Disable interrupts.
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRCI))
+      .addReg(RISCV::X0)
+      .addImm(RISCVSysReg::mstatus)
+      .addImm(8)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  // Restore `mepc` from x9 (s1), and `mcause` from x8 (s0). If either were used
+  // in the function, they have already been restored once, so now have the
+  // value stored in `emitSiFiveCLICPreemptibleSaves`.
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
+      .addReg(RISCV::X0)
+      .addImm(RISCVSysReg::mepc)
+      .addReg(RISCV::X9, RegState::Kill)
+      .setMIFlag(MachineInstr::FrameSetup);
+  BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW))
+      .addReg(RISCV::X0)
+      .addImm(RISCVSysReg::mcause)
+      .addReg(RISCV::X8, RegState::Kill)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  // X8 and X9 need to be restored to their values on function entry, which we
+  // saved onto the stack in `emitSiFiveCLICPreemptibleSaves`.
+  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X9,
+                            RVFI->getInterruptCSRFrameIndex(1),
+                            &RISCV::GPRRegClass, STI.getRegisterInfo(),
+                            Register(), MachineInstr::FrameSetup);
+  TII->loadRegFromStackSlot(MBB, MBBI, RISCV::X8,
+                            RVFI->getInterruptCSRFrameIndex(0),
+                            &RISCV::GPRRegClass, STI.getRegisterInfo(),
+                            Register(), MachineInstr::FrameSetup);
 }
 
 // Get the ID of the libcall used for spilling and restoring callee saved
@@ -762,6 +908,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
+  // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
+  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
+
   // Emit prologue for shadow call stack.
   emitSCSPrologue(MF, MBB, MBBI, DL);
 
@@ -870,6 +1019,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (StackSize != 0)
     allocateStack(MBB, MBBI, MF, StackSize, RealStackSize, /*EmitCFI=*/true,
                   NeedProbe, ProbeSize, DynAllocation);
+
+  // Save SiFive CLIC CSRs into Stack
+  emitSiFiveCLICPreemptibleSaves(MF, MBB, MBBI, DL);
 
   // The frame pointer is callee-saved, and code has been generated for us to
   // save it to the stack. We need to skip over the storing of callee-saved
@@ -1159,12 +1311,17 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
+  emitSiFiveCLICPreemptibleRestores(MF, MBB, MBBI, DL);
+
   // Deallocate stack if StackSize isn't a zero yet
   if (StackSize != 0)
     deallocateStack(MF, MBB, MBBI, DL, StackSize, RealStackSize - StackSize);
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
+
+  // SiFive CLIC needs to swap `sf.mscratchcsw` into `sp`
+  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
 StackOffset
@@ -1357,6 +1514,9 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
     SavedRegs.set(RISCV::X27);
+
+  // SiFive Preemptible Interrupt Handlers need additional frame entries
+  createSiFivePreemptibleInterruptFrameEntries(MF, *RVFI);
 }
 
 std::pair<int64_t, Align>
@@ -1716,11 +1876,22 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     MachineFunction &MF, const TargetRegisterInfo *TRI,
     std::vector<CalleeSavedInfo> &CSI, unsigned &MinCSFrameIndex,
     unsigned &MaxCSFrameIndex) const {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  // Preemptible Interrupts have two additional Callee-save Frame Indexes,
+  // not tracked by `CSI`.
+  if (RVFI->isSiFivePreemptibleInterrupt(MF)) {
+    for (int I = 0; I < 2; ++I) {
+      int FI = RVFI->getInterruptCSRFrameIndex(I);
+      MinCSFrameIndex = std::min<unsigned>(MinCSFrameIndex, FI);
+      MaxCSFrameIndex = std::max<unsigned>(MaxCSFrameIndex, FI);
+    }
+  }
+
   // Early exit if no callee saved registers are modified!
   if (CSI.empty())
     return true;
 
-  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->useQCIInterrupt(MF)) {
     RVFI->setQCIInterruptStackSize(QCIInterruptPushAmount);
   } else if (RVFI->isPushable(MF)) {

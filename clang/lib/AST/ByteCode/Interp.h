@@ -162,6 +162,7 @@ bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
+bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -1007,6 +1008,19 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return false;
   }
 
+  // Diagnose comparisons between fields with different access specifiers.
+  if (std::optional<std::pair<Pointer, Pointer>> Split =
+          Pointer::computeSplitPoint(LHS, RHS)) {
+    const FieldDecl *LF = Split->first.getField();
+    const FieldDecl *RF = Split->second.getField();
+    if (LF && RF && !LF->getParent()->isUnion() &&
+        LF->getAccess() != RF->getAccess()) {
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_pointer_comparison_differing_access)
+          << LF << LF->getAccess() << RF << RF->getAccess() << LF->getParent();
+    }
+  }
+
   unsigned VL = LHS.getByteOffset();
   unsigned VR = RHS.getByteOffset();
   S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
@@ -1307,6 +1321,8 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 static inline bool Kill(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckDummy(S, OpPC, Ptr, AK_Destroy))
+    return false;
   Ptr.endLifetime();
   return true;
 }
@@ -1433,7 +1449,7 @@ bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.P.getPtrGlobal(I);
-  if (!Ptr.isInitialized())
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -2161,16 +2177,22 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
     }
   }
 
-  T A = LHS.isBlockPointer()
-            ? (LHS.isElementPastEnd() ? T::from(LHS.getNumElems())
-                                      : T::from(LHS.getIndex()))
-            : T::from(LHS.getIntegerRepresentation());
-  T B = RHS.isBlockPointer()
-            ? (RHS.isElementPastEnd() ? T::from(RHS.getNumElems())
-                                      : T::from(RHS.getIndex()))
-            : T::from(RHS.getIntegerRepresentation());
+  int64_t A64 =
+      LHS.isBlockPointer()
+          ? (LHS.isElementPastEnd() ? LHS.getNumElems() : LHS.getIndex())
+          : LHS.getIntegerRepresentation();
 
-  return AddSubMulHelper<T, T::sub, std::minus>(S, OpPC, A.bitWidth(), A, B);
+  int64_t B64 =
+      RHS.isBlockPointer()
+          ? (RHS.isElementPastEnd() ? RHS.getNumElems() : RHS.getIndex())
+          : RHS.getIntegerRepresentation();
+
+  int64_t R64 = A64 - B64;
+  if (static_cast<int64_t>(T::from(R64)) != R64)
+    return handleOverflow(S, OpPC, R64);
+
+  S.Stk.push<T>(T::from(R64));
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2178,6 +2200,21 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 
 inline bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
+  assert(S.Current->getFunction());
+
+  // FIXME: We iterate the scope once here and then again in the destroy() call
+  // below.
+  for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
+    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
+
+    if (Ptr.getLifetime() == Lifetime::Ended) {
+      auto *D = cast<NamedDecl>(Ptr.getFieldDesc()->asDecl());
+      S.FFDiag(D->getLocation(), diag::note_constexpr_destroy_out_of_lifetime)
+          << D->getNameAsString();
+      return false;
+    }
+  }
+
   S.Current->destroy(I);
   return true;
 }
@@ -2326,8 +2363,12 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
   if (!CheckPointerToIntegralCast(S, OpPC, Ptr, T::bitWidth()))
-    return false;
+    return Invalid(S, OpPC);
 
   S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
   return true;
@@ -2899,6 +2940,11 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
       S.FFDiag(E);
 
     return false;
+  } else if (Kind == CastKind::Dynamic) {
+    assert(!S.getLangOpts().CPlusPlus20);
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::Dynamic;
+    return true;
   }
 
   return false;
@@ -2926,6 +2972,13 @@ inline bool SizelessVectorElementSize(InterpState &S, CodePtr OpPC) {
     S.CCEDiag(E, diag::note_constexpr_non_const_vectorelements) << ArgRange;
   }
   return false;
+}
+
+inline bool CheckPseudoDtor(InterpState &S, CodePtr OpPC) {
+  if (!S.getLangOpts().CPlusPlus20)
+    S.CCEDiag(S.Current->getSource(OpPC),
+              diag::note_constexpr_pseudo_destructor);
+  return true;
 }
 
 inline bool Assume(InterpState &S, CodePtr OpPC) {
@@ -3190,7 +3243,7 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
-  return CheckActive(S, OpPC, Ptr, AK_Destroy);
+  return CheckDestructor(S, OpPC, Ptr);
 }
 
 //===----------------------------------------------------------------------===//
