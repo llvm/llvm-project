@@ -297,6 +297,10 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   if (MCInst OutInst; lowerPseudoInstExpansion(MI, OutInst)) {
     EmitToStreamer(*OutStreamer, OutInst);
+#if LLPC_BUILD_NPI
+    if (MIA)
+      MIA->updateState(OutInst, 0);
+#endif /* LLPC_BUILD_NPI */
     return;
   }
 
@@ -376,9 +380,9 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       if (isVerbose())
         OutStreamer->emitRawComment(" meta instruction");
       return;
-#if LLPC_BUILD_NPI
     }
 
+#if LLPC_BUILD_NPI
     if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
       unsigned V = MI->getOperand(0).getImm();
       OutStreamer->AddComment(
@@ -396,9 +400,9 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
                               " vsrc1_msb=" + Twine((V >> 10) & 3) +
                               " vsrc2_msb=" + Twine((V >> 12) & 3) +
                               " vdst_msb=" + Twine((V >> 14) & 3));
-#endif /* LLPC_BUILD_NPI */
     }
 
+#endif /* LLPC_BUILD_NPI */
     if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
       if (isVerbose())
         emitVGPRBlockComment(MI, *OutStreamer);
@@ -406,6 +410,10 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
+#if LLPC_BUILD_NPI
+    if (MIA)
+      MIA->updateState(TmpInst, 0);
+#endif /* LLPC_BUILD_NPI */
 
 #ifdef EXPENSIVE_CHECKS
     // Check getInstSizeInBytes on explicitly specified CPUs (it cannot

@@ -3213,16 +3213,17 @@ struct RegInfo {
 
 static constexpr RegInfo RegularRegisters[] = {
 #if LLPC_BUILD_NPI
-    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR}, {{"ttmp"}, IS_TTMP},
-    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR}, {{"idx"}, IS_IDX_REG},
+    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR},  {{"ttmp"}, IS_TTMP},
+    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR},  {{"idx"}, IS_IDX_REG},
+    {{"g1"}, IS_VGPR},  {{"g2"}, IS_VGPR}, {{"g3"}, IS_VGPR}};
 #else /* LLPC_BUILD_NPI */
   {{"v"},    IS_VGPR},
   {{"s"},    IS_SGPR},
   {{"ttmp"}, IS_TTMP},
   {{"acc"},  IS_AGPR},
   {{"a"},    IS_AGPR},
-#endif /* LLPC_BUILD_NPI */
 };
+#endif /* LLPC_BUILD_NPI */
 
 static bool isRegularReg(RegisterKind Kind) {
 #if LLPC_BUILD_NPI
@@ -4443,8 +4444,8 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
 #else /* LLPC_BUILD_NPI */
 bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
     const MCInst &Inst, const OperandVector &Operands) {
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   const unsigned Opcode = Inst.getOpcode();
   if (!isVOPD(Opcode))
 #if LLPC_BUILD_NPI
@@ -5279,7 +5280,8 @@ bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
     if (!Op->isReg())
       continue;
     unsigned Reg = Op->getReg();
-    if (AMDGPU::isVGPR(Reg, MRI) && AMDGPU::getHWRegIndex(Reg, MRI) > 255) {
+    if (!isGFX13Plus() && AMDGPU::isVGPR(Reg, MRI) &&
+        AMDGPU::getHWRegIndex(Reg, MRI) > 255) {
       Error(getRegLoc(Reg, Operands), "register index is out of range");
       return false;
     }

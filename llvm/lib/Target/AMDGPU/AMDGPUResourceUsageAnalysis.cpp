@@ -173,31 +173,16 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
 #if LLPC_BUILD_NPI
-      // Look for the Metadata for indexing and access-type
-      uint32_t AccessTypeMask = 0;
-#else /* LLPC_BUILD_NPI */
-      // TODO: Check regmasks? Do they occur anywhere except calls?
+      // Look for the Metadata for indexing and access-type.
+      uint32_t AccessTypeMask = getVGPRIndexingMetaInfo(MI).second;
+
 #endif /* LLPC_BUILD_NPI */
-      for (const MachineOperand &MO : MI.operands()) {
-#if LLPC_BUILD_NPI
-        if (!MO.isMetadata())
-          continue;
-        const MDNode *Tuple = MO.getMetadata();
-        if (Tuple->getNumOperands() != 3)
-          continue;
-        const MDOperand &NameOp = Tuple->getOperand(0);
-        if (NameOp.equalsStr("vgpr_indexing_extra")) {
-          const MDOperand &MaskOp2 = Tuple->getOperand(2);
-          assert(isa<ConstantAsMetadata>(MaskOp2));
-          AccessTypeMask =
-              cast<ConstantInt>(cast<ConstantAsMetadata>(MaskOp2)->getValue())
-                  ->getZExtValue();
-          break;
-        }
-      }
       // TODO: Check regmasks? Do they occur anywhere except calls?
+#if LLPC_BUILD_NPI
       for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
         const MachineOperand &MO = MI.getOperand(i);
+#else /* LLPC_BUILD_NPI */
+      for (const MachineOperand &MO : MI.operands()) {
 #endif /* LLPC_BUILD_NPI */
         unsigned Width = 0;
         bool IsSGPR = false;

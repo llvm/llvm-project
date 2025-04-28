@@ -53,6 +53,7 @@ namespace AMDGPU {
 class AMDGPUMCInstrAnalysis : public MCInstrAnalysis {
 private:
   unsigned VgprMSBs = 0;
+  unsigned VgprIDXs = 0;
 
 public:
   explicit AMDGPUMCInstrAnalysis(const MCInstrInfo *Info)
@@ -61,11 +62,15 @@ public:
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
 
-  void resetState() override { VgprMSBs = 0; }
+  void resetState() override {
+    VgprMSBs = 0;
+    VgprIDXs = 0;
+  }
 
   void updateState(const MCInst &Inst, uint64_t Addr) override;
 
   unsigned getVgprMSBs() const { return VgprMSBs; }
+  unsigned getVgprIDXs() const { return VgprIDXs; }
 };
 
 } // namespace AMDGPU

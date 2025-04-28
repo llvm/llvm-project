@@ -114,6 +114,10 @@ public:
   MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
 
+#if LLPC_BUILD_NPI
+  MCInstPrinter *getInstPrinterPtr() override { return InstPrinter.get(); }
+
+#endif /* LLPC_BUILD_NPI */
   inline void EmitEOL() {
     // Dump Explicit Comments here.
     emitExplicitComments();

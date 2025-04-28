@@ -672,6 +672,14 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
   MCContext &Ctx = MF.getContext();
 
+#if LLPC_BUILD_NPI
+  MCInstPrinter *Printer = OutStreamer->getInstPrinterPtr();
+  if (Printer) {
+    MIA.reset(TM.getTarget().createMCInstrAnalysis(TM.getMCInstrInfo()));
+    Printer->setMCInstrAnalysis(MIA.get());
+  }
+
+#endif /* LLPC_BUILD_NPI */
   // The starting address of all shader programs must be 256 bytes aligned.
   // Regular functions just need the basic required instruction alignment.
   MF.setAlignment(MFI->isEntryFunction() ? Align(256) : Align(4));
@@ -1390,15 +1398,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT_SHIFT);
   }
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
   if (AMDGPU::isGFX1250Plus(STM))
     ProgInfo.ComputePGMRSrc3 =
         SetBits(ProgInfo.ComputePGMRSrc3, ProgInfo.NamedBarCnt,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT);
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
@@ -1793,7 +1801,11 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   // TODO: Should be able to support other operand types like globals.
   const MachineOperand &MO = MI->getOperand(OpNo);
   if (MO.isReg()) {
+#if LLPC_BUILD_NPI
+    AMDGPUInstPrinter::printRegOperand(MO.getReg(), *getGlobalSTI(), O,
+#else /* LLPC_BUILD_NPI */
     AMDGPUInstPrinter::printRegOperand(MO.getReg(), O,
+#endif /* LLPC_BUILD_NPI */
                                        *MF->getSubtarget().getRegisterInfo());
     return false;
   }

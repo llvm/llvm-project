@@ -20,6 +20,10 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 
+#if LLPC_BUILD_NPI
+#include <regex>
+
+#endif /* LLPC_BUILD_NPI */
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
@@ -413,14 +417,19 @@ void AMDGPUInstPrinter::printSymbolicFormat(const MCInst *MI,
 #if LLPC_BUILD_NPI
 // \returns a low 256 vgpr representing a high vgpr \p Reg [v256..v1023] or
 // \p Reg itself otherwise.
-static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+static MCPhysReg getRegForPrinting(MCPhysReg Reg, const MCSubtargetInfo &STI,
+                                   const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
   if (Idx < 0x100)
     return Reg;
 
   const MCRegisterClass *RC = getVGPRPhysRegClass(Reg, MRI);
-  return RC->getRegister(Idx % 0x100);
+  // On GFX13, since MIA is available, we always can figure out full 10-bit
+  // vgpr#. No need to print a vgpr operand with a comment, i.e. "v0 /*v256*/".
+  if (!STI.hasFeature(AMDGPU::FeatureVGPRIndexingRegisters))
+    Idx = Idx % 0x100;
+  return RC->getRegister(Idx);
 }
 
 // Restore MSBs of a VGPR above 255 from the MCInstrAnalysis.
@@ -459,9 +468,72 @@ static MCPhysReg getRegFromMIA(MCPhysReg Reg, unsigned OpNo,
   return Reg;
 }
 
-#endif /* LLPC_BUILD_NPI */
+// Get the IDX used by an operand from the MCInstrAnalysis.
+static unsigned getIdxFromMIA(unsigned OpNo, const MCInstrDesc &Desc,
+                              const AMDGPUMCInstrAnalysis &MIA) {
+  unsigned VgprIDXs = MIA.getVgprIDXs();
+  if (!VgprIDXs)
+    return 0;
+
+  auto Ops = AMDGPU::getVGPRLoweringOperandTables(Desc);
+  if (!Ops.first)
+    return 0;
+  unsigned Opc = Desc.getOpcode();
+  unsigned I;
+  for (I = 0; I < 4; ++I) {
+    if (Ops.first[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
+        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.first[I]) == OpNo)
+      break;
+    if (Ops.second && Ops.second[I] != AMDGPU::OpName::NUM_OPERAND_NAMES &&
+        (unsigned)AMDGPU::getNamedOperandIdx(Opc, Ops.second[I]) == OpNo)
+      break;
+  }
+  if (I == 4)
+    return 0;
+  return (VgprIDXs >> (I * 2)) & 3;
+}
+
+// Modify the VGPR name if it implicitly uses idx-reg1/2/3
+static void modifyVGPRNameUsingIndex(std::string &OpndStr, unsigned IdxReg) {
+  std::string Prefix = "";
+  switch (IdxReg) {
+  case 0:
+    return;
+  case 1:
+    Prefix = "g1";
+    break;
+  case 2:
+    Prefix = "g2";
+    break;
+  case 3:
+    Prefix = "g3";
+    break;
+  default:
+    assert(false);
+    break;
+  }
+
+  std::smatch Match;
+  std::regex BracketPattern("v\\[");
+  std::regex DigitPattern("v[0-9]+");
+  if (std::regex_search(OpndStr, Match, BracketPattern))
+    OpndStr = std::regex_replace(OpndStr, BracketPattern, Prefix + "[",
+                                 std::regex_constants::format_first_only);
+  else if (std::regex_search(OpndStr, Match, DigitPattern))
+    OpndStr = std::regex_replace(OpndStr, DigitPattern,
+                                 Prefix + "[" + Match.str().substr(1) + "]",
+                                 std::regex_constants::format_first_only);
+}
+
+void AMDGPUInstPrinter::printRegOperand(MCRegister Reg,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O,
+                                        const MCRegisterInfo &MRI,
+                                        unsigned IdxReg) {
+#else /* LLPC_BUILD_NPI */
 void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
+#endif /* LLPC_BUILD_NPI */
 #if !defined(NDEBUG)
   switch (Reg.id()) {
   case AMDGPU::FP_REG:
@@ -474,21 +546,35 @@ void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, raw_ostream &O,
 #endif
 
 #if LLPC_BUILD_NPI
-  unsigned PrintReg = getRegForPrinting(Reg, MRI);
-  O << getRegisterName(PrintReg);
+  std::string OpndStr;
+  llvm::raw_string_ostream TmpO(OpndStr);
+
+  unsigned PrintReg = getRegForPrinting(Reg, STI, MRI);
+  TmpO << getRegisterName(PrintReg);
 
   if (PrintReg != Reg.id())
-    O << " /*" << getRegisterName(Reg) << "*/";
+    TmpO << " /*" << getRegisterName(Reg) << "*/";
+
+  modifyVGPRNameUsingIndex(OpndStr, IdxReg);
+  O << OpndStr;
 }
 
 void AMDGPUInstPrinter::printRegOperand(MCRegister Reg, unsigned Opc,
-                                        unsigned OpNo, raw_ostream &O,
+                                        unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
 
   if (MIA)
     Reg = getRegFromMIA(Reg, OpNo, MII.get(Opc), MRI,
                         *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
-  printRegOperand(Reg, O, MRI);
+
+  unsigned IdxReg = 0;
+  if (MIA)
+    IdxReg = getIdxFromMIA(OpNo, MII.get(Opc),
+                           *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
+
+  printRegOperand(Reg, STI, O, MRI, IdxReg);
 #else /* LLPC_BUILD_NPI */
   O << getRegisterName(Reg);
 #endif /* LLPC_BUILD_NPI */
@@ -865,7 +951,11 @@ void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
   printRegOperand(STI.hasFeature(AMDGPU::FeatureWavefrontSize32)
                       ? AMDGPU::VCC_LO
                       : AMDGPU::VCC,
+#if LLPC_BUILD_NPI
+                  STI, O, MRI);
+#else /* LLPC_BUILD_NPI */
                   O, MRI);
+#endif /* LLPC_BUILD_NPI */
   if (FirstOperand)
     O << ", ";
 }
@@ -913,7 +1003,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
 #if LLPC_BUILD_NPI
-    printRegOperand(Op.getReg(), MI->getOpcode(), OpNo, O, MRI);
+    printRegOperand(Op.getReg(), MI->getOpcode(), OpNo, STI, O, MRI);
 #else /* LLPC_BUILD_NPI */
     printRegOperand(Op.getReg(), O, MRI);
 #endif /* LLPC_BUILD_NPI */
@@ -1379,7 +1469,7 @@ void AMDGPUInstPrinter::printExpSrcN(const MCInst *MI, unsigned OpNo,
 
   if (En & (1 << N))
 #if LLPC_BUILD_NPI
-    printRegOperand(MI->getOperand(OpNo).getReg(), Opc, OpNo, O, MRI);
+    printRegOperand(MI->getOperand(OpNo).getReg(), Opc, OpNo, STI, O, MRI);
 #else /* LLPC_BUILD_NPI */
     printRegOperand(MI->getOperand(OpNo).getReg(), O, MRI);
 #endif /* LLPC_BUILD_NPI */
@@ -2138,7 +2228,15 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
                                    raw_ostream &O) {
   if (OpNo == 0)
     O << ' ';
-  O << getRegisterName(MI->getOperand(OpNo).getReg());
+  std::string OpndStr = getRegisterName(MI->getOperand(OpNo).getReg());
+  const unsigned Opc = MI->getOpcode();
+  if (isVOPMAsmOnly(Opc)) {
+    int OpIdxs = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idxs);
+    unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (OpNo * 4)) & 0xf;
+    modifyVGPRNameUsingIndex(OpndStr, IdxReg);
+  }
+
+  O << OpndStr;
 }
 
 void AMDGPUInstPrinter::printGSrcSimple(const MCInst *MI, unsigned OpNo,
@@ -2146,7 +2244,14 @@ void AMDGPUInstPrinter::printGSrcSimple(const MCInst *MI, unsigned OpNo,
                                         raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNo);
   if (MO.isReg() && AMDGPU::isVGPR(MO.getReg(), MRI)) {
-    O << getRegisterName(MO.getReg());
+    std::string OpndStr = getRegisterName(MO.getReg());
+    const unsigned Opc = MI->getOpcode();
+    if (isVOPMAsmOnly(Opc)) {
+      int OpIdxs = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::idxs);
+      unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (OpNo * 4)) & 0xf;
+      modifyVGPRNameUsingIndex(OpndStr, IdxReg);
+    }
+    O << OpndStr;
     return;
   }
 

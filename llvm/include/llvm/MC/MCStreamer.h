@@ -312,6 +312,11 @@ public:
   // parse time.
   virtual MCAssembler *getAssemblerPtr() { return nullptr; }
 
+#if LLPC_BUILD_NPI
+  // MCAsmStreamer has an MCInstPrinter.
+  virtual MCInstPrinter *getInstPrinterPtr() { return nullptr; }
+
+#endif /* LLPC_BUILD_NPI */
   void setUseAssemblerInfoForParsing(bool v) { UseAssemblerInfoForParsing = v; }
   bool getUseAssemblerInfoForParsing() { return UseAssemblerInfoForParsing; }
 

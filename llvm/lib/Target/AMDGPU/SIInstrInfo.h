@@ -1460,8 +1460,8 @@ public:
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
   /// Check whether this is a bundle formed with v_load/store_idx
   /// surrounding a core v_mem/alu instruction, return that core
   /// instruction if true. In case it is just a v_load_idx bundled
@@ -1471,8 +1471,8 @@ public:
   /// v_load/store_idx that is the source/dest of its operand
   static const MachineInstr *getBundledIndexingInst(const MachineInstr &MI,
                                                     const MachineOperand &Op);
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -1655,6 +1655,13 @@ bool execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
 bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
                                    Register VReg,
                                    const MachineInstr &DefMI);
+#if LLPC_BUILD_NPI
+
+/// \brief Find the metadata operand that carries the indexing and access-type
+/// mask. Return the pair of uint32_t. Return {0, 0} if no such metadata
+/// operand.
+std::pair<uint32_t, uint32_t> getVGPRIndexingMetaInfo(const MachineInstr &MI);
+#endif /* LLPC_BUILD_NPI */
 
 namespace AMDGPU {
 

@@ -7693,14 +7693,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 #if LLPC_BUILD_NPI
         .add(SrcMO);
     SrcMO.ChangeToRegister(Reg, false);
-#else /* LLPC_BUILD_NPI */
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
-#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
-#if LLPC_BUILD_NPI
   if (MI.getOpcode() == AMDGPU::V_PERMUTE_PAIR_GENSGPR_B32) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
@@ -7724,9 +7719,14 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         .addImm(AMDGPU::sub1);
 
     Src1.ChangeToRegister(Reg, false);
+#else /* LLPC_BUILD_NPI */
+        .add(Src0);
+    Src0.ChangeToRegister(Reg, false);
+#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
+#if LLPC_BUILD_NPI
   // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
   // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
   if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||
@@ -10658,6 +10658,35 @@ bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
   }
 }
 
+#if LLPC_BUILD_NPI
+std::pair<uint32_t, uint32_t> llvm::getVGPRIndexingMetaInfo(const MachineInstr &MI) {
+  uint32_t IdxRegMask = 0;
+  uint32_t AccessTypeMask = 0;
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isMetadata())
+      continue;
+    const MDNode *Tuple = MO.getMetadata();
+    if (Tuple->getNumOperands() != 3)
+      continue;
+    const MDOperand &NameOp = Tuple->getOperand(0);
+    if (NameOp.equalsStr("vgpr_indexing_extra")) {
+      const MDOperand &MaskOp1 = Tuple->getOperand(1);
+      const MDOperand &MaskOp2 = Tuple->getOperand(2);
+      assert(isa<ConstantAsMetadata>(MaskOp1) &&
+             isa<ConstantAsMetadata>(MaskOp2));
+      IdxRegMask =
+          cast<ConstantInt>(cast<ConstantAsMetadata>(MaskOp1)->getValue())
+              ->getZExtValue();
+      AccessTypeMask =
+          cast<ConstantInt>(cast<ConstantAsMetadata>(MaskOp2)->getValue())
+              ->getZExtValue();
+      break;
+    }
+  }
+  return {IdxRegMask, AccessTypeMask};
+}
+
+#endif /* LLPC_BUILD_NPI */
 MachineInstr *SIInstrInfo::createPHIDestinationCopy(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator LastPHIIt,
     const DebugLoc &DL, Register Src, Register Dst) const {
