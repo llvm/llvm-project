@@ -70,7 +70,8 @@ def : WriteRes<WriteIMul32, [SMX60_IEU]>  { let Latency = 3; }
 def : WriteRes<WriteIMul, [SMX60_IEU]>  { let Latency = 6; }
 
 // Integer division/remainder
-// Worst case latency is used
+// TODO: our experiments show that the latency of div is 4, which
+// seems too low. We used the worst case latency from the C908 instead.
 let Latency = 12, ReleaseAtCycles = [12] in {
   def : WriteRes<WriteIDiv32, [SMX60_IEUA]>;
   def : WriteRes<WriteIRem32, [SMX60_IEUA]>;
