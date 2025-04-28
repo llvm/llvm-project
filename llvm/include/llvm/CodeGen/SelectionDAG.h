@@ -1466,6 +1466,9 @@ public:
                         SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
   SDValue getIndexedStore(SDValue OrigStore, const SDLoc &dl, SDValue Base,
                           SDValue Offset, ISD::MemIndexedMode AM);
+  SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
+                   SDValue Offset, EVT SVT, MachineMemOperand *MMO,
+                   ISD::MemIndexedMode AM, bool IsTruncating = false);
 
   SDValue getLoadVP(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
                     const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,
