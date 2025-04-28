@@ -35,7 +35,20 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
       markDivergent(I);
     else if (TTI->isAlwaysUniform(&I))
       addUniformOverride(I);
+    else if (auto Uniformity = TTI->getInstructionUniformity(I)) {
+      switch (*Uniformity) {
+      case InstructionUniformity::AlwaysUniform:
+        addUniformOverride(I);
+        break;
+      case InstructionUniformity::NeverUniform:
+        markDivergent(I);
+        break;
+      case InstructionUniformity::Default:
+        break;
+      }
+    }
   }
+
   for (auto &Arg : F.args()) {
     if (TTI->isSourceOfDivergence(&Arg)) {
       markDivergent(&Arg);
