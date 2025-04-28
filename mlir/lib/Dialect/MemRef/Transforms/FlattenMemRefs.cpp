@@ -46,6 +46,69 @@ static void setInsertionPointToStart(OpBuilder &builder, Value val) {
   }
 }
 
+OpFoldResult computeMemRefSpan(Value memref, OpBuilder &builder) {
+  Location loc = memref.getLoc();
+  MemRefType type = cast<MemRefType>(memref.getType());
+  ArrayRef<int64_t> shape = type.getShape();
+  
+  // Check for empty memref
+  if (type.hasStaticShape() && 
+      llvm::any_of(shape, [](int64_t dim) { return dim == 0; })) {
+    return builder.getIndexAttr(0);
+  }
+  
+  // Get strides of the memref
+  SmallVector<int64_t, 4> strides;
+  int64_t offset;
+  if (failed(type.getStridesAndOffset(strides, offset))) {
+    // Cannot extract strides, return a dynamic value
+    return Value();
+  }
+  
+  // Static case: compute at compile time if possible
+  if (type.hasStaticShape()) {
+    int64_t span = 0;
+    for (unsigned i = 0; i < type.getRank(); ++i) {
+      span += (shape[i] - 1) * strides[i];
+    }
+    return builder.getIndexAttr(span);
+  }
+  
+  // Dynamic case: emit IR to compute at runtime
+  Value result = builder.create<arith::ConstantIndexOp>(loc, 0);
+  
+  for (unsigned i = 0; i < type.getRank(); ++i) {
+    // Get dimension size
+    Value dimSize;
+    if (shape[i] == ShapedType::kDynamic) {
+      dimSize = builder.create<memref::DimOp>(loc, memref, i);
+    } else {
+      dimSize = builder.create<arith::ConstantIndexOp>(loc, shape[i]);
+    }
+    
+    // Compute (dim - 1)
+    Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+    Value dimMinusOne = builder.create<arith::SubIOp>(loc, dimSize, one);
+    
+    // Get stride
+    Value stride;
+    if (strides[i] == ShapedType::kDynamicStrideOrOffset) {
+      // For dynamic strides, need to extract from memref descriptor
+      // This would require runtime support, possibly using extractStride
+      // As a placeholder, return a dynamic value
+      return Value();
+    } else {
+      stride = builder.create<arith::ConstantIndexOp>(loc, strides[i]);
+    }
+    
+    // Add (dim - 1) * stride to result
+    Value term = builder.create<arith::MulIOp>(loc, dimMinusOne, stride);
+    result = builder.create<arith::AddIOp>(loc, result, term);
+  }
+  
+  return result;
+}
+
 static std::tuple<Value, OpFoldResult, SmallVector<OpFoldResult>, OpFoldResult,
                   OpFoldResult>
 getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
@@ -102,8 +165,9 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
       affine::makeComposedFoldedAffineApply(rewriter, loc, expr, values);
 
   // Compute collapsed size: (the outmost stride * outmost dimension).
-  SmallVector<OpFoldResult> ops{origStrides.front(), outmostDim};
-  OpFoldResult collapsedSize = affine::computeProduct(loc, rewriter, ops);
+  //SmallVector<OpFoldResult> ops{origStrides.front(), outmostDim};
+  //OpFoldResult collapsedSize = affine::computeProduct(loc, rewriter, ops);
+  OpFoldResult collapsedSize = computeMemRefSpan(source, rewriter);
 
   return {newExtractStridedMetadata.getBaseBuffer(), linearizedIndex,
           origStrides, origOffset, collapsedSize};
