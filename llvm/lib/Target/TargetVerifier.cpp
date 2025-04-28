@@ -48,25 +48,6 @@ bool TargetVerify::run(Function &F) {
   report_fatal_error("Target has no verification method\n");
 }
 
-bool TargetVerify::run(Function &F, FunctionAnalysisManager &AM) {
-  if (TT.isAMDGPU()) {
-    auto *UA = &AM.getResult<UniformityInfoAnalysis>(F);
-    auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-    auto *PDT = &AM.getResult<PostDominatorTreeAnalysis>(F);
-
-    AMDGPUTargetVerify TV(Mod, DT, PDT, UA);
-    TV.run(F);
-
-    dbgs() << TV.MessagesStr.str();
-    if (!TV.MessagesStr.str().empty()) {
-      TV.IsValid = false;
-      return false;
-    }
-    return true;
-  }
-  report_fatal_error("Target has no verification method\n");
-}
-
 PreservedAnalyses TargetVerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto TT = F.getParent()->getTargetTriple();
 
@@ -123,11 +104,12 @@ struct TargetVerifierLegacyPass : public FunctionPass {
       if (F.isDeclaration())
         IsValid &= TV->run(F);
 
-    if (!IsValid)
+    if (!IsValid) {
       if (FatalErrors)
         report_fatal_error("broken module found, compilation aborted!");
       else
         errs() << "broken module found, compilation aborted!\n";
+    }
     return false;
   }
 

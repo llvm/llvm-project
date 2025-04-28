@@ -77,7 +77,6 @@ public:
         MessagesStr(Messages) {}
 
   bool run(Function &F);
-  bool run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

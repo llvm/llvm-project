@@ -107,29 +107,12 @@ bool AMDGPUTargetVerify::run(Function &F) {
     }
   }
 
-  if (!MessagesStr.str().empty())
+  //dbgs() << MessagesStr.str();
+  if (!MessagesStr.str().empty()) {
+    //IsValid = false;
     return false;
-  return true;
-}
-
-PreservedAnalyses AMDGPUTargetVerifierPass::run(Function &F, FunctionAnalysisManager &AM) {
-
-  auto *Mod = F.getParent();
-
-  auto UA = &AM.getResult<UniformityInfoAnalysis>(F);
-  auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  auto *PDT = &AM.getResult<PostDominatorTreeAnalysis>(F);
-
-  AMDGPUTargetVerify TV(Mod, DT, PDT, UA);
-  TV.run(F);
-
-  dbgs() << TV.MessagesStr.str();
-  if (!TV.MessagesStr.str().empty()) {
-    TV.IsValid = false;
-    return PreservedAnalyses::none();
   }
-
-  return PreservedAnalyses::all();
+  return true;
 }
 
 } // namespace llvm
