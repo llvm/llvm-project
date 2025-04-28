@@ -30,6 +30,27 @@ func.func @test_create_nd_tdesc_vc_4(%src: memref<2x24x32xf32, 3>) {
 }
 
 // -----
+func.func @test_create_nd_tdesc_subgroup_1(%src: memref<128x128xf32>) {
+  // expected-error@+1 {{cannot distribute [128, 128] using #xegpu.layout<sg_layout = [4, 2], sg_data = [24, 48]>}}
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [24, 48]>>
+  return
+}
+
+// -----
+func.func @test_create_nd_tdesc_subgroup_1(%src: memref<128x128xf32>) {
+  // expected-error@+1 {{cannot distribute [128, 128] using #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [24, 48]>}}
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [24, 48]>>
+  return
+}
+
+// -----
+func.func @test_create_nd_tdesc_subgroup_1(%src: memref<128x128xf32>) {
+  // expected-error@+1 {{cannot distribute [128, 128] using #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [64, 32]>}}
+  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [4, 2], sg_data = [32, 64], inst_data = [64, 32]>>
+  return
+}
+
+// -----
 func.func @test_prefetch_nd_vc_1(%src: memref<24x32xf16>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<8x16xf16>
   // expected-error@+1 {{invalid l1_hint: #xegpu.cache_hint<write_back>}}
