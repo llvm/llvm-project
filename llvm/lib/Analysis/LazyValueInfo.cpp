@@ -1701,7 +1701,8 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     // of a cycle, we might end up reasoning about values from different cycle
     // iterations (PR60629).
     if (!CurrI->hasOneUse() ||
-        !isSafeToSpeculativelyExecuteWithVariableReplaced(CurrI))
+        !isSafeToSpeculativelyExecuteWithVariableReplaced(
+            CurrI, /*AllowRefinement=*/false))
       break;
     CurrU = &*CurrI->use_begin();
   }

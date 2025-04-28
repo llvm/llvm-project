@@ -7201,20 +7201,19 @@ bool llvm::isNotCrossLaneOperation(const Instruction *I) {
          !isa<CallBase, BitCastInst, ExtractElementInst>(I);
 }
 
-bool llvm::isSafeToSpeculativelyExecute(const Instruction *Inst,
-                                        const Instruction *CtxI,
-                                        AssumptionCache *AC,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI,
-                                        bool UseVariableInfo) {
+bool llvm::isSafeToSpeculativelyExecute(
+    const Instruction *Inst, const Instruction *CtxI, AssumptionCache *AC,
+    const DominatorTree *DT, const TargetLibraryInfo *TLI, bool UseVariableInfo,
+    bool AllowRefinement) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
-                                                AC, DT, TLI, UseVariableInfo);
+                                                AC, DT, TLI, UseVariableInfo,
+                                                AllowRefinement);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
     AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-    bool UseVariableInfo) {
+    bool UseVariableInfo, bool AllowRefinement) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -7266,7 +7265,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     return false;
   }
   case Instruction::Load: {
-    if (!UseVariableInfo)
+    if (!UseVariableInfo || !AllowRefinement)
       return false;
 
     const LoadInst *LI = dyn_cast<LoadInst>(Inst);
@@ -7287,7 +7286,20 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
 
     // The called function could have undefined behavior or side-effects, even
     // if marked readnone nounwind.
-    return Callee && Callee->isSpeculatable();
+    if (!Callee || !Callee->isSpeculatable())
+      return false;
+    // Since the operands may be changed after hoisting, undefined behavior may
+    // be triggered by some UB-implying attributes.
+    if (!AllowRefinement) {
+      if (CI->hasRetAttr(Attribute::NoUndef) ||
+          CI->getRetDereferenceableBytes() > 0 ||
+          CI->getRetDereferenceableOrNullBytes() > 0 ||
+          any_of(CI->args(), [&](const Use &U) {
+            return CI->isPassingUndefUB(CI->getArgOperandNo(&U));
+          }))
+        return false;
+    }
+    return true;
   }
   case Instruction::VAArg:
   case Instruction::Alloca:

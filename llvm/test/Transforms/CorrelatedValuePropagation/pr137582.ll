@@ -8,7 +8,7 @@ define i8 @test(i16 %x) {
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[OR:%.*]] = or i16 [[X]], 1
-; CHECK-NEXT:    [[CONV:%.*]] = trunc nuw nsw i16 [[OR]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i16 [[OR]] to i8
 ; CHECK-NEXT:    [[MIN:%.*]] = call noundef i8 @llvm.smin.i8(i8 [[CONV]], i8 0)
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i16 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
