@@ -1864,7 +1864,9 @@ public:
                                Step, IndDesc, DL),
         Trunc(nullptr) {
     addOperand(VF);
-    // Dummy StepVector replaced in convertToConcreteRecipes
+    // Temporarily use Poison for step-vector, which will only be introduced
+    // when needed, when preparing to execute.
+    assert(isa<PoisonValue>(StepVector->getLiveInIRValue()));
     addOperand(StepVector);
   }
 
@@ -1876,7 +1878,9 @@ public:
                                Step, IndDesc, DL),
         Trunc(Trunc) {
     addOperand(VF);
-    // Dummy StepVector replaced in convertToConcreteRecipes
+    // Temporarily use Poison for step-vector, which will only be introduced
+    // when needed, when preparing to execute.
+    assert(isa<PoisonValue>(StepVector->getLiveInIRValue()));
     addOperand(StepVector);
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
