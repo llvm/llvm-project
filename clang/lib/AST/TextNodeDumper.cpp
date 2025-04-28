@@ -3037,7 +3037,8 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   dumpName(D);
 }
 
-void TextNodeDumper::VisitHLSLRootSignatureDecl(const HLSLRootSignatureDecl *D) {
+void TextNodeDumper::VisitHLSLRootSignatureDecl(
+    const HLSLRootSignatureDecl *D) {
   dumpName(D);
 }
 
