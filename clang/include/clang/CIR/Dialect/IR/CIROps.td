@@ -816,11 +816,11 @@ def SwitchOp : CIR_Op<"switch",
     is an integral condition value.
 
     The set of `cir.case` operations and their enclosing `cir.switch`
-    represents the semantics of a C/C++ switch statement. Users can use
+    represent the semantics of a C/C++ switch statement. Users can use
     `collectCases(llvm::SmallVector<CaseOp> &cases)` to collect the `cir.case`
     operation in the `cir.switch` operation easily.
 
-    The `cir.case` operations doesn't have to be in the region of `cir.switch`
+    The `cir.case` operations don't have to be in the region of `cir.switch`
     directly. However, when all the `cir.case` operations live in the region
     of `cir.switch` directly and there are no other operations except the ending
     `cir.yield` operation in the region of `cir.switch` directly, we say the
