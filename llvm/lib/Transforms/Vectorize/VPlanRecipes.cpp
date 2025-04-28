@@ -71,6 +71,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -118,6 +120,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -155,6 +159,8 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPExtendedReductionSC:
+  case VPMulAccumulateReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
@@ -2513,6 +2519,18 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                                    Ctx.CostKind);
 }
 
+InstructionCost
+VPExtendedReductionRecipe::computeCost(ElementCount VF,
+                                       VPCostContext &Ctx) const {
+  return 0;
+}
+
+InstructionCost
+VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
+                                            VPCostContext &Ctx) const {
+  return 0;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -2549,6 +2567,56 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
   getEVL()->printAsOperand(O, SlotTracker);
+  if (isConditional()) {
+    O << ", ";
+    getCondOp()->printAsOperand(O, SlotTracker);
+  }
+  O << ")";
+}
+
+void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                      VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXTENDED-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " +";
+  O << " reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
+  getVecOp()->printAsOperand(O, SlotTracker);
+  O << " extended to " << *getResultType();
+  if (isConditional()) {
+    O << ", ";
+    getCondOp()->printAsOperand(O, SlotTracker);
+  }
+  O << ")";
+}
+
+void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
+                                           VPSlotTracker &SlotTracker) const {
+  O << Indent << "MULACC-REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " + ";
+  O << "reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
+  O << "mul";
+  printFlags(O);
+  if (isExtended())
+    O << "(";
+  getVecOp0()->printAsOperand(O, SlotTracker);
+  if (isExtended())
+    O << " extended to " << *getResultType() << "), (";
+  else
+    O << ", ";
+  getVecOp1()->printAsOperand(O, SlotTracker);
+  if (isExtended())
+    O << " extended to " << *getResultType() << ")";
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
