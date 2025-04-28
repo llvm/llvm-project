@@ -97,3 +97,11 @@
 // CHECK-NOSHA-DAG: "-target-feature" "-sha2"
 // CHECK-NOAES-DAG: "-target-feature" "-aes"
 //
+// Check that adding features that depend on NEON enable the feature
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+sha2 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+aes -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+crypto -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+dotprod -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+bf16 -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// RUN: %clang -target arm-none-none-eabi -march=armv8-r+i8mm -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-NEON-ENABLED-WITH-FEATURE %s
+// CHECK-NEON-ENABLED-WITH-FEATURE: "-target-feature" "+neon"
