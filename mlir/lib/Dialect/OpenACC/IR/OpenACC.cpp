@@ -76,6 +76,69 @@ struct LLVMPointerPointerLikeModel
                                             LLVM::LLVMPointerType> {
   Type getElementType(Type pointer) const { return Type(); }
 };
+
+/// Helper function for any of the times we need to modify an ArrayAttr based on
+/// a device type list.  Returns a new ArrayAttr with all of the
+/// existingDeviceTypes, plus the effective new ones(or an added none if hte new
+/// list is empty).
+mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
+    MLIRContext *context, mlir::ArrayAttr existingDeviceTypes,
+    llvm::ArrayRef<acc::DeviceType> newDeviceTypes) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (existingDeviceTypes)
+    llvm::copy(existingDeviceTypes, std::back_inserter(deviceTypes));
+
+  if (newDeviceTypes.empty())
+    deviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
+
+  for (DeviceType DT : newDeviceTypes)
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+
+  return mlir::ArrayAttr::get(context, deviceTypes);
+}
+
+/// Helper function for any of the times we need to add operands that are
+/// affected by a device type list. Returns a new ArrayAttr with all of the
+/// existingDeviceTypes, plus the effective new ones (or an added none, if the
+/// new list is empty). Additionally, adds the arguments to the argCollection
+/// the correct number of times. This will also update a 'segments' array, even
+/// if it won't be used.
+mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
+    MLIRContext *context, mlir::ArrayAttr existingDeviceTypes,
+    llvm::ArrayRef<acc::DeviceType> newDeviceTypes, mlir::ValueRange arguments,
+    mlir::MutableOperandRange argCollection,
+    llvm::SmallVector<int32_t> &segments) {
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
+  if (existingDeviceTypes)
+    llvm::copy(existingDeviceTypes, std::back_inserter(deviceTypes));
+
+  if (newDeviceTypes.empty()) {
+    argCollection.append(arguments);
+    segments.push_back(arguments.size());
+    deviceTypes.push_back(
+        acc::DeviceTypeAttr::get(context, acc::DeviceType::None));
+  }
+
+  for (DeviceType DT : newDeviceTypes) {
+    argCollection.append(arguments);
+    segments.push_back(arguments.size());
+    deviceTypes.push_back(acc::DeviceTypeAttr::get(context, DT));
+  }
+
+  return mlir::ArrayAttr::get(context, deviceTypes);
+}
+
+/// Overload for when the 'segments' aren't needed.
+mlir::ArrayAttr addDeviceTypeAffectedOperandHelper(
+    MLIRContext *context, mlir::ArrayAttr existingDeviceTypes,
+    llvm::ArrayRef<acc::DeviceType> newDeviceTypes, mlir::ValueRange arguments,
+    mlir::MutableOperandRange argCollection) {
+  llvm::SmallVector<int32_t> segments;
+  return addDeviceTypeAffectedOperandHelper(context, existingDeviceTypes,
+                                            newDeviceTypes, arguments,
+                                            argCollection, segments);
+}
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -1170,6 +1233,76 @@ void ParallelOp::build(mlir::OpBuilder &odsBuilder,
       /*defaultAttr=*/nullptr, /*combined=*/nullptr);
 }
 
+void acc::ParallelOp::addNumWorkersOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setNumWorkersDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getNumWorkersDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getNumWorkersMutable()));
+}
+void acc::ParallelOp::addVectorLengthOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorLengthDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getVectorLengthDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getVectorLengthMutable()));
+}
+
+void acc::ParallelOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void acc::ParallelOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void acc::ParallelOp::addNumGangsOperands(
+    MLIRContext *context, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  llvm::SmallVector<int32_t> segments;
+  if (getNumGangsSegments())
+    llvm::copy(*getNumGangsSegments(), std::back_inserter(segments));
+
+  setNumGangsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getNumGangsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getNumGangsMutable(), segments));
+
+  setNumGangsSegments(segments);
+}
+void acc::ParallelOp::addWaitOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+void acc::ParallelOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
+}
+
 static ParseResult parseNumGangs(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
@@ -1686,6 +1819,48 @@ LogicalResult acc::SerialOp::verify() {
   return checkDataOperands<acc::SerialOp>(*this, getDataClauseOperands());
 }
 
+void acc::SerialOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void acc::SerialOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void acc::SerialOp::addWaitOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+void acc::SerialOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
+}
+
 //===----------------------------------------------------------------------===//
 // KernelsOp
 //===----------------------------------------------------------------------===//
@@ -1811,6 +1986,77 @@ LogicalResult acc::KernelsOp::verify() {
     return failure();
 
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
+}
+
+void acc::KernelsOp::addNumWorkersOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setNumWorkersDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getNumWorkersDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getNumWorkersMutable()));
+}
+
+void acc::KernelsOp::addVectorLengthOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setVectorLengthDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getVectorLengthDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getVectorLengthMutable()));
+}
+void acc::KernelsOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void acc::KernelsOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void acc::KernelsOp::addNumGangsOperands(
+    MLIRContext *context, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  llvm::SmallVector<int32_t> segments;
+  if (getNumGangsSegmentsAttr())
+    llvm::copy(*getNumGangsSegments(), std::back_inserter(segments));
+
+  setNumGangsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getNumGangsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getNumGangsMutable(), segments));
+
+  setNumGangsSegments(segments);
+}
+
+void acc::KernelsOp::addWaitOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+void acc::KernelsOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
 }
 
 //===----------------------------------------------------------------------===//
@@ -2437,6 +2683,49 @@ mlir::Value DataOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
   return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
                             getWaitOperandsSegments(), getHasWaitDevnum(),
                             deviceType);
+}
+
+void acc::DataOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void acc::DataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void acc::DataOp::addWaitOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+
+void acc::DataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
 }
 
 //===----------------------------------------------------------------------===//
