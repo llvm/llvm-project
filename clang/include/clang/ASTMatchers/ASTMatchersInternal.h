@@ -881,20 +881,12 @@ inline bool isDefaultedHelper(const FunctionDecl *FD) {
 }
 
 // Metafunction to determine if type T has a member called getDecl.
-template <typename Ty>
-class has_getDecl {
-  using yes = char[1];
-  using no = char[2];
+template <typename T>
+using check_has_getDecl = decltype(std::declval<T &>().getDecl());
 
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->getDecl()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
+template <typename T>
+static constexpr bool has_getDecl =
+    llvm::is_detected<check_has_getDecl, T>::value;
 
 /// Matches overloaded operators with a specific name.
 ///
