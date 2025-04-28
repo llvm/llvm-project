@@ -2027,7 +2027,7 @@ Token ASTReader::ReadToken(ModuleFile &M, const RecordDataImpl &Record,
     }
     case tok::annot_pragma_pack: {
       auto *Info = new (PP.getPreprocessorAllocator()) Sema::PragmaPackInfo;
-      Info->Action = static_cast<Sema::PragmaMsStackAction>(Record[Idx++]);
+      Info->Action = static_cast<PragmaMsStackAction>(Record[Idx++]);
       auto SlotLabel = ReadString(Record, Idx);
       Info->SlotLabel =
           llvm::StringRef(SlotLabel).copy(PP.getPreprocessorAllocator());
