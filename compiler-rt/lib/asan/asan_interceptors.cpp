@@ -538,7 +538,6 @@ DEFINE_REAL(char*, index, const char *string, int c)
     }
     return REAL(strcat)(to, from);
   }
-#  endif
 
 INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   void *ctx;
@@ -558,6 +557,7 @@ INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   }
   return REAL(strncat)(to, from, size);
 }
+#  endif
 
 #  if SANITIZER_INTERCEPT_STRCPY
 INTERCEPTOR(char *, strcpy, char *to, const char *from) {
