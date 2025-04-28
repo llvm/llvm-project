@@ -61,10 +61,5 @@ func.func @test_local_memref() {
   %1 = fir.declare %0 {uniq_name = "local_array_declare", acc.declare = #acc.declare<dataClause = acc_create>} : (!fir.ref<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
   return
 }
-// NODECL-LABEL: func.func @test_local_memref() {
-  
-// Note: the uniq_name is not attached of fir.declare is not preserved because it conflicts with the uniq_name of the memref
-// NODECL: fir.alloca{{.*}}{acc.declare = #acc.declare<dataClause = acc_create>, uniq_name = "local_array"}
-
 // DECL-LABEL: func.func @test_local_memref() {
 // DECL: fircg.ext_declare{{.*}}{acc.declare = #acc.declare<dataClause = acc_create>, uniq_name = "local_array_declare"}

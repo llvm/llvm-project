@@ -281,20 +281,6 @@ public:
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     if (!preserveDeclare) {
-      auto memrefOp = declareOp.getMemref().getDefiningOp();
-      if (!memrefOp) {
-        rewriter.replaceOp(declareOp, declareOp.getMemref());
-        return mlir::success();
-      }
-
-      // attach metadatas from the fir.declare to its memref (if it's an
-      // operation)
-      mlir::NamedAttrList elidedAttrs =
-          mlir::NamedAttrList{memrefOp->getAttrs()};
-      for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
-        if (!elidedAttrs.get(attr.getName()))
-          memrefOp->setAttr(attr.getName(), attr.getValue());
-
       rewriter.replaceOp(declareOp, declareOp.getMemref());
       return mlir::success();
     }
