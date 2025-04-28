@@ -537,9 +537,10 @@ class FLAT_RTS<string opName, bit HasVdst, bit HasData, bit isStore, bit isLoad,
   let has_vdst = HasVdst;
   let mayLoad = isLoad;
   let mayStore = isStore;
+  let IsNeverUniform = true;
 }
 
-class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
+class FLAT_SWC<string opName, bit HasVdst, bit HasAddr, bit IsDivergent> : FLAT_Pseudo<
   opName,
   !if(HasVdst, (outs VGPR_32:$vdst), (outs)),
   !con(!if(HasAddr, !if(HasVdst, (ins VReg_64:$vaddr), (ins VGPR_32:$vaddr)), (ins)), (ins CPol:$cpol)),
@@ -553,6 +554,7 @@ class FLAT_SWC<string opName, bit HasVdst, bit HasAddr> : FLAT_Pseudo<
   let has_vdst = HasVdst;
   let mayStore = 1;
   let mayLoad = 1;
+  let IsNeverUniform = IsDivergent;
 }
 
 class FLAT_Prefetch_Pseudo<string opName, dag addr = (ins VReg_64:$vaddr), string asm = " $vaddr"> :
@@ -1530,13 +1532,13 @@ let SubtargetPredicate = isGFX13Plus in {
   def RTS_FLUSH                : FLAT_RTS<"rts_flush", 0, 0, 1, 1>;
 
   let OtherPredicates = [HasSWC] in {
-  def SWC_REORDER             : FLAT_SWC<"swc_reorder", 1, 1>;
-  def SWC_FLUSH               : FLAT_SWC<"swc_flush", 0, 0>;
-  def SWC_REORDER_SWAP        : FLAT_SWC<"swc_reorder_swap", 1, 1>;
-  def SWC_REORDER_SWAP_RESUME : FLAT_SWC<"swc_reorder_swap_resume", 1, 0>;
-  def SWC_GET_EXCHANGE_STATE  : FLAT_SWC<"swc_get_exchange_state", 1, 0>;
-  def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1>;
-  def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0>;
+  def SWC_REORDER             : FLAT_SWC<"swc_reorder", 1, 1, 1>;
+  def SWC_FLUSH               : FLAT_SWC<"swc_flush", 0, 0, 0>;
+  def SWC_REORDER_SWAP        : FLAT_SWC<"swc_reorder_swap", 1, 1, 1>;
+  def SWC_REORDER_SWAP_RESUME : FLAT_SWC<"swc_reorder_swap_resume", 1, 0, 1>;
+  def SWC_GET_EXCHANGE_STATE  : FLAT_SWC<"swc_get_exchange_state", 1, 0, 0>;
+  def SWC_SET_EXCHANGE_STATE  : FLAT_SWC<"swc_set_exchange_state", 0, 1, 0>;
+  def SWC_ABORT_EXCHANGE      : FLAT_SWC<"swc_abort_exchange", 0, 0, 0>;
   }
 
   let WaveSizePredicate = isWave32 in {
