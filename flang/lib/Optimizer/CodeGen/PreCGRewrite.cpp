@@ -305,7 +305,8 @@ public:
         declareOp.getTypeparams(), declareOp.getDummyScope(),
         declareOp.getUniqName());
 
-    // attach metadatas from fir.declare to fircg.ext_declare
+    // Propagate all attributes to fircg.ext_declare to avoid losing metadata
+    // including CUDA and OpenACC attributes.
     for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
       xDeclOp->setAttr(attr.getName(), attr.getValue());
 
