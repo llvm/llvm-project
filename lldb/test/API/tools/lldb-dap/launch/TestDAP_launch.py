@@ -100,6 +100,24 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     )
 
     @skipIfWindows
+    def test_empty_sourceMap(self):
+        """
+        Tests the launch with empty source map should not issue source map command.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_create_debug_adapter()
+        empty_source_map = []
+        self.launch(program, sourceMap=empty_source_map)
+        self.continue_to_exit()
+
+        # Now get the console output and verify no source map command was issued for empty source map.
+        console_output = self.get_console()
+        self.assertTrue(
+            console_output and len(console_output) > 0, "expect some console output"
+        )
+        self.assertNotIn("Setting source map:", console_output)
+
+    @skipIfWindows
     def test_cwd(self):
         """
         Tests the default launch of a simple program with a current working
