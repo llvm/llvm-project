@@ -7616,8 +7616,17 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // comparing against the legacy cost isn't desirable.
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
-      if (Instruction *UI = GetInstructionForCost(&R))
+      if (Instruction *UI = GetInstructionForCost(&R)) {
+        // If we adjusted the predicate of the recipe, the cost in the legacy
+        // cost model may be different.
+        if (auto *WidenCmp = dyn_cast<VPWidenRecipe>(&R)) {
+          if ((WidenCmp->getOpcode() == Instruction::ICmp ||
+               WidenCmp->getOpcode() == Instruction::FCmp) &&
+              WidenCmp->getPredicate() != cast<CmpInst>(UI)->getPredicate())
+            return true;
+        }
         SeenInstrs.insert(UI);
+      }
     }
   }
 
