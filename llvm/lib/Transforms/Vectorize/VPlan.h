@@ -1910,7 +1910,12 @@ public:
 
   VPValue *getStepVector() { return getOperand(3); }
   const VPValue *getStepVector() const { return getOperand(3); }
-  void setStepVector(VPValue *V) { setOperand(3, V); }
+  void setStepVector(VPValue *V) {
+    assert(isa<PoisonValue>(getOperand(3)->getLiveInIRValue()) &&
+           cast<VPInstructionWithType>(V->getDefiningRecipe())->getOpcode() ==
+               VPInstruction::StepVector);
+    setOperand(3, V);
+  }
 
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled, return the VPValue for the
