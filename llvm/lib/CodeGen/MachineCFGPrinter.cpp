@@ -60,8 +60,10 @@ MachineCFGPrinterPass::run(MachineFunction &MF,
   if (!MCFGFuncName.empty() && !MF.getName().contains(MCFGFuncName))
     return PreservedAnalyses::all();
   OS << "Writing Machine CFG for function ";
-  OS.write_escaped(MF.getName()) << '\n';
-
+  StringRef Name = MF.getName();
+  if (Name.empty())
+    Name = "(unamed machine function)";
+  OS.write_escaped(Name) << '\n';
   writeMCFGToDotFile(MF);
   return PreservedAnalyses::all();
 }
