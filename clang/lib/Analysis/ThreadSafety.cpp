@@ -1231,25 +1231,6 @@ static const ValueDecl *getValueDecl(const Expr *Exp) {
   return nullptr;
 }
 
-namespace {
-
-template <typename Ty>
-class has_arg_iterator_range {
-  using yes = char[1];
-  using no = char[2];
-
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->args()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-} // namespace
-
 bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
   const threadSafety::til::SExpr *SExp = CapE.sexpr();
   assert(SExp && "Null expressions should be ignored");
