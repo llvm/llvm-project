@@ -304,7 +304,10 @@ public:
   };
 
   /// Possible float expression evaluation method choices.
-  enum FPEvalMethodKind : unsigned {
+  enum FPEvalMethodKind {
+    /// The evaluation method cannot be determined or is inconsistent for this
+    /// target.
+    FEM_Indeterminable = -1,
     /// Use the declared type for fp arithmetic.
     FEM_Source = 0,
     /// Use the type double for fp arithmetic.
