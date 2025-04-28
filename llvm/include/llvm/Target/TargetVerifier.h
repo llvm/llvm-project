@@ -76,7 +76,7 @@ public:
       : Mod(Mod), TT(Mod->getTargetTriple()),
         MessagesStr(Messages) {}
 
-  bool run(Function &F);
+  virtual bool run(Function &F);
 };
 
 } // namespace llvm
