@@ -9,6 +9,7 @@ load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
+load("//mlir:build_defs.bzl", "cc_headers_only")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 package(
@@ -572,6 +573,11 @@ cc_library(
     }),
 )
 
+cc_headers_only(
+    name = "HostHeaders",
+    src = ":Host",
+)
+
 td_library(
     name = "CoreTdFiles",
     srcs = glob([
@@ -830,8 +836,7 @@ cc_binary(
     ]),
     deps = [
         ":APIHeaders",
-        ":Host",
-        ":Utility",
+        ":HostHeaders",
         ":liblldb.wrapper",
         ":lldb_options_inc_gen",
         "//llvm:Option",
