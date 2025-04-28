@@ -11,6 +11,7 @@
 /// pass.
 ///
 //===----------------------------------------------------------------------===//
+#include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -26,6 +27,17 @@ using namespace llvm;
 
 STATISTIC(NumEmptyBlocksRemoved, "Number of empty blocks removed");
 
+static bool removeEmptyBlocks(MachineFunction &MF);
+
+PreservedAnalyses
+GCEmptyBasicBlocksPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = removeEmptyBlocks(MF);
+  if (Changed)
+    return getMachineFunctionPassPreservedAnalyses();
+  return PreservedAnalyses::all();
+}
+
 class GCEmptyBasicBlocks : public MachineFunctionPass {
 public:
   static char ID;
@@ -38,10 +50,12 @@ public:
     return "Remove Empty Basic Blocks.";
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return removeEmptyBlocks(MF);
+  }
 };
 
-bool GCEmptyBasicBlocks::runOnMachineFunction(MachineFunction &MF) {
+bool removeEmptyBlocks(MachineFunction &MF) {
   if (MF.size() < 2)
     return false;
   MachineJumpTableInfo *JTI = MF.getJumpTableInfo();
