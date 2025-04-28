@@ -1194,21 +1194,21 @@ public:
     TagDecl *Tag = nullptr;
     SemaRef.LookupQualifiedName(Result, DC);
     switch (Result.getResultKind()) {
-      case LookupResult::NotFound:
-      case LookupResult::NotFoundInCurrentInstantiation:
-        break;
+    case LookupResultKind::NotFound:
+    case LookupResultKind::NotFoundInCurrentInstantiation:
+      break;
 
-      case LookupResult::Found:
-        Tag = Result.getAsSingle<TagDecl>();
-        break;
+    case LookupResultKind::Found:
+      Tag = Result.getAsSingle<TagDecl>();
+      break;
 
-      case LookupResult::FoundOverloaded:
-      case LookupResult::FoundUnresolvedValue:
-        llvm_unreachable("Tag lookup cannot find non-tags");
+    case LookupResultKind::FoundOverloaded:
+    case LookupResultKind::FoundUnresolvedValue:
+      llvm_unreachable("Tag lookup cannot find non-tags");
 
-      case LookupResult::Ambiguous:
-        // Let the LookupResult structure handle ambiguities.
-        return QualType();
+    case LookupResultKind::Ambiguous:
+      // Let the LookupResult structure handle ambiguities.
+      return QualType();
     }
 
     if (!Tag) {
@@ -1217,16 +1217,16 @@ public:
       LookupResult Result(SemaRef, Id, IdLoc, Sema::LookupTagName);
       SemaRef.LookupQualifiedName(Result, DC);
       switch (Result.getResultKind()) {
-        case LookupResult::Found:
-        case LookupResult::FoundOverloaded:
-        case LookupResult::FoundUnresolvedValue: {
-          NamedDecl *SomeDecl = Result.getRepresentativeDecl();
-          Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
-          SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag)
-              << SomeDecl << NTK << llvm::to_underlying(Kind);
-          SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
-          break;
-        }
+      case LookupResultKind::Found:
+      case LookupResultKind::FoundOverloaded:
+      case LookupResultKind::FoundUnresolvedValue: {
+        NamedDecl *SomeDecl = Result.getRepresentativeDecl();
+        Sema::NonTagKind NTK = SemaRef.getNonTagTypeDeclKind(SomeDecl, Kind);
+        SemaRef.Diag(IdLoc, diag::err_tag_reference_non_tag)
+            << SomeDecl << NTK << llvm::to_underlying(Kind);
+        SemaRef.Diag(SomeDecl->getLocation(), diag::note_declared_at);
+        break;
+      }
         default:
           SemaRef.Diag(IdLoc, diag::err_not_tag_in_scope)
               << llvm::to_underlying(Kind) << Id << DC
