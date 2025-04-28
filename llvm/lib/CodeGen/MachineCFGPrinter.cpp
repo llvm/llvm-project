@@ -54,6 +54,18 @@ static void writeMCFGToDotFile(MachineFunction &MF) {
   errs() << '\n';
 }
 
+PreservedAnalyses
+MachineCFGPrinterPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  if (!MCFGFuncName.empty() && !MF.getName().contains(MCFGFuncName))
+    return PreservedAnalyses::all();
+  OS << "Writing Machine CFG for function ";
+  OS.write_escaped(MF.getName()) << '\n';
+
+  writeMCFGToDotFile(MF);
+  return PreservedAnalyses::all();
+}
+
 namespace {
 
 class MachineCFGPrinter : public MachineFunctionPass {
