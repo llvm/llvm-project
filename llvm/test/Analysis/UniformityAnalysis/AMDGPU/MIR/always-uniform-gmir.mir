@@ -1,5 +1,6 @@
 # NOTE: This file is Generic MIR translation of test/Analysis/UniformityAnalysis/AMDGPU/always_uniform.ll test file
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -o - %s 2>&1 | FileCheck %s
 ---
 name:            readfirstlane
 body:             |
