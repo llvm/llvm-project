@@ -4,10 +4,7 @@
 namespace {
   int g1 = 1;
 
-  // Note: This causes a warning about the function being undefined, but we
-  // currently have a problem with duplicate definitions when we call functions.
-  // This should be updated when that problem is fixed.
-  void f1(void);
+  void f1(void) {}
 }
 
 
