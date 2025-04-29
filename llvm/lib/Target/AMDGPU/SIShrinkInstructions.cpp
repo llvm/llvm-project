@@ -52,9 +52,8 @@ class SIShrinkInstructions {
   bool instModifiesReg(const MachineInstr *MI, unsigned Reg,
                        unsigned SubReg) const;
   Register trySwapCndOperands(MachineInstr &MI) const;
-  bool
-  shouldSwapCndOperands(MachineInstr &MI,
-                        SmallVector<MachineOperand *, 4> &UsesToProcess) const;
+  bool shouldSwapCndOperands(Register Reg,
+                             std::vector<MachineInstr *> &UsesToProcess) const;
   unsigned getInverseCompareOpcode(MachineInstr &MI) const;
   TargetInstrInfo::RegSubRegPair getSubRegForIndex(Register Reg, unsigned Sub,
                                                    unsigned I) const;
@@ -954,31 +953,34 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
 }
 
 bool SIShrinkInstructions::shouldSwapCndOperands(
-    MachineInstr &MI, SmallVector<MachineOperand *, 4> &UsesToProcess) const {
-  auto AllUses = MRI->use_nodbg_operands(MI.getOperand(0).getReg());
+    Register Reg, std::vector<MachineInstr *> &UsesToProcess) const {
+  auto AllUses = MRI->use_nodbg_instructions(Reg);
   int InstsToSwap = 0;
 
-  for (auto &Use : AllUses) {
-    MachineInstr *UseInst = Use.getParent();
-    if (UseInst->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
+  for (auto &UseInst : AllUses) {
+    if (UseInst.getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
       return false;
 
-    UsesToProcess.push_back(&Use);
+    UsesToProcess.push_back(&UseInst);
 
-    MachineOperand &Src0 = UseInst->getOperand(2);
-    MachineOperand &Src1 = UseInst->getOperand(4);
+    MachineOperand &Src0 = UseInst.getOperand(2);
+    MachineOperand &Src1 = UseInst.getOperand(4);
 
-    bool Src0Imm = Src0.isImm();
-    bool Src1Imm = Src1.isImm();
+    //if instruction has source modifiers it cannot be converted to VOP2
+    if (UseInst.getOperand(1).getImm() != SISrcMods::NONE ||
+        UseInst.getOperand(3).getImm() != SISrcMods::NONE)
+      continue;
 
-    if (!Src1Imm && Src0Imm)
+    bool Src0IsVGPR = Src0.isReg() && TRI->isVGPR(*MRI, Src0.getReg());
+    bool Src1IsVGPR = Src1.isReg() && TRI->isVGPR(*MRI, Src1.getReg());
+
+    //Src1 always has to be VGPR in VOP2
+    if (!Src0IsVGPR && Src1IsVGPR)
       InstsToSwap--;
-    else if (Src1Imm && !Src0Imm &&
-             UseInst->getOperand(1).getImm() == SISrcMods::NONE &&
-             TRI->isVGPR(*MRI, Src0.getReg()))
+    else if (Src0IsVGPR && !Src1IsVGPR)
       InstsToSwap++;
   }
-  return (InstsToSwap > 0);
+  return InstsToSwap > 0;
 }
 
 static void swapCndOperands(MachineInstr &MI) {
@@ -1013,9 +1015,9 @@ Register SIShrinkInstructions::trySwapCndOperands(MachineInstr &MI) const {
   Register Reg = MI.getOperand(0).getReg();
 
   unsigned Opcode = getInverseCompareOpcode(MI);
-  SmallVector<MachineOperand *, 4> UsesToProcess;
+  std::vector<MachineInstr *> UsesToProcess;
   if (!Opcode ||
-      !SIShrinkInstructions::shouldSwapCndOperands(MI, UsesToProcess))
+      !SIShrinkInstructions::shouldSwapCndOperands(Reg, UsesToProcess))
     return Reg;
 
   auto DL = MI.getDebugLoc();
@@ -1027,15 +1029,14 @@ Register SIShrinkInstructions::trySwapCndOperands(MachineInstr &MI) const {
 
   unsigned OpNum = MI.getNumExplicitOperands();
   for (unsigned Idx = 1; Idx < OpNum; Idx++) {
-    MachineOperand Op = MI.getOperand(Idx);
+    MachineOperand &Op = MI.getOperand(Idx);
     InverseCompare.add(Op);
     if (Op.isReg() && Op.isKill())
       InverseCompare->getOperand(Idx).setIsKill(false);
   }
 
-  for (auto &Use : UsesToProcess) {
-    MachineInstr *Inst = Use->getParent();
-    swapCndOperands(*Inst);
+  for (auto Use : UsesToProcess) {
+    swapCndOperands(*Use);
   }
 
   MRI->replaceRegWith(Reg, NewVCC);

@@ -138,18 +138,18 @@ define amdgpu_ps float @dyn_extract_v8f32_s_v(<8 x float> inreg %vec, i32 %sel) 
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s5, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s7, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, v1, s9, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s4, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s5, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s7, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, s9, v1, vcc_lo
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <8 x float> %vec, i32 %sel
@@ -350,29 +350,29 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 3
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
 ; GFX10-NEXT:    s_mov_b64 s[6:7], 4
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s5, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s4, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s5, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 5
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
 ; GFX10-NEXT:    s_mov_b64 s[6:7], 6
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s5, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s4, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s5, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 7
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
 ; GFX10-NEXT:    s_mov_b64 s[6:7], 8
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s5, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, s7, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s4, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s5, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s6, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s7, v2, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: dyn_extract_v8i64_const_s_v:
@@ -385,29 +385,29 @@ define i64 @dyn_extract_v8i64_const_s_v(i32 %sel) {
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 3
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
 ; GFX11-NEXT:    s_mov_b64 s[2:3], 4
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s1, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s0, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s1, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 5
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s2, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s3, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
 ; GFX11-NEXT:    s_mov_b64 s[2:3], 6
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s1, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s0, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s1, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], 7
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s2, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s3, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
 ; GFX11-NEXT:    s_mov_b64 s[2:3], 8
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s1, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s2, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, s3, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s0, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s1, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s2, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s3, v2, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ext = extractelement <8 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8>, i32 %sel
@@ -579,24 +579,24 @@ define amdgpu_ps void @dyn_extract_v8i64_s_v(<8 x i64> inreg %vec, i32 %sel) {
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s12, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s13, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s14, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s16, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, s17, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s12, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s13, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s14, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s15, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s16, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s17, v2, vcc_lo
 ; GFX10-NEXT:    global_store_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -606,24 +606,24 @@ define amdgpu_ps void @dyn_extract_v8i64_s_v(<8 x i64> inreg %vec, i32 %sel) {
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s12, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s13, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s14, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s16, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, s17, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s12, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s13, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s14, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s15, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s16, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s17, v2, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -2121,14 +2121,14 @@ define amdgpu_ps float @dyn_extract_v6f32_s_v(<6 x float> inreg %vec, i32 %sel) 
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s5, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, v1, s7, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s4, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s5, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, s7, v1, vcc_lo
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <6 x float> %vec, i32 %sel
@@ -2267,16 +2267,16 @@ define amdgpu_ps float @dyn_extract_v7f32_s_v(<7 x float> inreg %vec, i32 %sel) 
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s5, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s7, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, v1, s8, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s4, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s5, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s7, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, s8, v1, vcc_lo
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <7 x float> %vec, i32 %sel
@@ -2439,18 +2439,18 @@ define amdgpu_ps double @dyn_extract_v6f64_s_v(<6 x double> inreg %vec, i32 %sel
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s12, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, s13, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s12, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s13, v2, vcc_lo
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -2461,18 +2461,18 @@ define amdgpu_ps double @dyn_extract_v6f64_s_v(<6 x double> inreg %vec, i32 %sel
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s12, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, s13, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s12, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s13, v2, vcc_lo
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -2665,27 +2665,27 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX10-NEXT:    s_mov_b32 s0, s14
+; GFX10-NEXT:    s_mov_b32 s0, s15
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s12, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s13, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s2, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, s3, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s12, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s13, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s14, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s0, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s1, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s2, v2, vcc_lo
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -2694,27 +2694,27 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v_bitcast(<14 x float> inreg %userD
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_mov_b32 v2, s5
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    s_mov_b32 s0, s14
+; GFX11-NEXT:    s_mov_b32 s0, s15
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s12, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s13, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s2, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, s3, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s12, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s13, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s14, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s0, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s1, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v2, vcc_lo
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -2791,27 +2791,27 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX10-NEXT:    s_mov_b32 s0, s14
+; GFX10-NEXT:    s_mov_b32 s0, s15
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s12, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s13, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s2, vcc_lo
-; GFX10-NEXT:    v_cndmask_b32_e64 v1, v2, s3, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s12, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s13, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s14, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, s0, v2, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s1, v1, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v1, s2, v2, vcc_lo
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX10-NEXT:    ; return to shader part epilog
@@ -2820,27 +2820,27 @@ define amdgpu_ps double @dyn_extract_v7f64_s_v(<7 x double> inreg %vec, i32 %sel
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_mov_b32 v2, s5
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    s_mov_b32 s0, s14
+; GFX11-NEXT:    s_mov_b32 s0, s15
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v2, s3, v2, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s7, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s9, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s11, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s12, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s13, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, s0, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, s15, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s2, vcc_lo
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v2, s3, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s7, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s9, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s11, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s12, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s13, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s14, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v2, s0, v2, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s1, v1, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, s2, v2, vcc_lo
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -3458,8 +3458,8 @@ define float @dyn_extract_v15f32_const_s_v(i32 %sel) {
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x41600000, v1, vcc_lo
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 14, v0
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 0x41700000, v1, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v0
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v1, s4, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 15, v0
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s4, v1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: dyn_extract_v15f32_const_s_v:
@@ -3493,8 +3493,8 @@ define float @dyn_extract_v15f32_const_s_v(i32 %sel) {
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x41600000, v1, vcc_lo
 ; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 14, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0x41700000, v1, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v1, s0, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 15, v0
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ext = extractelement <15 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0>, i32 %sel
@@ -3605,34 +3605,34 @@ define amdgpu_ps float @dyn_extract_v15f32_s_v(<15 x float> inreg %vec, i32 %sel
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s2, v1, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s4, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s5, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 4, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s6, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 5, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s7, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 6, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s8, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 7, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s9, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 8, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s10, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 9, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s11, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 10, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s12, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 11, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s13, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 12, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s14, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 13, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s15, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 14, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v1, v1, s16, vcc_lo
-; GFX10PLUS-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v0
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, v1, s0, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 2, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s4, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 3, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s5, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 4, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 5, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s7, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 6, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s8, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 7, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s9, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 8, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s10, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 9, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s11, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 10, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s12, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 11, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s13, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 12, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s14, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 13, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s15, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 14, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v1, s16, v1, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 15, v0
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, s0, v1, vcc_lo
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 entry:
   %ext = extractelement <15 x float> %vec, i32 %sel
@@ -3706,8 +3706,8 @@ define float @dyn_extract_v15f32_v_v(<15 x float> %vec, i32 %sel) {
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v13, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 14, v15
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v15
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, s4, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 15, v15
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s4, v0, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: dyn_extract_v15f32_v_v:
@@ -3741,8 +3741,8 @@ define float @dyn_extract_v15f32_v_v(<15 x float> %vec, i32 %sel) {
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v13, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 14, v15
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v15
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, s0, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 15, v15
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s0, v0, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ext = extractelement <15 x float> %vec, i32 %sel
@@ -3977,8 +3977,8 @@ define float @dyn_extract_v15f32_v_v_offset3(<15 x float> %vec, i32 %sel) {
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v13, vcc_lo
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 14, v15
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
-; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v15
-; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, s4, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 15, v15
+; GFX10-NEXT:    v_cndmask_b32_e32 v0, s4, v0, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: dyn_extract_v15f32_v_v_offset3:
@@ -4013,8 +4013,8 @@ define float @dyn_extract_v15f32_v_v_offset3(<15 x float> %vec, i32 %sel) {
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v13, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 14, v15
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v0, v14, vcc_lo
-; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 15, v15
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, s0, vcc_lo
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 15, v15
+; GFX11-NEXT:    v_cndmask_b32_e32 v0, s0, v0, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %add = add i32 %sel, 3
