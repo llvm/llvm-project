@@ -1808,9 +1808,6 @@ public:
   LLVMContextImpl(LLVMContext &C);
   ~LLVMContextImpl();
 
-  /// Destroy the ConstantArrays if they are not used.
-  void dropTriviallyDeadConstantArrays();
-
   mutable OptPassGate *OPG = nullptr;
 
   /// Access the object which can disable optional passes and individual

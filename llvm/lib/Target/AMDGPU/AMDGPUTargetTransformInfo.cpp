@@ -985,12 +985,6 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
            CastI->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
            ST->hasGloballyAddressableScratch();
   }
-  // An alloca in AS0 is lowered to an alloca in AS5 followed by an address
-  // space cast.
-  if (auto *AI = dyn_cast<AllocaInst>(V)) {
-    return AI->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
-           ST->hasGloballyAddressableScratch();
-  }
 
   return false;
 }

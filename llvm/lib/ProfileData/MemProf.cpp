@@ -190,12 +190,13 @@ static IndexedMemProfRecord deserializeV3(const MemProfSchema &Schema,
   const uint64_t NumNodes =
       endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
   Record.AllocSites.reserve(NumNodes);
+  const size_t SerializedSize = PortableMemInfoBlock::serializedSize(Schema);
   for (uint64_t I = 0; I < NumNodes; I++) {
     IndexedAllocationInfo Node;
     Node.CSId =
         endian::readNext<LinearCallStackId, llvm::endianness::little>(Ptr);
     Node.Info.deserialize(Schema, Ptr);
-    Ptr += PortableMemInfoBlock::serializedSize(Schema);
+    Ptr += SerializedSize;
     Record.AllocSites.push_back(Node);
   }
 
