@@ -70,6 +70,7 @@ void Ctx::reset() {
   isPic = false;
   legacyFunctionTable = false;
   emitBssSegments = false;
+  sym = WasmSym{};
 }
 
 namespace {
@@ -317,10 +318,6 @@ void LinkerDriver::addFile(StringRef path) {
     if (inWholeArchive) {
       for (const auto &[m, offset] : members) {
         auto *object = createObjectFile(m, path, offset);
-        // Mark object as live; object members are normally not
-        // live by default but -whole-archive is designed to treat
-        // them as such.
-        object->markLive();
         files.push_back(object);
       }
 
@@ -945,14 +942,14 @@ static void createSyntheticSymbols() {
                                                             true};
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI64 = {WASM_TYPE_I64,
                                                             true};
-  WasmSym::callCtors = symtab->addSyntheticFunction(
+  ctx.sym.callCtors = symtab->addSyntheticFunction(
       "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
   bool is64 = ctx.arg.is64.value_or(false);
 
   if (ctx.isPic) {
-    WasmSym::stackPointer =
+    ctx.sym.stackPointer =
         createUndefinedGlobal("__stack_pointer", ctx.arg.is64.value_or(false)
                                                      ? &mutableGlobalTypeI64
                                                      : &mutableGlobalTypeI32);
@@ -962,25 +959,24 @@ static void createSyntheticSymbols() {
     // See:
     // https://github.com/WebAssembly/tool-conventions/blob/main/DynamicLinking.md
     auto *globalType = is64 ? &globalTypeI64 : &globalTypeI32;
-    WasmSym::memoryBase = createUndefinedGlobal("__memory_base", globalType);
-    WasmSym::tableBase = createUndefinedGlobal("__table_base", globalType);
-    WasmSym::memoryBase->markLive();
-    WasmSym::tableBase->markLive();
+    ctx.sym.memoryBase = createUndefinedGlobal("__memory_base", globalType);
+    ctx.sym.tableBase = createUndefinedGlobal("__table_base", globalType);
+    ctx.sym.memoryBase->markLive();
+    ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    WasmSym::stackPointer = createGlobalVariable("__stack_pointer", true);
-    WasmSym::stackPointer->markLive();
+    ctx.sym.stackPointer = createGlobalVariable("__stack_pointer", true);
+    ctx.sym.stackPointer->markLive();
   }
 
   if (ctx.arg.sharedMemory) {
-    WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
-    WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
-    WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);
-    WasmSym::initTLS = symtab->addSyntheticFunction(
+    ctx.sym.tlsBase = createGlobalVariable("__tls_base", true);
+    ctx.sym.tlsSize = createGlobalVariable("__tls_size", false);
+    ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false);
+    ctx.sym.initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(
-            is64 ? i64ArgSignature : i32ArgSignature,
-            "__wasm_init_tls"));
+        make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
+                                "__wasm_init_tls"));
   }
 }
 
@@ -988,25 +984,24 @@ static void createOptionalSymbols() {
   if (ctx.arg.relocatable)
     return;
 
-  WasmSym::dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
+  ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
   if (!ctx.arg.shared)
-    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+    ctx.sym.dataEnd = symtab->addOptionalDataSymbol("__data_end");
 
   if (!ctx.isPic) {
-    WasmSym::stackLow = symtab->addOptionalDataSymbol("__stack_low");
-    WasmSym::stackHigh = symtab->addOptionalDataSymbol("__stack_high");
-    WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
-    WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
-    WasmSym::heapEnd = symtab->addOptionalDataSymbol("__heap_end");
-    WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
-    WasmSym::definedTableBase = symtab->addOptionalDataSymbol("__table_base");
+    ctx.sym.stackLow = symtab->addOptionalDataSymbol("__stack_low");
+    ctx.sym.stackHigh = symtab->addOptionalDataSymbol("__stack_high");
+    ctx.sym.globalBase = symtab->addOptionalDataSymbol("__global_base");
+    ctx.sym.heapBase = symtab->addOptionalDataSymbol("__heap_base");
+    ctx.sym.heapEnd = symtab->addOptionalDataSymbol("__heap_end");
+    ctx.sym.definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
+    ctx.sym.definedTableBase = symtab->addOptionalDataSymbol("__table_base");
   }
 
-  WasmSym::firstPageEnd =
-      symtab->addOptionalDataSymbol("__wasm_first_page_end");
-  if (WasmSym::firstPageEnd)
-    WasmSym::firstPageEnd->setVA(ctx.arg.pageSize);
+  ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");
+  if (ctx.sym.firstPageEnd)
+    ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
 
   // For non-shared memory programs we still need to define __tls_base since we
   // allow object files built with TLS to be linked into single threaded
@@ -1018,7 +1013,7 @@ static void createOptionalSymbols() {
   // __tls_size and __tls_align are not needed in this case since they are only
   // needed for __wasm_init_tls (which we do not create in this case).
   if (!ctx.arg.sharedMemory)
-    WasmSym::tlsBase = createOptionalGlobal("__tls_base", false);
+    ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
 static void processStubLibrariesPreLTO() {
@@ -1393,9 +1388,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // by libc/etc., because destructors are registered dynamically with
   // `__cxa_atexit` and friends.
   if (!ctx.arg.relocatable && !ctx.arg.shared &&
-      !WasmSym::callCtors->isUsedInRegularObj &&
-      WasmSym::callCtors->getName() != ctx.arg.entry &&
-      !ctx.arg.exportedSymbols.count(WasmSym::callCtors->getName())) {
+      !ctx.sym.callCtors->isUsedInRegularObj &&
+      ctx.sym.callCtors->getName() != ctx.arg.entry &&
+      !ctx.arg.exportedSymbols.count(ctx.sym.callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {
@@ -1404,7 +1399,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
              !callDtorsFunc->signature->Returns.empty())) {
           error("__wasm_call_dtors must have no argument or return values");
         }
-        WasmSym::callDtors = callDtorsFunc;
+        ctx.sym.callDtors = callDtorsFunc;
       } else {
         error("__wasm_call_dtors must be a function");
       }
@@ -1497,7 +1492,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   markLive();
 
   // Provide the indirect function table if needed.
-  WasmSym::indirectFunctionTable =
+  ctx.sym.indirectFunctionTable =
       symtab->resolveIndirectFunctionTable(/*required =*/false);
 
   if (errorCount())
