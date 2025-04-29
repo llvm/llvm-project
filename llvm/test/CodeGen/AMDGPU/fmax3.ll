@@ -2,10 +2,14 @@
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250_Plus,GFX1250 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250_Plus,GFX13 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX12,GFX12-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250,GFX1250-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=+real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -mattr=-real-true16 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX13,GFX13-FAKE16 %s
 
 define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
 ; SI-LABEL: test_fmax3_olt_0_f32:
@@ -158,35 +162,65 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-NEXT:    s_endpgm
 ;
-; GFX1250_Plus-LABEL: test_fmax3_olt_0_f32:
-; GFX1250_Plus:       ; %bb.0:
-; GFX1250_Plus-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX1250_Plus-NEXT:    s_mov_b32 s10, -1
-; GFX1250_Plus-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1250_Plus-NEXT:    s_mov_b32 s14, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s15, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s18, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s19, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s22, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s23, s11
-; GFX1250_Plus-NEXT:    s_wait_kmcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s12, s2
-; GFX1250_Plus-NEXT:    s_mov_b32 s13, s3
-; GFX1250_Plus-NEXT:    s_mov_b32 s16, s4
-; GFX1250_Plus-NEXT:    s_mov_b32 s17, s5
-; GFX1250_Plus-NEXT:    s_mov_b32 s20, s6
-; GFX1250_Plus-NEXT:    s_mov_b32 s21, s7
-; GFX1250_Plus-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s8, s0
-; GFX1250_Plus-NEXT:    s_mov_b32 s9, s1
-; GFX1250_Plus-NEXT:    v_max3_num_f32 v0, v0, v1, v2
-; GFX1250_Plus-NEXT:    buffer_store_b32 v0, off, s[8:11], null
-; GFX1250_Plus-NEXT:    s_endpgm
+; GFX1250-LABEL: test_fmax3_olt_0_f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1250-NEXT:    s_mov_b32 s10, -1
+; GFX1250-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1250-NEXT:    s_mov_b32 s14, s10
+; GFX1250-NEXT:    s_mov_b32 s15, s11
+; GFX1250-NEXT:    s_mov_b32 s18, s10
+; GFX1250-NEXT:    s_mov_b32 s19, s11
+; GFX1250-NEXT:    s_mov_b32 s22, s10
+; GFX1250-NEXT:    s_mov_b32 s23, s11
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s12, s2
+; GFX1250-NEXT:    s_mov_b32 s13, s3
+; GFX1250-NEXT:    s_mov_b32 s16, s4
+; GFX1250-NEXT:    s_mov_b32 s17, s5
+; GFX1250-NEXT:    s_mov_b32 s20, s6
+; GFX1250-NEXT:    s_mov_b32 s21, s7
+; GFX1250-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s8, s0
+; GFX1250-NEXT:    s_mov_b32 s9, s1
+; GFX1250-NEXT:    v_max3_num_f32 v0, v0, v1, v2
+; GFX1250-NEXT:    buffer_store_b32 v0, off, s[8:11], null
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: test_fmax3_olt_0_f32:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX13-NEXT:    s_mov_b32 s10, -1
+; GFX13-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX13-NEXT:    s_mov_b32 s14, s10
+; GFX13-NEXT:    s_mov_b32 s15, s11
+; GFX13-NEXT:    s_mov_b32 s18, s10
+; GFX13-NEXT:    s_mov_b32 s19, s11
+; GFX13-NEXT:    s_mov_b32 s22, s10
+; GFX13-NEXT:    s_mov_b32 s23, s11
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_mov_b32 s12, s2
+; GFX13-NEXT:    s_mov_b32 s13, s3
+; GFX13-NEXT:    s_mov_b32 s16, s4
+; GFX13-NEXT:    s_mov_b32 s17, s5
+; GFX13-NEXT:    s_mov_b32 s20, s6
+; GFX13-NEXT:    s_mov_b32 s21, s7
+; GFX13-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_mov_b32 s8, s0
+; GFX13-NEXT:    s_mov_b32 s9, s1
+; GFX13-NEXT:    v_max3_num_f32 v0, v0, v1, v2
+; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    s_endpgm
   %a = load volatile  float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
   %c = load volatile float, ptr addrspace(1) %cptr, align 4
@@ -348,35 +382,65 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    buffer_store_b32 v0, off, s[8:11], null
 ; GFX12-NEXT:    s_endpgm
 ;
-; GFX1250_Plus-LABEL: test_fmax3_olt_1_f32:
-; GFX1250_Plus:       ; %bb.0:
-; GFX1250_Plus-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX1250_Plus-NEXT:    s_mov_b32 s10, -1
-; GFX1250_Plus-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1250_Plus-NEXT:    s_mov_b32 s14, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s15, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s18, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s19, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s22, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s23, s11
-; GFX1250_Plus-NEXT:    s_wait_kmcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s12, s2
-; GFX1250_Plus-NEXT:    s_mov_b32 s13, s3
-; GFX1250_Plus-NEXT:    s_mov_b32 s16, s4
-; GFX1250_Plus-NEXT:    s_mov_b32 s17, s5
-; GFX1250_Plus-NEXT:    s_mov_b32 s20, s6
-; GFX1250_Plus-NEXT:    s_mov_b32 s21, s7
-; GFX1250_Plus-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s8, s0
-; GFX1250_Plus-NEXT:    s_mov_b32 s9, s1
-; GFX1250_Plus-NEXT:    v_max3_num_f32 v0, v2, v0, v1
-; GFX1250_Plus-NEXT:    buffer_store_b32 v0, off, s[8:11], null
-; GFX1250_Plus-NEXT:    s_endpgm
+; GFX1250-LABEL: test_fmax3_olt_1_f32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1250-NEXT:    s_mov_b32 s10, -1
+; GFX1250-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1250-NEXT:    s_mov_b32 s14, s10
+; GFX1250-NEXT:    s_mov_b32 s15, s11
+; GFX1250-NEXT:    s_mov_b32 s18, s10
+; GFX1250-NEXT:    s_mov_b32 s19, s11
+; GFX1250-NEXT:    s_mov_b32 s22, s10
+; GFX1250-NEXT:    s_mov_b32 s23, s11
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s12, s2
+; GFX1250-NEXT:    s_mov_b32 s13, s3
+; GFX1250-NEXT:    s_mov_b32 s16, s4
+; GFX1250-NEXT:    s_mov_b32 s17, s5
+; GFX1250-NEXT:    s_mov_b32 s20, s6
+; GFX1250-NEXT:    s_mov_b32 s21, s7
+; GFX1250-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s8, s0
+; GFX1250-NEXT:    s_mov_b32 s9, s1
+; GFX1250-NEXT:    v_max3_num_f32 v0, v2, v0, v1
+; GFX1250-NEXT:    buffer_store_b32 v0, off, s[8:11], null
+; GFX1250-NEXT:    s_endpgm
+;
+; GFX13-LABEL: test_fmax3_olt_1_f32:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX13-NEXT:    s_mov_b32 s10, -1
+; GFX13-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX13-NEXT:    s_mov_b32 s14, s10
+; GFX13-NEXT:    s_mov_b32 s15, s11
+; GFX13-NEXT:    s_mov_b32 s18, s10
+; GFX13-NEXT:    s_mov_b32 s19, s11
+; GFX13-NEXT:    s_mov_b32 s22, s10
+; GFX13-NEXT:    s_mov_b32 s23, s11
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_mov_b32 s12, s2
+; GFX13-NEXT:    s_mov_b32 s13, s3
+; GFX13-NEXT:    s_mov_b32 s16, s4
+; GFX13-NEXT:    s_mov_b32 s17, s5
+; GFX13-NEXT:    s_mov_b32 s20, s6
+; GFX13-NEXT:    s_mov_b32 s21, s7
+; GFX13-NEXT:    buffer_load_b32 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    buffer_load_b32 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    buffer_load_b32 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    s_mov_b32 s8, s0
+; GFX13-NEXT:    s_mov_b32 s9, s1
+; GFX13-NEXT:    v_max3_num_f32 v0, v2, v0, v1
+; GFX13-NEXT:    buffer_store_b32 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
   %b = load volatile float, ptr addrspace(1) %bptr, align 4
   %c = load volatile float, ptr addrspace(1) %cptr, align 4
@@ -485,95 +549,245 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: test_fmax3_olt_0_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX11-NEXT:    s_mov_b32 s10, -1
-; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s14, s10
-; GFX11-NEXT:    s_mov_b32 s15, s11
-; GFX11-NEXT:    s_mov_b32 s18, s10
-; GFX11-NEXT:    s_mov_b32 s19, s11
-; GFX11-NEXT:    s_mov_b32 s22, s10
-; GFX11-NEXT:    s_mov_b32 s23, s11
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s12, s2
-; GFX11-NEXT:    s_mov_b32 s13, s3
-; GFX11-NEXT:    s_mov_b32 s16, s4
-; GFX11-NEXT:    s_mov_b32 s17, s5
-; GFX11-NEXT:    s_mov_b32 s20, s6
-; GFX11-NEXT:    s_mov_b32 s21, s7
-; GFX11-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_load_u16 v1, off, s[16:19], 0 glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_load_u16 v2, off, s[20:23], 0 glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s8, s0
-; GFX11-NEXT:    s_mov_b32 s9, s1
-; GFX11-NEXT:    v_max3_f16 v0, v0, v1, v2
-; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: test_fmax3_olt_0_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX11-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX11-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX11-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX11-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX11-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX11-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX11-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX11-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    buffer_load_u16 v1, off, s[16:19], 0 glc dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    buffer_load_u16 v2, off, s[20:23], 0 glc dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX11-TRUE16-NEXT:    v_max3_f16 v0.l, v0.l, v1.l, v2.l
+; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX11-TRUE16-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: test_fmax3_olt_0_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX12-NEXT:    s_mov_b32 s10, -1
-; GFX12-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX12-NEXT:    s_mov_b32 s14, s10
-; GFX12-NEXT:    s_mov_b32 s15, s11
-; GFX12-NEXT:    s_mov_b32 s18, s10
-; GFX12-NEXT:    s_mov_b32 s19, s11
-; GFX12-NEXT:    s_mov_b32 s22, s10
-; GFX12-NEXT:    s_mov_b32 s23, s11
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s12, s2
-; GFX12-NEXT:    s_mov_b32 s13, s3
-; GFX12-NEXT:    s_mov_b32 s16, s4
-; GFX12-NEXT:    s_mov_b32 s17, s5
-; GFX12-NEXT:    s_mov_b32 s20, s6
-; GFX12-NEXT:    s_mov_b32 s21, s7
-; GFX12-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s8, s0
-; GFX12-NEXT:    s_mov_b32 s9, s1
-; GFX12-NEXT:    v_max3_num_f16 v0, v0, v1, v2
-; GFX12-NEXT:    buffer_store_b16 v0, off, s[8:11], null
-; GFX12-NEXT:    s_endpgm
+; GFX11-FAKE16-LABEL: test_fmax3_olt_0_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX11-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX11-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX11-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX11-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX11-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX11-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX11-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX11-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX11-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX11-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], 0 glc dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], 0 glc dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX11-FAKE16-NEXT:    v_max3_f16 v0, v0, v1, v2
+; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX11-FAKE16-NEXT:    s_endpgm
 ;
-; GFX1250_Plus-LABEL: test_fmax3_olt_0_f16:
-; GFX1250_Plus:       ; %bb.0:
-; GFX1250_Plus-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX1250_Plus-NEXT:    s_mov_b32 s10, -1
-; GFX1250_Plus-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1250_Plus-NEXT:    s_mov_b32 s14, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s15, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s18, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s19, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s22, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s23, s11
-; GFX1250_Plus-NEXT:    s_wait_kmcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s12, s2
-; GFX1250_Plus-NEXT:    s_mov_b32 s13, s3
-; GFX1250_Plus-NEXT:    s_mov_b32 s16, s4
-; GFX1250_Plus-NEXT:    s_mov_b32 s17, s5
-; GFX1250_Plus-NEXT:    s_mov_b32 s20, s6
-; GFX1250_Plus-NEXT:    s_mov_b32 s21, s7
-; GFX1250_Plus-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s8, s0
-; GFX1250_Plus-NEXT:    s_mov_b32 s9, s1
-; GFX1250_Plus-NEXT:    v_max3_num_f16 v0, v0, v1, v2
-; GFX1250_Plus-NEXT:    buffer_store_b16 v0, off, s[8:11], null
-; GFX1250_Plus-NEXT:    s_endpgm
+; GFX12-TRUE16-LABEL: test_fmax3_olt_0_f16:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX12-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX12-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX12-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX12-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX12-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX12-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX12-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX12-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX12-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX12-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: test_fmax3_olt_0_f16:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX12-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX12-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX12-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX12-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX12-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX12-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX12-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX12-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX12-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX12-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX12-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX12-FAKE16-NEXT:    v_max3_num_f16 v0, v0, v1, v2
+; GFX12-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX12-FAKE16-NEXT:    s_endpgm
+;
+; GFX1250-TRUE16-LABEL: test_fmax3_olt_0_f16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX1250-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX1250-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1250-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX1250-TRUE16-NEXT:    s_endpgm
+;
+; GFX1250-FAKE16-LABEL: test_fmax3_olt_0_f16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX1250-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX1250-FAKE16-NEXT:    v_max3_num_f16 v0, v0, v1, v2
+; GFX1250-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX1250-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: test_fmax3_olt_0_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX13-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX13-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX13-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX13-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX13-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX13-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX13-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX13-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX13-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX13-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX13-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX13-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX13-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX13-TRUE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX13-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX13-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
+; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_fmax3_olt_0_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX13-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX13-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX13-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX13-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX13-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX13-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX13-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX13-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX13-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX13-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX13-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX13-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX13-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX13-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX13-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX13-FAKE16-NEXT:    v_max3_num_f16 v0, v0, v1, v2
+; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
   %c = load volatile half, ptr addrspace(1) %cptr, align 2
@@ -683,95 +897,245 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX9-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: test_fmax3_olt_1_f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX11-NEXT:    s_mov_b32 s10, -1
-; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s14, s10
-; GFX11-NEXT:    s_mov_b32 s15, s11
-; GFX11-NEXT:    s_mov_b32 s18, s10
-; GFX11-NEXT:    s_mov_b32 s19, s11
-; GFX11-NEXT:    s_mov_b32 s22, s10
-; GFX11-NEXT:    s_mov_b32 s23, s11
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s12, s2
-; GFX11-NEXT:    s_mov_b32 s13, s3
-; GFX11-NEXT:    s_mov_b32 s16, s4
-; GFX11-NEXT:    s_mov_b32 s17, s5
-; GFX11-NEXT:    s_mov_b32 s20, s6
-; GFX11-NEXT:    s_mov_b32 s21, s7
-; GFX11-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_load_u16 v1, off, s[16:19], 0 glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_load_u16 v2, off, s[20:23], 0 glc dlc
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s8, s0
-; GFX11-NEXT:    s_mov_b32 s9, s1
-; GFX11-NEXT:    v_max3_f16 v0, v2, v0, v1
-; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: test_fmax3_olt_1_f16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX11-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX11-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX11-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX11-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX11-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX11-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX11-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX11-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX11-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX11-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX11-TRUE16-NEXT:    buffer_load_u16 v1, off, s[12:15], 0 glc dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    buffer_load_u16 v2, off, s[16:19], 0 glc dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    buffer_load_u16 v0, off, s[20:23], 0 glc dlc
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX11-TRUE16-NEXT:    v_max3_f16 v0.l, v0.l, v1.l, v2.l
+; GFX11-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX11-TRUE16-NEXT:    s_endpgm
 ;
-; GFX12-LABEL: test_fmax3_olt_1_f16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX12-NEXT:    s_mov_b32 s10, -1
-; GFX12-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX12-NEXT:    s_mov_b32 s14, s10
-; GFX12-NEXT:    s_mov_b32 s15, s11
-; GFX12-NEXT:    s_mov_b32 s18, s10
-; GFX12-NEXT:    s_mov_b32 s19, s11
-; GFX12-NEXT:    s_mov_b32 s22, s10
-; GFX12-NEXT:    s_mov_b32 s23, s11
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s12, s2
-; GFX12-NEXT:    s_mov_b32 s13, s3
-; GFX12-NEXT:    s_mov_b32 s16, s4
-; GFX12-NEXT:    s_mov_b32 s17, s5
-; GFX12-NEXT:    s_mov_b32 s20, s6
-; GFX12-NEXT:    s_mov_b32 s21, s7
-; GFX12-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_mov_b32 s8, s0
-; GFX12-NEXT:    s_mov_b32 s9, s1
-; GFX12-NEXT:    v_max3_num_f16 v0, v2, v0, v1
-; GFX12-NEXT:    buffer_store_b16 v0, off, s[8:11], null
-; GFX12-NEXT:    s_endpgm
+; GFX11-FAKE16-LABEL: test_fmax3_olt_1_f16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX11-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX11-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX11-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX11-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX11-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX11-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX11-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX11-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX11-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX11-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX11-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX11-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], 0 glc dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], 0 glc dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], 0 glc dlc
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX11-FAKE16-NEXT:    v_max3_f16 v0, v2, v0, v1
+; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX11-FAKE16-NEXT:    s_endpgm
 ;
-; GFX1250_Plus-LABEL: test_fmax3_olt_1_f16:
-; GFX1250_Plus:       ; %bb.0:
-; GFX1250_Plus-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
-; GFX1250_Plus-NEXT:    s_mov_b32 s10, -1
-; GFX1250_Plus-NEXT:    s_mov_b32 s11, 0x31016000
-; GFX1250_Plus-NEXT:    s_mov_b32 s14, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s15, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s18, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s19, s11
-; GFX1250_Plus-NEXT:    s_mov_b32 s22, s10
-; GFX1250_Plus-NEXT:    s_mov_b32 s23, s11
-; GFX1250_Plus-NEXT:    s_wait_kmcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s12, s2
-; GFX1250_Plus-NEXT:    s_mov_b32 s13, s3
-; GFX1250_Plus-NEXT:    s_mov_b32 s16, s4
-; GFX1250_Plus-NEXT:    s_mov_b32 s17, s5
-; GFX1250_Plus-NEXT:    s_mov_b32 s20, s6
-; GFX1250_Plus-NEXT:    s_mov_b32 s21, s7
-; GFX1250_Plus-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
-; GFX1250_Plus-NEXT:    s_wait_loadcnt 0x0
-; GFX1250_Plus-NEXT:    s_mov_b32 s8, s0
-; GFX1250_Plus-NEXT:    s_mov_b32 s9, s1
-; GFX1250_Plus-NEXT:    v_max3_num_f16 v0, v2, v0, v1
-; GFX1250_Plus-NEXT:    buffer_store_b16 v0, off, s[8:11], null
-; GFX1250_Plus-NEXT:    s_endpgm
+; GFX12-TRUE16-LABEL: test_fmax3_olt_1_f16:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX12-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX12-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX12-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX12-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX12-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX12-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX12-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX12-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX12-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v1, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v2, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX12-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX12-TRUE16-NEXT:    s_endpgm
+;
+; GFX12-FAKE16-LABEL: test_fmax3_olt_1_f16:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX12-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX12-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX12-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX12-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX12-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX12-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX12-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX12-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX12-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX12-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX12-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX12-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX12-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX12-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX12-FAKE16-NEXT:    v_max3_num_f16 v0, v2, v0, v1
+; GFX12-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX12-FAKE16-NEXT:    s_endpgm
+;
+; GFX1250-TRUE16-LABEL: test_fmax3_olt_1_f16:
+; GFX1250-TRUE16:       ; %bb.0:
+; GFX1250-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX1250-TRUE16-NEXT:    buffer_load_u16 v1, off, s[12:15], null scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    buffer_load_u16 v2, off, s[16:19], null scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    buffer_load_u16 v0, off, s[20:23], null scope:SCOPE_SYS
+; GFX1250-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX1250-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX1250-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
+; GFX1250-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX1250-TRUE16-NEXT:    s_endpgm
+;
+; GFX1250-FAKE16-LABEL: test_fmax3_olt_1_f16:
+; GFX1250-FAKE16:       ; %bb.0:
+; GFX1250-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX1250-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX1250-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX1250-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX1250-FAKE16-NEXT:    v_max3_num_f16 v0, v2, v0, v1
+; GFX1250-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null
+; GFX1250-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-TRUE16-LABEL: test_fmax3_olt_1_f16:
+; GFX13-TRUE16:       ; %bb.0:
+; GFX13-TRUE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX13-TRUE16-NEXT:    s_mov_b32 s10, -1
+; GFX13-TRUE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX13-TRUE16-NEXT:    s_mov_b32 s14, s10
+; GFX13-TRUE16-NEXT:    s_mov_b32 s15, s11
+; GFX13-TRUE16-NEXT:    s_mov_b32 s18, s10
+; GFX13-TRUE16-NEXT:    s_mov_b32 s19, s11
+; GFX13-TRUE16-NEXT:    s_mov_b32 s22, s10
+; GFX13-TRUE16-NEXT:    s_mov_b32 s23, s11
+; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-TRUE16-NEXT:    s_mov_b32 s12, s2
+; GFX13-TRUE16-NEXT:    s_mov_b32 s13, s3
+; GFX13-TRUE16-NEXT:    s_mov_b32 s16, s4
+; GFX13-TRUE16-NEXT:    s_mov_b32 s17, s5
+; GFX13-TRUE16-NEXT:    s_mov_b32 s20, s6
+; GFX13-TRUE16-NEXT:    s_mov_b32 s21, s7
+; GFX13-TRUE16-NEXT:    buffer_load_u16 v1, off, s[12:15], null scope:SCOPE_SYS
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    buffer_load_u16 v2, off, s[16:19], null scope:SCOPE_SYS
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    buffer_load_u16 v0, off, s[20:23], null scope:SCOPE_SYS
+; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-TRUE16-NEXT:    s_mov_b32 s8, s0
+; GFX13-TRUE16-NEXT:    s_mov_b32 s9, s1
+; GFX13-TRUE16-NEXT:    v_max3_num_f16 v0.l, v0.l, v1.l, v2.l
+; GFX13-TRUE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-TRUE16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: test_fmax3_olt_1_f16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX13-FAKE16-NEXT:    s_mov_b32 s10, -1
+; GFX13-FAKE16-NEXT:    s_mov_b32 s11, 0x31016000
+; GFX13-FAKE16-NEXT:    s_mov_b32 s14, s10
+; GFX13-FAKE16-NEXT:    s_mov_b32 s15, s11
+; GFX13-FAKE16-NEXT:    s_mov_b32 s18, s10
+; GFX13-FAKE16-NEXT:    s_mov_b32 s19, s11
+; GFX13-FAKE16-NEXT:    s_mov_b32 s22, s10
+; GFX13-FAKE16-NEXT:    s_mov_b32 s23, s11
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    s_mov_b32 s12, s2
+; GFX13-FAKE16-NEXT:    s_mov_b32 s13, s3
+; GFX13-FAKE16-NEXT:    s_mov_b32 s16, s4
+; GFX13-FAKE16-NEXT:    s_mov_b32 s17, s5
+; GFX13-FAKE16-NEXT:    s_mov_b32 s20, s6
+; GFX13-FAKE16-NEXT:    s_mov_b32 s21, s7
+; GFX13-FAKE16-NEXT:    buffer_load_u16 v0, off, s[12:15], null scope:SCOPE_SYS
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    buffer_load_u16 v1, off, s[16:19], null scope:SCOPE_SYS
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    buffer_load_u16 v2, off, s[20:23], null scope:SCOPE_SYS
+; GFX13-FAKE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-FAKE16-NEXT:    s_mov_b32 s8, s0
+; GFX13-FAKE16-NEXT:    s_mov_b32 s9, s1
+; GFX13-FAKE16-NEXT:    v_max3_num_f16 v0, v2, v0, v1
+; GFX13-FAKE16-NEXT:    buffer_store_b16 v0, off, s[8:11], null scope:SCOPE_SE
+; GFX13-FAKE16-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
   %b = load volatile half, ptr addrspace(1) %bptr, align 2
   %c = load volatile half, ptr addrspace(1) %cptr, align 2

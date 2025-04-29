@@ -140,6 +140,16 @@ C Language Changes
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
+- Clang now diagnoses ``const``-qualified object definitions without an
+  initializer. If the object is zero-initialized, it will be diagnosed under
+  the new warning ``-Wdefault-const-init`` (which is grouped under
+  ``-Wc++-compat`` because this construct is not compatible with C++). If the
+  object is left uninitialized, it will be diagnosed unsed the new warning
+  ``-Wdefault-const-init-unsafe`` (which is grouped under
+  ``-Wdefault-const-init``). #GH19297
+- Added ``-Wimplicit-void-ptr-cast``, grouped under ``-Wc++-compat``, which
+  diagnoses implicit conversion from ``void *`` to another pointer type as
+  being incompatible with C++. (#GH17792)
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -226,10 +236,6 @@ Modified Compiler Flags
 - `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
 - The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
-
-- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``,
-  reducing performance slightly while reducing the number of optimized-out
-  variables.
 
 Removed Compiler Flags
 -------------------------
@@ -398,6 +404,8 @@ Improvements to Clang's diagnostics
   constructors to initialize their non-modifiable members. The diagnostic is
   not new; being controlled via a warning group is what's new. Fixes #GH41104
 
+- Analysis-based diagnostics (like ``-Wconsumed`` or ``-Wunreachable-code``)
+  can now be correctly controlled by ``#pragma clang diagnostic``. #GH42199
 
 - Improved Clang's error recovery for invalid function calls.
 
@@ -462,6 +470,7 @@ Bug Fixes in This Version
 - Fixed a crash when ``#embed`` appears as a part of a failed constant
   evaluation. The crashes were happening during diagnostics emission due to
   unimplemented statement printer. (#GH132641)
+- Fixed visibility calculation for template functions. (#GH103477)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -599,6 +608,8 @@ Arm and AArch64 Support
 - The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
   ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is
   also now printed when the ``--print-supported-extensions`` option is used.
+- When a feature that depends on NEON (``simd``) is used, NEON is now automatically enabled.
+- When NEON is disabled (``+nosimd``), all features that depend on NEON will now be disabled.
 
 -  Support for __ptrauth type qualifier has been added.
 
@@ -626,11 +637,19 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 
 - Add support for `-mtune=generic-ooo` (a generic out-of-order model).
+- Adds support for `__attribute__((interrupt("SiFive-CLIC-preemptible")))` and
+  `__attribute__((interrupt("SiFive-CLIC-stack-swap")))`. The former
+  automatically saves some interrupt CSRs before re-enabling interrupts in the
+  function prolog, the latter swaps `sp` with the value in a CSR before it is
+  used or modified. These two can also be combined, and can be combined with
+  `interrupt("machine")`.
 
 - Adds support for `__attribute__((interrupt("qci-nest")))` and
   `__attribute__((interrupt("qci-nonest")))`. These use instructions from
   Qualcomm's `Xqciint` extension to save and restore some GPRs in interrupt
   service routines.
+
+- `Zicsr` / `Zifencei` are allowed to be duplicated in the presence of `g` in `-march`.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -681,6 +700,8 @@ clang-format
 
 libclang
 --------
+- Fixed a bug in ``clang_File_isEqual`` that sometimes led to different 
+  in-memory files to be considered as equal.
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
 - Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as
@@ -743,6 +764,7 @@ Python Binding Changes
   allows visiting the methods of a class.
 - Added ``Type.get_fully_qualified_name``, which provides fully qualified type names as
   instructed by a PrintingPolicy.
+- Add equality comparison operators for ``File`` type
 
 OpenMP Support
 --------------

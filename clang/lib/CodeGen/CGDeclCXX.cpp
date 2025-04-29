@@ -448,6 +448,11 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
 
   if (Linkage == llvm::GlobalVariable::InternalLinkage)
     SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  else {
+    SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn, false);
+    SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
+    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
+  }
 
   Fn->setCallingConv(getRuntimeCC());
 

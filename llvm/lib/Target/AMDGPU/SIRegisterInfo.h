@@ -169,6 +169,11 @@ public:
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
+  const TargetRegisterClass *
+  getRegClassForBlockOp(const MachineFunction &MF) const {
+    return &AMDGPU::VReg_1024RegClass;
+  }
+
   void buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index, int Offset,
                                bool IsLoad, bool IsKill = true) const;
 

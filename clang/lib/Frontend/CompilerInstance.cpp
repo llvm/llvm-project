@@ -110,7 +110,7 @@ void CompilerInstance::setAuxTarget(TargetInfo *Value) { AuxTarget = Value; }
 bool CompilerInstance::createTarget() {
   // Create the target instance.
   setTarget(TargetInfo::CreateTargetInfo(getDiagnostics(),
-                                         getInvocation().TargetOpts));
+                                         getInvocation().getTargetOpts()));
   if (!hasTarget())
     return false;
 
@@ -119,14 +119,14 @@ bool CompilerInstance::createTarget() {
   if (!getAuxTarget() &&
       (getLangOpts().CUDA || getLangOpts().isTargetDevice()) &&
       !getFrontendOpts().AuxTriple.empty()) {
-    auto TO = std::make_shared<TargetOptions>();
+    auto &TO = AuxTargetOpts = std::make_unique<TargetOptions>();
     TO->Triple = llvm::Triple::normalize(getFrontendOpts().AuxTriple);
     if (getFrontendOpts().AuxTargetCPU)
       TO->CPU = *getFrontendOpts().AuxTargetCPU;
     if (getFrontendOpts().AuxTargetFeatures)
       TO->FeaturesAsWritten = *getFrontendOpts().AuxTargetFeatures;
     TO->HostTriple = getTarget().getTriple().str();
-    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), TO));
+    setAuxTarget(TargetInfo::CreateTargetInfo(getDiagnostics(), *TO));
   }
 
   if (!getTarget().hasStrictFP() && !getLangOpts().ExpStrictFP) {
@@ -536,6 +536,9 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                            /*ShowAllHeaders=*/true, /*OutputPath=*/"",
                            /*ShowDepth=*/true, /*MSStyle=*/true);
   }
+
+  if (GetDependencyDirectives)
+    PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 }
 
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
@@ -1237,14 +1240,22 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   Instance.createSourceManager(Instance.getFileManager());
   SourceManager &SourceMgr = Instance.getSourceManager();
 
-  // Note that this module is part of the module build stack, so that we
-  // can detect cycles in the module graph.
-  SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
-  SourceMgr.pushModuleBuildStack(ModuleName,
-                                 FullSourceLoc(ImportLoc, getSourceManager()));
+  if (ThreadSafeConfig) {
+    // Detecting cycles in the module graph is responsibility of the client.
+  } else {
+    // Note that this module is part of the module build stack, so that we
+    // can detect cycles in the module graph.
+    SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
+    SourceMgr.pushModuleBuildStack(
+        ModuleName, FullSourceLoc(ImportLoc, getSourceManager()));
+  }
 
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
+
+  if (GetDependencyDirectives)
+    Instance.GetDependencyDirectives =
+        GetDependencyDirectives->cloneFor(Instance.getFileManager());
 
   // If we're collecting module dependencies, we need to share a collector
   // between all of the module CompilerInstances. Other than that, we don't

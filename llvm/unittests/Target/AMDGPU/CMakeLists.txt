@@ -23,6 +23,6 @@ add_llvm_target_unittest(AMDGPUTests
   CSETest.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
-  PALMetadata.cpp
   LiveRegUnits.cpp
+  PALMetadata.cpp
   )

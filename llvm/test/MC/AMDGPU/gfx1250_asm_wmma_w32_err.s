@@ -458,3 +458,23 @@ v_wmma_scale16_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[0:15], v[0:7], s[0:1], s[0
 // GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: wrong register tuple size for MATRIX_FMT_FP6
 // GFX1250-ERR-NEXT: {{^}}v_wmma_scale16_f32_16x16x128_f8f6f4 v[0:7], v[0:7], v[0:15], v[0:7], s[0:1], s[0:1] matrix_a_fmt:MATRIX_FMT_FP6
 // GFX1250-ERR-NEXT: {{^}}                                            ^
+
+v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_lo:[1,0,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_lo:[1,0,0]
+// GFX1250-ERR-NEXT: {{^}}                                                          ^
+
+v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_lo:[0,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_lo operand
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_lo:[0,1,0]
+// GFX1250-ERR-NEXT: {{^}}                                                          ^
+
+v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_hi:[1,0,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_hi:[1,0,0]
+// GFX1250-ERR-NEXT: {{^}}                                                          ^
+
+v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_hi:[0,1,0]
+// GFX1250-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid neg_hi operand
+// GFX1250-ERR-NEXT: {{^}}v_wmma_f32_32x16x128_f4 v[4:19], v[0:15], v[2:9], v[4:19] neg_hi:[0,1,0]
+// GFX1250-ERR-NEXT: {{^}}                                                          ^

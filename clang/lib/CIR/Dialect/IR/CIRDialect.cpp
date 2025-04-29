@@ -33,6 +33,14 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
+    if (auto recordType = dyn_cast<cir::RecordType>(type)) {
+      StringAttr nameAttr = recordType.getName();
+      if (!nameAttr)
+        os << "rec_anon_" << recordType.getKindAsStr();
+      else
+        os << "rec_" << nameAttr.getValue();
+      return AliasResult::OverridableAlias;
+    }
     if (auto intType = dyn_cast<cir::IntType>(type)) {
       // We only provide alias for standard integer types (i.e. integer types
       // whose width is a power of 2 and at least 8).
@@ -212,7 +220,7 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (isa<cir::ZeroAttr>(attrType)) {
-    if (isa<cir::RecordType, cir::ArrayType>(opType))
+    if (isa<cir::RecordType, cir::ArrayType, cir::VectorType>(opType))
       return success();
     return op->emitOpError("zero expects struct or array type");
   }
