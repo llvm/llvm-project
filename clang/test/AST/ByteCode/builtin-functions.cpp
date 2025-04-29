@@ -48,10 +48,10 @@ static_assert(test_address_of_incomplete_array_type() == 1234, ""); // both-erro
     constexpr NonTrivial(const NonTrivial &) : n(1) {}
     int n;
   };
-  constexpr bool test_nontrivial_memcpy() { // ref-error {{never produces a constant}}
+  constexpr bool test_nontrivial_memcpy() { // both-error {{never produces a constant}}
     NonTrivial arr[3] = {};
     __builtin_memcpy(arr, arr + 1, sizeof(NonTrivial)); // both-note {{non-trivially-copyable}} \
-                                                        // ref-note {{non-trivially-copyable}}
+                                                        // both-note {{non-trivially-copyable}}
     return true;
   }
   static_assert(test_nontrivial_memcpy()); // both-error {{constant}} \
