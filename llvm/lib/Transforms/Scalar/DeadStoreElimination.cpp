@@ -1212,10 +1212,8 @@ struct DSEState {
       return true;
 
     auto I = InvisibleToCallerAfterRet.insert({V, false});
-    if (I.second) {
-      if (isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
-        I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
-    }
+    if (I.second && isInvisibleToCallerOnUnwind(V) && isNoAliasCall(V))
+      I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
     return I.first->second;
   }
 
