@@ -1202,6 +1202,7 @@ static unsigned getNumSubRegsForSpillOp(const MachineInstr &MI,
   unsigned Op = MI.getOpcode();
   switch (Op) {
   case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+  case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
   case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     // FIXME: This assumes the mask is statically known and not computed at
     // runtime. However, some ABIs may want to compute the mask dynamically and
@@ -1986,11 +1987,17 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB.addImm(0); // swz
     MIB.addMemOperand(NewMMO);
 
-    if (IsStore && NeedsCFI)
-      TFL->buildCFIForVGPRToVMEMSpill(MBB, MI, DebugLoc(), SubReg,
-                                      (Offset + RegOffset) *
-                                          ST.getWavefrontSize() +
-                                          AdditionalCFIOffset);
+    if (IsStore && NeedsCFI) {
+      if (TII->isBlockLoadStore(LoadStoreOp)) {
+        assert(RegOffset == 0 &&
+               "expected whole register block to be treated as single element");
+        buildCFIForBlockCSRStore(MBB, MI, ValueReg, Offset);
+      } else {
+        TFL->buildCFIForVGPRToVMEMSpill(
+            MBB, MI, DebugLoc(), SubReg,
+            (Offset + RegOffset) * ST.getWavefrontSize() + AdditionalCFIOffset);
+      }
+    }
 
     if (!IsAGPR && NeedSuperRegDef)
       MIB.addReg(ValueReg, RegState::ImplicitDefine);
@@ -2059,6 +2066,31 @@ void SIRegisterInfo::addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
     if (!(Mask & (1 << RegOffset)) &&
         isCalleeSavedPhysReg(BaseVGPR + RegOffset, *MF))
       MIB.addUse(BaseVGPR + RegOffset, RegState::Implicit);
+}
+
+void SIRegisterInfo::buildCFIForBlockCSRStore(MachineBasicBlock &MBB,
+                                              MachineBasicBlock::iterator MBBI,
+                                              Register BlockReg,
+                                              int64_t Offset) const {
+  const MachineFunction *MF = MBB.getParent();
+  const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
+  uint32_t Mask = FuncInfo->getMaskForVGPRBlockOps(BlockReg);
+  Register BaseVGPR = getSubReg(BlockReg, AMDGPU::sub0);
+  for (unsigned RegOffset = 0; RegOffset < 32; ++RegOffset) {
+    Register VGPR = BaseVGPR + RegOffset;
+    if (Mask & (1 << RegOffset)) {
+      assert(isCalleeSavedPhysReg(VGPR, *MF));
+      ST.getFrameLowering()->buildCFIForVGPRToVMEMSpill(
+          MBB, MBBI, DebugLoc(), VGPR,
+          (Offset + RegOffset) * ST.getWavefrontSize());
+    } else if (isCalleeSavedPhysReg(VGPR, *MF)) {
+      // FIXME: This is a workaround for the fact that FrameLowering's
+      // emitPrologueEntryCFI considers the block load to clobber all registers
+      // in the block.
+      ST.getFrameLowering()->buildCFIForSameValue(MBB, MBBI, DebugLoc(),
+                                                  BaseVGPR + RegOffset);
+    }
+  }
 }
 
 void SIRegisterInfo::buildVGPRSpillLoadStore(SGPRSpillBuilder &SB, int Index,
@@ -2538,6 +2570,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
 
     // VGPR register spill
+    case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_SPILL_V512_CFI_SAVE:
     case AMDGPU::SI_SPILL_V256_CFI_SAVE:
@@ -2570,13 +2603,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV32_CFI_SAVE:
       NeedsCFI = true;
       LLVM_FALLTHROUGH;
-    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE: {
-      // Put mask into M0.
-      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
-              AMDGPU::M0)
-          .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
-      LLVM_FALLTHROUGH;
-    }
+    case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
     case AMDGPU::SI_SPILL_V1024_SAVE:
     case AMDGPU::SI_SPILL_V512_SAVE:
     case AMDGPU::SI_SPILL_V384_SAVE:
@@ -2622,6 +2649,16 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_AV32_SAVE:
     case AMDGPU::SI_SPILL_WWM_V32_SAVE:
     case AMDGPU::SI_SPILL_WWM_AV32_SAVE: {
+      assert(
+          MI->getOpcode() != AMDGPU::SI_BLOCK_SPILL_V1024_SAVE &&
+          "block spill does not currenty support spilling non-CSR registers");
+
+      if (MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE)
+        // Put mask into M0.
+        BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32),
+                AMDGPU::M0)
+            .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::mask));
+
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
       if (VData->isUndef()) {
@@ -2637,7 +2674,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         assert(ST.enableFlatScratch() && "Flat Scratch is not enabled!");
         Opc = AMDGPU::SCRATCH_STORE_SHORT_SADDR_t16;
       } else {
-        Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_SAVE
+        Opc = MI->getOpcode() == AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE
                   ? AMDGPU::SCRATCH_STORE_BLOCK_SADDR
               : ST.enableFlatScratch() ? AMDGPU::SCRATCH_STORE_DWORD_SADDR
                                        : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
@@ -2652,7 +2689,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
-          *MI->memoperands_begin(), RS);
+          *MI->memoperands_begin(), RS, nullptr, NeedsCFI);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(*MI, TII));
       if (IsWWMRegSpill)
         TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());

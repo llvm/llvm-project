@@ -1054,8 +1054,10 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
 
     def _CFI_SAVE : VPseudoInstSI <
       (outs),
-      (ins vgpr_class:$vdata, i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset)> {
+      !con(
+        (ins vgpr_class:$vdata, i32imm:$vaddr,
+             SReg_32:$soffset, i32imm:$offset),
+        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum

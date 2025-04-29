@@ -128,6 +128,13 @@ public:
   void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                       Register BlockReg) const;
 
+  // Iterate over all VGPRs in the given BlockReg and emit CFI for each VGPR
+  // as-needed depending on the (statically known) mask, relative to the given
+  // base Offset.
+  void buildCFIForBlockCSRStore(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                Register BlockReg, int64_t Offset) const;
+
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;

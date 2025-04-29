@@ -114,36 +114,13 @@ static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
   assert(Success && "spillCalleeSavedRegisters should always succeed");
   (void)Success;
 
-      MachineInstrSpan MIS(I, &SaveBlock);
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
+  // TFI doesn't update Indexes and LIS, so we have to do it separately.
+  if (Indexes)
+    Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
 
-      // If this value was already livein, we probably have a direct use of the
-      // incoming register value, so don't kill at the spill point. This happens
-      // since we pass some special inputs (workgroup IDs) in the callee saved
-      // range.
-      const bool IsLiveIn = isLiveIntoMBB(Reg, SaveBlock, TRI);
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
-                              RC, TRI, Register());
-
-      if (Indexes) {
-        assert(std::distance(MIS.begin(), I) == 1);
-        MachineInstr &Inst = *std::prev(I);
-        Indexes->insertMachineInstrInMaps(Inst);
-      }
-
-      if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
-    }
-  } else {
-    // TFI doesn't update Indexes and LIS, so we have to do it separately.
-    if (Indexes)
-      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
-
-    if (LIS)
-      for (const CalleeSavedInfo &CS : CSI)
-        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
-  }
+  if (LIS)
+    for (const CalleeSavedInfo &CS : CSI)
+      LIS->removeAllRegUnitsForPhysReg(CS.getReg());
 }
 
 /// Insert restore code for the callee-saved registers used in the function.

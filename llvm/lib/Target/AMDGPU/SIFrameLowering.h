@@ -84,11 +84,6 @@ public:
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
-  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI,
-                                 const ArrayRef<CalleeSavedInfo> CSI,
-                                 const TargetRegisterInfo *TRI) const override;
-
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
@@ -167,6 +162,9 @@ public:
                                               MachineBasicBlock::iterator MBBI,
                                               const DebugLoc &DL, Register Reg,
                                               Register SGPRPair) const;
+  MachineInstr *buildCFIForSameValue(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     const DebugLoc &DL, Register Reg) const;
   // Returns true if the function may need to reserve space on the stack for the
   // CWSR trap handler.
   bool mayReserveScratchForCWSR(const MachineFunction &MF) const;
