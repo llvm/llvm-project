@@ -20,7 +20,7 @@
 _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 
-// Type aliases to the address spaces used by the SPIRV backend.
+// Type aliases to the address spaces used by the SPIR-V backend.
 #define __gpu_private __attribute__((address_space(5)))
 #define __gpu_constant __attribute__((address_space(4)))
 #define __gpu_local __attribute__((address_space(3)))
@@ -29,6 +29,25 @@ _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 
 // Attribute to declare a function as a kernel.
 #define __gpu_kernel __attribute__((spir_kernel, visibility("protected")))
+
+extern "C" {
+uint32_t __builtin_spirv_get_num_workgroups_x();
+uint32_t __builtin_spirv_get_num_workgroups_y();
+uint32_t __builtin_spirv_get_num_workgroups_z();
+uint32_t __builtin_spirv_get_workgroup_id_x();
+uint32_t __builtin_spirv_get_workgroup_id_y();
+uint32_t __builtin_spirv_get_workgroup_id_z();
+uint32_t __builtin_spirv_workgroup_size_x();
+uint32_t __builtin_spirv_workgroup_size_y();
+uint32_t __builtin_spirv_workgroup_size_z();
+uint32_t __builtin_spirv_workitem_id_x();
+uint32_t __builtin_spirv_workitem_id_y();
+uint32_t __builtin_spirv_workitem_id_z();
+uint64_t __builtin_spirv_ballot(bool);
+void __builtin_spirv_sync_threads();
+bool __builtin_spirv_is_shared(void [[clang::address_space(0)]] *);
+bool __builtin_spirv_is_private(void [[clang::address_space(0)]] *);
+}
 
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
