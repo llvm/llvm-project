@@ -2219,7 +2219,6 @@ define half @fmul_select_f16_test6(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-<<<<<<< HEAD
 ; GFX11-SDAG-FAKE16-LABEL: fmul_select_f16_test6:
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2244,22 +2243,11 @@ define half @fmul_select_f16_test6(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-GISEL-FAKE16:       ; %bb.0:
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v3, 0x4200
-; GFX11-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v1, v3, 0xc800, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0xc800, v3, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-=======
-; GFX11-GISEL-LABEL: fmul_select_f16_test6:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0x4200
-; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xc800, v3, vcc_lo
-; GFX11-GISEL-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
->>>>>>> e85470abb9d1 ([AMDGPU] Switch V_CNDMASK operands to shrink it into VOP2)
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
   %y = select i1 %bool, half -8.000000e+00, half 3.000000e+00
   %ldexp = fmul half %x, %y
@@ -2339,7 +2327,6 @@ define half @fmul_select_f16_test7(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-SDAG-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-<<<<<<< HEAD
 ; GFX11-SDAG-FAKE16-LABEL: fmul_select_f16_test7:
 ; GFX11-SDAG-FAKE16:       ; %bb.0:
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2364,22 +2351,11 @@ define half @fmul_select_f16_test7(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-GISEL-FAKE16:       ; %bb.0:
 ; GFX11-GISEL-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v3, 0xc400
-; GFX11-GISEL-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-FAKE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e64 v1, v3, 0x4800, vcc_lo
+; GFX11-GISEL-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x4800, v3, vcc_lo
 ; GFX11-GISEL-FAKE16-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-=======
-; GFX11-GISEL-LABEL: fmul_select_f16_test7:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0xc400
-; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x4800, v3, vcc_lo
-; GFX11-GISEL-NEXT:    v_mul_f16_e32 v0, v0, v1
-; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
->>>>>>> e85470abb9d1 ([AMDGPU] Switch V_CNDMASK operands to shrink it into VOP2)
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
   %y = select i1 %bool, half 8.000000e+00, half -4.000000e+00
   %ldexp = fmul half %x, %y
