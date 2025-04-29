@@ -53,6 +53,15 @@ DataSharingProcessor::DataSharingProcessor(
   });
 }
 
+DataSharingProcessor::DataSharingProcessor(lower::AbstractConverter &converter,
+                                           semantics::SemanticsContext &semaCtx,
+                                           lower::pft::Evaluation &eval,
+                                           bool useDelayedPrivatization,
+                                           lower::SymMap &symTable)
+    : DataSharingProcessor(converter, semaCtx, {}, eval,
+                           /*shouldCollectPreDeterminedSymols=*/false,
+                           useDelayedPrivatization, symTable) {}
+
 void DataSharingProcessor::processStep1(
     mlir::omp::PrivateClauseOps *clauseOps) {
   collectSymbolsForPrivatization();
@@ -172,7 +181,8 @@ void DataSharingProcessor::cloneSymbol(const semantics::Symbol *sym) {
 
 void DataSharingProcessor::copyFirstPrivateSymbol(
     const semantics::Symbol *sym, mlir::OpBuilder::InsertPoint *copyAssignIP) {
-  if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate))
+  if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
+      sym->test(semantics::Symbol::Flag::LocalityLocalInit))
     converter.copyHostAssociateVar(*sym, copyAssignIP);
 }
 
@@ -504,22 +514,29 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
     }
 }
 
-void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
+void DataSharingProcessor::doPrivatize(const semantics::Symbol *symToPrivatize,
                                        mlir::omp::PrivateClauseOps *clauseOps) {
   if (!useDelayedPrivatization) {
-    cloneSymbol(sym);
-    copyFirstPrivateSymbol(sym);
+    cloneSymbol(symToPrivatize);
+    copyFirstPrivateSymbol(symToPrivatize);
     return;
   }
 
-  lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+  const semantics::Symbol *sym = symToPrivatize->HasLocalLocality()
+                                     ? &symToPrivatize->GetUltimate()
+                                     : symToPrivatize;
+  lower::SymbolBox hsb = symToPrivatize->HasLocalLocality()
+                             ? converter.shallowLookupSymbol(*sym)
+                             : converter.lookupOneLevelUpSymbol(*sym);
   assert(hsb && "Host symbol box not found");
   hlfir::Entity entity{hsb.getAddr()};
   bool cannotHaveNonDefaultLowerBounds = !entity.mayHaveNonDefaultLowerBounds();
 
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
-  bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
+  bool isFirstPrivate =
+      symToPrivatize->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
+      symToPrivatize->test(semantics::Symbol::Flag::LocalityLocalInit);
 
   mlir::Value privVal = hsb.getAddr();
   mlir::Type allocType = privVal.getType();
@@ -613,27 +630,30 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
           &copyRegion, /*insertPt=*/{}, {argType, argType}, {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
 
-      auto addSymbol = [&](unsigned argIdx, bool force = false) {
+      auto addSymbol = [&](unsigned argIdx, const semantics::Symbol *symToMap,
+                           bool force = false) {
         symExV.match(
             [&](const fir::MutableBoxValue &box) {
               symTable.addSymbol(
-                  *sym, fir::substBase(box, copyRegion.getArgument(argIdx)),
-                  force);
+                  *symToMap,
+                  fir::substBase(box, copyRegion.getArgument(argIdx)), force);
             },
             [&](const auto &box) {
-              symTable.addSymbol(*sym, copyRegion.getArgument(argIdx), force);
+              symTable.addSymbol(*symToMap, copyRegion.getArgument(argIdx),
+                                 force);
             });
       };
 
-      addSymbol(0, true);
+      addSymbol(0, sym, true);
       lower::SymMapScope innerScope(symTable);
-      addSymbol(1);
+      addSymbol(1, symToPrivatize);
 
       auto ip = firOpBuilder.saveInsertionPoint();
-      copyFirstPrivateSymbol(sym, &ip);
+      copyFirstPrivateSymbol(symToPrivatize, &ip);
 
       firOpBuilder.create<mlir::omp::YieldOp>(
-          hsb.getAddr().getLoc(), symTable.shallowLookupSymbol(*sym).getAddr());
+          hsb.getAddr().getLoc(),
+          symTable.shallowLookupSymbol(*symToPrivatize).getAddr());
     }
 
     return result;
@@ -645,6 +665,9 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   }
 
   symToPrivatizer[sym] = privatizerOp;
+
+  if (symToPrivatize->HasLocalLocality())
+    allPrivatizedSymbols.insert(symToPrivatize);
 }
 
 } // namespace omp
