@@ -112,5 +112,22 @@ x86vector::CvtPackedEvenIndexedBF16ToF32Op::getIntrinsicOperands(
   return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
 }
 
+SmallVector<Value>
+x86vector::CvtPackedEvenIndexedF16ToF32Op::getIntrinsicOperands(
+    RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
+  return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
+}
+
+SmallVector<Value>
+x86vector::CvtPackedOddIndexedF16ToF32Op::getIntrinsicOperands(
+    RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
+  return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
+}
+
+SmallVector<Value> x86vector::BcstF16ToPackedF32Op::getIntrinsicOperands(
+    RewriterBase &rewriter, const LLVMTypeConverter &typeConverter) {
+  return getMemrefBuffPtr(getLoc(), getA(), rewriter, typeConverter);
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/X86Vector/X86Vector.cpp.inc"

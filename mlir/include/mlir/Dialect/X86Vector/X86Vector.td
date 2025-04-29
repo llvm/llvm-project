@@ -527,4 +527,126 @@ def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [MemoryEffects<[Me
 
 }
 
+//----------------------------------------------------------------------------//
+// AVX: Convert packed F16 even-indexed/odd-indexed elements into packed F32
+//----------------------------------------------------------------------------//
+
+def CvtPackedEvenIndexedF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.f16_to_f32", [MemoryEffects<[MemRead]>, 
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
+  let summary = "AVX: Convert packed F16 even-indexed elements into packed F32 Data.";
+  let description = [{
+
+    #### From the Intel Intrinsics Guide:
+
+    Convert packed F16 (16-bit) floating-point even-indexed elements stored at
+    memory locations starting at location `__A` to packed single-precision
+    (32-bit) floating-point elements, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx.cvt.packed.even.indexed.f16_to_f32 %a : !llvm.ptr -> vector<8xf32>
+    ```
+  }];
+  let arguments = (ins AnyMemRef:$a);
+  let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
+
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
+      std::string intr = "llvm.x86.vcvtneeph2ps";
+      VectorType vecType = getDst().getType();
+      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
+      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
+      intr += std::to_string(opBitWidth);
+      return intr;
+    }
+  }];
+
+  let extraClassDeclaration = [{
+        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+  }];
+}
+
+def CvtPackedOddIndexedF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.f16_to_f32", [MemoryEffects<[MemRead]>, 
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
+  let summary = "AVX: Convert packed F16 odd-indexed elements into packed F32 Data.";
+  let description = [{
+
+    #### From the Intel Intrinsics Guide:
+
+    Convert packed F16 (16-bit) floating-point odd-indexed elements stored at
+    memory locations starting at location `__A` to packed single-precision
+    (32-bit) floating-point elements, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx.cvt.packed.odd.indexed.f16_to_f32 %a : !llvm.ptr -> vector<8xf32>
+    ```
+  }];
+  let arguments = (ins AnyMemRef:$a);
+  let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
+
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
+      std::string intr = "llvm.x86.vcvtneoph2ps";
+      VectorType vecType = getDst().getType();
+      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
+      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
+      intr += std::to_string(opBitWidth);
+      return intr;
+    }
+  }];
+
+  let extraClassDeclaration = [{
+        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+  }];
+}
+
+//----------------------------------------------------------------------------//
+// AVX: Convert F16 to F32 and broadcast into packed F32
+//----------------------------------------------------------------------------//
+
+def BcstF16ToPackedF32Op : AVX_Op<"bcst.f16_to_f32.packed", [MemoryEffects<[MemRead]>,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>]> {
+  let summary = "AVX: Broadcasts F16 into packed F32 Data.";
+
+  let description = [{
+
+    #### From the Intel Intrinsics Guide:
+
+    Convert scalar F16 (16-bit) floating-point element stored at memory locations
+    starting at location `__A` to a single-precision (32-bit) floating-point,
+    broadcast it to packed single-precision (32-bit) floating-point elements,
+    and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx.bcst.f16_to_f32.packed %a : !llvm.ptr -> vector<8xf32>
+    ```
+  }];
+  let arguments = (ins AnyMemRef:$a);
+  let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
+
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
+      std::string intr = "llvm.x86.vbcstnesh2ps";
+      VectorType vecType = getDst().getType();
+      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
+      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
+      intr += std::to_string(opBitWidth);
+      return intr;
+    }
+  }];
+
+    let extraClassDeclaration = [{
+        SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&, const LLVMTypeConverter&);
+  }];
+
+}
+
 #endif // X86VECTOR_OPS
