@@ -30,7 +30,7 @@
 ; RV32XSFMM32A16F: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfmm32a16f0p6_xsfmmbase0p6"
 ; RV32XSFMM32A32F: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfmm32a32f0p6_xsfmmbase0p6"
 ; RV32XSFMM32T: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xsfmm32t0p6_xsfmmbase0p6"
-; RV32XSFMM64A64F: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zve64f1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_xsfmm64a64f0p6_xsfmmbase0p6"
+; RV32XSFMM64A64F: .attribute 5, "rv32i2p1_f2p2_d2p2_zicsr2p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_xsfmm64a64f0p6_xsfmmbase0p6"
 ; RV32XSFMM64T: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl64b1p0_xsfmm64t0p6_xsfmmbase0p6"
 ; RV32XSFMMBASE: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xsfmmbase0p6"
 ; RV64XSFMM128T: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl512b1p0_zvl64b1p0_xsfmm128t0p6_xsfmmbase0p6"
@@ -40,7 +40,7 @@
 ; RV64XSFMM32A16F: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfmm32a16f0p6_xsfmmbase0p6"
 ; RV64XSFMM32A32F: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfmm32a32f0p6_xsfmmbase0p6"
 ; RV64XSFMM32T: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_xsfmm32t0p6_xsfmmbase0p6"
-; RV64XSFMM64A64F: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zve64f1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_xsfmm64a64f0p6_xsfmmbase0p6"
+; RV64XSFMM64A64F: .attribute 5, "rv64i2p1_f2p2_d2p2_zicsr2p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvl32b1p0_zvl64b1p0_xsfmm64a64f0p6_xsfmmbase0p6"
 ; RV64XSFMM64T: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl64b1p0_xsfmm64t0p6_xsfmmbase0p6"
 ; RV64XSFMMBASE: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xsfmmbase0p6"
 
