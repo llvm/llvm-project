@@ -1062,6 +1062,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IncludeIsMainRegex", Style.IncludeStyle.IncludeIsMainRegex);
     IO.mapOptional("IncludeIsMainSourceRegex",
                    Style.IncludeStyle.IncludeIsMainSourceRegex);
+    IO.mapOptional("IncludeSortKey", Style.IncludeStyle.IncludeSortKey);
     IO.mapOptional("IndentAccessModifiers", Style.IndentAccessModifiers);
     IO.mapOptional("IndentCaseBlocks", Style.IndentCaseBlocks);
     IO.mapOptional("IndentCaseLabels", Style.IndentCaseLabels);
@@ -1581,6 +1582,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       {"^(<|\"(gtest|gmock|isl|json)/)", 3, 0, false},
       {".*", 1, 0, false}};
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
+  LLVMStyle.IncludeStyle.IncludeSortKey = tooling::IncludeStyle::ISK_Path;
   LLVMStyle.IncludeStyle.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
   LLVMStyle.IndentAccessModifiers = false;
   LLVMStyle.IndentCaseBlocks = false;
@@ -3219,17 +3221,29 @@ static void sortCppIncludes(const FormatStyle &Style,
 
   if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive) {
     stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-      const auto LHSFilenameLower = Includes[LHSI].Filename.lower();
-      const auto RHSFilenameLower = Includes[RHSI].Filename.lower();
-      return std::tie(Includes[LHSI].Priority, LHSFilenameLower,
-                      Includes[LHSI].Filename) <
-             std::tie(Includes[RHSI].Priority, RHSFilenameLower,
-                      Includes[RHSI].Filename);
+      SmallString<128> LHSStem = Includes[LHSI].Filename;
+      SmallString<128> RHSStem = Includes[RHSI].Filename;
+      if (Style.IncludeStyle.IncludeSortKey ==
+          tooling::IncludeStyle::ISK_Stem) {
+        llvm::sys::path::replace_extension(LHSStem, "");
+        llvm::sys::path::replace_extension(RHSStem, "");
+      }
+      const auto LHSStemLower = LHSStem.str().lower();
+      const auto RHSStemLower = RHSStem.str().lower();
+      return std::tie(Includes[LHSI].Priority, LHSStemLower, LHSStem) <
+             std::tie(Includes[RHSI].Priority, RHSStemLower, RHSStem);
     });
   } else {
     stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
-      return std::tie(Includes[LHSI].Priority, Includes[LHSI].Filename) <
-             std::tie(Includes[RHSI].Priority, Includes[RHSI].Filename);
+      SmallString<128> LHSStem = Includes[LHSI].Filename;
+      SmallString<128> RHSStem = Includes[RHSI].Filename;
+      if (Style.IncludeStyle.IncludeSortKey ==
+          tooling::IncludeStyle::ISK_Stem) {
+        llvm::sys::path::replace_extension(LHSStem, "");
+        llvm::sys::path::replace_extension(RHSStem, "");
+      }
+      return std::tie(Includes[LHSI].Priority, LHSStem) <
+             std::tie(Includes[RHSI].Priority, RHSStem);
     });
   }
 

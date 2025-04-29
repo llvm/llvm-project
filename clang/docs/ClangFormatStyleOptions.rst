@@ -4226,6 +4226,22 @@ the configuration (without a prefix: ``Auto``).
   ``ClassImpl.hpp`` would not have the main include file put on top
   before any other include.
 
+.. _IncludeSortKey:
+
+**IncludeSortKey** (``IncludeSortKeyDiscriminator``) :versionbadge:`clang-format 21` :ref:`¶ <IncludeSortKey>`
+  When sorting includes in each block, sort by the specified sort key.
+
+  Possible values:
+
+  * ``ISK_Path`` (in configuration: ``Path``)
+    Includes are sorted alphabetically by their full path.
+
+  * ``ISK_Stem`` (in configuration: ``Stem``)
+    Includes are sorted alphabetically by their full path without the
+    file extension.
+
+
+
 .. _IndentAccessModifiers:
 
 **IndentAccessModifiers** (``Boolean``) :versionbadge:`clang-format 13` :ref:`¶ <IndentAccessModifiers>`

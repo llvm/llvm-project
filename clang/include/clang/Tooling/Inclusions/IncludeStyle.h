@@ -152,6 +152,19 @@ struct IncludeStyle {
   /// \version 10
   std::string IncludeIsMainSourceRegex;
 
+  /// Available sort keys that can be used to sort includes in each block.
+  enum IncludeSortKeyDiscriminator : int8_t {
+    /// Includes are sorted alphabetically by their full path.
+    ISK_Path,
+    /// Includes are sorted alphabetically by their full path without the
+    /// file extension.
+    ISK_Stem,
+  };
+
+  /// When sorting includes in each block, sort by the specified sort key.
+  /// \version 21
+  IncludeSortKeyDiscriminator IncludeSortKey;
+
   /// Character to consider in the include directives for the main header.
   enum MainIncludeCharDiscriminator : int8_t {
     /// Main include uses quotes: ``#include "foo.hpp"`` (the default).
@@ -195,6 +208,14 @@ struct ScalarEnumerationTraits<
   static void enumeration(
       IO &IO,
       clang::tooling::IncludeStyle::MainIncludeCharDiscriminator &Value);
+};
+
+template <>
+struct ScalarEnumerationTraits<
+    clang::tooling::IncludeStyle::IncludeSortKeyDiscriminator> {
+  static void
+  enumeration(IO &IO,
+              clang::tooling::IncludeStyle::IncludeSortKeyDiscriminator &Value);
 };
 
 } // namespace yaml
