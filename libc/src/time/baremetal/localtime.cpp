@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(time_t, localtime, (time_t *time)) {
+LLVM_LIBC_FUNCTION(struct tm *tm, localtime, (time_t *time)) {
   (void)time;
   return NULL;
 }
