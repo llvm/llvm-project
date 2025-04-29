@@ -24,6 +24,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaCodeCompletion.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 using namespace clang;
@@ -213,7 +214,7 @@ void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
 
   // C++11 allows extra semicolons at namespace scope, but not in any of the
   // other contexts.
-  if (Kind == OutsideFunction && getLangOpts().CPlusPlus) {
+  if (Kind == ExtraSemiKind::OutsideFunction && getLangOpts().CPlusPlus) {
     if (getLangOpts().CPlusPlus11)
       Diag(StartLoc, diag::warn_cxx98_compat_top_level_semi)
           << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
@@ -223,10 +224,11 @@ void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
     return;
   }
 
-  if (Kind != AfterMemberFunctionDefinition || HadMultipleSemis)
+  if (Kind != ExtraSemiKind::AfterMemberFunctionDefinition || HadMultipleSemis)
     Diag(StartLoc, diag::ext_extra_semi)
-        << Kind << DeclSpec::getSpecifierName(TST,
-                                    Actions.getASTContext().getPrintingPolicy())
+        << llvm::to_underlying(Kind)
+        << DeclSpec::getSpecifierName(
+               TST, Actions.getASTContext().getPrintingPolicy())
         << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
   else
     // A single semicolon is valid after a member function definition.
@@ -902,7 +904,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl =
         Actions.ActOnEmptyDeclaration(getCurScope(), Attrs, Tok.getLocation());
-    ConsumeExtraSemi(OutsideFunction);
+    ConsumeExtraSemi(ExtraSemiKind::OutsideFunction);
     break;
   case tok::r_brace:
     Diag(Tok, diag::err_extraneous_closing_brace);
