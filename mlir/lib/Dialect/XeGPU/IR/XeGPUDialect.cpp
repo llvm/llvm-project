@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <numeric>
+
+using std::optional;
 
 namespace mlir {
 namespace xegpu {
@@ -31,14 +34,24 @@ void XeGPUDialect::initialize() {
       >();
 }
 
+// Checks if the given shape can be evenly distributed based on the layout
+// and data factors provided by the LayoutAttr.
 bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
                                          xegpu::LayoutAttr attr) {
   assert(attr && "Layout attribute is missing.");
 
-  auto getSubShapeOrNull =
-      [&](llvm::ArrayRef<int64_t> shape, DenseI32ArrayAttr layout,
-          DenseI32ArrayAttr data,
-          bool use_rr = true) -> std::optional<SmallVector<int64_t>> {
+  // Checks whether the given shape can be evenly distributed using the
+  // specified layout and data attributes. If successful, it returns the work
+  // size for each compute unit; otherwise, it returns `std::nullopt`. The work
+  // size per compute unit is calculated as follows:
+  //   - If `data` is null: newShape[i] = shape[i] / layout[i]
+  //   - If `data` is not null: newShape[i] = data[i]
+  // When round-robin distribution (`rr`) is enabled, `shape[i]` can be
+  // smaller than `layout[i] * data[i]`, allowing multiple compute units to
+  // share the data.
+  auto tryDistribute = [&](llvm::ArrayRef<int64_t> shape,
+                           DenseI32ArrayAttr layout, DenseI32ArrayAttr data,
+                           bool rr = true) -> optional<SmallVector<int64_t>> {
     llvm::SmallVector<int64_t> newShape(shape);
     if (layout) {
       auto vec = llvm::to_vector_of<int64_t>(layout.asArrayRef());
@@ -55,7 +68,7 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
       if (vec.size() != shape.size())
         return std::nullopt;
       auto ratio = computeShapeRatio(newShape, vec);
-      if (!ratio.has_value() && use_rr)
+      if (!ratio.has_value() && rr)
         ratio = computeShapeRatio(vec, newShape);
       if (!ratio.has_value())
         return std::nullopt;
@@ -68,21 +81,21 @@ bool XeGPUDialect::isEvenlyDistributable(llvm::ArrayRef<int64_t> shape,
 
   // check the sgLayout and sgData
   auto maybeSgShape =
-      getSubShapeOrNull(shape, attr.getSgLayout(), attr.getSgData());
+      tryDistribute(shape, attr.getSgLayout(), attr.getSgData());
   if (!maybeSgShape)
     return false;
   auto sgShape = maybeSgShape.value();
 
   // check InstData, it neither have layout nor need round-robin
   auto maybeInstShape =
-      getSubShapeOrNull(sgShape, nullptr, attr.getInstData(), false);
+      tryDistribute(sgShape, nullptr, attr.getInstData(), false);
   if (!maybeInstShape)
     return false;
   auto instShape = maybeInstShape.value();
 
   // check LaneLayout and LaneData
-  auto maybeLaneShape = getSubShapeOrNull(instShape, attr.getLaneLayout(),
-                                          attr.getLaneData(), false);
+  auto maybeLaneShape =
+      tryDistribute(instShape, attr.getLaneLayout(), attr.getLaneData(), false);
   return maybeLaneShape.has_value();
 }
 

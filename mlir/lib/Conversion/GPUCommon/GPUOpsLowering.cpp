@@ -125,12 +125,8 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
     // Perform signature modification
     rewriter.modifyOpInPlace(
         gpuFuncOp, [gpuFuncOp, &argIndices, &argTypes, &argAttrs, &argLocs]() {
-          LogicalResult inserted =
-              static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
-                  argIndices, argTypes, argAttrs, argLocs);
-          (void)inserted;
-          assert(succeeded(inserted) &&
-                 "expected GPU funcs to support inserting any argument");
+          static_cast<FunctionOpInterface>(gpuFuncOp).insertArguments(
+              argIndices, argTypes, argAttrs, argLocs);
         });
   } else {
     workgroupBuffers.reserve(gpuFuncOp.getNumWorkgroupAttributions());

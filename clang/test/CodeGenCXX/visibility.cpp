@@ -1499,3 +1499,40 @@ namespace test73 {
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test731sIiE22should_not_be_exportedIiEET_v(
   // CHECK-HIDDEN-LABEL: define linkonce_odr noundef i32 @_ZN6test731sIiE22should_not_be_exportedIiEET_v(
 }
+
+namespace test74 {
+  template <typename> struct T;
+  template <typename R>
+  struct T<void (R::*)()> {
+    template <typename M>
+    static __attribute__((__visibility__("hidden"))) void Invoke(M) {
+    }
+  };
+
+  struct C;
+  void (C::*MM)();
+
+  void Fun() {
+    T<decltype(MM)>::Invoke(0);
+  }
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test741TIMNS_1CEFvvEE6InvokeIiEEvT_(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test741TIMNS_1CEFvvEE6InvokeIiEEvT_(
+}
+
+namespace test75 {
+  template <class> struct T;
+  template <class C, class Ret>
+  struct T<Ret C::*> {
+    template <class M>
+    static __attribute__((__visibility__("hidden")))
+    void Invoke(M) {
+    }
+  };
+
+  struct A;
+  void Fun() {
+    T<void (A::*)()>::Invoke(0);
+  }
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test751TIMNS_1AEFvvEE6InvokeIiEEvT_(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test751TIMNS_1AEFvvEE6InvokeIiEEvT_(
+}

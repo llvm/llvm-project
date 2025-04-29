@@ -165,9 +165,7 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
                           MemorySSAUpdater *MSSAU) {
   // Recursively deleting a PHI may cause multiple PHIs to be deleted
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : BB->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
   bool Changed = false;
   for (unsigned i = 0, e = PHIs.size(); i != e; ++i)
@@ -251,8 +249,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     assert(!DT && "cannot use both DT and DTU for updates");
     // To avoid processing the same predecessor more than once.
     SmallPtrSet<BasicBlock *, 8> SeenSuccs;
-    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(succ_begin(PredBB),
-                                               succ_end(PredBB));
+    SmallPtrSet<BasicBlock *, 2> SuccsOfPredBB(llvm::from_range,
+                                               successors(PredBB));
     Updates.reserve(Updates.size() + 2 * succ_size(BB) + 1);
     // Add insert edges first. Experimentally, for the particular case of two
     // blocks that can be merged, with a single successor and single predecessor

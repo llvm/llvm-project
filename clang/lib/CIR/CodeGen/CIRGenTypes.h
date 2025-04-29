@@ -89,7 +89,11 @@ public:
   mlir::MLIRContext &getMLIRContext() const;
   clang::ASTContext &getASTContext() const { return astContext; }
 
+  bool isRecordLayoutComplete(const clang::Type *ty) const;
   bool noRecordsBeingLaidOut() const { return recordsBeingLaidOut.empty(); }
+  bool isRecordBeingLaidOut(const clang::Type *ty) const {
+    return recordsBeingLaidOut.count(ty);
+  }
 
   const ABIInfo &getABIInfo() const { return theABIInfo; }
 
@@ -103,6 +107,8 @@ public:
 
   std::string getRecordTypeName(const clang::RecordDecl *,
                                 llvm::StringRef suffix);
+
+  const CIRGenRecordLayout &getCIRGenRecordLayout(const clang::RecordDecl *rd);
 
   /// Convert type T into an mlir::Type. This differs from convertType in that
   /// it is used to convert to the memory representation for a type. For

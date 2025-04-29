@@ -840,7 +840,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     -   a variadic number of Private memory attributions.
 
     The `kernelFunc` and `kernelModule` attributes are optional and specifies
-    the kernel name and a module in which the kernel should be outlined. 
+    the kernel name and a module in which the kernel should be outlined.
 
     Syntax:
 
@@ -1201,7 +1201,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 }
 
 def AnyIntegerOrFloatOr1DVector :
-  AnyTypeOf<[AnyIntegerOrFloat, VectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
+  AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";

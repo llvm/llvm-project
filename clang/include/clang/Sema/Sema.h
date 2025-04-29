@@ -463,6 +463,53 @@ enum class FunctionEffectMode : uint8_t {
   Dependent // effect(expr) where expr is dependent.
 };
 
+/// pragma clang section kind
+enum class PragmaClangSectionKind {
+  Invalid = 0,
+  BSS = 1,
+  Data = 2,
+  Rodata = 3,
+  Text = 4,
+  Relro = 5
+};
+
+enum class PragmaClangSectionAction { Set = 0, Clear = 1 };
+
+enum class PragmaOptionsAlignKind {
+  Native,  // #pragma options align=native
+  Natural, // #pragma options align=natural
+  Packed,  // #pragma options align=packed
+  Power,   // #pragma options align=power
+  Mac68k,  // #pragma options align=mac68k
+  Reset    // #pragma options align=reset
+};
+
+enum class TUFragmentKind {
+  /// The global module fragment, between 'module;' and a module-declaration.
+  Global,
+  /// A normal translation unit fragment. For a non-module unit, this is the
+  /// entire translation unit. Otherwise, it runs from the module-declaration
+  /// to the private-module-fragment (if any) or the end of the TU (if not).
+  Normal,
+  /// The private module fragment, between 'module :private;' and the end of
+  /// the translation unit.
+  Private
+};
+
+enum class FormatStringType {
+  Scanf,
+  Printf,
+  NSString,
+  Strftime,
+  Strfmon,
+  Kprintf,
+  FreeBSDKPrintf,
+  OSTrace,
+  OSLog,
+  Syslog,
+  Unknown
+};
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {
@@ -614,18 +661,6 @@ public:
   // Emit all deferred diagnostics.
   void emitDeferredDiags();
 
-  enum TUFragmentKind {
-    /// The global module fragment, between 'module;' and a module-declaration.
-    Global,
-    /// A normal translation unit fragment. For a non-module unit, this is the
-    /// entire translation unit. Otherwise, it runs from the module-declaration
-    /// to the private-module-fragment (if any) or the end of the TU (if not).
-    Normal,
-    /// The private module fragment, between 'module :private;' and the end of
-    /// the translation unit.
-    Private
-  };
-
   /// This is called before the very first declaration in the translation unit
   /// is parsed. Note that the ASTContext may have already injected some
   /// declarations.
@@ -752,20 +787,6 @@ public:
   /// Check if the type is allowed to be used for the current target.
   void checkTypeSupport(QualType Ty, SourceLocation Loc,
                         ValueDecl *D = nullptr);
-
-  // /// The kind of conversion being performed.
-  // enum CheckedConversionKind {
-  //   /// An implicit conversion.
-  //   CCK_ImplicitConversion,
-  //   /// A C-style cast.
-  //   CCK_CStyleCast,
-  //   /// A functional-style cast.
-  //   CCK_FunctionalCast,
-  //   /// A cast other than a C-style cast.
-  //   CCK_OtherCast,
-  //   /// A conversion for an operand of a builtin overloaded operator.
-  //   CCK_ForBuiltinOverloadedOp
-  // };
 
   /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit
   /// cast.  If there is already an implicit cast, merge into the existing one.
@@ -1426,18 +1447,6 @@ public:
   /// Source location for newly created implicit MSInheritanceAttrs
   SourceLocation ImplicitMSInheritanceAttrLoc;
 
-  /// pragma clang section kind
-  enum PragmaClangSectionKind {
-    PCSK_Invalid = 0,
-    PCSK_BSS = 1,
-    PCSK_Data = 2,
-    PCSK_Rodata = 3,
-    PCSK_Text = 4,
-    PCSK_Relro = 5
-  };
-
-  enum PragmaClangSectionAction { PCSA_Set = 0, PCSA_Clear = 1 };
-
   struct PragmaClangSection {
     std::string SectionName;
     bool Valid = false;
@@ -1797,15 +1806,6 @@ public:
   /// Add _Nullable attributes for std:: types.
   void inferNullableClassAttribute(CXXRecordDecl *CRD);
 
-  enum PragmaOptionsAlignKind {
-    POAK_Native,  // #pragma options align=native
-    POAK_Natural, // #pragma options align=natural
-    POAK_Packed,  // #pragma options align=packed
-    POAK_Power,   // #pragma options align=power
-    POAK_Mac68k,  // #pragma options align=mac68k
-    POAK_Reset    // #pragma options align=reset
-  };
-
   /// ActOnPragmaClangSection - Called on well formed \#pragma clang section
   void ActOnPragmaClangSection(SourceLocation PragmaLoc,
                                PragmaClangSectionAction Action,
@@ -2100,6 +2100,50 @@ public:
   bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
                                  bool OrNull);
 
+  /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
+  /// `__counted_by_or_null` pointer type \param LHSTy.
+  ///
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being assigned from.
+  /// \param Action The type assignment being performed
+  /// \param Loc The SourceLocation to use for error diagnostics
+  /// \param Assignee The ValueDecl being assigned. This is used to compute
+  ///        the name of the assignee. If the assignee isn't known this can
+  ///        be set to nullptr.
+  /// \param ShowFullyQualifiedAssigneeName If set to true when using \p
+  ///        Assignee to compute the name of the assignee use the fully
+  ///        qualified name, otherwise use the unqualified name.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckAssignmentToCountAttrPtr(
+      QualType LHSTy, Expr *RHSExpr, AssignmentAction Action,
+      SourceLocation Loc, const ValueDecl *Assignee,
+      bool ShowFullyQualifiedAssigneeName);
+
+  /// Perform Bounds Safety Semantic checks for initializing a Bounds Safety
+  /// pointer.
+  ///
+  /// \param Entity The entity being initialized
+  /// \param Kind The kind of initialization being performed
+  /// \param Action The type assignment being performed
+  /// \param LHSTy The type being assigned to. Checks will only be performed if
+  ///              the type is a `counted_by` or `counted_by_or_null ` pointer.
+  /// \param RHSExpr The expression being used for initialization.
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckInitialization(const InitializedEntity &Entity,
+                                       const InitializationKind &Kind,
+                                       AssignmentAction Action,
+                                       QualType LHSType, Expr *RHSExpr);
+
+  /// Perform Bounds Safety semantic checks for uses of invalid uses counted_by
+  /// or counted_by_or_null pointers in \param E.
+  ///
+  /// \param E the expression to check
+  ///
+  /// \returns True iff no diagnostic where emitted, false otherwise.
+  bool BoundsSafetyCheckUseOfCountAttrPtr(const Expr *E);
   ///@}
 
   //
@@ -2221,19 +2265,6 @@ public:
                                SourceLocation BuiltinLoc,
                                SourceLocation RParenLoc);
 
-  enum FormatStringType {
-    FST_Scanf,
-    FST_Printf,
-    FST_NSString,
-    FST_Strftime,
-    FST_Strfmon,
-    FST_Kprintf,
-    FST_FreeBSDKPrintf,
-    FST_OSTrace,
-    FST_OSLog,
-    FST_Syslog,
-    FST_Unknown
-  };
   static StringRef GetFormatStringTypeName(FormatStringType FST);
   static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
@@ -3492,6 +3523,7 @@ public:
   }
 
   void warnOnReservedIdentifier(const NamedDecl *D);
+  void warnOnCTypeHiddenInCPlusPlus(const NamedDecl *D);
 
   Decl *ActOnDeclarator(Scope *S, Declarator &D);
 
@@ -7742,6 +7774,11 @@ public:
     /// Compatible - the types are compatible according to the standard.
     Compatible,
 
+    /// CompatibleVoidPtrToNonVoidPtr - The types are compatible in C because
+    /// a void * can implicitly convert to another pointer type, which we
+    /// differentiate for better diagnostic behavior.
+    CompatibleVoidPtrToNonVoidPtr,
+
     /// PointerToInt - The assignment converts a pointer to an int, which we
     /// accept as an extension.
     PointerToInt,
@@ -7821,6 +7858,18 @@ public:
     /// represent it in the AST.
     Incompatible
   };
+
+  bool IsAssignConvertCompatible(AssignConvertType ConvTy) {
+    switch (ConvTy) {
+    default:
+      return false;
+    case Compatible:
+    case CompatiblePointerDiscardsQualifiers:
+    case CompatibleVoidPtrToNonVoidPtr:
+      return true;
+    }
+    llvm_unreachable("impossible");
+  }
 
   /// DiagnoseAssignmentResult - Emit a diagnostic, if required, for the
   /// assignment conversion type specified by ConvTy.  This returns true if the
