@@ -7,9 +7,10 @@
 target triple = "dxil-pc-shadermodel6.7-library"
 
 ; CHECK:      Combined Shader Flags for Module
-; CHECK-NEXT: Shader Flags Value: 0x00000000
+; CHECK-NEXT: Shader Flags Value: 0x00010000
 
-; CHECK-NOT: Note: shader requires additional functionality:
+; CHECK: Note: shader requires additional functionality:
+; CHECK:    UAVs at every shader stage
 ; CHECK-NOT:    64 UAV slots
 
 ; CHECK: Function test : 0x00000000
@@ -26,10 +27,8 @@ define void @test() "hlsl.export" {
   ret void
 }
 
-; Set validator version to 1.5
 !dx.valver = !{!1}
 !1 = !{i32 1, i32 5}
 
-; Set this flag to 1 to prevent the ResMayNotAlias flag from being set
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"dx.resmayalias", i32 1}
