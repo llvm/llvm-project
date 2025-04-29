@@ -1170,7 +1170,7 @@ Experimental extensions
     smctr                1.0
     ssctr                1.0
     svukte               0.3
-    xqccmp               0.1
+    xqccmp               0.3
     xqcia                0.4
     xqciac               0.3
     xqcibi               0.2
