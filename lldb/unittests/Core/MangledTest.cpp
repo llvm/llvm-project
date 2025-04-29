@@ -637,6 +637,14 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
 
   TrackingOutputBuffer OB;
   Root->print(OB);
+
+  // Filter out cases which would never show up in frames. We only care about function names.
+  if (Root->getKind() != llvm::itanium_demangle::Node::Kind::KFunctionEncoding
+      && Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+    return;
+
+  ASSERT_TRUE(OB.NameInfo.hasBasename());
+
   auto tracked_name = llvm::StringRef(OB);
 
   auto return_left = tracked_name.slice(0, OB.NameInfo.ScopeRange.first);
@@ -659,10 +667,7 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
       llvm::join_items("", return_left, scope, basename, template_args, args,
                        return_right, qualifiers, suffix);
 
-  // Special vtable names aren't tracked but won't show up in frames anyway.
-  if (Root->getKind() != llvm::itanium_demangle::Node::Kind::KSpecialName ||
-      !llvm::StringRef(mangled).starts_with("_ZTV"))
-    EXPECT_EQ(reconstructed_name, demangled);
+  EXPECT_EQ(reconstructed_name, demangled);
 }
 
 INSTANTIATE_TEST_SUITE_P(
