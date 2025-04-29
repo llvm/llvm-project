@@ -98,7 +98,14 @@ Entities that have been included in a module by means of USE association
 are represented in the module file with `USE` statements.
 Name aliases are sometimes necessary when an entity from another
 module is needed for a declaration and conflicts with another
-entity of the same name.
+entity of the same name, or is `PRIVATE`.
+These aliases have currency symbols (`$`) in them.
+When a module
+is parsed from a module file, no error is emitted for associating
+such an alias with a `PRIVATE` name.
+A module parsed from another source file that is not a module file
+(notably, the output of the `-fdebug-unparse-with-modules` option)
+will emit only warnings.
 
 ## Reading and writing module files
 

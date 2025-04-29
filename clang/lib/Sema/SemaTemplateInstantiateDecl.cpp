@@ -5645,9 +5645,12 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // We want to use a TypeLoc that reflects the transformed type while
     // preserving the source location from the pattern.
     TypeLocBuilder TLB;
-    TLB.pushTrivial(
-        Context, InstT,
-        PatternNameLoc.getNamedTypeInfo()->getTypeLoc().getBeginLoc());
+    TypeSourceInfo *PatternTSI = PatternName.getNamedTypeInfo();
+    assert(PatternTSI && "Pattern is supposed to have an associated TSI");
+    // FIXME: PatternTSI is not trivial. We should copy the source location
+    // along the TypeLoc chain. However a trivial TypeLoc is sufficient for
+    // getNameInfo().getSourceRange().
+    TLB.pushTrivial(Context, InstT, PatternTSI->getTypeLoc().getBeginLoc());
     return DeclarationNameLoc::makeNamedTypeLoc(
         TLB.getTypeSourceInfo(Context, InstT));
   };

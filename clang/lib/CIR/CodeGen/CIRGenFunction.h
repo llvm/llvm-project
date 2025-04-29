@@ -63,6 +63,9 @@ public:
   /// declarations.
   DeclMapTy localDeclMap;
 
+  /// The type of the condition for the emitting switch statement.
+  llvm::SmallVector<mlir::Type, 2> condTypeStack;
+
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -269,6 +272,12 @@ public:
     return LValue::makeAddr(addr, ty, baseInfo);
   }
 
+  /// Get an appropriate 'undef' rvalue for the given type.
+  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
+  /// void types so it just returns RValue::get(nullptr) but it'll need
+  /// addressed later.
+  RValue getUndefRValue(clang::QualType ty);
+
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -417,6 +426,10 @@ private:
                               clang::CharUnits alignment);
 
 public:
+  Address emitAddrOfFieldStorage(Address base, const FieldDecl *field,
+                                 llvm::StringRef fieldName,
+                                 unsigned fieldIndex);
+
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment,
                          bool insertIntoFnEntryBlock,
@@ -451,12 +464,23 @@ public:
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
-                  const CIRGenCallee &callee, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  cir::CIRCallOpInterface *callOp, mlir::Location loc);
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
-                  const clang::CallExpr *e);
-  RValue emitCallExpr(const clang::CallExpr *e);
+                  const clang::CallExpr *e, ReturnValueSlot returnValue);
+  RValue emitCallExpr(const clang::CallExpr *e,
+                      ReturnValueSlot returnValue = ReturnValueSlot());
   CIRGenCallee emitCallee(const clang::Expr *e);
+
+  template <typename T>
+  mlir::LogicalResult emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
+                                             mlir::ArrayAttr value,
+                                             cir::CaseOpKind kind,
+                                             bool buildingTopLevelCase);
+
+  mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
+                                   mlir::Type condType,
+                                   bool buildingTopLevelCase);
 
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
@@ -544,6 +568,9 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+  LValue emitLValueForField(LValue base, const clang::FieldDecl *field);
+
+  LValue emitMemberExpr(const MemberExpr *e);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
@@ -581,6 +608,11 @@ public:
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
+  mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
+  mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
+                                     bool buildingTopLevelCase);
+  mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
+
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
@@ -612,10 +644,9 @@ public:
   //===--------------------------------------------------------------------===//
 private:
   template <typename Op>
-  mlir::LogicalResult
-  emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
-                SourceLocation dirLoc,
-                llvm::ArrayRef<const OpenACCClause *> clauses);
+  Op emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+                   SourceLocation dirLoc,
+                   llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>

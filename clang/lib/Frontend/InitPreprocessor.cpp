@@ -32,7 +32,7 @@ using namespace clang;
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
   while (!MacroBody.empty() && isWhitespace(MacroBody.back()))
     MacroBody = MacroBody.drop_back();
-  return !MacroBody.empty() && MacroBody.back() == '\\';
+  return MacroBody.ends_with('\\');
 }
 
 // Append a #define line to Buf for Macro.  Macro should be of the form XXX,
