@@ -7,8 +7,4 @@ define void @invalid_arg_type(i32 %0) {
 }
 
 declare void @foo(label)
-; CHECK: Function argument cannot be of label type!
-; CHECK-NEXT: label %0
-; CHECK-NEXT: ptr @foo
-
-
+; CHECK: invalid type for function argument
