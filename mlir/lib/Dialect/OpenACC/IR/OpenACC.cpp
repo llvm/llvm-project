@@ -1686,25 +1686,19 @@ static void printDeviceTypeOperandsWithKeywordOnly(
 static ParseResult
 parseCombinedConstructsLoop(mlir::OpAsmParser &parser,
                             mlir::acc::CombinedConstructsTypeAttr &attr) {
-  if (succeeded(parser.parseOptionalKeyword("combined"))) {
-    if (parser.parseLParen())
-      return failure();
-    if (succeeded(parser.parseOptionalKeyword("kernels"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
-    } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
-      attr = mlir::acc::CombinedConstructsTypeAttr::get(
-          parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
-    } else {
-      parser.emitError(parser.getCurrentLocation(),
-                       "expected compute construct name");
-      return failure();
-    }
-    if (parser.parseRParen())
-      return failure();
+  if (succeeded(parser.parseOptionalKeyword("kernels"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::KernelsLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("parallel"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::ParallelLoop);
+  } else if (succeeded(parser.parseOptionalKeyword("serial"))) {
+    attr = mlir::acc::CombinedConstructsTypeAttr::get(
+        parser.getContext(), mlir::acc::CombinedConstructsType::SerialLoop);
+  } else {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected compute construct name");
+    return failure();
   }
   return success();
 }
@@ -1715,13 +1709,13 @@ printCombinedConstructsLoop(mlir::OpAsmPrinter &p, mlir::Operation *op,
   if (attr) {
     switch (attr.getValue()) {
     case mlir::acc::CombinedConstructsType::KernelsLoop:
-      p << "combined(kernels)";
+      p << "kernels";
       break;
     case mlir::acc::CombinedConstructsType::ParallelLoop:
-      p << "combined(parallel)";
+      p << "parallel";
       break;
     case mlir::acc::CombinedConstructsType::SerialLoop:
-      p << "combined(serial)";
+      p << "serial";
       break;
     };
   }
