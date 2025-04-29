@@ -73,9 +73,8 @@
       "title": "lldb-dap",
       "properties": {
         "lldb-dap.executable-path": {
-          "scope": "resource",
-          "type": "string",
           "scope": "machine-overridable",
+          "type": "string",
           "description": "The path to the lldb-dap binary, e.g. /usr/local/bin/lldb-dap"
         },
         "lldb-dap.arguments": {
@@ -88,7 +87,7 @@
           "description": "The list of additional arguments used to launch the debug adapter executable."
         },
         "lldb-dap.log-path": {
-          "scope": "resource",
+          "scope": "machine-overridable",
           "type": "string",
           "description": "The log path for lldb-dap (if any)"
         },
