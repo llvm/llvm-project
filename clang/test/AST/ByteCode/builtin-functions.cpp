@@ -1383,7 +1383,19 @@ namespace BuiltinMemcpy {
   static_assert(type_pun(0x3f800000) == 1.0f); // both-error {{constant}} \
                                                // both-note {{in call}}
 
-
+  struct Base { int a; };
+  struct Derived : Base { int b; };
+  constexpr int test_derived_to_base(int n) {
+    Derived arr[2] = {1, 2, 3, 4};
+    Base *p = &arr[0];
+    Base *q = &arr[1];
+    __builtin_memcpy(p, q, sizeof(Base) * n); // both-note {{source is not a contiguous array of at least 2 elements of type 'BuiltinMemcpy::Base'}}
+    return arr[0].a * 1000 + arr[0].b * 100 + arr[1].a * 10 + arr[1].b;
+  }
+  static_assert(test_derived_to_base(0) == 1234);
+  static_assert(test_derived_to_base(1) == 3234);
+  static_assert(test_derived_to_base(2) == 3434); // both-error {{constant}} \
+                                                  // both-note {{in call}}
 }
 
 namespace Memcmp {
