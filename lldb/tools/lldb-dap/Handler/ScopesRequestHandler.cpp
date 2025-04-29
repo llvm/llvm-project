@@ -64,6 +64,12 @@ namespace lldb_dap {
 //     "required": [ "body" ]
 //   }]
 // }
+
+llvm::Expected<protocol::ScopesResponseBody>
+ScopesRequestHandler2::Run(const protocol::ScopesArguments &args) const {
+  // lldb::SBFrame frame = dap.GetLLDBFrame()
+  return llvm::createStringError("something");
+};
 void ScopesRequestHandler::operator()(const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);

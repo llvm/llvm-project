@@ -260,6 +260,19 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("runInTerminal", LRA.runInTerminal) &&
          parseEnv(Params, LRA.env, P) && parseTimeout(Params, LRA.timeout, P);
 }
+bool fromJSON(const llvm::json::Value &Params, ScopesArguments &SCA,
+              llvm::json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.map("frameId", SCA.frameId);
+}
+
+llvm::json::Value toJSON(const ScopesResponseBody &SCR) {
+  llvm::json::Array body;
+  for (const Scope &scope : SCR.scopes) {
+    body.emplace_back(toJSON(scope));
+  }
+  return body;
+}
 
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
   json::ObjectMapper O(Params, P);
