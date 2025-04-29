@@ -916,6 +916,7 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     if (Chain.getOperand(0).getNode() == Callee.getNode())
       return true;
     if (Chain.getOperand(0).getOpcode() == ISD::TokenFactor &&
+        Chain.getOperand(0).getValue(0).hasOneUse() &&
         Callee.getValue(1).isOperandOf(Chain.getOperand(0).getNode()) &&
         Callee.getValue(1).hasOneUse())
       return true;
