@@ -190,12 +190,6 @@ struct Entry {
       return false;
     if (printf_format != rhs.printf_format)
       return false;
-    const size_t n = children.size();
-    const size_t m = rhs.children.size();
-    for (size_t i = 0; i < std::min<size_t>(n, m); ++i) {
-      if (!(children[i] == rhs.children[i]))
-        return false;
-    }
     if (children != rhs.children)
       return false;
     if (type != rhs.type)
