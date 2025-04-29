@@ -50,7 +50,7 @@ private:
   void emitArgRegisterLists(raw_ostream &O);
 
   StringMap<const CodeGenRegister *> RegistersByDefName;
-  std::string getQualifiedNameFromInit(const Init *I);
+  std::string getQualifiedRegisterName(const Init *I);
 };
 } // End anonymous namespace
 
@@ -135,7 +135,7 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
 
 // Return the name of the specified Init (DefInit or StringInit), with a
 // namespace qualifier if the corresponding record contains one.
-std::string CallingConvEmitter::getQualifiedNameFromInit(const Init *I) {
+std::string CallingConvEmitter::getQualifiedRegisterName(const Init *I) {
   if (const auto *DI = dyn_cast<DefInit>(I))
     return getQualifiedName(DI->getDef());
 
@@ -156,7 +156,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     O << Indent << "  ";
     ListSeparator LS;
     for (const Init *V : RL->getValues())
-      O << LS << getQualifiedNameFromInit(V);
+      O << LS << getQualifiedRegisterName(V);
     O << "\n" << Indent << "};\n";
   };
 
@@ -165,7 +165,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     SmallVector<std::string> Parms;
     if (RegLists[0]->size() == 1) {
       for (const ListInit *LI : RegLists)
-        Parms.push_back(getQualifiedNameFromInit(LI->getElement(0)));
+        Parms.push_back(getQualifiedRegisterName(LI->getElement(0)));
     } else {
       for (const std::string &S : RLNames)
         Parms.push_back(S + utostr(++Counter));
@@ -234,7 +234,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
                Action->isSubClassOf("CCAssignToRegAndStack")) {
       const ListInit *RegList = Action->getValueAsListInit("RegList");
       for (unsigned I = 0, E = RegList->size(); I != E; ++I) {
-        std::string Name = getQualifiedNameFromInit(RegList->getElement(I));
+        std::string Name = getQualifiedRegisterName(RegList->getElement(I));
         if (SwiftAction)
           AssignedSwiftRegsMap[CurrentAction].insert(std::move(Name));
         else
