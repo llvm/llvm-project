@@ -1873,7 +1873,6 @@ public:
     requires is_void_v<_T2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y)
 #  if _LIBCPP_STD_VER >= 26
-
     requires requires {
       { __x.error() == __y.error() } -> __core_convertible_to<bool>;
     }
@@ -1889,7 +1888,6 @@ public:
   template <class _E2>
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y)
 #  if _LIBCPP_STD_VER >= 26
-
     requires requires {
       { __x.error() == __y.error() } -> __core_convertible_to<bool>;
     }
