@@ -1023,8 +1023,25 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(&R, m_c_Mul(m_VPValue(A), m_SpecificInt(1))))
     return R.getVPSingleValue()->replaceAllUsesWith(A);
 
-  if (match(&R, m_Not(m_Not(m_VPValue(A)))))
-    return R.getVPSingleValue()->replaceAllUsesWith(A);
+  if (match(&R, m_Not(m_VPValue(A)))) {
+    if (match(A, m_Not(m_VPValue(A))))
+      return R.getVPSingleValue()->replaceAllUsesWith(A);
+
+    // Try to fold Not into compares by adjusting the predicate in-place.
+    if (isa<VPWidenRecipe>(A) && A->getNumUsers() == 1) {
+      auto *WideCmp = cast<VPWidenRecipe>(A);
+      if (WideCmp->getOpcode() == Instruction::ICmp ||
+          WideCmp->getOpcode() == Instruction::FCmp) {
+        WideCmp->setPredicate(
+            CmpInst::getInversePredicate(WideCmp->getPredicate()));
+        R.getVPSingleValue()->replaceAllUsesWith(WideCmp);
+        // If WideCmp doesn't have a debug location, use the one from the
+        // negation, to preserve the location.
+        if (!WideCmp->getDebugLoc() && R.getDebugLoc())
+          WideCmp->setDebugLoc(R.getDebugLoc());
+      }
+    }
+  }
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(&R,
@@ -1622,7 +1639,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe, VPWidenLoadRecipe>(&R))
+               VPWidenSelectRecipe, VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(
+              &R))
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -1695,7 +1713,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       }
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
-      if (isa<VPWidenLoadRecipe>(&R))
+      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R))
         continue;
 
       // Shrink operands by introducing truncates as needed.
