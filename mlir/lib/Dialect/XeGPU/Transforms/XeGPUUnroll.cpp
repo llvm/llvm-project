@@ -145,12 +145,14 @@ protected:
     auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(attr);
     if (!layout || layout.getLaneLayout() == nullptr)
       return xegpu::LayoutAttr();
-    return xegpu::LayoutAttr::get(layout.getContext(), nullptr /* sg_layout */, nullptr /* sg_data */,
+    return xegpu::LayoutAttr::get(
+        layout.getContext(), nullptr /* sg_layout */, nullptr /* sg_data */,
         nullptr /* inst_data */, layout.getLaneLayout(), layout.getLaneData(),
         layout.getOrder());
   };
 
-  std::optional<SmallVector<Type>> convertType(ShapedType type, llvm::ArrayRef<int64_t> blockSize) const {
+  std::optional<SmallVector<Type>>
+  convertType(ShapedType type, llvm::ArrayRef<int64_t> blockSize) const {
     auto elemTy = type.getElementType();
     auto maybeGrids = computeGrids(type.getShape(), blockSize);
 
@@ -162,13 +164,13 @@ protected:
       auto ctx = tdescTy.getContext();
       auto encoding = tdescTy.getEncoding();
       auto layout = tdescTy.getLayout();
-      newTy = xegpu::TensorDescType::get(ctx, blockSize, elemTy, encoding, getLaneLayoutAttr(layout));
+      newTy = xegpu::TensorDescType::get(ctx, blockSize, elemTy, encoding,
+                                         getLaneLayoutAttr(layout));
     } else {
       newTy = type.clone(blockSize, elemTy);
     }
     return llvm::SmallVector<Type>(computeProduct(*maybeGrids), newTy);
   }
-
 
   vector::UnrollVectorOptions options;
 };
