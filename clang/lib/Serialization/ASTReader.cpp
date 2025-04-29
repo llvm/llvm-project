@@ -3297,6 +3297,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       time_t StoredModTime = 0;
       ASTFileSignature StoredSignature;
       std::string ImportedFile;
+      std::string StoredFile;
+      bool IgnoreImportedByNote = false;
       StringRef ImportedCacheKey;
 
       // For prebuilt and explicit modules first consult the file map for
@@ -3323,13 +3325,26 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                                    SignatureBytes.end());
         Blob = Blob.substr(ASTFileSignature::size);
 
+        // Use BaseDirectoryAsWritten to ensure we use the same path in the
+        // ModuleCache as when writing.
+        StoredFile = ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
         if (ImportedFile.empty()) {
-          // Use BaseDirectoryAsWritten to ensure we use the same path in the
-          // ModuleCache as when writing.
-          ImportedFile =
-              ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
-        } else {
-          (void)ReadPathBlob(BaseDirectoryAsWritten, Record, Idx, Blob);
+          ImportedFile = StoredFile;
+        } else if (!getDiags().isIgnored(
+                       diag::warn_module_file_mapping_mismatch,
+                       CurrentImportLoc)) {
+          auto ImportedFileRef =
+              PP.getFileManager().getOptionalFileRef(ImportedFile);
+          auto StoredFileRef =
+              PP.getFileManager().getOptionalFileRef(StoredFile);
+          if ((ImportedFileRef && StoredFileRef) &&
+              (*ImportedFileRef != *StoredFileRef)) {
+            Diag(diag::warn_module_file_mapping_mismatch)
+                << ImportedFile << StoredFile;
+            Diag(diag::note_module_file_imported_by)
+                << F.FileName << !F.ModuleName.empty() << F.ModuleName;
+            IgnoreImportedByNote = true;
+          }
         }
 
         ImportedCacheKey = ReadStringBlob(Record, Idx, Blob);
@@ -3376,7 +3391,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                       .getModuleCache()
                                       .getInMemoryModuleCache()
                                       .isPCMFinal(F.FileName);
-      if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
+      if (!IgnoreImportedByNote &&
+          (isDiagnosedResult(Result, Capabilities) || recompilingFinalized))
         Diag(diag::note_module_file_imported_by)
             << F.FileName << !F.ModuleName.empty() << F.ModuleName;
 
