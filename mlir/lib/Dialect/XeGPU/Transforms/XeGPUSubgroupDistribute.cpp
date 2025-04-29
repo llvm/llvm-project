@@ -550,7 +550,7 @@ void LayoutInfoPropagation::visitCreateDescOp(
     xegpu::CreateDescOp createDesc, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   LayoutInfo descLayout = results[0]->getValue();
-  /// Need the layout of the descriptor to propagate to the operands.
+  // Need the layout of the descriptor to propagate to the operands.
   if (!descLayout.isAssigned())
     return;
   // For offset operand propagate 1D default layout.
@@ -889,11 +889,11 @@ static xegpu::TensorDescType dropLayouts(xegpu::TensorDescType tensorDesc) {
 ///   %0 = vector.shape_cast %1 : vector<8x1xf32> to vector<8xf32>
 /// Example 2:
 ///   distributed type: xegpu.tensor_desc<8x16xf32, #xegpu.layout<...>>
-//    expected type: xegpu.tensor_desc<8x16xf32>
+///   expected type: xegpu.tensor_desc<8x16xf32>
 ///   resolved using,
 ///   %0 = unrealized_conversion_cast %1 :
-///   xegpu.tensor_desc<8x16xf32, #xegpu.layout<..>> ->
-///   xegpu.tensor_desc<8x16xf32>
+///      xegpu.tensor_desc<8x16xf32, #xegpu.layout<..>> ->
+///      xegpu.tensor_desc<8x16xf32>
 template <typename T>
 static Value resolveDistributedTy(Value orig, T expected,
                                   PatternRewriter &rewriter) {
@@ -1263,9 +1263,9 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           loadOp, "Failed to get distributed vector type for the load op");
     xegpu::TensorDescType distributedTensorDescTy =
-        dropLayouts(loadOp.getTensorDescType()); /// Distributed tensor
-                                                 /// descriptor type does not
-                                                 /// contain layout info.
+        dropLayouts(loadOp.getTensorDescType()); // Distributed tensor
+                                                 // descriptor type does not
+                                                 // contain layout info.
     auto newLoadOp = rewriter.create<xegpu::LoadNdOp>(
         newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
         resolveDistributedTy(newWarpOp->getResult(newRetIndices[0]),
