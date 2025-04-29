@@ -11,6 +11,7 @@
 
 #include <__compare/common_comparison_category.h>
 #include <__compare/synth_three_way.h>
+#include <__concepts/boolean_testable.h>
 #include <__concepts/different_from.h>
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -461,7 +462,14 @@ pair(_T1, _T2) -> pair<_T1, _T2>;
 
 template <class _T1, class _T2, class _U1, class _U2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
-operator==(const pair<_T1, _T2>& __x, const pair<_U1, _U2>& __y) {
+operator==(const pair<_T1, _T2>& __x, const pair<_U1, _U2>& __y)
+#if _LIBCPP_STD_VER >= 26
+  requires requires {
+    { __x.first == __y.first } -> __boolean_testable;
+    { __x.second == __y.second } -> __boolean_testable;
+  }
+#endif
+{
   return __x.first == __y.first && __x.second == __y.second;
 }
 
