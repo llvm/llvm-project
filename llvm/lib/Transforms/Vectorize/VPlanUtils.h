@@ -39,18 +39,37 @@ const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 
 /// Returns true if \p VPV is uniform after vectorization.
 inline bool isUniformAfterVectorization(const VPValue *VPV) {
+  auto IsKnownUniformOpcode = [](auto *R) -> bool {
+    return Instruction::isBinaryOp(R->getOpcode()) ||
+           Instruction::isCast(R->getOpcode()) ||
+           R->getOpcode() == Instruction::GetElementPtr ||
+           R->getOpcode() == Instruction::ICmp ||
+           R->getOpcode() == Instruction::FCmp;
+  };
+
   // A value defined outside the vector region must be uniform after
   // vectorization inside a vector region.
-  if (VPV->isDefinedOutsideLoopRegions())
+  if (VPV->isLiveIn())
     return true;
-  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV))
-    return Rep->isUniform();
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
+    const VPRegionBlock *ParentR = Rep->getParent()->getParent();
+    return Rep->isUniform() ||
+           (IsKnownUniformOpcode(Rep) &&
+            (!ParentR || !ParentR->isReplicator()) &&
+            all_of(Rep->operands(), isUniformAfterVectorization));
+  }
+
   if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(),
                   isUniformAfterVectorization);
+  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
+    return IsKnownUniformOpcode(WidenR) &&
+           all_of(WidenR->operands(), isUniformAfterVectorization);
+  }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           ((Instruction::isBinaryOp(VPI->getOpcode()) ||
+           ((IsKnownUniformOpcode(VPI) ||
+             VPI->getOpcode() == VPInstruction::Broadcast ||
              VPI->getOpcode() == VPInstruction::PtrAdd) &&
             all_of(VPI->operands(), isUniformAfterVectorization));
 
