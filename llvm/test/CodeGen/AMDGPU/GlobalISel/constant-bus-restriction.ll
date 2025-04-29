@@ -145,8 +145,8 @@ define amdgpu_ps float @select_vcc_s_s(float %cmp0, float %cmp1, float inreg %sr
 ; GFX10PLUS-LABEL: select_vcc_s_s:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    v_mov_b32_e32 v2, s3
-; GFX10PLUS-NEXT:    v_cmp_eq_f32_e32 vcc_lo, v0, v1
-; GFX10PLUS-NEXT:    v_cndmask_b32_e64 v0, v2, s2, vcc_lo
+; GFX10PLUS-NEXT:    v_cmp_neq_f32_e32 vcc_lo, v0, v1
+; GFX10PLUS-NEXT:    v_cndmask_b32_e32 v0, s2, v2, vcc_lo
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %cmp = fcmp oeq float %cmp0, %cmp1
   %result = select i1 %cmp, float %src0, float %src1

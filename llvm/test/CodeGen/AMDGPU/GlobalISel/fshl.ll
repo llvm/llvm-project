@@ -6241,6 +6241,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_ssv(i128 inreg %lhs, i128 inreg %rhs, 
 ; GFX10-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX10-NEXT:    v_sub_nc_u32_e32 v2, 64, v13
 ; GFX10-NEXT:    v_lshlrev_b64 v[4:5], v12, s[0:1]
+<<<<<<< HEAD
 ; GFX10-NEXT:    v_cmp_gt_u32_e64 s1, 64, v13
 ; GFX10-NEXT:    v_cmp_eq_u32_e64 s0, 0, v12
 ; GFX10-NEXT:    v_cndmask_b32_e32 v6, v6, v0, vcc_lo
@@ -6262,6 +6263,32 @@ define amdgpu_ps <4 x float> @v_fshl_i128_ssv(i128 inreg %lhs, i128 inreg %rhs, 
 ; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, s9, s4
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s1
+=======
+; GFX10-NEXT:    v_or_b32_e32 v2, v2, v0
+; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0xffffffc0, v13
+; GFX10-NEXT:    v_lshlrev_b64 v[8:9], v8, s[6:7]
+; GFX10-NEXT:    v_lshlrev_b64 v[10:11], v10, s[0:1]
+; GFX10-NEXT:    v_or_b32_e32 v3, v3, v1
+; GFX10-NEXT:    v_cmp_gt_u32_e64 s0, 64, v13
+; GFX10-NEXT:    v_lshrrev_b64 v[0:1], v0, s[6:7]
+; GFX10-NEXT:    v_cmp_ne_u32_e64 s1, 0, v13
+; GFX10-NEXT:    v_or_b32_e32 v6, v6, v8
+; GFX10-NEXT:    v_or_b32_e32 v7, v7, v9
+; GFX10-NEXT:    v_cndmask_b32_e32 v8, v10, v2, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v10, v11, v3, vcc_lo
+; GFX10-NEXT:    v_lshrrev_b64 v[2:3], v13, s[6:7]
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, v6, s0
+; GFX10-NEXT:    v_cmp_ne_u32_e64 s4, 0, v12
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, v7, s0
+; GFX10-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, s8, v0, s1
+; GFX10-NEXT:    v_cndmask_b32_e64 v6, s2, v8, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v7, s3, v10, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, s9, v1, s1
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s0
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s0
+>>>>>>> 51c61e76cef3 (added sgpr case, refactoring)
 ; GFX10-NEXT:    v_or_b32_e32 v0, v4, v0
 ; GFX10-NEXT:    v_or_b32_e32 v1, v5, v1
 ; GFX10-NEXT:    v_or_b32_e32 v2, v6, v2
@@ -6277,6 +6304,7 @@ define amdgpu_ps <4 x float> @v_fshl_i128_ssv(i128 inreg %lhs, i128 inreg %rhs, 
 ; GFX11-NEXT:    s_mov_b32 s8, 0
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v2, 64, v12
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], v12, s[2:3]
+<<<<<<< HEAD
 ; GFX11-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 64, v12
 ; GFX11-NEXT:    v_and_b32_e32 v13, 0x7f, v6
 ; GFX11-NEXT:    v_add_nc_u32_e32 v7, 0xffffffc0, v12
@@ -6316,6 +6344,37 @@ define amdgpu_ps <4 x float> @v_fshl_i128_ssv(i128 inreg %lhs, i128 inreg %rhs, 
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s1
+=======
+; GFX11-NEXT:    v_sub_nc_u32_e32 v8, 64, v13
+; GFX11-NEXT:    v_add_nc_u32_e32 v10, 0xffffffc0, v12
+; GFX11-NEXT:    v_lshrrev_b64 v[6:7], v13, s[8:9]
+; GFX11-NEXT:    v_lshrrev_b64 v[2:3], v3, s[0:1]
+; GFX11-NEXT:    v_cmp_ne_u32_e64 s4, 0, v12
+; GFX11-NEXT:    v_lshlrev_b64 v[8:9], v8, s[6:7]
+; GFX11-NEXT:    v_lshlrev_b64 v[10:11], v10, s[0:1]
+; GFX11-NEXT:    v_cmp_gt_u32_e64 s0, 64, v13
+; GFX11-NEXT:    v_cmp_ne_u32_e64 s1, 0, v13
+; GFX11-NEXT:    v_or_b32_e32 v2, v2, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v0, 0xffffffc0, v13
+; GFX11-NEXT:    v_or_b32_e32 v3, v3, v1
+; GFX11-NEXT:    v_or_b32_e32 v6, v6, v8
+; GFX11-NEXT:    v_or_b32_e32 v7, v7, v9
+; GFX11-NEXT:    v_cndmask_b32_e32 v8, v10, v2, vcc_lo
+; GFX11-NEXT:    v_lshrrev_b64 v[0:1], v0, s[6:7]
+; GFX11-NEXT:    v_cndmask_b32_e32 v10, v11, v3, vcc_lo
+; GFX11-NEXT:    v_lshrrev_b64 v[2:3], v13, s[6:7]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, v6, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, v7, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v6, s2, v8, s4
+; GFX11-NEXT:    v_cndmask_b32_e64 v7, s3, v10, s4
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, v2, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, s8, v0, s1
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, s9, v1, s1
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, 0, v3, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_or_b32_e32 v2, v6, v2
+>>>>>>> 51c61e76cef3 (added sgpr case, refactoring)
 ; GFX11-NEXT:    v_or_b32_e32 v0, v4, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_or_b32_e32 v1, v5, v1
