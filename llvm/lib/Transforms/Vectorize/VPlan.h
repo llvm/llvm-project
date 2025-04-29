@@ -468,6 +468,9 @@ public:
   /// Return true if the recipe is a scalar cast.
   bool isScalarCast() const;
 
+  /// Set the recipe's debug location to \p NewDL.
+  void setDebugLoc(DebugLoc NewDL) { DL = NewDL; }
+
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
@@ -804,6 +807,12 @@ public:
     return CmpPredicate;
   }
 
+  void setPredicate(CmpInst::Predicate Pred) {
+    assert(OpType == OperationType::Cmp &&
+           "recipe doesn't have a compare predicate");
+    CmpPredicate = Pred;
+  }
+
   GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
 
   /// Returns true if the recipe has fast-math flags.
@@ -878,10 +887,14 @@ public:
     Broadcast,
     ComputeFindLastIVResult,
     ComputeReductionResult,
-    // Takes the VPValue to extract from as first operand and the lane or part
-    // to extract as second operand, counting from the end starting with 1 for
-    // last. The second operand must be a positive constant and <= VF.
-    ExtractFromEnd,
+    // Extracts the last lane from its operand if it is a vector, or the last
+    // part if scalar. In the latter case, the recipe will be removed during
+    // unrolling.
+    ExtractLastElement,
+    // Extracts the second-to-last lane from its operand or the second-to-last
+    // part if it is scalar. In the latter case, the recipe will be removed
+    // during unrolling.
+    ExtractPenultimateElement,
     LogicalAnd, // Non-poison propagating logical And.
     // Add an offset in bytes (second operand) to a base pointer (first
     // operand). Only generates scalar values (either for the first lane only or
@@ -1347,8 +1360,11 @@ public:
   ~VPWidenIntrinsicRecipe() override = default;
 
   VPWidenIntrinsicRecipe *clone() override {
-    return new VPWidenIntrinsicRecipe(*cast<CallInst>(getUnderlyingValue()),
-                                      VectorIntrinsicID, {op_begin(), op_end()},
+    if (Value *CI = getUnderlyingValue())
+      return new VPWidenIntrinsicRecipe(*cast<CallInst>(CI), VectorIntrinsicID,
+                                        {op_begin(), op_end()}, ResultTy,
+                                        getDebugLoc());
+    return new VPWidenIntrinsicRecipe(VectorIntrinsicID, {op_begin(), op_end()},
                                       ResultTy, getDebugLoc());
   }
 
@@ -1844,6 +1860,9 @@ public:
 class VPWidenIntOrFpInductionRecipe : public VPWidenInductionRecipe {
   TruncInst *Trunc;
 
+  // If this recipe is unrolled it will have 2 additional operands.
+  bool isUnrolled() const { return getNumOperands() == 5; }
+
 public:
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
                                 VPValue *VF, const InductionDescriptor &IndDesc,
@@ -1892,9 +1911,9 @@ public:
   const VPValue *getVFValue() const { return getOperand(2); }
 
   VPValue *getSplatVFValue() {
-    // If the recipe has been unrolled (4 operands), return the VPValue for the
-    // induction increment.
-    return getNumOperands() == 5 ? getOperand(3) : nullptr;
+    // If the recipe has been unrolled return the VPValue for the induction
+    // increment.
+    return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
@@ -1916,7 +1935,7 @@ public:
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return getNumOperands() == 5 ? getOperand(4) : this;
+    return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
   }
 };
 

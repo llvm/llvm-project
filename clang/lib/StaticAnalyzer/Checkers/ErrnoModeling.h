@@ -96,10 +96,9 @@ ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
 /// Set errno state for the common case when a standard function indicates
 /// failure only by \c errno. Sets \c ErrnoCheckState to \c MustBeChecked, and
 /// invalidates the errno region (clear of previous value).
-/// \arg \c Elem CFG Element that causes invalidation of \c errno.
+/// \arg \c InvalE Expression that causes invalidation of \c errno.
 ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
-                                         CheckerContext &C,
-                                         ConstCFGElementRef Elem);
+                                         CheckerContext &C, const Expr *InvalE);
 
 } // namespace errno_modeling
 } // namespace ento
