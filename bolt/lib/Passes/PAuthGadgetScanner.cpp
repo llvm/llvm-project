@@ -713,21 +713,23 @@ SrcSafetyAnalysis::create(BinaryFunction &BF,
                                                        RegsToTrackInstsFor);
 }
 
-static BriefReport<MCPhysReg> make_generic_report(MCInstReference Location,
-                                                  StringRef Text) {
+// This function could return PartialReport<T>, but currently T is always
+// MCPhysReg, even though it is an implementation detail.
+static PartialReport<MCPhysReg> make_generic_report(MCInstReference Location,
+                                                    StringRef Text) {
   auto Report = std::make_shared<GenericDiagnostic>(Location, Text);
-  return BriefReport<MCPhysReg>(Report, std::nullopt);
+  return PartialReport<MCPhysReg>(Report, std::nullopt);
 }
 
 template <typename T>
-static BriefReport<T> make_report(const GadgetKind &Kind,
-                                  MCInstReference Location,
-                                  T RequestedDetails) {
+static PartialReport<T> make_gadget_report(const GadgetKind &Kind,
+                                           MCInstReference Location,
+                                           T RequestedDetails) {
   auto Report = std::make_shared<GadgetDiagnostic>(Kind, Location);
-  return BriefReport<T>(Report, RequestedDetails);
+  return PartialReport<T>(Report, RequestedDetails);
 }
 
-static std::optional<BriefReport<MCPhysReg>>
+static std::optional<PartialReport<MCPhysReg>>
 shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
                          const SrcState &S) {
   static const GadgetKind RetKind("non-protected ret found");
@@ -752,10 +754,10 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   if (S.SafeToDerefRegs[RetReg])
     return std::nullopt;
 
-  return make_report(RetKind, Inst, RetReg);
+  return make_gadget_report(RetKind, Inst, RetReg);
 }
 
-static std::optional<BriefReport<MCPhysReg>>
+static std::optional<PartialReport<MCPhysReg>>
 shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
                        const SrcState &S) {
   static const GadgetKind CallKind("non-protected call found");
@@ -777,10 +779,10 @@ shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
   if (S.SafeToDerefRegs[DestReg])
     return std::nullopt;
 
-  return make_report(CallKind, Inst, DestReg);
+  return make_gadget_report(CallKind, Inst, DestReg);
 }
 
-static std::optional<BriefReport<MCPhysReg>>
+static std::optional<PartialReport<MCPhysReg>>
 shouldReportSigningOracle(const BinaryContext &BC, const MCInstReference &Inst,
                           const SrcState &S) {
   static const GadgetKind SigningOracleKind("signing oracle found");
@@ -797,7 +799,7 @@ shouldReportSigningOracle(const BinaryContext &BC, const MCInstReference &Inst,
   if (S.TrustedRegs[SignedReg])
     return std::nullopt;
 
-  return make_report(SigningOracleKind, Inst, SignedReg);
+  return make_gadget_report(SigningOracleKind, Inst, SignedReg);
 }
 
 template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
@@ -812,7 +814,7 @@ template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
 }
 
 static SmallVector<MCPhysReg>
-collectRegsToTrack(ArrayRef<BriefReport<MCPhysReg>> Reports) {
+collectRegsToTrack(ArrayRef<PartialReport<MCPhysReg>> Reports) {
   SmallSet<MCPhysReg, 4> RegsToTrack;
   for (auto Report : Reports)
     if (Report.RequestedDetails)
@@ -822,7 +824,7 @@ collectRegsToTrack(ArrayRef<BriefReport<MCPhysReg>> Reports) {
 }
 
 void FunctionAnalysisContext::findUnsafeUses(
-    SmallVector<BriefReport<MCPhysReg>> &Reports) {
+    SmallVector<PartialReport<MCPhysReg>> &Reports) {
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, {});
   LLVM_DEBUG({ dbgs() << "Running src register safety analysis...\n"; });
   Analysis->run();
@@ -856,7 +858,7 @@ void FunctionAnalysisContext::findUnsafeUses(
 }
 
 void FunctionAnalysisContext::augmentUnsafeUseReports(
-    ArrayRef<BriefReport<MCPhysReg>> Reports) {
+    ArrayRef<PartialReport<MCPhysReg>> Reports) {
   SmallVector<MCPhysReg> RegsToTrack = collectRegsToTrack(Reports);
   // Re-compute the analysis with register tracking.
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, RegsToTrack);
@@ -882,7 +884,7 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
 }
 
 void FunctionAnalysisContext::handleSimpleReports(
-    SmallVector<BriefReport<MCPhysReg>> &Reports) {
+    SmallVector<PartialReport<MCPhysReg>> &Reports) {
   // Before re-running the detailed analysis, process the reports which do not
   // need any additional details to be attached.
   for (auto &Report : Reports) {
@@ -899,7 +901,7 @@ void FunctionAnalysisContext::run() {
     BF.dump();
   });
 
-  SmallVector<BriefReport<MCPhysReg>> UnsafeUses;
+  SmallVector<PartialReport<MCPhysReg>> UnsafeUses;
   findUnsafeUses(UnsafeUses);
   handleSimpleReports(UnsafeUses);
   if (!UnsafeUses.empty())

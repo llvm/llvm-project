@@ -204,9 +204,10 @@ namespace PAuthGadgetScanner {
 // * an analysis (SrcSafetyAnalysis at now, DstSafetyAnalysis will be added
 //   later to support the detection of authentication oracles) computes register
 //   state for each instruction in the function.
-// * each instruction is checked to be a gadget of some kind, taking the
-//   computed state into account. If a gadget is found, its kind and location
-//   are stored into a subclass of Diagnostic wrapped into BriefReport<ReqT>.
+// * for each instruction, it is checked whether it is a gadget of some kind,
+//   taking the computed state into account. If a gadget is found, its kind
+//   and location are stored into a subclass of Diagnostic wrapped into
+//   PartialReport<ReqT>.
 // * if any issue is to be reported for the function, the same analysis is
 //   re-run to collect extra information to provide to the user. Which extra
 //   information can be requested depends on the particular analysis (for
@@ -216,7 +217,7 @@ namespace PAuthGadgetScanner {
 //
 // Here, the subclasses of Diagnostic store the pieces of information which
 // are kept unchanged since they are collected on the first run of the analysis.
-// BriefReport<T>::RequestedDetails, on the other hand, is replaced with
+// PartialReport<T>::RequestedDetails, on the other hand, is replaced with
 // FinalReport::Details computed by the second run of the analysis.
 
 /// Description of a gadget kind that can be detected. Intended to be
@@ -265,7 +266,7 @@ struct GenericDiagnostic : public Diagnostic {
                               const BinaryContext &BC) const override;
 };
 
-/// An information about an issue collected on the slower, detailed,
+/// Extra information about an issue collected on the slower, detailed,
 /// run of the analysis.
 class ExtraInfo {
 public:
@@ -288,9 +289,9 @@ public:
 /// A half-baked report produced on the first run of the analysis. An extra,
 /// analysis-specific information may be requested to be collected on the
 /// second run.
-template <typename T> struct BriefReport {
-  BriefReport(std::shared_ptr<Diagnostic> Issue,
-              const std::optional<T> RequestedDetails)
+template <typename T> struct PartialReport {
+  PartialReport(std::shared_ptr<Diagnostic> Issue,
+                const std::optional<T> RequestedDetails)
       : Issue(Issue), RequestedDetails(RequestedDetails) {}
 
   std::shared_ptr<Diagnostic> Issue;
@@ -320,12 +321,12 @@ class FunctionAnalysisContext {
 
   bool PacRetGadgetsOnly;
 
-  void findUnsafeUses(SmallVector<BriefReport<MCPhysReg>> &Reports);
-  void augmentUnsafeUseReports(ArrayRef<BriefReport<MCPhysReg>> Reports);
+  void findUnsafeUses(SmallVector<PartialReport<MCPhysReg>> &Reports);
+  void augmentUnsafeUseReports(ArrayRef<PartialReport<MCPhysReg>> Reports);
 
   /// Process the reports which do not have to be augmented, and remove them
   /// from Reports.
-  void handleSimpleReports(SmallVector<BriefReport<MCPhysReg>> &Reports);
+  void handleSimpleReports(SmallVector<PartialReport<MCPhysReg>> &Reports);
 
 public:
   FunctionAnalysisContext(BinaryFunction &BF,
