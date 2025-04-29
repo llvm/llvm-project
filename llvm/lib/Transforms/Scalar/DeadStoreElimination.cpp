@@ -970,9 +970,9 @@ struct DSEState {
   DenseMap<const Value *, bool> InvisibleToCallerAfterRet;
   // Keep track of blocks with throwing instructions not modeled in MemorySSA.
   SmallPtrSet<BasicBlock *, 16> ThrowingBlocks;
-  // Post-order numbers for each basic block. Used to figure out if memory
+  // Reverse post-order numbers for each basic block. Used to figure out if memory
   // accesses are executed before another access.
-  DenseMap<BasicBlock *, unsigned> PostOrderNumbers;
+  DenseMap<BasicBlock *, unsigned> RPONumbers;
 
   /// Keep track of instructions (partly) overlapping with killing MemoryDefs per
   /// basic block.
@@ -1001,9 +1001,10 @@ struct DSEState {
         PDT(PDT), TLI(TLI), DL(F.getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
-    unsigned PO = 0;
-    for (BasicBlock *BB : post_order(&F)) {
-      PostOrderNumbers[BB] = PO++;
+    unsigned RPO = 0;
+    ReversePostOrderTraversal<Function *> RPOT(&F);
+    for (BasicBlock *BB : RPOT) {
+      RPONumbers[BB] = RPO++;
       for (Instruction &I : *BB) {
         MemoryAccess *MA = MSSA.getMemoryAccess(&I);
         if (I.mayThrow() && !MA)
@@ -1761,8 +1762,8 @@ struct DSEState {
       if (MemoryDef *UseDef = dyn_cast<MemoryDef>(UseAccess)) {
         if (isCompleteOverwrite(MaybeDeadLoc, MaybeDeadI, UseInst)) {
           BasicBlock *MaybeKillingBlock = UseInst->getParent();
-          if (PostOrderNumbers.find(MaybeKillingBlock)->second <
-              PostOrderNumbers.find(MaybeDeadAccess->getBlock())->second) {
+          if (RPONumbers.find(MaybeKillingBlock)->second >
+              RPONumbers.find(MaybeDeadAccess->getBlock())->second) {
             if (!isInvisibleToCallerAfterRet(KillingUndObj)) {
               LLVM_DEBUG(dbgs()
                          << "    ... found killing def " << *UseInst << "\n");
@@ -2451,7 +2452,7 @@ DSEState::eliminateDeadDefs(const MemoryLocationWrapper &KillingLocWrapper) {
         // We only consider incoming MemoryAccesses that come before the
         // MemoryPhi. Otherwise we could discover candidates that do not
         // strictly dominate our starting def.
-        if (PostOrderNumbers[IncomingBlock] > PostOrderNumbers[PhiBlock])
+        if (RPONumbers[IncomingBlock] < RPONumbers[PhiBlock])
           ToCheck.insert(IncomingAccess);
       }
       continue;

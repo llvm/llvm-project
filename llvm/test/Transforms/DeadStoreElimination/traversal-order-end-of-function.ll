@@ -5,9 +5,10 @@
 ; Ensure MemoryDefs are visited bottom-up in eliminateDeadWritesAtEndOfFunction.
 
 ; CHECK:      Trying to eliminate MemoryDefs at the end of the function
+; CHECK-NEXT:   Check if def 2 = MemoryDef(4) (  store i32 %sum, ptr %array.idx, align 4) is at the end the function
+; CHECK-NEXT:   ... hit read clobber   call void @opaque(ptr noundef %array.idx).
 ; CHECK-NEXT:   Check if def 1 = MemoryDef(liveOnEntry) (  call void @llvm.memset.p0.i64(ptr noundef %array, i8 0, i64 100, i1 false)) is at the end the function
 ; CHECK-NEXT:   ... hit read clobber   %array.curr = load i32, ptr %array.idx, align 4.
-; CHECK-NEXT:   Check if def 2 = MemoryDef(4) (  store i32 %sum, ptr %array.idx, align 4) is at the end the function
 define void @reverse_post_order_traversal_visit_test(ptr noundef %A) {
 entry:
   %array = alloca [25 x i32], align 16
