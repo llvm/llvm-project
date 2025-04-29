@@ -150,6 +150,7 @@ parser::CharBlock MakeNameFromOperator(
     const parser::DefinedOperator::IntrinsicOperator &op,
     SemanticsContext &context);
 parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name);
+std::string MangleDefinedOperator(const parser::CharBlock &name);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_

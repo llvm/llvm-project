@@ -1667,8 +1667,6 @@ private:
       const std::optional<parser::OmpClauseList> &clauses,
       const T &wholeConstruct);
 
-  parser::CharBlock MangleDefinedOperator(const parser::CharBlock &name);
-
   int metaLevel_{0};
   const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
 };
@@ -1799,14 +1797,9 @@ parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name) {
       .Default(name);
 }
 
-parser::CharBlock OmpVisitor::MangleDefinedOperator(
-    const parser::CharBlock &name) {
-  // This function should only be used with user defined operators, that have
-  // the pattern
-  // .<leters>.
+std::string MangleDefinedOperator(const parser::CharBlock &name) {
   CHECK(name[0] == '.' && name[name.size() - 1] == '.');
-  return parser::CharBlock{
-      context().StoreUserReductionName("op" + name.ToString())};
+  return "op" + name.ToString();
 }
 
 template <typename T>
@@ -1828,7 +1821,8 @@ void OmpVisitor::ProcessReductionSpecifier(
     const auto &defOp{std::get<parser::DefinedOperator>(id.u)};
     if (const auto definedOp{std::get_if<parser::DefinedOpName>(&defOp.u)}) {
       name = &definedOp->v;
-      mangledName.source = MangleDefinedOperator(definedOp->v.source);
+      mangledName.source = parser::CharBlock{context().StoreUserReductionName(
+          MangleDefinedOperator(definedOp->v.source))};
     } else {
       mangledName.source = MakeNameFromOperator(
           std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),

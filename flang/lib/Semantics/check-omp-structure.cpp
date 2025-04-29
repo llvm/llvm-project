@@ -3391,6 +3391,14 @@ bool OmpStructureChecker::CheckReductionOperator(
         break;
       }
     }
+    // User-defined operators are OK if there has been a declared reduction
+    // for that. So check if it's a defined operator, and it has
+    // UserReductionDetails - then it's good.
+    if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
+      if (definedOp->v.symbol->detailsIf<UserReductionDetails>()) {
+        return true;
+      }
+    }
     context_.Say(source, "Invalid reduction operator in %s clause."_err_en_US,
         parser::ToUpperCaseLetters(getClauseName(clauseId).str()));
     return false;
@@ -3485,6 +3493,17 @@ void OmpStructureChecker::CheckReductionObjects(
   }
 }
 
+static bool CheckSymbolSupportsType(const Scope &scope,
+    const parser::CharBlock &name, const DeclTypeSpec &type) {
+  if (const auto &symbol{scope.FindSymbol(name)}) {
+    if (const auto *reductionDetails{
+            symbol->detailsIf<UserReductionDetails>()}) {
+      return reductionDetails->SupportsType(&type);
+    }
+  }
+  return false;
+}
+
 static bool IsReductionAllowedForType(
     const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
     const Scope &scope, SemanticsContext &context) {
@@ -3528,14 +3547,11 @@ static bool IsReductionAllowedForType(
         return false;
       }
       parser::CharBlock name{MakeNameFromOperator(*intrinsicOp, context)};
-      Symbol *symbol{scope.FindSymbol(name)};
-      if (symbol) {
-        const auto *reductionDetails{symbol->detailsIf<UserReductionDetails>()};
-        assert(reductionDetails && "Expected to find reductiondetails");
-
-        return reductionDetails->SupportsType(type);
-      }
-      return false;
+      return CheckSymbolSupportsType(scope, name, type);
+    } else if (const auto *definedOp{
+                   std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
+      // TODO: Figure out if it's valid.
+      return true;
     }
     DIE("Intrinsic Operator not found - parsing gone wrong?");
   }};
@@ -3576,12 +3592,7 @@ static bool IsReductionAllowedForType(
       // We also need to check for mangled names (max, min, iand, ieor and ior)
       // and then check if the type is there.
       parser::CharBlock mangledName{MangleSpecialFunctions(name->source)};
-      if (const auto &symbol{scope.FindSymbol(mangledName)}) {
-        if (const auto *reductionDetails{
-                symbol->detailsIf<UserReductionDetails>()}) {
-          return reductionDetails->SupportsType(type);
-        }
-      }
+      return CheckSymbolSupportsType(scope, mangledName, type);
     }
     // Everything else is "not matching type".
     return false;
