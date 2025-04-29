@@ -52,7 +52,7 @@ struct GpuSubgroupIdRewriter final : OpRewritePattern<gpu::SubgroupIdOp> {
     //             = (tid.x + dim.x * (tid.y + dim.y * tid.z)) /
     //             subgroup_size
 
-    auto loc = op->getLoc();
+    Location loc = op->getLoc();
 
     Value dimX = rewriter.create<gpu::BlockDimOp>(loc, gpu::Dimension::x);
     Value dimY = rewriter.create<gpu::BlockDimOp>(loc, gpu::Dimension::y);
