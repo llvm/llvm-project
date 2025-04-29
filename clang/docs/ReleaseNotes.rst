@@ -152,6 +152,18 @@ C Language Changes
   being incompatible with C++. (#GH17792)
 - Added ``-Wc++-keyword``, grouped under ``-Wc++-compat``, which diagnoses when
   a C++ keyword is used as an identifier in C. Partially addresses #GH21898.
+- Added ``-Wc++-hidden-decl``, grouped under ``-Wc++-compat``, which diagnoses
+  use of tag types which are visible in C but not visible in C++ due to scoping
+  rules. e.g.,
+
+  .. code-block:: c
+
+    struct S {
+      struct T {
+        int x;
+      } t;
+    };
+    struct T t; // Invalid C++, valid C, now diagnosed
 - Added ``-Wimplicit-int-enum-cast``, grouped under ``-Wc++-compat``, which
   diagnoses implicit conversion from integer types to an enumeration type in C,
   which is not compatible with C++. #GH37027
@@ -222,6 +234,8 @@ Non-comprehensive list of changes in this release
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 - Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
+- No longer crashing on invalid Objective-C categories and extensions when
+  dumping the AST as JSON. (#GH137320)
 
 New Compiler Flags
 ------------------
