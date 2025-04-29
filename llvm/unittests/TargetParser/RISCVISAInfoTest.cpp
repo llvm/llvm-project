@@ -695,13 +695,13 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
 
   for (StringRef Input :
        {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
-        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p1", "rv32i_zcd_xqccmp0p1"}) {
+        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p3", "rv32i_zcd_xqccmp0p3"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith("extension when 'd' extension is enabled"));
   }
 
-  for (StringRef Input : {"rv32i_zcmp_xqccmp0p1", "rv64i_zcmp_xqccmp0p1"}) {
+  for (StringRef Input : {"rv32i_zcmp_xqccmp0p3", "rv64i_zcmp_xqccmp0p3"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
               "'zcmp' and 'xqccmp' extensions are incompatible");
   }
