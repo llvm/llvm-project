@@ -10,8 +10,6 @@
 #ifndef _LIBCPP___CXX03___MEMORY_SHARED_PTR_H
 #define _LIBCPP___CXX03___MEMORY_SHARED_PTR_H
 
-#include <__cxx03/__compare/compare_three_way.h>
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/__exception/exception.h>
 #include <__cxx03/__functional/binary_function.h>

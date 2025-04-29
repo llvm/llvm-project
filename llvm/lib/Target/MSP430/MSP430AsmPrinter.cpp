@@ -43,8 +43,8 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
-    void printOperand(const MachineInstr *MI, int OpNum,
-                      raw_ostream &O, const char* Modifier = nullptr);
+    void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O,
+                      bool PrefixHash = true);
     void printSrcMemOperand(const MachineInstr *MI, int OpNum,
                             raw_ostream &O);
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
@@ -70,7 +70,7 @@ void MSP430AsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
 }
 
 void MSP430AsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
-                                    raw_ostream &O, const char *Modifier) {
+                                    raw_ostream &O, bool PrefixHash) {
   const MachineOperand &MO = MI->getOperand(OpNum);
   switch (MO.getType()) {
   default: llvm_unreachable("Not implemented yet!");
@@ -78,7 +78,7 @@ void MSP430AsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     O << MSP430InstPrinter::getRegisterName(MO.getReg());
     return;
   case MachineOperand::MO_Immediate:
-    if (!Modifier || strcmp(Modifier, "nohash"))
+    if (PrefixHash)
       O << '#';
     O << MO.getImm();
     return;
@@ -90,7 +90,7 @@ void MSP430AsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     // register base, we should not emit any prefix symbol here, e.g.
     //   mov.w glb(r1), r2
     // Otherwise (!) msp430-as will silently miscompile the output :(
-    if (!Modifier || strcmp(Modifier, "nohash"))
+    if (PrefixHash)
       O << '#';
     PrintSymbolOperand(MO, O);
     return;
@@ -108,7 +108,7 @@ void MSP430AsmPrinter::printSrcMemOperand(const MachineInstr *MI, int OpNum,
   // Imm here is in fact global address - print extra modifier.
   if (Disp.isImm() && Base.getReg() == MSP430::SR)
     O << '&';
-  printOperand(MI, OpNum+1, O, "nohash");
+  printOperand(MI, OpNum + 1, O, /*PrefixHash=*/false);
 
   // Print register base field
   if (Base.getReg() != MSP430::SR && Base.getReg() != MSP430::PC) {

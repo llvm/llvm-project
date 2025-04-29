@@ -376,9 +376,17 @@ FPClassTest CallBase::getParamNoFPClass(unsigned i) const {
 }
 
 std::optional<ConstantRange> CallBase::getRange() const {
-  const Attribute RangeAttr = getRetAttr(llvm::Attribute::Range);
-  if (RangeAttr.isValid())
-    return RangeAttr.getRange();
+  Attribute CallAttr = Attrs.getRetAttr(Attribute::Range);
+  Attribute FnAttr;
+  if (const Function *F = getCalledFunction())
+    FnAttr = F->getRetAttribute(Attribute::Range);
+
+  if (CallAttr.isValid() && FnAttr.isValid())
+    return CallAttr.getRange().intersectWith(FnAttr.getRange());
+  if (CallAttr.isValid())
+    return CallAttr.getRange();
+  if (FnAttr.isValid())
+    return FnAttr.getRange();
   return std::nullopt;
 }
 
@@ -928,7 +936,7 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
 
   // Set operands in order of their index to match use-list-order
   // prediction.
-  std::copy(Args.begin(), Args.end(), op_begin());
+  llvm::copy(Args, op_begin());
   NumIndirectDests = IndirectDests.size();
   setDefaultDest(Fallthrough);
   for (unsigned i = 0; i != NumIndirectDests; ++i)

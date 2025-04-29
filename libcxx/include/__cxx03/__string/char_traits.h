@@ -15,7 +15,6 @@
 #include <__cxx03/__algorithm/find_first_of.h>
 #include <__cxx03/__algorithm/min.h>
 #include <__cxx03/__assert>
-#include <__cxx03/__compare/ordering.h>
 #include <__cxx03/__config>
 #include <__cxx03/__functional/hash.h>
 #include <__cxx03/__functional/identity.h>
