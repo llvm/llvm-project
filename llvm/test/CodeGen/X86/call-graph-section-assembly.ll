@@ -1,4 +1,3 @@
-;; Test .callgraph section in assembly.
 ;; Test if temporary labels are generated for each indirect callsite with a callee_type metadata.
 ;; Test if the .callgraph section contains the numerical callee type id for each of the temporary 
 ;; labels generated. 
