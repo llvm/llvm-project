@@ -2467,7 +2467,6 @@ class VPReplicateRecipe : public VPRecipeWithIRFlags {
   bool IsPredicated;
 
 public:
-  template <typename IterT>
   VPReplicateRecipe(Instruction *I, ArrayRef<VPValue *> Operands,
                     bool IsUniform, VPValue *Mask = nullptr)
       : VPRecipeWithIRFlags(VPDef::VPReplicateSC, Operands, *I),
