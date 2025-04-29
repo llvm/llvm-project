@@ -130,6 +130,7 @@ constexpr Definition g_function_child_entries[] = {
     Definition("return-left", EntryType::FunctionReturnLeft),
     Definition("return-right", EntryType::FunctionReturnRight),
     Definition("qualifiers", EntryType::FunctionQualifiers),
+    Definition("suffix", EntryType::FunctionSuffix),
 };
 
 constexpr Definition g_line_child_entries[] = {
@@ -368,6 +369,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionReturnLeft);
     ENUM_TO_CSTR(FunctionReturnRight);
     ENUM_TO_CSTR(FunctionQualifiers);
+    ENUM_TO_CSTR(FunctionSuffix);
     ENUM_TO_CSTR(FunctionAddrOffset);
     ENUM_TO_CSTR(FunctionAddrOffsetConcrete);
     ENUM_TO_CSTR(FunctionLineOffset);
@@ -1808,6 +1810,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionFormattedArguments:
   case Entry::Type::FunctionReturnRight:
   case Entry::Type::FunctionReturnLeft:
+  case Entry::Type::FunctionSuffix:
   case Entry::Type::FunctionQualifiers: {
     if (!sc->function)
       return false;
