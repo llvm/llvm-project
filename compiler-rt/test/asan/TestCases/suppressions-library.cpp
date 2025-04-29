@@ -17,7 +17,6 @@
 
 // UNSUPPORTED: target={{.*aix.*}}
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

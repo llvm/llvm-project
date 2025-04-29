@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
   if (!inc) return 1;
   printf("ok\n");
   inc(1);
-  inc(11);  // BOOM, 11 is more robust than -1 as -1 requires the GLOB and pad are stored adjacent.
+  inc(11); // BOOM, 11 is more robust than -1 as -1 requires the GLOB and pad are stored adjacent.
   // CHECK: {{.*ERROR: AddressSanitizer: global-buffer-overflow}}
   // CHECK: {{READ of size 4 at 0x.* thread T0}}
   // CHECK: {{    #0 0x.*}}

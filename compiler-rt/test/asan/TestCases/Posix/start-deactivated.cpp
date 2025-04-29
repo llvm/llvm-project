@@ -87,27 +87,27 @@ int main(int argc, char *argv[]) {
   // After this line ASan is activated and starts detecting errors.
   void *fn = dlsym(dso, "do_another_bad_thing");
   if (!fn) {
-	  fprintf(stderr, "dlsym failed: %s\n", dlerror());
-	  return 1;
+    fprintf(stderr, "dlsym failed: %s\n", dlerror());
+    return 1;
   }
 
   // After activation: redzones.
   for (int i = 1; i < HoneyPotSize; ++i) {
-	  honeyPot[i] = (char *)malloc(HoneyPotBlockSize);
-	  test_malloc_shadow(honeyPot[i], HoneyPotBlockSize, true);
+    honeyPot[i] = (char *)malloc(HoneyPotBlockSize);
+    test_malloc_shadow(honeyPot[i], HoneyPotBlockSize, true);
   }
   {
-	  char *p = (char *)malloc(HoneyPotBlockSize);
-	  test_malloc_shadow(p, HoneyPotBlockSize, true);
-	  free(p);
+    char *p = (char *)malloc(HoneyPotBlockSize);
+    test_malloc_shadow(p, HoneyPotBlockSize, true);
+    free(p);
   }
   for (int i = 1; i < HoneyPotSize; ++i)
-	  free(honeyPot[i]);
+    free(honeyPot[i]);
 
   // Pre-existing allocations got redzones, too.
   for (size_t sz = 1; sz < nPtrs; ++sz) {
-	  test_malloc_shadow(ptrs[sz], sz, true);
-	  free(ptrs[sz]);
+    test_malloc_shadow(ptrs[sz], sz, true);
+    free(ptrs[sz]);
   }
 
   // Test that ASAN_ACTIVATION_OPTIONS=allocator_may_return_null=1 has effect.

@@ -7,7 +7,6 @@
 
 // UNSUPPORTED: target={{.*aix.*}}
 
-
 int x, y, z;
 int main() { return 0; }
 // CHECK-NOT: ___asan_gen_
