@@ -184,6 +184,8 @@ class MapsForPrivatizedSymbolsPass
     return fir::hasDynamicSize(t);
   }
 
+  // TODO: Remove this in favor of fir::factory::genImplicitBoundsOps
+  // in a subsequent PR.
   void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
                     llvm::SmallVector<mlir::Value> &boundsOps) {
     if (!fir::isBoxAddress(var.getType()))
