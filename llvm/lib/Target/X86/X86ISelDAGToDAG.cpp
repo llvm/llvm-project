@@ -912,6 +912,10 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
     if (isa<MemSDNode>(Chain.getNode()) &&
         cast<MemSDNode>(Chain.getNode())->writeMem())
       return false;
+    // Moving across inline asm is not safe: it could do anything.
+    if (Chain.getNode()->getOpcode() == ISD::INLINEASM ||
+        Chain.getNode()->getOpcode() == ISD::INLINEASM_BR)
+      return false;
 
     if (Chain.getOperand(0).getNode() == Callee.getNode())
       return true;
