@@ -652,19 +652,54 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-//  Definitions
+//  ArrayType Definitions
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
-  return getSize() * dataLayout.getTypeSizeInBits(getEltType());
+  return getSize() * dataLayout.getTypeSizeInBits(getElementType());
 }
 
 uint64_t
 ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                            ::mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeABIAlignment(getEltType());
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
+
+//===----------------------------------------------------------------------===//
+// VectorType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize cir::VectorType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(
+      getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t
+cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::NextPowerOf2(dataLayout.getTypeSizeInBits(*this));
+}
+
+mlir::LogicalResult cir::VectorType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type elementType, uint64_t size) {
+  if (size == 0)
+    return emitError() << "the number of vector elements must be non-zero";
+
+  // Check if it a valid FixedVectorType
+  if (mlir::isa<cir::PointerType, cir::FP128Type>(elementType))
+    return success();
+
+  // Check if it a valid VectorType
+  if (mlir::isa<cir::IntType>(elementType) ||
+      isAnyFloatingPointType(elementType))
+    return success();
+
+  return emitError() << "unsupported element type for CIR vector";
 }
 
 //===----------------------------------------------------------------------===//

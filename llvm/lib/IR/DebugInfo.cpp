@@ -13,6 +13,7 @@
 
 #include "llvm-c/DebugInfo.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -987,10 +988,8 @@ void Instruction::updateLocationAfterHoist() { dropLocation(); }
 
 void Instruction::dropLocation() {
   const DebugLoc &DL = getDebugLoc();
-  if (!DL) {
-    setDebugLoc(DebugLoc::getDropped());
+  if (!DL)
     return;
-  }
 
   // If this isn't a call, drop the location to allow a location from a
   // preceding instruction to propagate.
@@ -1002,7 +1001,7 @@ void Instruction::dropLocation() {
   }
 
   if (!MayLowerToCall) {
-    setDebugLoc(DebugLoc::getDropped());
+    setDebugLoc(DebugLoc());
     return;
   }
 
@@ -1021,7 +1020,7 @@ void Instruction::dropLocation() {
     //
     // One alternative is to set a line 0 location with the existing scope and
     // inlinedAt info. The location might be sensitive to when inlining occurs.
-    setDebugLoc(DebugLoc::getDropped());
+    setDebugLoc(DebugLoc());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1297,6 +1296,15 @@ LLVMMetadataRef LLVMDIBuilderCreateEnumerator(LLVMDIBuilderRef Builder,
                                               LLVMBool IsUnsigned) {
   return wrap(unwrap(Builder)->createEnumerator({Name, NameLen}, Value,
                                                 IsUnsigned != 0));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+    LLVMDIBuilderRef Builder, const char *Name, size_t NameLen,
+    uint64_t SizeInBits, const uint64_t Words[], LLVMBool IsUnsigned) {
+  uint64_t NumWords = (SizeInBits + 63) / 64;
+  return wrap(unwrap(Builder)->createEnumerator(
+      {Name, NameLen},
+      APSInt(APInt(SizeInBits, ArrayRef(Words, NumWords)), IsUnsigned != 0)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateEnumerationType(

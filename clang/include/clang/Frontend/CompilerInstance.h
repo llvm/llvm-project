@@ -88,6 +88,9 @@ class CompilerInstance : public ModuleLoader {
   /// The target being compiled for.
   IntrusiveRefCntPtr<TargetInfo> Target;
 
+  /// Options for the auxiliary target.
+  std::unique_ptr<TargetOptions> AuxTargetOpts;
+
   /// Auxiliary Target info.
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
@@ -316,9 +319,6 @@ public:
   const HeaderSearchOptions &getHeaderSearchOpts() const {
     return Invocation->getHeaderSearchOpts();
   }
-  std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
-    return Invocation->getHeaderSearchOptsPtr();
-  }
 
   APINotesOptions &getAPINotesOpts() { return Invocation->getAPINotesOpts(); }
   const APINotesOptions &getAPINotesOpts() const {
@@ -327,9 +327,6 @@ public:
 
   LangOptions &getLangOpts() { return Invocation->getLangOpts(); }
   const LangOptions &getLangOpts() const { return Invocation->getLangOpts(); }
-  std::shared_ptr<LangOptions> getLangOptsPtr() const {
-    return Invocation->getLangOptsPtr();
-  }
 
   PreprocessorOptions &getPreprocessorOpts() {
     return Invocation->getPreprocessorOpts();
@@ -839,16 +836,23 @@ public:
   class ThreadSafeCloneConfig {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
     DiagnosticConsumer &DiagConsumer;
+    std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
   public:
-    ThreadSafeCloneConfig(IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                          DiagnosticConsumer &DiagConsumer)
-        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer) {
+    ThreadSafeCloneConfig(
+        IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+        DiagnosticConsumer &DiagConsumer,
+        std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector = nullptr)
+        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer),
+          ModuleDepCollector(std::move(ModuleDepCollector)) {
       assert(this->VFS && "Clone config requires non-null VFS");
     }
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVFS() const { return VFS; }
     DiagnosticConsumer &getDiagConsumer() const { return DiagConsumer; }
+    std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const {
+      return ModuleDepCollector;
+    }
   };
 
 private:
