@@ -287,12 +287,12 @@ class VTX_READ <string name, dag outs, list<dag> pattern>
 def atomic_cmp_swap_global_noret : PatFrag<
   (ops node:$ptr, node:$cmp, node:$value),
   (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (Op.use_empty());}]>;
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (SDValue(N, 0).use_empty());}]>;
 
 def atomic_cmp_swap_global_ret : PatFrag<
   (ops node:$ptr, node:$cmp, node:$value),
   (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (!Op.use_empty());}]>;
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (!SDValue(N, 0).use_empty());}]>;
 
 def mskor_global : PatFrag<(ops node:$val, node:$ptr),
                             (AMDGPUstore_mskor node:$val, node:$ptr), [{

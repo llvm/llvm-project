@@ -1052,9 +1052,9 @@ def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
 // have no common bits.
 def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
                          [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
-   if (Op.getOpcode() == ISD::ADD)
+   if (N->getOpcode() == ISD::ADD)
      return true;
-   return CurDAG->isADDLike(Op);
+   return CurDAG->isADDLike(SDValue(N,0));
 }]> {
   let GISelPredicateCode = [{
      return mi_match(MI, MRI, m_GAddLike(m_Reg(), m_Reg()));
