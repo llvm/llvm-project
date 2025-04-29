@@ -3223,14 +3223,6 @@ void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
   SDValue Acc = N->getOperand(0);
   SDValue Input1 = N->getOperand(1);
 
-  // If the node has not gone through the DAG combine, then do not attempt to
-  // legalise, just expand.
-  if (!TLI.isPartialReduceMLALegal(Acc.getValueType(), Input1.getValueType())) {
-    SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
-    std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
-    return;
-  }
-
   SDValue AccLo, AccHi, Input1Lo, Input1Hi, Input2Lo, Input2Hi;
   std::tie(AccLo, AccHi) = DAG.SplitVector(Acc, DL);
   std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(Input1, DL);
@@ -4519,9 +4511,19 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
-  SDValue Lo, Hi;
-  SplitVecRes_PARTIAL_REDUCE_MLA(N, Lo, Hi);
-  return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), N->getValueType(0), Lo, Hi);
+
+  SDLoc DL(N);
+  SDValue Acc = N->getOperand(0);
+  SDValue Input1 = N->getOperand(1);
+
+  SDValue Input1Lo, Input1Hi, Input2Lo, Input2Hi;
+  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(Input1, DL);
+  std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(N->getOperand(2), DL);
+  unsigned Opcode = N->getOpcode();
+  EVT ResultVT = Acc.getValueType();
+
+  auto Lo = DAG.getNode(Opcode, DL, ResultVT, Acc, Input1Lo, Input2Lo);
+  return DAG.getNode(Opcode, DL, ResultVT, Lo, Input1Hi, Input2Hi);
 }
 
 //===----------------------------------------------------------------------===//
