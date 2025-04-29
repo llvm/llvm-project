@@ -1325,16 +1325,16 @@ public:
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, SDValue Chain,
                     SDValue Ptr, SDValue Val, MachineMemOperand *MMO);
 
-  /// Gets a node for an atomic op, produces result and chain and
-  /// takes 1 operand.
-  SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT, EVT VT,
-                    SDValue Chain, SDValue Ptr, MachineMemOperand *MMO);
-
   /// Gets a node for an atomic op, produces result and chain and takes N
   /// operands.
   SDValue getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                     SDVTList VTList, ArrayRef<SDValue> Ops,
-                    MachineMemOperand *MMO);
+                    MachineMemOperand *MMO,
+                    ISD::LoadExtType ExtType = ISD::NON_EXTLOAD);
+
+  SDValue getAtomicLoad(ISD::LoadExtType ExtType, const SDLoc &dl, EVT MemVT,
+                        EVT VT, SDValue Chain, SDValue Ptr,
+                        MachineMemOperand *MMO);
 
   /// Creates a MemIntrinsicNode that may produce a
   /// result and takes a list of operands. Opcode may be INTRINSIC_VOID,
@@ -1466,6 +1466,9 @@ public:
                         SDValue Ptr, EVT SVT, MachineMemOperand *MMO);
   SDValue getIndexedStore(SDValue OrigStore, const SDLoc &dl, SDValue Base,
                           SDValue Offset, ISD::MemIndexedMode AM);
+  SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
+                   SDValue Offset, EVT SVT, MachineMemOperand *MMO,
+                   ISD::MemIndexedMode AM, bool IsTruncating = false);
 
   SDValue getLoadVP(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT,
                     const SDLoc &dl, SDValue Chain, SDValue Ptr, SDValue Offset,

@@ -127,20 +127,32 @@ typedef std::vector<FixupList> FixupScopeList;
 typedef SmallSetVector<CachedHashString, 16> PredicateSet;
 typedef SmallSetVector<CachedHashString, 16> DecoderSet;
 
-struct DecoderTable : public std::vector<uint8_t> {
+class DecoderTable {
+public:
+  DecoderTable() { Data.reserve(16384); }
+
+  void clear() { Data.clear(); }
+  void push_back(uint8_t Item) { Data.push_back(Item); }
+  size_t size() const { return Data.size(); }
+  const uint8_t *data() const { return Data.data(); }
+
+  using const_iterator = std::vector<uint8_t>::const_iterator;
+  const_iterator begin() const { return Data.begin(); }
+  const_iterator end() const { return Data.end(); }
+
   // Insert a ULEB128 encoded value into the table.
   void insertULEB128(uint64_t Value) {
     // Encode and emit the value to filter against.
     uint8_t Buffer[16];
     unsigned Len = encodeULEB128(Value, Buffer);
-    insert(end(), Buffer, Buffer + Len);
+    Data.insert(Data.end(), Buffer, Buffer + Len);
   }
 
   // Insert space for `NumToSkip` and return the position
   // in the table for patching.
   size_t insertNumToSkip() {
-    size_t Size = size();
-    insert(end(), getNumToSkipInBytes(), 0);
+    size_t Size = Data.size();
+    Data.insert(Data.end(), getNumToSkipInBytes(), 0);
     return Size;
   }
 
@@ -156,11 +168,14 @@ struct DecoderTable : public std::vector<uint8_t> {
       PrintFatalError(
           "disassembler decoding table too large, try --large-decoder-table");
 
-    (*this)[FixupIdx] = static_cast<uint8_t>(Delta);
-    (*this)[FixupIdx + 1] = static_cast<uint8_t>(Delta >> 8);
+    Data[FixupIdx] = static_cast<uint8_t>(Delta);
+    Data[FixupIdx + 1] = static_cast<uint8_t>(Delta >> 8);
     if (getNumToSkipInBytes() == 3)
-      (*this)[FixupIdx + 2] = static_cast<uint8_t>(Delta >> 16);
+      Data[FixupIdx + 2] = static_cast<uint8_t>(Delta >> 16);
   }
+
+private:
+  std::vector<uint8_t> Data;
 };
 
 struct DecoderTableInfo {
@@ -1167,7 +1182,7 @@ bool FilterChooser::emitBinaryParser(raw_ostream &OS, indent Indent,
   }
 
   bool OpHasCompleteDecoder;
-  if (Decoder != "") {
+  if (!Decoder.empty()) {
     OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
     OS << Indent << "if (!Check(S, " << Decoder
        << "(MI, tmp, Address, Decoder))) { "
@@ -1931,7 +1946,7 @@ populateInstruction(const CodeGenTarget &Target, const Record &EncodingDef,
   // If the instruction has specified a custom decoding hook, use that instead
   // of trying to auto-generate the decoder.
   StringRef InstDecoder = EncodingDef.getValueAsString("DecoderMethod");
-  if (InstDecoder != "") {
+  if (!InstDecoder.empty()) {
     bool HasCompleteInstDecoder =
         EncodingDef.getValueAsBit("hasCompleteDecoder");
     InsnOperands.push_back(
@@ -2130,16 +2145,14 @@ static void emitInsertBits(formatted_raw_ostream &OS) {
 // Helper function for inserting bits extracted from an encoded instruction into
 // a field.
 template <typename InsnType>
-static std::enable_if_t<std::is_integral<InsnType>::value>
-insertBits(InsnType &field, InsnType bits, unsigned startBit, unsigned numBits) {
-  assert(startBit + numBits <= sizeof field * 8);
-  field |= (InsnType)bits << startBit;
-}
-
-template <typename InsnType>
-static std::enable_if_t<!std::is_integral<InsnType>::value>
-insertBits(InsnType &field, uint64_t bits, unsigned startBit, unsigned numBits) {
-  field.insertBits(bits, startBit, numBits);
+static void insertBits(InsnType &field, InsnType bits, unsigned startBit,
+                       unsigned numBits) {
+  if constexpr (std::is_integral<InsnType>::value) {
+    assert(startBit + numBits <= sizeof field * 8);
+    field |= (InsnType)bits << startBit;
+  } else {
+    field.insertBits(bits, startBit, numBits);
+  }
 }
 )";
 }
@@ -2517,7 +2530,6 @@ namespace {
     // decoders to give more opportunities for uniqueing.
     TableInfo.Table.clear();
     TableInfo.FixupStack.clear();
-    TableInfo.Table.reserve(16384);
     TableInfo.FixupStack.emplace_back();
     FC.emitTableEntries(TableInfo);
     // Any NumToSkip fixups in the top level scope can resolve to the

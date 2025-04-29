@@ -512,6 +512,14 @@ TEST(ParseArchString, RejectsDoubleOrTrailingUnderscore) {
 }
 
 TEST(ParseArchString, RejectsDuplicateExtensionNames) {
+  // Zicsr/Zifencei are allowed to duplicate with "g".
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv64g_zicsr", true),
+                       Succeeded());
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseArchString("rv64g_zifencei", true),
+                       Succeeded());
+  ASSERT_THAT_EXPECTED(
+      RISCVISAInfo::parseArchString("rv64g_zicsr_zifencei", true), Succeeded());
+
   EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64ii", true).takeError()),
             "invalid standard user-level extension 'i'");
   EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv32ee", true).takeError()),
@@ -982,6 +990,7 @@ R"(All available -march extensions for RISC-V
     zicbop               1.0
     zicboz               1.0
     ziccamoa             1.0
+    ziccamoc             1.0
     ziccif               1.0
     zicclsm              1.0
     ziccrse              1.0
@@ -1118,6 +1127,7 @@ R"(All available -march extensions for RISC-V
     svnapot              1.0
     svpbmt               1.0
     svvptc               1.0
+    xandesperf           5.0
     xcvalu               1.0
     xcvbi                1.0
     xcvbitmanip          1.0
@@ -1181,6 +1191,8 @@ Experimental extensions
     xqcisync             0.2
     xrivosvisni          0.1
     xrivosvizip          0.1
+    xsfmclic             0.1
+    xsfsclic             0.1
 
 Supported Profiles
     rva20s64

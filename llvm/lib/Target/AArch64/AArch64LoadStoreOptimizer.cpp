@@ -892,11 +892,10 @@ AArch64LoadStoreOpt::mergeNarrowZeroStores(MachineBasicBlock::iterator I,
     OffsetImm = IOffsetInBytes;
 
   int NewOpcode = getMatchingWideOpcode(Opc);
-  bool FinalIsScaled = !TII->hasUnscaledLdStOffset(NewOpcode);
-
-  // Adjust final offset if the result opcode is a scaled store.
-  if (FinalIsScaled) {
-    int NewOffsetStride = FinalIsScaled ? TII->getMemScale(NewOpcode) : 1;
+  // Adjust final offset on scaled stores because the new instruction
+  // has a different scale.
+  if (!TII->hasUnscaledLdStOffset(NewOpcode)) {
+    int NewOffsetStride = TII->getMemScale(NewOpcode);
     assert(((OffsetImm % NewOffsetStride) == 0) &&
            "Offset should be a multiple of the store memory scale");
     OffsetImm = OffsetImm / NewOffsetStride;
@@ -906,7 +905,7 @@ AArch64LoadStoreOpt::mergeNarrowZeroStores(MachineBasicBlock::iterator I,
   DebugLoc DL = I->getDebugLoc();
   MachineBasicBlock *MBB = I->getParent();
   MachineInstrBuilder MIB;
-  MIB = BuildMI(*MBB, InsertionPoint, DL, TII->get(getMatchingWideOpcode(Opc)))
+  MIB = BuildMI(*MBB, InsertionPoint, DL, TII->get(NewOpcode))
             .addReg(isNarrowStore(Opc) ? AArch64::WZR : AArch64::XZR)
             .add(BaseRegOp)
             .addImm(OffsetImm)

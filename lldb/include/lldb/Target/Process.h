@@ -1114,10 +1114,9 @@ public:
   virtual Status DoResume(lldb::RunDirection direction) {
     if (direction == lldb::RunDirection::eRunForward)
       return Status::FromErrorStringWithFormatv(
-          "error: {0} does not support resuming processes", GetPluginName());
+          "{0} does not support resuming processes", GetPluginName());
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
   }
 
   /// Called after resuming a process.
