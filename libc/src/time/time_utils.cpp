@@ -124,12 +124,12 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 }
 
 char *get_env_var(const char *input) {
-  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
+  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::env_ptr);
 
-  if (name == nullptr || env_ptr == nullptr)
+  if (input == nullptr || env_ptr == nullptr)
     return nullptr;
 
-  LIBC_NAMESPACE::cpp::string_view env_var_name(name);
+  LIBC_NAMESPACE::cpp::string_view env_var_name(input);
   if (env_var_name.size() == 0)
     return nullptr;
 
