@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Common/CodeGenTarget.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -126,6 +127,56 @@ void CallingConvEmitter::emitCallingConv(const Record *CC, raw_ostream &O) {
 
 void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
                                     raw_ostream &O) {
+
+  auto EmitRegList = [&](const ListInit *RL, const StringRef RLName) {
+    O << Indent << "static const MCPhysReg " << RLName << "[] = {\n";
+    O << Indent << "  ";
+    ListSeparator LS;
+    for (const Init *V : RL->getValues())
+      O << LS << getQualifiedName(cast<DefInit>(V)->getDef());
+    O << "\n" << Indent << "};\n";
+  };
+
+  auto EmitAllocateReg = [&](ArrayRef<const ListInit *> RegLists,
+                             ArrayRef<std::string> RLNames) {
+    SmallVector<std::string> Parms;
+    if (RegLists[0]->size() == 1) {
+      for (const ListInit *LI : RegLists)
+        Parms.push_back(getQualifiedName(LI->getElementAsRecord(0)));
+    } else {
+      for (const std::string &S : RLNames)
+        Parms.push_back(S + utostr(++Counter));
+      for (const auto [Idx, LI] : enumerate(RegLists))
+        EmitRegList(LI, Parms[Idx]);
+    }
+    O << formatv("{0}if (MCRegister Reg = State.AllocateReg({1})) {{\n", Indent,
+                 make_range(Parms.begin(), Parms.end()));
+    O << Indent << "  State.addLoc(CCValAssign::getReg(ValNo, ValVT, "
+      << "Reg, LocVT, LocInfo));\n";
+  };
+
+  auto EmitAllocateStack = [&](bool EmitOffset = false) {
+    int Size = Action->getValueAsInt("Size");
+    int Align = Action->getValueAsInt("Align");
+    if (EmitOffset)
+      O << Indent << "int64_t Offset" << ++Counter << " = ";
+    else
+      O << Indent << "  (void)";
+    O << "State.AllocateStack(";
+
+    const char *Fmt = "  State.getMachineFunction().getDataLayout()."
+                      "{0}(EVT(LocVT).getTypeForEVT(State.getContext()))";
+    if (Size)
+      O << Size << ", ";
+    else
+      O << "\n" << Indent << formatv(Fmt, "getTypeAllocSize") << ", ";
+    if (Align)
+      O << "Align(" << Align << ")";
+    else
+      O << "\n" << Indent << formatv(Fmt, "getABITypeAlign");
+    O << ");\n";
+  };
+
   if (Action->isSubClassOf("CCPredicateAction")) {
     O << Indent << "if (";
 
@@ -158,55 +209,18 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
     } else if (Action->isSubClassOf("CCAssignToReg") ||
                Action->isSubClassOf("CCAssignToRegAndStack")) {
       const ListInit *RegList = Action->getValueAsListInit("RegList");
-      if (RegList->size() == 1) {
-        std::string Name = getQualifiedName(RegList->getElementAsRecord(0));
-        O << Indent << "if (MCRegister Reg = State.AllocateReg(" << Name
-          << ")) {\n";
+      for (unsigned I = 0, E = RegList->size(); I != E; ++I) {
+        std::string Name = getQualifiedName(RegList->getElementAsRecord(I));
         if (SwiftAction)
           AssignedSwiftRegsMap[CurrentAction].insert(std::move(Name));
         else
           AssignedRegsMap[CurrentAction].insert(std::move(Name));
-      } else {
-        O << Indent << "static const MCPhysReg RegList" << ++Counter
-          << "[] = {\n";
-        O << Indent << "  ";
-        ListSeparator LS;
-        for (unsigned I = 0, E = RegList->size(); I != E; ++I) {
-          std::string Name = getQualifiedName(RegList->getElementAsRecord(I));
-          if (SwiftAction)
-            AssignedSwiftRegsMap[CurrentAction].insert(Name);
-          else
-            AssignedRegsMap[CurrentAction].insert(Name);
-          O << LS << Name;
-        }
-        O << "\n" << Indent << "};\n";
-        O << Indent << "if (MCRegister Reg = State.AllocateReg(RegList"
-          << Counter << ")) {\n";
       }
-      O << Indent << "  State.addLoc(CCValAssign::getReg(ValNo, ValVT, "
-        << "Reg, LocVT, LocInfo));\n";
-      if (Action->isSubClassOf("CCAssignToRegAndStack")) {
-        int Size = Action->getValueAsInt("Size");
-        int Align = Action->getValueAsInt("Align");
-        O << Indent << "  (void)State.AllocateStack(";
-        if (Size)
-          O << Size << ", ";
-        else
-          O << "\n"
-            << Indent
-            << "  State.getMachineFunction().getDataLayout()."
-               "getTypeAllocSize(EVT(LocVT).getTypeForEVT(State.getContext())),"
-               " ";
-        if (Align)
-          O << "Align(" << Align << ")";
-        else
-          O << "\n"
-            << Indent
-            << "  State.getMachineFunction().getDataLayout()."
-               "getABITypeAlign(EVT(LocVT).getTypeForEVT(State.getContext()"
-               "))";
-        O << ");\n";
-      }
+      EmitAllocateReg({RegList}, {"RegList"});
+
+      if (Action->isSubClassOf("CCAssignToRegAndStack"))
+        EmitAllocateStack();
+
       O << Indent << "  return false;\n";
       O << Indent << "}\n";
     } else if (Action->isSubClassOf("CCAssignToRegWithShadow")) {
@@ -217,62 +231,13 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
         PrintFatalError(Action->getLoc(),
                         "Invalid length of list of shadowed registers");
 
-      if (RegList->size() == 1) {
-        O << Indent << "if (MCRegister Reg = State.AllocateReg(";
-        O << getQualifiedName(RegList->getElementAsRecord(0));
-        O << ", " << getQualifiedName(ShadowRegList->getElementAsRecord(0));
-        O << ")) {\n";
-      } else {
-        unsigned RegListNumber = ++Counter;
-        unsigned ShadowRegListNumber = ++Counter;
+      EmitAllocateReg({RegList, ShadowRegList}, {"RegList", "RegList"});
 
-        O << Indent << "static const MCPhysReg RegList" << RegListNumber
-          << "[] = {\n";
-        O << Indent << "  ";
-        ListSeparator LS;
-        for (unsigned I = 0, E = RegList->size(); I != E; ++I)
-          O << LS << getQualifiedName(RegList->getElementAsRecord(I));
-        O << "\n" << Indent << "};\n";
-
-        O << Indent << "static const MCPhysReg RegList" << ShadowRegListNumber
-          << "[] = {\n";
-        O << Indent << "  ";
-        ListSeparator LSS;
-        for (unsigned I = 0, E = ShadowRegList->size(); I != E; ++I)
-          O << LSS << getQualifiedName(ShadowRegList->getElementAsRecord(I));
-        O << "\n" << Indent << "};\n";
-
-        O << Indent << "if (MCRegister Reg = State.AllocateReg(RegList"
-          << RegListNumber << ", "
-          << "RegList" << ShadowRegListNumber << ")) {\n";
-      }
-      O << Indent << "  State.addLoc(CCValAssign::getReg(ValNo, ValVT, "
-        << "Reg, LocVT, LocInfo));\n";
       O << Indent << "  return false;\n";
       O << Indent << "}\n";
     } else if (Action->isSubClassOf("CCAssignToStack")) {
-      int Size = Action->getValueAsInt("Size");
-      int Align = Action->getValueAsInt("Align");
-
-      O << Indent << "int64_t Offset" << ++Counter << " = State.AllocateStack(";
-      if (Size)
-        O << Size << ", ";
-      else
-        O << "\n"
-          << Indent
-          << "  State.getMachineFunction().getDataLayout()."
-             "getTypeAllocSize(EVT(LocVT).getTypeForEVT(State.getContext())),"
-             " ";
-      if (Align)
-        O << "Align(" << Align << ")";
-      else
-        O << "\n"
-          << Indent
-          << "  State.getMachineFunction().getDataLayout()."
-             "getABITypeAlign(EVT(LocVT).getTypeForEVT(State.getContext()"
-             "))";
-      O << ");\n"
-        << Indent << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
+      EmitAllocateStack(/*EmitOffset=*/true);
+      O << Indent << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
         << Counter << ", LocVT, LocInfo));\n";
       O << Indent << "return false;\n";
     } else if (Action->isSubClassOf("CCAssignToStackWithShadow")) {
@@ -282,14 +247,7 @@ void CallingConvEmitter::emitAction(const Record *Action, indent Indent,
           Action->getValueAsListInit("ShadowRegList");
 
       unsigned ShadowRegListNumber = ++Counter;
-
-      O << Indent << "static const MCPhysReg ShadowRegList"
-        << ShadowRegListNumber << "[] = {\n";
-      O << Indent << "  ";
-      ListSeparator LS;
-      for (unsigned I = 0, E = ShadowRegList->size(); I != E; ++I)
-        O << LS << getQualifiedName(ShadowRegList->getElementAsRecord(I));
-      O << "\n" << Indent << "};\n";
+      EmitRegList(ShadowRegList, "ShadowRegList" + utostr(ShadowRegListNumber));
 
       O << Indent << "int64_t Offset" << ++Counter << " = State.AllocateStack("
         << Size << ", Align(" << Align << "), "
