@@ -149,6 +149,20 @@ mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
 
 class DoConcurrentConversion
     : public mlir::OpRewritePattern<fir::DoConcurrentOp> {
+  /// Looks up from the operation from and returns the PrivateClauseOp with
+  /// name symbolName
+  ///
+  /// TODO Copied from OpenMPToLLVMIRTranslation.cpp, move to a shared location.
+  /// Maybe a static function on the `PrivateClauseOp`.
+  static mlir::omp::PrivateClauseOp
+  findPrivatizer(mlir::Operation *from, mlir::SymbolRefAttr symbolName) {
+    mlir::omp::PrivateClauseOp privatizer =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::omp::PrivateClauseOp>(
+            from, symbolName);
+    assert(privatizer && "privatizer not found in the symbol table");
+    return privatizer;
+  }
+
 public:
   using mlir::OpRewritePattern<fir::DoConcurrentOp>::OpRewritePattern;
 
@@ -162,7 +176,55 @@ public:
     assert(loop.getRegion().hasOneBlock());
     mlir::Block &loopBlock = loop.getRegion().getBlocks().front();
 
-    // Collect iteration variable(s) allocations do that we can move them
+    // Handle privatization
+    if (!loop.getPrivateVars().empty()) {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(&loop.getRegion().front());
+
+      std::optional<mlir::ArrayAttr> privateSyms = loop.getPrivateSyms();
+
+      for (auto [privateVar, privateArg, privatizerSym] :
+           llvm::zip_equal(loop.getPrivateVars(), loop.getRegionPrivateArgs(),
+                           *privateSyms)) {
+        mlir::SymbolRefAttr privatizerName =
+            llvm::cast<mlir::SymbolRefAttr>(privatizerSym);
+        mlir::omp::PrivateClauseOp privatizer =
+            findPrivatizer(loop, privatizerName);
+
+        mlir::Value localAlloc =
+            rewriter.create<fir::AllocaOp>(loop.getLoc(), privatizer.getType());
+
+        if (privatizer.getDataSharingType() ==
+            mlir::omp::DataSharingClauseType::FirstPrivate) {
+          // It is reasonable to make this assumption since, at this stage,
+          // control-flow ops are not converted yet. Therefore, things like `if`
+          // conditions will still be represented by their encapsulating `fir`
+          // dialect ops.
+          assert(privatizer.getCopyRegion().hasOneBlock() &&
+                 "Expected privatizer to have a single block.");
+          mlir::Block *beforeLocalInit = rewriter.getInsertionBlock();
+          mlir::Block *afterLocalInit = rewriter.splitBlock(
+              rewriter.getInsertionBlock(), rewriter.getInsertionPoint());
+          rewriter.cloneRegionBefore(privatizer.getCopyRegion(),
+                                     afterLocalInit);
+          mlir::Block *copyRegionBody = beforeLocalInit->getNextNode();
+
+          rewriter.eraseOp(copyRegionBody->getTerminator());
+          rewriter.mergeBlocks(afterLocalInit, copyRegionBody);
+          rewriter.mergeBlocks(copyRegionBody, beforeLocalInit,
+                               {privateVar, privateArg});
+        }
+
+        rewriter.replaceAllUsesWith(privateArg, localAlloc);
+      }
+
+      loop.getRegion().front().eraseArguments(loop.getNumInductionVars(),
+                                              loop.getNumPrivateOperands());
+      loop.getPrivateVarsMutable().clear();
+      loop.setPrivateSymsAttr(nullptr);
+    }
+
+    // Collect iteration variable(s) allocations so that we can move them
     // outside the `fir.do_concurrent` wrapper.
     llvm::SmallVector<mlir::Operation *> opsToMove;
     for (mlir::Operation &op : llvm::drop_end(wrapperBlock))
