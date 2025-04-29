@@ -30,7 +30,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/linux/Host.h"
-#include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 #include "lldb/Utility/DataExtractor.h"
 
 using namespace lldb;
