@@ -95,6 +95,7 @@ struct Entry {
     FunctionReturnLeft,
     FunctionReturnRight,
     FunctionQualifiers,
+    FunctionSuffix,
     FunctionAddrOffset,
     FunctionAddrOffsetConcrete,
     FunctionLineOffset,
