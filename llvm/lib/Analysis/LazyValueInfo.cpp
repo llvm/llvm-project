@@ -1702,7 +1702,7 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     // iterations (PR60629).
     if (!CurrI->hasOneUse() ||
         !isSafeToSpeculativelyExecuteWithVariableReplaced(
-            CurrI, /*AllowRefinement=*/false))
+            CurrI, /*IgnoreUBImplyingAttrs=*/false))
       break;
     CurrU = &*CurrI->use_begin();
   }

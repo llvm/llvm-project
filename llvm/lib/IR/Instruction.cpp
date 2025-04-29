@@ -554,6 +554,20 @@ void Instruction::dropUBImplyingAttrsAndMetadata() {
   dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
 }
 
+bool Instruction::hasUBImplyingAttrs() const {
+  auto *CB = dyn_cast<CallBase>(this);
+  if (!CB)
+    return false;
+  // For call instructions, we also need to check parameter and return
+  // attributes that are can cause UB.
+  for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+    if (CB->isPassingUndefUB(ArgNo))
+      return true;
+  return CB->hasRetAttr(Attribute::NoUndef) ||
+         CB->getRetDereferenceableBytes() > 0 ||
+         CB->getRetDereferenceableOrNullBytes() > 0;
+}
+
 bool Instruction::isExact() const {
   return cast<PossiblyExactOperator>(this)->isExact();
 }

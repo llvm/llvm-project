@@ -542,9 +542,9 @@ bool isNotCrossLaneOperation(const Instruction *I);
 /// If \p UseVariableInfo is true, the information from non-constant operands
 /// will be taken into account.
 ///
-/// If \p AllowRefinement is true, UB-implying attributes and metadata will be
-/// ignored. The caller is responsible for correctly propagating them after
-/// hoisting.
+/// If \p IgnoreUBImplyingAttrs is true, UB-implying attributes and metadata
+/// will be ignored. The caller is responsible for correctly propagating them
+/// after hoisting.
 ///
 /// This method can return true for instructions that read memory;
 /// for such instructions, moving them may change the resulting value.
@@ -554,7 +554,7 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   const DominatorTree *DT = nullptr,
                                   const TargetLibraryInfo *TLI = nullptr,
                                   bool UseVariableInfo = true,
-                                  bool AllowRefinement = true);
+                                  bool IgnoreUBImplyingAttrs = true);
 
 inline bool isSafeToSpeculativelyExecute(const Instruction *I,
                                          BasicBlock::iterator CtxI,
@@ -562,20 +562,19 @@ inline bool isSafeToSpeculativelyExecute(const Instruction *I,
                                          const DominatorTree *DT = nullptr,
                                          const TargetLibraryInfo *TLI = nullptr,
                                          bool UseVariableInfo = true,
-                                         bool AllowRefinement = true) {
+                                         bool IgnoreUBImplyingAttrs = true) {
   // Take an iterator, and unwrap it into an Instruction *.
   return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI, UseVariableInfo,
-                                      AllowRefinement);
+                                      IgnoreUBImplyingAttrs);
 }
 
 /// Don't use information from its non-constant operands. This helper is used
 /// when its operands are going to be replaced.
-inline bool
-isSafeToSpeculativelyExecuteWithVariableReplaced(const Instruction *I,
-                                                 bool AllowRefinement = true) {
+inline bool isSafeToSpeculativelyExecuteWithVariableReplaced(
+    const Instruction *I, bool IgnoreUBImplyingAttrs = true) {
   return isSafeToSpeculativelyExecute(I, nullptr, nullptr, nullptr, nullptr,
                                       /*UseVariableInfo=*/false,
-                                      AllowRefinement);
+                                      IgnoreUBImplyingAttrs);
 }
 
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
@@ -599,7 +598,7 @@ bool isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI = nullptr,
     AssumptionCache *AC = nullptr, const DominatorTree *DT = nullptr,
     const TargetLibraryInfo *TLI = nullptr, bool UseVariableInfo = true,
-    bool AllowRefinement = true);
+    bool IgnoreUBImplyingAttrs = true);
 
 /// Returns true if the result or effects of the given instructions \p I
 /// depend values not reachable through the def use graph.

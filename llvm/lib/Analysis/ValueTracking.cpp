@@ -7204,16 +7204,16 @@ bool llvm::isNotCrossLaneOperation(const Instruction *I) {
 bool llvm::isSafeToSpeculativelyExecute(
     const Instruction *Inst, const Instruction *CtxI, AssumptionCache *AC,
     const DominatorTree *DT, const TargetLibraryInfo *TLI, bool UseVariableInfo,
-    bool AllowRefinement) {
+    bool IgnoreUBImplyingAttrs) {
   return isSafeToSpeculativelyExecuteWithOpcode(Inst->getOpcode(), Inst, CtxI,
                                                 AC, DT, TLI, UseVariableInfo,
-                                                AllowRefinement);
+                                                IgnoreUBImplyingAttrs);
 }
 
 bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     unsigned Opcode, const Instruction *Inst, const Instruction *CtxI,
     AssumptionCache *AC, const DominatorTree *DT, const TargetLibraryInfo *TLI,
-    bool UseVariableInfo, bool AllowRefinement) {
+    bool UseVariableInfo, bool IgnoreUBImplyingAttrs) {
 #ifndef NDEBUG
   if (Inst->getOpcode() != Opcode) {
     // Check that the operands are actually compatible with the Opcode override.
@@ -7265,7 +7265,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     return false;
   }
   case Instruction::Load: {
-    if (!UseVariableInfo || !AllowRefinement)
+    if (!UseVariableInfo)
       return false;
 
     const LoadInst *LI = dyn_cast<LoadInst>(Inst);
@@ -7290,16 +7290,7 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
       return false;
     // Since the operands may be changed after hoisting, undefined behavior may
     // be triggered by some UB-implying attributes.
-    if (!AllowRefinement) {
-      if (CI->hasRetAttr(Attribute::NoUndef) ||
-          CI->getRetDereferenceableBytes() > 0 ||
-          CI->getRetDereferenceableOrNullBytes() > 0 ||
-          any_of(CI->args(), [&](const Use &U) {
-            return CI->isPassingUndefUB(CI->getArgOperandNo(&U));
-          }))
-        return false;
-    }
-    return true;
+    return IgnoreUBImplyingAttrs || !CI->hasUBImplyingAttrs();
   }
   case Instruction::VAArg:
   case Instruction::Alloca:
