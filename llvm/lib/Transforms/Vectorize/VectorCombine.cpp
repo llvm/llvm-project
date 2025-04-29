@@ -371,10 +371,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Worklist.pushValue(Result);
   Result = Builder.CreateShuffleVector(Result, Mask);
   Worklist.pushValue(Result);
-  if (NeedCast) {
+  if (NeedCast)
     Result = Builder.CreateBitOrPointerCast(Result, I.getType());
-    Worklist.pushValue(Result);
-  }
 
   replaceValue(I, *Result);
   ++NumVecLoad;
