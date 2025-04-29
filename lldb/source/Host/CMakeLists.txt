@@ -99,6 +99,7 @@ else()
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
+    posix/Support.cpp
     )
 
   if(LLDB_ENABLE_SWIFT_SUPPORT)
