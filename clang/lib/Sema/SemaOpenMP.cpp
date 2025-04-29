@@ -4789,26 +4789,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
   OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
 
-  if (Stack->isParentOrderConcurrent()) {
-    bool InvalidOrderNesting = false;
-    if ((SemaRef.LangOpts.OpenMP == 51 || SemaRef.LangOpts.OpenMP == 52) &&
-        CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
-        CurrentRegion != OMPD_parallel &&
-        !isOpenMPCombinedParallelADirective(CurrentRegion)) {
-      InvalidOrderNesting = true;
-    } else if (SemaRef.LangOpts.OpenMP >= 60 &&
-               !isOpenMPOrderConcurrentNestableDirective(CurrentRegion)) {
-      // OpenMP 6.0 [12.3 order Clause, Restrictions]
-      // Only regions that correspond to order-concurrent-nestable constructs
-      // or order-concurrent-nestable routines may be strictly nested regions
-      // of regions that correspond to constructs on which the order clause is
-      // specified with concurrent as the ordering argument.
-      InvalidOrderNesting = true;
-    }
-    if (InvalidOrderNesting) {
-      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
-          << getOpenMPDirectiveName(CurrentRegion);
-    }
+  if (SemaRef.LangOpts.OpenMP >= 50 && Stack->isParentOrderConcurrent() &&
+      !isOpenMPOrderConcurrentNestableDirective(CurrentRegion,
+                                                SemaRef.LangOpts)) {
+    SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_order)
+        << getOpenMPDirectiveName(CurrentRegion);
+    return true;
   }
   if (isOpenMPSimdDirective(ParentRegion) &&
       ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
@@ -7132,7 +7118,7 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
   if (!CalleeFnDecl)
     return Call;
 
-  if (getLangOpts().OpenMP >= 51 && getLangOpts().OpenMP < 60 &&
+  if (getLangOpts().OpenMP >= 50 && getLangOpts().OpenMP <= 60 &&
       CalleeFnDecl->getIdentifier() &&
       CalleeFnDecl->getName().starts_with_insensitive("omp_")) {
     // checking for any calls inside an Order region
@@ -16373,21 +16359,20 @@ OMPClause *SemaOpenMP::ActOnOpenMPOrderClause(
         << getOpenMPClauseName(OMPC_order);
     return nullptr;
   }
-  if (getLangOpts().OpenMP >= 51) {
-    if (Modifier == OMPC_ORDER_MODIFIER_unknown && MLoc.isValid()) {
-      Diag(MLoc, diag::err_omp_unexpected_clause_value)
-          << getListOfPossibleValues(OMPC_order,
-                                     /*First=*/OMPC_ORDER_MODIFIER_unknown + 1,
-                                     /*Last=*/OMPC_ORDER_MODIFIER_last)
-          << getOpenMPClauseName(OMPC_order);
-    } else {
-      DSAStack->setRegionHasOrderConcurrent(/*HasOrderConcurrent=*/true);
-      if (DSAStack->getCurScope()) {
-        // mark the current scope with 'order' flag
-        unsigned existingFlags = DSAStack->getCurScope()->getFlags();
-        DSAStack->getCurScope()->setFlags(existingFlags |
-                                          Scope::OpenMPOrderClauseScope);
-      }
+  if (getLangOpts().OpenMP >= 51 && Modifier == OMPC_ORDER_MODIFIER_unknown &&
+      MLoc.isValid()) {
+    Diag(MLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(OMPC_order,
+                                   /*First=*/OMPC_ORDER_MODIFIER_unknown + 1,
+                                   /*Last=*/OMPC_ORDER_MODIFIER_last)
+        << getOpenMPClauseName(OMPC_order);
+  } else if (getLangOpts().OpenMP >= 50) {
+    DSAStack->setRegionHasOrderConcurrent(/*HasOrderConcurrent=*/true);
+    if (DSAStack->getCurScope()) {
+      // mark the current scope with 'order' flag
+      unsigned existingFlags = DSAStack->getCurScope()->getFlags();
+      DSAStack->getCurScope()->setFlags(existingFlags |
+                                        Scope::OpenMPOrderClauseScope);
     }
   }
   return new (getASTContext()) OMPOrderClause(

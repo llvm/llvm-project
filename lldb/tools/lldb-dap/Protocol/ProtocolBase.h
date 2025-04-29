@@ -149,7 +149,7 @@ struct ErrorResponseBody {
 llvm::json::Value toJSON(const ErrorResponseBody &);
 
 /// This is just an acknowledgement, so no body field is required.
-using VoidResponse = std::monostate;
+using VoidResponse = llvm::Error;
 
 } // namespace lldb_dap::protocol
 

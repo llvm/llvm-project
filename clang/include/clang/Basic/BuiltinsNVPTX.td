@@ -321,6 +321,11 @@ def __nvvm_fabs_ftz_f : NVPTXBuiltin<"float(float)">;
 def __nvvm_fabs_f : NVPTXBuiltin<"float(float)">;
 def __nvvm_fabs_d : NVPTXBuiltin<"double(double)">;
 
+def __nvvm_fabs_f16 : NVPTXBuiltinSMAndPTX<"__fp16(__fp16)", SM_53, PTX65>;
+def __nvvm_fabs_f16x2 : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(_Vector<2, __fp16>)", SM_53, PTX65>;
+def __nvvm_fabs_ftz_f16 : NVPTXBuiltinSMAndPTX<"__fp16(__fp16)", SM_53, PTX65>;
+def __nvvm_fabs_ftz_f16x2 : NVPTXBuiltinSMAndPTX<"_Vector<2, __fp16>(_Vector<2, __fp16>)", SM_53, PTX65>;
+
 // Round
 
 def __nvvm_round_ftz_f : NVPTXBuiltin<"float(float)">;

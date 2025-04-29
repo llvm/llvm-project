@@ -24,6 +24,7 @@
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUPerfHintAnalysis.h"
+#include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUSplitModule.h"
@@ -1069,7 +1070,7 @@ GCNTargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(GCNTTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<GCNTTIImpl>(this, F));
 }
 
 Error GCNTargetMachine::buildCodeGenPipeline(
@@ -2080,13 +2081,11 @@ void AMDGPUCodeGenPassBuilder::addCodeGenPrepare(AddIRPass &addPass) const {
 
 void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(FlattenCFGPass());
-
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(SinkingPass());
-
-  addPass(AMDGPULateCodeGenPreparePass(TM));
+    addPass(AMDGPULateCodeGenPreparePass(TM));
+  }
 
   // Merge divergent exit nodes. StructurizeCFG won't recognize the multi-exit
   // regions formed by them.

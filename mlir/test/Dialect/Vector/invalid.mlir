@@ -525,6 +525,24 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 
 // -----
 
+func.func @test_vector.transfer_read(%arg0: memref<?xindex>) -> vector<3x4xindex> {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  %0 = vector.transfer_read %arg0[%c3], %c3 : memref<?xindex>, vector<3x4xindex>
+  return %0 : vector<3x4xindex>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?xvector<2xindex>>) {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  %0 = vector.transfer_read %arg0[%c3], %c3 : memref<?xvector<2xindex>>, vector<2x3x4xindex>
+  return %0 : vector<2x3x4xindex>
+}
+
+// -----
+
 func.func @test_vector.transfer_write(%arg0: memref<?x?xf32>) {
   %c3 = arith.constant 3 : index
   %cst = arith.constant 3.0 : f32
@@ -642,6 +660,22 @@ func.func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>
   vector.transfer_write %arg1, %arg0[%c3]
       {permutation_map = affine_map<(d0) -> (0)>}
       : vector<7xf32>, memref<?xf32>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?xindex>, %arg1: vector<3x4xindex>) {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  vector.transfer_write %arg1, %arg0[%c3, %c3] : vector<3x4xindex>, memref<?xindex>
+}
+
+// -----
+
+func.func @test_vector.transfer_write(%arg0: memref<?xvector<2xindex>>, %arg1: vector<2x3x4xindex>) {
+  %c3 = arith.constant 3 : index
+  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
+  vector.transfer_write %arg1, %arg0[%c3, %c3] : vector<2x3x4xindex>, memref<?xvector<2xindex>>
 }
 
 // -----
@@ -1409,6 +1443,16 @@ func.func @maskedstore_memref_mismatch(%base: memref<?xf32>, %mask: vector<16xi1
 
 // -----
 
+func.func @gather_from_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
+                                %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.gather' op operand #0 must be Tensor or MemRef of any type values, but got 'vector<16xf32>'}}
+  %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
+    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 func.func @gather_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
@@ -1468,6 +1512,17 @@ func.func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector
 }
 
 // -----
+
+func.func @scatter_to_vector(%base: vector<16xf32>, %indices: vector<16xi32>,
+                             %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+2 {{custom op 'vector.scatter' invalid kind of type specified}}
+  vector.scatter %base[%c0][%indices], %mask, %pass_thru
+    : vector<16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+}
+
+// -----
+
 
 func.func @scatter_base_type_mismatch(%base: memref<?xf64>, %indices: vector<16xi32>,
                                  %mask: vector<16xi1>, %value: vector<16xf32>) {

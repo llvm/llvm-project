@@ -401,6 +401,38 @@ define i64 @no_sexth_i64(i64 %a) nounwind {
   ret i64 %shr
 }
 
+define i32 @sext_sextinreg_sra(i16 %a) nounwind {
+; RV32I-LABEL: sext_sextinreg_sra:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a0, a0, 26
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sext_sextinreg_sra:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 10
+; RV32XTHEADBB-NEXT:    ret
+  %sext = sext i16 %a to i32
+  %shr = ashr exact i32 %sext, 10
+  ret i32 %shr
+}
+
+define i32 @sext_sextinreg_sra_2(i16 %a) nounwind {
+; RV32I-LABEL: sext_sextinreg_sra_2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a0, a0, 31
+; RV32I-NEXT:    ret
+;
+; RV32XTHEADBB-LABEL: sext_sextinreg_sra_2:
+; RV32XTHEADBB:       # %bb.0:
+; RV32XTHEADBB-NEXT:    th.ext a0, a0, 15, 15
+; RV32XTHEADBB-NEXT:    ret
+  %sext = sext i16 %a to i32
+  %shr = ashr exact i32 %sext, 24
+  ret i32 %shr
+}
+
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV32I-LABEL: zexth_i32:
 ; RV32I:       # %bb.0:

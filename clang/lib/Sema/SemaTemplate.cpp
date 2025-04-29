@@ -2116,6 +2116,8 @@ DeclResult Sema::CheckClassTemplate(
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+    if (LangOpts.HLSL)
+      NewClass->addAttr(PackedAttr::CreateImplicit(Context));
     AddAlignmentAttributesForRecord(NewClass);
     AddMsStructLayoutForRecord(NewClass);
   }
@@ -4892,7 +4894,7 @@ bool Sema::CheckTemplateTypeArgument(
 
         // Recover by synthesizing a type using the location information that we
         // already have.
-        ArgType = Context.getDependentNameType(ElaboratedTypeKeyword::Typename,
+        ArgType = Context.getDependentNameType(ElaboratedTypeKeyword::None,
                                                SS.getScopeRep(), II);
         TypeLocBuilder TLB;
         DependentNameTypeLoc TL = TLB.push<DependentNameTypeLoc>(ArgType);
@@ -8655,6 +8657,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // Add alignment attributes if necessary; these attributes are checked when
   // the ASTContext lays out the structure.
   if (TUK == TagUseKind::Definition && (!SkipBody || !SkipBody->ShouldSkip)) {
+    if (LangOpts.HLSL)
+      Specialization->addAttr(PackedAttr::CreateImplicit(Context));
     AddAlignmentAttributesForRecord(Specialization);
     AddMsStructLayoutForRecord(Specialization);
   }
@@ -10672,10 +10676,8 @@ TypeResult Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   TypeSourceInfo *TSI = nullptr;
   QualType T =
-      CheckTypenameType((TypenameLoc.isValid() ||
-                         IsImplicitTypename == ImplicitTypenameContext::Yes)
-                            ? ElaboratedTypeKeyword::Typename
-                            : ElaboratedTypeKeyword::None,
+      CheckTypenameType(TypenameLoc.isValid() ? ElaboratedTypeKeyword::Typename
+                                              : ElaboratedTypeKeyword::None,
                         TypenameLoc, QualifierLoc, II, IdLoc, &TSI,
                         /*DeducedTSTContext=*/true);
   if (T.isNull())
@@ -10713,6 +10715,9 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
   TemplateArgumentListInfo TemplateArgs(LAngleLoc, RAngleLoc);
   translateTemplateArguments(TemplateArgsIn, TemplateArgs);
 
+  auto Keyword = TypenameLoc.isValid() ? ElaboratedTypeKeyword::Typename
+                                       : ElaboratedTypeKeyword::None;
+
   TemplateName Template = TemplateIn.get();
   if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
     // Construct a dependent template specialization type.
@@ -10726,7 +10731,7 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     }
 
     QualType T = Context.getDependentTemplateSpecializationType(
-        ElaboratedTypeKeyword::Typename, *DTN, TemplateArgs.arguments());
+        Keyword, *DTN, TemplateArgs.arguments());
 
     // Create source-location information for this type.
     TypeLocBuilder Builder;
@@ -10758,8 +10763,7 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
   for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
     SpecTL.setArgLocInfo(I, TemplateArgs[I].getLocInfo());
 
-  T = Context.getElaboratedType(ElaboratedTypeKeyword::Typename,
-                                SS.getScopeRep(), T);
+  T = Context.getElaboratedType(Keyword, SS.getScopeRep(), T);
   ElaboratedTypeLoc TL = Builder.push<ElaboratedTypeLoc>(T);
   TL.setElaboratedKeywordLoc(TypenameLoc);
   TL.setQualifierLoc(SS.getWithLocInContext(Context));
@@ -10853,6 +10857,8 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
                         NestedNameSpecifierLoc QualifierLoc,
                         const IdentifierInfo &II,
                         SourceLocation IILoc, bool DeducedTSTContext) {
+  assert((Keyword != ElaboratedTypeKeyword::None) == KeywordLoc.isValid());
+
   CXXScopeSpec SS;
   SS.Adopt(QualifierLoc);
 
@@ -10887,7 +10893,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
   unsigned DiagID = 0;
   Decl *Referenced = nullptr;
   switch (Result.getResultKind()) {
-  case LookupResult::NotFound: {
+  case LookupResultKind::NotFound: {
     // If we're looking up 'type' within a template named 'enable_if', produce
     // a more specific diagnostic.
     SourceRange CondRange;
@@ -10919,7 +10925,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     break;
   }
 
-  case LookupResult::FoundUnresolvedValue: {
+  case LookupResultKind::FoundUnresolvedValue: {
     // We found a using declaration that is a value. Most likely, the using
     // declaration itself is meant to have the 'typename' keyword.
     SourceRange FullRange(KeywordLoc.isValid() ? KeywordLoc : SS.getBeginLoc(),
@@ -10933,17 +10939,17 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
         << FixItHint::CreateInsertion(Loc, "typename ");
     }
   }
-  // Fall through to create a dependent typename type, from which we can recover
-  // better.
-  [[fallthrough]];
+    // Fall through to create a dependent typename type, from which we can
+    // recover better.
+    [[fallthrough]];
 
-  case LookupResult::NotFoundInCurrentInstantiation:
+  case LookupResultKind::NotFoundInCurrentInstantiation:
     // Okay, it's a member of an unknown instantiation.
     return Context.getDependentNameType(Keyword,
                                         QualifierLoc.getNestedNameSpecifier(),
                                         &II);
 
-  case LookupResult::Found:
+  case LookupResultKind::Found:
     if (TypeDecl *Type = dyn_cast<TypeDecl>(Result.getFoundDecl())) {
       // C++ [class.qual]p2:
       //   In a lookup in which function names are not ignored and the
@@ -11001,13 +11007,13 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
     Referenced = Result.getFoundDecl();
     break;
 
-  case LookupResult::FoundOverloaded:
+  case LookupResultKind::FoundOverloaded:
     DiagID = Ctx ? diag::err_typename_nested_not_type
                  : diag::err_typename_not_type;
     Referenced = *Result.begin();
     break;
 
-  case LookupResult::Ambiguous:
+  case LookupResultKind::Ambiguous:
     return QualType();
   }
 
