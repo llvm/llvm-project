@@ -156,13 +156,14 @@ def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
 def C23Compat : DiagGroup<"c23-compat">;
 def : DiagGroup<"c2x-compat", [C23Compat]>;
+def HiddenCppDecl : DiagGroup<"c++-hidden-decl">;
 def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe">;
 def DefaultConstInit : DiagGroup<"default-const-init", [DefaultConstInitUnsafe]>;
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
 def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
                                       [ImplicitEnumEnumCast]>;
 def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
-                                        ImplicitIntToEnumCast]>;
+                                        ImplicitIntToEnumCast, HiddenCppDecl]>;
 
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
