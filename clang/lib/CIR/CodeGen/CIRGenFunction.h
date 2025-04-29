@@ -63,6 +63,9 @@ public:
   /// declarations.
   DeclMapTy localDeclMap;
 
+  /// The type of the condition for the emitting switch statement.
+  llvm::SmallVector<mlir::Type, 2> condTypeStack;
+
   clang::ASTContext &getContext() const { return cgm.getASTContext(); }
 
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -469,6 +472,16 @@ public:
                       ReturnValueSlot returnValue = ReturnValueSlot());
   CIRGenCallee emitCallee(const clang::Expr *e);
 
+  template <typename T>
+  mlir::LogicalResult emitCaseDefaultCascade(const T *stmt, mlir::Type condType,
+                                             mlir::ArrayAttr value,
+                                             cir::CaseOpKind kind,
+                                             bool buildingTopLevelCase);
+
+  mlir::LogicalResult emitCaseStmt(const clang::CaseStmt &s,
+                                   mlir::Type condType,
+                                   bool buildingTopLevelCase);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -594,6 +607,11 @@ public:
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
+
+  mlir::LogicalResult emitSwitchBody(const clang::Stmt *s);
+  mlir::LogicalResult emitSwitchCase(const clang::SwitchCase &s,
+                                     bool buildingTopLevelCase);
+  mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
