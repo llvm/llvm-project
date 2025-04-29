@@ -197,10 +197,8 @@ PreservedAnalyses
 MachineUniformityPrinterPass::run(MachineFunction &MF,
                                   MachineFunctionAnalysisManager &MFAM) {
   auto &MUI = MFAM.getResult<MachineUniformityAnalysis>(MF);
-  std::string Name;
-  raw_string_ostream SS(Name);
-  MF.getFunction().printAsOperand(SS, /*PrintType=*/false);
-  OS << "MachineUniformityInfo for function: " << Name << '\n';
+  OS << "MachineUniformityInfo for function: "
+     << MF.getFunction().getNameOrAsOperand() << '\n';
   MUI.print(OS);
   return PreservedAnalyses::all();
 }
