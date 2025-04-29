@@ -742,7 +742,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);
 
   instance->setTarget(clang::TargetInfo::CreateTargetInfo(
-      *diagnostics_engine, instance->getInvocation().TargetOpts));
+      *diagnostics_engine, instance->getInvocation().getTargetOpts()));
 
   if (!instance->hasTarget())
     return nullptr;
