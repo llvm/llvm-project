@@ -2905,11 +2905,13 @@ checkDeclareOperands(Op &op, const mlir::ValueRange &operands,
     mlir::Value var{getVar(operand.getDefiningOp())};
     assert(var && "declare operands can only be data entry operations which "
                   "must have var");
+    (void)var;
     std::optional<mlir::acc::DataClause> dataClauseOptional{
         getDataClause(operand.getDefiningOp())};
     assert(dataClauseOptional.has_value() &&
            "declare operands can only be data entry operations which must have "
            "dataClause");
+    (void)dataClauseOptional;
   }
 
   return success();
