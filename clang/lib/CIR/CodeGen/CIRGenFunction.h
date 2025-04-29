@@ -482,6 +482,8 @@ public:
                                    mlir::Type condType,
                                    bool buildingTopLevelCase);
 
+  LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
