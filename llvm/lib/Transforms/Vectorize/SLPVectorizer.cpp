@@ -21851,9 +21851,9 @@ public:
     if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
       return RecurKind::FMin;
 
-    if (match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(), m_Value())))
+    if (match(I, m_FMaximum(m_Value(), m_Value())))
       return RecurKind::FMaximum;
-    if (match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(), m_Value())))
+    if (match(I, m_FMinimum(m_Value(), m_Value())))
       return RecurKind::FMinimum;
     // This matches either cmp+select or intrinsics. SLP is expected to handle
     // either form.
@@ -23501,13 +23501,13 @@ static Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
 static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
   if (match(I, m_BinOp(m_Value(V0), m_Value(V1))))
     return true;
-  if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(V0), m_Value(V1))))
+  if (match(I, m_FMaxNum(m_Value(V0), m_Value(V1))))
     return true;
-  if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(V0), m_Value(V1))))
+  if (match(I, m_FMinNum(m_Value(V0), m_Value(V1))))
     return true;
-  if (match(I, m_Intrinsic<Intrinsic::maximum>(m_Value(V0), m_Value(V1))))
+  if (match(I, m_FMaximum(m_Value(V0), m_Value(V1))))
     return true;
-  if (match(I, m_Intrinsic<Intrinsic::minimum>(m_Value(V0), m_Value(V1))))
+  if (match(I, m_FMinimum(m_Value(V0), m_Value(V1))))
     return true;
   if (match(I, m_Intrinsic<Intrinsic::smax>(m_Value(V0), m_Value(V1))))
     return true;
