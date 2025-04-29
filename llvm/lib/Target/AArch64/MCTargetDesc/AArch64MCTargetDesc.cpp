@@ -352,6 +352,8 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
     MAI = new AArch64MCAsmInfoMicrosoftCOFF();
   else if (TheTriple.isOSBinFormatCOFF())
     MAI = new AArch64MCAsmInfoGNUCOFF();
+  else if (TheTriple.isUEFI())
+    MAI = new AArch64MCAsmInfoMicrosoftCOFF();
   else {
     assert(TheTriple.isOSBinFormatELF() && "Invalid target");
     MAI = new AArch64MCAsmInfoELF(TheTriple);
