@@ -1477,6 +1477,10 @@ def TernaryOp : CIR_Op<"ternary",
     since each region is one block sized and the `cir.yield` closing the block
     scope should have one argument.
 
+    `cir.ternary` also represents the GNU binary conditional operator ?: which
+    reuses the parent operation for both the condition and the true branch to
+    evaluate it only once.
+
     Example:
 
     ```mlir

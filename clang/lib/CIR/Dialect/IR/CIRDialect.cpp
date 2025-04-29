@@ -1191,7 +1191,7 @@ LogicalResult cir::BinOp::verify() {
 // TernaryOp
 //===----------------------------------------------------------------------===//
 
-/// Given the region at `index`, or the parent operation if `index` is None,
+/// Given the region at `point`, or the parent operation if `point` is None,
 /// return the successor regions. These are the regions that may be selected
 /// during the flow of control. `operands` is a set of optional attributes that
 /// correspond to a constant value for each operand, or null if that operand is
@@ -1204,7 +1204,8 @@ void cir::TernaryOp::getSuccessorRegions(
     return;
   }
 
-  // If the condition isn't constant, both regions may be executed.
+  // When branching from the parent operation, both the true and false
+  // regions are considered possible successors
   regions.push_back(RegionSuccessor(&getTrueRegion()));
   regions.push_back(RegionSuccessor(&getFalseRegion()));
 }
