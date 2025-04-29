@@ -381,32 +381,28 @@ GetDemangledScope(const SymbolContext &sc) {
   return demangled_name.slice(info->ScopeRange.first, info->ScopeRange.second);
 }
 
-static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
-  assert(sc.symbol);
-
+/// Handles anything printed after the FunctionEncoding ItaniumDemangle
+/// node. Most notably the DotSUffix node.
+static std::optional<llvm::StringRef>
+GetDemangledFunctionSuffix(const SymbolContext &sc) {
   Mangled mangled = sc.GetPossiblyInlinedFunctionName();
   if (!mangled)
-    return false;
+    return std::nullopt;
 
   auto demangled_name = mangled.GetDemangledName().GetStringRef();
   if (demangled_name.empty())
-    return false;
+    return std::nullopt;
 
   const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
   if (!info)
-    return false;
+    return std::nullopt;
 
   // Function without a basename is nonsense.
   if (!info->hasBasename())
-    return false;
+    return std::nullopt;
 
-  if (info->ArgumentsRange.second < info->ArgumentsRange.first)
-    return false;
-
-  s << demangled_name.slice(info->ArgumentsRange.first,
-                            info->ArgumentsRange.second);
-
-  return true;
+  return demangled_name.slice(info->QualifiersRange.second,
+                              llvm::StringRef::npos);
 }
 
 bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
@@ -1918,6 +1914,8 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
 bool CPlusPlusLanguage::HandleFrameFormatVariable(
     const SymbolContext &sc, const ExecutionContext *exe_ctx,
     FormatEntity::Entry::Type type, Stream &s) {
+  assert(sc.function);
+
   switch (type) {
   case FormatEntity::Entry::Type::FunctionScope: {
     std::optional<llvm::StringRef> scope = GetDemangledScope(sc);
@@ -1951,14 +1949,6 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   }
 
   case FormatEntity::Entry::Type::FunctionFormattedArguments: {
-    // This ensures we print the arguments even when no debug-info is available.
-    //
-    // FIXME: we should have a Entry::Type::FunctionArguments and
-    // use it in the plugin.cplusplus.display.function-name-format
-    // once we have a "fallback operator" in the frame-format language.
-    if (!sc.function && sc.symbol)
-      return PrintDemangledArgumentList(s, sc);
-
     VariableList args;
     if (auto variable_list_sp = GetFunctionVariableList(sc))
       variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
@@ -1997,6 +1987,15 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
       return false;
 
     s << *quals;
+
+    return true;
+  }
+  case FormatEntity::Entry::Type::FunctionSuffix: {
+    std::optional<llvm::StringRef> suffix = GetDemangledFunctionSuffix(sc);
+    if (!suffix)
+      return false;
+
+    s << *suffix;
 
     return true;
   }
