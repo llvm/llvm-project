@@ -740,6 +740,14 @@ def HasStdExtZvfbfminOrZvfofp8min
                          "'Zvfbfmin' (Vector BF16 Converts) or "
                          "'Zvfofp8min' (Vector OFP8 Converts)">;
 
+def FeatureStdExtZvfofp4min
+    : RISCVExperimentalExtension<0, 1, "OFP4 conversion extension Zvfofp4min",
+                                 [FeatureStdExtZve32f]>;
+def HasStdExtZvfofp4min
+    : Predicate<"Subtarget->hasStdExtZvfofp4min()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfofp4min),
+                          "'Zvfofp4min' (OFP4 conversion extension Zvfofp4min)">;
+
 // Vector Cryptography and Bitmanip Extensions
 
 def FeatureStdExtZvkb
