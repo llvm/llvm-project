@@ -483,6 +483,9 @@ void __msan_init() {
     Printf("FATAL: Disabling ASLR is known to cause this error.\n");
     Printf("FATAL: If running under GDB, try "
            "'set disable-randomization off'.\n");
+    Printf(
+        "FATAL: This error may also occur for programs that use GPU "
+        "libraries.\n");
     DumpProcessMap();
     Die();
   }
