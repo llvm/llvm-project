@@ -103,10 +103,12 @@ def AnonEnumEnumConversion : DiagGroup<"anon-enum-enum-conversion",
                                    [DeprecatedAnonEnumEnumConversion]>;
 def EnumEnumConversion : DiagGroup<"enum-enum-conversion",
                                    [DeprecatedEnumEnumConversion]>;
+def ImplicitEnumEnumCast : DiagGroup<"implicit-enum-enum-cast">;
 def EnumFloatConversion : DiagGroup<"enum-float-conversion",
                                     [DeprecatedEnumFloatConversion]>;
 def EnumConversion : DiagGroup<"enum-conversion",
                                [EnumEnumConversion,
+                                ImplicitEnumEnumCast,
                                 EnumFloatConversion,
                                 EnumCompareConditional]>;
 def DeprecatedOFast : DiagGroup<"deprecated-ofast">;
@@ -157,7 +159,10 @@ def : DiagGroup<"c2x-compat", [C23Compat]>;
 def DefaultConstInitUnsafe : DiagGroup<"default-const-init-unsafe">;
 def DefaultConstInit : DiagGroup<"default-const-init", [DefaultConstInitUnsafe]>;
 def ImplicitVoidPtrCast : DiagGroup<"implicit-void-ptr-cast">;
-def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit]>;
+def ImplicitIntToEnumCast : DiagGroup<"implicit-int-enum-cast",
+                                      [ImplicitEnumEnumCast]>;
+def CXXCompat: DiagGroup<"c++-compat", [ImplicitVoidPtrCast, DefaultConstInit,
+                                        ImplicitIntToEnumCast]>;
 
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
