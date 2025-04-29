@@ -225,7 +225,7 @@ void initializeNaryReassociateLegacyPassPass(PassRegistry &);
 void initializeObjCARCContractLegacyPassPass(PassRegistry &);
 void initializeOptimizationRemarkEmitterWrapperPassPass(PassRegistry &);
 void initializeOptimizePHIsLegacyPass(PassRegistry &);
-void initializePEIPass(PassRegistry &);
+void initializePEILegacyPass(PassRegistry &);
 void initializePHIEliminationPass(PassRegistry &);
 void initializePartiallyInlineLibCallsLegacyPassPass(PassRegistry &);
 void initializePatchableFunctionLegacyPass(PassRegistry &);
